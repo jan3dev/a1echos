@@ -1,0 +1,75 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Flutter Development Best Practices
+
+## Project Structure
+- Organize code by feature rather than type
+- Keep widget files focused on a single responsibility
+- Use `lib/` for all application code
+- Separate UI from business logic
+
+## State Management
+- Choose appropriate state management based on complexity:
+  - Provider for simple apps
+  - Bloc/Cubit for more complex state
+  - Redux for large applications
+- Avoid using setState() for anything beyond local UI state
+- Use immutable state objects when possible
+
+## Widget Design
+- Prefer composition over inheritance
+- Break large widgets into smaller, reusable components
+- Keep widget constructors immutable with required parameters
+- Use const constructors whenever possible
+- Limit widget rebuilds to improve performance
+
+## Asynchronous Code
+- Always handle errors in async code
+- Use async/await over .then() chains when possible
+- Show loading indicators during async operations
+- Implement proper error states for failed operations
+
+## Performance
+- Use lazy loading for heavy resources
+- Implement pagination for long lists
+- Minimize widget rebuilds with const and RepaintBoundary
+- Use DevTools to identify performance bottlenecks
+
+## Testing
+- Write unit tests for all business logic
+- Create widget tests for component validation
+- Use integration tests for critical user flows
+- Aim for high test coverage on core functionality
+
+## Naming Conventions
+- Use lowerCamelCase for variables and functions
+- Use UpperCamelCase for classes and types
+- Use snake_case for file names
+- Prefix private variables with underscore
+
+## Code Quality
+- Follow [Effective Dart](mdc:https:/dart.dev/guides/language/effective-dart) guidelines
+- Run the linter and fix warnings
+- Keep methods short and focused
+- Use explicit types for public APIs
+
+## Resource Management
+- Properly dispose resources (controllers, streams, etc.)
+- Optimize assets and images
+- Use SVGs when possible for icons
+
+## Error Handling
+- Implement global error handling
+- Use custom exception classes
+- Present user-friendly error messages
+- Log errors for debugging
+
+## Accessibility
+- Support dark/light themes
+- Ensure proper contrast ratios
+- Add meaningful semantics labels
+- Test with screen readers

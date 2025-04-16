@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Transcription App Project Requirements Document (PRD)
+
+## Overview
+A Flutter-based mobile application that transcribes audio to text using OpenAI's transcriptions API. The app provides a simple, chat-like interface for users to record, view, and manage transcriptions.
+
+## Target Platform
+- Initial focus: Android APK for testing
+- Future expansion: iOS (potential)
+
+## Core Features
+
+### Authentication
+- One-time setup requiring user's OpenAI API key
+- No account creation required
+
+### Audio Recording & Transcription
+- Record button at bottom of screen for audio capture
+- Real-time transcription using OpenAI's API
+- Automatic paragraph breaks for long speech segments
+
+### Transcription Management
+- Transcriptions displayed as chat-like bubbles
+- Individual copy functionality for each transcription block
+- Swipe-to-delete gesture for individual transcription blocks
+- "Clear All" button to remove all transcriptions
+- "Copy All" button to copy entire transcript
+
+### Data Storage
+- All data stored locally on device
+- No external database or cloud storage required
+- API key securely stored on device
+
+### Settings
+- Simple settings menu
+- Add/Edit/Remove OpenAI API key
+- Basic app preferences (if needed)
+
+## UI/UX Requirements
+- Clean, minimalistic interface
+- Chat-style transcript display
+- Prominent record button
+- Intuitive gesture controls
+- Visual feedback during recording process
+- Error messaging for API issues
+
+## Technical Requirements
+- Flutter framework
+- OpenAI Transcriptions API integration
+- Local secure storage for API key
+- Audio recording capabilities
+- Clipboard integration
+
+## Success Criteria
+- Simple user setup process
+- Accurate transcription results
+- Fast response time
+- Intuitive UI requiring minimal user training
