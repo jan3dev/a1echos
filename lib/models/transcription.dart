@@ -28,4 +28,4 @@ class Transcription {
       'audioPath': audioPath,
     };
   }
-} 
+}
