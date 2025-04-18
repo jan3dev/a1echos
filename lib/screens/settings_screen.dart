@@ -12,7 +12,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final ModelService _modelService = ModelService();
   bool _isLoading = true;
   bool _isModelInitialized = false;
-  String _modelPath = '';
   String _modelError = '';
 
   @override
@@ -30,16 +29,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final isInstalled = await _modelService.isModelInstalled();
       
       if (isInstalled) {
-        final modelPath = await _modelService.getModelPath();
+        await _modelService.getModelPath();
         setState(() {
           _isModelInitialized = true;
-          _modelPath = modelPath;
           _modelError = '';
         });
       } else {
         setState(() {
           _isModelInitialized = false;
-          _modelPath = '';
           _modelError = '';
         });
       }
