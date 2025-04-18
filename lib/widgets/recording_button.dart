@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/transcription_provider.dart';
+import '../providers/local_transcription_provider.dart';
 
 class RecordingButton extends StatefulWidget {
   const RecordingButton({super.key});
@@ -22,28 +22,23 @@ class _RecordingButtonState extends State<RecordingButton>
     )..repeat(reverse: true);
 
     WidgetsBinding.instance.addObserver(this);
-
-    _refreshApiKeyStatus();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _refreshApiKeyStatus();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _refreshApiKeyStatus();
+      // Check model status when app is resumed
+      _refreshModelStatus();
     }
   }
 
-  void _refreshApiKeyStatus() {
-    Provider.of<TranscriptionProvider>(
-      context,
-      listen: false,
-    ).refreshApiKeyStatus();
+  void _refreshModelStatus() {
+    // Nothing to do - model status is checked at provider initialization
   }
 
   @override
@@ -55,19 +50,19 @@ class _RecordingButtonState extends State<RecordingButton>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TranscriptionProvider>(
+    return Consumer<LocalTranscriptionProvider>(
       builder: (context, provider, child) {
         final isRecording = provider.isRecording;
         final isTranscribing = provider.isTranscribing;
-        final hasApiKey = provider.hasApiKey;
+        final isModelReady = provider.isModelReady;
 
-        if (!hasApiKey) {
+        if (!isModelReady) {
           return FloatingActionButton.extended(
             onPressed: () {
-              _showApiKeyMissingDialog(context);
+              _showModelMissingDialog(context);
             },
-            label: const Text('Add API Key to Start'),
-            icon: const Icon(Icons.key),
+            label: const Text('Model Not Found'),
+            icon: const Icon(Icons.error_outline),
             backgroundColor: Colors.amber,
           );
         }
@@ -90,7 +85,7 @@ class _RecordingButtonState extends State<RecordingButton>
         if (isRecording) {
           return FloatingActionButton(
             onPressed: () {
-              provider.stopRecordingAndTranscribe();
+              provider.stopRecordingAndSave();
             },
             backgroundColor: Colors.red,
             child: AnimatedBuilder(
@@ -116,28 +111,19 @@ class _RecordingButtonState extends State<RecordingButton>
     );
   }
 
-  void _showApiKeyMissingDialog(BuildContext context) {
+  void _showModelMissingDialog(BuildContext context) {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('API Key Required'),
+            title: const Text('Model Initialization Failed'),
             content: const Text(
-              'You need to add your OpenAI API key in Settings to use the transcription feature.',
+              'The speech recognition model failed to initialize. Please restart the app and try again.',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/settings').then((_) {
-                    _refreshApiKeyStatus();
-                  });
-                },
-                child: const Text('Go to Settings'),
+                child: const Text('OK'),
               ),
             ],
           ),

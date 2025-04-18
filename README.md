@@ -1,46 +1,38 @@
 # Transcription App
 
-A Flutter-based mobile application that transcribes audio to text using OpenAI's transcriptions API. The app provides a simple, chat-like interface for users to record, view, and manage transcriptions.
+A Flutter-based mobile application that performs offline speech-to-text transcription using Vosk. The app provides a simple, chat-like interface for users to record, view, and manage transcriptions.
 
 ## Features
 
 - Record audio with a simple tap
-- Automatically transcribe speech to text using OpenAI's Whisper API
-- View transcriptions in a chat-like interface
-- Copy individual transcriptions
-- Swipe to delete individual transcriptions
+- Live (streaming) transcription while recording
+- Offline transcription via embedded Vosk model (no internet required)
+- Transcriptions displayed as chat-style bubbles
+- Automatic paragraph splitting by punctuation or word count
+- Long-press to copy individual paragraphs
+- Swipe to delete individual paragraphs
 - Copy all transcriptions at once
 - Clear all transcriptions
-- Securely store your OpenAI API key
 
 ## Requirements
 
 - Flutter SDK
 - Android device or emulator
-- OpenAI API key
+- Embedded Vosk model (assets/models/vosk-model-small-en-us-0.15.zip)
 
 ## Getting Started
 
 1. Clone this repository
 2. Run `flutter pub get` to install dependencies
-3. Connect an Android device or start an emulator
-4. Run the app with `flutter run`
-5. On first launch, you'll need to add your OpenAI API key in Settings
-
-## Setting Up Your OpenAI API Key
-
-1. Visit [OpenAI API Keys](https://platform.openai.com/api-keys) to create an API key
-2. In the app, go to Settings (gear icon in the app bar)
-3. Enter your API key and tap "Save API Key"
-4. Your key is now securely stored on your device
+3. Ensure the Vosk model ZIP (`assets/models/vosk-model-small-en-us-0.15.zip`) is present under `assets/models/`
+4. Connect an Android device or start an emulator
+5. Run the app with `flutter run`
 
 ## Usage
 
-1. With your API key set up, tap the microphone button to start recording
-2. Speak clearly into your device's microphone
-3. Tap the stop button when you're done
-4. The app will automatically transcribe your speech
-5. View all your transcriptions in the main screen
-6. Swipe left on a transcription to delete it
-7. Tap the copy icon to copy a specific transcription
-8. Use the app bar buttons to copy all transcriptions or clear them
+1. Tap the microphone button to start recording
+2. Speak clearly into your device's microphone (live transcription appears as you speak)
+3. Pause or keep speaking; transcription will continue accumulating until you press stop
+4. Tap the stop button to end and save the transcription as a chat bubble
+5. Swipe left on any paragraph to delete it, or long-press to copy
+6. Use the app bar buttons to copy all transcriptions or clear them

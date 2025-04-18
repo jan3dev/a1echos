@@ -1,3 +1,5 @@
+import com.android.build.gradle.LibraryExtension
+
 allprojects {
     repositories {
         google()
@@ -18,4 +20,14 @@ subprojects {
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
+}
+
+subprojects {
+    pluginManager.withPlugin("com.android.library") {
+        extensions.configure(LibraryExtension::class.java) {
+            if (namespace.isNullOrBlank()) {
+                namespace = "org.vosk.vosk_flutter"
+            }
+        }
+    }
 }

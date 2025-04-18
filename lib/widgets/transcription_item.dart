@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/transcription.dart';
-import '../providers/transcription_provider.dart';
+import '../providers/local_transcription_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -44,25 +44,24 @@ class TranscriptionItem extends StatelessWidget {
               child: const Icon(Icons.delete, color: Colors.white),
             ),
             direction: DismissDirection.endToStart,
-            confirmDismiss: (direction) async {
+            onDismissed: (direction) async {
               try {
-                await Provider.of<TranscriptionProvider>(
+                await Provider.of<LocalTranscriptionProvider>(
                   context,
                   listen: false,
                 ).deleteParagraphFromTranscription(transcription.id, index);
-
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Paragraph deleted'),
-                      duration: Duration(seconds: 2),
-                    ),
+                    const SnackBar(content: Text('Paragraph deleted')),
                   );
                 }
-                return true;
               } catch (e) {
                 debugPrint('Error deleting paragraph: $e');
-                return false;
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete paragraph')),
+                  );
+                }
               }
             },
             child: GestureDetector(

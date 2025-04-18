@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/api_service.dart';
-import '../providers/transcription_provider.dart';
+import '../services/model_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,38 +9,50 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final TextEditingController _apiKeyController = TextEditingController();
-  final ApiService _apiService = ApiService();
+  final ModelService _modelService = ModelService();
   bool _isLoading = true;
-  bool _hasApiKey = false;
+  bool _isModelInitialized = false;
+  String _modelPath = '';
+  String _modelError = '';
 
   @override
   void initState() {
     super.initState();
-    _loadApiKey();
+    _checkModelStatus();
   }
 
-  Future<void> _loadApiKey() async {
-    final hasKey = await _apiService.hasApiKey();
+  Future<void> _checkModelStatus() async {
     setState(() {
-      _hasApiKey = hasKey;
-      _isLoading = false;
+      _isLoading = true;
     });
 
-    if (hasKey) {
-      final apiKey = await _apiService.getApiKey();
-      // Only show first few characters for security
-      if (apiKey != null && apiKey.isNotEmpty) {
-        _apiKeyController.text =
-            '${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}';
+    try {
+      final isInstalled = await _modelService.isModelInstalled();
+      
+      if (isInstalled) {
+        final modelPath = await _modelService.getModelPath();
+        setState(() {
+          _isModelInitialized = true;
+          _modelPath = modelPath;
+          _modelError = '';
+        });
+      } else {
+        setState(() {
+          _isModelInitialized = false;
+          _modelPath = '';
+          _modelError = '';
+        });
       }
+    } catch (e) {
+      setState(() {
+        _isModelInitialized = false;
+        _modelError = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-  }
-
-  @override
-  void dispose() {
-    _apiKeyController.dispose();
-    super.dispose();
   }
 
   @override
@@ -58,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'OpenAI API Key',
+                      'Speech Recognition Status',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -66,156 +76,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Your API key is stored securely on your device and is only used to access the OpenAI transcription API.',
+                      'The app uses Vosk for offline speech recognition. No internet connection is required for transcription.',
                     ),
                     const SizedBox(height: 16),
-                    if (_hasApiKey) ...[
-                      TextField(
-                        controller: _apiKeyController,
-                        decoration: const InputDecoration(
-                          labelText: 'Current API Key (masked)',
-                          border: OutlineInputBorder(),
-                          enabled: false,
+                    if (_isModelInitialized) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green),
                         ),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            onPressed: _updateApiKey,
-                            child: const Text('Update API Key'),
-                          ),
-                          ElevatedButton(
-                            onPressed: _removeApiKey,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: Colors.green),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Model Ready',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: const Text('Remove API Key'),
-                          ),
-                        ],
+                            const SizedBox(height: 8),
+                            Text('Using: English (US) - Small Model'),
+                          ],
+                        ),
                       ),
                     ] else ...[
-                      TextField(
-                        controller: _apiKeyController,
-                        decoration: const InputDecoration(
-                          labelText: 'Enter your OpenAI API Key',
-                          hintText: 'sk-...',
-                          border: OutlineInputBorder(),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
                         ),
-                        obscureText: true,
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _saveApiKey,
-                          child: const Text('Save API Key'),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Don\'t have an API key? You can get one from the OpenAI website.',
-                        style: TextStyle(fontStyle: FontStyle.italic),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () {
-                          // In a real app, you might open a browser to the OpenAI API key page
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Visit: https://platform.openai.com/api-keys',
-                              ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.warning, color: Colors.orange),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Model Not Ready',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                        child: const Text('Get an API Key'),
+                            if (_modelError.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                _modelError,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Please restart the app to initialize the speech recognition model.',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
+                    const SizedBox(height: 24),
+                    const Text(
+                      'About Speech Recognition',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '• All transcription processing happens on your device\n'
+                      '• No internet connection required\n'
+                      '• Works best in quiet environments\n'
+                      '• Optimized for English (US) speech'
+                    ),
                   ],
                 ),
               ),
     );
   }
-
-  Future<void> _saveApiKey() async {
-    final apiKey = _apiKeyController.text.trim();
-    if (apiKey.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter an API key')));
-      return;
-    }
-
-    await _apiService.saveApiKey(apiKey);
-    setState(() {
-      _hasApiKey = true;
-    });
-
-    // Notify the provider that API key has been updated
-    if (mounted) {
-      Provider.of<TranscriptionProvider>(context, listen: false).refreshApiKeyStatus();
-    }
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('API key saved')));
-
-    // Reload to mask the key
-    _loadApiKey();
-  }
-
-  Future<void> _updateApiKey() async {
-    setState(() {
-      _hasApiKey = false;
-      _apiKeyController.clear();
-    });
-  }
-
-  Future<void> _removeApiKey() async {
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Remove API Key?'),
-            content: const Text(
-              'This will remove your OpenAI API key from this device. You will need to enter it again to use the transcription feature.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(dialogContext);
-                  await _apiService.deleteApiKey();
-
-                  // Notify the provider that API key has been removed
-                  if (mounted) {
-                    Provider.of<TranscriptionProvider>(context, listen: false).refreshApiKeyStatus();
-                  }
-
-                  if (!mounted) return;
-
-                  setState(() {
-                    _hasApiKey = false;
-                    _apiKeyController.clear();
-                  });
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('API key removed')),
-                  );
-                },
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
-    );
-  }
 }
+
