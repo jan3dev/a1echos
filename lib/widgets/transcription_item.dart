@@ -4,6 +4,7 @@ import '../models/transcription.dart';
 import '../providers/local_transcription_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../constants/app_constants.dart';
 
 class TranscriptionItem extends StatelessWidget {
   final Transcription transcription;
@@ -52,13 +53,19 @@ class TranscriptionItem extends StatelessWidget {
                 ).deleteParagraphFromTranscription(transcription.id, index);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Paragraph deleted')),
+                    SnackBar(
+                      content: Text(AppStrings.paragraphDeleted),
+                      duration: AppConstants.snackBarDurationShort,
+                    ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to delete paragraph')),
+                    SnackBar(
+                      content: Text(AppStrings.paragraphDeleteFailed),
+                      duration: AppConstants.snackBarDurationShort,
+                    ),
                   );
                 }
               }
@@ -91,9 +98,9 @@ class TranscriptionItem extends StatelessWidget {
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(AppStrings.copiedToClipboard),
+        duration: AppConstants.snackBarDurationShort,
       ),
     );
   }

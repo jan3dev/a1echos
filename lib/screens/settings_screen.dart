@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/local_transcription_provider.dart';
-import '../services/model_service.dart';
+import '../models/model_type.dart';
+import '../widgets/model_status_tile.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -12,7 +13,7 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Settings')),
       body: Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
+          if (provider.state == TranscriptionState.loading) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -51,7 +52,13 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                _buildModelStatusWidget(context, provider),
+                ModelStatusTile(
+                  selectedModelType: provider.selectedModelType,
+                  isModelReady: provider.isModelReady,
+                  error: provider.error,
+                  onRetry:
+                      () => provider.changeModel(provider.selectedModelType),
+                ),
                 const SizedBox(height: 24),
 
                 const Text(
@@ -93,110 +100,5 @@ class SettingsScreen extends StatelessWidget {
       activeColor: Theme.of(context).colorScheme.primary,
       contentPadding: EdgeInsets.zero,
     );
-  }
-
-  Widget _buildModelStatusWidget(
-    BuildContext context,
-    LocalTranscriptionProvider provider,
-  ) {
-    final theme = Theme.of(context);
-    final modelName =
-        provider.selectedModelType == ModelType.vosk
-            ? 'Vosk (Small EN)'
-            : 'Whisper (Base EN)';
-
-    if (provider.isModelReady) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.green.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.green.shade300),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green.shade700),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '$modelName model is ready.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.green.shade900,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } else if (provider.error != null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.shade300),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.error, color: Colors.red.shade700),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$modelName model failed to initialize.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.red.shade900,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    provider.error!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.red.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Please ensure model files are correctly placed in assets and restart the app.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.shade300),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Initializing $modelName model...',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.blue.shade900,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'providers/session_provider.dart';
 import 'providers/local_transcription_provider.dart';
 
 void main() {
@@ -13,10 +14,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => LocalTranscriptionProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SessionProvider()),
+        ChangeNotifierProvider(
+          create:
+              (context) =>
+                  LocalTranscriptionProvider(context.read<SessionProvider>()),
+        ),
+      ],
       child: MaterialApp(
-        title: 'Transcription App',
+        title: 'dolphinecho',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,

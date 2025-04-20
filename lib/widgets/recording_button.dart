@@ -32,77 +32,56 @@ class _RecordingButtonState extends State<RecordingButton>
   Widget build(BuildContext context) {
     return Consumer<LocalTranscriptionProvider>(
       builder: (context, provider, child) {
-        final isRecording = provider.isRecording;
-        final isTranscribing = provider.isTranscribing;
-        final isModelReady = provider.isModelReady;
-        final isLoadingModel = provider.isLoading;
-
-        if (isLoadingModel) {
-          return const FloatingActionButton(
-            onPressed: null,
-            backgroundColor: Colors.grey,
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
+        // Drive the button UI from the unified state
+        switch (provider.state) {
+          case TranscriptionState.loading:
+          case TranscriptionState.transcribing:
+            return const FloatingActionButton(
+              onPressed: null,
+              backgroundColor: Colors.grey,
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
               ),
-            ),
-          );
-        }
-
-        if (!isModelReady) {
-          return FloatingActionButton.extended(
-            onPressed: () {
-              _showModelErrorDialog(context, provider.error);
-            },
-            label: const Text('Model Error'),
-            icon: const Icon(Icons.error_outline),
-            backgroundColor: Colors.amber.shade700,
-          );
-        }
-
-        if (isTranscribing) {
-          return const FloatingActionButton(
-            onPressed: null,
-            backgroundColor: Colors.grey,
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            ),
-          );
-        }
-
-        if (isRecording) {
-          return FloatingActionButton(
-            onPressed: () {
-              provider.stopRecordingAndSave();
-            },
-            backgroundColor: Colors.red,
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 0.8 + (_animationController.value * 0.2),
-                  child: child,
-                );
+            );
+          case TranscriptionState.error:
+            return FloatingActionButton.extended(
+              onPressed: () {
+                _showModelErrorDialog(context, provider.error);
               },
-              child: const Icon(Icons.stop),
-            ),
-          );
+              label: const Text('Model Error'),
+              icon: const Icon(Icons.error_outline),
+              backgroundColor: Colors.amber.shade700,
+            );
+          case TranscriptionState.recording:
+            return FloatingActionButton(
+              onPressed: () {
+                provider.stopRecordingAndSave();
+              },
+              backgroundColor: Colors.red,
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 0.8 + (_animationController.value * 0.2),
+                    child: child,
+                  );
+                },
+                child: const Icon(Icons.stop),
+              ),
+            );
+          case TranscriptionState.ready:
+            return FloatingActionButton(
+              onPressed: () {
+                provider.startRecording();
+              },
+              child: const Icon(Icons.mic),
+            );
         }
-
-        return FloatingActionButton(
-          onPressed: () {
-            provider.startRecording();
-          },
-          child: const Icon(Icons.mic),
-        );
       },
     );
   }
@@ -110,10 +89,12 @@ class _RecordingButtonState extends State<RecordingButton>
   void _showModelErrorDialog(BuildContext context, String? errorMessage) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder:
+          (context) => AlertDialog(
             title: const Text('Model Not Ready'),
             content: Text(
-              errorMessage ?? 'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.',
+              errorMessage ??
+                  'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.',
             ),
             actions: [
               TextButton(

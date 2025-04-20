@@ -1,8 +1,8 @@
-name: transcription_app
-description: "A new Flutter project."
+name: dolphinecho
+description: "A transcription app using local models."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -34,34 +34,34 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  
+
   # Audio recording
   record: ^6.0.0
-  
+
   # Path provider for file management
   path_provider: ^2.1.1
-  
+
   # Secure storage for API key
   flutter_secure_storage: ^9.2.4
 
   # Encryption
   encrypt: ^5.0.3
-  
+
   # Permission handling
   permission_handler: ^12.0.0+1
-  
+
   # File operations
   file_picker: ^10.1.2
-  
+
   # Provider for state management
   provider: ^6.0.5
-  
+
   # UUID generation
   uuid: ^4.1.0
-  
+
   # Date formatting
   intl: ^0.20.2
-  
+
   # Path manipulation
   path: ^1.8.3
 
@@ -80,12 +80,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  flutter_launcher_icons: ^0.14.3
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -1,0 +1,1 @@
+enum ModelType { vosk, whisper }
