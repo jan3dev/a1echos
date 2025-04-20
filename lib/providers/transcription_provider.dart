@@ -52,7 +52,7 @@ class TranscriptionProvider with ChangeNotifier {
   Future<bool> startRecording() async {
     _error = null;
     try {
-      final result = await _audioService.startRecording();
+      final result = await _audioService.startRecording(useStreaming: true);
       _isRecording = result;
       notifyListeners();
       return result;

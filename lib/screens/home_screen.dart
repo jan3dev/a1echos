@@ -2,12 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/local_transcription_provider.dart';
+import '../services/model_service.dart';
 import '../widgets/recording_button.dart';
 import '../widgets/transcription_item.dart';
 import 'settings_screen.dart';
+import 'dart:developer' as developer;
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<LocalTranscriptionProvider>(
+        context,
+        listen: false,
+      );
+      provider.addListener(_scrollToBottom);
+    });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+
+  // Remove listener in dispose
+  @override
+  void dispose() {
+    // Remove listener using the context BEFORE super.dispose()
+    // Check if the provider is still accessible (might not be needed if disposed elsewhere)
+    try {
+      Provider.of<LocalTranscriptionProvider>(
+        context,
+        listen: false,
+      ).removeListener(_scrollToBottom);
+    } catch (e) {
+      developer.log('Error removing listener: $e', name: '_HomeScreenState');
+    }
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +95,15 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
-          // Show streaming text while recording
-          if (provider.isStreaming && provider.isRecording) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (provider.selectedModelType == ModelType.vosk &&
+              provider.isStreaming &&
+              provider.isRecording) {
             return Column(
               children: [
-                // Live transcription area with pulsing border
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
@@ -83,75 +139,87 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
 
-                // Still show previous transcriptions below
-                if (provider.transcriptions.isNotEmpty)
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: provider.transcriptions.length,
-                      itemBuilder: (context, index) {
-                        final transcription = provider.transcriptions[index];
-                        return TranscriptionItem(transcription: transcription);
-                      },
-                    ),
-                  ),
+                Expanded(child: _buildTranscriptionList(provider)),
               ],
             );
           }
 
           if (provider.isTranscribing) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Processing transcription...'),
-                ],
-              ),
-            );
-          }
-
-          if (provider.error != null) {
+            final message =
+                provider.selectedModelType == ModelType.whisper
+                    ? 'Processing Whisper transcription (this may take a moment)...'
+                    : 'Processing transcription...';
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const CircularProgressIndicator(),
                   const SizedBox(height: 16),
                   Text(
-                    provider.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      Provider.of<LocalTranscriptionProvider>(
-                        context,
-                        listen: false,
-                      ).loadTranscriptions();
-                    },
-                    child: const Text('Retry'),
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),
             );
           }
 
-          if (provider.transcriptions.isEmpty) {
-            return const Center(
-              child: Text(
-                'No transcriptions yet. Tap the record button to start.',
+          // Show error state
+          if (provider.error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red.shade700,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: ${provider.error!}',
+                      style: TextStyle(
+                        color: Colors.red.shade900,
+                        fontSize: 16,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Attempt to re-initialize the model on error
+                        Provider.of<LocalTranscriptionProvider>(
+                          context,
+                          listen: false,
+                        ).changeModel(provider.selectedModelType);
+                      },
+                      child: const Text('Retry Initialization'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
-          return ListView.builder(
-            itemCount: provider.transcriptions.length,
-            itemBuilder: (context, index) {
-              final transcription = provider.transcriptions[index];
-              return TranscriptionItem(transcription: transcription);
-            },
-          );
+          // Show initial state or list of transcriptions
+          if (provider.transcriptions.isEmpty && !provider.isRecording) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text(
+                  'Tap the record button below to start transcribing with the selected model.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            );
+          }
+
+          // Default view: List of existing transcriptions
+          return _buildTranscriptionList(provider);
         },
       ),
       floatingActionButton: Consumer<LocalTranscriptionProvider>(
@@ -229,6 +297,23 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
+    );
+  }
+
+  Widget _buildTranscriptionList(LocalTranscriptionProvider provider) {
+    if (provider.transcriptions.isEmpty) {
+      // Return an empty container or a subtle message if needed when
+      // live streaming is active but no past transcriptions exist.
+      return const SizedBox.shrink();
+    }
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: provider.transcriptions.length,
+      itemBuilder: (context, index) {
+        final transcription = provider.transcriptions[index];
+        return TranscriptionItem(transcription: transcription);
+      },
     );
   }
 }

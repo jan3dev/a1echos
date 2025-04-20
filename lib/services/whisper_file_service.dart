@@ -1,0 +1,81 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:whisper_flutter_new/whisper_flutter_new.dart';
+import 'dart:io';
+
+class WhisperFileService {
+  Whisper? _whisperInstance;
+  bool _isInitialized = false;
+  bool _isInitializing = false;
+  bool _isTranscribing = false;
+
+  Future<bool> initialize() async {
+    if (_isInitialized) return true;
+    if (_isInitializing) {
+      return false;
+    }
+
+    _isInitializing = true;
+
+    try {
+      _whisperInstance = Whisper(model: WhisperModel.base);
+
+      final version = await _whisperInstance?.getVersion();
+      if (version != null) {
+        _isInitialized = true;
+      } else {
+        throw Exception('Whisper getVersion returned null.');
+      }
+    } catch (e) {
+      _whisperInstance = null;
+      _isInitialized = false;
+    } finally {
+      _isInitializing = false;
+    }
+    return _isInitialized;
+  }
+
+  Future<String?> transcribeFile(String audioPath) async {
+    if (!_isInitialized || _whisperInstance == null) {
+      throw Exception('Whisper service/plugin not initialized.');
+    }
+    if (_isTranscribing) {
+      throw Exception('Transcription already in progress.');
+    }
+
+    _isTranscribing = true;
+
+    try {
+      final audioFile = File(audioPath);
+      if (!await audioFile.exists()) {
+        throw Exception('Audio file not found at: $audioPath');
+      }
+
+      final WhisperTranscribeResponse response = await _whisperInstance!
+          .transcribe(
+            transcribeRequest: TranscribeRequest(
+              audio: audioPath,
+              language: 'en',
+              isTranslate: false,
+              isNoTimestamps: true,
+            ),
+          );
+
+      _isTranscribing = false;
+      return response.text;
+    } catch (e) {
+      _isTranscribing = false;
+      throw Exception('Whisper transcription failed: $e');
+    }
+  }
+
+  bool get isInitialized => _isInitialized;
+  bool get isTranscribing => _isTranscribing;
+
+  Future<void> dispose() async {
+    _whisperInstance = null;
+    _isInitialized = false;
+    _isInitializing = false;
+    _isTranscribing = false;
+  }
+}

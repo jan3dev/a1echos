@@ -10,7 +10,7 @@ class RecordingButton extends StatefulWidget {
 }
 
 class _RecordingButtonState extends State<RecordingButton>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
 
   @override
@@ -20,30 +20,10 @@ class _RecordingButtonState extends State<RecordingButton>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
-
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Check model status when app is resumed
-      _refreshModelStatus();
-    }
-  }
-
-  void _refreshModelStatus() {
-    // Nothing to do - model status is checked at provider initialization
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     super.dispose();
   }
@@ -55,15 +35,31 @@ class _RecordingButtonState extends State<RecordingButton>
         final isRecording = provider.isRecording;
         final isTranscribing = provider.isTranscribing;
         final isModelReady = provider.isModelReady;
+        final isLoadingModel = provider.isLoading;
+
+        if (isLoadingModel) {
+          return const FloatingActionButton(
+            onPressed: null,
+            backgroundColor: Colors.grey,
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        }
 
         if (!isModelReady) {
           return FloatingActionButton.extended(
             onPressed: () {
-              _showModelMissingDialog(context);
+              _showModelErrorDialog(context, provider.error);
             },
-            label: const Text('Model Not Found'),
+            label: const Text('Model Error'),
             icon: const Icon(Icons.error_outline),
-            backgroundColor: Colors.amber,
+            backgroundColor: Colors.amber.shade700,
           );
         }
 
@@ -111,14 +107,13 @@ class _RecordingButtonState extends State<RecordingButton>
     );
   }
 
-  void _showModelMissingDialog(BuildContext context) {
+  void _showModelErrorDialog(BuildContext context, String? errorMessage) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Model Initialization Failed'),
-            content: const Text(
-              'The speech recognition model failed to initialize. Please restart the app and try again.',
+      builder: (context) => AlertDialog(
+            title: const Text('Model Not Ready'),
+            content: Text(
+              errorMessage ?? 'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.',
             ),
             actions: [
               TextButton(

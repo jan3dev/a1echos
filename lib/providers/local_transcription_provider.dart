@@ -3,28 +3,37 @@ import 'package:uuid/uuid.dart';
 import '../models/transcription.dart';
 import '../services/storage_service.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
+import '../services/whisper_file_service.dart';
+import '../services/audio_service.dart';
+import '../services/model_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 class LocalTranscriptionProvider with ChangeNotifier {
   final StorageService _storageService = StorageService();
-  final VoskFlutterPlugin _vosk = VoskFlutterPlugin.instance();
-  Model? _model;
-  Recognizer? _recognizer;
-  SpeechService? _speechService;
-  StreamSubscription<String>? _partialSubscription;
-  StreamSubscription<String>? _resultSubscription;
+  final AudioService _audioService = AudioService();
+  final VoskFlutterPlugin _voskPlugin = VoskFlutterPlugin.instance();
+  Model? _voskModel;
+  Recognizer? _voskRecognizer;
+  SpeechService? _voskSpeechService;
+  WhisperFileService? _whisperService;
   final Uuid _uuid = const Uuid();
-
   List<Transcription> _transcriptions = [];
   bool _isRecording = false;
+  bool _isLoading = true;
   bool _isTranscribing = false;
   String? _error;
   bool _isModelInitialized = false;
+  ModelType _selectedModelType = ModelType.vosk;
+  static const String _prefsKeyModelType = 'selected_model_type';
   bool _isStreaming = false;
   String _currentStreamingText = '';
   String _accumulatedText = '';
+  StreamSubscription? _voskPartialSubscription;
+  StreamSubscription? _voskResultSubscription;
 
   List<Transcription> get transcriptions => _transcriptions;
   bool get isRecording => _isRecording;
@@ -33,10 +42,100 @@ class LocalTranscriptionProvider with ChangeNotifier {
   bool get isModelReady => _isModelInitialized;
   String get currentStreamingText => _currentStreamingText;
   bool get isStreaming => _isStreaming;
+  ModelType get selectedModelType => _selectedModelType;
+  bool get isLoading => _isLoading;
 
   LocalTranscriptionProvider() {
-    _loadTranscriptions();
-    _initializeModel();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    _isLoading = true;
+    notifyListeners();
+    await _loadTranscriptions();
+    await _loadSelectedModelType();
+    await _initializeSelectedModel(_selectedModelType);
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> _loadSelectedModelType() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final modelName =
+          prefs.getString(_prefsKeyModelType) ?? ModelType.vosk.name;
+      _selectedModelType = ModelType.values.firstWhere(
+        (e) => e.name == modelName,
+        orElse: () => ModelType.vosk,
+      );
+    } catch (e) {
+      developer.log(
+        'Error loading selected model type: $e',
+        name: 'LocalTranscriptionProvider',
+      );
+      _selectedModelType = ModelType.vosk;
+    }
+  }
+
+  Future<void> _saveSelectedModelType(ModelType type) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKeyModelType, type.name);
+    } catch (e) {
+      developer.log(
+        'Error saving selected model type: $e',
+        name: 'LocalTranscriptionProvider',
+      );
+    }
+  }
+
+  Future<void> changeModel(ModelType newModelType) async {
+    if (_selectedModelType == newModelType && _isModelInitialized) return;
+
+    _isLoading = true;
+    _isModelInitialized = false;
+    _error = null;
+    ModelType previousModelType = _selectedModelType;
+    _selectedModelType = newModelType;
+    notifyListeners();
+
+    try {
+      if (previousModelType == ModelType.whisper) {
+        _whisperService?.dispose();
+        _whisperService = null;
+      } else if (previousModelType == ModelType.vosk) {
+        if (_voskSpeechService != null) {
+          await _voskSpeechService!.dispose();
+        }
+        if (_voskRecognizer != null) {
+          await _voskRecognizer!.dispose();
+        }
+        if (_voskModel != null) {
+          _voskModel!.dispose();
+        }
+        _voskPartialSubscription?.cancel();
+        _voskResultSubscription?.cancel();
+        _voskSpeechService = null;
+        _voskRecognizer = null;
+        _voskModel = null;
+        _voskPartialSubscription = null;
+        _voskResultSubscription = null;
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error during synchronous cleanup attempt: $e',
+        name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+
+    await _saveSelectedModelType(newModelType);
+
+    await _initializeSelectedModel(newModelType);
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   Future<void> _loadTranscriptions() async {
@@ -59,79 +158,311 @@ class LocalTranscriptionProvider with ChangeNotifier {
     await _loadTranscriptions();
   }
 
-  Future<void> _initializeModel() async {
+  Future<void> _initializeSelectedModel(ModelType modelToInitialize) async {
+    _isModelInitialized = false;
+    _isTranscribing = false;
+    _error = null;
+    notifyListeners();
+
     try {
-      _isTranscribing = true;
-      notifyListeners();
+      bool initResult = false;
 
-      final modelPath = await ModelLoader().loadFromAssets(
-        'assets/models/vosk-model-small-en-us-0.15.zip',
-      );
-      _model = await _vosk.createModel(modelPath);
-      _recognizer = await _vosk.createRecognizer(
-        model: _model!,
-        sampleRate: 16000,
-      );
-      _speechService = await _vosk.initSpeechService(_recognizer!);
+      if (modelToInitialize == ModelType.vosk) {
+        final modelPath = await ModelLoader().loadFromAssets(
+          'assets/models/vosk-model-small-en-us-0.15.zip',
+        );
+        _voskModel = await _voskPlugin.createModel(modelPath);
+        if (_voskModel == null)
+          throw Exception("Failed to create Vosk model object");
+        _voskRecognizer = await _voskPlugin.createRecognizer(
+          model: _voskModel!,
+          sampleRate: 16000,
+        );
+        if (_voskRecognizer == null)
+          throw Exception("Failed to create Vosk recognizer");
 
-      _isModelInitialized = _speechService != null;
-      if (!_isModelInitialized) {
-        _error = 'Failed to initialize Vosk plugin';
+        if (Platform.isAndroid) {
+          if (_voskSpeechService != null) {
+          } else {
+            try {
+              _voskSpeechService = await _voskPlugin.initSpeechService(
+                _voskRecognizer!,
+              );
+              initResult = _voskSpeechService != null;
+              if (initResult) {
+                _setupVoskListeners();
+              } else {
+                _error =
+                    'Failed to initialize Vosk Speech Service (returned null).';
+              }
+            } catch (e, stackTrace) {
+              _error =
+                  'Failed to initialize Vosk Speech Service (exception): $e';
+              developer.log(
+                _error!,
+                name: 'LocalTranscriptionProvider',
+                error: e,
+                stackTrace: stackTrace,
+              );
+              initResult = false;
+            }
+          }
+        } else {
+          initResult = true;
+        }
+      } else {
+        if (modelToInitialize == ModelType.whisper) {
+          _whisperService = WhisperFileService();
+          initResult = await _whisperService!.initialize();
+
+          if (!initResult) {
+            _error = 'Failed to initialize Whisper service via plugin.';
+            developer.log(_error!, name: 'LocalTranscriptionProvider');
+          }
+        } else {
+          _error =
+              'State Inconsistency: Tried to initialize Whisper when intended model was $modelToInitialize';
+          developer.log(
+            _error!,
+            name: 'LocalTranscriptionProvider',
+            level: 1000,
+          );
+          initResult = false;
+        }
       }
-    } catch (e) {
-      _error = 'Error initializing model: $e';
+
+      _isModelInitialized = initResult;
+    } catch (e, stackTrace) {
+      _error = 'Error initializing ${modelToInitialize.name} model: $e';
+      developer.log(
+        _error!,
+        name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _isModelInitialized = false;
     } finally {
+      notifyListeners();
+    }
+  }
+
+  void _setupVoskListeners() {
+    if (_voskSpeechService == null) return;
+    _voskPartialSubscription?.cancel();
+    _voskResultSubscription?.cancel();
+    _voskPartialSubscription = _voskSpeechService!.onPartial().listen(
+      (partialJson) {
+        try {
+          final data = jsonDecode(partialJson) as Map<String, dynamic>;
+          final partial = data['partial'] as String? ?? '';
+          if (partial.trim().isEmpty && _accumulatedText.isNotEmpty) return;
+          _currentStreamingText =
+              _accumulatedText.isEmpty ? partial : '$_accumulatedText $partial';
+          notifyListeners();
+        } catch (e) {
+          developer.log(
+            'Error parsing Vosk partial: $e, JSON: $partialJson',
+            name: 'LocalTranscriptionProvider',
+          );
+        }
+      },
+      onError: (e) {
+        developer.log(
+          'Error in Vosk result stream: $e',
+          name: 'LocalTranscriptionProvider',
+        );
+        _error = 'Vosk result stream error: $e';
+        notifyListeners();
+      },
+    );
+
+    _voskResultSubscription = _voskSpeechService!.onResult().listen(
+      (resultJson) {
+        try {
+          final data = jsonDecode(resultJson) as Map<String, dynamic>;
+          final text = data['text'] as String? ?? '';
+
+          if (text.trim().isNotEmpty) {
+            _accumulatedText =
+                _accumulatedText.isEmpty ? text : '$_accumulatedText $text';
+            _currentStreamingText = _accumulatedText;
+            notifyListeners();
+          }
+        } catch (e) {
+          developer.log(
+            'Error parsing Vosk result: $e, JSON: $resultJson',
+            name: 'LocalTranscriptionProvider',
+          );
+        }
+      },
+      onError: (e) {
+        developer.log(
+          'Error in Vosk result stream: $e',
+          name: 'LocalTranscriptionProvider',
+        );
+        _error = 'Vosk result stream error: $e';
+        notifyListeners();
+      },
+    );
+  }
+
+  Future<bool> startRecording() async {
+    _error = null;
+    if (!_isModelInitialized) {
+      _error = 'Model not ready';
+      notifyListeners();
+      return false;
+    }
+    if (_isRecording) {
+      return true;
+    }
+
+    bool success = false;
+    try {
+      if (_selectedModelType == ModelType.vosk) {
+        if (_voskSpeechService == null)
+          throw Exception('Vosk SpeechService not initialized');
+        await _voskSpeechService!.start();
+        success = true;
+        _isStreaming = true;
+        _accumulatedText = '';
+        _currentStreamingText = '';
+      } else {
+        success = await _audioService.startRecording(useStreaming: false);
+        if (!success) {
+          _error = 'Failed to start audio recording for Whisper';
+        }
+      }
+
+      if (success) {
+        _isRecording = true;
+      }
+    } catch (e, stackTrace) {
+      _error = 'Failed to start recording: $e';
+      developer.log(
+        _error!,
+        name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      success = false;
+      _isRecording = false;
+      _isStreaming = false;
+    } finally {
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<void> stopRecordingAndSave() async {
+    if (!_isRecording) return;
+
+    _error = null;
+    _isRecording = false;
+    _isStreaming = false;
+    _isTranscribing = true;
+    notifyListeners();
+
+    try {
+      if (_selectedModelType == ModelType.vosk) {
+        if (_voskSpeechService == null)
+          throw Exception('Vosk SpeechService not available');
+
+        await _voskSpeechService!.stop();
+
+        final resultText = _accumulatedText.trim();
+
+        if (resultText.isEmpty) {
+          _error = 'No speech detected (Vosk)';
+          developer.log(_error!, name: 'LocalTranscriptionProvider');
+        } else {
+          await _saveTranscription(resultText, '');
+        }
+        _accumulatedText = '';
+        _currentStreamingText = '';
+      } else {
+        if (_whisperService == null)
+          throw Exception('Whisper service not available');
+
+        final audioFile = await _audioService.stopRecording();
+
+        if (audioFile == null || !await audioFile.exists()) {
+          _error = 'Failed to get recorded audio file for Whisper';
+          developer.log(_error!, name: 'LocalTranscriptionProvider');
+        } else {
+          final fileSize = await audioFile.length();
+
+          if (fileSize < 1000) {
+            _error = 'Recording too short or empty for Whisper';
+            developer.log(_error!, name: 'LocalTranscriptionProvider');
+          } else {
+            try {
+              final transcriptionText = await _whisperService!.transcribeFile(
+                audioFile.path,
+              );
+
+              if (transcriptionText == null ||
+                  transcriptionText.trim().isEmpty) {
+                _error = 'No speech detected (Whisper)';
+                developer.log(_error!, name: 'LocalTranscriptionProvider');
+              } else {
+                final storedAudioPath = await _storageService.saveAudioFile(
+                  audioFile,
+                  'whisper_${_uuid.v4()}.m4a',
+                );
+                await _saveTranscription(transcriptionText, storedAudioPath);
+              }
+            } catch (e, stackTrace) {
+              _error = 'Whisper transcription failed: $e';
+              developer.log(
+                _error!,
+                name: 'LocalTranscriptionProvider',
+                error: e,
+                stackTrace: stackTrace,
+              );
+            } finally {
+              try {
+                await audioFile.delete();
+              } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (e, stackTrace) {
+      _error = 'Error stopping/saving transcription: $e';
+      developer.log(
+        _error!,
+        name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _isRecording = false;
+      _isStreaming = false;
       _isTranscribing = false;
       notifyListeners();
     }
   }
 
-  Future<bool> startRecording() async {
-    _error = null;
-    if (!_isModelInitialized || _speechService == null) {
-      _error = 'Model not ready';
-      notifyListeners();
-      return false;
-    }
+  Future<void> _saveTranscription(String text, String audioPath) async {
     try {
-      _partialSubscription = _speechService!.onPartial().listen((partialJson) {
-        try {
-          final data = jsonDecode(partialJson) as Map<String, dynamic>;
-          final partial = data['partial'] as String? ?? '';
-          if (partial.trim().isEmpty) return;
-          // Show accumulated text plus new partial
-          _currentStreamingText =
-              _accumulatedText.isEmpty ? partial : '$_accumulatedText $partial';
-          notifyListeners();
-        } catch (_) {}
-      });
-      _resultSubscription = _speechService!.onResult().listen((resultJson) {
-        try {
-          final data = jsonDecode(resultJson) as Map<String, dynamic>;
-          final text = data['text'] as String? ?? '';
-          if (text.trim().isEmpty) return;
-          // Append finished segment
-          _accumulatedText =
-              _accumulatedText.isEmpty ? text : '$_accumulatedText $text';
-          _currentStreamingText = _accumulatedText;
-          notifyListeners();
-        } catch (_) {}
-      });
-      await _speechService!.start();
-      _isRecording = true;
-      _isStreaming = true;
-      // Reset buffers at start
-      _accumulatedText = '';
-      _currentStreamingText = '';
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = 'Failed to start speech service: $e';
-      _isRecording = false;
-      _isStreaming = false;
-      notifyListeners();
-      return false;
+      final formattedText = _formatTranscriptionText(text);
+      final transcription = Transcription(
+        id: _uuid.v4(),
+        text: formattedText,
+        timestamp: DateTime.now(),
+        audioPath: audioPath,
+      );
+      await _storageService.saveTranscription(transcription);
+      await _loadTranscriptions();
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error saving transcription: $e',
+        name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _error = 'Failed to save transcription results';
     }
   }
 
@@ -140,7 +471,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     String normalizedText = text.trim().replaceAll(RegExp(r'\s+'), ' ');
 
-    // Fallback for transcripts without punctuation: split into word-based paragraphs
     if (!RegExp(r'[.?!]').hasMatch(normalizedText)) {
       final words = normalizedText.split(' ');
       const int wordsPerParagraph = 30;
@@ -155,10 +485,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
       return paras.join('\n\n');
     }
 
-    // Look for patterns like "• " or "- " or "1. " etc.
     final bulletRegex = RegExp(r'(?:^|\n|\s)(?:[•\-\*]|\d+\.)\s');
     if (bulletRegex.hasMatch(normalizedText)) {
-      // Insert newlines before bullet points if they don't already have them
       normalizedText = normalizedText.replaceAllMapped(
         RegExp(r'(?<!\n)(?<!\n\s)(?<!\n\n)(\s*)(?:[•\-\*]|\d+\.)\s'),
         (match) => '\n${match.group(1)}${match.group(0)}',
@@ -169,7 +497,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
       return normalizedText;
     }
 
-    // For non-bullet text, use sentence-based formatting
     final List<String> sentences = [];
     String currentSentence = "";
 
@@ -189,7 +516,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
       sentences.add(currentSentence.trim());
     }
 
-    // Build paragraphs (3 sentences per paragraph)
     final List<String> paragraphs = [];
     for (int i = 0; i < sentences.length; i += 3) {
       final int end = i + 3 < sentences.length ? i + 3 : sentences.length;
@@ -198,49 +524,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     }
 
     return paragraphs.join('\n\n');
-  }
-
-  Future<void> stopRecordingAndSave() async {
-    _error = null;
-    if (!_isRecording || _speechService == null) return;
-    try {
-      await _speechService!.stop();
-      // Cancel streaming subscriptions to avoid empty events
-      await _partialSubscription?.cancel();
-      await _resultSubscription?.cancel();
-      _partialSubscription = null;
-      _resultSubscription = null;
-      _isRecording = false;
-      _isStreaming = false;
-      notifyListeners();
-
-      if (_currentStreamingText.trim().isEmpty) {
-        _error = 'No speech detected';
-        notifyListeners();
-        return;
-      }
-
-      _isTranscribing = true;
-      notifyListeners();
-
-      final formattedText = _formatTranscriptionText(_currentStreamingText);
-      final transcription = Transcription(
-        id: _uuid.v4(),
-        text: formattedText,
-        timestamp: DateTime.now(),
-        audioPath: '',
-      );
-      await _storageService.saveTranscription(transcription);
-      await _loadTranscriptions();
-
-      _isTranscribing = false;
-      _currentStreamingText = '';
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to stop service and save: $e';
-      _isTranscribing = false;
-      notifyListeners();
-    }
   }
 
   Future<void> deleteTranscription(String id) async {
@@ -329,7 +612,11 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   @override
   void dispose() {
-    _speechService?.stop();
+    _voskPartialSubscription?.cancel();
+    _voskResultSubscription?.cancel();
+    _voskSpeechService?.stop();
+    _whisperService?.dispose();
+    _audioService.dispose();
     super.dispose();
   }
 }

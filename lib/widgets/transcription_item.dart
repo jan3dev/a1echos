@@ -56,7 +56,6 @@ class TranscriptionItem extends StatelessWidget {
                   );
                 }
               } catch (e) {
-                debugPrint('Error deleting paragraph: $e');
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Failed to delete paragraph')),
