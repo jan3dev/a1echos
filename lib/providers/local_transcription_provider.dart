@@ -11,6 +11,7 @@ import 'dart:developer' as developer;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import '../models/session.dart';
 
 class LocalTranscriptionProvider with ChangeNotifier {
   final StorageService _storageService = StorageService();
@@ -34,6 +35,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
   String _accumulatedText = '';
   StreamSubscription? _voskPartialSubscription;
   StreamSubscription? _voskResultSubscription;
+  static const String _prefsKeySessions = 'sessions';
+  static const String _prefsKeyActiveSession = 'active_session';
+  List<Session> _sessions = [];
+  String _activeSessionId = '';
 
   List<Transcription> get transcriptions => _transcriptions;
   bool get isRecording => _isRecording;
@@ -44,12 +49,19 @@ class LocalTranscriptionProvider with ChangeNotifier {
   bool get isStreaming => _isStreaming;
   ModelType get selectedModelType => _selectedModelType;
   bool get isLoading => _isLoading;
+  List<Session> get sessions => _sessions;
+  String get activeSessionId => _activeSessionId;
+  Session get activeSession =>
+      _sessions.firstWhere((s) => s.id == _activeSessionId);
+  List<Transcription> get sessionTranscriptions =>
+      _transcriptions.where((t) => t.sessionId == _activeSessionId).toList();
 
   LocalTranscriptionProvider() {
     _initialize();
   }
 
   Future<void> _initialize() async {
+    await _loadSessions();
     _isLoading = true;
     notifyListeners();
     await _loadTranscriptions();
@@ -172,14 +184,16 @@ class LocalTranscriptionProvider with ChangeNotifier {
           'assets/models/vosk-model-small-en-us-0.15.zip',
         );
         _voskModel = await _voskPlugin.createModel(modelPath);
-        if (_voskModel == null)
+        if (_voskModel == null) {
           throw Exception("Failed to create Vosk model object");
+        }
         _voskRecognizer = await _voskPlugin.createRecognizer(
           model: _voskModel!,
           sampleRate: 16000,
         );
-        if (_voskRecognizer == null)
+        if (_voskRecognizer == null) {
           throw Exception("Failed to create Vosk recognizer");
+        }
 
         if (Platform.isAndroid) {
           if (_voskSpeechService != null) {
@@ -320,8 +334,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
     bool success = false;
     try {
       if (_selectedModelType == ModelType.vosk) {
-        if (_voskSpeechService == null)
+        if (_voskSpeechService == null) {
           throw Exception('Vosk SpeechService not initialized');
+        }
         await _voskSpeechService!.start();
         success = true;
         _isStreaming = true;
@@ -365,8 +380,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     try {
       if (_selectedModelType == ModelType.vosk) {
-        if (_voskSpeechService == null)
+        if (_voskSpeechService == null) {
           throw Exception('Vosk SpeechService not available');
+        }
 
         await _voskSpeechService!.stop();
 
@@ -381,8 +397,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _accumulatedText = '';
         _currentStreamingText = '';
       } else {
-        if (_whisperService == null)
+        if (_whisperService == null) {
           throw Exception('Whisper service not available');
+        }
 
         final audioFile = await _audioService.stopRecording();
 
@@ -449,6 +466,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
       final formattedText = _formatTranscriptionText(text);
       final transcription = Transcription(
         id: _uuid.v4(),
+        sessionId: _activeSessionId,
         text: formattedText,
         timestamp: DateTime.now(),
         audioPath: audioPath,
@@ -588,6 +606,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
       final newTranscription = Transcription(
         id: transcription.id,
+        sessionId: transcription.sessionId,
         text: newText,
         timestamp: transcription.timestamp,
         audioPath: transcription.audioPath,
@@ -608,6 +627,99 @@ class LocalTranscriptionProvider with ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  Future<void> _loadSessions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionsJson = prefs.getString(_prefsKeySessions);
+    if (sessionsJson != null) {
+      final List<dynamic> list = jsonDecode(sessionsJson);
+      _sessions = list.map((m) => Session.fromJson(m)).toList();
+    } else {
+      _sessions = [
+        Session(
+          id: 'default_session',
+          name: 'Default',
+          timestamp: DateTime.now(),
+        ),
+      ];
+      await _saveSessions();
+    }
+    final active = prefs.getString(_prefsKeyActiveSession);
+    if (active != null && _sessions.any((s) => s.id == active)) {
+      _activeSessionId = active;
+    } else {
+      _activeSessionId = _sessions.first.id;
+      await _saveActiveSession();
+    }
+  }
+
+  Future<void> _saveSessions() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _prefsKeySessions,
+      jsonEncode(_sessions.map((s) => s.toJson()).toList()),
+    );
+  }
+
+  Future<void> _saveActiveSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKeyActiveSession, _activeSessionId);
+  }
+
+  Future<void> createSession(String name) async {
+    final session = Session(
+      id: _uuid.v4(),
+      name: name,
+      timestamp: DateTime.now(),
+    );
+    _sessions.add(session);
+    notifyListeners();
+    await _saveSessions();
+  }
+
+  Future<void> renameSession(String id, String newName) async {
+    final idx = _sessions.indexWhere((s) => s.id == id);
+    if (idx >= 0) {
+      _sessions[idx].name = newName;
+      notifyListeners();
+      await _saveSessions();
+    }
+  }
+
+  Future<void> switchSession(String id) async {
+    if (_sessions.any((s) => s.id == id)) {
+      _activeSessionId = id;
+      notifyListeners();
+      await _saveActiveSession();
+    }
+  }
+
+  Future<void> deleteSession(String id) async {
+    if (_sessions.length <= 1) return;
+    _sessions.removeWhere((s) => s.id == id);
+    _transcriptions = _transcriptions.where((t) => t.sessionId != id).toList();
+    await _saveSessions();
+    if (_activeSessionId == id) {
+      _activeSessionId = _sessions.first.id;
+      await _saveActiveSession();
+    }
+    await _storageService.clearTranscriptions();
+    for (final t in _transcriptions) {
+      await _storageService.saveTranscription(t);
+    }
+    notifyListeners();
+  }
+
+  Future<void> clearTranscriptionsForSession(String sessionId) async {
+    final remaining =
+        _transcriptions.where((t) => t.sessionId != sessionId).toList();
+    _transcriptions = remaining;
+    await _storageService.clearTranscriptions();
+    for (final t in remaining) {
+      await _storageService.saveTranscription(t);
+    }
+    notifyListeners();
   }
 
   @override

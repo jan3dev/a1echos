@@ -3,11 +3,10 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 # Transcription App Project Requirements Document (PRD)
 
 ## Overview
-A Flutter-based mobile application that transcribes audio to text using OpenAI's transcriptions API. The app provides a simple, chat-like interface for users to record, view, and manage transcriptions.
+A Flutter-based mobile application that performs offline speech-to-text transcription using local models (Vosk for real-time streaming and Whisper for post-recording higher accuracy). The app provides a simple, chat-like interface for users to record, view, and manage transcriptions.
 
 ## Target Platform
 - Initial focus: Android APK for testing
@@ -16,12 +15,16 @@ A Flutter-based mobile application that transcribes audio to text using OpenAI's
 ## Core Features
 
 ### Authentication
-- One-time setup requiring user's OpenAI API key
 - No account creation required
+
+### Model Selection
+- Choose between Vosk (real-time streaming transcription) and Whisper (post-recording, high-accuracy transcription)
+- All processing happens on device; no API key or internet connection required
 
 ### Audio Recording & Transcription
 - Record button at bottom of screen for audio capture
-- Real-time transcription using OpenAI's API
+- Vosk model: live streaming transcription while recording
+- Whisper model: processes audio after recording stops for higher accuracy
 - Automatic paragraph breaks for long speech segments
 
 ### Transcription Management
@@ -30,16 +33,20 @@ A Flutter-based mobile application that transcribes audio to text using OpenAI's
 - Swipe-to-delete gesture for individual transcription blocks
 - "Clear All" button to remove all transcriptions
 - "Copy All" button to copy entire transcript
+- Session Organizer: group transcriptions into named sessions
+- Create, rename, delete, and switch between sessions
+- Unlimited transcriptions per session
 
 ### Data Storage
-- All data stored locally on device
+- All transcription data stored and encrypted at rest locally on device
 - No external database or cloud storage required
-- API key securely stored on device
+- Sessions and their transcriptions are stored (and encrypted) locally
+- Session state (active session) is remembered across app restarts
 
 ### Settings
 - Simple settings menu
-- Add/Edit/Remove OpenAI API key
-- Basic app preferences (if needed)
+- Select transcription model (Vosk or Whisper) and view model initialization status
+- (Optional) Basic app preferences
 
 ## UI/UX Requirements
 - Clean, minimalistic interface
@@ -48,15 +55,25 @@ A Flutter-based mobile application that transcribes audio to text using OpenAI's
 - Intuitive gesture controls
 - Visual feedback during recording process
 - Error messaging for API issues
+- Hideable sidebar for session navigation
+- “New Session” button in the sidebar
+- Long‑press to rename and swipe‑to‑delete sessions
 
 ## Technical Requirements
 - Flutter framework
-- OpenAI Transcriptions API integration
 - Local secure storage for API key
 - Audio recording capabilities
 - Clipboard integration
 
 ## Success Criteria
+- Simple user setup process
+- Accurate transcription results
+- Fast response time
+- Intuitive UI requiring minimal user training
+- Users can manage sessions (create/rename/delete) within the sidebar
+- Switching sessions immediately filters the displayed transcript
+- Sessions (and their contents) persist after quitting and relaunch
+
 - Simple user setup process
 - Accurate transcription results
 - Fast response time

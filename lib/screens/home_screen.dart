@@ -7,6 +7,7 @@ import '../widgets/recording_button.dart';
 import '../widgets/transcription_item.dart';
 import 'settings_screen.dart';
 import 'dart:developer' as developer;
+import '../models/session.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,9 +62,156 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _showCreateSessionDialog(
+    BuildContext context,
+    LocalTranscriptionProvider provider,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('New Session'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'Session name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final name = controller.text.trim();
+                  if (name.isNotEmpty) {
+                    provider.createSession(name);
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Create'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showRenameSessionDialog(
+    BuildContext context,
+    LocalTranscriptionProvider provider,
+    Session session,
+  ) {
+    final controller = TextEditingController(text: session.name);
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Rename Session'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'New name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final newName = controller.text.trim();
+                  if (newName.isNotEmpty) {
+                    provider.renameSession(session.id, newName);
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Rename'),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: Consumer<LocalTranscriptionProvider>(
+          builder: (context, provider, child) {
+            return Column(
+              children: [
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      'Sessions',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: provider.sessions.length,
+                    itemBuilder: (context, index) {
+                      final session = provider.sessions[index];
+                      final isActive = session.id == provider.activeSessionId;
+                      return ListTile(
+                        title: Text(
+                          session.name,
+                          style:
+                              isActive
+                                  ? const TextStyle(fontWeight: FontWeight.bold)
+                                  : null,
+                        ),
+                        onTap: () {
+                          provider.switchSession(session.id);
+                          Navigator.pop(context);
+                        },
+                        onLongPress:
+                            () => _showRenameSessionDialog(
+                              context,
+                              provider,
+                              session,
+                            ),
+                        trailing:
+                            provider.sessions.length > 1
+                                ? IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () {
+                                    provider.deleteSession(session.id);
+                                    if (Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                                )
+                                : null,
+                      );
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add),
+                  title: const Text('New Session'),
+                  onTap: () {
+                    _showCreateSessionDialog(
+                      context,
+                      Provider.of<LocalTranscriptionProvider>(
+                        context,
+                        listen: false,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ),
       appBar: AppBar(
         title: const Text('Transcription App'),
         actions: [
@@ -189,7 +337,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Show error state
           if (provider.error != null) {
             return Center(
               child: Padding(
@@ -228,8 +375,8 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Show initial state or list of transcriptions
-          if (provider.transcriptions.isEmpty && !provider.isRecording) {
+          // Show initial state or list of transcriptions for active session
+          if (provider.sessionTranscriptions.isEmpty && !provider.isRecording) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24.0),
@@ -242,7 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Default view: List of existing transcriptions
           return _buildTranscriptionList(provider);
         },
       ),
@@ -270,14 +416,14 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       listen: false,
     );
-    if (provider.transcriptions.isEmpty) {
+    if (provider.sessionTranscriptions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No transcriptions to copy')),
       );
       return;
     }
 
-    final text = provider.transcriptions.map((t) => t.text).join('\n\n');
+    final text = provider.sessionTranscriptions.map((t) => t.text).join('\n\n');
 
     Clipboard.setData(ClipboardData(text: text));
 
@@ -291,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       listen: false,
     );
-    if (provider.transcriptions.isEmpty) {
+    if (provider.sessionTranscriptions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No transcriptions to clear')),
       );
@@ -302,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Clear all transcriptions?'),
+            title: const Text('Clear all transcriptions for this session?'),
             content: const Text('This action cannot be undone.'),
             actions: [
               TextButton(
@@ -311,10 +457,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  provider.clearTranscriptions();
+                  provider.clearTranscriptionsForSession(
+                    provider.activeSessionId,
+                  );
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All transcriptions cleared')),
+                    const SnackBar(
+                      content: Text(
+                        'All transcriptions cleared for this session',
+                      ),
+                    ),
                   );
                 },
                 child: const Text('Clear'),
@@ -325,17 +477,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTranscriptionList(LocalTranscriptionProvider provider) {
-    if (provider.transcriptions.isEmpty) {
-      // Return an empty container or a subtle message if needed when
-      // live streaming is active but no past transcriptions exist.
+    if (provider.sessionTranscriptions.isEmpty) {
       return const SizedBox.shrink();
     }
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 80),
-      itemCount: provider.transcriptions.length,
+      itemCount: provider.sessionTranscriptions.length,
       itemBuilder: (context, index) {
-        final transcription = provider.transcriptions[index];
+        final transcription = provider.sessionTranscriptions[index];
         return TranscriptionItem(transcription: transcription);
       },
     );
