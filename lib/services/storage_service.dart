@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
 import '../models/transcription.dart';
+import 'encryption_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 class StorageService {
   static const String _fileName = 'transcriptions.json';
@@ -16,23 +18,32 @@ class StorageService {
     return File('$path/$_fileName');
   }
 
+  final _encryptor = EncryptionService();
+
   Future<List<Transcription>> getTranscriptions() async {
+    final file = await _localFile;
+    if (!await file.exists()) return [];
+
+    final encrypted = await file.readAsString();
+    if (encrypted.isEmpty) return [];
+
     try {
-      final file = await _localFile;
-      if (!await file.exists()) {
-        return [];
-      }
-
-      final contents = await file.readAsString();
-      if (contents.isEmpty) {
-        return [];
-      }
-
-      final List<dynamic> jsonList = json.decode(contents);
-      return jsonList.map((json) => Transcription.fromJson(json)).toList();
+      // 1) decrypt the JSON
+      final jsonString = await _encryptor.decrypt(encrypted);
+      final List<dynamic> jsonList = json.decode(jsonString);
+      return jsonList.map((m) => Transcription.fromJson(m)).toList();
     } catch (e) {
+      await file.delete();
       return [];
     }
+  }
+
+  Future<void> _saveTranscriptions(List<Transcription> list) async {
+    final file = await _localFile;
+    final rawJson = json.encode(list.map((t) => t.toJson()).toList());
+    // 2) encrypt before writing
+    final encrypted = await _encryptor.encrypt(rawJson);
+    await file.writeAsString(encrypted);
   }
 
   Future<void> saveTranscription(Transcription transcription) async {
@@ -49,12 +60,6 @@ class StorageService {
 
   Future<void> clearTranscriptions() async {
     await _saveTranscriptions([]);
-  }
-
-  Future<void> _saveTranscriptions(List<Transcription> transcriptions) async {
-    final file = await _localFile;
-    final jsonList = transcriptions.map((item) => item.toJson()).toList();
-    await file.writeAsString(json.encode(jsonList));
   }
 
   Future<String> saveAudioFile(File audioFile, String fileName) async {
