@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 // Common constants for recording durations and text formatting
 class AppConstants {
   // Maximum recording duration before auto-stopping
@@ -51,12 +49,9 @@ class AppStrings {
   static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
   static const String retryInitialization = 'Retry Initialization';
-}
-
-/// UI Colors
-class AppColors {
-  // ... existing colors ...
-
-  /// Color for the audio wave visualization from Figma
-  static const Color audioWaveColor = Color(0xFFE92424);
+  
+  // Model error dialog
+  static const String modelNotReady = 'Model Not Ready';
+  static const String modelInitFailure = 'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.';
+  static const String ok = 'OK';
 }

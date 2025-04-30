@@ -23,6 +23,7 @@ dependencies:
   vosk_flutter: ^0.3.48
   shared_preferences: ^2.2.3
   whisper_flutter_new: ^1.0.1
+  flutter_svg: ^2.0.7
   ui_components:
     git:
       url: https://github.com/jan3dev/aqua-design-system.git
@@ -39,6 +40,7 @@ flutter:
   assets:
     - assets/models/
     - assets/fonts/
+    - assets/icon/
   fonts:
     - family: RobotoMono
       fonts:

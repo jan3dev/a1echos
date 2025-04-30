@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
-import '../constants/app_constants.dart';
 
 class AudioWaveVisualization extends StatefulWidget {
   final TranscriptionState state;
@@ -117,7 +117,7 @@ class _AudioBar extends StatelessWidget {
       width: 4,
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.audioWaveColor,
+        color: AquaColors.lightColors.accentDanger,
         borderRadius: BorderRadius.circular(4),
       ),
     );

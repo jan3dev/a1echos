@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
-import '../models/model_type.dart';
+import '../constants/app_constants.dart';
 
 class RecordingButton extends StatefulWidget {
   const RecordingButton({super.key});
@@ -31,68 +33,118 @@ class _RecordingButtonState extends State<RecordingButton>
 
   @override
   Widget build(BuildContext context) {
+    final aquaColors = AquaColors.lightColors;
+
     return Consumer<LocalTranscriptionProvider>(
       builder: (context, provider, child) {
-        // Drive the button UI from the unified state
         switch (provider.state) {
           case TranscriptionState.loading:
           case TranscriptionState.transcribing:
-            return const FloatingActionButton(
-              onPressed: null,
-              backgroundColor: Colors.grey,
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+            return Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: aquaColors.surfaceSecondary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 16,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: AquaIndefinateProgressIndicator(
+                    color: aquaColors.textPrimary,
+                  ),
                 ),
               ),
             );
           case TranscriptionState.error:
-            return FloatingActionButton.extended(
-              onPressed: () {
-                _showModelErrorDialog(context, provider.error);
-              },
-              label: const Text('Model Error'),
-              icon: const Icon(Icons.error_outline),
-              backgroundColor: Colors.amber.shade700,
+            return Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: aquaColors.accentDanger,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: () {
+                  _showModelErrorDialog(context, provider.error);
+                },
+                icon: Icon(Icons.error_outline, color: aquaColors.textInverse),
+              ),
             );
           case TranscriptionState.recording:
-            // Simplify animation when using Whisper since we have the audio wave
-            if (provider.selectedModelType == ModelType.whisper) {
-              return FloatingActionButton(
+            return Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: aquaColors.accentDanger,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: aquaColors.accentDanger.withOpacity(0.3),
+                    blurRadius: 24,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: IconButton(
                 onPressed: () {
                   provider.stopRecordingAndSave();
                 },
-                backgroundColor: Colors.red,
-                child: const Icon(Icons.stop),
-              );
-            } else {
-              // For other models, keep the original animation
-              return FloatingActionButton(
-                onPressed: () {
-                  provider.stopRecordingAndSave();
-                },
-                backgroundColor: Colors.red,
-                child: AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 0.8 + (_animationController.value * 0.2),
-                      child: child,
-                    );
-                  },
-                  child: const Icon(Icons.stop),
+                icon: SvgPicture.asset(
+                  'assets/icon/rectangle.svg',
+                  width: 14,
+                  height: 14,
+                  colorFilter: ColorFilter.mode(
+                    aquaColors.textInverse,
+                    BlendMode.srcIn,
+                  ),
                 ),
-              );
-            }
+              ),
+            );
           case TranscriptionState.ready:
-            return FloatingActionButton(
-              onPressed: () {
-                provider.startRecording();
-              },
-              child: const Icon(Icons.mic),
+            return Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: aquaColors.surfaceInverse,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: () {
+                  provider.startRecording();
+                },
+                icon: SvgPicture.asset(
+                  'assets/icon/mic.svg',
+                  width: 24,
+                  height: 24,
+                  colorFilter: ColorFilter.mode(
+                    aquaColors.textInverse,
+                    BlendMode.srcIn,
+                  ),
+                ),
+              ),
             );
         }
       },
@@ -104,15 +156,12 @@ class _RecordingButtonState extends State<RecordingButton>
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Model Not Ready'),
-            content: Text(
-              errorMessage ??
-                  'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.',
-            ),
+            title: Text(AppStrings.modelNotReady),
+            content: Text(errorMessage ?? AppStrings.modelInitFailure),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                child: Text(AppStrings.ok),
               ),
             ],
           ),

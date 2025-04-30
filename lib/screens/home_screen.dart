@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../models/model_type.dart';
@@ -202,12 +204,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(
+                              SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.audioWaveColor,
+                                child: AquaIndefinateProgressIndicator(
+                                  color: AquaColors.lightColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -239,13 +240,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Center(
                           child:
                               provider.state == TranscriptionState.recording
-                                  ? FloatingActionButton(
-                                    onPressed: () {
-                                      provider.stopRecordingAndSave();
-                                    },
-                                    backgroundColor: Colors.red,
-                                    child: const Icon(Icons.stop),
-                                  )
+                                  ? Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        color: AquaColors.lightColors.accentDanger,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AquaColors.lightColors.accentDanger.withOpacity(0.3),
+                                            blurRadius: 24,
+                                            offset: const Offset(0, 0),
+                                          ),
+                                        ],
+                                      ),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          provider.stopRecordingAndSave();
+                                        },
+                                        icon: SvgPicture.asset(
+                                          'assets/icon/rectangle.svg',
+                                          width: 14,
+                                          height: 14,
+                                          colorFilter: ColorFilter.mode(
+                                            AquaColors.lightColors.textInverse,
+                                            BlendMode.srcIn,
+                                          ),
+                                        ),
+                                      ),
+                                    )
                                   : const RecordingButton(),
                         ),
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui_components/ui_components.dart';
 
 /// Widget that shows a loading indicator with a message during transcription processing.
 class ProcessingView extends StatelessWidget {
@@ -12,7 +13,9 @@ class ProcessingView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          AquaIndefinateProgressIndicator(
+            color: AquaColors.lightColors.textPrimary,
+          ),
           const SizedBox(height: 16),
           Text(
             message,
