@@ -5,6 +5,7 @@ import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../models/model_type.dart';
 import '../widgets/recording_button.dart';
+import '../widgets/audio_wave_visualization.dart';
 import 'settings_screen.dart';
 import 'dart:developer' as developer;
 import '../widgets/session_drawer.dart';
@@ -124,51 +125,138 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      body: Consumer<LocalTranscriptionProvider>(
-        builder: (context, provider, child) {
-          // Drive UI off the consolidated state
-          switch (provider.state) {
-            case TranscriptionState.loading:
-              return ProcessingView(message: AppStrings.loading);
-            case TranscriptionState.recording:
-              if (provider.selectedModelType == ModelType.vosk) {
-                return LiveTranscriptionView(controller: _scrollController);
-              }
-              break;
-            case TranscriptionState.transcribing:
-              final message =
-                  provider.selectedModelType == ModelType.whisper
-                      ? AppStrings.processingWhisper
-                      : AppStrings.processingTranscription;
-              return ProcessingView(message: message);
-            case TranscriptionState.error:
-              return ErrorView(
-                errorMessage: provider.error!,
-                onRetry: () => provider.changeModel(provider.selectedModelType),
-              );
-            case TranscriptionState.ready:
-              break;
-          }
-          // default: show empty state or transcription list
-          return TranscriptionContentView(controller: _scrollController);
-        },
-      ),
-      floatingActionButton: Consumer<LocalTranscriptionProvider>(
-        builder: (context, provider, _) {
-          if (provider.state == TranscriptionState.recording) {
-            return FloatingActionButton(
-              onPressed: () {
-                provider.stopRecordingAndSave();
+      body: Stack(
+        children: [
+          Positioned.fill(
+            bottom: 120,
+            child: Consumer<LocalTranscriptionProvider>(
+              builder: (context, provider, child) {
+                switch (provider.state) {
+                  case TranscriptionState.loading:
+                    return ProcessingView(message: AppStrings.loading);
+                  case TranscriptionState.recording:
+                    if (provider.selectedModelType == ModelType.vosk) {
+                      return LiveTranscriptionView(
+                        controller: _scrollController,
+                      );
+                    }
+                    break;
+                  case TranscriptionState.transcribing:
+                    if (provider.selectedModelType != ModelType.whisper) {
+                      return ProcessingView(
+                        message: AppStrings.processingTranscription,
+                      );
+                    }
+                    return const SizedBox();
+                  case TranscriptionState.error:
+                    return ErrorView(
+                      errorMessage: provider.error!,
+                      onRetry:
+                          () =>
+                              provider.changeModel(provider.selectedModelType),
+                    );
+                  case TranscriptionState.ready:
+                    break;
+                }
+                return TranscriptionContentView(controller: _scrollController);
               },
-              backgroundColor: Colors.red,
-              child: const Icon(Icons.stop),
-            );
-          }
+            ),
+          ),
 
-          return const RecordingButton();
-        },
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Consumer<LocalTranscriptionProvider>(
+              builder: (context, provider, _) {
+                final bool showAudioWave =
+                    provider.selectedModelType == ModelType.whisper &&
+                    (provider.state == TranscriptionState.recording ||
+                        provider.state == TranscriptionState.transcribing);
+
+                final bool isTranscribing =
+                    provider.state == TranscriptionState.transcribing;
+
+                return Container(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(128, 255, 255, 255),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromARGB(13, 0, 0, 0),
+                        blurRadius: 8,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isTranscribing &&
+                          provider.selectedModelType == ModelType.whisper)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.audioWaveColor,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppStrings.transcribingStatus,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (showAudioWave)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: AudioWaveVisualization(
+                            state: provider.state,
+                            modelType: provider.selectedModelType,
+                          ),
+                        ),
+
+                      SizedBox(
+                        height: 80,
+                        child: Center(
+                          child:
+                              provider.state == TranscriptionState.recording
+                                  ? FloatingActionButton(
+                                    onPressed: () {
+                                      provider.stopRecordingAndSave();
+                                    },
+                                    backgroundColor: Colors.red,
+                                    child: const Icon(Icons.stop),
+                                  )
+                                  : const RecordingButton(),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 

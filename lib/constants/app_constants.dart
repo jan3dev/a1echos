@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 // Common constants for recording durations and text formatting
 class AppConstants {
   // Maximum recording duration before auto-stopping
@@ -21,8 +23,7 @@ class AppStrings {
   // Standard UI labels
   static const String loading = 'Loading...';
   static const String processingTranscription = 'Processing transcription...';
-  static const String processingWhisper =
-      'Processing Whisper transcription (this may take a moment)...';
+  static const String transcribingStatus = 'Transcribing...';
   static const String liveTranscriptionTitle = 'Live Transcription';
   static const String speakNow = 'Speak now...';
   static const String encryptedAtRest = 'Encrypted at rest';
@@ -50,4 +51,12 @@ class AppStrings {
   static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
   static const String retryInitialization = 'Retry Initialization';
+}
+
+/// UI Colors
+class AppColors {
+  // ... existing colors ...
+
+  /// Color for the audio wave visualization from Figma
+  static const Color audioWaveColor = Color(0xFFE92424);
 }

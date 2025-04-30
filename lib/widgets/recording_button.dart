@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/local_transcription_provider.dart';
+import '../models/model_type.dart';
 
 class RecordingButton extends StatefulWidget {
   const RecordingButton({super.key});
@@ -58,22 +59,34 @@ class _RecordingButtonState extends State<RecordingButton>
               backgroundColor: Colors.amber.shade700,
             );
           case TranscriptionState.recording:
-            return FloatingActionButton(
-              onPressed: () {
-                provider.stopRecordingAndSave();
-              },
-              backgroundColor: Colors.red,
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: 0.8 + (_animationController.value * 0.2),
-                    child: child,
-                  );
+            // Simplify animation when using Whisper since we have the audio wave
+            if (provider.selectedModelType == ModelType.whisper) {
+              return FloatingActionButton(
+                onPressed: () {
+                  provider.stopRecordingAndSave();
                 },
+                backgroundColor: Colors.red,
                 child: const Icon(Icons.stop),
-              ),
-            );
+              );
+            } else {
+              // For other models, keep the original animation
+              return FloatingActionButton(
+                onPressed: () {
+                  provider.stopRecordingAndSave();
+                },
+                backgroundColor: Colors.red,
+                child: AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: 0.8 + (_animationController.value * 0.2),
+                      child: child,
+                    );
+                  },
+                  child: const Icon(Icons.stop),
+                ),
+              );
+            }
           case TranscriptionState.ready:
             return FloatingActionButton(
               onPressed: () {
