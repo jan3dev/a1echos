@@ -54,4 +54,16 @@ class AppStrings {
   static const String modelNotReady = 'Model Not Ready';
   static const String modelInitFailure = 'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.';
   static const String ok = 'OK';
+
+  // Settings Screen
+  static const String settingsTitle = 'Settings';
+  static const String transcriptionModelTitle = 'Transcription Model';
+  static const String transcriptionModelDescription =
+      'Select which model to use. All processing happens on your device.';
+  static const String voskModelTitle = 'Vosk (Small EN)';
+  static const String voskModelSubtitle =
+      'Faster, real-time streaming transcription. Good for general use.';
+  static const String whisperModelTitle = 'Whisper (Base EN)';
+  static const String whisperModelSubtitle =
+      'Higher accuracy, processes audio after recording stops (no streaming).';
 }
