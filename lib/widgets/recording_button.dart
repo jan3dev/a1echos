@@ -6,7 +6,25 @@ import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
 
 class RecordingButton extends StatefulWidget {
-  const RecordingButton({super.key});
+  /// Callback that gets triggered when recording is started
+  final VoidCallback? onRecordingStart;
+
+  /// Callback that gets triggered when recording is stopped
+  final VoidCallback? onRecordingStop;
+
+  /// Whether the button should show in recording state
+  final bool isRecording;
+
+  /// Whether to use the provider for state or rely on passed parameters
+  final bool useProviderState;
+
+  const RecordingButton({
+    super.key,
+    this.onRecordingStart,
+    this.onRecordingStop,
+    this.isRecording = false,
+    this.useProviderState = true,
+  });
 
   @override
   State<RecordingButton> createState() => _RecordingButtonState();
@@ -35,120 +53,144 @@ class _RecordingButtonState extends State<RecordingButton>
   Widget build(BuildContext context) {
     final aquaColors = AquaColors.lightColors;
 
-    return Consumer<LocalTranscriptionProvider>(
-      builder: (context, provider, child) {
-        switch (provider.state) {
-          case TranscriptionState.loading:
-          case TranscriptionState.transcribing:
-            return Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: aquaColors.surfaceSecondary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 16,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
+    if (widget.useProviderState) {
+      return Consumer<LocalTranscriptionProvider>(
+        builder: (context, provider, child) {
+          return _buildButtonForState(provider.state, aquaColors, provider);
+        },
+      );
+    } else {
+      final state =
+          widget.isRecording
+              ? TranscriptionState.recording
+              : TranscriptionState.ready;
+      return _buildButtonForState(state, aquaColors, null);
+    }
+  }
+
+  Widget _buildButtonForState(
+    TranscriptionState state,
+    AquaColors colors,
+    LocalTranscriptionProvider? provider,
+  ) {
+    switch (state) {
+      case TranscriptionState.loading:
+      case TranscriptionState.transcribing:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.surfaceSecondary,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 16,
+                offset: const Offset(0, 0),
               ),
-              child: Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: AquaIndefinateProgressIndicator(
-                    color: aquaColors.textPrimary,
-                  ),
-                ),
+            ],
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: AquaIndefinateProgressIndicator(color: colors.textPrimary),
+            ),
+          ),
+        );
+      case TranscriptionState.error:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.accentDanger,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 0),
               ),
-            );
-          case TranscriptionState.error:
-            return Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: aquaColors.accentDanger,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
+            ],
+          ),
+          child: IconButton(
+            onPressed: () {
+              if (provider != null) {
+                _showModelErrorDialog(context, provider.error);
+              }
+            },
+            icon: Icon(Icons.error_outline, color: colors.textInverse),
+          ),
+        );
+      case TranscriptionState.recording:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.accentDanger,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colors.accentDanger.withOpacity(0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 0),
               ),
-              child: IconButton(
-                onPressed: () {
-                  _showModelErrorDialog(context, provider.error);
-                },
-                icon: Icon(Icons.error_outline, color: aquaColors.textInverse),
+            ],
+          ),
+          child: IconButton(
+            onPressed: () {
+              if (widget.onRecordingStop != null) {
+                widget.onRecordingStop!();
+              } else if (provider != null) {
+                provider.stopRecordingAndSave();
+              }
+            },
+            icon: SvgPicture.asset(
+              'assets/icon/rectangle.svg',
+              width: 14,
+              height: 14,
+              colorFilter: ColorFilter.mode(
+                colors.textInverse,
+                BlendMode.srcIn,
               ),
-            );
-          case TranscriptionState.recording:
-            return Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: aquaColors.accentDanger,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: aquaColors.accentDanger.withOpacity(0.3),
-                    blurRadius: 24,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
+            ),
+          ),
+        );
+      case TranscriptionState.ready:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.surfaceInverse,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 0),
               ),
-              child: IconButton(
-                onPressed: () {
-                  provider.stopRecordingAndSave();
-                },
-                icon: SvgPicture.asset(
-                  'assets/icon/rectangle.svg',
-                  width: 14,
-                  height: 14,
-                  colorFilter: ColorFilter.mode(
-                    aquaColors.textInverse,
-                    BlendMode.srcIn,
-                  ),
-                ),
+            ],
+          ),
+          child: IconButton(
+            onPressed: () {
+              if (widget.onRecordingStart != null) {
+                widget.onRecordingStart!();
+              } else if (provider != null) {
+                provider.startRecording();
+              }
+            },
+            icon: SvgPicture.asset(
+              'assets/icon/mic.svg',
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                colors.textInverse,
+                BlendMode.srcIn,
               ),
-            );
-          case TranscriptionState.ready:
-            return Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: aquaColors.surfaceInverse,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: () {
-                  provider.startRecording();
-                },
-                icon: SvgPicture.asset(
-                  'assets/icon/mic.svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter: ColorFilter.mode(
-                    aquaColors.textInverse,
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ),
-            );
-        }
-      },
-    );
+            ),
+          ),
+        );
+    }
   }
 
   void _showModelErrorDialog(BuildContext context, String? errorMessage) {

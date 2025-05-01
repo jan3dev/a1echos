@@ -6,6 +6,12 @@
 - [ ] Document main application flow
 - [ ] Explore providers implementation
 - [ ] Investigate transcription model integration
+- [ ] Create diagram of provider relationships
+- [ ] Analyze Vosk and Whisper service implementations
+- [ ] Map out the audio recording and transcription process flow
+- [ ] Document error handling patterns
+- [ ] Examine UI component architecture
+- [ ] Explore session-based transcription filtering
 
 ## In Progress
 - [ ] Explore SessionProvider and LocalTranscriptionProvider implementation

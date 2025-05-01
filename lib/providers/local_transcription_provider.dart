@@ -310,15 +310,19 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   Future<void> _saveTranscription(String text, String audioPath) async {
     try {
+      final sessionId = sessionProvider.activeSessionId;
       final formattedText = TranscriptionFormatter.format(text);
       final transcription = Transcription(
         id: _uuid.v4(),
-        sessionId: sessionProvider.activeSessionId,
+        sessionId: sessionId,
         text: formattedText,
         timestamp: DateTime.now(),
         audioPath: audioPath,
       );
       await _repository.saveTranscription(transcription);
+
+      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+
       await _loadTranscriptions();
     } catch (e, stackTrace) {
       developer.log(
@@ -334,7 +338,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
   Future<void> deleteTranscription(String id) async {
     _errorMessage = null;
     try {
+      final transcription = _transcriptions.firstWhere((t) => t.id == id);
+      final sessionId = transcription.sessionId;
+
       await _repository.deleteTranscription(id);
+
+      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+
       await _loadTranscriptions();
     } catch (e) {
       _errorMessage = 'Failed to delete transcription';
@@ -368,11 +378,17 @@ class LocalTranscriptionProvider with ChangeNotifier {
     int paragraphIndex,
   ) async {
     try {
+      final transcription = _transcriptions.firstWhere((t) => t.id == id);
+      final sessionId = transcription.sessionId;
+
       final updatedList = await _sessionManager.deleteParagraph(
         id,
         paragraphIndex,
       );
       _transcriptions = updatedList;
+
+      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Failed to delete paragraph';
@@ -389,11 +405,37 @@ class LocalTranscriptionProvider with ChangeNotifier {
     try {
       final remaining = await _sessionManager.clearSession(sessionId);
       _transcriptions = remaining;
+
+      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+
       notifyListeners();
     } catch (e) {
       _errorMessage = 'Failed to clear session transcriptions';
       developer.log(
         'Error clearing session transcriptions: $e',
+        name: 'LocalTranscriptionProvider',
+        error: e,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Loads transcriptions for a specific session
+  /// This is used when navigating to a session screen
+  Future<void> loadTranscriptionsForSession(String sessionId) async {
+    try {
+      _transcriptions = await _repository.getTranscriptions();
+      _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      if (sessionProvider.activeSessionId != sessionId) {
+        await sessionProvider.switchSession(sessionId);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Failed to load transcriptions for session';
+      developer.log(
+        _errorMessage!,
         name: 'LocalTranscriptionProvider',
         error: e,
       );

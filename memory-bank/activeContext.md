@@ -22,6 +22,19 @@ Analyzing the transcription app structure and understanding key components with 
 - Manages recording state (loading, ready, recording, transcribing, error)
 - Includes session-based filtering of transcriptions
 - Coordinates with SessionProvider for organizing transcriptions
+- Uses TranscriptionOrchestrator and SessionTranscriptionManager for business logic
+
+## Data Models
+- Session model with id, name, and timestamp
+- Transcription model with id, sessionId, text, timestamp, and audioPath
+- ModelType enum for differentiating between Vosk and Whisper
+
+## UI Architecture
+- Material Design 3 implementation
+- HomeScreen as the main interface with drawer for session management
+- Settings screen for model configuration
+- Custom widgets for specific functionality like AudioWaveVisualization and RecordingButton
+- External UI components from aqua-design-system repository
 
 ## Active Questions
 1. How are audio recordings captured and stored?
@@ -29,6 +42,8 @@ Analyzing the transcription app structure and understanding key components with 
 3. How is the transcription data structured in the models?
 4. What are the key differences between Vosk and Whisper implementation?
 5. How is error handling implemented across the application?
+6. How does the SessionTranscriptionManager filter transcriptions?
+7. What is the initialization process for transcription models?
 
 ## Current Task Focus
 - Examining SessionProvider and LocalTranscriptionProvider implementation
@@ -40,4 +55,6 @@ Analyzing the transcription app structure and understanding key components with 
 - LocalTranscriptionProvider coordinates multiple services (VoskService, WhisperService, AudioService)
 - Application allows switching between Vosk and Whisper models
 - TranscriptionState enum manages application state
-- SessionTranscriptionManager handles filtering transcriptions by session 
+- SessionTranscriptionManager handles filtering transcriptions by session
+- Error handling includes dedicated UI components and error state management
+- Multiple specialized views depending on the transcription state 
