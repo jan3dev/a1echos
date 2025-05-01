@@ -3,13 +3,23 @@ import 'package:provider/provider.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
 import 'session_list_item.dart';
-import '../screens/session_screen.dart';
 import 'package:ui_components/ui_components.dart';
 
 class SessionList extends StatelessWidget {
-  final Function(BuildContext, Session) showRenameDeleteDialog;
+  final bool selectionMode;
+  final Set<String> selectedSessionIds;
+  final Function(Session) onSessionLongPress;
+  final Function(String) onSessionTap;
+  final Function(String) onSelectionToggle;
 
-  const SessionList({super.key, required this.showRenameDeleteDialog});
+  const SessionList({
+    super.key,
+    required this.selectionMode,
+    required this.selectedSessionIds,
+    required this.onSessionLongPress,
+    required this.onSessionTap,
+    required this.onSelectionToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +48,14 @@ class SessionList extends StatelessWidget {
                 children: [
                   SessionListItem(
                     session: session,
-                    onTap: () => _openSession(context, session.id),
-                    onLongPress: () => showRenameDeleteDialog(context, session),
+                    selectionMode: selectionMode,
+                    isSelected: selectedSessionIds.contains(session.id),
+                    onTap:
+                        () =>
+                            selectionMode
+                                ? onSelectionToggle(session.id)
+                                : onSessionTap(session.id),
+                    onLongPress: () => onSessionLongPress(session),
                   ),
                   if (index < sessions.length - 1)
                     Divider(
@@ -52,15 +68,6 @@ class SessionList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  void _openSession(BuildContext context, String sessionId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SessionScreen(sessionId: sessionId),
-      ),
     );
   }
 }

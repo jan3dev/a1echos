@@ -7,12 +7,16 @@ class SessionListItem extends StatelessWidget {
   final Session session;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool selectionMode;
+  final bool isSelected;
 
   const SessionListItem({
     super.key,
     required this.session,
     required this.onTap,
     required this.onLongPress,
+    this.selectionMode = false,
+    this.isSelected = false,
   });
 
   @override
@@ -27,12 +31,17 @@ class SessionListItem extends StatelessWidget {
       child: AquaListItem(
         title: session.name,
         subtitle: subtitle,
-        iconTrailing: AquaIcon.chevronRight(),
+        iconLeading: selectionMode ? _buildCheckbox() : null,
+        iconTrailing: selectionMode ? null : AquaIcon.chevronRight(),
         backgroundColor: AquaColors.lightColors.surfacePrimary,
         titleColor: Theme.of(context).textTheme.titleMedium?.color,
         subtitleColor: Theme.of(context).textTheme.bodySmall?.color,
         onTap: onTap,
       ),
     );
+  }
+
+  Widget _buildCheckbox() {
+    return AquaCheckBox.small(value: isSelected, onChanged: (_) {});
   }
 }

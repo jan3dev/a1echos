@@ -51,16 +51,16 @@ class SettingsScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Container(
                         decoration: BoxDecoration(
-                          color: aquaColors.surfacePrimary,
+                          color: AquaColors.lightColors.surfacePrimary,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.04),
                               blurRadius: 16,
-                              offset: const Offset(0, 0),
                             ),
                           ],
                         ),
+                        clipBehavior: Clip.antiAlias,
                         child: Column(
                           children: [
                             AquaListItem(
@@ -77,7 +77,6 @@ class SettingsScreen extends StatelessWidget {
                             ),
                             Divider(
                               height: 1,
-                              thickness: 1,
                               color: aquaColors.surfaceBorderSecondary,
                             ),
                             AquaListItem(

@@ -23,6 +23,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _selectionMode = false;
+  Set<String> _selectedSessionIds = {};
 
   @override
   void initState() {
@@ -66,6 +68,61 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---- Session Management Methods ----
 
+  void _toggleSessionSelection(String sessionId) {
+    setState(() {
+      if (_selectedSessionIds.contains(sessionId)) {
+        _selectedSessionIds.remove(sessionId);
+      } else {
+        _selectedSessionIds.add(sessionId);
+      }
+
+      if (_selectedSessionIds.isEmpty) {
+        _selectionMode = false;
+      }
+    });
+  }
+
+  void _selectAllSessions() {
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    setState(() {
+      _selectedSessionIds =
+          sessionProvider.sessions.map((session) => session.id).toSet();
+    });
+  }
+
+  void _deleteSelectedSessions() {
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    if (_selectedSessionIds.isEmpty) return;
+
+    ConfirmationModal.show(
+      context: context,
+      title: 'Delete Selected Sessions?',
+      message:
+          'Are you sure you want to delete ${_selectedSessionIds.length} ${_selectedSessionIds.length == 1 ? 'session' : 'sessions'}? This action cannot be undone.',
+      confirmText: 'Delete Sessions',
+      onConfirm: () {
+        Navigator.pop(context);
+        for (var sessionId in _selectedSessionIds) {
+          sessionProvider.deleteSession(sessionId);
+        }
+        setState(() {
+          _selectionMode = false;
+          _selectedSessionIds.clear();
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sessions deleted')));
+      },
+    );
+  }
+
   void _showCreateSessionDialog(BuildContext context) {
     final sessionProvider = Provider.of<SessionProvider>(
       context,
@@ -96,83 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // temporary
-  void _showRenameDeleteSessionDialog(BuildContext context, Session session) {
-    showModalBottomSheet(
-      context: context,
-      builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Rename Session'),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  _showRenameSessionDialog(context, session);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.delete, color: Colors.red),
-                title: Text(
-                  'Delete Session',
-                  style: TextStyle(color: Colors.red),
-                ),
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  _showConfirmDeleteDialog(context, session);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showRenameSessionDialog(BuildContext context, Session session) {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    SessionInputModal.show(
-      context,
-      title: 'Rename Session',
-      buttonText: 'Rename',
-      initialValue: session.name,
-      onSubmit: (newName) {
-        if (newName.isNotEmpty) {
-          sessionProvider.renameSession(session.id, newName);
-        }
-      },
-    );
-  }
-
-  void _showConfirmDeleteDialog(BuildContext context, Session session) {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    ConfirmationModal.show(
-      context: context,
-      title: 'Delete Selected Sessions?',
-      message:
-          'Are you sure you want to delete these sessions? This action cannot be undone.',
-      confirmText: 'Delete Sessions',
-      onConfirm: () {
-        sessionProvider.deleteSession(session.id);
-        Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Sessions deleted')));
-      },
-    );
+  void _handleSessionLongPress(Session session) {
+    if (!_selectionMode) {
+      setState(() {
+        _selectionMode = true;
+        _selectedSessionIds.add(session.id);
+      });
+    }
   }
 
   void _openSession(String sessionId) {
+    // Don't navigate when in selection mode
+    if (_selectionMode) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -309,28 +302,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const SizedBox.shrink()
                 : SvgPicture.asset('assets/icon/echo-logo.svg', height: 28),
         actions: [
-          IconButton(
-            icon: AquaIcon.plus(),
-            onPressed: () => _showCreateSessionDialog(context),
-            tooltip: 'New Session',
-            color: colors.textPrimary,
-          ),
-
-          if (!isEmpty)
+          if (_selectionMode) ...[
             IconButton(
-              icon: AquaIcon.settings(),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-              tooltip: 'Settings',
+              icon: AquaIcon.account(),
+              onPressed: _selectAllSessions,
+              tooltip: 'Select All',
               color: colors.textPrimary,
             ),
-
+            IconButton(
+              icon: AquaIcon.trash(),
+              onPressed: _deleteSelectedSessions,
+              tooltip: 'Delete Selected',
+              color: colors.textPrimary,
+            ),
+          ] else ...[
+            IconButton(
+              icon: AquaIcon.plus(),
+              onPressed: () => _showCreateSessionDialog(context),
+              tooltip: 'New Session',
+              color: colors.textPrimary,
+            ),
+            if (!isEmpty)
+              IconButton(
+                icon: AquaIcon.settings(),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Settings',
+                color: colors.textPrimary,
+              ),
+          ],
           const SizedBox(width: 8),
         ],
       ),
@@ -407,7 +413,11 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: SessionList(
-            showRenameDeleteDialog: _showRenameDeleteSessionDialog,
+            selectionMode: _selectionMode,
+            selectedSessionIds: _selectedSessionIds,
+            onSessionLongPress: _handleSessionLongPress,
+            onSessionTap: _openSession,
+            onSelectionToggle: _toggleSessionSelection,
           ),
         ),
         const Spacer(),

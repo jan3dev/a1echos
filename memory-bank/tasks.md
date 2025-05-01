@@ -8,10 +8,12 @@
 - [ ] Document error handling patterns
 - [ ] Examine UI component architecture
 - [ ] Explore session-based transcription filtering
+- [ ] Analyze TranscriptionOrchestrator and SessionTranscriptionManager in detail
+- [ ] Map data persistence approaches across the application
+- [ ] Document transcription model initialization process
 
 ## In Progress
 - [ ] Investigate transcription model integration
-- [ ] Analyze TranscriptionOrchestrator and SessionTranscriptionManager
 
 ## Completed
 - [x] Initial repository exploration

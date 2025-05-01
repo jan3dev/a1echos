@@ -1,13 +1,18 @@
 # Active Context
 
 ## Current Focus
-Analyzing the transcription app structure and understanding key components with special focus on provider-based state management implementation.
+Analyzing the transcription app structure and understanding key components with special focus on:
+1. Provider-based state management implementation
+2. Transcription orchestration between different model types
+3. Audio recording and processing workflow
 
 ## Key Components Under Review
 - SessionProvider for managing user sessions
 - LocalTranscriptionProvider for handling transcription functionality
 - Transcription models integration (Vosk and Whisper)
 - Audio recording and processing
+- TranscriptionOrchestrator for coordinating transcription workflow
+- SessionTranscriptionManager for handling session-based filtering
 
 ## Provider Analysis
 ### SessionProvider
@@ -25,9 +30,16 @@ Analyzing the transcription app structure and understanding key components with 
 - Uses TranscriptionOrchestrator and SessionTranscriptionManager for business logic
 
 ## Data Models
-- Session model with id, name, and timestamp
+- Session model with id, name, timestamp, lastModified, and isTemporary fields
 - Transcription model with id, sessionId, text, timestamp, and audioPath
 - ModelType enum for differentiating between Vosk and Whisper
+
+## Core Services
+- AudioService: Handles recording functionality and audio file management
+- VoskService: Interfaces with the Vosk transcription model
+- WhisperService: Interfaces with the Whisper transcription model
+- StorageService: Manages file storage for audio recordings and transcriptions
+- EncryptionService: Provides encryption functionality for sensitive data
 
 ## UI Architecture
 - Material Design 3 implementation
@@ -39,16 +51,17 @@ Analyzing the transcription app structure and understanding key components with 
 ## Active Questions
 1. How are audio recordings captured and stored?
 2. What is the exact flow for transcription using local models?
-3. How is the transcription data structured in the models?
+3. How is the transcription data structured and persisted?
 4. What are the key differences between Vosk and Whisper implementation?
 5. How is error handling implemented across the application?
 6. How does the SessionTranscriptionManager filter transcriptions?
 7. What is the initialization process for transcription models?
 
 ## Current Task Focus
-- Examining SessionProvider and LocalTranscriptionProvider implementation
-- Understanding model switching and initialization logic
-- Analyzing the relationship between sessions and transcriptions
+- Understanding transcription orchestration and model switching logic
+- Analyzing the relationship between TranscriptionOrchestrator and services
+- Mapping the audio recording and processing workflow
+- Documenting data persistence approaches
 
 ## Recent Insights
 - SessionProvider uses UUID for unique session identification

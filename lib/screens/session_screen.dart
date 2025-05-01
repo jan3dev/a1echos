@@ -14,6 +14,7 @@ import '../widgets/error_view.dart';
 import '../widgets/transcription_content_view.dart';
 import '../constants/app_constants.dart';
 import '../widgets/modals/confirmation_modal.dart';
+import '../widgets/modals/session_input_modal.dart';
 
 class SessionScreen extends StatefulWidget {
   final String sessionId;
@@ -75,6 +76,35 @@ class _SessionScreenState extends State<SessionScreen> {
     }
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _showRenameSessionDialog() {
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    final session = sessionProvider.sessions.firstWhere(
+      (s) => s.id == widget.sessionId,
+      orElse:
+          () => Session(
+            id: widget.sessionId,
+            name: 'Session',
+            timestamp: DateTime.now(),
+          ),
+    );
+
+    SessionInputModal.show(
+      context,
+      title: 'Rename Session',
+      buttonText: 'Rename',
+      initialValue: session.name,
+      onSubmit: (newName) {
+        if (newName.isNotEmpty) {
+          sessionProvider.renameSession(session.id, newName);
+        }
+      },
+    );
   }
 
   void _copyAllTranscriptions(BuildContext context) {
@@ -148,6 +178,7 @@ class _SessionScreenState extends State<SessionScreen> {
                       ),
                 )
                 .name,
+        onTitlePressed: _showRenameSessionDialog,
         actions: [
           IconButton(
             icon: AquaIcon.copy(),
