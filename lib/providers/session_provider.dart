@@ -110,13 +110,13 @@ class SessionProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   /// Checks if the active session is temporary
   bool isActiveSessionTemporary() {
     final idx = _sessions.indexWhere((s) => s.id == _activeSessionId);
     return idx >= 0 ? _sessions[idx].isTemporary : false;
   }
-  
+
   /// Renames a session and makes it permanent
   Future<void> saveTemporarySession(String id, String newName) async {
     final idx = _sessions.indexWhere((s) => s.id == id);
@@ -148,13 +148,16 @@ class SessionProvider with ChangeNotifier {
   }
 
   Future<void> deleteSession(String id) async {
-    if (_sessions.length <= 1) return;
     _sessions.removeWhere((s) => s.id == id);
-    if (_activeSessionId == id) {
+
+    if (_sessions.isEmpty) {
+      _activeSessionId = '';
+    } else if (_activeSessionId == id) {
       _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
       _activeSessionId = _sessions.first.id;
       await _saveActiveSession();
     }
+
     await _saveSessions();
     notifyListeners();
   }

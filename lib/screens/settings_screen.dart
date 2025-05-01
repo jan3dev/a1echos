@@ -15,23 +15,15 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: aquaColors.surfaceBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        centerTitle: true,
-        elevation: 0,
-        title: Text(AppStrings.settingsTitle, style: AquaTypography.subtitleSemiBold),
-        leading: IconButton(
-          icon: AquaIcon.chevronLeft(),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+      appBar: AquaTopAppBar(
+        colors: aquaColors,
+        title: AppStrings.settingsTitle,
       ),
       extendBodyBehindAppBar: true,
       body: Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           if (provider.state == TranscriptionState.loading) {
-            return Center(
-              child: AquaIndefinateProgressIndicator(),
-            );
+            return Center(child: AquaIndefinateProgressIndicator());
           }
 
           return Column(

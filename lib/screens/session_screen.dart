@@ -140,29 +140,31 @@ class _SessionScreenState extends State<SessionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Consumer<SessionProvider>(
-          builder: (context, sessionProvider, _) {
-            final session = sessionProvider.sessions.firstWhere(
-              (s) => s.id == widget.sessionId,
-              orElse:
-                  () => Session(
-                    id: widget.sessionId,
-                    name: 'Session',
-                    timestamp: DateTime.now(),
-                  ),
-            );
-            return Text(session.name);
-          },
-        ),
+      backgroundColor: AquaColors.lightColors.surfaceBackground,
+      appBar: AquaTopAppBar(
+        colors: AquaColors.lightColors,
+        title:
+            context
+                .watch<SessionProvider>()
+                .sessions
+                .firstWhere(
+                  (s) => s.id == widget.sessionId,
+                  orElse:
+                      () => Session(
+                        id: widget.sessionId,
+                        name: 'Session',
+                        timestamp: DateTime.now(),
+                      ),
+                )
+                .name,
         actions: [
           IconButton(
-            icon: const Icon(Icons.copy_all),
+            icon: AquaIcon.copy(),
             onPressed: () => _copyAllTranscriptions(context),
             tooltip: AppStrings.copyAllTooltip,
           ),
           IconButton(
-            icon: const Icon(Icons.delete_sweep),
+            icon: AquaIcon.trash(),
             onPressed: () => _clearAllTranscriptions(context),
             tooltip: AppStrings.clearAllTooltip,
           ),
