@@ -13,6 +13,7 @@ import '../widgets/processing_view.dart';
 import '../widgets/error_view.dart';
 import '../widgets/transcription_content_view.dart';
 import '../constants/app_constants.dart';
+import '../widgets/modals/confirmation_modal.dart';
 
 class SessionScreen extends StatefulWidget {
   final String sessionId;
@@ -109,31 +110,21 @@ class _SessionScreenState extends State<SessionScreen> {
       return;
     }
 
-    showDialog(
+    ConfirmationModal.show(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(AppStrings.clearAllDialogTitle),
-            content: const Text(AppStrings.clearAllDialogContent),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(AppStrings.cancel),
-              ),
-              TextButton(
-                onPressed: () {
-                  locProv.clearTranscriptionsForSession(widget.sessionId);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(AppStrings.allTranscriptionsClearedSession),
-                    ),
-                  );
-                },
-                child: const Text(AppStrings.clear),
-              ),
-            ],
+      title: AppStrings.clearAllDialogTitle,
+      message: AppStrings.clearAllDialogContent,
+      confirmText: AppStrings.clear,
+      cancelText: AppStrings.cancel,
+      onConfirm: () {
+        locProv.clearTranscriptionsForSession(widget.sessionId);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(AppStrings.allTranscriptionsClearedSession),
           ),
+        );
+      },
     );
   }
 

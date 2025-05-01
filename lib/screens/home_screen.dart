@@ -11,6 +11,8 @@ import 'settings_screen.dart';
 import 'dart:developer' as developer;
 import '../widgets/session_list.dart';
 import 'session_screen.dart';
+import '../widgets/modals/session_input_modal.dart';
+import '../widgets/modals/confirmation_modal.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -65,55 +67,36 @@ class _HomeScreenState extends State<HomeScreen> {
   // ---- Session Management Methods ----
 
   void _showCreateSessionDialog(BuildContext context) {
-    final controller = TextEditingController();
     final sessionProvider = Provider.of<SessionProvider>(
       context,
       listen: false,
     );
 
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('New Session'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(labelText: 'Session name'),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final name = controller.text.trim();
-                  Navigator.pop(context);
+    SessionInputModal.show(
+      context,
+      title: 'New Session',
+      buttonText: 'Save',
+      onSubmit: (name) async {
+        try {
+          final sessionId = await sessionProvider.createSession(
+            name.isEmpty ? 'New Session' : name,
+          );
 
-                  try {
-                    final sessionId = await sessionProvider.createSession(
-                      name.isEmpty ? 'New Session' : name,
-                    );
+          if (!context.mounted) return;
 
-                    if (!mounted) return;
+          _openSession(sessionId);
+        } catch (e) {
+          if (!context.mounted) return;
 
-                    _openSession(sessionId);
-                  } catch (e) {
-                    if (!mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error creating session: $e')),
-                    );
-                  }
-                },
-                child: const Text('Create'),
-              ),
-            ],
-          ),
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error creating session: $e')));
+        }
+      },
     );
   }
 
+  // temporary
   void _showRenameDeleteSessionDialog(BuildContext context, Session session) {
     showModalBottomSheet(
       context: context,
@@ -149,39 +132,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showRenameSessionDialog(BuildContext context, Session session) {
-    final controller = TextEditingController(text: session.name);
     final sessionProvider = Provider.of<SessionProvider>(
       context,
       listen: false,
     );
 
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Rename Session'),
-            content: TextField(
-              controller: controller,
-              decoration: const InputDecoration(labelText: 'New name'),
-              autofocus: true,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final newName = controller.text.trim();
-                  if (newName.isNotEmpty) {
-                    sessionProvider.renameSession(session.id, newName);
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Rename'),
-              ),
-            ],
-          ),
+    SessionInputModal.show(
+      context,
+      title: 'Rename Session',
+      buttonText: 'Rename',
+      initialValue: session.name,
+      onSubmit: (newName) {
+        if (newName.isNotEmpty) {
+          sessionProvider.renameSession(session.id, newName);
+        }
+      },
     );
   }
 
@@ -191,34 +156,19 @@ class _HomeScreenState extends State<HomeScreen> {
       listen: false,
     );
 
-    showDialog(
+    ConfirmationModal.show(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Delete Session?'),
-            content: Text(
-              'Are you sure you want to delete "${session.name}"? This action cannot be undone.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () {
-                  sessionProvider.deleteSession(session.id);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Session "${session.name}" deleted'),
-                    ),
-                  );
-                },
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
+      title: 'Delete Selected Sessions?',
+      message:
+          'Are you sure you want to delete these sessions? This action cannot be undone.',
+      confirmText: 'Delete Sessions',
+      onConfirm: () {
+        sessionProvider.deleteSession(session.id);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sessions deleted')));
+      },
     );
   }
 
@@ -297,64 +247,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showSaveTemporarySessionDialog(String sessionId, String initialName) {
-    final controller = TextEditingController(text: initialName);
     final sessionProvider = Provider.of<SessionProvider>(
       context,
       listen: false,
     );
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Save Recording?'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Do you want to save this recording? If not saved, it will be lost when you restart the app.',
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(labelText: 'Session name'),
-                  autofocus: true,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Discard'),
-              ),
-              TextButton(
-                onPressed: () {
-                  sessionProvider.deleteSession(sessionId);
-                  Navigator.pop(context);
-                },
-                child: const Text('Delete'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final newName = controller.text.trim();
-                  if (newName.isNotEmpty) {
-                    sessionProvider.saveTemporarySession(sessionId, newName);
-                  } else {
-                    sessionProvider.makeSessionPermanent(sessionId);
-                  }
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Session saved')),
-                  );
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+    SessionInputModal.show(
+      context,
+      title: 'Save Recording?',
+      buttonText: 'Save',
+      initialValue: initialName,
+      onSubmit: (newName) {
+        if (newName.isNotEmpty) {
+          sessionProvider.saveTemporarySession(sessionId, newName);
+        } else {
+          sessionProvider.makeSessionPermanent(sessionId);
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Session saved')));
+      },
     );
   }
 

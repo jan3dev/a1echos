@@ -1,11 +1,7 @@
 # Tasks
 
 ## Pending
-- [ ] Analyze project structure and codebase in detail
-- [ ] Identify key components and dependencies
 - [ ] Document main application flow
-- [ ] Explore providers implementation
-- [ ] Investigate transcription model integration
 - [ ] Create diagram of provider relationships
 - [ ] Analyze Vosk and Whisper service implementations
 - [ ] Map out the audio recording and transcription process flow
@@ -14,7 +10,8 @@
 - [ ] Explore session-based transcription filtering
 
 ## In Progress
-- [ ] Explore SessionProvider and LocalTranscriptionProvider implementation
+- [ ] Investigate transcription model integration
+- [ ] Analyze TranscriptionOrchestrator and SessionTranscriptionManager
 
 ## Completed
 - [x] Initial repository exploration
@@ -25,4 +22,7 @@
 - [x] Set up active context tracker
 - [x] Create progress tracking document
 - [x] Create product context documentation
-- [x] Analyze project structure (basic exploration) 
+- [x] Analyze project structure (basic exploration)
+- [x] Identify key components and dependencies
+- [x] Explore providers implementation
+- [x] Explore SessionProvider and LocalTranscriptionProvider implementation 

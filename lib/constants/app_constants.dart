@@ -41,10 +41,10 @@ class AppStrings {
 
   // Clear All dialog
   static const String clearAllDialogTitle =
-      'Clear all transcriptions for this session?';
-  static const String clearAllDialogContent = 'This action cannot be undone.';
+      'Delete All Transcriptions?';
+  static const String clearAllDialogContent = 'Are you sure you want to delete all transcriptions for this session? This action cannot be undone.';
   static const String cancel = 'Cancel';
-  static const String clear = 'Clear';
+  static const String clear = 'Delete All Transcriptions';
   static const String paragraphDeleted = 'Paragraph deleted';
   static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
