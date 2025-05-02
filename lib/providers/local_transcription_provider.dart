@@ -342,18 +342,47 @@ class LocalTranscriptionProvider with ChangeNotifier {
       final sessionId = transcription.sessionId;
 
       await _repository.deleteTranscription(id);
+      _transcriptions.removeWhere((t) => t.id == id);
 
       await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-
-      await _loadTranscriptions();
+      notifyListeners();
     } catch (e) {
       _errorMessage = 'Failed to delete transcription';
       developer.log(
-        'Error deleting transcription: $e',
+        _errorMessage!,
         name: 'LocalTranscriptionProvider',
         error: e,
       );
+      throw Exception('Failed to delete transcription: $e');
+    }
+  }
+
+  Future<void> deleteTranscriptions(Set<String> ids) async {
+    _errorMessage = null;
+    try {
+      final sessionIds = <String>{};
+
+      for (final id in ids) {
+        final transcription = _transcriptions.firstWhere((t) => t.id == id);
+        sessionIds.add(transcription.sessionId);
+        await _repository.deleteTranscription(id);
+      }
+
+      _transcriptions.removeWhere((t) => ids.contains(t.id));
+
+      for (final sessionId in sessionIds) {
+        await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+      }
+
       notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Failed to delete transcriptions';
+      developer.log(
+        _errorMessage!,
+        name: 'LocalTranscriptionProvider',
+        error: e,
+      );
+      throw Exception('Failed to delete transcriptions: $e');
     }
   }
 

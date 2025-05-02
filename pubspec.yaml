@@ -40,7 +40,7 @@ flutter:
   assets:
     - assets/models/
     - assets/fonts/
-    - assets/icon/
+    - assets/icons/
   fonts:
     - family: RobotoMono
       fonts:

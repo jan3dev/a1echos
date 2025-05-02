@@ -13,6 +13,7 @@ import '../widgets/session_list.dart';
 import 'session_screen.dart';
 import '../widgets/modals/session_input_modal.dart';
 import '../widgets/modals/confirmation_modal.dart';
+import '../widgets/empty_transcriptions_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -163,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openSession(String sessionId) {
-    // Don't navigate when in selection mode
     if (_selectionMode) return;
 
     Navigator.push(
@@ -278,11 +278,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: colors.surfaceBackground,
         elevation: 0,
-        leadingWidth: isEmpty ? 56 : 0,
+        leadingWidth: isEmpty || _selectionMode ? 56 : 0,
         automaticallyImplyLeading: false,
-        titleSpacing: isEmpty ? 0 : 16,
+        titleSpacing: isEmpty || _selectionMode ? 0 : 16,
         leading:
-            isEmpty
+            isEmpty || _selectionMode
                 ? IconButton(
                   icon: AquaIcon.settings(),
                   onPressed: () {
@@ -298,13 +298,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
                 : null,
         title:
-            isEmpty
-                ? const SizedBox.shrink()
-                : SvgPicture.asset('assets/icon/echo-logo.svg', height: 28),
+            !isEmpty && !_selectionMode
+                ? SvgPicture.asset('assets/icons/echo-logo.svg', height: 28)
+                : null,
         actions: [
           if (_selectionMode) ...[
             IconButton(
-              icon: AquaIcon.account(),
+              icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
               onPressed: _selectAllSessions,
               tooltip: 'Select All',
               color: colors.textPrimary,
@@ -340,69 +340,19 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: isEmpty ? _buildEmptyState(colors) : _buildSessionList(),
-    );
-  }
-
-  Widget _buildEmptyState(AquaColors colors) {
-    return Stack(
-      children: [
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 88,
-                  height: 88,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceTertiary,
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: AquaIcon.pending(
-                      color: colors.textTertiary,
-                      size: 32,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AquaText.h4Medium(
-                  text: 'No Transcriptions Yet',
-                  size: 24,
-                  color: colors.textPrimary,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Hit the record button to start capturing and transcribing your voice notes.',
-                  maxLines: 5,
-                  textAlign: TextAlign.center,
-                  style: AquaTypography.body1.copyWith(
-                    height: 1.2,
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
+      body: Stack(
+        children: [
+          isEmpty ? EmptyTranscriptionsState() : _buildSessionList(),
+          Positioned(
+            bottom: 32,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: RecordingButton(onRecordingStart: _startRecording),
             ),
           ),
-        ),
-
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 32,
-          child: Center(
-            child: RecordingButton(onRecordingStart: _startRecording),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -418,17 +368,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onSessionLongPress: _handleSessionLongPress,
             onSessionTap: _openSession,
             onSelectionToggle: _toggleSessionSelection,
-          ),
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.only(bottom: 32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 16),
-              RecordingButton(onRecordingStart: _startRecording),
-            ],
           ),
         ),
       ],

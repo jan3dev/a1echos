@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
-import '../models/model_type.dart';
 import '../models/session.dart';
 import '../widgets/recording_button.dart';
 import '../widgets/audio_wave_visualization.dart';
 import '../widgets/live_transcription_view.dart';
 import '../widgets/processing_view.dart';
 import '../widgets/error_view.dart';
-import '../widgets/transcription_content_view.dart';
 import '../constants/app_constants.dart';
 import '../widgets/modals/confirmation_modal.dart';
-import '../widgets/modals/session_input_modal.dart';
+import '../widgets/transcription_list.dart';
+import '../widgets/empty_transcriptions_state.dart';
 
 class SessionScreen extends StatefulWidget {
   final String sessionId;
@@ -27,6 +27,8 @@ class SessionScreen extends StatefulWidget {
 
 class _SessionScreenState extends State<SessionScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _transcriptionSelectionMode = false;
+  Set<String> _selectedTranscriptionIds = {};
 
   @override
   void initState() {
@@ -78,30 +80,79 @@ class _SessionScreenState extends State<SessionScreen> {
     super.dispose();
   }
 
-  void _showRenameSessionDialog() {
-    final sessionProvider = Provider.of<SessionProvider>(
+  void _toggleTranscriptionSelection(String transcriptionId) {
+    setState(() {
+      if (_selectedTranscriptionIds.contains(transcriptionId)) {
+        _selectedTranscriptionIds.remove(transcriptionId);
+        if (_selectedTranscriptionIds.isEmpty) {
+          _transcriptionSelectionMode = false;
+        }
+      } else {
+        _selectedTranscriptionIds.add(transcriptionId);
+      }
+    });
+  }
+
+  void _handleTranscriptionLongPress(String transcriptionId) {
+    if (!_transcriptionSelectionMode) {
+      setState(() {
+        _transcriptionSelectionMode = true;
+        _selectedTranscriptionIds.add(transcriptionId);
+      });
+    } else {
+      _toggleTranscriptionSelection(transcriptionId);
+    }
+  }
+
+  void _selectAllTranscriptions() {
+    final provider = Provider.of<LocalTranscriptionProvider>(
       context,
       listen: false,
     );
 
-    final session = sessionProvider.sessions.firstWhere(
-      (s) => s.id == widget.sessionId,
-      orElse:
-          () => Session(
-            id: widget.sessionId,
-            name: 'Session',
-            timestamp: DateTime.now(),
-          ),
+    setState(() {
+      _selectedTranscriptionIds =
+          provider.sessionTranscriptions
+              .map((transcription) => transcription.id)
+              .toSet();
+    });
+  }
+
+  void _deleteSelectedTranscriptions() {
+    if (_selectedTranscriptionIds.isEmpty) return;
+
+    final provider = Provider.of<LocalTranscriptionProvider>(
+      context,
+      listen: false,
     );
 
-    SessionInputModal.show(
-      context,
-      title: 'Rename Session',
-      buttonText: 'Rename',
-      initialValue: session.name,
-      onSubmit: (newName) {
-        if (newName.isNotEmpty) {
-          sessionProvider.renameSession(session.id, newName);
+    ConfirmationModal.show(
+      context: context,
+      title: 'Delete Transcriptions?',
+      message:
+          'Are you sure you want to delete ${_selectedTranscriptionIds.length} ${_selectedTranscriptionIds.length == 1 ? 'transcription' : 'transcriptions'}? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      onConfirm: () async {
+        Navigator.pop(context);
+
+        try {
+          await provider.deleteTranscriptions(_selectedTranscriptionIds);
+          if (mounted) {
+            setState(() {
+              _transcriptionSelectionMode = false;
+              _selectedTranscriptionIds.clear();
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Transcriptions deleted')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error deleting transcriptions: $e')),
+            );
+          }
         }
       },
     );
@@ -158,39 +209,63 @@ class _SessionScreenState extends State<SessionScreen> {
     );
   }
 
+  List<Widget> _buildNormalActions() {
+    return [
+      IconButton(
+        icon: AquaIcon.copy(),
+        onPressed: () => _copyAllTranscriptions(context),
+        tooltip: AppStrings.copyAllTooltip,
+      ),
+      IconButton(
+        icon: AquaIcon.trash(),
+        onPressed: () => _clearAllTranscriptions(context),
+        tooltip: AppStrings.clearAllTooltip,
+      ),
+    ];
+  }
+
+  List<Widget> _buildSelectionActions() {
+    return [
+      IconButton(
+        icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
+        onPressed: _selectAllTranscriptions,
+        tooltip: 'Select All',
+      ),
+      IconButton(
+        icon: AquaIcon.trash(),
+        onPressed: _deleteSelectedTranscriptions,
+        tooltip: 'Delete Selected',
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = AquaColors.lightColors;
+    final sessionProvider = context.watch<SessionProvider>();
+
+    final sessionName =
+        sessionProvider.sessions
+            .firstWhere(
+              (s) => s.id == widget.sessionId,
+              orElse:
+                  () => Session(
+                    id: widget.sessionId,
+                    name: 'Session',
+                    timestamp: DateTime.now(),
+                  ),
+            )
+            .name;
+
     return Scaffold(
-      backgroundColor: AquaColors.lightColors.surfaceBackground,
+      backgroundColor: colors.surfaceBackground,
       appBar: AquaTopAppBar(
-        colors: AquaColors.lightColors,
-        title:
-            context
-                .watch<SessionProvider>()
-                .sessions
-                .firstWhere(
-                  (s) => s.id == widget.sessionId,
-                  orElse:
-                      () => Session(
-                        id: widget.sessionId,
-                        name: 'Session',
-                        timestamp: DateTime.now(),
-                      ),
-                )
-                .name,
-        onTitlePressed: _showRenameSessionDialog,
-        actions: [
-          IconButton(
-            icon: AquaIcon.copy(),
-            onPressed: () => _copyAllTranscriptions(context),
-            tooltip: AppStrings.copyAllTooltip,
-          ),
-          IconButton(
-            icon: AquaIcon.trash(),
-            onPressed: () => _clearAllTranscriptions(context),
-            tooltip: AppStrings.clearAllTooltip,
-          ),
-        ],
+        colors: colors,
+        title: sessionName,
+        actions:
+            _transcriptionSelectionMode
+                ? _buildSelectionActions()
+                : _buildNormalActions(),
       ),
       body: Stack(
         children: [
@@ -198,113 +273,63 @@ class _SessionScreenState extends State<SessionScreen> {
             bottom: 120,
             child: Consumer<LocalTranscriptionProvider>(
               builder: (context, provider, child) {
-                switch (provider.state) {
-                  case TranscriptionState.loading:
-                    return ProcessingView(message: AppStrings.loading);
-                  case TranscriptionState.recording:
-                    if (provider.selectedModelType == ModelType.vosk) {
-                      return LiveTranscriptionView(
-                        controller: _scrollController,
-                      );
-                    }
-                    break;
-                  case TranscriptionState.transcribing:
-                    if (provider.selectedModelType != ModelType.whisper) {
-                      return ProcessingView(
-                        message: AppStrings.processingTranscription,
-                      );
-                    }
-                    return const SizedBox();
-                  case TranscriptionState.error:
-                    return ErrorView(
-                      errorMessage: provider.error!,
-                      onRetry:
-                          () =>
-                              provider.changeModel(provider.selectedModelType),
-                    );
-                  case TranscriptionState.ready:
-                    break;
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
                 }
-                return TranscriptionContentView(controller: _scrollController);
-              },
-            ),
-          ),
 
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Consumer<LocalTranscriptionProvider>(
-              builder: (context, provider, _) {
-                final bool showAudioWave =
-                    provider.selectedModelType == ModelType.whisper &&
-                    (provider.state == TranscriptionState.recording ||
-                        provider.state == TranscriptionState.transcribing);
+                if (provider.error != null) {
+                  return ErrorView(errorMessage: provider.error!);
+                }
 
-                final bool isTranscribing =
-                    provider.state == TranscriptionState.transcribing;
-
-                return Container(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                if (provider.isRecording) {
+                  return Column(
                     children: [
-                      if (isTranscribing &&
-                          provider.selectedModelType == ModelType.whisper)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12, bottom: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: AquaIndefinateProgressIndicator(
-                                  color: AquaColors.lightColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                AppStrings.transcribingStatus,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                      if (showAudioWave)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: AudioWaveVisualization(
-                            state: provider.state,
-                            modelType: provider.selectedModelType,
-                          ),
-                        ),
-
-                      SizedBox(
-                        height: 80,
-                        child: Center(
-                          child: RecordingButton(
-                            isRecording:
-                                provider.state == TranscriptionState.recording,
-                            useProviderState: false,
-                            onRecordingStart: () => provider.startRecording(),
-                            onRecordingStop:
-                                () => provider.stopRecordingAndSave(),
-                          ),
+                      Expanded(
+                        child: LiveTranscriptionView(
+                          controller: _scrollController,
                         ),
                       ),
+                      AudioWaveVisualization(
+                        state: TranscriptionState.recording,
+                        modelType: provider.selectedModelType,
+                      ),
                     ],
-                  ),
+                  );
+                }
+
+                if (provider.isTranscribing) {
+                  return ProcessingView(
+                    message: AppStrings.processingTranscription,
+                  );
+                }
+
+                if (provider.sessionTranscriptions.isEmpty) {
+                  return EmptyTranscriptionsState(
+                    title: 'No Transcriptions in Session',
+                    message:
+                        'Start recording to add transcriptions to this session.',
+                  );
+                }
+
+                return TranscriptionList(
+                  controller: _scrollController,
+                  selectionMode: _transcriptionSelectionMode,
+                  selectedTranscriptionIds: _selectedTranscriptionIds,
+                  onTranscriptionTap: (id) {
+                    if (_transcriptionSelectionMode) {
+                      _toggleTranscriptionSelection(id);
+                    }
+                  },
+                  onTranscriptionLongPress: _handleTranscriptionLongPress,
                 );
               },
             ),
+          ),
+          Positioned(
+            bottom: 32,
+            left: 0,
+            right: 0,
+            child: Center(child: RecordingButton(useProviderState: true)),
           ),
         ],
       ),

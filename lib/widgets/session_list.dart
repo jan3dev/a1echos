@@ -23,6 +23,7 @@ class SessionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AquaColors.lightColors;
     return Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
         final sessions = sessionProvider.sessions;
@@ -33,10 +34,13 @@ class SessionList extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            color: AquaColors.lightColors.surfacePrimary,
+            color: colors.surfacePrimary,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16),
+              BoxShadow(
+                color: colors.surfacePrimary.withOpacity(0.04),
+                blurRadius: 16,
+              ),
             ],
           ),
           clipBehavior: Clip.antiAlias,
@@ -58,10 +62,7 @@ class SessionList extends StatelessWidget {
                     onLongPress: () => onSessionLongPress(session),
                   ),
                   if (index < sessions.length - 1)
-                    Divider(
-                      height: 1,
-                      color: AquaColors.lightColors.surfaceBorderSecondary,
-                    ),
+                    Divider(height: 1, color: colors.surfaceBorderSecondary),
                 ],
               );
             }),

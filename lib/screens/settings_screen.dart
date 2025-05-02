@@ -122,7 +122,7 @@ class SettingsScreen extends StatelessWidget {
                         Navigator.of(context).pushReplacementNamed('/');
                       },
                       icon: SvgPicture.asset(
-                        'assets/icon/mic.svg',
+                        'assets/icons/mic.svg',
                         width: 24,
                         height: 24,
                         colorFilter: ColorFilter.mode(

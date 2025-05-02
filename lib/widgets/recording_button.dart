@@ -146,7 +146,7 @@ class _RecordingButtonState extends State<RecordingButton>
               }
             },
             icon: SvgPicture.asset(
-              'assets/icon/rectangle.svg',
+              'assets/icons/rectangle.svg',
               width: 14,
               height: 14,
               colorFilter: ColorFilter.mode(
@@ -180,7 +180,7 @@ class _RecordingButtonState extends State<RecordingButton>
               }
             },
             icon: SvgPicture.asset(
-              'assets/icon/mic.svg',
+              'assets/icons/mic.svg',
               width: 24,
               height: 24,
               colorFilter: ColorFilter.mode(

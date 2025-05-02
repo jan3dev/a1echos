@@ -1,105 +1,117 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ui_components/ui_components.dart';
 import '../models/transcription.dart';
-import '../providers/local_transcription_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
 
+enum TranscriptionItemState { normal, longpressSelected, longpressUnselected }
+
 class TranscriptionItem extends StatelessWidget {
   final Transcription transcription;
+  final bool selectionMode;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
-  const TranscriptionItem({super.key, required this.transcription});
+  const TranscriptionItem({
+    super.key,
+    required this.transcription,
+    this.selectionMode = false,
+    this.isSelected = false,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final dateFormat = DateFormat('MMM d, h:mm a');
-    final paragraphs = transcription.text.split('\n\n');
+    final colors = AquaColors.lightColors;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Text(
-            dateFormat.format(transcription.timestamp),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+    Color backgroundColor = colors.surfacePrimary;
+    if (selectionMode && isSelected) {
+      backgroundColor = colors.surfaceSelected;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: colors.surfacePrimary.withOpacity(0.04),
+              blurRadius: 16,
             ),
-          ),
+          ],
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    dateFormat.format(transcription.timestamp),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textTertiary,
+                      letterSpacing: -0.12,
+                    ),
+                  ),
+                ),
 
-        ...paragraphs.asMap().entries.map((entry) {
-          final int index = entry.key;
-          final String paragraph = entry.value;
-          final String uniqueKey =
-              '${transcription.id}_${index}_${paragraph.hashCode}';
-
-          return Dismissible(
-            key: Key(uniqueKey),
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20.0),
-              child: const Icon(Icons.delete, color: Colors.white),
+                if (selectionMode) _buildCheckbox(colors),
+              ],
             ),
-            direction: DismissDirection.endToStart,
-            onDismissed: (direction) async {
-              try {
-                await Provider.of<LocalTranscriptionProvider>(
-                  context,
-                  listen: false,
-                ).deleteParagraphFromTranscription(transcription.id, index);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppStrings.paragraphDeleted),
-                      duration: AppConstants.snackBarDurationShort,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppStrings.paragraphDeleteFailed),
-                      duration: AppConstants.snackBarDurationShort,
-                    ),
-                  );
-                }
-              }
-            },
-            child: GestureDetector(
-              onLongPress: () => _copyToClipboard(context, paragraph),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+
+            const SizedBox(height: 8),
+
+            Text(
+              transcription.text,
+              style: AquaTypography.body1.copyWith(color: colors.textSecondary),
+            ),
+
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: GestureDetector(
+                  onTap: () => _copyToClipboard(context, transcription.text),
+                  behavior: HitTestBehavior.opaque,
+                  child: Center(
+                    child: AquaIcon.copy(size: 18, color: colors.textTertiary),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(paragraph, style: theme.textTheme.bodyMedium),
               ),
             ),
-          );
-        }),
-
-        const SizedBox(height: 8),
-
-        const Divider(),
-      ],
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildCheckbox(AquaColors colors) {
+    if (isSelected) {
+      return AquaCheckBox.small(value: true, onChanged: (_) {});
+    } else {
+      return AquaCheckBox.small(value: false, onChanged: (_) {});
+    }
   }
 
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppStrings.copiedToClipboard),
+        content: const Text('Copied to clipboard'),
         duration: AppConstants.snackBarDurationShort,
       ),
     );
