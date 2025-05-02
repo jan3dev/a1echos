@@ -36,24 +36,7 @@ class _SessionScreenState extends State<SessionScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final sessionProvider = Provider.of<SessionProvider>(
-        context,
-        listen: false,
-      );
-      final provider = Provider.of<LocalTranscriptionProvider>(
-        context,
-        listen: false,
-      );
-
-      if (sessionProvider.activeSessionId != widget.sessionId) {
-        sessionProvider.switchSession(widget.sessionId);
-      }
-
-      provider.loadTranscriptionsForSession(widget.sessionId);
-      provider.addListener(_scrollToBottom);
-    });
+    _initializeSession();
   }
 
   @override
@@ -70,6 +53,10 @@ class _SessionScreenState extends State<SessionScreen>
       if (provider.isRecording || provider.isTranscribing) {
         provider.stopRecordingAndSave();
       }
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _checkForExpiredTemporarySession();
     }
   }
 
@@ -270,6 +257,43 @@ class _SessionScreenState extends State<SessionScreen>
         tooltip: 'Delete Selected',
       ),
     ];
+  }
+
+  void _checkForExpiredTemporarySession() {
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    if (widget.sessionId == sessionProvider.activeSessionId &&
+        sessionProvider.isActiveTemporarySessionExpired()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _initializeSession() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final provider = Provider.of<LocalTranscriptionProvider>(
+        context,
+        listen: false,
+      );
+
+      if (sessionProvider.isActiveTemporarySessionExpired()) {
+        Navigator.of(context).pop();
+        return;
+      }
+
+      sessionProvider.switchSession(widget.sessionId);
+
+      sessionProvider.updateSessionModifiedTimestamp(widget.sessionId);
+
+      provider.loadTranscriptionsForSession(widget.sessionId);
+      provider.addListener(_scrollToBottom);
+    });
   }
 
   @override

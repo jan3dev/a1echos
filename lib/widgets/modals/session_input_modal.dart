@@ -6,6 +6,9 @@ class SessionInputModal extends StatefulWidget {
   final String buttonText;
   final String initialValue;
   final Function(String) onSubmit;
+  final VoidCallback? onCancel;
+  final bool showCancelButton;
+  final String cancelButtonText;
 
   /// A reusable modal for session creation or renaming
   ///
@@ -13,12 +16,18 @@ class SessionInputModal extends StatefulWidget {
   /// [buttonText] - Text for the primary action button
   /// [initialValue] - Optional initial value for the text field (used when renaming)
   /// [onSubmit] - Callback function that receives the input text when submitted
+  /// [onCancel] - Optional callback when cancel is pressed
+  /// [showCancelButton] - Whether to show a cancel button
+  /// [cancelButtonText] - Text for the cancel button
   const SessionInputModal({
     super.key,
     required this.title,
     required this.buttonText,
     this.initialValue = '',
     required this.onSubmit,
+    this.onCancel,
+    this.showCancelButton = false,
+    this.cancelButtonText = 'Cancel',
   });
 
   /// Show the session input modal
@@ -28,6 +37,9 @@ class SessionInputModal extends StatefulWidget {
     required String buttonText,
     String initialValue = '',
     required Function(String) onSubmit,
+    VoidCallback? onCancel,
+    bool showCancelButton = false,
+    String cancelButtonText = 'Cancel',
   }) {
     return showModalBottomSheet(
       context: context,
@@ -43,6 +55,9 @@ class SessionInputModal extends StatefulWidget {
               buttonText: buttonText,
               initialValue: initialValue,
               onSubmit: onSubmit,
+              onCancel: onCancel,
+              showCancelButton: showCancelButton,
+              cancelButtonText: cancelButtonText,
             ),
           ),
     );
@@ -89,7 +104,12 @@ class _SessionInputModalState extends State<SessionInputModal> {
             actions: [
               IconButton(
                 icon: AquaIcon.close(),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (widget.onCancel != null) {
+                    widget.onCancel!();
+                  }
+                },
               ),
             ],
           ),
@@ -157,6 +177,21 @@ class _SessionInputModalState extends State<SessionInputModal> {
                     onPressed: _handleSubmit,
                   ),
                 ),
+                if (widget.showCancelButton) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: AquaButton.secondary(
+                      text: widget.cancelButtonText,
+                      onPressed: () {
+                        Navigator.pop(context);
+                        if (widget.onCancel != null) {
+                          widget.onCancel!();
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -9,6 +9,8 @@ class SessionProvider with ChangeNotifier {
   static const String _prefsKeyActiveSession = 'active_session';
   final Uuid _uuid = const Uuid();
 
+  static const Duration temporarySessionTimeout = Duration(hours: 1);
+
   List<Session> _sessions = [];
   String _activeSessionId = '';
 
@@ -54,6 +56,8 @@ class SessionProvider with ChangeNotifier {
       await _saveSessions();
     }
 
+    await _handleExpiredTemporarySessions();
+
     _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
 
     final active = prefs.getString(_prefsKeyActiveSession);
@@ -64,6 +68,70 @@ class SessionProvider with ChangeNotifier {
       await _saveActiveSession();
     }
     notifyListeners();
+  }
+
+  Future<void> _handleExpiredTemporarySessions() async {
+    final now = DateTime.now();
+    final expiredSessions =
+        _sessions
+            .where(
+              (session) =>
+                  session.isTemporary &&
+                  now.difference(session.lastModified) >=
+                      temporarySessionTimeout,
+            )
+            .toList();
+
+    if (expiredSessions.isNotEmpty) {
+      for (var session in expiredSessions) {
+        _sessions.removeWhere((s) => s.id == session.id);
+      }
+
+      if (_sessions.isEmpty) {
+        _sessions = [
+          Session(
+            id: 'default_session',
+            name: 'Default Session',
+            timestamp: now,
+          ),
+        ];
+      }
+
+      await _saveSessions();
+    }
+  }
+
+  bool isActiveTemporarySessionExpired() {
+    if (!isActiveSessionTemporary()) return false;
+
+    final session = _sessions.firstWhere(
+      (s) => s.id == _activeSessionId,
+      orElse: () => _sessions.first,
+    );
+
+    final now = DateTime.now();
+    return now.difference(session.lastModified) >= temporarySessionTimeout;
+  }
+
+  Future<String> createNewSessionIfExpired() async {
+    if (isActiveTemporarySessionExpired()) {
+      final now = DateTime.now();
+      final formattedDate = "${now.month}/${now.day} ${now.hour}:${now.minute}";
+      final sessionName = 'Recording $formattedDate';
+      return await createSession(sessionName, isTemporary: true);
+    }
+    return _activeSessionId;
+  }
+
+  Future<void> validateSessionsOnAppStart() async {
+    await _handleExpiredTemporarySessions();
+
+    if (isActiveTemporarySessionExpired()) {
+      final now = DateTime.now();
+      final formattedDate = "${now.month}/${now.day} ${now.hour}:${now.minute}";
+      final sessionName = 'Recording $formattedDate';
+      await createSession(sessionName, isTemporary: true);
+    }
   }
 
   Future<void> _saveSessions() async {

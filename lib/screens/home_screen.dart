@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _selectionMode = false;
   Set<String> _selectedSessionIds = {};
@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<LocalTranscriptionProvider>(
         context,
@@ -37,6 +38,24 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       provider.addListener(_scrollToBottom);
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkForExpiredTemporarySession();
+    }
+  }
+
+  void _checkForExpiredTemporarySession() {
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    if (sessionProvider.isActiveTemporarySessionExpired()) {
+      sessionProvider.validateSessionsOnAppStart();
+    }
   }
 
   void _scrollToBottom() {
@@ -55,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     try {
       Provider.of<LocalTranscriptionProvider>(
         context,
@@ -66,8 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  // ---- Session Management Methods ----
 
   void _toggleSessionSelection(String sessionId) {
     setState(() {
@@ -166,6 +184,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSession(String sessionId) {
     if (_selectionMode) return;
 
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    if (sessionId == sessionProvider.activeSessionId &&
+        sessionProvider.isActiveTemporarySessionExpired()) {
+      sessionProvider.validateSessionsOnAppStart();
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -187,10 +216,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final sessionName = 'Recording $formattedDate';
 
     try {
-      final sessionId = await sessionProvider.createSession(
-        sessionName,
-        isTemporary: true,
-      );
+      String sessionId;
+      if (sessionProvider.isActiveSessionTemporary() &&
+          !sessionProvider.isActiveTemporarySessionExpired()) {
+        sessionId = sessionProvider.activeSessionId;
+        await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+      } else {
+        sessionId = await sessionProvider.createSession(
+          sessionName,
+          isTemporary: true,
+        );
+      }
+
       if (!mounted) return;
 
       final provider = Provider.of<LocalTranscriptionProvider>(
@@ -229,6 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (sessionProvider.isActiveSessionTemporary() &&
+        !sessionProvider.isActiveTemporarySessionExpired() &&
         locProvider.sessionTranscriptions.isNotEmpty) {
       _showSaveTemporarySessionDialog(
         sessionProvider.activeSessionId,
@@ -248,6 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
       title: 'Save Recording?',
       buttonText: 'Save',
       initialValue: initialName,
+      showCancelButton: true,
+      cancelButtonText: 'Discard',
       onSubmit: (newName) {
         if (newName.isNotEmpty) {
           sessionProvider.saveTemporarySession(sessionId, newName);
@@ -257,6 +297,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Session saved')));
+      },
+      onCancel: () {
+        sessionProvider.deleteSession(sessionId);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recording discarded')));
       },
     );
   }
