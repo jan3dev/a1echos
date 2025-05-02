@@ -198,17 +198,15 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       );
 
+      provider.startRecording();
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => SessionScreen(sessionId: sessionId),
         ),
       ).then((_) {
-        if (mounted) {
-          provider.startRecording();
-
-          _checkForTemporarySession();
-        }
+        _checkForTemporarySession();
       });
     } catch (e) {
       if (!mounted) return;

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ui_components/ui_components.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../constants/app_constants.dart';
+import '../providers/session_provider.dart';
+import 'package:intl/intl.dart';
+import '../widgets/recording_button.dart';
+import 'session_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -102,35 +105,40 @@ class SettingsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.only(top: 24, bottom: 24),
                 child: Center(
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: aquaColors.surfaceInverse,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 16,
-                          offset: const Offset(0, 0),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        provider.startRecording();
-                        Navigator.of(context).pushReplacementNamed('/');
-                      },
-                      icon: SvgPicture.asset(
-                        'assets/icons/mic.svg',
-                        width: 24,
-                        height: 24,
-                        colorFilter: ColorFilter.mode(
-                          aquaColors.textInverse,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
+                  child: RecordingButton(
+                    onRecordingStart: () {
+                      final sessionProvider = Provider.of<SessionProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final provider = Provider.of<LocalTranscriptionProvider>(
+                        context,
+                        listen: false,
+                      );
+
+                      // Create a temporary session
+                      final now = DateTime.now();
+                      final formattedDate = DateFormat(
+                        'MMM d, h:mm a',
+                      ).format(now);
+                      final sessionName = 'Recording $formattedDate';
+
+                      sessionProvider
+                          .createSession(sessionName, isTemporary: true)
+                          .then((sessionId) {
+                            provider.startRecording();
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        SessionScreen(sessionId: sessionId),
+                              ),
+                            );
+                          });
+                    },
+                    useProviderState: false,
                   ),
                 ),
               ),

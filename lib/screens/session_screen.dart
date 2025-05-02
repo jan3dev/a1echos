@@ -1,3 +1,4 @@
+import 'package:dolphinecho/widgets/modals/session_input_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -25,7 +26,8 @@ class SessionScreen extends StatefulWidget {
   State<SessionScreen> createState() => _SessionScreenState();
 }
 
-class _SessionScreenState extends State<SessionScreen> {
+class _SessionScreenState extends State<SessionScreen>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _transcriptionSelectionMode = false;
   Set<String> _selectedTranscriptionIds = {};
@@ -33,6 +35,8 @@ class _SessionScreenState extends State<SessionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final sessionProvider = Provider.of<SessionProvider>(
         context,
@@ -52,6 +56,23 @@ class _SessionScreenState extends State<SessionScreen> {
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      final provider = Provider.of<LocalTranscriptionProvider>(
+        context,
+        listen: false,
+      );
+
+      if (provider.isRecording || provider.isTranscribing) {
+        provider.stopRecordingAndSave();
+      }
+    }
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,6 +89,8 @@ class _SessionScreenState extends State<SessionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
     try {
       Provider.of<LocalTranscriptionProvider>(
         context,
@@ -77,6 +100,16 @@ class _SessionScreenState extends State<SessionScreen> {
       debugPrint('Error removing listener: $e');
     }
     _scrollController.dispose();
+
+    final provider = Provider.of<LocalTranscriptionProvider>(
+      context,
+      listen: false,
+    );
+
+    if (provider.isRecording || provider.isTranscribing) {
+      provider.stopRecordingAndSave();
+    }
+
     super.dispose();
   }
 
@@ -243,6 +276,10 @@ class _SessionScreenState extends State<SessionScreen> {
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
     final sessionProvider = context.watch<SessionProvider>();
+    final provider = Provider.of<LocalTranscriptionProvider>(
+      context,
+      listen: false,
+    );
 
     final sessionName =
         sessionProvider.sessions
@@ -261,11 +298,28 @@ class _SessionScreenState extends State<SessionScreen> {
       backgroundColor: colors.surfaceBackground,
       appBar: AquaTopAppBar(
         colors: colors,
+        onBackPressed: () {
+          if (provider.isRecording || provider.isTranscribing) {
+            provider.stopRecordingAndSave();
+          }
+          Navigator.of(context).pop();
+        },
         title: sessionName,
         actions:
             _transcriptionSelectionMode
                 ? _buildSelectionActions()
                 : _buildNormalActions(),
+        onTitlePressed: () {
+          SessionInputModal.show(
+            context,
+            title: 'Rename Session',
+            buttonText: 'Save',
+            initialValue: sessionName,
+            onSubmit: (name) {
+              sessionProvider.renameSession(widget.sessionId, name);
+            },
+          );
+        },
       ),
       body: Stack(
         children: [
