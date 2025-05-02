@@ -58,7 +58,9 @@ class SettingsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: aquaColors.surfacePrimary.withOpacity(
+                                0.04,
+                              ),
                               blurRadius: 16,
                             ),
                           ],
@@ -116,12 +118,12 @@ class SettingsScreen extends StatelessWidget {
                         listen: false,
                       );
 
-                      // Create a temporary session
                       final now = DateTime.now();
                       final formattedDate = DateFormat(
                         'MMM d, h:mm a',
                       ).format(now);
-                      final sessionName = 'Recording $formattedDate';
+                      final sessionName =
+                          '${AppStrings.recordingPrefix} $formattedDate';
 
                       sessionProvider
                           .createSession(sessionName, isTemporary: true)

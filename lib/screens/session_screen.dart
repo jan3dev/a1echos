@@ -148,11 +148,17 @@ class _SessionScreenState extends State<SessionScreen>
 
     ConfirmationModal.show(
       context: context,
-      title: 'Delete Transcriptions?',
-      message:
-          'Are you sure you want to delete ${_selectedTranscriptionIds.length} ${_selectedTranscriptionIds.length == 1 ? 'transcription' : 'transcriptions'}? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      title: AppStrings.sessionDeleteTranscriptionsTitle,
+      message: AppStrings.sessionDeleteTranscriptionsMessage
+          .replaceAll('{count}', _selectedTranscriptionIds.length.toString())
+          .replaceAll(
+            '{transcriptions}',
+            _selectedTranscriptionIds.length == 1
+                ? 'transcription'
+                : 'transcriptions',
+          ),
+      confirmText: AppStrings.sessionDeleteTranscriptionsButton,
+      cancelText: AppStrings.cancel,
       onConfirm: () async {
         Navigator.pop(context);
 
@@ -164,13 +170,20 @@ class _SessionScreenState extends State<SessionScreen>
               _selectedTranscriptionIds.clear();
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Transcriptions deleted')),
+              SnackBar(content: Text(AppStrings.sessionTranscriptionsDeleted)),
             );
           }
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error deleting transcriptions: $e')),
+              SnackBar(
+                content: Text(
+                  AppStrings.sessionErrorDeletingTranscriptions.replaceAll(
+                    '{error}',
+                    e.toString(),
+                  ),
+                ),
+              ),
             );
           }
         }
@@ -249,12 +262,12 @@ class _SessionScreenState extends State<SessionScreen>
       IconButton(
         icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
         onPressed: _selectAllTranscriptions,
-        tooltip: 'Select All',
+        tooltip: AppStrings.selectAll,
       ),
       IconButton(
         icon: AquaIcon.trash(),
         onPressed: _deleteSelectedTranscriptions,
-        tooltip: 'Delete Selected',
+        tooltip: AppStrings.deleteSelected,
       ),
     ];
   }
@@ -336,8 +349,8 @@ class _SessionScreenState extends State<SessionScreen>
         onTitlePressed: () {
           SessionInputModal.show(
             context,
-            title: 'Rename Session',
-            buttonText: 'Save',
+            title: AppStrings.sessionRenameTitle,
+            buttonText: AppStrings.save,
             initialValue: sessionName,
             onSubmit: (name) {
               sessionProvider.renameSession(widget.sessionId, name);
@@ -383,9 +396,8 @@ class _SessionScreenState extends State<SessionScreen>
 
                 if (provider.sessionTranscriptions.isEmpty) {
                   return EmptyTranscriptionsState(
-                    title: 'No Transcriptions in Session',
-                    message:
-                        'Start recording to add transcriptions to this session.',
+                    title: AppStrings.sessionEmptyStateTitle,
+                    message: AppStrings.sessionEmptyStateMessage,
                   );
                 }
 

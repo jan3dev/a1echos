@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import '../../constants/app_constants.dart';
 
 class ConfirmationModal {
   /// Shows a confirmation modal with warning icon
@@ -17,7 +18,7 @@ class ConfirmationModal {
     required String title,
     required String message,
     required String confirmText,
-    String cancelText = 'Cancel',
+    String cancelText = AppStrings.cancel,
     required VoidCallback onConfirm,
     VoidCallback? onCancel,
     bool isDanger = true,

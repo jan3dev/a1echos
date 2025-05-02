@@ -20,7 +20,7 @@ class ProcessingView extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16),
+            style: AquaTypography.body1,
           ),
         ],
       ),

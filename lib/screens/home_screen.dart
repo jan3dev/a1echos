@@ -14,6 +14,7 @@ import 'session_screen.dart';
 import '../widgets/modals/session_input_modal.dart';
 import '../widgets/modals/confirmation_modal.dart';
 import '../widgets/empty_transcriptions_state.dart';
+import '../constants/app_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -122,10 +123,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     ConfirmationModal.show(
       context: context,
-      title: 'Delete Selected Sessions?',
-      message:
-          'Are you sure you want to delete ${_selectedSessionIds.length} ${_selectedSessionIds.length == 1 ? 'session' : 'sessions'}? This action cannot be undone.',
-      confirmText: 'Delete Sessions',
+      title: AppStrings.homeDeleteSelectedSessionsTitle,
+      message: AppStrings.homeDeleteSelectedSessionsMessage
+          .replaceAll('{count}', _selectedSessionIds.length.toString())
+          .replaceAll(
+            '{sessions}',
+            _selectedSessionIds.length == 1 ? 'session' : 'sessions',
+          ),
+      confirmText: AppStrings.homeDeleteSessionsButton,
       onConfirm: () {
         Navigator.pop(context);
         for (var sessionId in _selectedSessionIds) {
@@ -137,7 +142,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Sessions deleted')));
+        ).showSnackBar(SnackBar(content: Text(AppStrings.homeSessionsDeleted)));
       },
     );
   }
@@ -150,12 +155,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     SessionInputModal.show(
       context,
-      title: 'New Session',
-      buttonText: 'Save',
+      title: AppStrings.homeNewSessionTitle,
+      buttonText: AppStrings.save,
       onSubmit: (name) async {
         try {
           final sessionId = await sessionProvider.createSession(
-            name.isEmpty ? 'New Session' : name,
+            name.isEmpty ? AppStrings.defaultSessionName : name,
           );
 
           if (!context.mounted) return;
@@ -164,9 +169,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         } catch (e) {
           if (!context.mounted) return;
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error creating session: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppStrings.homeErrorCreatingSession.replaceAll(
+                  '{error}',
+                  e.toString(),
+                ),
+              ),
+            ),
+          );
         }
       },
     );
@@ -213,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final now = DateTime.now();
     final formattedDate = DateFormat('MMM d, h:mm a').format(now);
-    final sessionName = 'Recording $formattedDate';
+    final sessionName = '${AppStrings.recordingPrefix} $formattedDate';
 
     try {
       String sessionId;
@@ -248,9 +260,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error creating session: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppStrings.homeErrorCreatingSession.replaceAll(
+              '{error}',
+              e.toString(),
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -283,11 +302,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     SessionInputModal.show(
       context,
-      title: 'Save Recording?',
-      buttonText: 'Save',
+      title: AppStrings.homeSaveRecordingTitle,
+      buttonText: AppStrings.save,
       initialValue: initialName,
       showCancelButton: true,
-      cancelButtonText: 'Discard',
+      cancelButtonText: AppStrings.cancel,
       onSubmit: (newName) {
         if (newName.isNotEmpty) {
           sessionProvider.saveTemporarySession(sessionId, newName);
@@ -296,13 +315,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Session saved')));
+        ).showSnackBar(SnackBar(content: Text(AppStrings.homeSessionSaved)));
       },
       onCancel: () {
         sessionProvider.deleteSession(sessionId);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recording discarded')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppStrings.homeRecordingDiscarded)),
+        );
       },
     );
   }
@@ -337,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     );
                   },
-                  tooltip: 'Settings',
+                  tooltip: AppStrings.settingsTooltip,
                   color: colors.textPrimary,
                 )
                 : null,
@@ -350,20 +369,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             IconButton(
               icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
               onPressed: _selectAllSessions,
-              tooltip: 'Select All',
+              tooltip: AppStrings.selectAll,
               color: colors.textPrimary,
             ),
             IconButton(
               icon: AquaIcon.trash(),
               onPressed: _deleteSelectedSessions,
-              tooltip: 'Delete Selected',
+              tooltip: AppStrings.deleteSelected,
               color: colors.textPrimary,
             ),
           ] else ...[
             IconButton(
               icon: AquaIcon.plus(),
               onPressed: () => _showCreateSessionDialog(context),
-              tooltip: 'New Session',
+              tooltip: AppStrings.newSessionTooltip,
               color: colors.textPrimary,
             ),
             if (!isEmpty)
@@ -377,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   );
                 },
-                tooltip: 'Settings',
+                tooltip: AppStrings.settingsTooltip,
                 color: colors.textPrimary,
               ),
           ],
@@ -386,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       body: Stack(
         children: [
-          isEmpty ? EmptyTranscriptionsState() : _buildSessionList(),
+          isEmpty ? const EmptyTranscriptionsState() : _buildSessionList(),
           Positioned(
             bottom: 32,
             left: 0,

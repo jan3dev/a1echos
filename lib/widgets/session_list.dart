@@ -4,6 +4,7 @@ import '../providers/session_provider.dart';
 import '../models/session.dart';
 import 'session_list_item.dart';
 import 'package:ui_components/ui_components.dart';
+import '../constants/app_constants.dart';
 
 class SessionList extends StatelessWidget {
   final bool selectionMode;
@@ -29,7 +30,7 @@ class SessionList extends StatelessWidget {
         final sessions = sessionProvider.sessions;
 
         if (sessions.isEmpty) {
-          return const Center(child: Text('No sessions found.'));
+          return Center(child: Text(AppStrings.noSessionsFound));
         }
 
         return Container(

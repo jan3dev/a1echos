@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import '../../constants/app_constants.dart';
 
 class SessionInputModal extends StatefulWidget {
   final String title;
@@ -44,7 +45,7 @@ class SessionInputModal extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AquaColors.lightColors.surfaceBackground,
       builder:
           (dialogContext) => Padding(
             padding: EdgeInsets.only(
@@ -84,11 +85,11 @@ class _SessionInputModalState extends State<SessionInputModal> {
 
   @override
   Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+    final colors = AquaColors.lightColors;
 
     return Container(
       decoration: BoxDecoration(
-        color: aquaColors.surfacePrimary,
+        color: colors.surfacePrimary,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -98,7 +99,7 @@ class _SessionInputModalState extends State<SessionInputModal> {
         mainAxisSize: MainAxisSize.min,
         children: [
           AquaTopAppBar(
-            colors: aquaColors,
+            colors: colors,
             title: widget.title,
             transparent: true,
             actions: [
@@ -120,11 +121,11 @@ class _SessionInputModalState extends State<SessionInputModal> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    color: aquaColors.surfacePrimary,
+                    color: colors.surfacePrimary,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: colors.surfacePrimary.withOpacity(0.04),
                         blurRadius: 16,
                         offset: const Offset(0, 0),
                       ),
@@ -140,9 +141,9 @@ class _SessionInputModalState extends State<SessionInputModal> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          'Session Name',
+                          AppStrings.sessionNameLabel,
                           style: AquaTypography.body1.copyWith(
-                            color: aquaColors.textSecondary,
+                            color: colors.textSecondary,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -151,7 +152,7 @@ class _SessionInputModalState extends State<SessionInputModal> {
                       TextField(
                         controller: _controller,
                         decoration: InputDecoration(
-                          hintText: 'Enter session name',
+                          hintText: AppStrings.sessionNameHint,
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.only(
@@ -160,7 +161,7 @@ class _SessionInputModalState extends State<SessionInputModal> {
                           ),
                         ),
                         style: AquaTypography.body1.copyWith(
-                          color: aquaColors.textPrimary,
+                          color: colors.textPrimary,
                         ),
                         autofocus: true,
                         textInputAction: TextInputAction.done,

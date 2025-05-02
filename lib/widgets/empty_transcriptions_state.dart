@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import '../constants/app_constants.dart';
 
 class EmptyTranscriptionsState extends StatelessWidget {
   final String title;
@@ -7,9 +8,8 @@ class EmptyTranscriptionsState extends StatelessWidget {
 
   const EmptyTranscriptionsState({
     super.key,
-    this.title = 'No Transcriptions Yet',
-    this.message =
-        'Hit the record button to start capturing and transcribing your voice notes.',
+    this.title = AppStrings.emptySessionsTitle,
+    this.message = AppStrings.emptySessionsMessage,
   });
 
   @override

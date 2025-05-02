@@ -51,12 +51,12 @@ class _RecordingButtonState extends State<RecordingButton>
 
   @override
   Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+    final colors = AquaColors.lightColors;
 
     if (widget.useProviderState) {
       return Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
-          return _buildButtonForState(provider.state, aquaColors, provider);
+          return _buildButtonForState(provider.state, colors, provider);
         },
       );
     } else {
@@ -64,7 +64,7 @@ class _RecordingButtonState extends State<RecordingButton>
           widget.isRecording
               ? TranscriptionState.recording
               : TranscriptionState.ready;
-      return _buildButtonForState(state, aquaColors, null);
+      return _buildButtonForState(state, colors, null);
     }
   }
 
@@ -107,7 +107,7 @@ class _RecordingButtonState extends State<RecordingButton>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: colors.surfacePrimary.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),
@@ -165,7 +165,7 @@ class _RecordingButtonState extends State<RecordingButton>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: colors.surfacePrimary.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),

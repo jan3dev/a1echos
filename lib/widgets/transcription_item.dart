@@ -111,7 +111,7 @@ class TranscriptionItem extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Copied to clipboard'),
+        content: Text(AppStrings.copiedToClipboard),
         duration: AppConstants.snackBarDurationShort,
       ),
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ui_components/ui_components.dart';
+import '../constants/app_constants.dart';
 
 /// Displays an error message with an optional retry action.
 class ErrorView extends StatelessWidget {
@@ -9,22 +11,23 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AquaColors.lightColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red.shade700),
+            AquaIcon.warning(color: colors.textInverse),
             const SizedBox(height: 16),
             Text(
-              'Error: $errorMessage',
-              style: TextStyle(color: Colors.red.shade900, fontSize: 16),
+              '${AppStrings.errorPrefix} $errorMessage',
+              style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             if (onRetry != null)
-              ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+              AquaButton.primary(text: AppStrings.retry, onPressed: onRetry),
           ],
         ),
       ),
