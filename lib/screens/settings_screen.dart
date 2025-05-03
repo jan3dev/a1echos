@@ -4,10 +4,6 @@ import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../constants/app_constants.dart';
-import '../providers/session_provider.dart';
-import 'package:intl/intl.dart';
-import '../widgets/recording_button.dart';
-import 'session_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -101,46 +97,6 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.only(top: 24, bottom: 24),
-                child: Center(
-                  child: RecordingButton(
-                    onRecordingStart: () {
-                      final sessionProvider = Provider.of<SessionProvider>(
-                        context,
-                        listen: false,
-                      );
-                      final provider = Provider.of<LocalTranscriptionProvider>(
-                        context,
-                        listen: false,
-                      );
-
-                      final now = DateTime.now();
-                      final formattedDate = DateFormat(
-                        'MMM d, h:mm a',
-                      ).format(now);
-                      final sessionName =
-                          '${AppStrings.recordingPrefix} $formattedDate';
-
-                      sessionProvider
-                          .createSession(sessionName, isTemporary: true)
-                          .then((sessionId) {
-                            provider.startRecording();
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) =>
-                                        SessionScreen(sessionId: sessionId),
-                              ),
-                            );
-                          });
-                    },
-                    useProviderState: false,
                   ),
                 ),
               ),

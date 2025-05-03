@@ -49,6 +49,7 @@ class EmptyTranscriptionsState extends StatelessWidget {
                   text: title,
                   size: 24,
                   color: colors.textPrimary,
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 6),
                 Text(

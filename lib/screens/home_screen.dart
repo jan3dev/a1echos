@@ -362,12 +362,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 : null,
         title:
             !isEmpty && !_selectionMode
-                ? SvgPicture.asset('assets/icons/echo-logo.svg', height: 28)
+                ? SvgPicture.asset('assets/icons/echo-logo.svg')
                 : null,
         actions: [
           if (_selectionMode) ...[
             IconButton(
-              icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
+              icon: SvgPicture.asset('assets/icons/select-all.svg'),
               onPressed: _selectAllSessions,
               tooltip: AppStrings.selectAll,
               color: colors.textPrimary,

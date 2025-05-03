@@ -260,7 +260,7 @@ class _SessionScreenState extends State<SessionScreen>
   List<Widget> _buildSelectionActions() {
     return [
       IconButton(
-        icon: SvgPicture.asset('assets/icons/select-all.svg', height: 20),
+        icon: SvgPicture.asset('assets/icons/select-all.svg'),
         onPressed: _selectAllTranscriptions,
         tooltip: AppStrings.selectAll,
       ),
