@@ -245,14 +245,9 @@ class _SessionScreenState extends State<SessionScreen>
   List<Widget> _buildNormalActions() {
     return [
       IconButton(
-        icon: AquaIcon.copy(),
+        icon: SvgPicture.asset('assets/icons/copy-multiple.svg'),
         onPressed: () => _copyAllTranscriptions(context),
         tooltip: AppStrings.copyAllTooltip,
-      ),
-      IconButton(
-        icon: AquaIcon.trash(),
-        onPressed: () => _clearAllTranscriptions(context),
-        tooltip: AppStrings.clearAllTooltip,
       ),
     ];
   }
