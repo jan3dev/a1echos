@@ -20,7 +20,6 @@ class AppStrings {
       'Tap the record button below to start transcribing with the selected model.';
   // Standard UI labels
   static const String loading = 'Loading...';
-  static const String processingTranscription = 'Processing transcription...';
   static const String transcribingStatus = 'Transcribing...';
   static const String liveTranscriptionTitle = 'Live Transcription';
   static const String speakNow = 'Speak now...';

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/local_transcription_provider.dart';
 import 'transcription_item.dart';
+import '../models/transcription.dart';
+import '../models/model_type.dart';
 
 class TranscriptionList extends StatelessWidget {
   final ScrollController controller;
@@ -22,7 +24,15 @@ class TranscriptionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<LocalTranscriptionProvider>(context);
-    final items = provider.sessionTranscriptions;
+    List<Transcription> items = List.from(provider.sessionTranscriptions);
+
+    bool showLiveVoskItem = provider.isRecording &&
+        provider.selectedModelType == ModelType.vosk &&
+        provider.liveVoskTranscriptionPreview != null;
+
+    if (showLiveVoskItem) {
+      items.add(provider.liveVoskTranscriptionPreview!);
+    }
 
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -32,12 +42,22 @@ class TranscriptionList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final transcription = items[index];
+        bool isTheLiveVoskItem = showLiveVoskItem && (transcription.id == 'live_vosk_active_preview');
+
         return TranscriptionItem(
           transcription: transcription,
-          selectionMode: selectionMode,
-          isSelected: selectedTranscriptionIds.contains(transcription.id),
-          onTap: () => onTranscriptionTap(transcription.id),
-          onLongPress: () => onTranscriptionLongPress(transcription.id),
+          selectionMode: isTheLiveVoskItem ? false : selectionMode,
+          isSelected: isTheLiveVoskItem ? false : selectedTranscriptionIds.contains(transcription.id),
+          onTap: () {
+            if (!isTheLiveVoskItem) {
+              onTranscriptionTap(transcription.id);
+            }
+          },
+          onLongPress: () {
+            if (!isTheLiveVoskItem) {
+              onTranscriptionLongPress(transcription.id);
+            }
+          },
         );
       },
     );

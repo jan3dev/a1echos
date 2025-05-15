@@ -10,7 +10,6 @@ import '../models/session.dart';
 import '../widgets/recording_button.dart';
 import '../widgets/audio_wave_visualization.dart';
 import '../widgets/live_transcription_view.dart';
-import '../widgets/processing_view.dart';
 import '../widgets/error_view.dart';
 import '../constants/app_constants.dart';
 import '../widgets/modals/confirmation_modal.dart';
@@ -211,37 +210,6 @@ class _SessionScreenState extends State<SessionScreen>
     );
   }
 
-  void _clearAllTranscriptions(BuildContext context) {
-    final locProv = Provider.of<LocalTranscriptionProvider>(
-      context,
-      listen: false,
-    );
-
-    if (locProv.sessionTranscriptions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.noTranscriptionsToClear)),
-      );
-      return;
-    }
-
-    ConfirmationModal.show(
-      context: context,
-      title: AppStrings.clearAllDialogTitle,
-      message: AppStrings.clearAllDialogContent,
-      confirmText: AppStrings.clear,
-      cancelText: AppStrings.cancel,
-      onConfirm: () {
-        locProv.clearTranscriptionsForSession(widget.sessionId);
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.allTranscriptionsClearedSession),
-          ),
-        );
-      },
-    );
-  }
-
   List<Widget> _buildNormalActions() {
     return [
       IconButton(
@@ -368,20 +336,8 @@ class _SessionScreenState extends State<SessionScreen>
                 }
 
                 if (provider.isRecording) {
-                  return Column(
-                    children: [
-                      Expanded(
-                        child: LiveTranscriptionView(
-                          controller: _scrollController,
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                if (provider.isTranscribing) {
-                  return ProcessingView(
-                    message: AppStrings.processingTranscription,
+                  return LiveTranscriptionView(
+                    controller: _scrollController,
                   );
                 }
 

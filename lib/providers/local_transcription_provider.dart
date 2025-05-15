@@ -29,6 +29,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   TranscriptionState _state = TranscriptionState.loading;
   String? _errorMessage;
   String _currentStreamingText = '';
+  Transcription? _liveVoskTranscriptionPreview;
   late TranscriptionOrchestrator _orchestrator;
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
@@ -45,6 +46,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   String get currentStreamingText => _currentStreamingText;
   ModelType get selectedModelType => _selectedModelType;
   List<Transcription> get allTranscriptions => _transcriptions;
+  Transcription? get liveVoskTranscriptionPreview => _liveVoskTranscriptionPreview;
 
   List<Transcription> get sessionTranscriptions => _sessionManager
       .filterBySession(_transcriptions, sessionProvider.activeSessionId);
@@ -210,6 +212,18 @@ class LocalTranscriptionProvider with ChangeNotifier {
             _selectedModelType == ModelType.vosk
                 ? TranscriptionState.recording
                 : TranscriptionState.transcribing;
+
+        if (_selectedModelType == ModelType.vosk && isRecording) {
+          _liveVoskTranscriptionPreview = Transcription(
+            id: 'live_vosk_active_preview',
+            text: _currentStreamingText,
+            timestamp: DateTime.now(),
+            sessionId: sessionProvider.activeSessionId,
+            audioPath: '',
+          );
+        } else {
+          _liveVoskTranscriptionPreview = null;
+        }
         notifyListeners();
       });
     } catch (e, stackTrace) {
@@ -244,6 +258,15 @@ class LocalTranscriptionProvider with ChangeNotifier {
       }
       if (success) {
         _state = TranscriptionState.recording;
+        if (_selectedModelType == ModelType.vosk) {
+          _liveVoskTranscriptionPreview = Transcription(
+            id: 'live_vosk_active_preview',
+            text: '',
+            timestamp: DateTime.now(),
+            sessionId: sessionProvider.activeSessionId,
+            audioPath: '',
+          );
+        }
       }
     } catch (e, stack) {
       _errorMessage = 'Failed to start recording: $e';
@@ -266,6 +289,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     _errorMessage = null;
     _state = TranscriptionState.transcribing;
+    _liveVoskTranscriptionPreview = null;
     notifyListeners();
 
     try {
