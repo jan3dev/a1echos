@@ -22,8 +22,9 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
     with TickerProviderStateMixin {
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _animations;
-  final int barCount = 31;
+  final int barsPerSide = 11;
   final random = Random();
+  final double maxBarHeight = 32.0;
 
   @override
   void initState() {
@@ -32,22 +33,22 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
   }
 
   void _initializeAnimations() {
+    final totalBars = barsPerSide * 2;
     _animationControllers = List.generate(
-      barCount,
+      totalBars,
       (index) => AnimationController(
         vsync: this,
         duration: Duration(milliseconds: 600 + random.nextInt(400)),
       ),
     );
 
-    _animations =
-        _animationControllers.map((controller) {
-          return Tween<double>(begin: 0.3, end: 1.0).animate(
-            CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-          );
-        }).toList();
+    _animations = _animationControllers.map((controller) {
+      return Tween<double>(begin: 0.3, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+      );
+    }).toList();
 
-    for (var i = 0; i < barCount; i++) {
+    for (var i = 0; i < totalBars; i++) {
       Future.delayed(Duration(milliseconds: random.nextInt(200)), () {
         if (mounted) {
           _animationControllers[i].repeat(reverse: true);
@@ -83,25 +84,41 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildAudioWaveSide(int startIndex) {
     return SizedBox(
-      height: 40,
+      height: maxBarHeight,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(barCount, (index) {
-          if (widget.state == TranscriptionState.transcribing) {
-            return _AudioBar(height: 20);
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(barsPerSide, (index) {
+          final animationIndex = startIndex + index;
+          if (widget.state == TranscriptionState.recording) {
+            return AnimatedBuilder(
+              animation: _animations[animationIndex],
+              builder: (context, child) {
+                return _AudioBar(height: maxBarHeight * _animations[animationIndex].value);
+              },
+            );
+          } else {
+            return _AudioBar(height: maxBarHeight * 0.5);
           }
-
-          return AnimatedBuilder(
-            animation: _animations[index],
-            builder: (context, child) {
-              return _AudioBar(height: 40 * _animations[index].value);
-            },
-          );
         }),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Left side audio wave
+        Expanded(child: _buildAudioWaveSide(0)),
+        
+        // Space for the recording button (matches button width)
+        const SizedBox(width: 64),
+        
+        // Right side audio wave
+        Expanded(child: _buildAudioWaveSide(barsPerSide)),
+      ],
     );
   }
 }
@@ -117,7 +134,7 @@ class _AudioBar extends StatelessWidget {
       width: 4,
       height: height,
       decoration: BoxDecoration(
-        color: AquaColors.lightColors.accentDanger,
+        color: AquaColors.lightColors.accentBrand,
         borderRadius: BorderRadius.circular(4),
       ),
     );

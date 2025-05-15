@@ -380,10 +380,6 @@ class _SessionScreenState extends State<SessionScreen>
                           controller: _scrollController,
                         ),
                       ),
-                      AudioWaveVisualization(
-                        state: TranscriptionState.recording,
-                        modelType: provider.selectedModelType,
-                      ),
                     ],
                   );
                 }
@@ -419,7 +415,26 @@ class _SessionScreenState extends State<SessionScreen>
             bottom: 32,
             left: 0,
             right: 0,
-            child: Center(child: RecordingButton(useProviderState: true)),
+            child: Center(
+              child: Consumer<LocalTranscriptionProvider>(
+                builder: (context, transcriptionProvider, _) {
+                  if (transcriptionProvider.isRecording) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        AudioWaveVisualization(
+                          state: transcriptionProvider.state,
+                          modelType: transcriptionProvider.selectedModelType,
+                        ),
+                        RecordingButton(useProviderState: true),
+                      ],
+                    );
+                  } else {
+                    return RecordingButton(useProviderState: true);
+                  }
+                },
+              ),
+            ),
           ),
         ],
       ),

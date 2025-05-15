@@ -80,11 +80,11 @@ class _RecordingButtonState extends State<RecordingButton>
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: colors.surfaceSecondary,
+            color: colors.glassInverse,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: colors.glassInverse.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),
@@ -94,7 +94,7 @@ class _RecordingButtonState extends State<RecordingButton>
             child: SizedBox(
               width: 24,
               height: 24,
-              child: AquaIndefinateProgressIndicator(color: colors.textPrimary),
+              child: AquaIndefinateProgressIndicator(color: colors.textInverse),
             ),
           ),
         );
@@ -127,11 +127,11 @@ class _RecordingButtonState extends State<RecordingButton>
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: colors.accentDanger,
+            color: colors.accentBrand,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: colors.accentDanger.withOpacity(0.3),
+                color: colors.accentBrand.withOpacity(0.3),
                 blurRadius: 24,
                 offset: const Offset(0, 0),
               ),
@@ -161,11 +161,11 @@ class _RecordingButtonState extends State<RecordingButton>
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: colors.surfaceInverse,
+            color: colors.glassInverse,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: colors.surfacePrimary.withOpacity(0.04),
+                color: colors.glassInverse.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),
