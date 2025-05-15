@@ -147,43 +147,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _showCreateSessionDialog(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    SessionInputModal.show(
-      context,
-      title: AppStrings.homeNewSessionTitle,
-      buttonText: AppStrings.save,
-      onSubmit: (name) async {
-        try {
-          final sessionId = await sessionProvider.createSession(
-            name.isEmpty ? AppStrings.defaultSessionName : name,
-          );
-
-          if (!context.mounted) return;
-
-          _openSession(sessionId);
-        } catch (e) {
-          if (!context.mounted) return;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppStrings.homeErrorCreatingSession.replaceAll(
-                  '{error}',
-                  e.toString(),
-                ),
-              ),
-            ),
-          );
-        }
-      },
-    );
-  }
-
   void _handleSessionLongPress(Session session) {
     if (!_selectionMode) {
       setState(() {
@@ -379,12 +342,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               color: colors.textPrimary,
             ),
           ] else ...[
-            IconButton(
-              icon: AquaIcon.plus(),
-              onPressed: () => _showCreateSessionDialog(context),
-              tooltip: AppStrings.newSessionTooltip,
-              color: colors.textPrimary,
-            ),
             if (!isEmpty)
               IconButton(
                 icon: AquaIcon.settings(),
