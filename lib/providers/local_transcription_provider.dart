@@ -30,6 +30,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   String? _errorMessage;
   String _currentStreamingText = '';
   Transcription? _liveVoskTranscriptionPreview;
+  Transcription? _loadingWhisperTranscriptionPreview;
   late TranscriptionOrchestrator _orchestrator;
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
@@ -47,6 +48,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   ModelType get selectedModelType => _selectedModelType;
   List<Transcription> get allTranscriptions => _transcriptions;
   Transcription? get liveVoskTranscriptionPreview => _liveVoskTranscriptionPreview;
+  Transcription? get loadingWhisperTranscriptionPreview => _loadingWhisperTranscriptionPreview;
 
   List<Transcription> get sessionTranscriptions => _sessionManager
       .filterBySession(_transcriptions, sessionProvider.activeSessionId);
@@ -248,7 +250,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
       notifyListeners();
       return false;
     }
-    if (_state == TranscriptionState.recording) return true;
 
     bool success = false;
     try {
@@ -266,6 +267,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
             sessionId: sessionProvider.activeSessionId,
             audioPath: '',
           );
+          _loadingWhisperTranscriptionPreview = null; 
+        } else if (_selectedModelType == ModelType.whisper) {
+          _liveVoskTranscriptionPreview = null; 
+          _loadingWhisperTranscriptionPreview = null;
         }
       }
     } catch (e, stack) {
@@ -285,24 +290,45 @@ class LocalTranscriptionProvider with ChangeNotifier {
   }
 
   Future<void> stopRecordingAndSave() async {
-    if (_state != TranscriptionState.recording) return;
+    if (_state != TranscriptionState.recording && _state != TranscriptionState.transcribing) {
+        if(_state != TranscriptionState.recording) return;
+    }
 
     _errorMessage = null;
-    _state = TranscriptionState.transcribing;
-    _liveVoskTranscriptionPreview = null;
+    bool wasVoskRecording = _selectedModelType == ModelType.vosk && _state == TranscriptionState.recording;
+    ModelType modelUsedForThisOperation = _selectedModelType;
+
+    _state = TranscriptionState.transcribing; 
+    if (modelUsedForThisOperation == ModelType.whisper) {
+      _loadingWhisperTranscriptionPreview = Transcription(
+        id: 'whisper_loading_active_preview',
+        text: '', 
+        timestamp: DateTime.now(),
+        sessionId: sessionProvider.activeSessionId,
+        audioPath: '',
+      );
+    }
     notifyListeners();
 
     try {
-      final output = await _orchestrator.stopRecording(_selectedModelType);
+      final output = await _orchestrator.stopRecording(modelUsedForThisOperation);
       final resultText = output.text;
+
+      if (wasVoskRecording) { 
+          _liveVoskTranscriptionPreview = null;
+      }
+
       if (resultText.isEmpty) {
         final modelName =
-            _selectedModelType == ModelType.vosk ? 'Vosk' : 'Whisper';
+            modelUsedForThisOperation == ModelType.vosk ? 'Vosk' : 'Whisper';
         _errorMessage = 'No speech detected ($modelName)';
         developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+        if (modelUsedForThisOperation == ModelType.whisper) {
+             _loadingWhisperTranscriptionPreview = null; 
+        }
       } else {
         String audioPath = '';
-        if (_selectedModelType == ModelType.whisper) {
+        if (modelUsedForThisOperation == ModelType.whisper) {
           final tempFile = File(output.audioPath);
           if (await tempFile.exists()) {
             audioPath = await _repository.saveAudioFile(
@@ -315,6 +341,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
           }
         }
         await _saveTranscription(resultText, audioPath);
+        if (modelUsedForThisOperation == ModelType.whisper) {
+          _loadingWhisperTranscriptionPreview = null; 
+        }
       }
     } catch (e, stack) {
       _errorMessage = 'Error stopping/saving transcription: $e';
@@ -324,6 +353,12 @@ class LocalTranscriptionProvider with ChangeNotifier {
         error: e,
         stackTrace: stack,
       );
+       if (modelUsedForThisOperation == ModelType.vosk) { 
+          _liveVoskTranscriptionPreview = null;
+      }
+      if (modelUsedForThisOperation == ModelType.whisper) {
+        _loadingWhisperTranscriptionPreview = null; 
+      }
     } finally {
       if (_state != TranscriptionState.error) {
         _state = TranscriptionState.ready;

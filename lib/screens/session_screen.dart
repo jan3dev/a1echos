@@ -7,6 +7,7 @@ import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
+import '../models/model_type.dart';
 import '../widgets/recording_button.dart';
 import '../widgets/audio_wave_visualization.dart';
 import '../widgets/live_transcription_view.dart';
@@ -335,13 +336,30 @@ class _SessionScreenState extends State<SessionScreen>
                   return ErrorView(errorMessage: provider.error!);
                 }
 
+                bool whisperPreviewIsActive =
+                    provider.selectedModelType == ModelType.whisper &&
+                        provider.isTranscribing &&
+                        provider.loadingWhisperTranscriptionPreview != null;
+
+                bool voskPreviewIsActive = provider.selectedModelType ==
+                        ModelType.vosk &&
+                    ((provider.isRecording &&
+                            provider.liveVoskTranscriptionPreview != null) ||
+                        (provider.isTranscribing &&
+                            provider.liveVoskTranscriptionPreview !=
+                                null)
+                        );
+
+                bool anyPreviewActive =
+                    whisperPreviewIsActive || voskPreviewIsActive;
+
                 if (provider.isRecording) {
                   return LiveTranscriptionView(
                     controller: _scrollController,
                   );
                 }
 
-                if (provider.sessionTranscriptions.isEmpty) {
+                if (provider.sessionTranscriptions.isEmpty && !anyPreviewActive) {
                   return EmptyTranscriptionsState(
                     title: AppStrings.sessionEmptyStateTitle,
                     message: AppStrings.sessionEmptyStateMessage,

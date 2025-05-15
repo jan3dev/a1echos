@@ -26,12 +26,32 @@ class TranscriptionList extends StatelessWidget {
     final provider = Provider.of<LocalTranscriptionProvider>(context);
     List<Transcription> items = List.from(provider.sessionTranscriptions);
 
-    bool showLiveVoskItem = provider.isRecording &&
-        provider.selectedModelType == ModelType.vosk &&
-        provider.liveVoskTranscriptionPreview != null;
+    Transcription? activePreviewItem;
+    bool isVoskStreamingLive = false;
+    bool isVoskLoadingResult = false;
+    bool isWhisperLoadingResult = false;
 
-    if (showLiveVoskItem) {
-      items.add(provider.liveVoskTranscriptionPreview!);
+    if (provider.selectedModelType == ModelType.vosk) {
+      if (provider.isRecording && provider.liveVoskTranscriptionPreview != null) {
+        activePreviewItem = provider.liveVoskTranscriptionPreview;
+        isVoskStreamingLive = true;
+      } else if (provider.isTranscribing && provider.liveVoskTranscriptionPreview != null) {
+        activePreviewItem = provider.liveVoskTranscriptionPreview;
+        isVoskLoadingResult = true;
+      }
+    } else if (provider.selectedModelType == ModelType.whisper) {
+      if ((provider.isRecording || provider.isTranscribing) && 
+          provider.loadingWhisperTranscriptionPreview != null) {
+        if (provider.isTranscribing) {
+            activePreviewItem = provider.loadingWhisperTranscriptionPreview;
+            isWhisperLoadingResult = true;
+        }
+      }
+    }
+
+    if (activePreviewItem != null) {
+      items.removeWhere((item) => item.id == activePreviewItem!.id);
+      items.add(activePreviewItem);
     }
 
     if (items.isEmpty) return const SizedBox.shrink();
@@ -42,19 +62,25 @@ class TranscriptionList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final transcription = items[index];
-        bool isTheLiveVoskItem = showLiveVoskItem && (transcription.id == 'live_vosk_active_preview');
+        
+        bool itemIsVoskStreaming = isVoskStreamingLive && activePreviewItem != null && transcription.id == activePreviewItem.id;
+        bool itemIsVoskLoading = isVoskLoadingResult && activePreviewItem != null && transcription.id == activePreviewItem.id;
+        bool itemIsWhisperLoading = isWhisperLoadingResult && activePreviewItem != null && transcription.id == activePreviewItem.id;
 
         return TranscriptionItem(
           transcription: transcription,
-          selectionMode: isTheLiveVoskItem ? false : selectionMode,
-          isSelected: isTheLiveVoskItem ? false : selectedTranscriptionIds.contains(transcription.id),
+          selectionMode: (itemIsVoskStreaming || itemIsVoskLoading || itemIsWhisperLoading) ? false : selectionMode,
+          isSelected: (itemIsVoskStreaming || itemIsVoskLoading || itemIsWhisperLoading) ? false : selectedTranscriptionIds.contains(transcription.id),
+          isLivePreviewItem: itemIsVoskStreaming,
+          isLoadingVoskResult: itemIsVoskLoading,
+          isLoadingWhisperResult: itemIsWhisperLoading,
           onTap: () {
-            if (!isTheLiveVoskItem) {
+            if (!itemIsVoskStreaming && !itemIsVoskLoading && !itemIsWhisperLoading) {
               onTranscriptionTap(transcription.id);
             }
           },
           onLongPress: () {
-            if (!isTheLiveVoskItem) {
+            if (!itemIsVoskStreaming && !itemIsVoskLoading && !itemIsWhisperLoading) {
               onTranscriptionLongPress(transcription.id);
             }
           },
