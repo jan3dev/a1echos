@@ -28,7 +28,7 @@ class ConfirmationModal {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: AquaIcon.warning(color: colors.textInverse),
+      icon: AquaIcon.danger(color: colors.textInverse),
       title: title,
       message: message,
       primaryButtonText: confirmText,

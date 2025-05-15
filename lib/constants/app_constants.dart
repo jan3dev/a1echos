@@ -49,7 +49,7 @@ class AppStrings {
   static const String homeSaveRecordingTitle = 'Save Recording?';
   static const String homeSessionSaved = 'Session saved';
   static const String homeRecordingDiscarded = 'Recording discarded';
-  static const String homeEmptyStateTitle = 'No Sessions Yet';
+  static const String homeEmptyStateTitle = 'No Transcriptions Yet';
   static const String homeEmptyStateMessage =
       'Create a new session to get started';
 
@@ -62,10 +62,10 @@ class AppStrings {
   // SessionScreen strings
   static const String sessionRenameTitle = 'Rename Session';
   static const String sessionDeleteTranscriptionsTitle =
-      'Delete Transcriptions?';
+      'Delete Selected Transcriptions?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
-  static const String sessionDeleteTranscriptionsButton = 'Delete';
+  static const String sessionDeleteTranscriptionsButton = 'Delete Transcriptions';
   static const String sessionTranscriptionsDeleted = 'Transcriptions deleted';
   static const String sessionErrorDeletingTranscriptions =
       'Error deleting transcriptions: {error}';
@@ -113,12 +113,9 @@ class AppStrings {
   static const String defaultSessionTitle = 'Default Session';
   
   // Empty states
-  static const String emptyTranscriptionsTitle = 'No Transcriptions Yet';
-  static const String emptyTranscriptionsMessage =
-      'Hit the record button to start capturing and transcribing your voice notes.';
-  static const String emptySessionsTitle = 'No Sessions Yet';
+  static const String emptySessionsTitle = 'No Transcriptions Yet';
   static const String emptySessionsMessage =
-      'Create a new session or start recording to get started.';
+      'Hit the record button to start capturing and transcribing your voice notes.';
   static const String noSessionsFound = 'No sessions found.';
   
   // TranscriptionItem

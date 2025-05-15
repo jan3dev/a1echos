@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
 
-// Basic Skeleton Loader Widget
+/// Basic Skeleton Loader Widget
 class SkeletonLoader extends StatefulWidget {
   final double height;
   final double width;
