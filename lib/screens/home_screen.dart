@@ -5,13 +5,14 @@ import 'package:ui_components/ui_components.dart';
 import 'package:intl/intl.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
+import '../providers/settings_provider.dart';
 import '../models/session.dart';
+import '../widgets/incognito_toggle_item.dart';
 import '../widgets/recording_button.dart';
 import 'settings_screen.dart';
 import 'dart:developer' as developer;
 import '../widgets/session_list.dart';
 import 'session_screen.dart';
-import '../widgets/modals/session_input_modal.dart';
 import '../widgets/modals/confirmation_modal.dart';
 import '../widgets/empty_transcriptions_state.dart';
 import '../constants/app_constants.dart';
@@ -41,24 +42,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkForExpiredTemporarySession();
-    }
-  }
-
-  void _checkForExpiredTemporarySession() {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    if (sessionProvider.isActiveTemporarySessionExpired()) {
-      sessionProvider.validateSessionsOnAppStart();
-    }
-  }
-
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -86,6 +69,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final settingsProvider = Provider.of<SettingsProvider>(
+        context,
+        listen: false,
+      );
+
+      if (settingsProvider.isIncognitoMode) {
+        final incognitoSessions =
+            sessionProvider.sessions
+                .where((session) => session.isIncognito)
+                .toList();
+        for (var session in incognitoSessions) {
+          sessionProvider.deleteSession(session.id);
+        }
+      }
+    }
   }
 
   void _toggleSessionSelection(String sessionId) {
@@ -159,29 +169,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _openSession(String sessionId) {
     if (_selectionMode) return;
 
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    if (sessionId == sessionProvider.activeSessionId &&
-        sessionProvider.isActiveTemporarySessionExpired()) {
-      sessionProvider.validateSessionsOnAppStart();
-      return;
-    }
-
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SessionScreen(sessionId: sessionId),
       ),
-    ).then((_) {
-      _checkForTemporarySession();
-    });
+    );
   }
 
   void _startRecording() async {
     final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final settingsProvider = Provider.of<SettingsProvider>(
       context,
       listen: false,
     );
@@ -192,15 +193,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     try {
       String sessionId;
-      if (sessionProvider.isActiveSessionTemporary() &&
-          !sessionProvider.isActiveTemporarySessionExpired()) {
-        sessionId = sessionProvider.activeSessionId;
-        await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-      } else {
+      if (settingsProvider.isIncognitoMode) {
         sessionId = await sessionProvider.createSession(
           sessionName,
-          isTemporary: true,
+          isIncognito: true,
         );
+      } else {
+        sessionId = await sessionProvider.createSession(sessionName);
       }
 
       if (!mounted) return;
@@ -217,9 +216,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         MaterialPageRoute(
           builder: (context) => SessionScreen(sessionId: sessionId),
         ),
-      ).then((_) {
-        _checkForTemporarySession();
-      });
+      ).then((_) {});
     } catch (e) {
       if (!mounted) return;
 
@@ -236,79 +233,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _checkForTemporarySession() async {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    final locProvider = Provider.of<LocalTranscriptionProvider>(
-      context,
-      listen: false,
-    );
-
-    if (sessionProvider.isActiveSessionTemporary() &&
-        !sessionProvider.isActiveTemporarySessionExpired() &&
-        locProvider.sessionTranscriptions.isNotEmpty) {
-      _showSaveTemporarySessionDialog(
-        sessionProvider.activeSessionId,
-        sessionProvider.activeSession.name,
-      );
-    }
-  }
-
-  void _showSaveTemporarySessionDialog(String sessionId, String initialName) {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    SessionInputModal.show(
-      context,
-      title: AppStrings.homeSaveRecordingTitle,
-      buttonText: AppStrings.save,
-      initialValue: initialName,
-      showCancelButton: true,
-      cancelButtonText: AppStrings.cancel,
-      onSubmit: (newName) {
-        if (newName.isNotEmpty) {
-          sessionProvider.saveTemporarySession(sessionId, newName);
-        } else {
-          sessionProvider.makeSessionPermanent(sessionId);
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppStrings.homeSessionSaved)));
-      },
-      onCancel: () {
-        sessionProvider.deleteSession(sessionId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppStrings.homeRecordingDiscarded)),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
-
     final sessionProvider = Provider.of<SessionProvider>(context);
-    final bool isEmpty =
-        sessionProvider.sessions.isEmpty ||
-        (sessionProvider.sessions.length == 1 &&
-            sessionProvider.sessions.first.isTemporary);
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+
+    bool effectivelyEmpty = sessionProvider.sessions.isEmpty;
+    if (sessionProvider.sessions.length == 1 &&
+        sessionProvider.sessions.first.isIncognito) {
+      if (settingsProvider.isIncognitoMode) {
+        effectivelyEmpty = true;
+      } else {
+        effectivelyEmpty = false;
+      }
+    }
+    if (sessionProvider.sessions.length > 1) effectivelyEmpty = false;
 
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
       appBar: AppBar(
         backgroundColor: colors.surfaceBackground,
         elevation: 0,
-        leadingWidth: isEmpty || _selectionMode ? 56 : 0,
+        leadingWidth: effectivelyEmpty || _selectionMode ? 56 : 0,
         automaticallyImplyLeading: false,
-        titleSpacing: isEmpty || _selectionMode ? 0 : 16,
+        titleSpacing: _selectionMode ? 0 : 16,
         leading:
-            isEmpty || _selectionMode
+            _selectionMode
                 ? IconButton(
                   icon: AquaIcon.settings(),
                   onPressed: () {
@@ -324,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 )
                 : null,
         title:
-            !isEmpty && !_selectionMode
+            !_selectionMode
                 ? SvgPicture.asset('assets/icons/echo-logo.svg')
                 : null,
         actions: [
@@ -342,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               color: colors.textPrimary,
             ),
           ] else ...[
-            if (!isEmpty)
+            if (!_selectionMode)
               IconButton(
                 icon: AquaIcon.settings(),
                 onPressed: () {
@@ -362,7 +313,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       body: Stack(
         children: [
-          isEmpty ? const EmptyTranscriptionsState() : _buildSessionList(),
+          Column(
+            children: [
+              const IncognitoToggleItem(),
+              Expanded(
+                child:
+                    effectivelyEmpty
+                        ? const EmptyTranscriptionsState()
+                        : _buildSessionList(),
+              ),
+            ],
+          ),
           Positioned(
             bottom: 32,
             left: 0,
@@ -378,8 +339,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildSessionList() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(padding: const EdgeInsets.all(16.0)),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Text(
+            AppStrings.homeSessionsTitle,
+            style: AquaTypography.body1SemiBold.copyWith(
+              color: AquaColors.lightColors.textPrimary,
+            ),
+            textAlign: TextAlign.left,
+          ),
+        ),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: SessionList(

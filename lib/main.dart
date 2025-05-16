@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'providers/session_provider.dart';
 import 'providers/local_transcription_provider.dart';
+import 'providers/settings_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(
           create:
@@ -56,11 +58,7 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
-    _initFuture =
-        Provider.of<SessionProvider>(
-          context,
-          listen: false,
-        ).validateSessionsOnAppStart();
+    _initFuture = Future.value();
   }
 
   @override

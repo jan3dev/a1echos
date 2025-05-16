@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'dart:developer' as developer;
 import '../models/transcription.dart';
 import 'encryption_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -71,5 +71,34 @@ class StorageService {
     await audioFile.copy(targetFile.path);
 
     return targetFile.path;
+  }
+
+  Future<void> deleteTranscriptionsForSession(String sessionId) async {
+    final transcriptions = await getTranscriptions();
+    final List<Transcription> transcriptionsToKeep = [];
+    final List<String> audioPathsToDelete = [];
+
+    for (final transcription in transcriptions) {
+      if (transcription.sessionId == sessionId) {
+        if (transcription.audioPath.isNotEmpty) {
+          audioPathsToDelete.add(transcription.audioPath);
+        }
+      } else {
+        transcriptionsToKeep.add(transcription);
+      }
+    }
+
+    await _saveTranscriptions(transcriptionsToKeep);
+
+    for (final path in audioPathsToDelete) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        developer.log("Error deleting audio file $path: $e");
+      }
+    }
   }
 }

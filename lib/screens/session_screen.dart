@@ -16,6 +16,7 @@ import '../constants/app_constants.dart';
 import '../widgets/modals/confirmation_modal.dart';
 import '../widgets/transcription_list.dart';
 import '../widgets/empty_transcriptions_state.dart';
+import '../providers/settings_provider.dart';
 
 class SessionScreen extends StatefulWidget {
   final String sessionId;
@@ -32,9 +33,18 @@ class _SessionScreenState extends State<SessionScreen>
   bool _transcriptionSelectionMode = false;
   Set<String> _selectedTranscriptionIds = {};
 
+  late LocalTranscriptionProvider _localTranscriptionProviderInstance;
+  late SessionProvider _sessionProviderInstance;
+  late SettingsProvider _settingsProviderInstance;
+
   @override
   void initState() {
     super.initState();
+
+    _localTranscriptionProviderInstance = Provider.of<LocalTranscriptionProvider>(context, listen: false);
+    _sessionProviderInstance = Provider.of<SessionProvider>(context, listen: false);
+    _settingsProviderInstance = Provider.of<SettingsProvider>(context, listen: false);
+
     WidgetsBinding.instance.addObserver(this);
     _initializeSession();
   }
@@ -45,18 +55,19 @@ class _SessionScreenState extends State<SessionScreen>
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      final provider = Provider.of<LocalTranscriptionProvider>(
-        context,
-        listen: false,
-      );
-
-      if (provider.isRecording || provider.isTranscribing) {
-        provider.stopRecordingAndSave();
+      if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+        _localTranscriptionProviderInstance.stopRecordingAndSave();
       }
-    }
 
-    if (state == AppLifecycleState.resumed) {
-      _checkForExpiredTemporarySession();
+      if (_settingsProviderInstance.isIncognitoMode) {
+        final currentSession = _sessionProviderInstance.sessions.firstWhere(
+          (s) => s.id == widget.sessionId,
+          orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+        );
+        if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
+          _sessionProviderInstance.deleteSession(widget.sessionId);
+        }
+      }
     }
   }
 
@@ -79,22 +90,24 @@ class _SessionScreenState extends State<SessionScreen>
     WidgetsBinding.instance.removeObserver(this);
 
     try {
-      Provider.of<LocalTranscriptionProvider>(
-        context,
-        listen: false,
-      ).removeListener(_scrollToBottom);
+      _localTranscriptionProviderInstance.removeListener(_scrollToBottom);
     } catch (e) {
       debugPrint('Error removing listener: $e');
     }
     _scrollController.dispose();
 
-    final provider = Provider.of<LocalTranscriptionProvider>(
-      context,
-      listen: false,
-    );
+    if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+      _localTranscriptionProviderInstance.stopRecordingAndSave();
+    }
 
-    if (provider.isRecording || provider.isTranscribing) {
-      provider.stopRecordingAndSave();
+    if (_settingsProviderInstance.isIncognitoMode) {
+      final currentSession = _sessionProviderInstance.sessions.firstWhere(
+        (s) => s.id == widget.sessionId,
+        orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+      );
+      if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
+        _sessionProviderInstance.deleteSession(widget.sessionId);
+      }
     }
 
     super.dispose();
@@ -236,18 +249,6 @@ class _SessionScreenState extends State<SessionScreen>
     ];
   }
 
-  void _checkForExpiredTemporarySession() {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-
-    if (widget.sessionId == sessionProvider.activeSessionId &&
-        sessionProvider.isActiveTemporarySessionExpired()) {
-      Navigator.of(context).pop();
-    }
-  }
-
   void _initializeSession() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final sessionProvider = Provider.of<SessionProvider>(
@@ -258,11 +259,6 @@ class _SessionScreenState extends State<SessionScreen>
         context,
         listen: false,
       );
-
-      if (sessionProvider.isActiveTemporarySessionExpired()) {
-        Navigator.of(context).pop();
-        return;
-      }
 
       sessionProvider.switchSession(widget.sessionId);
 
@@ -277,10 +273,6 @@ class _SessionScreenState extends State<SessionScreen>
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
     final sessionProvider = context.watch<SessionProvider>();
-    final provider = Provider.of<LocalTranscriptionProvider>(
-      context,
-      listen: false,
-    );
 
     final sessionName =
         sessionProvider.sessions
@@ -300,8 +292,18 @@ class _SessionScreenState extends State<SessionScreen>
       appBar: AquaTopAppBar(
         colors: colors,
         onBackPressed: () {
-          if (provider.isRecording || provider.isTranscribing) {
-            provider.stopRecordingAndSave();
+          if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+            _localTranscriptionProviderInstance.stopRecordingAndSave();
+          }
+
+          if (_settingsProviderInstance.isIncognitoMode) {
+            final currentSession = _sessionProviderInstance.sessions.firstWhere(
+              (s) => s.id == widget.sessionId,
+              orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+            );
+            if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
+              _sessionProviderInstance.deleteSession(widget.sessionId);
+            }
           }
           Navigator.of(context).pop();
         },
@@ -317,7 +319,7 @@ class _SessionScreenState extends State<SessionScreen>
             buttonText: AppStrings.save,
             initialValue: sessionName,
             onSubmit: (name) {
-              sessionProvider.renameSession(widget.sessionId, name);
+              _sessionProviderInstance.renameSession(widget.sessionId, name);
             },
           );
         },
@@ -338,28 +340,25 @@ class _SessionScreenState extends State<SessionScreen>
 
                 bool whisperPreviewIsActive =
                     provider.selectedModelType == ModelType.whisper &&
-                        provider.isTranscribing &&
-                        provider.loadingWhisperTranscriptionPreview != null;
+                    provider.isTranscribing &&
+                    provider.loadingWhisperTranscriptionPreview != null;
 
-                bool voskPreviewIsActive = provider.selectedModelType ==
-                        ModelType.vosk &&
+                bool voskPreviewIsActive =
+                    provider.selectedModelType == ModelType.vosk &&
                     ((provider.isRecording &&
                             provider.liveVoskTranscriptionPreview != null) ||
                         (provider.isTranscribing &&
-                            provider.liveVoskTranscriptionPreview !=
-                                null)
-                        );
+                            provider.liveVoskTranscriptionPreview != null));
 
                 bool anyPreviewActive =
                     whisperPreviewIsActive || voskPreviewIsActive;
 
                 if (provider.isRecording) {
-                  return LiveTranscriptionView(
-                    controller: _scrollController,
-                  );
+                  return LiveTranscriptionView(controller: _scrollController);
                 }
 
-                if (provider.sessionTranscriptions.isEmpty && !anyPreviewActive) {
+                if (provider.sessionTranscriptions.isEmpty &&
+                    !anyPreviewActive) {
                   return EmptyTranscriptionsState(
                     title: AppStrings.sessionEmptyStateTitle,
                     message: AppStrings.sessionEmptyStateMessage,

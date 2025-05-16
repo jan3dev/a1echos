@@ -3,14 +3,14 @@ class Session {
   String name;
   final DateTime timestamp;
   DateTime lastModified;
-  bool isTemporary;
+  bool isIncognito;
 
   Session({
     required this.id,
     required this.name,
     required this.timestamp,
     DateTime? lastModified,
-    this.isTemporary = false,
+    this.isIncognito = false,
   }) : lastModified = lastModified ?? timestamp;
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -21,7 +21,7 @@ class Session {
       lastModified: json.containsKey('lastModified')
           ? DateTime.parse(json['lastModified'])
           : DateTime.parse(json['timestamp']),
-      isTemporary: json['isTemporary'] ?? false,
+      isIncognito: json['isIncognito'] ?? false,
     );
   }
 
@@ -31,7 +31,7 @@ class Session {
       'name': name,
       'timestamp': timestamp.toIso8601String(),
       'lastModified': lastModified.toIso8601String(),
-      'isTemporary': isTemporary,
+      'isIncognito': isIncognito,
     };
   }
 }

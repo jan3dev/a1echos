@@ -36,22 +36,15 @@ class AppStrings {
   static const String retry = 'Retry';
 
   // HomeScreen strings
-  static const String homeNewSession = 'New Session';
   static const String homeDeleteSelectedSessionsTitle =
       'Delete Selected Sessions?';
   static const String homeDeleteSelectedSessionsMessage =
       'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
   static const String homeDeleteSessionsButton = 'Delete Sessions';
   static const String homeSessionsDeleted = 'Sessions deleted';
-  static const String homeNewSessionTitle = 'New Session';
   static const String homeErrorCreatingSession =
       'Error creating session: {error}';
-  static const String homeSaveRecordingTitle = 'Save Recording?';
-  static const String homeSessionSaved = 'Session saved';
-  static const String homeRecordingDiscarded = 'Recording discarded';
-  static const String homeEmptyStateTitle = 'No Transcriptions Yet';
-  static const String homeEmptyStateMessage =
-      'Create a new session to get started';
+  static const String homeSessionsTitle = 'Your Sessions';
 
   // HomeScreen actions
   static const String copyAllTooltip = 'Copy All';
@@ -109,8 +102,6 @@ class AppStrings {
   
   // Recording strings
   static const String recordingPrefix = 'Recording';
-  static const String defaultSessionName = 'New Session';
-  static const String defaultSessionTitle = 'Default Session';
   
   // Empty states
   static const String emptySessionsTitle = 'No Transcriptions Yet';
@@ -137,4 +128,7 @@ class AppStrings {
   static const String initializingModelPrefix = 'Initializing';
   static const String modelSuffix = 'model...';
   static const String retryInitializationButton = 'Retry Initialization';
+
+  // Incognito Mode Settings
+  static const String incognitoModeToggleTitle = 'Incognito Mode';
 }

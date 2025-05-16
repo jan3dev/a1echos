@@ -50,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
                       const SizedBox(height: 16),
                       Container(
                         decoration: BoxDecoration(
-                          color: AquaColors.lightColors.surfacePrimary,
+                          color: aquaColors.surfacePrimary,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(

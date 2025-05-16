@@ -59,8 +59,31 @@ class LocalTranscriptionProvider with ChangeNotifier {
     _initialize();
   }
 
-  void _onSessionChanged() {
-    notifyListeners();
+  void _onSessionChanged() async {
+    // Get all session IDs currently in the in-memory _transcriptions list
+    final inMemorySessionIds = _transcriptions.map((t) => t.sessionId).toSet();
+
+    // Get all valid session IDs from SessionProvider
+    final validSessionIds = sessionProvider.sessions.map((s) => s.id).toSet();
+
+    // Find session IDs that are in memory but no longer valid
+    final sessionsToDelete = inMemorySessionIds.difference(validSessionIds);
+
+    bool changed = false;
+    if (sessionsToDelete.isNotEmpty) {
+      for (final sessionIdToDelete in sessionsToDelete) {
+        if (sessionIdToDelete.isEmpty) continue;
+        await _repository.deleteTranscriptionsForSession(sessionIdToDelete);
+        _transcriptions.removeWhere((t) => t.sessionId == sessionIdToDelete);
+      }
+      changed = true;
+    }
+
+    if (changed) {
+      notifyListeners();
+    } else {
+      notifyListeners();
+    }
   }
 
   Future<void> _initialize() async {
@@ -529,6 +552,12 @@ class LocalTranscriptionProvider with ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  Future<void> deleteAllTranscriptionsForSession(String sessionId) async {
+    _transcriptions.removeWhere((t) => t.sessionId == sessionId);
+    await _repository.deleteTranscriptionsForSession(sessionId);
+    notifyListeners();
   }
 
   @override
