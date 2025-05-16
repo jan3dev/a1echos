@@ -262,8 +262,6 @@ class _SessionScreenState extends State<SessionScreen>
 
       sessionProvider.switchSession(widget.sessionId);
 
-      sessionProvider.updateSessionModifiedTimestamp(widget.sessionId);
-
       provider.loadTranscriptionsForSession(widget.sessionId);
       provider.addListener(_scrollToBottom);
     });

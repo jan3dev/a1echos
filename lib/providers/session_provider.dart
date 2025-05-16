@@ -34,9 +34,6 @@ class SessionProvider with ChangeNotifier {
       try {
         final List<dynamic> list = jsonDecode(sessionsJson);
         _sessions = list.map((m) => Session.fromJson(m)).toList();
-        for (var session in _sessions) {
-          session.lastModified;
-        }
       } catch (e) {
         debugPrint("Error loading sessions: $e. Resetting to default.");
         _sessions = [];
