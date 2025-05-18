@@ -20,7 +20,7 @@ class EmptyTranscriptionsState extends StatelessWidget {
       children: [
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            padding: const EdgeInsets.symmetric(horizontal: 48.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -44,12 +44,13 @@ class EmptyTranscriptionsState extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                AquaText.h4Medium(
-                  text: title,
-                  size: 24,
-                  color: colors.textPrimary,
-                  maxLines: 2,
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: AquaTypography.h4Medium.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -57,7 +58,6 @@ class EmptyTranscriptionsState extends StatelessWidget {
                   maxLines: 5,
                   textAlign: TextAlign.center,
                   style: AquaTypography.body1.copyWith(
-                    height: 1.2,
                     color: colors.textSecondary,
                   ),
                 ),

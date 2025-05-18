@@ -69,15 +69,12 @@ class TranscriptionItem extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    (showSkeleton || !(isLivePreviewItem && transcription.text.isEmpty)) 
+                    (showSkeleton ||
+                            !(isLivePreviewItem && transcription.text.isEmpty))
                         ? dateFormat.format(transcription.timestamp)
                         : "",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                    style: AquaTypography.caption1Medium.copyWith(
                       color: colors.textTertiary,
-                      letterSpacing: -0.12,
                     ),
                   ),
                 ),
@@ -97,7 +94,9 @@ class TranscriptionItem extends StatelessWidget {
             else
               Text(
                 transcription.text,
-                style: AquaTypography.body1.copyWith(color: colors.textSecondary),
+                style: AquaTypography.body1.copyWith(
+                  color: colors.textSecondary,
+                ),
               ),
             if (showCopyIcon)
               Align(
@@ -109,13 +108,16 @@ class TranscriptionItem extends StatelessWidget {
                     onTap: () => _copyToClipboard(context, transcription.text),
                     behavior: HitTestBehavior.opaque,
                     child: Center(
-                      child: AquaIcon.copy(size: 18, color: colors.textTertiary),
+                      child: AquaIcon.copy(
+                        size: 18,
+                        color: colors.textTertiary,
+                      ),
                     ),
                   ),
                 ),
               )
             else if (!showSkeleton)
-                 const SizedBox(height: 18),
+              const SizedBox(height: 18),
           ],
         ),
       ),
