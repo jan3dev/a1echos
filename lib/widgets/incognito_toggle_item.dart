@@ -21,7 +21,7 @@ class IncognitoToggleItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: colors.surfaceInverse.withOpacity(0.04),
             blurRadius: 16,
             offset: const Offset(0, 0),
           ),

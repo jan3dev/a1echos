@@ -39,8 +39,9 @@ class SessionList extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: colors.surfacePrimary.withOpacity(0.04),
+                color: colors.surfaceInverse.withOpacity(0.04),
                 blurRadius: 16,
+                offset: const Offset(0, 0),
               ),
             ],
           ),
@@ -63,7 +64,7 @@ class SessionList extends StatelessWidget {
                     onLongPress: () => onSessionLongPress(session),
                   ),
                   if (index < sessions.length - 1)
-                    Divider(height: 1, color: colors.surfaceBorderSecondary),
+                    Divider(height: 1, color: colors.surfaceBorderPrimary),
                 ],
               );
             }),

@@ -107,7 +107,7 @@ class _RecordingButtonState extends State<RecordingButton>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: colors.surfacePrimary.withOpacity(0.04),
+                color: colors.surfaceInverse.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),

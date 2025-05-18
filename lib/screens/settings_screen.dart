@@ -54,10 +54,9 @@ class SettingsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: aquaColors.surfacePrimary.withOpacity(
-                                0.04,
-                              ),
+                              color: aquaColors.surfaceInverse.withOpacity(0.04),
                               blurRadius: 16,
+                              offset: const Offset(0, 0),
                             ),
                           ],
                         ),
@@ -78,7 +77,7 @@ class SettingsScreen extends StatelessWidget {
                             ),
                             Divider(
                               height: 1,
-                              color: aquaColors.surfaceBorderSecondary,
+                              color: aquaColors.surfaceBorderPrimary,
                             ),
                             AquaListItem(
                               title: AppStrings.whisperModelTitle,

@@ -41,9 +41,16 @@ class _SessionScreenState extends State<SessionScreen>
   void initState() {
     super.initState();
 
-    _localTranscriptionProviderInstance = Provider.of<LocalTranscriptionProvider>(context, listen: false);
-    _sessionProviderInstance = Provider.of<SessionProvider>(context, listen: false);
-    _settingsProviderInstance = Provider.of<SettingsProvider>(context, listen: false);
+    _localTranscriptionProviderInstance =
+        Provider.of<LocalTranscriptionProvider>(context, listen: false);
+    _sessionProviderInstance = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    _settingsProviderInstance = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
 
     WidgetsBinding.instance.addObserver(this);
     _initializeSession();
@@ -55,14 +62,21 @@ class _SessionScreenState extends State<SessionScreen>
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+      if (_localTranscriptionProviderInstance.isRecording ||
+          _localTranscriptionProviderInstance.isTranscribing) {
         _localTranscriptionProviderInstance.stopRecordingAndSave();
       }
 
       if (_settingsProviderInstance.isIncognitoMode) {
         final currentSession = _sessionProviderInstance.sessions.firstWhere(
           (s) => s.id == widget.sessionId,
-          orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+          orElse:
+              () => Session(
+                id: '',
+                name: '',
+                timestamp: DateTime.now(),
+                isIncognito: false,
+              ),
         );
         if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
           _sessionProviderInstance.deleteSession(widget.sessionId);
@@ -96,14 +110,21 @@ class _SessionScreenState extends State<SessionScreen>
     }
     _scrollController.dispose();
 
-    if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+    if (_localTranscriptionProviderInstance.isRecording ||
+        _localTranscriptionProviderInstance.isTranscribing) {
       _localTranscriptionProviderInstance.stopRecordingAndSave();
     }
 
     if (_settingsProviderInstance.isIncognitoMode) {
       final currentSession = _sessionProviderInstance.sessions.firstWhere(
         (s) => s.id == widget.sessionId,
-        orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+        orElse:
+            () => Session(
+              id: '',
+              name: '',
+              timestamp: DateTime.now(),
+              isIncognito: false,
+            ),
       );
       if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
         _sessionProviderInstance.deleteSession(widget.sessionId);
@@ -290,14 +311,21 @@ class _SessionScreenState extends State<SessionScreen>
       appBar: AquaTopAppBar(
         colors: colors,
         onBackPressed: () {
-          if (_localTranscriptionProviderInstance.isRecording || _localTranscriptionProviderInstance.isTranscribing) {
+          if (_localTranscriptionProviderInstance.isRecording ||
+              _localTranscriptionProviderInstance.isTranscribing) {
             _localTranscriptionProviderInstance.stopRecordingAndSave();
           }
 
           if (_settingsProviderInstance.isIncognitoMode) {
             final currentSession = _sessionProviderInstance.sessions.firstWhere(
               (s) => s.id == widget.sessionId,
-              orElse: () => Session(id: '', name: '', timestamp: DateTime.now(), isIncognito: false),
+              orElse:
+                  () => Session(
+                    id: '',
+                    name: '',
+                    timestamp: DateTime.now(),
+                    isIncognito: false,
+                  ),
             );
             if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
               _sessionProviderInstance.deleteSession(widget.sessionId);
@@ -360,6 +388,7 @@ class _SessionScreenState extends State<SessionScreen>
                   return EmptyTranscriptionsState(
                     title: AppStrings.sessionEmptyStateTitle,
                     message: AppStrings.sessionEmptyStateMessage,
+                    centered: true,
                   );
                 }
 
