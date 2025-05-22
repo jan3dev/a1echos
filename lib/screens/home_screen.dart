@@ -26,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _selectionMode = false;
-  Set<String> _selectedSessionIds = {};
+  final Set<String> _selectedSessionIds = {};
 
   @override
   void initState() {
@@ -111,17 +111,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _selectAllSessions() {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-    setState(() {
-      _selectedSessionIds =
-          sessionProvider.sessions.map((session) => session.id).toSet();
-    });
-  }
-
   void _deleteSelectedSessions() {
     final sessionProvider = Provider.of<SessionProvider>(
       context,
@@ -194,7 +183,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isIncognito: true,
         );
       } else {
-        sessionId = await sessionProvider.createSession(AppStrings.recordingPrefix);
+        sessionId = await sessionProvider.createSession(
+          AppStrings.recordingPrefix,
+        );
       }
 
       if (!mounted) return;
@@ -252,35 +243,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         elevation: 0,
         leadingWidth: effectivelyEmpty || _selectionMode ? 56 : 0,
         automaticallyImplyLeading: false,
-        titleSpacing: _selectionMode ? 0 : 16,
-        leading:
-            _selectionMode
-                ? IconButton(
-                  icon: AquaIcon.settings(),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: AppStrings.settingsTooltip,
-                  color: colors.textPrimary,
-                )
-                : null,
-        title:
-            !_selectionMode
-                ? SvgPicture.asset('assets/icons/echo-logo.svg')
-                : null,
+        titleSpacing: 16,
+        title: SvgPicture.asset('assets/icons/echo-logo.svg'),
         actions: [
           if (_selectionMode) ...[
-            IconButton(
-              icon: SvgPicture.asset('assets/icons/select-all.svg'),
-              onPressed: _selectAllSessions,
-              tooltip: AppStrings.selectAll,
-              color: colors.textPrimary,
-            ),
             IconButton(
               icon: AquaIcon.trash(),
               onPressed: _deleteSelectedSessions,
@@ -288,9 +254,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               color: colors.textPrimary,
             ),
           ] else ...[
-            if (!_selectionMode)
+            if (!_selectionMode) ...[
               IconButton(
-                icon: AquaIcon.settings(),
+                icon: SvgPicture.asset(
+                  'assets/icons/incognito.svg',
+                  width: 24,
+                  height: 24,
+                  colorFilter: ColorFilter.mode(
+                    colors.textSecondary,
+                    BlendMode.srcIn,
+                  ),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -302,6 +276,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 tooltip: AppStrings.settingsTooltip,
                 color: colors.textPrimary,
               ),
+              IconButton(
+                icon: AquaIcon.hamburger(),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+                tooltip: AppStrings.settingsTooltip,
+                color: colors.textPrimary,
+              ),
+            ],
           ],
           const SizedBox(width: 8),
         ],
