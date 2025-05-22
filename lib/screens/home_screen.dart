@@ -6,7 +6,6 @@ import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/session.dart';
-import '../widgets/incognito_toggle_item.dart';
 import '../widgets/recording_button.dart';
 import 'settings_screen.dart';
 import 'dart:developer' as developer;
@@ -261,20 +260,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   width: 24,
                   height: 24,
                   colorFilter: ColorFilter.mode(
-                    colors.textSecondary,
+                    settingsProvider.isIncognitoMode
+                        ? colors.accentBrand
+                        : colors.textPrimary,
                     BlendMode.srcIn,
                   ),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
+                onPressed: () async {
+                  await settingsProvider.setIncognitoMode(!settingsProvider.isIncognitoMode);
                 },
-                tooltip: AppStrings.settingsTooltip,
-                color: colors.textPrimary,
+                tooltip: settingsProvider.isIncognitoMode
+                    ? 'Turn off Incognito Mode'
+                    : 'Turn on Incognito Mode',
+                color: settingsProvider.isIncognitoMode
+                    ? colors.accentBrand
+                    : colors.textPrimary,
               ),
               IconButton(
                 icon: AquaIcon.hamburger(),
@@ -298,7 +298,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           Column(
             children: [
-              const IncognitoToggleItem(),
               Expanded(
                 child:
                     effectivelyEmpty
@@ -324,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
