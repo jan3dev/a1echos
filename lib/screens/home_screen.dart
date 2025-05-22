@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
-import 'package:intl/intl.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
@@ -187,19 +186,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       listen: false,
     );
 
-    final now = DateTime.now();
-    final formattedDate = DateFormat('MMM d, h:mm a').format(now);
-    final sessionName = '${AppStrings.recordingPrefix} $formattedDate';
-
     try {
       String sessionId;
       if (settingsProvider.isIncognitoMode) {
         sessionId = await sessionProvider.createSession(
-          sessionName,
+          AppStrings.recordingPrefix,
           isIncognito: true,
         );
       } else {
-        sessionId = await sessionProvider.createSession(sessionName);
+        sessionId = await sessionProvider.createSession(AppStrings.recordingPrefix);
       }
 
       if (!mounted) return;

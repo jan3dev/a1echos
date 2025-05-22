@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/session.dart';
+import '../constants/app_constants.dart';
 
 class SessionProvider with ChangeNotifier {
   static const String _prefsKeySessions = 'sessions';
@@ -20,7 +21,12 @@ class SessionProvider with ChangeNotifier {
   String get activeSessionId => _activeSessionId;
   Session get activeSession => _sessions.firstWhere(
     (s) => s.id == _activeSessionId,
-    orElse: () => _sessions.first,
+    orElse: () {
+      if (_sessions.isNotEmpty) {
+        return _sessions.first;
+      }
+      throw Exception("No sessions available to be active.");
+    },
   );
 
   SessionProvider() {
@@ -66,14 +72,46 @@ class SessionProvider with ChangeNotifier {
     await prefs.setString(_prefsKeyActiveSession, _activeSessionId);
   }
 
+  String _getNewSessionName() {
+    const baseName = "${AppStrings.recordingPrefix} ";
+    final existingSessionNumbers = _sessions
+        .where((s) => s.name.startsWith(baseName))
+        .map((s) {
+          try {
+            return int.parse(s.name.substring(baseName.length));
+          } catch (e) {
+            return null;
+          }
+        })
+        .where((count) => count != null)
+        .cast<int>()
+        .toList();
+
+    int nextNumber = 1;
+    if (existingSessionNumbers.isNotEmpty) {
+      nextNumber = existingSessionNumbers.reduce((a, b) => a > b ? a : b) + 1;
+    }
+    return "$baseName$nextNumber";
+  }
+
   /// Creates a new session with the given name
   /// Returns the ID of the newly created session
-  Future<String> createSession(String name, {bool isIncognito = false}) async {
+  Future<String> createSession(String? name, {bool isIncognito = false}) async {
     final now = DateTime.now();
     final sessionId = _uuid.v4();
+    String sessionNameToUse;
+
+    if (name == null || name.trim().isEmpty || name.startsWith(AppStrings.recordingPrefix)) {
+      sessionNameToUse = _getNewSessionName();
+    } else {
+      sessionNameToUse = name.trim();
+      // Optional: Check for duplicates if a custom name is provided and handle if necessary
+      // For now, we'll allow custom names to be duplicates if the user insists.
+    }
+
     final session = Session(
       id: sessionId,
-      name: name.trim().isEmpty ? 'New Session' : name.trim(),
+      name: sessionNameToUse,
       timestamp: now,
       lastModified: now,
       isIncognito: isIncognito,

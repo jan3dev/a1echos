@@ -101,7 +101,7 @@ class AppStrings {
       'Higher accuracy, processes audio after recording stops (no streaming).';
   
   // Recording strings
-  static const String recordingPrefix = 'Recording';
+  static const String recordingPrefix = 'Session';
   
   // Empty states
   static const String emptySessionsTitle = 'No Transcriptions Yet';
