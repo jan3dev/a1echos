@@ -42,8 +42,9 @@ class TranscriptionItem extends StatelessWidget {
 
     bool showSkeleton = isLoadingWhisperResult || isLoadingVoskResult;
     bool enableInteractions = !isLivePreviewItem && !showSkeleton;
-    bool showCopyIcon = !isLivePreviewItem && !showSkeleton;
-    bool showCheckbox = selectionMode && !isLivePreviewItem && !showSkeleton;
+    bool showCopyIcon = !isLivePreviewItem && !selectionMode;
+    bool showCheckbox = selectionMode && !isLivePreviewItem;
+    bool disableCopyIcon = showSkeleton;
 
     return GestureDetector(
       onTap: enableInteractions ? onTap : null,
@@ -79,6 +80,7 @@ class TranscriptionItem extends StatelessWidget {
                   ),
                 ),
                 if (showCheckbox) _buildCheckbox(colors),
+                if (showCopyIcon) _buildCopyIcon(context, colors, disableCopyIcon),
               ],
             ),
             const SizedBox(height: 8),
@@ -98,26 +100,6 @@ class TranscriptionItem extends StatelessWidget {
                   color: colors.textSecondary,
                 ),
               ),
-            if (showCopyIcon)
-              Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: GestureDetector(
-                    onTap: () => _copyToClipboard(context, transcription.text),
-                    behavior: HitTestBehavior.opaque,
-                    child: Center(
-                      child: AquaIcon.copy(
-                        size: 18,
-                        color: colors.textTertiary,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            else if (!showSkeleton)
-              const SizedBox(height: 18),
           ],
         ),
       ),
@@ -130,6 +112,26 @@ class TranscriptionItem extends StatelessWidget {
     } else {
       return AquaCheckBox.small(value: false, onChanged: (_) {});
     }
+  }
+
+  Widget _buildCopyIcon(BuildContext context, AquaColors colors, bool disabled) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: GestureDetector(
+        onTap: disabled ? null : () => _copyToClipboard(context, transcription.text),
+        behavior: HitTestBehavior.opaque,
+        child: Opacity(
+          opacity: disabled ? 0.5 : 1.0,
+          child: Center(
+            child: AquaIcon.copy(
+              size: 18,
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _copyToClipboard(BuildContext context, String text) {
