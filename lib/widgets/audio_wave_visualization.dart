@@ -24,7 +24,7 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
   late List<Animation<double>> _animations;
   final int barsPerSide = 11;
   final random = Random();
-  final double maxBarHeight = 32.0;
+  final double maxBarHeight = 56.0;
 
   @override
   void initState() {
@@ -114,7 +114,7 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
         Expanded(child: _buildAudioWaveSide(0)),
         
         // Space for the recording button (matches button width)
-        const SizedBox(width: 64),
+        const SizedBox(width: 96),
         
         // Right side audio wave
         Expanded(child: _buildAudioWaveSide(barsPerSide)),
@@ -131,10 +131,10 @@ class _AudioBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 4,
+      width: 8,
       height: height,
       decoration: BoxDecoration(
-        color: AquaColors.lightColors.accentBrand,
+        color: AquaColors.lightColors.accentBrand.withOpacity(0.5),
         borderRadius: BorderRadius.circular(4),
       ),
     );

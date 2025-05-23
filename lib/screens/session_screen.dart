@@ -409,15 +409,18 @@ class _SessionScreenState extends State<SessionScreen>
               child: Consumer<LocalTranscriptionProvider>(
                 builder: (context, transcriptionProvider, _) {
                   if (transcriptionProvider.isRecording) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AudioWaveVisualization(
-                          state: transcriptionProvider.state,
-                          modelType: transcriptionProvider.selectedModelType,
-                        ),
-                        RecordingButton(useProviderState: true),
-                      ],
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          AudioWaveVisualization(
+                            state: transcriptionProvider.state,
+                            modelType: transcriptionProvider.selectedModelType,
+                          ),
+                          RecordingButton(useProviderState: true),
+                        ],
+                      ),
                     );
                   } else {
                     return RecordingButton(useProviderState: true);
