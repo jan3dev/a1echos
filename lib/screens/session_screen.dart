@@ -248,6 +248,31 @@ class _SessionScreenState extends State<SessionScreen>
   List<Widget> _buildNormalActions() {
     return [
       IconButton(
+        icon: AquaIcon.edit(),
+        onPressed:
+            () => SessionInputModal.show(
+              context,
+              title: AppStrings.sessionRenameTitle,
+              buttonText: AppStrings.save,
+              initialValue:
+                  _sessionProviderInstance.sessions
+                      .firstWhere(
+                        (s) => s.id == widget.sessionId,
+                        orElse:
+                            () => Session(
+                              id: widget.sessionId,
+                              name: 'Session',
+                              timestamp: DateTime.now(),
+                            ),
+                      )
+                      .name,
+              onSubmit: (name) {
+                _sessionProviderInstance.renameSession(widget.sessionId, name);
+              },
+            ),
+        tooltip: AppStrings.sessionRenameTitle,
+      ),
+      IconButton(
         icon: SvgPicture.asset('assets/icons/copy-multiple.svg'),
         onPressed: () => _copyAllTranscriptions(context),
         tooltip: AppStrings.copyAllTooltip,

@@ -53,7 +53,7 @@ class AppStrings {
   static const String newSessionTooltip = 'New Session';
 
   // SessionScreen strings
-  static const String sessionRenameTitle = 'Rename Session';
+  static const String sessionRenameTitle = 'Rename';
   static const String sessionDeleteTranscriptionsTitle =
       'Delete Selected Transcriptions?';
   static const String sessionDeleteTranscriptionsMessage =
