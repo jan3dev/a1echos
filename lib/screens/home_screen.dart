@@ -298,12 +298,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           Column(
             children: [
-              Expanded(
-                child:
-                    effectivelyEmpty
-                        ? const EmptyTranscriptionsState()
-                        : _buildSessionList(),
-              ),
+              if (effectivelyEmpty)
+                const Expanded(child: EmptyTranscriptionsState())
+              else
+                Expanded(child: _buildSessionList()),
             ],
           ),
           Positioned(

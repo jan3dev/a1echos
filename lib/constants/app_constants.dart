@@ -62,9 +62,6 @@ class AppStrings {
   static const String sessionTranscriptionsDeleted = 'Transcriptions deleted';
   static const String sessionErrorDeletingTranscriptions =
       'Error deleting transcriptions: {error}';
-  static const String sessionEmptyStateTitle = 'No Transcriptions in Session';
-  static const String sessionEmptyStateMessage =
-      'Start recording to add transcriptions to this session.';
   
   // Snackbar messages
   static const String noTranscriptionsToCopy = 'No transcriptions to copy';
@@ -104,10 +101,8 @@ class AppStrings {
   static const String recordingPrefix = 'Session';
   
   // Empty states
-  static const String emptySessionsTitle = 'No Transcriptions Yet';
   static const String emptySessionsMessage =
       'Hit the record button to start capturing and transcribing your voice notes.';
-  static const String noSessionsFound = 'No sessions found.';
   
   // TranscriptionItem
   static const String copyToClipboard = 'Copied to clipboard';

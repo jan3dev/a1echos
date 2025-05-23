@@ -4,7 +4,7 @@ import '../providers/session_provider.dart';
 import '../models/session.dart';
 import 'session_list_item.dart';
 import 'package:ui_components/ui_components.dart';
-import '../constants/app_constants.dart';
+import 'empty_transcriptions_state.dart';
 
 class SessionList extends StatelessWidget {
   final bool selectionMode;
@@ -28,10 +28,6 @@ class SessionList extends StatelessWidget {
     return Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
         final sessions = sessionProvider.sessions;
-
-        if (sessions.isEmpty) {
-          return Center(child: Text(AppStrings.noSessionsFound));
-        }
 
         return Container(
           decoration: BoxDecoration(

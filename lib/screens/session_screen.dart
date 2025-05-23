@@ -353,7 +353,6 @@ class _SessionScreenState extends State<SessionScreen>
       body: Stack(
         children: [
           Positioned.fill(
-            bottom: 120,
             child: Consumer<LocalTranscriptionProvider>(
               builder: (context, provider, child) {
                 if (provider.isLoading) {
@@ -385,11 +384,7 @@ class _SessionScreenState extends State<SessionScreen>
 
                 if (provider.sessionTranscriptions.isEmpty &&
                     !anyPreviewActive) {
-                  return EmptyTranscriptionsState(
-                    title: AppStrings.sessionEmptyStateTitle,
-                    message: AppStrings.sessionEmptyStateMessage,
-                    centered: true,
-                  );
+                  return EmptyTranscriptionsState();
                 }
 
                 return TranscriptionList(
