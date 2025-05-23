@@ -15,6 +15,7 @@ class TranscriptionItem extends StatelessWidget {
   final bool isLivePreviewItem;
   final bool isLoadingWhisperResult;
   final bool isLoadingVoskResult;
+  final bool isWhisperRecording;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -26,6 +27,7 @@ class TranscriptionItem extends StatelessWidget {
     this.isLivePreviewItem = false,
     this.isLoadingWhisperResult = false,
     this.isLoadingVoskResult = false,
+    this.isWhisperRecording = false,
     required this.onTap,
     required this.onLongPress,
   });
@@ -40,7 +42,8 @@ class TranscriptionItem extends StatelessWidget {
       backgroundColor = colors.surfaceSelected;
     }
 
-    bool showSkeleton = isLoadingWhisperResult || isLoadingVoskResult;
+    bool showSkeleton =
+        isLoadingWhisperResult || isLoadingVoskResult || isWhisperRecording;
     bool enableInteractions = !isLivePreviewItem && !showSkeleton;
     bool showCopyIcon = !isLivePreviewItem && !selectionMode;
     bool showCheckbox = selectionMode && !isLivePreviewItem;
@@ -80,7 +83,8 @@ class TranscriptionItem extends StatelessWidget {
                   ),
                 ),
                 if (showCheckbox) _buildCheckbox(colors),
-                if (showCopyIcon) _buildCopyIcon(context, colors, disableCopyIcon),
+                if (showCopyIcon)
+                  _buildCopyIcon(context, colors, disableCopyIcon),
               ],
             ),
             const SizedBox(height: 8),
@@ -114,20 +118,24 @@ class TranscriptionItem extends StatelessWidget {
     }
   }
 
-  Widget _buildCopyIcon(BuildContext context, AquaColors colors, bool disabled) {
+  Widget _buildCopyIcon(
+    BuildContext context,
+    AquaColors colors,
+    bool disabled,
+  ) {
     return SizedBox(
       width: 18,
       height: 18,
       child: GestureDetector(
-        onTap: disabled ? null : () => _copyToClipboard(context, transcription.text),
+        onTap:
+            disabled
+                ? null
+                : () => _copyToClipboard(context, transcription.text),
         behavior: HitTestBehavior.opaque,
         child: Opacity(
           opacity: disabled ? 0.5 : 1.0,
           child: Center(
-            child: AquaIcon.copy(
-              size: 18,
-              color: colors.textSecondary,
-            ),
+            child: AquaIcon.copy(size: 18, color: colors.textSecondary),
           ),
         ),
       ),
