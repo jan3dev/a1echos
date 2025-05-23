@@ -355,6 +355,20 @@ class _SessionScreenState extends State<SessionScreen>
             if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
               _sessionProviderInstance.deleteSession(widget.sessionId);
             }
+          } else {
+            final currentSession = _sessionProviderInstance.sessions.firstWhere(
+              (s) => s.id == widget.sessionId,
+              orElse: () => Session(
+                id: '',
+                name: '',
+                timestamp: DateTime.now(),
+                isIncognito: false,
+              ),
+            );
+            if (!currentSession.isIncognito && currentSession.id.isNotEmpty && (currentSession.name.isEmpty)) {
+              final defaultName = _sessionProviderInstance.getNewSessionName();
+              _sessionProviderInstance.renameSession(widget.sessionId, defaultName);
+            }
           }
           Navigator.of(context).pop();
         },

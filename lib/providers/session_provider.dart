@@ -72,7 +72,7 @@ class SessionProvider with ChangeNotifier {
     await prefs.setString(_prefsKeyActiveSession, _activeSessionId);
   }
 
-  String _getNewSessionName() {
+  String getNewSessionName() {
     const baseName = "${AppStrings.recordingPrefix} ";
     final existingSessionNumbers = _sessions
         .where((s) => s.name.startsWith(baseName))
@@ -94,15 +94,21 @@ class SessionProvider with ChangeNotifier {
     return "$baseName$nextNumber";
   }
 
-  /// Creates a new session with the given name
+  /// Creates a new session
+  /// Incognito sessions are created with an empty name.
+  /// Normal sessions can be created with an empty name and should be named later (e.g., when navigating back to home screen).
   /// Returns the ID of the newly created session
   Future<String> createSession(String? name, {bool isIncognito = false}) async {
     final now = DateTime.now();
     final sessionId = _uuid.v4();
-    String sessionNameToUse;
+    String sessionNameToUse = '';
 
-    if (name == null || name.trim().isEmpty || name.startsWith(AppStrings.recordingPrefix)) {
-      sessionNameToUse = _getNewSessionName();
+    if (isIncognito) {
+      // Incognito sessions have no name
+      sessionNameToUse = '';
+    } else if (name == null || name.trim().isEmpty || name.startsWith(AppStrings.recordingPrefix)) {
+      // Normal sessions can be created with an empty name, to be set later
+      sessionNameToUse = '';
     } else {
       sessionNameToUse = name.trim();
       // Optional: Check for duplicates if a custom name is provided and handle if necessary
