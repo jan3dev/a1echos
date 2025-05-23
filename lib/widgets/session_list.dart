@@ -4,7 +4,6 @@ import '../providers/session_provider.dart';
 import '../models/session.dart';
 import 'session_list_item.dart';
 import 'package:ui_components/ui_components.dart';
-import 'empty_transcriptions_state.dart';
 
 class SessionList extends StatelessWidget {
   final bool selectionMode;
