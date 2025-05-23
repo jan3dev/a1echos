@@ -4,10 +4,10 @@ import '../../constants/app_constants.dart';
 
 class ConfirmationModal {
   /// Shows a confirmation modal with warning icon
-  /// 
+  ///
   /// [context] - The build context
   /// [title] - Title text for the modal
-  /// [message] - Description/message text 
+  /// [message] - Description/message text
   /// [confirmText] - Text for the primary/confirm button
   /// [cancelText] - Text for the secondary/cancel button
   /// [onConfirm] - Callback function when user confirms the action
@@ -24,7 +24,7 @@ class ConfirmationModal {
     bool isDanger = true,
   }) {
     final colors = AquaColors.lightColors;
-    
+
     AquaModalSheet.show(
       context,
       colors: colors,
@@ -38,4 +38,4 @@ class ConfirmationModal {
       isDanger: isDanger,
     );
   }
-} 
+}

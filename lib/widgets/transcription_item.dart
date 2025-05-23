@@ -4,7 +4,7 @@ import 'package:ui_components/ui_components.dart';
 import '../models/transcription.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
-import 'skeleton_loader.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 enum TranscriptionItemState { normal, longpressSelected, longpressUnselected }
 
@@ -88,22 +88,17 @@ class TranscriptionItem extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            if (showSkeleton)
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SkeletonLoader(height: 16),
-                  SizedBox(height: 8),
-                  SkeletonLoader(height: 16, width: 200),
-                ],
-              )
-            else
-              Text(
-                transcription.text,
+            Skeletonizer(
+              enabled: showSkeleton,
+              child: Text(
+                showSkeleton 
+                    ? 'Lorem ipsum dolor sit amet, consectetur adipi.' 
+                    : transcription.text,
                 style: AquaTypography.body1.copyWith(
                   color: colors.textSecondary,
                 ),
               ),
+            ),
           ],
         ),
       ),

@@ -247,31 +247,36 @@ class _SessionScreenState extends State<SessionScreen>
 
   List<Widget> _buildNormalActions() {
     return [
-      IconButton(
-        icon: AquaIcon.edit(),
-        onPressed:
-            () => SessionInputModal.show(
-              context,
-              title: AppStrings.sessionRenameTitle,
-              buttonText: AppStrings.save,
-              initialValue:
-                  _sessionProviderInstance.sessions
-                      .firstWhere(
-                        (s) => s.id == widget.sessionId,
-                        orElse:
-                            () => Session(
-                              id: widget.sessionId,
-                              name: 'Session',
-                              timestamp: DateTime.now(),
-                            ),
-                      )
-                      .name,
-              onSubmit: (name) {
-                _sessionProviderInstance.renameSession(widget.sessionId, name);
-              },
-            ),
-        tooltip: AppStrings.sessionRenameTitle,
-      ),
+      if (!_settingsProviderInstance.isIncognitoMode) ...[
+        IconButton(
+          icon: AquaIcon.edit(),
+          onPressed:
+              () => SessionInputModal.show(
+                context,
+                title: AppStrings.sessionRenameTitle,
+                buttonText: AppStrings.save,
+                initialValue:
+                    _sessionProviderInstance.sessions
+                        .firstWhere(
+                          (s) => s.id == widget.sessionId,
+                          orElse:
+                              () => Session(
+                                id: widget.sessionId,
+                                name: 'Session',
+                                timestamp: DateTime.now(),
+                              ),
+                        )
+                        .name,
+                onSubmit: (name) {
+                  _sessionProviderInstance.renameSession(
+                    widget.sessionId,
+                    name,
+                  );
+                },
+              ),
+          tooltip: AppStrings.sessionRenameTitle,
+        ),
+      ],
       IconButton(
         icon: SvgPicture.asset('assets/icons/copy-multiple.svg'),
         onPressed: () => _copyAllTranscriptions(context),
@@ -358,16 +363,22 @@ class _SessionScreenState extends State<SessionScreen>
           } else {
             final currentSession = _sessionProviderInstance.sessions.firstWhere(
               (s) => s.id == widget.sessionId,
-              orElse: () => Session(
-                id: '',
-                name: '',
-                timestamp: DateTime.now(),
-                isIncognito: false,
-              ),
+              orElse:
+                  () => Session(
+                    id: '',
+                    name: '',
+                    timestamp: DateTime.now(),
+                    isIncognito: false,
+                  ),
             );
-            if (!currentSession.isIncognito && currentSession.id.isNotEmpty && (currentSession.name.isEmpty)) {
+            if (!currentSession.isIncognito &&
+                currentSession.id.isNotEmpty &&
+                (currentSession.name.isEmpty)) {
               final defaultName = _sessionProviderInstance.getNewSessionName();
-              _sessionProviderInstance.renameSession(widget.sessionId, defaultName);
+              _sessionProviderInstance.renameSession(
+                widget.sessionId,
+                defaultName,
+              );
             }
           }
           Navigator.of(context).pop();

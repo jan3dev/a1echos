@@ -24,6 +24,7 @@ dependencies:
   shared_preferences: ^2.2.3
   whisper_flutter_new: ^1.0.1
   flutter_svg: ^2.0.7
+  skeletonizer: ^2.0.1
   ui_components:
     git:
       url: https://github.com/jan3dev/aqua-design-system.git
@@ -61,3 +62,4 @@ flutter:
 
 dependency_overrides:
   permission_handler: ^12.0.0+1
+  skeletonizer: ^2.0.1

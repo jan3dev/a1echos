@@ -649,10 +649,10 @@ packages:
     dependency: transitive
     description:
       name: record_linux
-      sha256: fcb5964a84292813de70d52253663c1caca00a15f849fb5d0fdf9b929b28a7b9
+      sha256: "29e7735b05c1944bb6c9b72a36c08d4a1b24117e712d6a9523c003bde12bf484"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.0"
+    version: "1.1.0"
   record_macos:
     dependency: transitive
     description:
@@ -681,10 +681,10 @@ packages:
     dependency: transitive
     description:
       name: record_windows
-      sha256: "26bfebc8899f4fa5b6b044089887dc42115820cd6a907bdf40c16e909e87de0a"
+      sha256: "85a22fc97f6d73ecd67c8ba5f2f472b74ef1d906f795b7970f771a0914167e99"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.5"
+    version: "1.0.6"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -741,6 +741,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
+  skeletonizer:
+    dependency: "direct main"
+    description:
+      name: skeletonizer
+      sha256: a9ddf63900947f4c0648372b6e9987bc2b028db9db843376db6767224d166c31
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -815,7 +823,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "0f29b67630df87573786e008f336d39f27dde7a7"
+      resolved-ref: "65bbe1651903f0f1cbb123457d8ccaaf7e8f4a8b"
       url: "https://github.com/jan3dev/aqua-design-system.git"
     source: git
     version: "0.0.1+1"
