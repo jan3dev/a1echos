@@ -1,15 +1,21 @@
 # Tasks
 
-## Pending
-- [ ] Document main application flow
-- [ ] Create diagram of provider relationships
-- [ ] Map out error handling patterns in detail
-- [ ] Examine UI component architecture
-- [ ] Explore session-based transcription filtering
-- [ ] Map data persistence approaches across the application
+## High Priority
+- [ ] Document transcription model initialization process (In Progress)
+- [ ] Create comprehensive data flow diagram
+- [ ] Map error handling patterns in detail
+- [ ] Document UI component architecture and state management
 
-## In Progress
-- [ ] Document transcription model initialization process
+## Medium Priority  
+- [ ] Examine session-based transcription filtering implementation
+- [ ] Map data persistence approaches across the application
+- [ ] Document main application flow with sequence diagrams
+- [ ] Create diagram of provider relationships
+
+## Low Priority
+- [ ] Performance optimization analysis
+- [ ] Security analysis documentation
+- [ ] User experience flow documentation
 
 ## Completed
 - [x] Initial repository exploration
@@ -28,3 +34,5 @@
 - [x] Map out the audio recording and transcription process flow
 - [x] Analyze TranscriptionOrchestrator and SessionTranscriptionManager in detail
 - [x] Investigate transcription model integration 
+- [x] Document provider coordination and state management patterns
+- [x] Map transcription workflow differences between Vosk and Whisper 

@@ -90,12 +90,12 @@ class AppStrings {
   static const String transcriptionModelTitle = 'Transcription Model';
   static const String transcriptionModelDescription =
       'Select which model to use. All processing happens on your device.';
-  static const String voskModelTitle = 'Vosk (Small EN)';
+  static const String voskModelTitle = 'Vosk';
   static const String voskModelSubtitle =
-      'Faster, real-time streaming transcription. Good for general use.';
-  static const String whisperModelTitle = 'Whisper (Base EN)';
+      'Fast, real-time';
+  static const String whisperModelTitle = 'Whisper';
   static const String whisperModelSubtitle =
-      'Higher accuracy, processes audio after recording stops (no streaming).';
+      'High accuracy';
   
   // Recording strings
   static const String recordingPrefix = 'Session';

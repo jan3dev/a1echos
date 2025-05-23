@@ -54,7 +54,9 @@ class SettingsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: aquaColors.surfaceInverse.withOpacity(0.04),
+                              color: aquaColors.surfaceInverse.withOpacity(
+                                0.04,
+                              ),
                               blurRadius: 16,
                               offset: const Offset(0, 0),
                             ),
@@ -64,25 +66,10 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             AquaListItem(
-                              title: AppStrings.voskModelTitle,
-                              subtitle: AppStrings.voskModelSubtitle,
-                              iconLeading: AquaRadio<ModelType>(
-                                value: ModelType.vosk,
-                                groupValue: provider.selectedModelType,
-                                onChanged:
-                                    (value) => provider.changeModel(value),
-                              ),
-                              onTap: () => provider.changeModel(ModelType.vosk),
-                              backgroundColor: aquaColors.surfacePrimary,
-                            ),
-                            Divider(
-                              height: 1,
-                              color: aquaColors.surfaceBorderPrimary,
-                            ),
-                            AquaListItem(
                               title: AppStrings.whisperModelTitle,
-                              subtitle: AppStrings.whisperModelSubtitle,
-                              iconLeading: AquaRadio<ModelType>(
+                              titleTrailing: AppStrings.whisperModelSubtitle,
+                              titleTrailingColor: aquaColors.textSecondary,
+                              iconTrailing: AquaRadio<ModelType>(
                                 value: ModelType.whisper,
                                 groupValue: provider.selectedModelType,
                                 onChanged:
@@ -90,6 +77,23 @@ class SettingsScreen extends StatelessWidget {
                               ),
                               onTap:
                                   () => provider.changeModel(ModelType.whisper),
+                              backgroundColor: aquaColors.surfacePrimary,
+                            ),
+                            Divider(
+                              height: 1,
+                              color: aquaColors.surfaceBorderPrimary,
+                            ),
+                            AquaListItem(
+                              title: AppStrings.voskModelTitle,
+                              titleTrailing: AppStrings.voskModelSubtitle,
+                              titleTrailingColor: aquaColors.textSecondary,
+                              iconTrailing: AquaRadio<ModelType>(
+                                value: ModelType.vosk,
+                                groupValue: provider.selectedModelType,
+                                onChanged:
+                                    (value) => provider.changeModel(value),
+                              ),
+                              onTap: () => provider.changeModel(ModelType.vosk),
                               backgroundColor: aquaColors.surfacePrimary,
                             ),
                           ],
