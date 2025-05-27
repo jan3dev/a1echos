@@ -29,6 +29,7 @@ dependencies:
     git:
       url: https://github.com/jan3dev/aqua-design-system.git
       ref: main
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

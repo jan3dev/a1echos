@@ -4,6 +4,7 @@ import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../constants/app_constants.dart';
+import '../widgets/aqua_in_app_banner.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -99,9 +100,16 @@ class SettingsScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(
+                        height: 235,
+                      ), // 211px banner + 24px spacing
                     ],
                   ),
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: const AquaInAppBanner(),
               ),
             ],
           );
