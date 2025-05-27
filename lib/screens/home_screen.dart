@@ -256,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             if (!_selectionMode) ...[
               IconButton(
                 icon: SvgPicture.asset(
-                  'assets/icons/incognito.svg',
+                  'assets/icons/ghost.svg',
                   width: 24,
                   height: 24,
                   colorFilter: ColorFilter.mode(
