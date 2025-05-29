@@ -6,8 +6,6 @@ import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-enum TranscriptionItemState { normal, longpressSelected, longpressUnselected }
-
 class TranscriptionItem extends StatelessWidget {
   final Transcription transcription;
   final bool selectionMode;
@@ -91,8 +89,8 @@ class TranscriptionItem extends StatelessWidget {
             Skeletonizer(
               enabled: showSkeleton,
               child: Text(
-                showSkeleton 
-                    ? 'Lorem ipsum dolor sit amet, consectetur adipi.' 
+                showSkeleton
+                    ? 'Lorem ipsum dolor sit amet, consectetur adipi.'
                     : transcription.text,
                 style: AquaTypography.body1.copyWith(
                   color: colors.textSecondary,
@@ -107,9 +105,9 @@ class TranscriptionItem extends StatelessWidget {
 
   Widget _buildCheckbox(AquaColors colors) {
     if (isSelected) {
-      return AquaCheckBox.small(value: true, onChanged: (_) {});
+      return AquaCheckBox.small(value: true, onChanged: null);
     } else {
-      return AquaCheckBox.small(value: false, onChanged: (_) {});
+      return AquaCheckBox.small(value: false, onChanged: null);
     }
   }
 

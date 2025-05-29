@@ -67,21 +67,7 @@ class _SessionScreenState extends State<SessionScreen>
         _localTranscriptionProviderInstance.stopRecordingAndSave();
       }
 
-      if (_settingsProviderInstance.isIncognitoMode) {
-        final currentSession = _sessionProviderInstance.sessions.firstWhere(
-          (s) => s.id == widget.sessionId,
-          orElse:
-              () => Session(
-                id: '',
-                name: '',
-                timestamp: DateTime.now(),
-                isIncognito: false,
-              ),
-        );
-        if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
-          _sessionProviderInstance.deleteSession(widget.sessionId);
-        }
-      }
+      _deleteIncognitoSessionIfNeeded();
     }
   }
 
@@ -115,21 +101,7 @@ class _SessionScreenState extends State<SessionScreen>
       _localTranscriptionProviderInstance.stopRecordingAndSave();
     }
 
-    if (_settingsProviderInstance.isIncognitoMode) {
-      final currentSession = _sessionProviderInstance.sessions.firstWhere(
-        (s) => s.id == widget.sessionId,
-        orElse:
-            () => Session(
-              id: '',
-              name: '',
-              timestamp: DateTime.now(),
-              isIncognito: false,
-            ),
-      );
-      if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
-        _sessionProviderInstance.deleteSession(widget.sessionId);
-      }
-    }
+    _deleteIncognitoSessionIfNeeded();
 
     super.dispose();
   }
@@ -225,7 +197,7 @@ class _SessionScreenState extends State<SessionScreen>
     );
   }
 
-  void _copyAllTranscriptions(BuildContext context) {
+  Future<void> _copyAllTranscriptions(BuildContext context) async {
     final provider = Provider.of<LocalTranscriptionProvider>(
       context,
       listen: false,
@@ -238,11 +210,20 @@ class _SessionScreenState extends State<SessionScreen>
     }
 
     final text = provider.sessionTranscriptions.map((t) => t.text).join('\n\n');
-    Clipboard.setData(ClipboardData(text: text));
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text(AppStrings.allTranscriptionsCopied)),
-    );
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.allTranscriptionsCopied)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to copy: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   List<Widget> _buildNormalActions() {
@@ -300,6 +281,24 @@ class _SessionScreenState extends State<SessionScreen>
     ];
   }
 
+  void _deleteIncognitoSessionIfNeeded() {
+    if (_settingsProviderInstance.isIncognitoMode) {
+      final currentSession = _sessionProviderInstance.sessions.firstWhere(
+        (s) => s.id == widget.sessionId,
+        orElse:
+            () => Session(
+              id: '',
+              name: '',
+              timestamp: DateTime.now(),
+              isIncognito: false,
+            ),
+      );
+      if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
+        _sessionProviderInstance.deleteSession(widget.sessionId);
+      }
+    }
+  }
+
   void _initializeSession() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final sessionProvider = Provider.of<SessionProvider>(
@@ -347,19 +346,7 @@ class _SessionScreenState extends State<SessionScreen>
           }
 
           if (_settingsProviderInstance.isIncognitoMode) {
-            final currentSession = _sessionProviderInstance.sessions.firstWhere(
-              (s) => s.id == widget.sessionId,
-              orElse:
-                  () => Session(
-                    id: '',
-                    name: '',
-                    timestamp: DateTime.now(),
-                    isIncognito: false,
-                  ),
-            );
-            if (currentSession.isIncognito && currentSession.id.isNotEmpty) {
-              _sessionProviderInstance.deleteSession(widget.sessionId);
-            }
+            _deleteIncognitoSessionIfNeeded();
           } else {
             final currentSession = _sessionProviderInstance.sessions.firstWhere(
               (s) => s.id == widget.sessionId,

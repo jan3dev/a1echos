@@ -12,10 +12,14 @@ class SessionProvider with ChangeNotifier {
 
   List<Session> _sessions = [];
   String _activeSessionId = '';
+  bool _needsSort = true;
 
   List<Session> get sessions {
-    _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
-    return _sessions;
+    if (_needsSort) {
+      _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
+      _needsSort = false;
+    }
+    return List.unmodifiable(_sessions);
   }
 
   String get activeSessionId => _activeSessionId;
@@ -46,14 +50,16 @@ class SessionProvider with ChangeNotifier {
       }
     }
 
-    _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
+    _needsSort = true;
 
     final active = prefs.getString(_prefsKeyActiveSession);
     if (active != null && _sessions.any((s) => s.id == active)) {
       _activeSessionId = active;
-    } else {
+    } else if (_sessions.isNotEmpty) {
       _activeSessionId = _sessions.first.id;
       await _saveActiveSession();
+    } else {
+      await createSession(getNewSessionName());
     }
     notifyListeners();
   }
@@ -74,18 +80,19 @@ class SessionProvider with ChangeNotifier {
 
   String getNewSessionName() {
     const baseName = "${AppStrings.recordingPrefix} ";
-    final existingSessionNumbers = _sessions
-        .where((s) => s.name.startsWith(baseName))
-        .map((s) {
-          try {
-            return int.parse(s.name.substring(baseName.length));
-          } catch (e) {
-            return null;
-          }
-        })
-        .where((count) => count != null)
-        .cast<int>()
-        .toList();
+    final existingSessionNumbers =
+        _sessions
+            .where((s) => s.name.startsWith(baseName))
+            .map((s) {
+              try {
+                return int.parse(s.name.substring(baseName.length));
+              } catch (e) {
+                return null;
+              }
+            })
+            .where((count) => count != null)
+            .cast<int>()
+            .toList();
 
     int nextNumber = 1;
     if (existingSessionNumbers.isNotEmpty) {
@@ -106,7 +113,9 @@ class SessionProvider with ChangeNotifier {
     if (isIncognito) {
       // Incognito sessions have no name
       sessionNameToUse = '';
-    } else if (name == null || name.trim().isEmpty || name.startsWith(AppStrings.recordingPrefix)) {
+    } else if (name == null ||
+        name.trim().isEmpty ||
+        name.startsWith(AppStrings.recordingPrefix)) {
       // Normal sessions can be created with an empty name, to be set later
       sessionNameToUse = '';
     } else {
@@ -123,6 +132,7 @@ class SessionProvider with ChangeNotifier {
       isIncognito: isIncognito,
     );
     _sessions.add(session);
+    _needsSort = true;
     await _saveSessions();
     _activeSessionId = session.id;
     await _saveActiveSession();
@@ -141,6 +151,7 @@ class SessionProvider with ChangeNotifier {
     if (idx >= 0 && newName.trim().isNotEmpty) {
       _sessions[idx].name = newName.trim();
       _sessions[idx].lastModified = DateTime.now();
+      _needsSort = true;
       await _saveSessions();
       notifyListeners();
     }
@@ -156,7 +167,7 @@ class SessionProvider with ChangeNotifier {
 
   Future<void> deleteSession(String id) async {
     _sessions.removeWhere((s) => s.id == id);
-
+    _needsSort = true;
     if (_sessions.isEmpty) {
       _activeSessionId = '';
     } else if (_activeSessionId == id) {
@@ -173,6 +184,7 @@ class SessionProvider with ChangeNotifier {
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx >= 0) {
       _sessions[idx].lastModified = DateTime.now();
+      _needsSort = true;
       await _saveSessions();
       notifyListeners();
     }

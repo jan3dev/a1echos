@@ -5,6 +5,89 @@ import 'transcription_item.dart';
 import '../models/transcription.dart';
 import '../models/model_type.dart';
 
+class _ActivePreviewState {
+  final Transcription? item;
+  final bool isVoskStreamingLive;
+  final bool isVoskLoadingResult;
+  final bool isWhisperLoading;
+  final bool isWhisperRecording;
+
+  const _ActivePreviewState({
+    this.item,
+    this.isVoskStreamingLive = false,
+    this.isVoskLoadingResult = false,
+    this.isWhisperLoading = false,
+    this.isWhisperRecording = false,
+  });
+
+  bool get isPreviewItem =>
+      isVoskStreamingLive ||
+      isVoskLoadingResult ||
+      isWhisperLoading ||
+      isWhisperRecording;
+
+  static _ActivePreviewState empty() => const _ActivePreviewState();
+}
+
+_ActivePreviewState _determineActivePreviewState(
+  LocalTranscriptionProvider provider,
+) {
+  if (provider.selectedModelType == ModelType.vosk) {
+    return _handleVoskPreviewState(provider);
+  } else if (provider.selectedModelType == ModelType.whisper) {
+    return _handleWhisperPreviewState(provider);
+  }
+  return _ActivePreviewState.empty();
+}
+
+_ActivePreviewState _handleVoskPreviewState(
+  LocalTranscriptionProvider provider,
+) {
+  if (provider.isRecording && provider.liveVoskTranscriptionPreview != null) {
+    return _ActivePreviewState(
+      item: provider.liveVoskTranscriptionPreview,
+      isVoskStreamingLive: true,
+    );
+  } else if (provider.isTranscribing &&
+      provider.liveVoskTranscriptionPreview != null) {
+    return _ActivePreviewState(
+      item: provider.liveVoskTranscriptionPreview,
+      isVoskLoadingResult: true,
+    );
+  }
+  return _ActivePreviewState.empty();
+}
+
+_ActivePreviewState _handleWhisperPreviewState(
+  LocalTranscriptionProvider provider,
+) {
+  if (provider.isRecording) {
+    if (provider.loadingWhisperTranscriptionPreview != null) {
+      return _ActivePreviewState(
+        item: provider.loadingWhisperTranscriptionPreview,
+        isWhisperRecording: true,
+      );
+    } else {
+      return _ActivePreviewState(
+        item: Transcription(
+          id: 'whisper_recording_preview',
+          text: '',
+          timestamp: DateTime.now(),
+          audioPath: '',
+        ),
+        isWhisperRecording: true,
+      );
+    }
+  } else if (provider.isTranscribing &&
+      provider.loadingWhisperTranscriptionPreview != null) {
+    return _ActivePreviewState(
+      item: provider.loadingWhisperTranscriptionPreview,
+      isWhisperLoading: true,
+    );
+  }
+  return _ActivePreviewState.empty();
+}
+
 class TranscriptionList extends StatelessWidget {
   final ScrollController controller;
   final bool selectionMode;
@@ -26,45 +109,16 @@ class TranscriptionList extends StatelessWidget {
     final provider = Provider.of<LocalTranscriptionProvider>(context);
     List<Transcription> items = List.from(provider.sessionTranscriptions);
 
-    Transcription? activePreviewItem;
-    bool isVoskStreamingLive = false;
-    bool isVoskLoadingResult = false;
-    bool isWhisperLoadingResult = false;
-    bool isWhisperRecordingLive = false;
-
-    if (provider.selectedModelType == ModelType.vosk) {
-      if (provider.isRecording &&
-          provider.liveVoskTranscriptionPreview != null) {
-        activePreviewItem = provider.liveVoskTranscriptionPreview;
-        isVoskStreamingLive = true;
-      } else if (provider.isTranscribing &&
-          provider.liveVoskTranscriptionPreview != null) {
-        activePreviewItem = provider.liveVoskTranscriptionPreview;
-        isVoskLoadingResult = true;
-      }
-    } else if (provider.selectedModelType == ModelType.whisper) {
-      if (provider.isRecording) {
-        isWhisperRecordingLive = true;
-        if (provider.loadingWhisperTranscriptionPreview != null) {
-          activePreviewItem = provider.loadingWhisperTranscriptionPreview;
-        } else {
-          activePreviewItem = Transcription(
-            id: 'whisper_recording_preview',
-            text: '',
-            timestamp: DateTime.now(),
-            audioPath: '',
-          );
-        }
-      } else if (provider.isTranscribing &&
-          provider.loadingWhisperTranscriptionPreview != null) {
-        activePreviewItem = provider.loadingWhisperTranscriptionPreview;
-        isWhisperLoadingResult = true;
-      }
-    }
+    final _ActivePreviewState previewState = _determineActivePreviewState(
+      provider,
+    );
+    final Transcription? activePreviewItem = previewState.item;
 
     if (activePreviewItem != null) {
-      items.removeWhere((item) => item.id == activePreviewItem!.id);
-      items.add(activePreviewItem);
+      items = [
+        ...items.where((item) => item.id != activePreviewItem.id),
+        activePreviewItem,
+      ];
     }
 
     if (items.isEmpty) return const SizedBox.shrink();
@@ -76,56 +130,30 @@ class TranscriptionList extends StatelessWidget {
       itemBuilder: (context, index) {
         final transcription = items[index];
 
-        bool itemIsVoskStreaming =
-            isVoskStreamingLive &&
+        final bool isPreview =
             activePreviewItem != null &&
             transcription.id == activePreviewItem.id;
-        bool itemIsVoskLoading =
-            isVoskLoadingResult &&
-            activePreviewItem != null &&
-            transcription.id == activePreviewItem.id;
-        bool itemIsWhisperLoading =
-            isWhisperLoadingResult &&
-            activePreviewItem != null &&
-            transcription.id == activePreviewItem.id;
-        bool itemIsWhisperRecording =
-            isWhisperRecordingLive &&
-            activePreviewItem != null &&
-            transcription.id == activePreviewItem.id;
+        final _ActivePreviewState itemState =
+            isPreview ? previewState : _ActivePreviewState.empty();
 
         return TranscriptionItem(
           transcription: transcription,
-          selectionMode:
-              (itemIsVoskStreaming ||
-                      itemIsVoskLoading ||
-                      itemIsWhisperLoading ||
-                      itemIsWhisperRecording)
-                  ? false
-                  : selectionMode,
+          selectionMode: itemState.isPreviewItem ? false : selectionMode,
           isSelected:
-              (itemIsVoskStreaming ||
-                      itemIsVoskLoading ||
-                      itemIsWhisperLoading ||
-                      itemIsWhisperRecording)
+              itemState.isPreviewItem
                   ? false
                   : selectedTranscriptionIds.contains(transcription.id),
-          isLivePreviewItem: itemIsVoskStreaming,
-          isLoadingVoskResult: itemIsVoskLoading,
-          isLoadingWhisperResult: itemIsWhisperLoading,
-          isWhisperRecording: itemIsWhisperRecording,
+          isLivePreviewItem: itemState.isVoskStreamingLive,
+          isLoadingVoskResult: itemState.isVoskLoadingResult,
+          isLoadingWhisperResult: itemState.isWhisperLoading,
+          isWhisperRecording: itemState.isWhisperRecording,
           onTap: () {
-            if (!itemIsVoskStreaming &&
-                !itemIsVoskLoading &&
-                !itemIsWhisperLoading &&
-                !itemIsWhisperRecording) {
+            if (!itemState.isPreviewItem) {
               onTranscriptionTap(transcription.id);
             }
           },
           onLongPress: () {
-            if (!itemIsVoskStreaming &&
-                !itemIsVoskLoading &&
-                !itemIsWhisperLoading &&
-                !itemIsWhisperRecording) {
+            if (!itemState.isPreviewItem) {
               onTranscriptionLongPress(transcription.id);
             }
           },

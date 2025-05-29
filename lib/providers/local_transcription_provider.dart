@@ -47,8 +47,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
   String get currentStreamingText => _currentStreamingText;
   ModelType get selectedModelType => _selectedModelType;
   List<Transcription> get allTranscriptions => _transcriptions;
-  Transcription? get liveVoskTranscriptionPreview => _liveVoskTranscriptionPreview;
-  Transcription? get loadingWhisperTranscriptionPreview => _loadingWhisperTranscriptionPreview;
+  Transcription? get liveVoskTranscriptionPreview =>
+      _liveVoskTranscriptionPreview;
+  Transcription? get loadingWhisperTranscriptionPreview =>
+      _loadingWhisperTranscriptionPreview;
 
   List<Transcription> get sessionTranscriptions => _sessionManager
       .filterBySession(_transcriptions, sessionProvider.activeSessionId);
@@ -290,9 +292,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
             sessionId: sessionProvider.activeSessionId,
             audioPath: '',
           );
-          _loadingWhisperTranscriptionPreview = null; 
+          _loadingWhisperTranscriptionPreview = null;
         } else if (_selectedModelType == ModelType.whisper) {
-          _liveVoskTranscriptionPreview = null; 
+          _liveVoskTranscriptionPreview = null;
           _loadingWhisperTranscriptionPreview = null;
         }
       }
@@ -313,19 +315,22 @@ class LocalTranscriptionProvider with ChangeNotifier {
   }
 
   Future<void> stopRecordingAndSave() async {
-    if (_state != TranscriptionState.recording && _state != TranscriptionState.transcribing) {
-        if(_state != TranscriptionState.recording) return;
+    if (_state != TranscriptionState.recording &&
+        _state != TranscriptionState.transcribing) {
+      return;
     }
 
     _errorMessage = null;
-    bool wasVoskRecording = _selectedModelType == ModelType.vosk && _state == TranscriptionState.recording;
+    bool wasVoskRecording =
+        _selectedModelType == ModelType.vosk &&
+        _state == TranscriptionState.recording;
     ModelType modelUsedForThisOperation = _selectedModelType;
 
-    _state = TranscriptionState.transcribing; 
+    _state = TranscriptionState.transcribing;
     if (modelUsedForThisOperation == ModelType.whisper) {
       _loadingWhisperTranscriptionPreview = Transcription(
         id: 'whisper_loading_active_preview',
-        text: '', 
+        text: '',
         timestamp: DateTime.now(),
         sessionId: sessionProvider.activeSessionId,
         audioPath: '',
@@ -334,11 +339,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final output = await _orchestrator.stopRecording(modelUsedForThisOperation);
+      final output = await _orchestrator.stopRecording(
+        modelUsedForThisOperation,
+      );
       final resultText = output.text;
 
-      if (wasVoskRecording) { 
-          _liveVoskTranscriptionPreview = null;
+      if (wasVoskRecording) {
+        _liveVoskTranscriptionPreview = null;
       }
 
       if (resultText.isEmpty) {
@@ -347,7 +354,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _errorMessage = 'No speech detected ($modelName)';
         developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
         if (modelUsedForThisOperation == ModelType.whisper) {
-             _loadingWhisperTranscriptionPreview = null; 
+          _loadingWhisperTranscriptionPreview = null;
         }
       } else {
         String audioPath = '';
@@ -365,7 +372,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
         }
         await _saveTranscription(resultText, audioPath);
         if (modelUsedForThisOperation == ModelType.whisper) {
-          _loadingWhisperTranscriptionPreview = null; 
+          _loadingWhisperTranscriptionPreview = null;
         }
       }
     } catch (e, stack) {
@@ -376,11 +383,11 @@ class LocalTranscriptionProvider with ChangeNotifier {
         error: e,
         stackTrace: stack,
       );
-       if (modelUsedForThisOperation == ModelType.vosk) { 
-          _liveVoskTranscriptionPreview = null;
+      if (modelUsedForThisOperation == ModelType.vosk) {
+        _liveVoskTranscriptionPreview = null;
       }
       if (modelUsedForThisOperation == ModelType.whisper) {
-        _loadingWhisperTranscriptionPreview = null; 
+        _loadingWhisperTranscriptionPreview = null;
       }
     } finally {
       if (_state != TranscriptionState.error) {
@@ -535,12 +542,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
   /// This is used when navigating to a session screen
   Future<void> loadTranscriptionsForSession(String sessionId) async {
     try {
-      _transcriptions = await _repository.getTranscriptions();
+      final allTranscriptions = await _repository.getTranscriptions();
+      _transcriptions =
+          allTranscriptions.where((t) => t.sessionId == sessionId).toList();
       _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      if (sessionProvider.activeSessionId != sessionId) {
-        await sessionProvider.switchSession(sessionId);
-      }
 
       notifyListeners();
     } catch (e) {

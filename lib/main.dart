@@ -6,19 +6,21 @@ import 'providers/session_provider.dart';
 import 'providers/local_transcription_provider.dart';
 import 'providers/settings_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  final settingsProvider = await SettingsProvider.create();
+  runApp(MyApp(settingsProvider: settingsProvider));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SettingsProvider settingsProvider;
+  const MyApp({super.key, required this.settingsProvider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(
           create:

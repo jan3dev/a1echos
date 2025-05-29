@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.paused ||
@@ -267,14 +267,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 onPressed: () async {
-                  await settingsProvider.setIncognitoMode(!settingsProvider.isIncognitoMode);
+                  await settingsProvider.setIncognitoMode(
+                    !settingsProvider.isIncognitoMode,
+                  );
                 },
-                tooltip: settingsProvider.isIncognitoMode
-                    ? 'Turn off Incognito Mode'
-                    : 'Turn on Incognito Mode',
-                color: settingsProvider.isIncognitoMode
-                    ? colors.accentBrand
-                    : colors.textPrimary,
+                tooltip:
+                    settingsProvider.isIncognitoMode
+                        ? 'Turn off Incognito Mode'
+                        : 'Turn on Incognito Mode',
+                color:
+                    settingsProvider.isIncognitoMode
+                        ? colors.accentBrand
+                        : colors.textPrimary,
               ),
               IconButton(
                 icon: AquaIcon.hamburger(),

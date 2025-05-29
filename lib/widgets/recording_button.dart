@@ -30,25 +30,7 @@ class RecordingButton extends StatefulWidget {
   State<RecordingButton> createState() => _RecordingButtonState();
 }
 
-class _RecordingButtonState extends State<RecordingButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
+class _RecordingButtonState extends State<RecordingButton> {
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
