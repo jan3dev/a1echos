@@ -120,6 +120,12 @@ class SessionProvider with ChangeNotifier {
         }
       } else {
         sessionNameToUse = name.trim();
+        if (sessionNameToUse.length > AppConstants.sessionNameMaxLength) {
+          sessionNameToUse = sessionNameToUse.substring(
+            0,
+            AppConstants.sessionNameMaxLength,
+          );
+        }
       }
     }
 
@@ -148,7 +154,14 @@ class SessionProvider with ChangeNotifier {
   Future<void> renameSession(String id, String newName) async {
     final idx = _sessions.indexWhere((s) => s.id == id);
     if (idx >= 0 && newName.trim().isNotEmpty) {
-      _sessions[idx].name = newName.trim();
+      String trimmedName = newName.trim();
+      if (trimmedName.length > AppConstants.sessionNameMaxLength) {
+        trimmedName = trimmedName.substring(
+          0,
+          AppConstants.sessionNameMaxLength,
+        );
+      }
+      _sessions[idx].name = trimmedName;
       _sessions[idx].lastModified = DateTime.now();
       _needsSort = true;
       await _saveSessions();

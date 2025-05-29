@@ -125,7 +125,7 @@ class _SessionInputModalState extends State<SessionInputModal> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: colors.surfacePrimary.withOpacity(0.04),
+                        color: colors.surfaceInverse.withOpacity(0.04),
                         blurRadius: 16,
                         offset: const Offset(0, 0),
                       ),
@@ -159,15 +159,24 @@ class _SessionInputModalState extends State<SessionInputModal> {
                             top: 4,
                             bottom: 12,
                           ),
+                          counterText: '',
                         ),
                         style: AquaTypography.body1.copyWith(
                           color: colors.textPrimary,
                         ),
                         autofocus: true,
                         textInputAction: TextInputAction.done,
+                        maxLength: AppConstants.sessionNameMaxLength,
                         onSubmitted: (_) => _handleSubmit(),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.sessionNameMaxLengthHelper,
+                  style: AquaTypography.caption1Medium.copyWith(
+                    color: colors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -203,7 +212,8 @@ class _SessionInputModalState extends State<SessionInputModal> {
 
   void _handleSubmit() {
     final text = _controller.text.trim();
-    if (text.isNotEmpty || widget.initialValue.isNotEmpty) {
+    if ((text.isNotEmpty || widget.initialValue.isNotEmpty) &&
+        text.length <= AppConstants.sessionNameMaxLength) {
       Navigator.pop(context);
       widget.onSubmit(text);
     }
