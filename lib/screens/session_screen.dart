@@ -227,8 +227,10 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   List<Widget> _buildNormalActions() {
+    final sessionProvider = Provider.of<SessionProvider>(context);
+
     return [
-      if (!_settingsProviderInstance.isIncognitoMode) ...[
+      if (!sessionProvider.activeSession.isIncognito) ...[
         IconButton(
           icon: AquaIcon.edit(),
           onPressed:
@@ -375,17 +377,23 @@ class _SessionScreenState extends State<SessionScreen>
             _transcriptionSelectionMode
                 ? _buildSelectionActions()
                 : _buildNormalActions(),
-        onTitlePressed: () {
-          SessionInputModal.show(
-            context,
-            title: AppStrings.sessionRenameTitle,
-            buttonText: AppStrings.save,
-            initialValue: sessionName,
-            onSubmit: (name) {
-              _sessionProviderInstance.renameSession(widget.sessionId, name);
-            },
-          );
-        },
+        onTitlePressed:
+            !sessionProvider.activeSession.isIncognito
+                ? () {
+                  SessionInputModal.show(
+                    context,
+                    title: AppStrings.sessionRenameTitle,
+                    buttonText: AppStrings.save,
+                    initialValue: sessionName,
+                    onSubmit: (name) {
+                      _sessionProviderInstance.renameSession(
+                        widget.sessionId,
+                        name,
+                      );
+                    },
+                  );
+                }
+                : null,
       ),
       body: Stack(
         children: [
