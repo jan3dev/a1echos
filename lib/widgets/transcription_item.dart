@@ -32,7 +32,13 @@ class TranscriptionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM d, h:mm a');
+    final now = DateTime.now();
+    final isOlderThanCurrentYear = transcription.timestamp.year < now.year;
+    final dateFormat =
+        isOlderThanCurrentYear
+            ? DateFormat('MMM d, yyyy')
+            : DateFormat('MMM d');
+    final timeFormat = DateFormat('h:mm a');
     final colors = AquaColors.lightColors;
 
     Color backgroundColor = colors.surfacePrimary;
@@ -70,13 +76,33 @@ class TranscriptionItem extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    (showSkeleton ||
-                            !(isLivePreviewItem && transcription.text.isEmpty))
-                        ? dateFormat.format(transcription.timestamp)
-                        : "",
-                    style: AquaTypography.caption1Medium.copyWith(
-                      color: colors.textTertiary,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text:
+                              (showSkeleton ||
+                                      !(isLivePreviewItem &&
+                                          transcription.text.isEmpty))
+                                  ? dateFormat.format(transcription.timestamp)
+                                  : "",
+                          style: AquaTypography.caption1Medium.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const TextSpan(text: '  '),
+                        TextSpan(
+                          text:
+                              (showSkeleton ||
+                                      !(isLivePreviewItem &&
+                                          transcription.text.isEmpty))
+                                  ? timeFormat.format(transcription.timestamp)
+                                  : "",
+                          style: AquaTypography.caption1Medium.copyWith(
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
