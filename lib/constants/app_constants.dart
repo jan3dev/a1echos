@@ -44,7 +44,6 @@ class AppStrings {
   static const String homeSessionsDeleted = 'Sessions deleted';
   static const String homeErrorCreatingSession =
       'Error creating session: {error}';
-  static const String homeSessionsTitle = 'Your Sessions';
 
   // HomeScreen actions
   static const String copyAllTooltip = 'Copy All';
@@ -125,5 +124,5 @@ class AppStrings {
   static const String retryInitializationButton = 'Retry Initialization';
 
   // Incognito Mode Settings
-  static const String incognitoModeToggleTitle = 'Incognito Mode';
+  static const String incognitoModeTitle = 'Incognito';
 }

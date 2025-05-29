@@ -102,8 +102,8 @@ class SessionProvider with ChangeNotifier {
   }
 
   /// Creates a new session
-  /// Incognito sessions are created with an empty name.
-  /// Normal sessions can be created with an empty name and should be named later (e.g., when navigating back to home screen).
+  /// Incognito sessions are created with a default name.
+  /// Normal sessions can be created with an empty name and should be named later.
   /// Returns the ID of the newly created session
   Future<String> createSession(String? name, {bool isIncognito = false}) async {
     final now = DateTime.now();
@@ -111,17 +111,16 @@ class SessionProvider with ChangeNotifier {
     String sessionNameToUse = '';
 
     if (isIncognito) {
-      // Incognito sessions have no name
-      sessionNameToUse = '';
-    } else if (name == null ||
-        name.trim().isEmpty ||
-        name.startsWith(AppStrings.recordingPrefix)) {
-      // Normal sessions can be created with an empty name, to be set later
-      sessionNameToUse = '';
+      sessionNameToUse = AppStrings.incognitoModeTitle;
     } else {
-      sessionNameToUse = name.trim();
-      // Optional: Check for duplicates if a custom name is provided and handle if necessary
-      // For now, we'll allow custom names to be duplicates if the user insists.
+      if (name == null || name.trim().isEmpty) {
+        sessionNameToUse = getNewSessionName();
+        if (sessionNameToUse.trim().isEmpty) {
+          throw ArgumentError('Session name cannot be empty.');
+        }
+      } else {
+        sessionNameToUse = name.trim();
+      }
     }
 
     final session = Session(

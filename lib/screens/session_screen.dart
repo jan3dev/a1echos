@@ -390,52 +390,55 @@ class _SessionScreenState extends State<SessionScreen>
       body: Stack(
         children: [
           Positioned.fill(
-            child: Consumer<LocalTranscriptionProvider>(
-              builder: (context, provider, child) {
-                if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Consumer<LocalTranscriptionProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                if (provider.error != null) {
-                  return ErrorView(errorMessage: provider.error!);
-                }
+                  if (provider.error != null) {
+                    return ErrorView(errorMessage: provider.error!);
+                  }
 
-                bool whisperPreviewIsActive =
-                    provider.selectedModelType == ModelType.whisper &&
-                    provider.isTranscribing &&
-                    provider.loadingWhisperTranscriptionPreview != null;
+                  bool whisperPreviewIsActive =
+                      provider.selectedModelType == ModelType.whisper &&
+                      provider.isTranscribing &&
+                      provider.loadingWhisperTranscriptionPreview != null;
 
-                bool voskPreviewIsActive =
-                    provider.selectedModelType == ModelType.vosk &&
-                    ((provider.isRecording &&
-                            provider.liveVoskTranscriptionPreview != null) ||
-                        (provider.isTranscribing &&
-                            provider.liveVoskTranscriptionPreview != null));
+                  bool voskPreviewIsActive =
+                      provider.selectedModelType == ModelType.vosk &&
+                      ((provider.isRecording &&
+                              provider.liveVoskTranscriptionPreview != null) ||
+                          (provider.isTranscribing &&
+                              provider.liveVoskTranscriptionPreview != null));
 
-                bool anyPreviewActive =
-                    whisperPreviewIsActive || voskPreviewIsActive;
+                  bool anyPreviewActive =
+                      whisperPreviewIsActive || voskPreviewIsActive;
 
-                if (provider.isRecording) {
-                  return LiveTranscriptionView(controller: _scrollController);
-                }
+                  if (provider.isRecording) {
+                    return LiveTranscriptionView(controller: _scrollController);
+                  }
 
-                if (provider.sessionTranscriptions.isEmpty &&
-                    !anyPreviewActive) {
-                  return EmptyTranscriptionsState();
-                }
+                  if (provider.sessionTranscriptions.isEmpty &&
+                      !anyPreviewActive) {
+                    return EmptyTranscriptionsState();
+                  }
 
-                return TranscriptionList(
-                  controller: _scrollController,
-                  selectionMode: _transcriptionSelectionMode,
-                  selectedTranscriptionIds: _selectedTranscriptionIds,
-                  onTranscriptionTap: (id) {
-                    if (_transcriptionSelectionMode) {
-                      _toggleTranscriptionSelection(id);
-                    }
-                  },
-                  onTranscriptionLongPress: _handleTranscriptionLongPress,
-                );
-              },
+                  return TranscriptionList(
+                    controller: _scrollController,
+                    selectionMode: _transcriptionSelectionMode,
+                    selectedTranscriptionIds: _selectedTranscriptionIds,
+                    onTranscriptionTap: (id) {
+                      if (_transcriptionSelectionMode) {
+                        _toggleTranscriptionSelection(id);
+                      }
+                    },
+                    onTranscriptionLongPress: _handleTranscriptionLongPress,
+                  );
+                },
+              ),
             ),
           ),
           Positioned(

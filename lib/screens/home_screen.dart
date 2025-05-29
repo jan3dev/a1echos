@@ -178,13 +178,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       String sessionId;
       if (settingsProvider.isIncognitoMode) {
         sessionId = await sessionProvider.createSession(
-          AppStrings.recordingPrefix,
+          null,
           isIncognito: true,
         );
       } else {
-        sessionId = await sessionProvider.createSession(
-          AppStrings.recordingPrefix,
-        );
+        sessionId = await sessionProvider.createSession(null);
       }
 
       if (!mounted) return;
@@ -325,17 +323,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            AppStrings.homeSessionsTitle,
-            style: AquaTypography.body1SemiBold.copyWith(
-              color: AquaColors.lightColors.textPrimary,
-            ),
-            textAlign: TextAlign.left,
-          ),
-        ),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
