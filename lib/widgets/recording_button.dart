@@ -62,7 +62,7 @@ class _RecordingButtonState extends State<RecordingButton> {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: colors.glassInverse,
+            color: colors.glassInverse.withOpacity(0.5),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
@@ -73,10 +73,14 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: Center(
-            child: SizedBox(
+            child: SvgPicture.asset(
+              'assets/icons/mic.svg',
               width: 24,
               height: 24,
-              child: AquaIndefinateProgressIndicator(color: colors.textInverse),
+              colorFilter: ColorFilter.mode(
+                colors.textInverse.withOpacity(0.5),
+                BlendMode.srcIn,
+              ),
             ),
           ),
         );
