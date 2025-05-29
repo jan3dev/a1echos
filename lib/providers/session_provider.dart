@@ -59,7 +59,7 @@ class SessionProvider with ChangeNotifier {
       _activeSessionId = _sessions.first.id;
       await _saveActiveSession();
     } else {
-      await createSession(getNewSessionName());
+      _activeSessionId = '';
     }
     notifyListeners();
   }
