@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:ui_components/ui_components.dart';
 import '../models/session.dart';
 import '../constants/app_constants.dart';
+import '../utils/session_formatter.dart';
 
 class SessionListItem extends StatelessWidget {
   final Session session;
@@ -22,11 +22,13 @@ class SessionListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String formattedDate = DateFormat(
-      'MMM d, h:mm a',
-    ).format(session.lastModified);
-    final String subtitle = '${AppStrings.modifiedPrefix} $formattedDate';
     final colors = AquaColors.lightColors;
+    final String subtitle = formatSessionSubtitle(
+      now: DateTime.now(),
+      created: session.timestamp,
+      lastModified: session.lastModified,
+      modifiedPrefix: AppStrings.modifiedPrefix,
+    );
 
     return GestureDetector(
       onLongPress: onLongPress,
