@@ -62,13 +62,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
   }
 
   void _onSessionChanged() async {
-    // Get all session IDs currently in the in-memory _transcriptions list
     final inMemorySessionIds = _transcriptions.map((t) => t.sessionId).toSet();
 
-    // Get all valid session IDs from SessionProvider
     final validSessionIds = sessionProvider.sessions.map((s) => s.id).toSet();
 
-    // Find session IDs that are in memory but no longer valid
     final sessionsToDelete = inMemorySessionIds.difference(validSessionIds);
 
     bool changed = false;
@@ -267,21 +264,80 @@ class LocalTranscriptionProvider with ChangeNotifier {
     }
   }
 
+  /// Validates if a state transition is allowed
+  bool _validateStateTransition(
+    TranscriptionState from,
+    TranscriptionState to,
+  ) {
+    const validTransitions = {
+      TranscriptionState.loading: {
+        TranscriptionState.ready,
+        TranscriptionState.error,
+      },
+      TranscriptionState.ready: {
+        TranscriptionState.recording,
+        TranscriptionState.loading,
+        TranscriptionState.error,
+      },
+      TranscriptionState.recording: {
+        TranscriptionState.transcribing,
+        TranscriptionState.ready,
+        TranscriptionState.error,
+      },
+      TranscriptionState.transcribing: {
+        TranscriptionState.ready,
+        TranscriptionState.error,
+      },
+      TranscriptionState.error: {
+        TranscriptionState.loading,
+        TranscriptionState.ready,
+      },
+    };
+
+    return validTransitions[from]?.contains(to) ?? false;
+  }
+
+  /// Checks if the orchestrator is busy with an operation
+  bool get _isOrchestratorBusy => _orchestrator.isOperationInProgress;
+
   Future<bool> startRecording() async {
     _errorMessage = null;
-    if (_state != TranscriptionState.ready) {
-      _errorMessage = 'Model not ready';
-      _state = TranscriptionState.error;
-      notifyListeners();
+
+    if (!_validateStateTransition(_state, TranscriptionState.recording)) {
+      _errorMessage = 'Cannot start recording from current state: $_state';
+      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+      return false;
+    }
+
+    if (_isOrchestratorBusy) {
+      _errorMessage = 'Another operation is in progress. Please wait.';
+      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+      return false;
+    }
+
+    if (_selectedModelType == ModelType.vosk && _orchestrator.isRecording) {
+      _errorMessage = 'Vosk recording already in progress';
+      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
       return false;
     }
 
     bool success = false;
     try {
+      developer.log(
+        'Starting ${_selectedModelType.name} recording...',
+        name: 'LocalTranscriptionProvider',
+      );
+
       success = await _orchestrator.startRecording(_selectedModelType);
-      if (!success && _selectedModelType == ModelType.whisper) {
-        _errorMessage = 'Failed to start audio recording for Whisper';
+
+      if (!success) {
+        _errorMessage =
+            _selectedModelType == ModelType.whisper
+                ? 'Failed to start audio recording for Whisper'
+                : 'Failed to start Vosk streaming';
+        developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
       }
+
       if (success) {
         _state = TranscriptionState.recording;
         if (_selectedModelType == ModelType.vosk) {
@@ -297,6 +353,12 @@ class LocalTranscriptionProvider with ChangeNotifier {
           _liveVoskTranscriptionPreview = null;
           _loadingWhisperTranscriptionPreview = null;
         }
+        developer.log(
+          'Recording started successfully',
+          name: 'LocalTranscriptionProvider',
+        );
+      } else {
+        _state = TranscriptionState.error;
       }
     } catch (e, stack) {
       _errorMessage = 'Failed to start recording: $e';
@@ -317,6 +379,18 @@ class LocalTranscriptionProvider with ChangeNotifier {
   Future<void> stopRecordingAndSave() async {
     if (_state != TranscriptionState.recording &&
         _state != TranscriptionState.transcribing) {
+      developer.log(
+        'Cannot stop recording from state: $_state',
+        name: 'LocalTranscriptionProvider',
+      );
+      return;
+    }
+
+    if (_isOrchestratorBusy && _state != TranscriptionState.recording) {
+      developer.log(
+        'Orchestrator busy, cannot stop recording now',
+        name: 'LocalTranscriptionProvider',
+      );
       return;
     }
 
@@ -325,6 +399,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _selectedModelType == ModelType.vosk &&
         _state == TranscriptionState.recording;
     ModelType modelUsedForThisOperation = _selectedModelType;
+
+    if (!_validateStateTransition(_state, TranscriptionState.transcribing)) {
+      _errorMessage = 'Invalid state transition when stopping recording';
+      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+      _state = TranscriptionState.error;
+      notifyListeners();
+      return;
+    }
 
     _state = TranscriptionState.transcribing;
     if (modelUsedForThisOperation == ModelType.whisper) {
@@ -339,10 +421,20 @@ class LocalTranscriptionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      developer.log(
+        'Stopping ${modelUsedForThisOperation.name} recording...',
+        name: 'LocalTranscriptionProvider',
+      );
+
       final output = await _orchestrator.stopRecording(
         modelUsedForThisOperation,
       );
-      final resultText = output.text;
+      final resultText = output.text.trim();
+
+      developer.log(
+        'Recording stopped. Result text length: ${resultText.length}',
+        name: 'LocalTranscriptionProvider',
+      );
 
       if (wasVoskRecording) {
         _liveVoskTranscriptionPreview = null;
@@ -370,7 +462,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
             } catch (_) {}
           }
         }
+
+        developer.log(
+          'Saving transcription: "$resultText"',
+          name: 'LocalTranscriptionProvider',
+        );
         await _saveTranscription(resultText, audioPath);
+
         if (modelUsedForThisOperation == ModelType.whisper) {
           _loadingWhisperTranscriptionPreview = null;
         }
@@ -391,7 +489,16 @@ class LocalTranscriptionProvider with ChangeNotifier {
       }
     } finally {
       if (_state != TranscriptionState.error) {
-        _state = TranscriptionState.ready;
+        if (_validateStateTransition(_state, TranscriptionState.ready)) {
+          _state = TranscriptionState.ready;
+        } else {
+          developer.log(
+            'Invalid state transition to ready from $_state',
+            name: 'LocalTranscriptionProvider',
+          );
+          _state = TranscriptionState.error;
+          _errorMessage = 'State management error after recording';
+        }
       }
       notifyListeners();
     }

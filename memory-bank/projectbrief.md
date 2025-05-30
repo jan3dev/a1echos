@@ -1,21 +1,38 @@
-# Project Brief: dolphinecho - Transcription App
+# Project Brief
+
+## Project Name
+**DolphinEcho** - A transcription app using local models
 
 ## Overview
-dolphinecho is a Flutter-based mobile application for transcribing audio using local models. The application provides users with the ability to record audio and generate transcriptions without relying on cloud-based services, ensuring privacy and offline functionality.
+DolphinEcho is a Flutter-based transcription application that provides offline transcription capabilities using local AI models. The app focuses on privacy and performance by processing audio locally without requiring internet connectivity for transcription services.
 
 ## Key Features
-- Audio recording functionality
-- Local transcription using Vosk and Whisper models
-- Session management for organizing recordings and transcriptions
-- Settings configuration for transcription models and parameters
-- File management for recordings and transcriptions
+- **Local Transcription**: Uses Vosk and Whisper models for offline transcription
+- **Session Management**: Organize transcriptions into user-defined sessions
+- **Real-time Processing**: Live transcription with Vosk model
+- **Post-processing**: High-quality transcription with Whisper model
+- **Audio Recording**: Built-in recording functionality with waveform visualization
+- **Data Security**: Local storage with encryption capabilities
+- **Model Switching**: Dynamic switching between transcription models
+- **Material Design 3**: Modern UI following Material Design principles
 
 ## Technical Stack
-- Flutter (SDK ^3.7.2) for cross-platform mobile development
-- Provider package for state management
-- Local storage for data persistence
-- Audio recording capabilities via the record package
-- Transcription via vosk_flutter and whisper_flutter_new packages
+- **Framework**: Flutter 3.7.2+
+- **State Management**: Provider pattern
+- **Local Storage**: SharedPreferences, Flutter Secure Storage
+- **Audio Processing**: Record package for audio capture
+- **Transcription Models**: Vosk Flutter, Whisper Flutter New
+- **UI Components**: Custom design system (aqua-design-system)
+- **File Management**: Path Provider for local file storage
+
+## Target Platforms
+- Android
+- iOS
+
+## Development Status
+- **Current Phase**: Documentation and Architecture Analysis
+- **Completion**: ~85% of core architecture documented
+- **Next Phase**: Feature enhancement and optimization
 
 ## Project Structure
 - **lib/**: Main source code directory
