@@ -3,6 +3,7 @@ import 'package:ui_components/ui_components.dart';
 import '../models/session.dart';
 import '../constants/app_constants.dart';
 import '../utils/session_formatter.dart';
+import 'menus/session_more_menu.dart';
 
 class SessionListItem extends StatelessWidget {
   final Session session;
@@ -36,7 +37,10 @@ class SessionListItem extends StatelessWidget {
         title: session.name,
         subtitle: subtitle,
         iconLeading: selectionMode ? _buildCheckbox() : null,
-        iconTrailing: selectionMode ? null : AquaIcon.chevronRight(),
+        iconTrailing: SessionMoreMenu(
+          session: session,
+          listItemContext: context,
+        ),
         backgroundColor: colors.surfacePrimary,
         titleColor: colors.textPrimary,
         subtitleColor: colors.textSecondary,

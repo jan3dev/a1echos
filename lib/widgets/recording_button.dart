@@ -78,7 +78,7 @@ class _RecordingButtonState extends State<RecordingButton> {
               width: 24,
               height: 24,
               colorFilter: ColorFilter.mode(
-                colors.textInverse.withOpacity(0.5),
+                colors.textInverse,
                 BlendMode.srcIn,
               ),
             ),

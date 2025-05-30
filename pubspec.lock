@@ -673,10 +673,10 @@ packages:
     dependency: transitive
     description:
       name: record_web
-      sha256: "654c08113961051dcb5427e63f56315ba47c0752781ba990dac9313d0ec23c70"
+      sha256: f8e536a9c927e52f95326d7540898457eaeefbe0b21a84d3cb3d2d7d4645e8cb
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.6"
+    version: "1.1.7"
   record_windows:
     dependency: transitive
     description:
@@ -823,7 +823,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "65bbe1651903f0f1cbb123457d8ccaaf7e8f4a8b"
+      resolved-ref: "6fe9e2a06e9c93ce78fcc9d09363b65ac15572e4"
       url: "https://github.com/jan3dev/aqua-design-system.git"
     source: git
     version: "0.0.1+1"
