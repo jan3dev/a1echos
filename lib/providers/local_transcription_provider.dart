@@ -34,6 +34,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   late TranscriptionOrchestrator _orchestrator;
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
+  String? _recordingSessionId;
 
   List<Transcription> get transcriptions => _transcriptions;
   TranscriptionState get state => _state;
@@ -51,6 +52,24 @@ class LocalTranscriptionProvider with ChangeNotifier {
       _liveVoskTranscriptionPreview;
   Transcription? get loadingWhisperTranscriptionPreview =>
       _loadingWhisperTranscriptionPreview;
+
+  /// Gets live Vosk preview only if it belongs to the current active session
+  Transcription? get liveVoskTranscriptionPreviewForCurrentSession {
+    if (_liveVoskTranscriptionPreview?.sessionId ==
+        sessionProvider.activeSessionId) {
+      return _liveVoskTranscriptionPreview;
+    }
+    return null;
+  }
+
+  /// Gets Whisper loading preview only if it belongs to the current active session
+  Transcription? get loadingWhisperTranscriptionPreviewForCurrentSession {
+    if (_loadingWhisperTranscriptionPreview?.sessionId ==
+        sessionProvider.activeSessionId) {
+      return _loadingWhisperTranscriptionPreview;
+    }
+    return null;
+  }
 
   List<Transcription> get sessionTranscriptions => _sessionManager
       .filterBySession(_transcriptions, sessionProvider.activeSessionId);
@@ -76,6 +95,34 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _transcriptions.removeWhere((t) => t.sessionId == sessionIdToDelete);
       }
       changed = true;
+    }
+
+    if (_recordingSessionId != null &&
+        _recordingSessionId != sessionProvider.activeSessionId) {
+      developer.log(
+        'Session changed during recording/transcribing. Clearing previews for UI consistency.',
+        name: 'LocalTranscriptionProvider',
+      );
+
+      if (_liveVoskTranscriptionPreview?.sessionId !=
+          sessionProvider.activeSessionId) {
+        developer.log(
+          'Clearing live Vosk preview (session: ${_liveVoskTranscriptionPreview?.sessionId}, current: ${sessionProvider.activeSessionId})',
+          name: 'LocalTranscriptionProvider',
+        );
+        _liveVoskTranscriptionPreview = null;
+        changed = true;
+      }
+
+      if (_loadingWhisperTranscriptionPreview?.sessionId !=
+          sessionProvider.activeSessionId) {
+        developer.log(
+          'Clearing Whisper loading preview (session: ${_loadingWhisperTranscriptionPreview?.sessionId}, current: ${sessionProvider.activeSessionId})',
+          name: 'LocalTranscriptionProvider',
+        );
+        _loadingWhisperTranscriptionPreview = null;
+        changed = true;
+      }
     }
 
     if (changed) {
@@ -242,7 +289,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
             id: 'live_vosk_active_preview',
             text: _currentStreamingText,
             timestamp: DateTime.now(),
-            sessionId: sessionProvider.activeSessionId,
+            sessionId: _recordingSessionId ?? sessionProvider.activeSessionId,
             audioPath: '',
           );
         } else {
@@ -328,6 +375,12 @@ class LocalTranscriptionProvider with ChangeNotifier {
         name: 'LocalTranscriptionProvider',
       );
 
+      _recordingSessionId = sessionProvider.activeSessionId;
+      developer.log(
+        'Captured recording session ID: $_recordingSessionId',
+        name: 'LocalTranscriptionProvider',
+      );
+
       success = await _orchestrator.startRecording(_selectedModelType);
 
       if (!success) {
@@ -345,7 +398,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
             id: 'live_vosk_active_preview',
             text: '',
             timestamp: DateTime.now(),
-            sessionId: sessionProvider.activeSessionId,
+            sessionId: _recordingSessionId!,
             audioPath: '',
           );
           _loadingWhisperTranscriptionPreview = null;
@@ -359,6 +412,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
         );
       } else {
         _state = TranscriptionState.error;
+        _recordingSessionId = null;
       }
     } catch (e, stack) {
       _errorMessage = 'Failed to start recording: $e';
@@ -370,6 +424,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
       );
       success = false;
       _state = TranscriptionState.error;
+      _recordingSessionId = null;
     } finally {
       notifyListeners();
     }
@@ -414,7 +469,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
         id: 'whisper_loading_active_preview',
         text: '',
         timestamp: DateTime.now(),
-        sessionId: sessionProvider.activeSessionId,
+        sessionId: _recordingSessionId ?? sessionProvider.activeSessionId,
         audioPath: '',
       );
     }
@@ -500,13 +555,18 @@ class LocalTranscriptionProvider with ChangeNotifier {
           _errorMessage = 'State management error after recording';
         }
       }
+      _recordingSessionId = null;
       notifyListeners();
     }
   }
 
   Future<void> _saveTranscription(String text, String audioPath) async {
     try {
-      final sessionId = sessionProvider.activeSessionId;
+      final sessionId = _recordingSessionId ?? sessionProvider.activeSessionId;
+      developer.log(
+        'Saving transcription to session: $sessionId (recording session: $_recordingSessionId, current session: ${sessionProvider.activeSessionId})',
+        name: 'LocalTranscriptionProvider',
+      );
       final formattedText = TranscriptionFormatter.format(text);
       final transcription = Transcription(
         id: _uuid.v4(),

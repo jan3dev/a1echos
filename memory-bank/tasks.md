@@ -52,4 +52,13 @@
   - [x] Improved error handling and logging throughout the stack
   - [x] Fixed transcription loss on immediate stop
   - [x] Fixed state persistence issues between recordings
-  - [x] Eliminated race conditions with sequential operation management 
+  - [x] Eliminated race conditions with sequential operation management
+- [x] **SESSION SWITCHING FIX FOR WHISPER TRANSCRIPTIONS**
+  - [x] Fixed transcriptions being saved to wrong session when switching during recording
+  - [x] Added recording session ID capture at start of recording
+  - [x] Updated all preview transcriptions to use correct session ID
+  - [x] Added comprehensive logging for session tracking
+  - [x] Proper cleanup of recording session ID on completion/error
+  - [x] Fixed loading skeleton appearing in wrong session during session switch
+  - [x] Added preview clearing when session changes during recording/transcribing
+  - [x] Added session-aware getter methods for preview transcriptions 
