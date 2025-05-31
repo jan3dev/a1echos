@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:ui_components/ui_components.dart';
-import '../providers/local_transcription_provider.dart';
+import '../providers/transcription_state_manager.dart';
 import '../models/model_type.dart';
 
 class AudioWaveVisualization extends StatefulWidget {
@@ -42,11 +42,12 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
       ),
     );
 
-    _animations = _animationControllers.map((controller) {
-      return Tween<double>(begin: 0.3, end: 1.0).animate(
-        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-      );
-    }).toList();
+    _animations =
+        _animationControllers.map((controller) {
+          return Tween<double>(begin: 0.3, end: 1.0).animate(
+            CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+          );
+        }).toList();
 
     for (var i = 0; i < totalBars; i++) {
       Future.delayed(Duration(milliseconds: random.nextInt(200)), () {
@@ -95,7 +96,9 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
             return AnimatedBuilder(
               animation: _animations[animationIndex],
               builder: (context, child) {
-                return _AudioBar(height: maxBarHeight * _animations[animationIndex].value);
+                return _AudioBar(
+                  height: maxBarHeight * _animations[animationIndex].value,
+                );
               },
             );
           } else {
@@ -112,10 +115,10 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
       children: [
         // Left side audio wave
         Expanded(child: _buildAudioWaveSide(0)),
-        
+
         // Space for the recording button (matches button width)
         const SizedBox(width: 96),
-        
+
         // Right side audio wave
         Expanded(child: _buildAudioWaveSide(barsPerSide)),
       ],

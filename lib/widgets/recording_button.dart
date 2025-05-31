@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
+import '../providers/transcription_state_manager.dart';
 
 class RecordingButton extends StatefulWidget {
   /// Callback that gets triggered when recording is started

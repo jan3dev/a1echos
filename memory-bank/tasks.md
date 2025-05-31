@@ -5,6 +5,19 @@
 - [ ] Document UI component architecture and state management in detail
 - [ ] Create visual representation of provider relationships and data flow
 - [ ] Map complete user journey with sequence diagrams
+- [ ] **SESSION SCREEN REFACTORING FOR MODULARITY**
+  - [x] Creative phase: Architecture design for modular session screen
+  - [x] Implement SessionRecordingController for recording logic
+  - [x] Implement TranscriptionSelectionController for selection operations
+  - [x] Implement SessionNavigationController for lifecycle management
+  - [x] Extract SessionAppBar component
+  - [x] Extract TranscriptionContentView component  
+  - [x] Extract RecordingControlsView component
+  - [x] Integrate controllers with UI components
+  - [x] Fix session name update bug (make SessionNavigationController reactive)
+  - [x] Fix empty state positioning bug (adjust container constraints)
+  - [ ] Add comprehensive testing for new architecture
+  - [x] Verify all existing functionality preserved
 
 ## Medium Priority  
 - [ ] Performance optimization analysis and recommendations

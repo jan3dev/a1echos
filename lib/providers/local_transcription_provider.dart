@@ -1,741 +1,320 @@
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
-import '../models/transcription.dart';
-import '../repositories/transcription_repository.dart';
-import '../services/vosk_service.dart';
-import '../services/whisper_service.dart';
-import '../services/audio_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
-import 'dart:io';
-import 'session_provider.dart';
-import '../utils/transcription_formatter.dart';
-import '../managers/session_transcription_manager.dart';
-import '../managers/transcription_orchestrator.dart';
+
+import '../models/transcription.dart';
 import '../models/model_type.dart';
+import 'session_provider.dart';
+import 'transcription_state_manager.dart';
+import 'model_management_provider.dart';
+import 'transcription_ui_state_provider.dart';
+import 'transcription_operation_provider.dart';
+import 'transcription_data_provider.dart';
 
-enum TranscriptionState { loading, ready, recording, transcribing, error }
-
+/// LocalTranscriptionProvider using composition of specialized providers
 class LocalTranscriptionProvider with ChangeNotifier {
-  final TranscriptionRepository _repository = TranscriptionRepository();
-  late final SessionTranscriptionManager _sessionManager;
-  final AudioService _audioService = AudioService();
-  final VoskService _voskService = VoskService();
-  WhisperService? _whisperService;
-  final Uuid _uuid = const Uuid();
-  final SessionProvider sessionProvider;
-  List<Transcription> _transcriptions = [];
-  TranscriptionState _state = TranscriptionState.loading;
-  String? _errorMessage;
-  String _currentStreamingText = '';
-  Transcription? _liveVoskTranscriptionPreview;
-  Transcription? _loadingWhisperTranscriptionPreview;
-  late TranscriptionOrchestrator _orchestrator;
-  ModelType _selectedModelType = ModelType.vosk;
-  static const String _prefsKeyModelType = 'selected_model_type';
-  String? _recordingSessionId;
+  // Specialized providers for different concerns
+  late final TranscriptionStateManager _stateManager;
+  late final ModelManagementProvider _modelManager;
+  late final TranscriptionUIStateProvider _uiStateProvider;
+  late final TranscriptionOperationProvider _operationProvider;
+  late final TranscriptionDataProvider _dataProvider;
 
-  List<Transcription> get transcriptions => _transcriptions;
-  TranscriptionState get state => _state;
-  bool get isLoading => _state == TranscriptionState.loading;
-  bool get isModelReady => _state == TranscriptionState.ready;
-  bool get isRecording => _state == TranscriptionState.recording;
-  bool get isTranscribing => _state == TranscriptionState.transcribing;
-  bool get isStreaming => _state == TranscriptionState.recording;
-  String? get error =>
-      _state == TranscriptionState.error ? _errorMessage : null;
-  String get currentStreamingText => _currentStreamingText;
-  ModelType get selectedModelType => _selectedModelType;
-  List<Transcription> get allTranscriptions => _transcriptions;
-  Transcription? get liveVoskTranscriptionPreview =>
-      _liveVoskTranscriptionPreview;
-  Transcription? get loadingWhisperTranscriptionPreview =>
-      _loadingWhisperTranscriptionPreview;
+  final SessionProvider _sessionProvider;
 
-  /// Gets live Vosk preview only if it belongs to the current active session
-  Transcription? get liveVoskTranscriptionPreviewForCurrentSession {
-    if (_liveVoskTranscriptionPreview?.sessionId ==
-        sessionProvider.activeSessionId) {
-      return _liveVoskTranscriptionPreview;
-    }
-    return null;
-  }
-
-  /// Gets Whisper loading preview only if it belongs to the current active session
-  Transcription? get loadingWhisperTranscriptionPreviewForCurrentSession {
-    if (_loadingWhisperTranscriptionPreview?.sessionId ==
-        sessionProvider.activeSessionId) {
-      return _loadingWhisperTranscriptionPreview;
-    }
-    return null;
-  }
-
-  List<Transcription> get sessionTranscriptions => _sessionManager
-      .filterBySession(_transcriptions, sessionProvider.activeSessionId);
-
-  LocalTranscriptionProvider(this.sessionProvider) {
-    _sessionManager = SessionTranscriptionManager(_repository);
-    sessionProvider.addListener(_onSessionChanged);
+  /// Constructor initializes all specialized providers
+  LocalTranscriptionProvider(this._sessionProvider) {
+    _initializeProviders();
+    _setupProviderCommunication();
     _initialize();
   }
 
-  void _onSessionChanged() async {
-    final inMemorySessionIds = _transcriptions.map((t) => t.sessionId).toSet();
+  /// Initialize all specialized providers
+  void _initializeProviders() {
+    _stateManager = TranscriptionStateManager();
+    _modelManager = ModelManagementProvider();
+    _uiStateProvider = TranscriptionUIStateProvider();
+    _operationProvider = TranscriptionOperationProvider(_sessionProvider);
+    _dataProvider = TranscriptionDataProvider(_sessionProvider);
+  }
 
-    final validSessionIds = sessionProvider.sessions.map((s) => s.id).toSet();
+  /// Setup communication between providers
+  void _setupProviderCommunication() {
+    // Listen to session changes
+    _sessionProvider.addListener(_onSessionChanged);
 
-    final sessionsToDelete = inMemorySessionIds.difference(validSessionIds);
+    // Setup partial transcription handling
+    _operationProvider.setPartialTranscriptionCallback(_onPartialTranscription);
 
-    bool changed = false;
-    if (sessionsToDelete.isNotEmpty) {
-      for (final sessionIdToDelete in sessionsToDelete) {
-        if (sessionIdToDelete.isEmpty) continue;
-        await _repository.deleteTranscriptionsForSession(sessionIdToDelete);
-        _transcriptions.removeWhere((t) => t.sessionId == sessionIdToDelete);
-      }
-      changed = true;
+    // Forward state changes to UI
+    _stateManager.addListener(notifyListeners);
+    _modelManager.addListener(notifyListeners);
+    _uiStateProvider.addListener(notifyListeners);
+    _operationProvider.addListener(notifyListeners);
+    _dataProvider.addListener(notifyListeners);
+  }
+
+  /// Handles partial transcription updates during recording
+  void _onPartialTranscription(String partial) {
+    _uiStateProvider.updateStreamingText(partial);
+
+    // Update live preview if recording with Vosk
+    if (_modelManager.selectedModelType == ModelType.vosk &&
+        _stateManager.isRecording) {
+      final sessionId =
+          _uiStateProvider.recordingSessionId ??
+          _sessionProvider.activeSessionId;
+      _uiStateProvider.updatePreviewForRecording(
+        ModelType.vosk,
+        partial,
+        sessionId,
+        true,
+      );
     }
+  }
 
-    if (_recordingSessionId != null &&
-        _recordingSessionId != sessionProvider.activeSessionId) {
+  /// Handles session changes
+  void _onSessionChanged() async {
+    // Clean up data for deleted sessions
+    final validSessionIds = _sessionProvider.sessions.map((s) => s.id).toSet();
+    await _dataProvider.cleanupDeletedSessions(validSessionIds);
+
+    // Clean up UI previews for session changes during recording
+    if (_uiStateProvider.recordingSessionId != null &&
+        _uiStateProvider.recordingSessionId !=
+            _sessionProvider.activeSessionId) {
       developer.log(
         'Session changed during recording/transcribing. Clearing previews for UI consistency.',
         name: 'LocalTranscriptionProvider',
       );
-
-      if (_liveVoskTranscriptionPreview?.sessionId !=
-          sessionProvider.activeSessionId) {
-        developer.log(
-          'Clearing live Vosk preview (session: ${_liveVoskTranscriptionPreview?.sessionId}, current: ${sessionProvider.activeSessionId})',
-          name: 'LocalTranscriptionProvider',
-        );
-        _liveVoskTranscriptionPreview = null;
-        changed = true;
-      }
-
-      if (_loadingWhisperTranscriptionPreview?.sessionId !=
-          sessionProvider.activeSessionId) {
-        developer.log(
-          'Clearing Whisper loading preview (session: ${_loadingWhisperTranscriptionPreview?.sessionId}, current: ${sessionProvider.activeSessionId})',
-          name: 'LocalTranscriptionProvider',
-        );
-        _loadingWhisperTranscriptionPreview = null;
-        changed = true;
-      }
+      _uiStateProvider.cleanupPreviewsForSessionChange(
+        _sessionProvider.activeSessionId,
+      );
     }
 
-    if (changed) {
-      notifyListeners();
-    } else {
-      notifyListeners();
-    }
+    notifyListeners();
   }
 
+  /// Initialize the provider system
   Future<void> _initialize() async {
-    _state = TranscriptionState.loading;
-    notifyListeners();
-    await _loadTranscriptions();
-    await _loadSelectedModelType();
-    await _initializeSelectedModel(_selectedModelType);
-    _state = TranscriptionState.ready;
-    notifyListeners();
-  }
+    _stateManager.transitionTo(TranscriptionState.loading);
 
-  Future<void> _loadSelectedModelType() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final modelName =
-          prefs.getString(_prefsKeyModelType) ?? ModelType.vosk.name;
-      _selectedModelType = ModelType.values.firstWhere(
-        (e) => e.name == modelName,
-        orElse: () => ModelType.vosk,
-      );
-    } catch (e) {
+      // Load transcription data
+      await _dataProvider.loadTranscriptions();
+
+      // Load and initialize selected model
+      await _modelManager.loadSelectedModelType();
+      final error = await _modelManager.initializeSelectedModel();
+
+      if (error != null) {
+        _stateManager.setError(error);
+        return;
+      }
+
+      // Setup orchestrator communication
+      _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
+
+      _stateManager.transitionTo(TranscriptionState.ready);
+    } catch (e, stackTrace) {
       developer.log(
-        'Error loading selected model type: $e',
+        'Error during initialization: $e',
         name: 'LocalTranscriptionProvider',
+        error: e,
+        stackTrace: stackTrace,
       );
-      _selectedModelType = ModelType.vosk;
+      _stateManager.setError('Failed to initialize transcription system: $e');
     }
   }
 
-  Future<void> _saveSelectedModelType(ModelType type) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsKeyModelType, type.name);
-    } catch (e) {
-      developer.log(
-        'Error saving selected model type: $e',
-        name: 'LocalTranscriptionProvider',
-      );
-    }
-  }
+  // ============================================================================
+  // PUBLIC API - State getters
+  // ============================================================================
 
+  TranscriptionState get state => _stateManager.state;
+  bool get isLoading => _stateManager.isLoading;
+  bool get isModelReady => _stateManager.isModelReady;
+  bool get isRecording => _stateManager.isRecording;
+  bool get isTranscribing => _stateManager.isTranscribing;
+  bool get isStreaming => _stateManager.isStreaming;
+  String? get error => _stateManager.error;
+
+  // Model management
+  ModelType get selectedModelType => _modelManager.selectedModelType;
+
+  // UI state
+  String get currentStreamingText => _uiStateProvider.currentStreamingText;
+  Transcription? get liveVoskTranscriptionPreview =>
+      _uiStateProvider.getLiveVoskTranscriptionPreviewForSession(
+        _sessionProvider.activeSessionId,
+      );
+  Transcription? get loadingWhisperTranscriptionPreview =>
+      _uiStateProvider.getLoadingWhisperTranscriptionPreviewForSession(
+        _sessionProvider.activeSessionId,
+      );
+
+  // Data access
+  List<Transcription> get transcriptions => _dataProvider.transcriptions;
+  List<Transcription> get allTranscriptions => _dataProvider.allTranscriptions;
+  List<Transcription> get sessionTranscriptions =>
+      _dataProvider.sessionTranscriptions;
+
+  // ============================================================================
+  // PUBLIC API - Operations
+  // ============================================================================
+
+  /// Changes the transcription model
   Future<void> changeModel(ModelType newModelType) async {
-    if (_selectedModelType == newModelType &&
-        _state == TranscriptionState.ready) {
+    if (!_stateManager.transitionTo(TranscriptionState.loading)) {
       return;
     }
 
-    _state = TranscriptionState.loading;
-    _errorMessage = null;
-    ModelType previousModelType = _selectedModelType;
-    _selectedModelType = newModelType;
-    notifyListeners();
+    final error = await _modelManager.changeModel(newModelType);
 
-    try {
-      if (previousModelType == ModelType.whisper) {
-        await _whisperService?.dispose();
-        _whisperService = null;
-      } else if (previousModelType == ModelType.vosk) {
-        await _voskService.stop();
-        await _voskService.dispose();
-      }
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error during synchronous cleanup attempt: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
-    }
-
-    await _saveSelectedModelType(newModelType);
-
-    await _initializeSelectedModel(newModelType);
-
-    _state =
-        _errorMessage != null
-            ? TranscriptionState.error
-            : TranscriptionState.ready;
-    notifyListeners();
-  }
-
-  Future<void> _loadTranscriptions() async {
-    try {
-      _transcriptions = await _repository.getTranscriptions();
-      _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to load transcriptions';
-      developer.log(
-        _errorMessage!,
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      notifyListeners();
+    if (error != null) {
+      _stateManager.setError(error);
+    } else {
+      // Reinitialize orchestrator connection
+      _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
+      _stateManager.transitionTo(TranscriptionState.ready);
     }
   }
 
-  Future<void> loadTranscriptions() async {
-    await _loadTranscriptions();
-  }
-
-  Future<void> _initializeSelectedModel(ModelType modelToInitialize) async {
-    _state = TranscriptionState.loading;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      bool initResult = false;
-
-      if (modelToInitialize == ModelType.vosk) {
-        final initialized = await _voskService.initialize(
-          'assets/models/vosk-model-small-en-us-0.15.zip',
-        );
-        if (initialized) {
-          initResult = true;
-        } else {
-          _errorMessage = 'Failed to initialize Vosk service.';
-        }
-      } else {
-        if (modelToInitialize == ModelType.whisper) {
-          _whisperService = WhisperService();
-          initResult = await _whisperService!.initialize();
-
-          if (!initResult) {
-            _errorMessage = 'Failed to initialize Whisper service via plugin.';
-            developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
-          }
-        } else {
-          _errorMessage =
-              'State Inconsistency: Tried to initialize Whisper when intended model was $modelToInitialize';
-          developer.log(
-            _errorMessage!,
-            name: 'LocalTranscriptionProvider',
-            level: 1000,
-          );
-          initResult = false;
-        }
-      }
-
-      _state = initResult ? TranscriptionState.ready : TranscriptionState.error;
-
-      _orchestrator = TranscriptionOrchestrator(
-        _audioService,
-        _voskService,
-        _whisperService,
-      );
-      _orchestrator.onPartial.listen((partial) {
-        _currentStreamingText = partial;
-        _state =
-            _selectedModelType == ModelType.vosk
-                ? TranscriptionState.recording
-                : TranscriptionState.transcribing;
-
-        if (_selectedModelType == ModelType.vosk && isRecording) {
-          _liveVoskTranscriptionPreview = Transcription(
-            id: 'live_vosk_active_preview',
-            text: _currentStreamingText,
-            timestamp: DateTime.now(),
-            sessionId: _recordingSessionId ?? sessionProvider.activeSessionId,
-            audioPath: '',
-          );
-        } else {
-          _liveVoskTranscriptionPreview = null;
-        }
-        notifyListeners();
-      });
-    } catch (e, stackTrace) {
-      _errorMessage = 'Error initializing ${modelToInitialize.name} model: $e';
-      developer.log(
-        _errorMessage!,
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      _state = TranscriptionState.error;
-    } finally {
-      notifyListeners();
-    }
-  }
-
-  /// Validates if a state transition is allowed
-  bool _validateStateTransition(
-    TranscriptionState from,
-    TranscriptionState to,
-  ) {
-    const validTransitions = {
-      TranscriptionState.loading: {
-        TranscriptionState.ready,
-        TranscriptionState.error,
-      },
-      TranscriptionState.ready: {
-        TranscriptionState.recording,
-        TranscriptionState.loading,
-        TranscriptionState.error,
-      },
-      TranscriptionState.recording: {
-        TranscriptionState.transcribing,
-        TranscriptionState.ready,
-        TranscriptionState.error,
-      },
-      TranscriptionState.transcribing: {
-        TranscriptionState.ready,
-        TranscriptionState.error,
-      },
-      TranscriptionState.error: {
-        TranscriptionState.loading,
-        TranscriptionState.ready,
-      },
-    };
-
-    return validTransitions[from]?.contains(to) ?? false;
-  }
-
-  /// Checks if the orchestrator is busy with an operation
-  bool get _isOrchestratorBusy => _orchestrator.isOperationInProgress;
-
+  /// Starts recording
   Future<bool> startRecording() async {
-    _errorMessage = null;
-
-    if (!_validateStateTransition(_state, TranscriptionState.recording)) {
-      _errorMessage = 'Cannot start recording from current state: $_state';
-      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+    if (!_stateManager.transitionTo(TranscriptionState.recording)) {
       return false;
     }
 
-    if (_isOrchestratorBusy) {
-      _errorMessage = 'Another operation is in progress. Please wait.';
-      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+    if (_modelManager.isOperationInProgress) {
+      _stateManager.setError('Another operation is in progress. Please wait.');
       return false;
     }
 
-    if (_selectedModelType == ModelType.vosk && _orchestrator.isRecording) {
-      _errorMessage = 'Vosk recording already in progress';
-      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
-      return false;
-    }
+    // Capture recording session
+    final sessionId = _sessionProvider.activeSessionId;
+    _uiStateProvider.setRecordingSessionId(sessionId);
 
-    bool success = false;
     try {
-      developer.log(
-        'Starting ${_selectedModelType.name} recording...',
-        name: 'LocalTranscriptionProvider',
+      final success = await _operationProvider.startRecording(
+        _modelManager.selectedModelType,
+        sessionId,
       );
-
-      _recordingSessionId = sessionProvider.activeSessionId;
-      developer.log(
-        'Captured recording session ID: $_recordingSessionId',
-        name: 'LocalTranscriptionProvider',
-      );
-
-      success = await _orchestrator.startRecording(_selectedModelType);
 
       if (!success) {
-        _errorMessage =
-            _selectedModelType == ModelType.whisper
-                ? 'Failed to start audio recording for Whisper'
-                : 'Failed to start Vosk streaming';
-        developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
+        _stateManager.setError('Failed to start recording');
+        _uiStateProvider.clearRecordingSessionId();
+        return false;
       }
 
-      if (success) {
-        _state = TranscriptionState.recording;
-        if (_selectedModelType == ModelType.vosk) {
-          _liveVoskTranscriptionPreview = Transcription(
-            id: 'live_vosk_active_preview',
-            text: '',
-            timestamp: DateTime.now(),
-            sessionId: _recordingSessionId!,
-            audioPath: '',
-          );
-          _loadingWhisperTranscriptionPreview = null;
-        } else if (_selectedModelType == ModelType.whisper) {
-          _liveVoskTranscriptionPreview = null;
-          _loadingWhisperTranscriptionPreview = null;
-        }
-        developer.log(
-          'Recording started successfully',
-          name: 'LocalTranscriptionProvider',
-        );
+      // Setup UI state for recording
+      if (_modelManager.selectedModelType == ModelType.vosk) {
+        _uiStateProvider.updateLiveVoskPreview('', sessionId);
+        _uiStateProvider.clearWhisperLoadingPreview();
       } else {
-        _state = TranscriptionState.error;
-        _recordingSessionId = null;
+        _uiStateProvider.clearLiveVoskPreview();
       }
+
+      return true;
     } catch (e, stack) {
-      _errorMessage = 'Failed to start recording: $e';
+      _stateManager.setError('Failed to start recording: $e');
+      _uiStateProvider.clearRecordingSessionId();
       developer.log(
-        _errorMessage!,
+        'Error starting recording: $e',
         name: 'LocalTranscriptionProvider',
         error: e,
         stackTrace: stack,
       );
-      success = false;
-      _state = TranscriptionState.error;
-      _recordingSessionId = null;
-    } finally {
-      notifyListeners();
+      return false;
     }
-    return success;
   }
 
+  /// Stops recording and saves transcription
   Future<void> stopRecordingAndSave() async {
-    if (_state != TranscriptionState.recording &&
-        _state != TranscriptionState.transcribing) {
-      developer.log(
-        'Cannot stop recording from state: $_state',
-        name: 'LocalTranscriptionProvider',
-      );
+    if (!_stateManager.transitionTo(TranscriptionState.transcribing)) {
       return;
     }
 
-    if (_isOrchestratorBusy && _state != TranscriptionState.recording) {
-      developer.log(
-        'Orchestrator busy, cannot stop recording now',
-        name: 'LocalTranscriptionProvider',
-      );
-      return;
-    }
+    final modelType = _modelManager.selectedModelType;
+    final sessionId =
+        _uiStateProvider.recordingSessionId ?? _sessionProvider.activeSessionId;
 
-    _errorMessage = null;
-    bool wasVoskRecording =
-        _selectedModelType == ModelType.vosk &&
-        _state == TranscriptionState.recording;
-    ModelType modelUsedForThisOperation = _selectedModelType;
-
-    if (!_validateStateTransition(_state, TranscriptionState.transcribing)) {
-      _errorMessage = 'Invalid state transition when stopping recording';
-      developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
-      _state = TranscriptionState.error;
-      notifyListeners();
-      return;
+    // Show loading preview for Whisper
+    if (modelType == ModelType.whisper) {
+      _uiStateProvider.createWhisperLoadingPreview(sessionId);
     }
-
-    _state = TranscriptionState.transcribing;
-    if (modelUsedForThisOperation == ModelType.whisper) {
-      _loadingWhisperTranscriptionPreview = Transcription(
-        id: 'whisper_loading_active_preview',
-        text: '',
-        timestamp: DateTime.now(),
-        sessionId: _recordingSessionId ?? sessionProvider.activeSessionId,
-        audioPath: '',
-      );
-    }
-    notifyListeners();
 
     try {
-      developer.log(
-        'Stopping ${modelUsedForThisOperation.name} recording...',
-        name: 'LocalTranscriptionProvider',
+      final result = await _operationProvider.stopRecordingAndTranscribe(
+        modelType,
+        sessionId,
       );
 
-      final output = await _orchestrator.stopRecording(
-        modelUsedForThisOperation,
-      );
-      final resultText = output.text.trim();
-
-      developer.log(
-        'Recording stopped. Result text length: ${resultText.length}',
-        name: 'LocalTranscriptionProvider',
-      );
-
-      if (wasVoskRecording) {
-        _liveVoskTranscriptionPreview = null;
+      // Clear UI previews
+      if (modelType == ModelType.vosk) {
+        _uiStateProvider.clearLiveVoskPreview();
+      } else {
+        _uiStateProvider.clearWhisperLoadingPreview();
       }
 
-      if (resultText.isEmpty) {
-        final modelName =
-            modelUsedForThisOperation == ModelType.vosk ? 'Vosk' : 'Whisper';
-        _errorMessage = 'No speech detected ($modelName)';
-        developer.log(_errorMessage!, name: 'LocalTranscriptionProvider');
-        if (modelUsedForThisOperation == ModelType.whisper) {
-          _loadingWhisperTranscriptionPreview = null;
-        }
+      if (result.isSuccess) {
+        // Add transcription to data provider
+        _dataProvider.addTranscription(result.transcription!);
+        _stateManager.transitionTo(TranscriptionState.ready);
       } else {
-        String audioPath = '';
-        if (modelUsedForThisOperation == ModelType.whisper) {
-          final tempFile = File(output.audioPath);
-          if (await tempFile.exists()) {
-            audioPath = await _repository.saveAudioFile(
-              tempFile,
-              'whisper_${_uuid.v4()}.m4a',
-            );
-            try {
-              await tempFile.delete();
-            } catch (_) {}
-          }
-        }
-
-        developer.log(
-          'Saving transcription: "$resultText"',
-          name: 'LocalTranscriptionProvider',
-        );
-        await _saveTranscription(resultText, audioPath);
-
-        if (modelUsedForThisOperation == ModelType.whisper) {
-          _loadingWhisperTranscriptionPreview = null;
-        }
+        _stateManager.setError(result.errorMessage!);
       }
     } catch (e, stack) {
-      _errorMessage = 'Error stopping/saving transcription: $e';
+      _stateManager.setError('Error stopping/saving transcription: $e');
+      _uiStateProvider.clearLiveVoskPreview();
+      _uiStateProvider.clearWhisperLoadingPreview();
       developer.log(
-        _errorMessage!,
+        'Error in stopRecordingAndSave: $e',
         name: 'LocalTranscriptionProvider',
         error: e,
         stackTrace: stack,
       );
-      if (modelUsedForThisOperation == ModelType.vosk) {
-        _liveVoskTranscriptionPreview = null;
-      }
-      if (modelUsedForThisOperation == ModelType.whisper) {
-        _loadingWhisperTranscriptionPreview = null;
-      }
     } finally {
-      if (_state != TranscriptionState.error) {
-        if (_validateStateTransition(_state, TranscriptionState.ready)) {
-          _state = TranscriptionState.ready;
-        } else {
-          developer.log(
-            'Invalid state transition to ready from $_state',
-            name: 'LocalTranscriptionProvider',
-          );
-          _state = TranscriptionState.error;
-          _errorMessage = 'State management error after recording';
-        }
-      }
-      _recordingSessionId = null;
-      notifyListeners();
+      _uiStateProvider.clearRecordingSessionId();
     }
   }
 
-  Future<void> _saveTranscription(String text, String audioPath) async {
-    try {
-      final sessionId = _recordingSessionId ?? sessionProvider.activeSessionId;
-      developer.log(
-        'Saving transcription to session: $sessionId (recording session: $_recordingSessionId, current session: ${sessionProvider.activeSessionId})',
-        name: 'LocalTranscriptionProvider',
-      );
-      final formattedText = TranscriptionFormatter.format(text);
-      final transcription = Transcription(
-        id: _uuid.v4(),
-        sessionId: sessionId,
-        text: formattedText,
-        timestamp: DateTime.now(),
-        audioPath: audioPath,
-      );
-      await _repository.saveTranscription(transcription);
+  // ============================================================================
+  // PUBLIC API - Data operations
+  // ============================================================================
 
-      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
+  Future<void> loadTranscriptions() => _dataProvider.loadTranscriptions();
 
-      await _loadTranscriptions();
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error saving transcription: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      _errorMessage = 'Failed to save transcription results';
-    }
-  }
+  Future<void> loadTranscriptionsForSession(String sessionId) =>
+      _dataProvider.loadTranscriptionsForSession(sessionId);
 
-  Future<void> deleteTranscription(String id) async {
-    _errorMessage = null;
-    try {
-      final transcription = _transcriptions.firstWhere((t) => t.id == id);
-      final sessionId = transcription.sessionId;
+  Future<void> deleteTranscription(String id) =>
+      _dataProvider.deleteTranscription(id);
 
-      await _repository.deleteTranscription(id);
-      _transcriptions.removeWhere((t) => t.id == id);
+  Future<void> deleteTranscriptions(Set<String> ids) =>
+      _dataProvider.deleteTranscriptions(ids);
 
-      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to delete transcription';
-      developer.log(
-        _errorMessage!,
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      throw Exception('Failed to delete transcription: $e');
-    }
-  }
-
-  Future<void> deleteTranscriptions(Set<String> ids) async {
-    _errorMessage = null;
-    try {
-      final sessionIds = <String>{};
-
-      for (final id in ids) {
-        final transcription = _transcriptions.firstWhere((t) => t.id == id);
-        sessionIds.add(transcription.sessionId);
-        await _repository.deleteTranscription(id);
-      }
-
-      _transcriptions.removeWhere((t) => ids.contains(t.id));
-
-      for (final sessionId in sessionIds) {
-        await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-      }
-
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to delete transcriptions';
-      developer.log(
-        _errorMessage!,
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      throw Exception('Failed to delete transcriptions: $e');
-    }
-  }
-
-  Future<void> clearTranscriptions() async {
-    _errorMessage = null;
-    try {
-      await _repository.clearTranscriptions();
-      await _loadTranscriptions();
-    } catch (e) {
-      _errorMessage = 'Failed to clear transcriptions';
-      developer.log(
-        'Error clearing transcriptions: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      notifyListeners();
-    }
-  }
+  Future<void> clearTranscriptions() => _dataProvider.clearTranscriptions();
 
   Future<void> deleteParagraphFromTranscription(
     String id,
     int paragraphIndex,
-  ) async {
-    try {
-      final transcription = _transcriptions.firstWhere((t) => t.id == id);
-      final sessionId = transcription.sessionId;
+  ) => _dataProvider.deleteParagraphFromTranscription(id, paragraphIndex);
 
-      final updatedList = await _sessionManager.deleteParagraph(
-        id,
-        paragraphIndex,
-      );
-      _transcriptions = updatedList;
+  Future<void> clearTranscriptionsForSession(String sessionId) =>
+      _dataProvider.clearTranscriptionsForSession(sessionId);
 
-      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to delete paragraph';
-      developer.log(
-        'Error deleting paragraph: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      notifyListeners();
-    }
-  }
-
-  Future<void> clearTranscriptionsForSession(String sessionId) async {
-    try {
-      final remaining = await _sessionManager.clearSession(sessionId);
-      _transcriptions = remaining;
-
-      await sessionProvider.updateSessionModifiedTimestamp(sessionId);
-
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to clear session transcriptions';
-      developer.log(
-        'Error clearing session transcriptions: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      notifyListeners();
-    }
-  }
-
-  /// Loads transcriptions for a specific session
-  /// This is used when navigating to a session screen
-  Future<void> loadTranscriptionsForSession(String sessionId) async {
-    try {
-      final allTranscriptions = await _repository.getTranscriptions();
-      _transcriptions =
-          allTranscriptions.where((t) => t.sessionId == sessionId).toList();
-      _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      notifyListeners();
-    } catch (e) {
-      _errorMessage = 'Failed to load transcriptions for session';
-      developer.log(
-        _errorMessage!,
-        name: 'LocalTranscriptionProvider',
-        error: e,
-      );
-      notifyListeners();
-    }
-  }
-
-  Future<void> deleteAllTranscriptionsForSession(String sessionId) async {
-    _transcriptions.removeWhere((t) => t.sessionId == sessionId);
-    await _repository.deleteTranscriptionsForSession(sessionId);
-    notifyListeners();
-  }
+  Future<void> deleteAllTranscriptionsForSession(String sessionId) =>
+      _dataProvider.deleteAllTranscriptionsForSession(sessionId);
 
   @override
   void dispose() {
-    sessionProvider.removeListener(_onSessionChanged);
-    _orchestrator.dispose();
+    _sessionProvider.removeListener(_onSessionChanged);
+    _stateManager.dispose();
+    _modelManager.dispose();
+    _uiStateProvider.dispose();
+    _operationProvider.dispose();
+    _dataProvider.dispose();
     super.dispose();
   }
 }
