@@ -397,7 +397,11 @@ class _SessionScreenState extends State<SessionScreen>
       ),
       body: Stack(
         children: [
-          Positioned.fill(
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 128,
             child: Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Consumer<LocalTranscriptionProvider>(
