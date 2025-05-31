@@ -13,7 +13,6 @@ import 'transcription_data_provider.dart';
 
 /// LocalTranscriptionProvider using composition of specialized providers
 class LocalTranscriptionProvider with ChangeNotifier {
-  // Specialized providers for different concerns
   late final TranscriptionStateManager _stateManager;
   late final ModelManagementProvider _modelManager;
   late final TranscriptionUIStateProvider _uiStateProvider;
@@ -21,6 +20,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
   late final TranscriptionDataProvider _dataProvider;
 
   final SessionProvider _sessionProvider;
+
+  bool _isOperationLocked = false;
+  DateTime? _lastOperationTime;
+  final Set<String> _activeOperations = {};
+
+  static const Duration _minimumOperationInterval = Duration(milliseconds: 500);
+  static const Duration _operationTimeout = Duration(seconds: 30);
 
   /// Constructor initializes all specialized providers
   LocalTranscriptionProvider(this._sessionProvider) {
@@ -40,13 +46,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   /// Setup communication between providers
   void _setupProviderCommunication() {
-    // Listen to session changes
     _sessionProvider.addListener(_onSessionChanged);
 
-    // Setup partial transcription handling
     _operationProvider.setPartialTranscriptionCallback(_onPartialTranscription);
 
-    // Forward state changes to UI
     _stateManager.addListener(notifyListeners);
     _modelManager.addListener(notifyListeners);
     _uiStateProvider.addListener(notifyListeners);
@@ -54,11 +57,108 @@ class LocalTranscriptionProvider with ChangeNotifier {
     _dataProvider.addListener(notifyListeners);
   }
 
+  /// Acquires operation lock to prevent concurrent operations
+  Future<bool> _acquireOperationLock(String operationName) async {
+    if (_isOperationLocked) {
+      if (operationName == 'stopRecordingAndSave' &&
+          _stateManager.isRecording) {
+        developer.log(
+          'Allowing stop operation to proceed despite lock - recording in progress',
+          name: 'LocalTranscriptionProvider',
+        );
+        return true;
+      }
+
+      developer.log(
+        'Operation "$operationName" rejected - another operation in progress',
+        name: 'LocalTranscriptionProvider',
+      );
+      return false;
+    }
+
+    if (operationName != 'stopRecordingAndSave') {
+      final now = DateTime.now();
+      if (_lastOperationTime != null) {
+        final timeSinceLastOperation = now.difference(_lastOperationTime!);
+        if (timeSinceLastOperation < _minimumOperationInterval) {
+          developer.log(
+            'Operation "$operationName" rejected - too soon after last operation',
+            name: 'LocalTranscriptionProvider',
+          );
+          return false;
+        }
+      }
+    }
+
+    if (!_modelManager.isInitialized && operationName != 'initialization') {
+      developer.log(
+        'Operation "$operationName" rejected - model not initialized',
+        name: 'LocalTranscriptionProvider',
+      );
+      return false;
+    }
+
+    if (_modelManager.isOperationInProgress &&
+        operationName != 'stopRecordingAndSave') {
+      developer.log(
+        'Operation "$operationName" rejected - orchestrator busy',
+        name: 'LocalTranscriptionProvider',
+      );
+      return false;
+    }
+
+    _isOperationLocked = true;
+    _lastOperationTime = DateTime.now();
+    _activeOperations.add(operationName);
+
+    developer.log(
+      'Operation lock acquired for: $operationName',
+      name: 'LocalTranscriptionProvider',
+    );
+
+    Timer(_operationTimeout, () {
+      if (_activeOperations.contains(operationName)) {
+        developer.log(
+          'Operation "$operationName" timed out - releasing lock',
+          name: 'LocalTranscriptionProvider',
+        );
+        _releaseOperationLock(operationName);
+      }
+    });
+
+    return true;
+  }
+
+  /// Releases operation lock
+  void _releaseOperationLock(String operationName) {
+    _isOperationLocked = false;
+    _activeOperations.remove(operationName);
+
+    developer.log(
+      'Operation lock released for: $operationName',
+      name: 'LocalTranscriptionProvider',
+    );
+  }
+
+  /// Validates if an operation can be performed in current state
+  bool _validateOperationState(
+    String operationName,
+    TranscriptionState requiredState,
+  ) {
+    if (_stateManager.state != requiredState) {
+      developer.log(
+        'Operation "$operationName" invalid - current state: ${_stateManager.state}, required: $requiredState',
+        name: 'LocalTranscriptionProvider',
+      );
+      return false;
+    }
+    return true;
+  }
+
   /// Handles partial transcription updates during recording
   void _onPartialTranscription(String partial) {
     _uiStateProvider.updateStreamingText(partial);
 
-    // Update live preview if recording with Vosk
     if (_modelManager.selectedModelType == ModelType.vosk &&
         _stateManager.isRecording) {
       final sessionId =
@@ -75,11 +175,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   /// Handles session changes
   void _onSessionChanged() async {
-    // Clean up data for deleted sessions
     final validSessionIds = _sessionProvider.sessions.map((s) => s.id).toSet();
     await _dataProvider.cleanupDeletedSessions(validSessionIds);
 
-    // Clean up UI previews for session changes during recording
     if (_uiStateProvider.recordingSessionId != null &&
         _uiStateProvider.recordingSessionId !=
             _sessionProvider.activeSessionId) {
@@ -97,13 +195,18 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   /// Initialize the provider system
   Future<void> _initialize() async {
+    const operationName = 'initialization';
+
+    if (!await _acquireOperationLock(operationName)) {
+      _stateManager.setError('System is busy. Please wait and try again.');
+      return;
+    }
+
     _stateManager.transitionTo(TranscriptionState.loading);
 
     try {
-      // Load transcription data
       await _dataProvider.loadTranscriptions();
 
-      // Load and initialize selected model
       await _modelManager.loadSelectedModelType();
       final error = await _modelManager.initializeSelectedModel();
 
@@ -112,7 +215,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
         return;
       }
 
-      // Setup orchestrator communication
       _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
 
       _stateManager.transitionTo(TranscriptionState.ready);
@@ -124,6 +226,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
         stackTrace: stackTrace,
       );
       _stateManager.setError('Failed to initialize transcription system: $e');
+    } finally {
+      _releaseOperationLock(operationName);
     }
   }
 
@@ -139,10 +243,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
   bool get isStreaming => _stateManager.isStreaming;
   String? get error => _stateManager.error;
 
-  // Model management
   ModelType get selectedModelType => _modelManager.selectedModelType;
 
-  // UI state
   String get currentStreamingText => _uiStateProvider.currentStreamingText;
   Transcription? get liveVoskTranscriptionPreview =>
       _uiStateProvider.getLiveVoskTranscriptionPreviewForSession(
@@ -153,11 +255,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _sessionProvider.activeSessionId,
       );
 
-  // Data access
   List<Transcription> get transcriptions => _dataProvider.transcriptions;
   List<Transcription> get allTranscriptions => _dataProvider.allTranscriptions;
   List<Transcription> get sessionTranscriptions =>
       _dataProvider.sessionTranscriptions;
+
+  bool get isOperationInProgress =>
+      _isOperationLocked || _modelManager.isOperationInProgress;
 
   // ============================================================================
   // PUBLIC API - Operations
@@ -165,33 +269,68 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   /// Changes the transcription model
   Future<void> changeModel(ModelType newModelType) async {
-    if (!_stateManager.transitionTo(TranscriptionState.loading)) {
+    const operationName = 'changeModel';
+
+    if (!await _acquireOperationLock(operationName)) {
+      _stateManager.setError('Cannot change model - system is busy');
       return;
     }
 
-    final error = await _modelManager.changeModel(newModelType);
+    if (!_stateManager.transitionTo(TranscriptionState.loading)) {
+      _releaseOperationLock(operationName);
+      return;
+    }
 
-    if (error != null) {
-      _stateManager.setError(error);
-    } else {
-      // Reinitialize orchestrator connection
-      _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
-      _stateManager.transitionTo(TranscriptionState.ready);
+    try {
+      final error = await _modelManager.changeModel(newModelType);
+
+      if (error != null) {
+        _stateManager.setError(error);
+      } else {
+        _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
+        _stateManager.transitionTo(TranscriptionState.ready);
+      }
+    } finally {
+      _releaseOperationLock(operationName);
     }
   }
 
   /// Starts recording
   Future<bool> startRecording() async {
+    const operationName = 'startRecording';
+
+    if (!_modelManager.isInitialized) {
+      developer.log(
+        'Model not ready for recording, attempting reinitialization',
+        name: 'LocalTranscriptionProvider',
+      );
+
+      await _modelManager.forceReinitialize();
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (!_modelManager.isInitialized) {
+        _stateManager.setError(
+          'Model failed to initialize. Please try switching models.',
+        );
+        return false;
+      }
+    }
+
+    if (!await _acquireOperationLock(operationName)) {
+      return false;
+    }
+
+    if (!_validateOperationState(operationName, TranscriptionState.ready)) {
+      _releaseOperationLock(operationName);
+      return false;
+    }
+
     if (!_stateManager.transitionTo(TranscriptionState.recording)) {
+      _releaseOperationLock(operationName);
       return false;
     }
 
-    if (_modelManager.isOperationInProgress) {
-      _stateManager.setError('Another operation is in progress. Please wait.');
-      return false;
-    }
-
-    // Capture recording session
     final sessionId = _sessionProvider.activeSessionId;
     _uiStateProvider.setRecordingSessionId(sessionId);
 
@@ -207,13 +346,17 @@ class LocalTranscriptionProvider with ChangeNotifier {
         return false;
       }
 
-      // Setup UI state for recording
       if (_modelManager.selectedModelType == ModelType.vosk) {
         _uiStateProvider.updateLiveVoskPreview('', sessionId);
         _uiStateProvider.clearWhisperLoadingPreview();
       } else {
         _uiStateProvider.clearLiveVoskPreview();
       }
+
+      developer.log(
+        'Recording started successfully for session: $sessionId',
+        name: 'LocalTranscriptionProvider',
+      );
 
       return true;
     } catch (e, stack) {
@@ -226,12 +369,30 @@ class LocalTranscriptionProvider with ChangeNotifier {
         stackTrace: stack,
       );
       return false;
+    } finally {
+      _releaseOperationLock(operationName);
     }
   }
 
   /// Stops recording and saves transcription
   Future<void> stopRecordingAndSave() async {
+    const operationName = 'stopRecordingAndSave';
+
+    if (!_stateManager.isRecording) {
+      developer.log(
+        'Stop recording called but not in recording state: ${_stateManager.state}',
+        name: 'LocalTranscriptionProvider',
+      );
+      return;
+    }
+
+    if (!await _acquireOperationLock(operationName)) {
+      _stateManager.setError('Cannot stop recording - system is busy');
+      return;
+    }
+
     if (!_stateManager.transitionTo(TranscriptionState.transcribing)) {
+      _releaseOperationLock(operationName);
       return;
     }
 
@@ -239,7 +400,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     final sessionId =
         _uiStateProvider.recordingSessionId ?? _sessionProvider.activeSessionId;
 
-    // Show loading preview for Whisper
     if (modelType == ModelType.whisper) {
       _uiStateProvider.createWhisperLoadingPreview(sessionId);
     }
@@ -250,7 +410,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
         sessionId,
       );
 
-      // Clear UI previews
       if (modelType == ModelType.vosk) {
         _uiStateProvider.clearLiveVoskPreview();
       } else {
@@ -258,25 +417,92 @@ class LocalTranscriptionProvider with ChangeNotifier {
       }
 
       if (result.isSuccess) {
-        // Add transcription to data provider
-        _dataProvider.addTranscription(result.transcription!);
+        if (result.transcription != null &&
+            result.transcription!.text.trim().isNotEmpty) {
+          _dataProvider.addTranscription(result.transcription!);
+          developer.log(
+            'Recording stopped and transcription saved successfully',
+            name: 'LocalTranscriptionProvider',
+          );
+        } else {
+          developer.log(
+            'Recording stopped successfully - no speech detected (empty recording)',
+            name: 'LocalTranscriptionProvider',
+          );
+        }
         _stateManager.transitionTo(TranscriptionState.ready);
       } else {
-        _stateManager.setError(result.errorMessage!);
+        final errorMessage = result.errorMessage ?? 'Unknown error';
+        _stateManager.setError(errorMessage);
       }
     } catch (e, stack) {
       _stateManager.setError('Error stopping/saving transcription: $e');
-      _uiStateProvider.clearLiveVoskPreview();
-      _uiStateProvider.clearWhisperLoadingPreview();
       developer.log(
         'Error in stopRecordingAndSave: $e',
         name: 'LocalTranscriptionProvider',
         error: e,
         stackTrace: stack,
       );
+
+      _uiStateProvider.clearLiveVoskPreview();
+      _uiStateProvider.clearWhisperLoadingPreview();
     } finally {
       _uiStateProvider.clearRecordingSessionId();
+      _releaseOperationLock(operationName);
     }
+  }
+
+  /// Reinitializes the model (for error recovery)
+  Future<void> reinitializeModel() async {
+    const operationName = 'reinitializeModel';
+
+    if (!await _acquireOperationLock(operationName)) {
+      return;
+    }
+
+    try {
+      _stateManager.transitionTo(TranscriptionState.loading);
+
+      final error = await _modelManager.initializeSelectedModel();
+
+      if (error != null) {
+        _stateManager.setError(error);
+      } else {
+        _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
+        _stateManager.transitionTo(TranscriptionState.ready);
+      }
+    } finally {
+      _releaseOperationLock(operationName);
+    }
+  }
+
+  /// Resets to ready state (for error recovery)
+  void resetToReadyState() {
+    if (_stateManager.state == TranscriptionState.error) {
+      _stateManager.transitionTo(TranscriptionState.ready);
+    }
+  }
+
+  /// Forces system reset to clear any stuck states
+  Future<void> forceSystemReset() async {
+    developer.log(
+      'Force resetting system to clear stuck states',
+      name: 'LocalTranscriptionProvider',
+    );
+
+    _isOperationLocked = false;
+    _activeOperations.clear();
+    _lastOperationTime = null;
+
+    _uiStateProvider.clearRecordingSessionId();
+    _uiStateProvider.clearLiveVoskPreview();
+    _uiStateProvider.clearWhisperLoadingPreview();
+
+    await _modelManager.forceReinitialize();
+
+    _stateManager.transitionTo(TranscriptionState.ready);
+
+    developer.log('System reset completed', name: 'LocalTranscriptionProvider');
   }
 
   // ============================================================================

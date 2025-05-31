@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
+import 'dart:async';
+import 'dart:developer' as developer;
 import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
@@ -32,6 +34,103 @@ class RecordingButton extends StatefulWidget {
 }
 
 class _RecordingButtonState extends State<RecordingButton> {
+  bool _isDebouncing = false;
+  Timer? _debounceTimer;
+  DateTime? _lastActionTime;
+
+  static const Duration _debounceDuration = Duration(milliseconds: 300);
+  static const Duration _minimumActionInterval = Duration(milliseconds: 500);
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Handles recording actions with debouncing and validation
+  Future<void> _handleRecordingAction(
+    Future<void> Function() action,
+    String actionName,
+  ) async {
+    if (_isDebouncing) {
+      developer.log(
+        'Action "$actionName" ignored - debouncing active',
+        name: 'RecordingButton',
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastActionTime != null) {
+      final timeSinceLastAction = now.difference(_lastActionTime!);
+      if (timeSinceLastAction < _minimumActionInterval) {
+        developer.log(
+          'Action "$actionName" ignored - too soon after last action',
+          name: 'RecordingButton',
+        );
+        return;
+      }
+    }
+
+    setState(() => _isDebouncing = true);
+    _lastActionTime = now;
+
+    try {
+      developer.log('Executing action: $actionName', name: 'RecordingButton');
+
+      await action();
+
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(_debounceDuration, () {
+        if (mounted) {
+          setState(() => _isDebouncing = false);
+        }
+      });
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error in action "$actionName": $e',
+        name: 'RecordingButton',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      setState(() => _isDebouncing = false);
+
+      if (mounted) {
+        _showActionErrorDialog(context, actionName, e.toString());
+      }
+    }
+  }
+
+  /// Handles start recording action with validation
+  Future<void> _handleStartRecording(
+    LocalTranscriptionProvider? provider,
+  ) async {
+    await _handleRecordingAction(() async {
+      if (widget.onRecordingStart != null) {
+        widget.onRecordingStart!();
+      } else if (provider != null) {
+        final success = await provider.startRecording();
+        if (!success) {
+          throw Exception('Failed to start recording - system may be busy');
+        }
+      }
+    }, 'Start Recording');
+  }
+
+  /// Handles stop recording action with validation
+  Future<void> _handleStopRecording(
+    LocalTranscriptionProvider? provider,
+  ) async {
+    await _handleRecordingAction(() async {
+      if (widget.onRecordingStop != null) {
+        widget.onRecordingStop!();
+      } else if (provider != null) {
+        await provider.stopRecordingAndSave();
+      }
+    }, 'Stop Recording');
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
@@ -101,11 +200,14 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed: () {
-              if (provider != null) {
-                _showModelErrorDialog(context, provider.error);
-              }
-            },
+            onPressed:
+                _isDebouncing
+                    ? null
+                    : () {
+                      if (provider != null) {
+                        _showModelErrorDialog(context, provider.error);
+                      }
+                    },
             icon: Icon(Icons.error_outline, color: colors.textInverse),
           ),
         );
@@ -125,13 +227,8 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed: () {
-              if (widget.onRecordingStop != null) {
-                widget.onRecordingStop!();
-              } else if (provider != null) {
-                provider.stopRecordingAndSave();
-              }
-            },
+            onPressed:
+                _isDebouncing ? null : () => _handleStopRecording(provider),
             icon: SvgPicture.asset(
               'assets/icons/rectangle.svg',
               width: 14,
@@ -159,13 +256,8 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed: () {
-              if (widget.onRecordingStart != null) {
-                widget.onRecordingStart!();
-              } else if (provider != null) {
-                provider.startRecording();
-              }
-            },
+            onPressed:
+                _isDebouncing ? null : () => _handleStartRecording(provider),
             icon: SvgPicture.asset(
               'assets/icons/mic.svg',
               width: 24,
@@ -187,6 +279,29 @@ class _RecordingButtonState extends State<RecordingButton> {
           (context) => AlertDialog(
             title: Text(AppStrings.modelNotReady),
             content: Text(errorMessage ?? AppStrings.modelInitFailure),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppStrings.ok),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showActionErrorDialog(
+    BuildContext context,
+    String action,
+    String error,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('$action Failed'),
+            content: Text(
+              'An error occurred: $error\n\nPlease try again in a moment.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),

@@ -57,7 +57,6 @@ class TranscriptionOrchestrator {
   StreamSubscription<String>? _resultSub;
   bool _isRecording = false;
 
-  // Streams partial transcription updates.
   final StreamController<String> _partialController =
       StreamController.broadcast();
   Stream<String> get onPartial => _partialController.stream;
@@ -155,54 +154,100 @@ class TranscriptionOrchestrator {
 
       if (type == ModelType.vosk) {
         final service = _voskService.speechService;
-        if (service == null) throw Exception('Vosk service not available');
+        if (service == null) {
+          developer.log(
+            'Vosk service not available during stop - likely immediate stop',
+            name: 'Orchestrator',
+          );
+          _isRecording = false;
+          return TranscriptionOutput(text: '', audioPath: '');
+        }
 
         developer.log(
           'Stopping Vosk recording gracefully...',
           name: 'Orchestrator',
         );
 
-        final completeText = await _voskService.stopGracefully();
+        try {
+          final completeText = await _voskService.stopGracefully();
 
-        await _partialSub?.cancel();
-        await _resultSub?.cancel();
-        _partialSub = null;
-        _resultSub = null;
+          await _partialSub?.cancel();
+          await _resultSub?.cancel();
+          _partialSub = null;
+          _resultSub = null;
 
-        _isRecording = false;
+          _isRecording = false;
 
-        developer.log(
-          'Vosk recording stopped. Final text: "$completeText"',
-          name: 'Orchestrator',
-        );
+          developer.log(
+            'Vosk recording stopped. Final text: "$completeText"',
+            name: 'Orchestrator',
+          );
 
-        return TranscriptionOutput(text: completeText, audioPath: '');
+          return TranscriptionOutput(text: completeText, audioPath: '');
+        } catch (e) {
+          developer.log(
+            'Error stopping Vosk gracefully (likely immediate stop): $e',
+            name: 'Orchestrator',
+          );
+
+          await _partialSub?.cancel();
+          await _resultSub?.cancel();
+          _partialSub = null;
+          _resultSub = null;
+          _isRecording = false;
+
+          return TranscriptionOutput(text: '', audioPath: '');
+        }
       } else {
         if (_whisperService == null) {
-          throw Exception('Whisper service not available');
+          developer.log(
+            'Whisper service not available during stop',
+            name: 'Orchestrator',
+          );
+          _isRecording = false;
+          return TranscriptionOutput(text: '', audioPath: '');
         }
 
-        final audioFile = await _audioService.stopRecording();
-        _isRecording = false;
+        try {
+          final audioFile = await _audioService.stopRecording();
+          _isRecording = false;
 
-        if (audioFile == null || !await audioFile.exists()) {
-          throw Exception('Recorded audio file not found');
+          if (audioFile == null || !await audioFile.exists()) {
+            developer.log(
+              'Recorded audio file not found - likely immediate stop',
+              name: 'Orchestrator',
+            );
+            return TranscriptionOutput(text: '', audioPath: '');
+          }
+
+          final fileSize = await audioFile.length();
+          if (fileSize < 1000) {
+            developer.log(
+              'Recording too short or empty - likely immediate stop',
+              name: 'Orchestrator',
+            );
+            return TranscriptionOutput(text: '', audioPath: '');
+          }
+
+          final transcriptionText = await _whisperService.transcribeFile(
+            audioFile.path,
+          );
+          final text = transcriptionText?.trim() ?? '';
+
+          developer.log(
+            'Whisper transcription completed: "$text"',
+            name: 'Orchestrator',
+          );
+
+          return TranscriptionOutput(text: text, audioPath: audioFile.path);
+        } catch (e) {
+          developer.log(
+            'Error during Whisper stop (likely immediate stop): $e',
+            name: 'Orchestrator',
+          );
+          _isRecording = false;
+          return TranscriptionOutput(text: '', audioPath: '');
         }
-
-        final fileSize = await audioFile.length();
-        if (fileSize < 1000) throw Exception('Recording too short or empty');
-
-        final transcriptionText = await _whisperService.transcribeFile(
-          audioFile.path,
-        );
-        final text = transcriptionText?.trim() ?? '';
-
-        developer.log(
-          'Whisper transcription completed: "$text"',
-          name: 'Orchestrator',
-        );
-
-        return TranscriptionOutput(text: text, audioPath: audioFile.path);
       }
     });
   }

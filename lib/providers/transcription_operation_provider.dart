@@ -94,7 +94,11 @@ class TranscriptionOperationProvider with ChangeNotifier {
 
       if (resultText.isEmpty) {
         final modelName = modelType == ModelType.vosk ? 'Vosk' : 'Whisper';
-        return TranscriptionResult.error('No speech detected ($modelName)');
+        developer.log(
+          'No speech detected in recording ($modelName) - treating as successful empty recording',
+          name: 'TranscriptionOperationProvider',
+        );
+        return TranscriptionResult.emptyRecording();
       }
 
       String audioPath = '';
@@ -192,5 +196,9 @@ class TranscriptionResult {
 
   factory TranscriptionResult.error(String message) {
     return TranscriptionResult._(isSuccess: false, errorMessage: message);
+  }
+
+  factory TranscriptionResult.emptyRecording() {
+    return TranscriptionResult._(isSuccess: true, transcription: null);
   }
 }
