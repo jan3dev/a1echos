@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/model_type.dart';
+import '../constants/app_constants.dart';
+import 'package:ui_components/ui_components.dart';
 
 /// Shows the status of the selected transcription model and an optional retry button.
 class ModelStatusTile extends StatelessWidget {
@@ -18,30 +20,28 @@ class ModelStatusTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = AquaColors.lightColors;
     final modelName =
         selectedModelType == ModelType.vosk
-            ? 'Vosk (Small EN)'
-            : 'Whisper (Base EN)';
+            ? AppStrings.voskModelTitle
+            : AppStrings.whisperModelTitle;
 
     if (isModelReady) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.green.shade50,
+          color: colors.surfacePrimary,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.green.shade300),
+          border: Border.all(color: colors.accentSuccess),
         ),
         child: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green.shade700),
+            AquaIcon.checkCircle(color: colors.accentSuccess),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '$modelName model is ready.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.green.shade900,
-                ),
+                '$modelName ${AppStrings.modelReadySuffix}',
+                style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               ),
             ),
           ],
@@ -51,37 +51,37 @@ class ModelStatusTile extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: colors.surfacePrimary,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.shade300),
+          border: Border.all(color: colors.accentDanger),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.error, color: Colors.red.shade700),
+            AquaIcon.warning(color: colors.textInverse),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$modelName model failed to initialize.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.red.shade900,
+                    '$modelName ${AppStrings.modelFailedInitSuffix}',
+                    style: AquaTypography.body1.copyWith(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     error!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.red.shade800,
+                    style: AquaTypography.body1.copyWith(
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: onRetry,
-                    child: const Text('Retry Initialization'),
+                    child: Text(AppStrings.retryInitializationButton),
                   ),
                 ],
               ),
@@ -93,24 +93,22 @@ class ModelStatusTile extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blue.shade50,
+          color: colors.surfacePrimary,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.shade300),
+          border: Border.all(color: colors.accentBrand),
         ),
         child: Row(
           children: [
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: AquaIndefinateProgressIndicator(),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Initializing $modelName model...',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Colors.blue.shade900,
-                ),
+                '${AppStrings.initializingModelPrefix} $modelName ${AppStrings.modelSuffix}',
+                style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               ),
             ),
           ],

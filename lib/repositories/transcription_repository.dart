@@ -25,4 +25,8 @@ class TranscriptionRepository {
   /// Saves an audio file and returns its new path.
   Future<String> saveAudioFile(File audioFile, String fileName) =>
       _storageService.saveAudioFile(audioFile, fileName);
+
+  /// Deletes all transcriptions associated with a specific session ID.
+  Future<void> deleteTranscriptionsForSession(String sessionId) =>
+      _storageService.deleteTranscriptionsForSession(sessionId);
 }

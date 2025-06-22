@@ -12,6 +12,9 @@ class AppConstants {
   static const int wordsPerParagraph = 30;
   // Number of sentences per paragraph when sentence punctuation exists
   static const int sentencesPerParagraph = 3;
+
+  // Maximum allowed length for session names
+  static const int sessionNameMaxLength = 30;
 }
 
 // Common UI strings
@@ -20,18 +23,48 @@ class AppStrings {
       'Tap the record button below to start transcribing with the selected model.';
   // Standard UI labels
   static const String loading = 'Loading...';
-  static const String processingTranscription = 'Processing transcription...';
-  static const String processingWhisper =
-      'Processing Whisper transcription (this may take a moment)...';
+  static const String transcribingStatus = 'Transcribing...';
   static const String liveTranscriptionTitle = 'Live Transcription';
   static const String speakNow = 'Speak now...';
   static const String encryptedAtRest = 'Encrypted at rest';
+
+  // Generic actions and buttons
+  static const String save = 'Save';
+  static const String cancel = 'Cancel';
+  static const String ok = 'OK';
+  static const String delete = 'Delete';
+  static const String clear = 'Delete All Transcriptions';
+  static const String selectAll = 'Select All';
+  static const String deleteSelected = 'Delete Selected';
+  static const String retry = 'Retry';
+
+  // HomeScreen strings
+  static const String homeDeleteSelectedSessionsTitle =
+      'Delete Selected Sessions?';
+  static const String homeDeleteSelectedSessionsMessage =
+      'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
+  static const String homeDeleteSessionsButton = 'Delete Sessions';
+  static const String homeSessionsDeleted = 'Sessions deleted';
+  static const String homeErrorCreatingSession =
+      'Error creating session: {error}';
 
   // HomeScreen actions
   static const String copyAllTooltip = 'Copy All';
   static const String clearAllTooltip = 'Clear All';
   static const String settingsTooltip = 'Settings';
+  static const String newSessionTooltip = 'New Session';
 
+  // SessionScreen strings
+  static const String sessionRenameTitle = 'Rename';
+  static const String sessionDeleteTranscriptionsTitle =
+      'Delete Selected Transcriptions?';
+  static const String sessionDeleteTranscriptionsMessage =
+      'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
+  static const String sessionDeleteTranscriptionsButton = 'Delete Transcriptions';
+  static const String sessionTranscriptionsDeleted = 'Transcriptions deleted';
+  static const String sessionErrorDeletingTranscriptions =
+      'Error deleting transcriptions: {error}';
+  
   // Snackbar messages
   static const String noTranscriptionsToCopy = 'No transcriptions to copy';
   static const String allTranscriptionsCopied =
@@ -41,13 +74,59 @@ class AppStrings {
       'All transcriptions cleared for this session';
 
   // Clear All dialog
-  static const String clearAllDialogTitle =
-      'Clear all transcriptions for this session?';
-  static const String clearAllDialogContent = 'This action cannot be undone.';
-  static const String cancel = 'Cancel';
-  static const String clear = 'Clear';
+  static const String clearAllDialogTitle = 'Delete All Transcriptions?';
+  static const String clearAllDialogContent =
+      'Are you sure you want to delete all transcriptions for this session? This action cannot be undone.';
   static const String paragraphDeleted = 'Paragraph deleted';
   static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
   static const String retryInitialization = 'Retry Initialization';
+  
+  // Model error dialog
+  static const String modelNotReady = 'Model Not Ready';
+  static const String modelInitFailure =
+      'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.';
+
+  // Settings Screen
+  static const String settingsTitle = 'Settings';
+  static const String transcriptionModelTitle = 'Transcription Model';
+  static const String transcriptionModelDescription =
+      'Select which model to use. All processing happens on your device.';
+  static const String voskModelTitle = 'Vosk';
+  static const String voskModelSubtitle =
+      'Fast, real-time';
+  static const String whisperModelTitle = 'Whisper';
+  static const String whisperModelSubtitle =
+      'High accuracy';
+  
+  // Recording strings
+  static const String recordingPrefix = 'Session';
+  
+  // Empty states
+  static const String emptySessionsMessage =
+      'Hit the record button to start capturing and transcribing your voice notes.';
+  
+  // TranscriptionItem
+  static const String copyToClipboard = 'Copied to clipboard';
+  
+  // SessionListItem
+  static const String modifiedPrefix = 'Modified';
+
+  // ErrorView
+  static const String errorPrefix = 'Error:';
+  
+  // SessionInputModal
+  static const String sessionNameLabel = 'Session Name';
+  static const String sessionNameHint = 'Enter session name';
+  static const String sessionNameMaxLengthHelper = 'Max 30 characters.';
+  
+  // ModelStatusTile
+  static const String modelReadySuffix = 'model is ready.';
+  static const String modelFailedInitSuffix = 'model failed to initialize.';
+  static const String initializingModelPrefix = 'Initializing';
+  static const String modelSuffix = 'model...';
+  static const String retryInitializationButton = 'Retry Initialization';
+
+  // Incognito Mode Settings
+  static const String incognitoModeTitle = 'Incognito';
 }

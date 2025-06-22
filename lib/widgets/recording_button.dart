@@ -1,89 +1,275 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:ui_components/ui_components.dart';
+import 'dart:async';
+import 'dart:developer' as developer;
 import '../providers/local_transcription_provider.dart';
+import '../constants/app_constants.dart';
+import '../providers/transcription_state_manager.dart';
 
 class RecordingButton extends StatefulWidget {
-  const RecordingButton({super.key});
+  /// Callback that gets triggered when recording is started
+  final VoidCallback? onRecordingStart;
+
+  /// Callback that gets triggered when recording is stopped
+  final VoidCallback? onRecordingStop;
+
+  /// Whether the button should show in recording state
+  final bool isRecording;
+
+  /// Whether to use the provider for state or rely on passed parameters
+  final bool useProviderState;
+
+  const RecordingButton({
+    super.key,
+    this.onRecordingStart,
+    this.onRecordingStop,
+    this.isRecording = false,
+    this.useProviderState = true,
+  });
 
   @override
   State<RecordingButton> createState() => _RecordingButtonState();
 }
 
-class _RecordingButtonState extends State<RecordingButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _RecordingButtonState extends State<RecordingButton> {
+  bool _isDebouncing = false;
+  Timer? _debounceTimer;
+  DateTime? _lastActionTime;
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-  }
+  static const Duration _debounceDuration = Duration(milliseconds: 300);
+  static const Duration _minimumActionInterval = Duration(milliseconds: 500);
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
+  }
+
+  /// Handles recording actions with debouncing and validation
+  Future<void> _handleRecordingAction(
+    Future<void> Function() action,
+    String actionName,
+  ) async {
+    if (_isDebouncing) {
+      developer.log(
+        'Action "$actionName" ignored - debouncing active',
+        name: 'RecordingButton',
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastActionTime != null) {
+      final timeSinceLastAction = now.difference(_lastActionTime!);
+      if (timeSinceLastAction < _minimumActionInterval) {
+        developer.log(
+          'Action "$actionName" ignored - too soon after last action',
+          name: 'RecordingButton',
+        );
+        return;
+      }
+    }
+
+    setState(() => _isDebouncing = true);
+    _lastActionTime = now;
+
+    try {
+      developer.log('Executing action: $actionName', name: 'RecordingButton');
+
+      await action();
+
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(_debounceDuration, () {
+        if (mounted) {
+          setState(() => _isDebouncing = false);
+        }
+      });
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error in action "$actionName": $e',
+        name: 'RecordingButton',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      setState(() => _isDebouncing = false);
+
+      if (mounted) {
+        _showActionErrorDialog(context, actionName, e.toString());
+      }
+    }
+  }
+
+  /// Handles start recording action with validation
+  Future<void> _handleStartRecording(
+    LocalTranscriptionProvider? provider,
+  ) async {
+    await _handleRecordingAction(() async {
+      if (widget.onRecordingStart != null) {
+        widget.onRecordingStart!();
+      } else if (provider != null) {
+        final success = await provider.startRecording();
+        if (!success) {
+          throw Exception('Failed to start recording - system may be busy');
+        }
+      }
+    }, 'Start Recording');
+  }
+
+  /// Handles stop recording action with validation
+  Future<void> _handleStopRecording(
+    LocalTranscriptionProvider? provider,
+  ) async {
+    await _handleRecordingAction(() async {
+      if (widget.onRecordingStop != null) {
+        widget.onRecordingStop!();
+      } else if (provider != null) {
+        await provider.stopRecordingAndSave();
+      }
+    }, 'Stop Recording');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LocalTranscriptionProvider>(
-      builder: (context, provider, child) {
-        // Drive the button UI from the unified state
-        switch (provider.state) {
-          case TranscriptionState.loading:
-          case TranscriptionState.transcribing:
-            return const FloatingActionButton(
-              onPressed: null,
-              backgroundColor: Colors.grey,
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
+    final colors = AquaColors.lightColors;
+
+    if (widget.useProviderState) {
+      return Consumer<LocalTranscriptionProvider>(
+        builder: (context, provider, child) {
+          return _buildButtonForState(provider.state, colors, provider);
+        },
+      );
+    } else {
+      final state =
+          widget.isRecording
+              ? TranscriptionState.recording
+              : TranscriptionState.ready;
+      return _buildButtonForState(state, colors, null);
+    }
+  }
+
+  Widget _buildButtonForState(
+    TranscriptionState state,
+    AquaColors colors,
+    LocalTranscriptionProvider? provider,
+  ) {
+    switch (state) {
+      case TranscriptionState.loading:
+      case TranscriptionState.transcribing:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.glassInverse.withOpacity(0.5),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colors.glassInverse.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 0),
               ),
-            );
-          case TranscriptionState.error:
-            return FloatingActionButton.extended(
-              onPressed: () {
-                _showModelErrorDialog(context, provider.error);
-              },
-              label: const Text('Model Error'),
-              icon: const Icon(Icons.error_outline),
-              backgroundColor: Colors.amber.shade700,
-            );
-          case TranscriptionState.recording:
-            return FloatingActionButton(
-              onPressed: () {
-                provider.stopRecordingAndSave();
-              },
-              backgroundColor: Colors.red,
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: 0.8 + (_animationController.value * 0.2),
-                    child: child,
-                  );
-                },
-                child: const Icon(Icons.stop),
+            ],
+          ),
+          child: Center(
+            child: SvgPicture.asset(
+              'assets/icons/mic.svg',
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                colors.textInverse,
+                BlendMode.srcIn,
               ),
-            );
-          case TranscriptionState.ready:
-            return FloatingActionButton(
-              onPressed: () {
-                provider.startRecording();
-              },
-              child: const Icon(Icons.mic),
-            );
-        }
-      },
-    );
+            ),
+          ),
+        );
+      case TranscriptionState.error:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.accentDanger,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colors.surfaceInverse.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 0),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed:
+                _isDebouncing
+                    ? null
+                    : () {
+                      if (provider != null) {
+                        _showModelErrorDialog(context, provider.error);
+                      }
+                    },
+            icon: Icon(Icons.error_outline, color: colors.textInverse),
+          ),
+        );
+      case TranscriptionState.recording:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.accentBrand,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colors.accentBrand.withOpacity(0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 0),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed:
+                _isDebouncing ? null : () => _handleStopRecording(provider),
+            icon: SvgPicture.asset(
+              'assets/icons/rectangle.svg',
+              width: 14,
+              height: 14,
+              colorFilter: ColorFilter.mode(
+                colors.textInverse,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+        );
+      case TranscriptionState.ready:
+        return Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.glassInverse,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colors.glassInverse.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 0),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed:
+                _isDebouncing ? null : () => _handleStartRecording(provider),
+            icon: SvgPicture.asset(
+              'assets/icons/mic.svg',
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                colors.textInverse,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+        );
+    }
   }
 
   void _showModelErrorDialog(BuildContext context, String? errorMessage) {
@@ -91,15 +277,35 @@ class _RecordingButtonState extends State<RecordingButton>
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Model Not Ready'),
+            title: Text(AppStrings.modelNotReady),
+            content: Text(errorMessage ?? AppStrings.modelInitFailure),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppStrings.ok),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showActionErrorDialog(
+    BuildContext context,
+    String action,
+    String error,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('$action Failed'),
             content: Text(
-              errorMessage ??
-                  'The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.',
+              'An error occurred: $error\n\nPlease try again in a moment.',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                child: Text(AppStrings.ok),
               ),
             ],
           ),
