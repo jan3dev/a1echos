@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dolphinecho/utils/session_formatter.dart';
+import 'package:echos/utils/session_formatter.dart';
 
 void main() {
   final now = DateTime(2024, 6, 11, 15, 30); // Tuesday

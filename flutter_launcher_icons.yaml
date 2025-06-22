@@ -1,6 +1,6 @@
 # flutter pub run flutter_launcher_icons
 flutter_launcher_icons:
-  image_path: "assets/icons/app-icon.png"
+  image_path: "assets/icons/app-icon.jpg"
 
   android: "launcher_icon"
   # image_path_android: "assets/icons/app-icon.png"

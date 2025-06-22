@@ -1,4 +1,4 @@
-name: dolphinecho
+name: echos
 description: "A transcription app using local models."
 publish_to: "none"
 version: 1.0.0+1

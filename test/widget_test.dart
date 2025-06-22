@@ -7,8 +7,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:dolphinecho/main.dart';
-import 'package:dolphinecho/providers/settings_provider.dart';
+import 'package:echos/main.dart';
+import 'package:echos/providers/settings_provider.dart';
 
 void main() async {
   testWidgets('App displays main title', (WidgetTester tester) async {
@@ -17,6 +17,6 @@ void main() async {
     await tester.pumpWidget(MyApp(settingsProvider: settingsProvider));
 
     // Verify that the app title is shown.
-    expect(find.text('dolphinecho'), findsOneWidget);
+    expect(find.text('Echos'), findsOneWidget);
   });
 }

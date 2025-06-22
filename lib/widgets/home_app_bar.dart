@@ -29,7 +29,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       leadingWidth: effectivelyEmpty || selectionMode ? 56 : 0,
       automaticallyImplyLeading: false,
       titleSpacing: 16,
-      title: SvgPicture.asset('assets/icons/echo-logo.svg'),
+      title: Row(
+        children: [
+          SvgPicture.asset('assets/icons/echos-logo.svg'),
+          const SizedBox(width: 10),
+          const AquaText.subtitleSemiBold(text: 'Echos'),
+        ],
+      ),
       actions: [
         if (selectionMode) ...[
           IconButton(
