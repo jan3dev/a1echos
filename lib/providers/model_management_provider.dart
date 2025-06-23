@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 import 'dart:async';
+import 'dart:io';
 import '../models/model_type.dart';
 import '../services/vosk_service.dart';
 import '../services/whisper_service.dart';
@@ -22,7 +23,9 @@ class ModelManagementProvider with ChangeNotifier {
   static const Duration _minimumInitializationInterval = Duration(
     milliseconds: 500,
   );
-  static const Duration _initializationTimeout = Duration(seconds: 30);
+  static const Duration _initializationTimeout = Duration(
+    minutes: 6,
+  ); // Extended for Whisper model download
 
   ModelType get selectedModelType => _selectedModelType;
   bool get isInitialized => _isInitialized;
@@ -30,6 +33,21 @@ class ModelManagementProvider with ChangeNotifier {
   VoskService get voskService => _voskService;
   WhisperService? get whisperService => _whisperService;
   TranscriptionOrchestrator get orchestrator => _orchestrator;
+
+  /// Returns whether a model is currently being downloaded (Whisper specific)
+  bool get isDownloadingModel =>
+      _selectedModelType == ModelType.whisper
+          ? (_whisperService?.isDownloadingModel ?? false)
+          : false;
+
+  /// Returns the current initialization status message
+  String? get initializationStatus {
+    if (_selectedModelType == ModelType.whisper) {
+      return _whisperService?.initializationStatus;
+    }
+    // Return null for Vosk or other models as they don't have detailed status
+    return null;
+  }
 
   ModelManagementProvider() {
     _orchestrator = TranscriptionOrchestrator(
@@ -75,6 +93,16 @@ class ModelManagementProvider with ChangeNotifier {
         orElse: () => ModelType.vosk,
       );
 
+      // On iOS, force Whisper since Vosk is not supported
+      if (!Platform.isAndroid && _selectedModelType == ModelType.vosk) {
+        developer.log(
+          'iOS detected: Switching from Vosk to Whisper (Vosk only supports Android)',
+          name: 'ModelManagementProvider',
+        );
+        _selectedModelType = ModelType.whisper;
+        await _saveSelectedModelType(_selectedModelType);
+      }
+
       developer.log(
         'Loaded model type: ${_selectedModelType.name}',
         name: 'ModelManagementProvider',
@@ -84,7 +112,9 @@ class ModelManagementProvider with ChangeNotifier {
         'Error loading selected model type: $e',
         name: 'ModelManagementProvider',
       );
-      _selectedModelType = ModelType.vosk;
+      // Default to Whisper on iOS, Vosk on Android
+      _selectedModelType =
+          Platform.isAndroid ? ModelType.vosk : ModelType.whisper;
     }
   }
 
@@ -115,10 +145,11 @@ class ModelManagementProvider with ChangeNotifier {
     Timer? timeoutTimer;
     timeoutTimer = Timer(_initializationTimeout, () {
       if (_isInitializing) {
-        developer.log(
-          'Model initialization timed out',
-          name: 'ModelManagementProvider',
-        );
+        final message =
+            _selectedModelType == ModelType.whisper
+                ? 'Whisper model download/initialization timed out after ${_initializationTimeout.inMinutes} minutes'
+                : 'Model initialization timed out';
+        developer.log(message, name: 'ModelManagementProvider');
         _isInitializing = false;
         _isInitialized = false;
         notifyListeners();

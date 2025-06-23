@@ -244,6 +244,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
   String? get error => _stateManager.error;
 
   ModelType get selectedModelType => _modelManager.selectedModelType;
+  bool get isInitializing => _modelManager.isInitializing;
+  bool get isDownloadingModel => _modelManager.isDownloadingModel;
+  String? get initializationStatus => _modelManager.initializationStatus;
 
   String get currentStreamingText => _uiStateProvider.currentStreamingText;
   Transcription? get liveVoskTranscriptionPreview =>

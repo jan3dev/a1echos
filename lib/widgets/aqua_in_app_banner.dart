@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ui_components/ui_components.dart';
 
@@ -6,9 +8,34 @@ class AquaInAppBanner extends StatelessWidget {
   const AquaInAppBanner({super.key});
 
   Future<void> _launchAquaApp() async {
-    final Uri url = Uri.parse('https://play.google.com/store/apps/details?id=io.aquawallet.android');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+    try {
+      final Uri url = Uri.parse(
+        Platform.isAndroid
+            ? 'https://play.google.com/store/apps/details?id=io.aquawallet.android'
+            : 'https://apps.apple.com/us/app/aqua-wallet/id6468594241',
+      );
+
+      if (await canLaunchUrl(url)) {
+        final launched = await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          await launchUrl(url, mode: LaunchMode.platformDefault);
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint('Cannot launch URL: $url');
+          debugPrint('This is expected behavior in iOS Simulator');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error launching URL: $e');
+        debugPrint(
+          'This is expected behavior in iOS Simulator - URL launching is limited',
+        );
+      }
     }
   }
 
@@ -32,11 +59,8 @@ class AquaInAppBanner extends StatelessWidget {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Image.asset(
-          'assets/icons/in-app-banner.png',
-          fit: BoxFit.cover,
-        ),
+        child: Image.asset('assets/icons/in-app-banner.png', fit: BoxFit.cover),
       ),
     );
   }
-} 
+}

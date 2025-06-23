@@ -63,7 +63,8 @@ class VoskResultBuffer {
 
 /// A service that encapsulates Vosk plugin initialization, start/stop, and disposal.
 class VoskService {
-  final VoskFlutterPlugin _plugin = VoskFlutterPlugin.instance();
+  VoskFlutterPlugin? _plugin;
+  ModelLoader? _modelLoader;
   Model? _model;
   Recognizer? _recognizer;
   SpeechService? _speechService;
@@ -78,13 +79,26 @@ class VoskService {
 
   /// Loads the model from assets and initializes the speech service.
   Future<bool> initialize(String assetPath) async {
+    // Vosk only supports Android platform
+    if (!Platform.isAndroid) {
+      developer.log(
+        'VoskService: iOS platform not supported, Vosk only works on Android',
+        name: 'VoskService',
+      );
+      return false;
+    }
+
     bool initResult = false;
     try {
-      final modelPath = await ModelLoader().loadFromAssets(assetPath);
-      _model = await _plugin.createModel(modelPath);
+      // Initialize Vosk components only on Android
+      _plugin = VoskFlutterPlugin.instance();
+      _modelLoader = ModelLoader();
+      
+      final modelPath = await _modelLoader!.loadFromAssets(assetPath);
+      _model = await _plugin!.createModel(modelPath);
       if (_model == null) throw Exception('Failed to create Vosk model');
 
-      _recognizer = await _plugin.createRecognizer(
+      _recognizer = await _plugin!.createRecognizer(
         model: _model!,
         sampleRate: 16000,
       );
@@ -92,11 +106,14 @@ class VoskService {
         throw Exception('Failed to create Vosk recognizer');
       }
 
-      if (Platform.isAndroid) {
-        _speechService = await _plugin.initSpeechService(_recognizer!);
-        initResult = _speechService != null;
-      } else {
-        initResult = true;
+      _speechService = await _plugin!.initSpeechService(_recognizer!);
+      initResult = _speechService != null;
+      
+      if (initResult) {
+        developer.log(
+          'VoskService initialized successfully on Android',
+          name: 'VoskService',
+        );
       }
     } catch (e, stack) {
       developer.log(
