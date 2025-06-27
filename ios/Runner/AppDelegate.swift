@@ -9,7 +9,7 @@ import AVFoundation
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-    let audioPermissionChannel = FlutterMethodChannel(name: "com.example.echos/audio_permission",
+    let audioPermissionChannel = FlutterMethodChannel(name: "com.jan3.a1lab.a1echos/audio_permission",
                                                       binaryMessenger: controller.binaryMessenger)
     audioPermissionChannel.setMethodCallHandler({
       (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in

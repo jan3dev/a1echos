@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 /// This uses the same permission system as FlutterWhisperKit
 class NativeAudioPermissionService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.echos/audio_permission',
+    'com.jan3.a1lab.a1echos/audio_permission',
   );
 
   /// Requests microphone permission using iOS native AVAudioSession.requestRecordPermission
