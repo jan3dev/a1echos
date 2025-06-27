@@ -1,15 +1,30 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:developer' as developer;
-import 'package:whisper_flutter_new/whisper_flutter_new.dart';
+import 'package:whisper_flutter_new/whisper_flutter_new.dart' as fwn;
+import 'package:flutter_whisper_kit/flutter_whisper_kit.dart' as kit;
 
-/// A service that encapsulates Whisper plugin initialization, transcription, and disposal.
+/// A service that abstracts Whisper functionality for both Android (whisper_flutter_new)
+/// and iOS (flutter_whisper_kit) back-ends.
 class WhisperService {
-  Whisper? _whisperInstance;
+  // Android implementation --------------------------------------------------
+  fwn.Whisper? _androidWhisper;
+
+  // iOS implementation ------------------------------------------------------
+  kit.FlutterWhisperKit? _iosKit;
+
+  // Realtime streaming support (iOS)
+  StreamSubscription<dynamic>? _iosPartialSub;
+  final StreamController<String> _partialController =
+      StreamController<String>.broadcast();
+
+  /// Stream of partial transcription results (only emitted during real-time recording).
+  Stream<String> get onPartial => _partialController.stream;
+
   bool _isInitialized = false;
   bool _isInitializing = false;
   bool _isTranscribing = false;
-  bool _isDownloadingModel = false;
+  bool _isRealtimeRecording = false;
+  String _currentTranscription = '';
   String? _initializationStatus;
 
   /// Returns whether the service has been successfully initialized.
@@ -18,134 +33,244 @@ class WhisperService {
   /// Returns whether a transcription is currently in progress.
   bool get isTranscribing => _isTranscribing;
 
-  /// Returns whether the model is currently being downloaded.
-  bool get isDownloadingModel => _isDownloadingModel;
-
   /// Returns the current initialization status message.
   String? get initializationStatus => _initializationStatus;
 
-  /// Initializes the Whisper instance if not already initialized.
+  // =========================================================================
+  // INITIALIZATION
+  // =========================================================================
+
   Future<bool> initialize() async {
     if (_isInitialized) return true;
     if (_isInitializing) return false;
+
     _isInitializing = true;
     _initializationStatus = 'Starting initialization...';
 
     try {
-      developer.log('WhisperService: Starting initialization...');
+      if (Platform.isAndroid) {
+        _initializationStatus = 'Creating Whisper instance...';
+        _androidWhisper = fwn.Whisper(model: fwn.WhisperModel.tiny);
+        _initializationStatus = 'Whisper Flutter New ready';
+      } else if (Platform.isIOS) {
+        _initializationStatus = 'Creating FlutterWhisperKit instance...';
+        _iosKit = kit.FlutterWhisperKit();
 
-      // Initialize Whisper with base model
-      _initializationStatus = 'Creating Whisper instance...';
-      _whisperInstance = Whisper(model: WhisperModel.base);
-      developer.log('WhisperService: Whisper instance created');
+        _initializationStatus = 'Loading CoreML model...';
 
-      // Check if model needs to be downloaded (first time setup)
-      _initializationStatus = 'Checking model availability...';
-      _isDownloadingModel = true;
+        bool modelLoaded = false;
+        const modelRepo = 'argmaxinc/whisperkit-coreml';
 
-      // Extended timeout for iOS model download (can take several minutes on first run)
-      final version = await _whisperInstance?.getVersion().timeout(
-        const Duration(minutes: 5),
-        onTimeout: () {
-          throw TimeoutException(
-            'Whisper model download/initialization timed out after 5 minutes',
-          );
-        },
-      );
+        // Try loading models in order of preference
+        final modelsToTry = ['tiny'];
 
-      _isDownloadingModel = false;
-      developer.log('WhisperService: Version retrieved: $version');
+        for (final modelName in modelsToTry) {
+          if (modelLoaded) break;
 
-      if (version != null && version.isNotEmpty) {
-        _isInitialized = true;
-        _initializationStatus = 'Whisper ready';
-        developer.log(
-          'WhisperService: Initialization successful with version: $version',
-        );
-      } else {
-        throw Exception(
-          'Whisper getVersion returned null or empty - model may not be ready',
-        );
-      }
-    } on TimeoutException catch (e) {
-      developer.log('WhisperService initialization timeout: $e');
-      _initializationStatus = 'Model download timed out. Please try again.';
-      _isInitialized = false;
-      _whisperInstance = null;
-      _isDownloadingModel = false;
-    } catch (e, stack) {
-      developer.log(
-        'WhisperService initialization error: $e',
-        error: e,
-        stackTrace: stack,
-      );
+          try {
+            _initializationStatus = 'Loading $modelName model...';
+            final loadResult = await _iosKit!
+                .loadModel(modelName, modelRepo: modelRepo, redownload: false)
+                .timeout(const Duration(minutes: 5));
 
-      // Provide more specific error messages for common iOS issues
-      if (e.toString().contains('PlatformException')) {
-        _initializationStatus =
-            'Platform initialization failed. This may be due to iOS simulator limitations or missing dependencies.';
-      } else if (e.toString().contains('network') ||
-          e.toString().contains('download')) {
-        _initializationStatus =
-            'Model download failed. Check your internet connection and try again.';
-      } else if (e.toString().contains('timeout')) {
-        _initializationStatus =
-            'Initialization timed out. This is common on iOS simulator - try on a real device.';
+            if (loadResult != null &&
+                !loadResult.toString().toLowerCase().contains('fail')) {
+              _initializationStatus = '$modelName model loaded successfully';
+              modelLoaded = true;
+            } else {
+              _initializationStatus = 'Failed to load $modelName model';
+            }
+          } catch (e) {
+            _initializationStatus =
+                'Error loading $modelName model: ${e.toString()}';
+          }
+        }
+
+        if (!modelLoaded) {
+          throw Exception('Failed to load any Whisper model variants');
+        }
+
+        _initializationStatus = 'Flutter Whisper Kit ready';
       } else {
         _initializationStatus =
-            'Initialization failed: ${e.toString().length > 100 ? '${e.toString().substring(0, 100)}...' : e.toString()}';
+            'Unsupported platform for WhisperService: ${Platform.operatingSystem}';
+        _isInitializing = false;
+        return false;
       }
 
-      _isInitialized = false;
-      _whisperInstance = null;
-      _isDownloadingModel = false;
+      _isInitialized = true;
+      return true;
+    } catch (e) {
+      _initializationStatus = 'Initialization failed: $e';
+      _resetState();
+      return false;
     } finally {
       _isInitializing = false;
     }
-    return _isInitialized;
   }
 
-  /// Transcribes the given audio file and returns the recognized text.
+  // =========================================================================
+  // FILE-BASED TRANSCRIPTION
+  // =========================================================================
+
   Future<String?> transcribeFile(String audioPath) async {
-    if (!_isInitialized || _whisperInstance == null) {
+    if (!_isInitialized) {
       throw Exception('Whisper service not initialized.');
     }
     if (_isTranscribing) {
       throw Exception('Transcription already in progress.');
     }
-    _isTranscribing = true;
+
+    final audioFile = File(audioPath);
+    if (!await audioFile.exists()) {
+      throw Exception('Audio file not found at: $audioPath');
+    }
+
     try {
-      final audioFile = File(audioPath);
-      if (!await audioFile.exists()) {
-        throw Exception('Audio file not found at: $audioPath');
+      _isTranscribing = true;
+
+      if (Platform.isAndroid) {
+        final result = await _androidWhisper?.transcribe(
+          transcribeRequest: fwn.TranscribeRequest(
+            audio: audioPath,
+            isTranslate: false,
+            isNoTimestamps: true,
+          ),
+        );
+
+        return result?.text.trim();
+      } else if (Platform.isIOS) {
+        final options = kit.DecodingOptions(
+          task: kit.DecodingTask.transcribe,
+          detectLanguage: true,
+          language: null,
+        );
+
+        final transcription = await _iosKit!.transcribeFromFile(
+          audioPath,
+          options: options,
+        );
+
+        return transcription?.text.trim();
+      } else {
+        throw Exception('Unsupported platform');
       }
-      final WhisperTranscribeResponse response = await _whisperInstance!
-          .transcribe(
-            transcribeRequest: TranscribeRequest(
-              audio: audioPath,
-              language: 'en',
-              isTranslate: false,
-              isNoTimestamps: true,
-            ),
-          );
-      return response.text;
-    } catch (e, stack) {
-      developer.log(
-        'WhisperService transcription error: $e',
-        error: e,
-        stackTrace: stack,
-      );
-      throw Exception('Whisper transcription failed: $e');
+    } catch (e) {
+      rethrow;
     } finally {
       _isTranscribing = false;
     }
   }
 
-  /// Disposes the Whisper instance and resets state.
+  // =========================================================================
+  // REAL-TIME RECORDING (iOS only)
+  // =========================================================================
+
+  /// Starts real-time transcription. Returns true when recording started.
+  Future<bool> startRealtimeRecording() async {
+    if (!Platform.isIOS) {
+      return false;
+    }
+    if (_iosKit == null) {
+      return false;
+    }
+    if (!_isInitialized) {
+      return false;
+    }
+    if (_isRealtimeRecording) {
+      return false;
+    }
+
+    _currentTranscription = '';
+
+    try {
+      await _setupTranscriptionListener();
+
+      await _iosKit!.startRecording(
+        options: kit.DecodingOptions(
+          task: kit.DecodingTask.transcribe,
+          detectLanguage: true,
+          language: null,
+        ),
+      );
+
+      _isRealtimeRecording = true;
+      return true;
+    } catch (e) {
+      await _iosPartialSub?.cancel();
+      _isRealtimeRecording = false;
+      return false;
+    }
+  }
+
+  /// Sets up the transcription stream listener
+  Future<void> _setupTranscriptionListener() async {
+    await _iosPartialSub?.cancel();
+
+    try {
+      _iosPartialSub = _iosKit!.transcriptionStream.listen(
+        (event) {
+          _handleTranscriptionEvent(event);
+        },
+        onError: (error) {},
+        onDone: () {},
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Handles transcription events from the stream
+  void _handleTranscriptionEvent(dynamic event) {
+    try {
+      String text = '';
+      if (event != null) {
+        if (event.text != null) {
+          text = event.text.toString().trim();
+        } else {
+          text = event.toString().trim();
+        }
+      }
+
+      if (text.isNotEmpty) {
+        _currentTranscription = text;
+        _partialController.add(text);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Stops real-time recording and returns the final transcription.
+  Future<String> stopRealtimeRecording() async {
+    if (!Platform.isIOS) return '';
+    if (_iosKit == null) return '';
+    if (!_isRealtimeRecording) return '';
+
+    try {
+      await _iosKit!.stopRecording();
+      return _currentTranscription;
+    } finally {
+      _isRealtimeRecording = false;
+      await _iosPartialSub?.cancel();
+    }
+  }
+
+  // =========================================================================
+  // CLEANUP
+  // =========================================================================
+
   Future<void> dispose() async {
-    _whisperInstance = null;
+    _androidWhisper = null;
+    await _iosPartialSub?.cancel();
+    _iosKit = null;
+    _resetState();
+  }
+
+  void _resetState() {
     _isInitialized = false;
     _isInitializing = false;
     _isTranscribing = false;
+    _isRealtimeRecording = false;
   }
 }

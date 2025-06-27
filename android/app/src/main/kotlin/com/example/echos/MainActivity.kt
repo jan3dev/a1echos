@@ -1,4 +1,4 @@
-package com.example.transcription_app
+package com.example.echos
 
 import io.flutter.embedding.android.FlutterActivity
 

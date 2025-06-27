@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:developer' as developer;
 
 enum TranscriptionState { loading, ready, recording, transcribing, error }
 
@@ -52,14 +51,9 @@ class TranscriptionStateManager with ChangeNotifier {
   /// Attempts to transition to a new state
   bool transitionTo(TranscriptionState newState, {String? errorMessage}) {
     if (!_validateStateTransition(_state, newState)) {
-      developer.log(
-        'Invalid state transition from $_state to $newState',
-        name: 'TranscriptionStateManager',
-      );
       return false;
     }
 
-    final oldState = _state;
     _state = newState;
 
     if (newState == TranscriptionState.error) {
@@ -67,11 +61,6 @@ class TranscriptionStateManager with ChangeNotifier {
     } else {
       _errorMessage = null;
     }
-
-    developer.log(
-      'State transition: $oldState -> $newState',
-      name: 'TranscriptionStateManager',
-    );
 
     notifyListeners();
     return true;

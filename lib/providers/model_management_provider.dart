@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:developer' as developer;
 import 'dart:async';
 import 'dart:io';
+
 import '../models/model_type.dart';
 import '../services/vosk_service.dart';
 import '../services/whisper_service.dart';
@@ -16,6 +16,7 @@ class ModelManagementProvider with ChangeNotifier {
 
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
+  static const String _prefsKeyWhisperRealtime = 'whisper_realtime';
   bool _isInitialized = false;
   bool _isInitializing = false;
   DateTime? _lastInitializationAttempt;
@@ -23,9 +24,7 @@ class ModelManagementProvider with ChangeNotifier {
   static const Duration _minimumInitializationInterval = Duration(
     milliseconds: 500,
   );
-  static const Duration _initializationTimeout = Duration(
-    minutes: 6,
-  ); // Extended for Whisper model download
+  static const Duration _initializationTimeout = Duration(minutes: 5);
 
   ModelType get selectedModelType => _selectedModelType;
   bool get isInitialized => _isInitialized;
@@ -34,22 +33,20 @@ class ModelManagementProvider with ChangeNotifier {
   WhisperService? get whisperService => _whisperService;
   TranscriptionOrchestrator get orchestrator => _orchestrator;
 
-  /// Returns whether a model is currently being downloaded (Whisper specific)
-  bool get isDownloadingModel =>
-      _selectedModelType == ModelType.whisper
-          ? (_whisperService?.isDownloadingModel ?? false)
-          : false;
+  bool _whisperRealtime = false;
+  bool get whisperRealtime => _whisperRealtime;
 
   /// Returns the current initialization status message
   String? get initializationStatus {
     if (_selectedModelType == ModelType.whisper) {
       return _whisperService?.initializationStatus;
     }
-    // Return null for Vosk or other models as they don't have detailed status
     return null;
   }
 
   ModelManagementProvider() {
+    _whisperService = WhisperService();
+
     _orchestrator = TranscriptionOrchestrator(
       AudioService(),
       _voskService,
@@ -60,10 +57,6 @@ class ModelManagementProvider with ChangeNotifier {
   /// Validates if initialization can proceed
   bool _canInitialize() {
     if (_isInitializing) {
-      developer.log(
-        'Initialization already in progress',
-        name: 'ModelManagementProvider',
-      );
       return false;
     }
 
@@ -71,10 +64,6 @@ class ModelManagementProvider with ChangeNotifier {
     if (_lastInitializationAttempt != null) {
       final timeSinceLastAttempt = now.difference(_lastInitializationAttempt!);
       if (timeSinceLastAttempt < _minimumInitializationInterval) {
-        developer.log(
-          'Initialization attempted too soon after last attempt',
-          name: 'ModelManagementProvider',
-        );
         return false;
       }
     }
@@ -93,28 +82,26 @@ class ModelManagementProvider with ChangeNotifier {
         orElse: () => ModelType.vosk,
       );
 
-      // On iOS, force Whisper since Vosk is not supported
-      if (!Platform.isAndroid && _selectedModelType == ModelType.vosk) {
-        developer.log(
-          'iOS detected: Switching from Vosk to Whisper (Vosk only supports Android)',
-          name: 'ModelManagementProvider',
-        );
+      _whisperRealtime = prefs.getBool(_prefsKeyWhisperRealtime) ?? false;
+
+      // Disable real-time flag on non-iOS platforms where it is unsupported.
+      if (!Platform.isIOS && _whisperRealtime) {
+        _whisperRealtime = false;
+        await prefs.setBool(_prefsKeyWhisperRealtime, false);
+      }
+
+      // On iOS, default to Whisper if no preference is set since Vosk is not supported
+      if (Platform.isIOS && _selectedModelType == ModelType.vosk) {
         _selectedModelType = ModelType.whisper;
+        _whisperRealtime = false;
         await _saveSelectedModelType(_selectedModelType);
       }
 
-      developer.log(
-        'Loaded model type: ${_selectedModelType.name}',
-        name: 'ModelManagementProvider',
-      );
+      notifyListeners();
     } catch (e) {
-      developer.log(
-        'Error loading selected model type: $e',
-        name: 'ModelManagementProvider',
-      );
-      // Default to Whisper on iOS, Vosk on Android
-      _selectedModelType =
-          Platform.isAndroid ? ModelType.vosk : ModelType.whisper;
+      _selectedModelType = Platform.isIOS ? ModelType.whisper : ModelType.vosk;
+      _whisperRealtime = false;
+      notifyListeners();
     }
   }
 
@@ -123,18 +110,21 @@ class ModelManagementProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKeyModelType, type.name);
+      await prefs.setBool(_prefsKeyWhisperRealtime, _whisperRealtime);
     } catch (e) {
-      developer.log(
-        'Error saving selected model type: $e',
-        name: 'ModelManagementProvider',
-      );
+      // Ignore save errors - use defaults on next load
     }
   }
 
-  /// Initializes the currently selected model with protection against rapid calls
+  /// Initializes the selected model with enhanced protection against concurrent calls
   Future<String?> initializeSelectedModel() async {
     if (!_canInitialize()) {
       return 'Model initialization is already in progress or was attempted too recently';
+    }
+
+    if (_selectedModelType == ModelType.whisper && !_whisperRealtime) {
+      _isInitialized = true;
+      return null;
     }
 
     _isInitializing = true;
@@ -145,11 +135,6 @@ class ModelManagementProvider with ChangeNotifier {
     Timer? timeoutTimer;
     timeoutTimer = Timer(_initializationTimeout, () {
       if (_isInitializing) {
-        final message =
-            _selectedModelType == ModelType.whisper
-                ? 'Whisper model download/initialization timed out after ${_initializationTimeout.inMinutes} minutes'
-                : 'Model initialization timed out';
-        developer.log(message, name: 'ModelManagementProvider');
         _isInitializing = false;
         _isInitialized = false;
         notifyListeners();
@@ -160,39 +145,21 @@ class ModelManagementProvider with ChangeNotifier {
       bool initResult = false;
 
       if (_selectedModelType == ModelType.vosk) {
-        developer.log(
-          'Initializing Vosk model...',
-          name: 'ModelManagementProvider',
-        );
+        await _voskService.dispose();
 
         final initialized = await _voskService.initialize(
           'assets/models/vosk-model-small-en-us-0.15.zip',
         );
         if (initialized) {
           initResult = true;
-          developer.log(
-            'Vosk service initialized successfully',
-            name: 'ModelManagementProvider',
-          );
         } else {
           return 'Failed to initialize Vosk service.';
         }
       } else if (_selectedModelType == ModelType.whisper) {
-        developer.log(
-          'Initializing Whisper model...',
-          name: 'ModelManagementProvider',
-        );
-
-        _whisperService = WhisperService();
         initResult = await _whisperService!.initialize();
 
         if (!initResult) {
           return 'Failed to initialize Whisper service via plugin.';
-        } else {
-          developer.log(
-            'Whisper service initialized successfully',
-            name: 'ModelManagementProvider',
-          );
         }
       } else {
         return 'Unknown model type: ${_selectedModelType.name}';
@@ -200,27 +167,10 @@ class ModelManagementProvider with ChangeNotifier {
 
       _isInitialized = initResult;
 
-      _orchestrator = TranscriptionOrchestrator(
-        AudioService(),
-        _voskService,
-        _whisperService,
-      );
-
-      developer.log(
-        'Model initialization completed: ${_selectedModelType.name}',
-        name: 'ModelManagementProvider',
-      );
-
       return null;
-    } catch (e, stackTrace) {
+    } catch (e) {
       final errorMessage =
           'Error initializing ${_selectedModelType.name} model: $e';
-      developer.log(
-        errorMessage,
-        name: 'ModelManagementProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
       _isInitialized = false;
       return errorMessage;
     } finally {
@@ -233,52 +183,22 @@ class ModelManagementProvider with ChangeNotifier {
   /// Changes the model type and reinitializes with enhanced protection
   Future<String?> changeModel(ModelType newModelType) async {
     if (_selectedModelType == newModelType && _isInitialized) {
-      developer.log(
-        'Model type unchanged and already initialized: ${newModelType.name}',
-        name: 'ModelManagementProvider',
-      );
       return null;
     }
 
-    if (!_canInitialize()) {
-      return 'Cannot change model - initialization in progress or attempted too recently';
+    if (newModelType == ModelType.vosk) {
+      await _voskService.dispose();
+      _whisperRealtime = false;
     }
 
-    final previousModelType = _selectedModelType;
     _selectedModelType = newModelType;
     _isInitialized = false;
-    notifyListeners();
-
-    developer.log(
-      'Changing model from ${previousModelType.name} to ${newModelType.name}',
-      name: 'ModelManagementProvider',
-    );
-
-    try {
-      if (previousModelType == ModelType.whisper) {
-        await _whisperService?.dispose();
-        _whisperService = null;
-        developer.log(
-          'Whisper service disposed',
-          name: 'ModelManagementProvider',
-        );
-      } else if (previousModelType == ModelType.vosk) {
-        await _voskService.stop();
-        await _voskService.dispose();
-        developer.log('Vosk service disposed', name: 'ModelManagementProvider');
-      }
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error during cleanup of ${previousModelType.name}: $e',
-        name: 'ModelManagementProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
-    }
 
     await _saveSelectedModelType(newModelType);
 
-    return await initializeSelectedModel();
+    final error = await initializeSelectedModel();
+    notifyListeners();
+    return error;
   }
 
   /// Checks if the orchestrator is busy with an operation
@@ -286,16 +206,30 @@ class ModelManagementProvider with ChangeNotifier {
 
   /// Forces reinitialization (for error recovery)
   Future<String?> forceReinitialize() async {
-    developer.log(
-      'Force reinitializing model: ${_selectedModelType.name}',
-      name: 'ModelManagementProvider',
-    );
-
     _isInitialized = false;
     _isInitializing = false;
     _lastInitializationAttempt = null;
 
     return await initializeSelectedModel();
+  }
+
+  /// Sets the real-time mode for Whisper and saves it.
+  Future<void> setWhisperRealtime(bool isRealtime) async {
+    if (Platform.isIOS) {
+      _whisperRealtime = isRealtime;
+      _isInitialized = false;
+      await _saveSelectedModelType(_selectedModelType);
+      await initializeSelectedModel();
+      notifyListeners();
+    }
+  }
+
+  /// Marks the system as initialized for file-based mode without loading the model
+  void markAsInitializedForFileBased() {
+    if (_selectedModelType == ModelType.whisper && !_whisperRealtime) {
+      _isInitialized = true;
+      notifyListeners();
+    }
   }
 
   @override

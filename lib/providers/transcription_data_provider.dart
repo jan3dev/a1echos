@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:developer' as developer;
 import '../models/transcription.dart';
 import '../repositories/transcription_repository.dart';
 import '../managers/session_transcription_manager.dart';
@@ -29,18 +28,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       _transcriptions = await _repository.getTranscriptions();
       _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-      developer.log(
-        'Loaded ${_transcriptions.length} transcriptions',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Failed to load transcriptions: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to load transcriptions: $e');
     }
   }
@@ -49,22 +38,13 @@ class TranscriptionDataProvider with ChangeNotifier {
   Future<void> loadTranscriptionsForSession(String sessionId) async {
     try {
       final allTranscriptions = await _repository.getTranscriptions();
-      _transcriptions =
-          allTranscriptions.where((t) => t.sessionId == sessionId).toList();
+      _transcriptions = allTranscriptions
+          .where((t) => t.sessionId == sessionId)
+          .toList();
       _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      developer.log(
-        'Loaded ${_transcriptions.length} transcriptions for session: $sessionId',
-        name: 'TranscriptionDataProvider',
-      );
 
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Failed to load transcriptions for session: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to load transcriptions for session: $e');
     }
   }
@@ -73,11 +53,6 @@ class TranscriptionDataProvider with ChangeNotifier {
   void addTranscription(Transcription transcription) {
     _transcriptions.add(transcription);
     _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    developer.log(
-      'Added transcription: ${transcription.id}',
-      name: 'TranscriptionDataProvider',
-    );
 
     notifyListeners();
   }
@@ -93,18 +68,8 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
-      developer.log(
-        'Deleted transcription: $id',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Failed to delete transcription: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to delete transcription: $e');
     }
   }
@@ -126,18 +91,8 @@ class TranscriptionDataProvider with ChangeNotifier {
         await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
       }
 
-      developer.log(
-        'Deleted ${ids.length} transcriptions',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Failed to delete transcriptions: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to delete transcriptions: $e');
     }
   }
@@ -147,17 +102,7 @@ class TranscriptionDataProvider with ChangeNotifier {
     try {
       await _repository.clearTranscriptions();
       await loadTranscriptions();
-
-      developer.log(
-        'Cleared all transcriptions',
-        name: 'TranscriptionDataProvider',
-      );
     } catch (e) {
-      developer.log(
-        'Error clearing transcriptions: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to clear transcriptions: $e');
     }
   }
@@ -179,18 +124,8 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
-      developer.log(
-        'Deleted paragraph $paragraphIndex from transcription: $id',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Error deleting paragraph: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to delete paragraph: $e');
     }
   }
@@ -203,18 +138,8 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
-      developer.log(
-        'Cleared transcriptions for session: $sessionId',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Error clearing session transcriptions: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to clear session transcriptions: $e');
     }
   }
@@ -225,18 +150,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       _transcriptions.removeWhere((t) => t.sessionId == sessionId);
       await _repository.deleteTranscriptionsForSession(sessionId);
 
-      developer.log(
-        'Deleted all transcriptions for session: $sessionId',
-        name: 'TranscriptionDataProvider',
-      );
-
       notifyListeners();
     } catch (e) {
-      developer.log(
-        'Error deleting transcriptions for session: $e',
-        name: 'TranscriptionDataProvider',
-        error: e,
-      );
       throw Exception('Failed to delete transcriptions for session: $e');
     }
   }
@@ -257,10 +172,6 @@ class TranscriptionDataProvider with ChangeNotifier {
     }
 
     if (changed) {
-      developer.log(
-        'Cleaned up transcriptions for ${sessionsToDelete.length} deleted sessions',
-        name: 'TranscriptionDataProvider',
-      );
       notifyListeners();
     }
   }

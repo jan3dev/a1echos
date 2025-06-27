@@ -65,134 +65,147 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Column(
-                          children: [
-                            AquaListItem(
-                              title: AppStrings.whisperModelTitle,
-                              titleTrailing: AppStrings.whisperModelSubtitle,
-                              titleTrailingColor: aquaColors.textSecondary,
-                              iconTrailing: AquaRadio<ModelType>(
-                                value: ModelType.whisper,
-                                groupValue: provider.selectedModelType,
-                                onChanged:
-                                    (value) => provider.changeModel(value),
+                          children: () {
+                            // Determine current selection key
+                            final String selectedKey;
+                            if (provider.selectedModelType == ModelType.vosk) {
+                              selectedKey = 'vosk';
+                            } else {
+                              selectedKey = provider.whisperRealtime
+                                  ? 'whisper_rt'
+                                  : 'whisper_file';
+                            }
+
+                            List<Widget> items = [];
+
+                            // Helper to build AquaListItem
+                            Widget buildItem({
+                              required String key,
+                              required String title,
+                              required String subtitle,
+                              required bool enabled,
+                              required VoidCallback? onTap,
+                            }) {
+                              return AquaListItem(
+                                title: title,
+                                titleTrailing: subtitle,
+                                titleTrailingColor: aquaColors.textSecondary
+                                    .withOpacity(enabled ? 1.0 : 0.5),
+                                iconTrailing: AquaRadio<String>(
+                                  value: key,
+                                  groupValue: selectedKey,
+                                  onChanged: enabled
+                                      ? (_) => onTap?.call()
+                                      : null,
+                                ),
+                                onTap: enabled ? onTap : null,
+                                backgroundColor: aquaColors.surfacePrimary
+                                    .withOpacity(enabled ? 1.0 : 0.5),
+                              );
+                            }
+
+                            // Whisper File-based
+                            items.add(
+                              buildItem(
+                                key: 'whisper_file',
+                                title: 'Whisper (File-based)',
+                                subtitle: AppStrings.whisperModelSubtitle,
+                                enabled: true,
+                                onTap: () async {
+                                  if (provider.whisperRealtime) {
+                                    await provider.setWhisperRealtime(false);
+                                  }
+                                  if (provider.selectedModelType !=
+                                      ModelType.whisper) {
+                                    await provider.changeModel(
+                                      ModelType.whisper,
+                                    );
+                                  }
+                                },
                               ),
-                              onTap:
-                                  () => provider.changeModel(ModelType.whisper),
-                              backgroundColor: aquaColors.surfacePrimary,
-                            ),
-                            Divider(
-                              height: 1,
-                              color: aquaColors.surfaceBorderPrimary,
-                            ),
-                            AquaListItem(
-                              title: AppStrings.voskModelTitle,
-                              titleTrailing:
-                                  Platform.isAndroid
-                                      ? AppStrings.voskModelSubtitle
-                                      : "Not available on iOS",
-                              titleTrailingColor:
-                                  Platform.isAndroid
-                                      ? aquaColors.textSecondary
-                                      : aquaColors.textSecondary.withOpacity(
-                                        0.5,
-                                      ),
-                              iconTrailing: AquaRadio<ModelType>(
-                                value: ModelType.vosk,
-                                groupValue: provider.selectedModelType,
-                                onChanged:
-                                    Platform.isAndroid
-                                        ? (value) => provider.changeModel(value)
-                                        : null, // Disabled on iOS
+                            );
+
+                            // Whisper Real-time (enabled only on iOS)
+                            final bool rtEnabled = Platform.isIOS;
+                            items.add(
+                              Divider(
+                                height: 1,
+                                color: aquaColors.surfaceBorderPrimary,
                               ),
-                              onTap:
-                                  Platform.isAndroid
-                                      ? () =>
-                                          provider.changeModel(ModelType.vosk)
-                                      : null, // Disabled on iOS
-                              backgroundColor:
-                                  Platform.isAndroid
-                                      ? aquaColors.surfacePrimary
-                                      : aquaColors.surfacePrimary.withOpacity(
-                                        0.5,
-                                      ),
-                            ),
-                          ],
+                            );
+                            items.add(
+                              buildItem(
+                                key: 'whisper_rt',
+                                title: 'Whisper (Real-time)',
+                                subtitle: rtEnabled
+                                    ? AppStrings.whisperModelSubtitle
+                                    : 'not available',
+                                enabled: rtEnabled,
+                                onTap: rtEnabled
+                                    ? () async {
+                                        if (!provider.whisperRealtime) {
+                                          await provider.setWhisperRealtime(
+                                            true,
+                                          );
+                                        }
+                                        if (provider.selectedModelType !=
+                                            ModelType.whisper) {
+                                          await provider.changeModel(
+                                            ModelType.whisper,
+                                          );
+                                        }
+                                      }
+                                    : null,
+                              ),
+                            );
+
+                            // Vosk (enabled only on Android)
+                            items.add(
+                              Divider(
+                                height: 1,
+                                color: aquaColors.surfaceBorderPrimary,
+                              ),
+                            );
+                            final bool voskEnabled = Platform.isAndroid;
+                            items.add(
+                              buildItem(
+                                key: 'vosk',
+                                title: AppStrings.voskModelTitle,
+                                subtitle: voskEnabled
+                                    ? AppStrings.voskModelSubtitle
+                                    : 'not available',
+                                enabled: voskEnabled,
+                                onTap: voskEnabled
+                                    ? () async {
+                                        await provider.changeModel(
+                                          ModelType.vosk,
+                                        );
+                                      }
+                                    : null,
+                              ),
+                            );
+
+                            return items;
+                          }(),
                         ),
                       ),
-                      // Show initialization status for Whisper
-                      if (provider.selectedModelType == ModelType.whisper &&
-                          (provider.isInitializing ||
-                              provider.isDownloadingModel))
-                        Container(
-                          margin: const EdgeInsets.only(top: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: aquaColors.surfacePrimary,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: aquaColors.surfaceBorderPrimary,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        aquaColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      provider.isDownloadingModel
-                                          ? 'Downloading Whisper model...'
-                                          : 'Initializing Whisper...',
-                                      style: AquaTypography.body1SemiBold
-                                          .copyWith(
-                                            color: aquaColors.textPrimary,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (provider.initializationStatus != null) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  provider.initializationStatus!,
-                                  style: AquaTypography.body2.copyWith(
-                                    color: aquaColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              Text(
-                                provider.isDownloadingModel
-                                    ? 'This may take several minutes on first use. The model is being downloaded to your device.'
-                                    : 'Please wait while the model initializes...',
-                                style: AquaTypography.body2.copyWith(
-                                  color: aquaColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       // Show initialization error for Whisper
                       if (provider.selectedModelType == ModelType.whisper &&
                           !provider.isInitializing &&
-                          !provider.isDownloadingModel &&
                           (provider.error != null ||
-                           (provider.initializationStatus != null &&
-                            (provider.initializationStatus!.contains('failed') ||
-                             provider.initializationStatus!.contains('error') ||
-                             provider.initializationStatus!.contains('timeout') ||
-                             provider.initializationStatus!.contains('Failed')))))
+                              (provider.initializationStatus != null &&
+                                  (provider.initializationStatus!.contains(
+                                        'failed',
+                                      ) ||
+                                      provider.initializationStatus!.contains(
+                                        'error',
+                                      ) ||
+                                      provider.initializationStatus!.contains(
+                                        'timeout',
+                                      ) ||
+                                      provider.initializationStatus!.contains(
+                                        'Failed',
+                                      )))))
                         Container(
                           margin: const EdgeInsets.only(top: 16),
                           padding: const EdgeInsets.all(16),
@@ -227,7 +240,9 @@ class SettingsScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                provider.error ?? provider.initializationStatus ?? 'Unknown error occurred',
+                                provider.error ??
+                                    provider.initializationStatus ??
+                                    'Unknown error occurred',
                                 style: AquaTypography.body2.copyWith(
                                   color: aquaColors.textSecondary,
                                 ),
@@ -241,9 +256,8 @@ class SettingsScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               GestureDetector(
-                                onTap:
-                                    () =>
-                                        provider.changeModel(ModelType.whisper),
+                                onTap: () =>
+                                    provider.changeModel(ModelType.whisper),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'dart:developer' as developer;
+
 import '../models/transcription.dart';
 import '../models/model_type.dart';
 
@@ -37,10 +37,6 @@ class TranscriptionUIStateProvider with ChangeNotifier {
   /// Updates the streaming text during live transcription
   void updateStreamingText(String text) {
     _currentStreamingText = text;
-    developer.log(
-      'Streaming text updated: ${text.length} characters',
-      name: 'TranscriptionUIStateProvider',
-    );
     notifyListeners();
   }
 
@@ -53,23 +49,15 @@ class TranscriptionUIStateProvider with ChangeNotifier {
   /// Sets the recording session ID when recording starts
   void setRecordingSessionId(String sessionId) {
     _recordingSessionId = sessionId;
-    developer.log(
-      'Recording session ID set: $sessionId',
-      name: 'TranscriptionUIStateProvider',
-    );
   }
 
   /// Clears the recording session ID when recording stops
   void clearRecordingSessionId() {
     _recordingSessionId = null;
-    developer.log(
-      'Recording session ID cleared',
-      name: 'TranscriptionUIStateProvider',
-    );
   }
 
   /// Creates or updates live Vosk transcription preview
-  void updateLiveVoskPreview(String text, String sessionId) {
+  void updateLivePreview(String text, String sessionId) {
     _liveVoskTranscriptionPreview = Transcription(
       id: 'live_vosk_active_preview',
       text: text,
@@ -78,20 +66,12 @@ class TranscriptionUIStateProvider with ChangeNotifier {
       audioPath: '',
     );
 
-    developer.log(
-      'Live Vosk preview updated for session: $sessionId',
-      name: 'TranscriptionUIStateProvider',
-    );
     notifyListeners();
   }
 
   /// Clears live Vosk transcription preview
-  void clearLiveVoskPreview() {
+  void clearLivePreview() {
     if (_liveVoskTranscriptionPreview != null) {
-      developer.log(
-        'Clearing live Vosk preview',
-        name: 'TranscriptionUIStateProvider',
-      );
       _liveVoskTranscriptionPreview = null;
       notifyListeners();
     }
@@ -107,20 +87,12 @@ class TranscriptionUIStateProvider with ChangeNotifier {
       audioPath: '',
     );
 
-    developer.log(
-      'Whisper loading preview created for session: $sessionId',
-      name: 'TranscriptionUIStateProvider',
-    );
     notifyListeners();
   }
 
   /// Clears Whisper loading preview
   void clearWhisperLoadingPreview() {
     if (_loadingWhisperTranscriptionPreview != null) {
-      developer.log(
-        'Clearing Whisper loading preview',
-        name: 'TranscriptionUIStateProvider',
-      );
       _loadingWhisperTranscriptionPreview = null;
       notifyListeners();
     }
@@ -131,19 +103,11 @@ class TranscriptionUIStateProvider with ChangeNotifier {
     bool changed = false;
 
     if (_liveVoskTranscriptionPreview?.sessionId != currentSessionId) {
-      developer.log(
-        'Clearing live Vosk preview (session: ${_liveVoskTranscriptionPreview?.sessionId}, current: $currentSessionId)',
-        name: 'TranscriptionUIStateProvider',
-      );
       _liveVoskTranscriptionPreview = null;
       changed = true;
     }
 
     if (_loadingWhisperTranscriptionPreview?.sessionId != currentSessionId) {
-      developer.log(
-        'Clearing Whisper loading preview (session: ${_loadingWhisperTranscriptionPreview?.sessionId}, current: $currentSessionId)',
-        name: 'TranscriptionUIStateProvider',
-      );
       _loadingWhisperTranscriptionPreview = null;
       changed = true;
     }
@@ -161,12 +125,13 @@ class TranscriptionUIStateProvider with ChangeNotifier {
     bool isRecording,
   ) {
     if (modelType == ModelType.vosk && isRecording) {
-      updateLiveVoskPreview(text, sessionId);
+      updateLivePreview(text, sessionId);
       clearWhisperLoadingPreview();
-    } else if (modelType == ModelType.whisper) {
-      clearLiveVoskPreview();
+    } else if (modelType == ModelType.whisper && isRecording) {
+      updateLivePreview(text, sessionId);
+      clearWhisperLoadingPreview();
     } else {
-      clearLiveVoskPreview();
+      clearLivePreview();
     }
   }
 

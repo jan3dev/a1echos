@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:developer' as developer;
 import 'dart:async';
 import 'dart:io';
 import '../models/transcription.dart';
@@ -39,36 +38,19 @@ class TranscriptionOperationProvider with ChangeNotifier {
   }
 
   /// Starts recording with the specified model type
-  Future<bool> startRecording(ModelType modelType, String sessionId) async {
+  Future<bool> startRecording(
+    ModelType modelType,
+    String sessionId,
+    bool whisperRealtime,
+  ) async {
     try {
-      developer.log(
-        'Starting ${modelType.name} recording for session: $sessionId',
-        name: 'TranscriptionOperationProvider',
+      final success = await _orchestrator.startRecording(
+        modelType,
+        whisperRealtime: whisperRealtime,
       );
-
-      final success = await _orchestrator.startRecording(modelType);
-
-      if (success) {
-        developer.log(
-          'Recording started successfully',
-          name: 'TranscriptionOperationProvider',
-        );
-      } else {
-        final errorMessage =
-            modelType == ModelType.whisper
-                ? 'Failed to start audio recording for Whisper'
-                : 'Failed to start Vosk streaming';
-        developer.log(errorMessage, name: 'TranscriptionOperationProvider');
-      }
 
       return success;
-    } catch (e, stack) {
-      developer.log(
-        'Failed to start recording: $e',
-        name: 'TranscriptionOperationProvider',
-        error: e,
-        stackTrace: stack,
-      );
+    } catch (e) {
       return false;
     }
   }
@@ -77,27 +59,17 @@ class TranscriptionOperationProvider with ChangeNotifier {
   Future<TranscriptionResult> stopRecordingAndTranscribe(
     ModelType modelType,
     String sessionId,
+    bool whisperRealtime,
   ) async {
     try {
-      developer.log(
-        'Stopping ${modelType.name} recording...',
-        name: 'TranscriptionOperationProvider',
+      final output = await _orchestrator.stopRecording(
+        modelType,
+        whisperRealtime: whisperRealtime,
       );
 
-      final output = await _orchestrator.stopRecording(modelType);
       final resultText = output.text.trim();
 
-      developer.log(
-        'Recording stopped. Result text length: ${resultText.length}',
-        name: 'TranscriptionOperationProvider',
-      );
-
       if (resultText.isEmpty) {
-        final modelName = modelType == ModelType.vosk ? 'Vosk' : 'Whisper';
-        developer.log(
-          'No speech detected in recording ($modelName) - treating as successful empty recording',
-          name: 'TranscriptionOperationProvider',
-        );
         return TranscriptionResult.emptyRecording();
       }
 
@@ -111,7 +83,9 @@ class TranscriptionOperationProvider with ChangeNotifier {
           );
           try {
             await tempFile.delete();
-          } catch (_) {}
+          } catch (e) {
+            // Ignore temp file deletion errors
+          }
         }
       }
 
@@ -122,14 +96,8 @@ class TranscriptionOperationProvider with ChangeNotifier {
       );
 
       return TranscriptionResult.success(transcription);
-    } catch (e, stack) {
+    } catch (e) {
       final errorMessage = 'Error stopping/saving transcription: $e';
-      developer.log(
-        errorMessage,
-        name: 'TranscriptionOperationProvider',
-        error: e,
-        stackTrace: stack,
-      );
       return TranscriptionResult.error(errorMessage);
     }
   }
@@ -140,11 +108,6 @@ class TranscriptionOperationProvider with ChangeNotifier {
     String audioPath,
     String sessionId,
   ) async {
-    developer.log(
-      'Saving transcription to session: $sessionId',
-      name: 'TranscriptionOperationProvider',
-    );
-
     final formattedText = TranscriptionFormatter.format(text);
     final transcription = Transcription(
       id: _uuid.v4(),
@@ -156,11 +119,6 @@ class TranscriptionOperationProvider with ChangeNotifier {
 
     await _repository.saveTranscription(transcription);
     await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
-
-    developer.log(
-      'Transcription saved successfully: ${transcription.id}',
-      name: 'TranscriptionOperationProvider',
-    );
 
     return transcription;
   }

@@ -1,89 +1,140 @@
-# Technical Context
+# TECHNICAL CONTEXT
 
-## Development Framework
-- **Flutter SDK**: ^3.7.2 for cross-platform mobile development
-- **Dart Language**: Version compatible with Flutter SDK requirements
+## Technology Stack
 
-## State Management
-- **Provider Pattern**: Primary state management solution (provider: ^6.0.5)
-- **SharedPreferences**: Persistent storage for app settings and user preferences
-- **StreamController**: Used for real-time transcription updates and event broadcasting
+### Core Framework
+- **Flutter** - Cross-platform mobile framework
+- **Dart** - Primary programming language
+- **Version:** Based on project structure, likely Flutter 3.x+
 
-## Audio Processing
-- **Record Package**: ^6.0.0 for audio recording functionality
-- **Permission Handler**: ^12.0.0+1 for audio recording permissions
-- **Path Provider**: ^2.1.1 for accessing device storage paths
+### State Management
+- **Provider** - Official Flutter state management solution
+- **ChangeNotifier** - Reactive state pattern
+- **Consumer/Selector** - Granular UI updates
 
-## Transcription Engines
-- **Vosk Flutter**: ^0.3.48 for real-time speech recognition
-  - Provides streaming transcription with partial results
-  - Operates during recording phase
-  - No audio file persistence required
-- **Whisper Flutter New**: ^1.0.1 for high-accuracy post-processing transcription
-  - Processes complete audio files after recording
-  - Requires audio file storage for processing
-  - Higher accuracy but delayed results
+### Audio Processing
+- **Native Audio Recording** - Platform-specific audio capture
+- **Vosk** - Offline speech recognition engine
+- **Whisper** - OpenAI speech-to-text model
+- **Audio Format:** Standard mobile formats (AAC, WAV)
 
-## Storage and Security
-- **Flutter Secure Storage**: ^9.2.4 for sensitive data storage
-- **Encrypt**: ^5.0.3 for data encryption capabilities
-- **Path**: ^1.8.3 for file path manipulation
-- **File Picker**: ^10.1.2 for file selection operations
+### Storage & Persistence
+- **Local Storage** - Device-based data persistence
+- **Encryption** - AES encryption for sensitive data
+- **JSON Serialization** - Data format for model persistence
+- **Flutter Secure Storage** - Secure key-value storage
 
-## UI Framework
-- **Material Design 3**: Primary design system
-- **Flutter SVG**: ^2.0.7 for scalable vector graphics
-- **Custom UI Components**: External design system from aqua-design-system repository
-- **Custom Fonts**: 
-  - Inter family (Regular, Medium, SemiBold)
-  - RobotoMono family (Regular, Medium, SemiBold)
+### Platform Integration
+- **Android** - Kotlin/Java native integration
+- **iOS** - Swift/Objective-C native integration
+- **Platform Channels** - Flutter-native communication
 
-## Utility Libraries
-- **UUID**: ^4.1.0 for unique identifier generation
-- **Intl**: ^0.20.2 for internationalization and date formatting
-- **Cupertino Icons**: ^1.0.8 for iOS-style icons
+## Development Environment
 
-## Architecture Patterns
-- **Provider Architecture**: Centralized state management with LocalTranscriptionProvider and SessionProvider
-- **Service Layer Pattern**: Dedicated services for specific functionality (AudioService, VoskService, WhisperService, StorageService, EncryptionService)
-- **Repository Pattern**: Data access abstraction for transcriptions and sessions
-- **Orchestration Pattern**: TranscriptionOrchestrator coordinates complex workflows
-- **Manager Pattern**: SessionTranscriptionManager handles session-specific filtering
+### Build System
+- **Gradle** - Android build system (Kotlin DSL)
+- **Xcode** - iOS build system
+- **Flutter SDK** - Cross-platform toolchain
 
-## Development Tools
-- **Flutter Test**: Built-in testing framework
-- **Flutter Lints**: ^5.0.0 for code quality and consistency
-- **Flutter Launcher Icons**: ^0.14.3 for app icon generation
+### Dependencies
+- **Core Flutter Dependencies:**
+  - `provider` - State management
+  - `flutter_secure_storage` - Secure storage
+  - `path_provider` - File system access
+  - Native platform integrations
 
-## Platform Compatibility
-- **iOS**: Full support with native audio permissions
-- **Android**: Full support with audio recording permissions
-- **Cross-platform**: Single codebase for both platforms using Flutter
+### Testing
+- **Widget Tests** - Flutter UI testing
+- **Unit Tests** - Business logic testing
+- **Integration Tests** - End-to-end testing capabilities
 
-## Data Models
-- **Session Model**: User-created organizational units for transcriptions
-- **Transcription Model**: Individual transcription records with metadata
-- **ModelType Enum**: Vosk vs Whisper model selection
-- **TranscriptionOutput**: Structured transcription results with audio file references
+## Architecture Implementation
 
-## External Dependencies
-- **Git-based UI Components**: aqua-design-system for consistent UI components
-- **Local Model Assets**: Stored in assets/models/ directory for offline transcription
+### Project Structure
+```
+lib/
+├── constants/       # App-wide constants
+├── controllers/     # Business logic controllers
+├── main.dart       # App entry point
+├── managers/       # High-level coordination
+├── models/         # Data models
+├── providers/      # State management
+├── repositories/   # Data access layer
+├── screens/        # UI screens
+├── services/       # External service integration
+├── utils/          # Utility functions
+└── widgets/        # Reusable components
+```
+
+### Service Integration
+- **VoskService** - Local speech recognition
+- **WhisperService** - Cloud-based transcription
+- **AudioService** - Audio recording and playback
+- **StorageService** - Data persistence
+- **EncryptionService** - Security layer
+
+### Data Models
+- **Session** - Recording session representation
+- **Transcription** - Text output with metadata
+- **ModelType** - Transcription engine enumeration
+
+## Platform-Specific Features
+
+### Android
+- **Permissions** - Microphone, storage access
+- **Background Processing** - Service-based audio recording
+- **File System** - Android-specific storage paths
+- **Build Configuration** - Gradle build scripts
+
+### iOS
+- **Permissions** - Privacy-focused permission handling
+- **Background Audio** - iOS audio session management
+- **File System** - iOS sandbox-compliant storage
+- **Build Configuration** - Xcode project settings
 
 ## Performance Considerations
-- **Local Processing**: All transcription occurs on-device for privacy
-- **Memory Management**: Stream-based processing for real-time transcription
-- **File Management**: Efficient audio file handling with cleanup for Whisper workflows
-- **State Optimization**: Comprehensive state management to prevent unnecessary rebuilds
 
-## Project Structure
-The application follows a layered architecture with:
-- UI Layer (screens, widgets)
-- State Management Layer (providers)
-- Business Logic Layer (managers, services)
-- Data Layer (repositories, models)
+### Audio Processing
+- **Real-time Processing** - Low-latency transcription
+- **Memory Management** - Efficient audio buffer handling
+- **Battery Optimization** - Power-efficient recording
 
-## Important Technical Requirements
-- Local transcription capabilities (no cloud dependency)
-- Audio recording and file management
-- Permission handling for microphone and storage access 
+### Data Management
+- **Lazy Loading** - On-demand data loading
+- **Caching** - Strategic data caching
+- **Compression** - Efficient storage utilization
+
+### UI Performance
+- **Widget Optimization** - Efficient widget rebuilding
+- **State Isolation** - Minimal state propagation
+- **Smooth Animations** - 60fps target performance
+
+## Security Implementation
+
+### Data Protection
+- **Encryption at Rest** - All stored data encrypted
+- **Local Processing** - Privacy-first approach
+- **Secure Storage** - Protected key-value storage
+- **No Cloud Dependencies** - Optional cloud features
+
+### Code Security
+- **Obfuscation** - Release build code protection
+- **Certificate Pinning** - Network security (if applicable)
+- **Secure Communication** - HTTPS for external services
+
+## Development Tools
+
+### IDE Support
+- **VS Code** - Flutter development environment
+- **Android Studio** - Android-specific development
+- **Xcode** - iOS development and testing
+
+### Debugging
+- **Flutter Inspector** - Widget tree inspection
+- **Platform Debugging** - Native debugging tools
+- **Logging** - Structured logging implementation
+
+### Performance Monitoring
+- **Flutter Performance** - Frame rate monitoring
+- **Memory Profiling** - Memory usage analysis
+- **CPU Profiling** - Performance bottleneck identification 

@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
-import 'dart:async';
-import 'dart:developer' as developer;
+
 import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
@@ -35,28 +36,36 @@ class RecordingButton extends StatefulWidget {
 
 class _RecordingButtonState extends State<RecordingButton> {
   bool _isDebouncing = false;
+  bool _gestureIsolationActive = false;
   Timer? _debounceTimer;
+  Timer? _gestureIsolationTimer;
   DateTime? _lastActionTime;
+  String? _lastActionType;
+  TranscriptionState? _lastKnownState;
 
-  static const Duration _debounceDuration = Duration(milliseconds: 300);
-  static const Duration _minimumActionInterval = Duration(milliseconds: 500);
+  static const Duration _debounceDuration = Duration(milliseconds: 800);
+  static const Duration _minimumActionInterval = Duration(milliseconds: 1200);
+  static const Duration _gestureIsolationDuration = Duration(
+    milliseconds: 2000,
+  );
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _gestureIsolationTimer?.cancel();
     super.dispose();
   }
 
-  /// Handles recording actions with debouncing and validation
+  /// Handles recording actions with enhanced debouncing and validation
   Future<void> _handleRecordingAction(
     Future<void> Function() action,
     String actionName,
   ) async {
-    if (_isDebouncing) {
-      developer.log(
-        'Action "$actionName" ignored - debouncing active',
-        name: 'RecordingButton',
-      );
+    if (_gestureIsolationActive) {
+      return;
+    }
+
+    if (_isDebouncing && _lastActionType == actionName) {
       return;
     }
 
@@ -64,20 +73,20 @@ class _RecordingButtonState extends State<RecordingButton> {
     if (_lastActionTime != null) {
       final timeSinceLastAction = now.difference(_lastActionTime!);
       if (timeSinceLastAction < _minimumActionInterval) {
-        developer.log(
-          'Action "$actionName" ignored - too soon after last action',
-          name: 'RecordingButton',
-        );
         return;
       }
     }
 
-    setState(() => _isDebouncing = true);
+    if (!mounted) return;
+
+    setState(() {
+      _isDebouncing = true;
+      _lastActionType = actionName;
+      _gestureIsolationActive = true;
+    });
     _lastActionTime = now;
 
     try {
-      developer.log('Executing action: $actionName', name: 'RecordingButton');
-
       await action();
 
       _debounceTimer?.cancel();
@@ -86,17 +95,19 @@ class _RecordingButtonState extends State<RecordingButton> {
           setState(() => _isDebouncing = false);
         }
       });
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error in action "$actionName": $e',
-        name: 'RecordingButton',
-        error: e,
-        stackTrace: stackTrace,
-      );
 
-      setState(() => _isDebouncing = false);
-
+      _gestureIsolationTimer?.cancel();
+      _gestureIsolationTimer = Timer(_gestureIsolationDuration, () {
+        if (mounted) {
+          setState(() => _gestureIsolationActive = false);
+        }
+      });
+    } catch (e) {
       if (mounted) {
+        setState(() {
+          _isDebouncing = false;
+          _gestureIsolationActive = false;
+        });
         _showActionErrorDialog(context, actionName, e.toString());
       }
     }
@@ -138,14 +149,23 @@ class _RecordingButtonState extends State<RecordingButton> {
     if (widget.useProviderState) {
       return Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
-          return _buildButtonForState(provider.state, colors, provider);
+          final state = provider.state;
+
+          if (_lastKnownState != state) {
+            _lastKnownState = state;
+            if (state == TranscriptionState.ready ||
+                state == TranscriptionState.error) {
+              _gestureIsolationActive = false;
+            }
+          }
+
+          return _buildButtonForState(state, colors, provider);
         },
       );
     } else {
-      final state =
-          widget.isRecording
-              ? TranscriptionState.recording
-              : TranscriptionState.ready;
+      final state = widget.isRecording
+          ? TranscriptionState.recording
+          : TranscriptionState.ready;
       return _buildButtonForState(state, colors, null);
     }
   }
@@ -200,14 +220,13 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed:
-                _isDebouncing
-                    ? null
-                    : () {
-                      if (provider != null) {
-                        _showModelErrorDialog(context, provider.error);
-                      }
-                    },
+            onPressed: (_isDebouncing || _gestureIsolationActive)
+                ? null
+                : () {
+                    if (provider != null) {
+                      _showModelErrorDialog(context, provider.error);
+                    }
+                  },
             icon: Icon(Icons.error_outline, color: colors.textInverse),
           ),
         );
@@ -227,8 +246,9 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed:
-                _isDebouncing ? null : () => _handleStopRecording(provider),
+            onPressed: (_isDebouncing || _gestureIsolationActive)
+                ? null
+                : () => _handleStopRecording(provider),
             icon: SvgPicture.asset(
               'assets/icons/rectangle.svg',
               width: 14,
@@ -256,8 +276,9 @@ class _RecordingButtonState extends State<RecordingButton> {
             ],
           ),
           child: IconButton(
-            onPressed:
-                _isDebouncing ? null : () => _handleStartRecording(provider),
+            onPressed: (_isDebouncing || _gestureIsolationActive)
+                ? null
+                : () => _handleStartRecording(provider),
             icon: SvgPicture.asset(
               'assets/icons/mic.svg',
               width: 24,
@@ -275,17 +296,16 @@ class _RecordingButtonState extends State<RecordingButton> {
   void _showModelErrorDialog(BuildContext context, String? errorMessage) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(AppStrings.modelNotReady),
-            content: Text(errorMessage ?? AppStrings.modelInitFailure),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(AppStrings.ok),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(AppStrings.modelNotReady),
+        content: Text(errorMessage ?? AppStrings.modelInitFailure),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.ok),
           ),
+        ],
+      ),
     );
   }
 
@@ -296,19 +316,18 @@ class _RecordingButtonState extends State<RecordingButton> {
   ) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('$action Failed'),
-            content: Text(
-              'An error occurred: $error\n\nPlease try again in a moment.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(AppStrings.ok),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('$action Failed'),
+        content: Text(
+          'An error occurred: $error\n\nPlease try again in a moment.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.ok),
           ),
+        ],
+      ),
     );
   }
 }

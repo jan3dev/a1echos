@@ -1,117 +1,158 @@
 import 'dart:io';
-import 'dart:async';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:developer' as developer;
-import '../constants/app_constants.dart';
+import 'native_audio_permission_service.dart';
 
 class AudioService {
   final AudioRecorder _audioRecorder = AudioRecorder();
   String? _recordingPath;
   File? _currentAudioFile;
-  Timer? _durationTimer;
 
   Future<bool> hasPermission() async {
+    if (Platform.isIOS) {
+      return await NativeAudioPermissionService.ensureRecordPermission();
+    }
+
     final status = await Permission.microphone.status;
+
     if (status.isGranted) {
       return true;
     }
 
-    final result = await Permission.microphone.request();
-    return result.isGranted;
-  }
+    if (status.isDenied) {
+      final result = await Permission.microphone.request();
+      return result.isGranted;
+    }
 
-  Future<bool> startRecording({required bool useStreaming}) async {
-    if (!await hasPermission()) {
+    if (status.isPermanentlyDenied) {
       return false;
     }
 
-    if (await _audioRecorder.isRecording()) {
-      return true;
+    return false;
+  }
+
+  Future<String> _generateRecordingPath() async {
+    final tempDir = await getTemporaryDirectory();
+    return '${tempDir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+  }
+
+  Future<bool> startRecording({bool useStreaming = false}) async {
+    if (!await hasPermission()) {
+      throw Exception('Microphone permission denied');
     }
 
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final fileExtension = useStreaming ? 'pcm' : 'wav';
-      _recordingPath =
-          '${tempDir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
-      _currentAudioFile = null;
+    await _cleanup();
 
-      final encoder = useStreaming ? AudioEncoder.pcm16bits : AudioEncoder.wav;
+    _recordingPath = await _generateRecordingPath();
+
+    if (useStreaming) {
+      await _audioRecorder.startStream(
+        RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+      );
+    } else {
+      final encoders = [
+        AudioEncoder.wav,
+        AudioEncoder.flac,
+        AudioEncoder.aacLc,
+      ];
+
+      bool recordingStarted = false;
+
+      for (final encoder in encoders) {
+        try {
+          final success = await _startFileRecording(encoder);
+          if (success) {
+            recordingStarted = true;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (!recordingStarted) {
+        throw Exception('Failed to start recording with any encoder');
+      }
+    }
+
+    return true;
+  }
+
+  Future<bool> _startFileRecording(AudioEncoder encoder) async {
+    try {
       final config = RecordConfig(
         encoder: encoder,
         sampleRate: 16000,
+        bitRate: 128000,
         numChannels: 1,
       );
 
-      if (useStreaming) {
-        await _audioRecorder.startStream(config);
-      } else {
-        await _audioRecorder.start(config, path: _recordingPath!);
+      await _audioRecorder.start(config, path: _recordingPath!);
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      final isRecording = await _audioRecorder.isRecording();
+
+      if (!isRecording) {
+        return false;
       }
 
-      _monitorRecordingDuration();
-
       return true;
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error starting recording: $e',
-        name: 'AudioService',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      await _cleanup();
+    } catch (e) {
       return false;
     }
   }
 
-  void _monitorRecordingDuration() {
-    _durationTimer?.cancel();
-    final startTime = DateTime.now();
-
-    _durationTimer = Timer.periodic(AppConstants.recordingCheckInterval, (
-      timer,
-    ) async {
-      if (!await _audioRecorder.isRecording()) {
-        timer.cancel();
-        return;
-      }
-      final elapsed = DateTime.now().difference(startTime);
-      if (elapsed >= AppConstants.recordingMaxDuration) {
-        await stopRecording();
-        timer.cancel();
-      }
-    });
-  }
-
   Future<File?> stopRecording() async {
-    _durationTimer?.cancel();
-    if (!await _audioRecorder.isRecording()) {
-      return _currentAudioFile?.existsSync() == true ? _currentAudioFile : null;
+    final isCurrentlyRecording = await _audioRecorder.isRecording();
+
+    if (!isCurrentlyRecording) {
+      if (_recordingPath != null) {
+        final existingFile = File(_recordingPath!);
+        if (await existingFile.exists()) {
+          final size = await existingFile.length();
+          return size > 0 ? existingFile : null;
+        }
+      }
+      return _currentAudioFile;
     }
 
     File? recordedFile;
+
     try {
       final path = await _audioRecorder.stop();
+
       if (path != null) {
-        _recordingPath = path;
-        await Future.delayed(const Duration(milliseconds: 300));
-        final file = File(_recordingPath!);
-        if (await file.exists()) {
-          _currentAudioFile = file;
-          recordedFile = _currentAudioFile;
+        if (path != _recordingPath) {
+          _recordingPath = path;
         }
+
+        final file = File(_recordingPath!);
+
+        final fileExists = await file.exists();
+
+        if (fileExists) {
+          final fileSize = await file.length();
+
+          if (fileSize > 0) {
+            recordedFile = file;
+          } else {
+            recordedFile = null;
+          }
+        } else {
+          recordedFile = null;
+        }
+      } else {
+        recordedFile = null;
       }
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error stopping recording: $e',
-        name: 'AudioService',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } catch (e) {
       recordedFile = null;
     }
+
     return recordedFile;
   }
 
@@ -120,7 +161,6 @@ class AudioService {
   }
 
   Future<void> _cleanup() async {
-    _durationTimer?.cancel();
     if (await _audioRecorder.isRecording()) {
       await _audioRecorder.stop();
     }

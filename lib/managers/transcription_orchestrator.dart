@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
 
 import '../services/audio_service.dart';
 import '../services/vosk_service.dart';
@@ -68,10 +67,12 @@ class TranscriptionOrchestrator {
   );
 
   /// Starts recording or streaming based on [type].
-  Future<bool> startRecording(ModelType type) async {
+  Future<bool> startRecording(
+    ModelType type, {
+    bool whisperRealtime = false,
+  }) async {
     return await _operationManager.executeSequentially(() async {
       if (_isRecording) {
-        developer.log('Recording already in progress', name: 'Orchestrator');
         return false;
       }
 
@@ -94,10 +95,7 @@ class TranscriptionOrchestrator {
               );
             }
           } catch (e) {
-            developer.log(
-              'Error parsing Vosk partial: $e',
-              name: 'Orchestrator',
-            );
+            // Ignore parsing errors for partial results
           }
         });
 
@@ -110,63 +108,60 @@ class TranscriptionOrchestrator {
               _partialController.add(
                 _voskService.resultBuffer.getCompleteText(),
               );
-              developer.log(
-                'Vosk final result captured: "$text"',
-                name: 'Orchestrator',
-              );
             }
           } catch (e) {
-            developer.log(
-              'Error parsing Vosk result: $e',
-              name: 'Orchestrator',
-            );
+            // Ignore parsing errors for final results
           }
         });
 
         await service.start();
         _isRecording = true;
-        developer.log(
-          'Vosk recording started successfully',
-          name: 'Orchestrator',
-        );
         return true;
       } else {
-        final success = await _audioService.startRecording(useStreaming: false);
-        if (success) {
-          _isRecording = true;
-          developer.log(
-            'Whisper recording started successfully',
-            name: 'Orchestrator',
-          );
+        if (whisperRealtime && _whisperService != null) {
+          await _partialSub?.cancel();
+          _partialSub = _whisperService.onPartial.listen((p) {
+            _partialController.add(p);
+          });
+
+          final success = await _whisperService.startRealtimeRecording();
+          if (success) {
+            _isRecording = true;
+          }
+          return success;
         }
-        return success;
+
+        try {
+          final success = await _audioService.startRecording(
+            useStreaming: false,
+          );
+          if (success) {
+            _isRecording = true;
+          }
+          return success;
+        } catch (e) {
+          rethrow;
+        }
       }
     });
   }
 
   /// Stops recording/streaming and returns the transcription text and audio path.
-  Future<TranscriptionOutput> stopRecording(ModelType type) async {
+  Future<TranscriptionOutput> stopRecording(
+    ModelType type, {
+    bool whisperRealtime = false,
+  }) async {
     return await _operationManager.executeSequentially(() async {
       if (!_isRecording) {
-        developer.log('No recording in progress to stop', name: 'Orchestrator');
         return TranscriptionOutput(text: '', audioPath: '');
       }
 
       if (type == ModelType.vosk) {
         final service = _voskService.speechService;
         if (service == null) {
-          developer.log(
-            'Vosk service not available during stop - likely immediate stop',
-            name: 'Orchestrator',
-          );
           _isRecording = false;
           return TranscriptionOutput(text: '', audioPath: '');
         }
-
-        developer.log(
-          'Stopping Vosk recording gracefully...',
-          name: 'Orchestrator',
-        );
 
         try {
           final completeText = await _voskService.stopGracefully();
@@ -178,18 +173,8 @@ class TranscriptionOrchestrator {
 
           _isRecording = false;
 
-          developer.log(
-            'Vosk recording stopped. Final text: "$completeText"',
-            name: 'Orchestrator',
-          );
-
           return TranscriptionOutput(text: completeText, audioPath: '');
         } catch (e) {
-          developer.log(
-            'Error stopping Vosk gracefully (likely immediate stop): $e',
-            name: 'Orchestrator',
-          );
-
           await _partialSub?.cancel();
           await _resultSub?.cancel();
           _partialSub = null;
@@ -200,51 +185,54 @@ class TranscriptionOrchestrator {
         }
       } else {
         if (_whisperService == null) {
-          developer.log(
-            'Whisper service not available during stop',
-            name: 'Orchestrator',
-          );
           _isRecording = false;
           return TranscriptionOutput(text: '', audioPath: '');
+        }
+
+        if (whisperRealtime) {
+          final text = await _whisperService.stopRealtimeRecording();
+          _isRecording = false;
+          await _partialSub?.cancel();
+          _partialSub = null;
+          return TranscriptionOutput(text: text, audioPath: '');
         }
 
         try {
           final audioFile = await _audioService.stopRecording();
           _isRecording = false;
 
-          if (audioFile == null || !await audioFile.exists()) {
-            developer.log(
-              'Recorded audio file not found - likely immediate stop',
-              name: 'Orchestrator',
-            );
+          if (audioFile == null) {
+            return TranscriptionOutput(text: '', audioPath: '');
+          }
+
+          final fileExists = await audioFile.exists();
+
+          if (!fileExists) {
             return TranscriptionOutput(text: '', audioPath: '');
           }
 
           final fileSize = await audioFile.length();
-          if (fileSize < 1000) {
-            developer.log(
-              'Recording too short or empty - likely immediate stop',
-              name: 'Orchestrator',
-            );
+
+          // Check for truly empty files (header-only or corrupt files)
+          if (fileSize < 300) {
             return TranscriptionOutput(text: '', audioPath: '');
+          }
+
+          if (!_whisperService.isInitialized) {
+            final success = await _whisperService.initialize();
+            if (!success) {
+              return TranscriptionOutput(text: '', audioPath: '');
+            }
           }
 
           final transcriptionText = await _whisperService.transcribeFile(
             audioFile.path,
           );
-          final text = transcriptionText?.trim() ?? '';
 
-          developer.log(
-            'Whisper transcription completed: "$text"',
-            name: 'Orchestrator',
-          );
+          final text = transcriptionText?.trim() ?? '';
 
           return TranscriptionOutput(text: text, audioPath: audioFile.path);
         } catch (e) {
-          developer.log(
-            'Error during Whisper stop (likely immediate stop): $e',
-            name: 'Orchestrator',
-          );
           _isRecording = false;
           return TranscriptionOutput(text: '', audioPath: '');
         }

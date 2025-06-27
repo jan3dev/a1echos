@@ -1,6 +1,6 @@
 ---
 description: creative phase metrics
-globs: creative-phase-metrics.mdc
+globs: creative-phase-metrics.md
 alwaysApply: false
 ---
 

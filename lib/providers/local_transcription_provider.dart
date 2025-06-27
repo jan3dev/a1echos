@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:developer' as developer;
 import 'dart:async';
 
 import '../models/transcription.dart';
@@ -62,17 +61,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
     if (_isOperationLocked) {
       if (operationName == 'stopRecordingAndSave' &&
           _stateManager.isRecording) {
-        developer.log(
-          'Allowing stop operation to proceed despite lock - recording in progress',
-          name: 'LocalTranscriptionProvider',
-        );
         return true;
       }
 
-      developer.log(
-        'Operation "$operationName" rejected - another operation in progress',
-        name: 'LocalTranscriptionProvider',
-      );
       return false;
     }
 
@@ -81,29 +72,17 @@ class LocalTranscriptionProvider with ChangeNotifier {
       if (_lastOperationTime != null) {
         final timeSinceLastOperation = now.difference(_lastOperationTime!);
         if (timeSinceLastOperation < _minimumOperationInterval) {
-          developer.log(
-            'Operation "$operationName" rejected - too soon after last operation',
-            name: 'LocalTranscriptionProvider',
-          );
           return false;
         }
       }
     }
 
     if (!_modelManager.isInitialized && operationName != 'initialization') {
-      developer.log(
-        'Operation "$operationName" rejected - model not initialized',
-        name: 'LocalTranscriptionProvider',
-      );
       return false;
     }
 
     if (_modelManager.isOperationInProgress &&
         operationName != 'stopRecordingAndSave') {
-      developer.log(
-        'Operation "$operationName" rejected - orchestrator busy',
-        name: 'LocalTranscriptionProvider',
-      );
       return false;
     }
 
@@ -111,17 +90,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
     _lastOperationTime = DateTime.now();
     _activeOperations.add(operationName);
 
-    developer.log(
-      'Operation lock acquired for: $operationName',
-      name: 'LocalTranscriptionProvider',
-    );
-
     Timer(_operationTimeout, () {
       if (_activeOperations.contains(operationName)) {
-        developer.log(
-          'Operation "$operationName" timed out - releasing lock',
-          name: 'LocalTranscriptionProvider',
-        );
         _releaseOperationLock(operationName);
       }
     });
@@ -133,11 +103,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
   void _releaseOperationLock(String operationName) {
     _isOperationLocked = false;
     _activeOperations.remove(operationName);
-
-    developer.log(
-      'Operation lock released for: $operationName',
-      name: 'LocalTranscriptionProvider',
-    );
   }
 
   /// Validates if an operation can be performed in current state
@@ -146,10 +111,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     TranscriptionState requiredState,
   ) {
     if (_stateManager.state != requiredState) {
-      developer.log(
-        'Operation "$operationName" invalid - current state: ${_stateManager.state}, required: $requiredState',
-        name: 'LocalTranscriptionProvider',
-      );
       return false;
     }
     return true;
@@ -159,13 +120,27 @@ class LocalTranscriptionProvider with ChangeNotifier {
   void _onPartialTranscription(String partial) {
     _uiStateProvider.updateStreamingText(partial);
 
-    if (_modelManager.selectedModelType == ModelType.vosk &&
-        _stateManager.isRecording) {
+    final isVosk = _modelManager.selectedModelType == ModelType.vosk;
+    final isWhisperRT =
+        _modelManager.selectedModelType == ModelType.whisper &&
+        _modelManager.whisperRealtime;
+
+    if ((isVosk || isWhisperRT) && _stateManager.isRecording) {
       final sessionId =
           _uiStateProvider.recordingSessionId ??
           _sessionProvider.activeSessionId;
+
+      // For real-time models (Vosk or Whisper RT), use live preview during recording
+      if (isVosk) {
+        _uiStateProvider.updateLivePreview(partial, sessionId);
+        _uiStateProvider.clearWhisperLoadingPreview();
+      } else if (isWhisperRT) {
+        _uiStateProvider.updateLivePreview(partial, sessionId);
+        _uiStateProvider.clearWhisperLoadingPreview();
+      }
+
       _uiStateProvider.updatePreviewForRecording(
-        ModelType.vosk,
+        _modelManager.selectedModelType,
         partial,
         sessionId,
         true,
@@ -181,10 +156,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     if (_uiStateProvider.recordingSessionId != null &&
         _uiStateProvider.recordingSessionId !=
             _sessionProvider.activeSessionId) {
-      developer.log(
-        'Session changed during recording/transcribing. Clearing previews for UI consistency.',
-        name: 'LocalTranscriptionProvider',
-      );
       _uiStateProvider.cleanupPreviewsForSessionChange(
         _sessionProvider.activeSessionId,
       );
@@ -208,23 +179,25 @@ class LocalTranscriptionProvider with ChangeNotifier {
       await _dataProvider.loadTranscriptions();
 
       await _modelManager.loadSelectedModelType();
-      final error = await _modelManager.initializeSelectedModel();
 
-      if (error != null) {
-        _stateManager.setError(error);
-        return;
+      final bool isFileBasedWhisper =
+          _modelManager.selectedModelType == ModelType.whisper &&
+          !_modelManager.whisperRealtime;
+
+      if (isFileBasedWhisper) {
+        _modelManager.markAsInitializedForFileBased();
+      } else {
+        final error = await _modelManager.initializeSelectedModel();
+        if (error != null) {
+          _stateManager.setError(error);
+          return;
+        }
       }
 
       _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
 
       _stateManager.transitionTo(TranscriptionState.ready);
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error during initialization: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } catch (e) {
       _stateManager.setError('Failed to initialize transcription system: $e');
     } finally {
       _releaseOperationLock(operationName);
@@ -245,7 +218,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   ModelType get selectedModelType => _modelManager.selectedModelType;
   bool get isInitializing => _modelManager.isInitializing;
-  bool get isDownloadingModel => _modelManager.isDownloadingModel;
   String? get initializationStatus => _modelManager.initializationStatus;
 
   String get currentStreamingText => _uiStateProvider.currentStreamingText;
@@ -265,6 +237,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   bool get isOperationInProgress =>
       _isOperationLocked || _modelManager.isOperationInProgress;
+
+  bool get whisperRealtime => _modelManager.whisperRealtime;
 
   // ============================================================================
   // PUBLIC API - Operations
@@ -302,14 +276,15 @@ class LocalTranscriptionProvider with ChangeNotifier {
   Future<bool> startRecording() async {
     const operationName = 'startRecording';
 
-    if (!_modelManager.isInitialized) {
-      developer.log(
-        'Model not ready for recording, attempting reinitialization',
-        name: 'LocalTranscriptionProvider',
-      );
+    // Real-time modes (Vosk, Whisper RT) require an initialized model upfront.
+    // File-based Whisper does not.
+    final bool isRealtime =
+        _modelManager.selectedModelType == ModelType.vosk ||
+        (_modelManager.selectedModelType == ModelType.whisper &&
+            _modelManager.whisperRealtime);
 
+    if (isRealtime && !_modelManager.isInitialized) {
       await _modelManager.forceReinitialize();
-
       await Future.delayed(const Duration(milliseconds: 100));
 
       if (!_modelManager.isInitialized) {
@@ -341,6 +316,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
       final success = await _operationProvider.startRecording(
         _modelManager.selectedModelType,
         sessionId,
+        _modelManager.whisperRealtime,
       );
 
       if (!success) {
@@ -349,28 +325,22 @@ class LocalTranscriptionProvider with ChangeNotifier {
         return false;
       }
 
-      if (_modelManager.selectedModelType == ModelType.vosk) {
-        _uiStateProvider.updateLiveVoskPreview('', sessionId);
-        _uiStateProvider.clearWhisperLoadingPreview();
+      final isLivePreview =
+          _modelManager.selectedModelType == ModelType.vosk ||
+          (_modelManager.selectedModelType == ModelType.whisper &&
+              _modelManager.whisperRealtime);
+      if (isLivePreview) {
+        _uiStateProvider.clearLivePreview();
       } else {
-        _uiStateProvider.clearLiveVoskPreview();
+        _uiStateProvider.clearWhisperLoadingPreview();
       }
 
-      developer.log(
-        'Recording started successfully for session: $sessionId',
-        name: 'LocalTranscriptionProvider',
-      );
-
       return true;
-    } catch (e, stack) {
-      _stateManager.setError('Failed to start recording: $e');
+    } catch (e) {
+      final errorMessage = 'Failed to start recording: $e';
+
+      _stateManager.setError(errorMessage);
       _uiStateProvider.clearRecordingSessionId();
-      developer.log(
-        'Error starting recording: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stack,
-      );
       return false;
     } finally {
       _releaseOperationLock(operationName);
@@ -382,10 +352,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     const operationName = 'stopRecordingAndSave';
 
     if (!_stateManager.isRecording) {
-      developer.log(
-        'Stop recording called but not in recording state: ${_stateManager.state}',
-        name: 'LocalTranscriptionProvider',
-      );
       return;
     }
 
@@ -403,7 +369,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
     final sessionId =
         _uiStateProvider.recordingSessionId ?? _sessionProvider.activeSessionId;
 
-    if (modelType == ModelType.whisper) {
+    if (modelType == ModelType.whisper && !_modelManager.whisperRealtime) {
       _uiStateProvider.createWhisperLoadingPreview(sessionId);
     }
 
@@ -411,10 +377,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
       final result = await _operationProvider.stopRecordingAndTranscribe(
         modelType,
         sessionId,
+        _modelManager.whisperRealtime,
       );
 
-      if (modelType == ModelType.vosk) {
-        _uiStateProvider.clearLiveVoskPreview();
+      final isLivePreview =
+          modelType == ModelType.vosk ||
+          (modelType == ModelType.whisper && _modelManager.whisperRealtime);
+      if (isLivePreview) {
+        _uiStateProvider.clearLivePreview();
       } else {
         _uiStateProvider.clearWhisperLoadingPreview();
       }
@@ -423,31 +393,16 @@ class LocalTranscriptionProvider with ChangeNotifier {
         if (result.transcription != null &&
             result.transcription!.text.trim().isNotEmpty) {
           _dataProvider.addTranscription(result.transcription!);
-          developer.log(
-            'Recording stopped and transcription saved successfully',
-            name: 'LocalTranscriptionProvider',
-          );
-        } else {
-          developer.log(
-            'Recording stopped successfully - no speech detected (empty recording)',
-            name: 'LocalTranscriptionProvider',
-          );
         }
         _stateManager.transitionTo(TranscriptionState.ready);
       } else {
         final errorMessage = result.errorMessage ?? 'Unknown error';
         _stateManager.setError(errorMessage);
       }
-    } catch (e, stack) {
+    } catch (e) {
       _stateManager.setError('Error stopping/saving transcription: $e');
-      developer.log(
-        'Error in stopRecordingAndSave: $e',
-        name: 'LocalTranscriptionProvider',
-        error: e,
-        stackTrace: stack,
-      );
 
-      _uiStateProvider.clearLiveVoskPreview();
+      _uiStateProvider.clearLivePreview();
       _uiStateProvider.clearWhisperLoadingPreview();
     } finally {
       _uiStateProvider.clearRecordingSessionId();
@@ -488,24 +443,17 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   /// Forces system reset to clear any stuck states
   Future<void> forceSystemReset() async {
-    developer.log(
-      'Force resetting system to clear stuck states',
-      name: 'LocalTranscriptionProvider',
-    );
-
     _isOperationLocked = false;
     _activeOperations.clear();
     _lastOperationTime = null;
 
     _uiStateProvider.clearRecordingSessionId();
-    _uiStateProvider.clearLiveVoskPreview();
+    _uiStateProvider.clearLivePreview();
     _uiStateProvider.clearWhisperLoadingPreview();
 
     await _modelManager.forceReinitialize();
 
     _stateManager.transitionTo(TranscriptionState.ready);
-
-    developer.log('System reset completed', name: 'LocalTranscriptionProvider');
   }
 
   // ============================================================================
@@ -535,6 +483,10 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   Future<void> deleteAllTranscriptionsForSession(String sessionId) =>
       _dataProvider.deleteAllTranscriptionsForSession(sessionId);
+
+  Future<void> setWhisperRealtime(bool value) async {
+    await _modelManager.setWhisperRealtime(value);
+  }
 
   @override
   void dispose() {

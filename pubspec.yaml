@@ -4,37 +4,39 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.2
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   record: ^6.0.0
-  path_provider: ^2.1.1
+  path_provider: ^2.1.5
   flutter_secure_storage: ^9.2.4
   encrypt: ^5.0.3
   permission_handler: ^12.0.0+1
-  provider: ^6.0.5
-  uuid: ^4.1.0
+  provider: ^6.1.5
+  uuid: ^4.5.1
   intl: ^0.20.2
-  path: ^1.8.3
+  path: ^1.9.1
   vosk_flutter: ^0.3.48
-  shared_preferences: ^2.2.3
+  shared_preferences: ^2.5.3
   whisper_flutter_new: ^1.0.1
-  flutter_svg: ^2.0.7
+  flutter_svg: ^2.0.9
   skeletonizer: ^2.0.1
   ui_components:
     git:
       url: https://github.com/jan3dev/aqua-design-system.git
       ref: main
   url_launcher: ^6.3.1
+  flutter_whisper_kit: ^0.1.0
+  flutter_whisper_kit_apple: ^0.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.14.3
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

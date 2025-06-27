@@ -61,23 +61,34 @@ _ActivePreviewState _handleVoskPreviewState(
 _ActivePreviewState _handleWhisperPreviewState(
   LocalTranscriptionProvider provider,
 ) {
+  final bool isRealtime = provider.whisperRealtime;
+
   if (provider.isRecording) {
-    if (provider.loadingWhisperTranscriptionPreview != null) {
+    if (isRealtime && provider.liveVoskTranscriptionPreview != null) {
+      return _ActivePreviewState(
+        item: provider.liveVoskTranscriptionPreview,
+        isVoskStreamingLive: true,
+      );
+    }
+
+    if (!isRealtime && provider.loadingWhisperTranscriptionPreview != null) {
       return _ActivePreviewState(
         item: provider.loadingWhisperTranscriptionPreview,
         isWhisperRecording: true,
       );
-    } else {
-      return _ActivePreviewState(
-        item: Transcription(
-          id: 'whisper_recording_preview',
-          text: '',
-          timestamp: DateTime.now(),
-          audioPath: '',
-        ),
-        isWhisperRecording: true,
-      );
     }
+
+    return _ActivePreviewState(
+      item: Transcription(
+        id: isRealtime
+            ? 'whisper_realtime_recording_preview'
+            : 'whisper_recording_preview',
+        text: '',
+        timestamp: DateTime.now(),
+        audioPath: '',
+      ),
+      isWhisperRecording: !isRealtime,
+    );
   } else if (provider.isTranscribing &&
       provider.loadingWhisperTranscriptionPreview != null) {
     return _ActivePreviewState(
@@ -133,16 +144,16 @@ class TranscriptionList extends StatelessWidget {
         final bool isPreview =
             activePreviewItem != null &&
             transcription.id == activePreviewItem.id;
-        final _ActivePreviewState itemState =
-            isPreview ? previewState : _ActivePreviewState.empty();
+        final _ActivePreviewState itemState = isPreview
+            ? previewState
+            : _ActivePreviewState.empty();
 
         return TranscriptionItem(
           transcription: transcription,
           selectionMode: itemState.isPreviewItem ? false : selectionMode,
-          isSelected:
-              itemState.isPreviewItem
-                  ? false
-                  : selectedTranscriptionIds.contains(transcription.id),
+          isSelected: itemState.isPreviewItem
+              ? false
+              : selectedTranscriptionIds.contains(transcription.id),
           isLivePreviewItem: itemState.isVoskStreamingLive,
           isLoadingVoskResult: itemState.isVoskLoadingResult,
           isLoadingWhisperResult: itemState.isWhisperLoading,

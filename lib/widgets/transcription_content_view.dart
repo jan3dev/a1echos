@@ -48,11 +48,28 @@ class TranscriptionContentView extends StatelessWidget {
                 (provider.isTranscribing &&
                     provider.liveVoskTranscriptionPreview != null));
 
-        bool anyPreviewActive = whisperPreviewIsActive || voskPreviewIsActive;
+        bool whisperRealtimePreviewIsActive =
+            provider.selectedModelType == ModelType.whisper &&
+            provider.whisperRealtime &&
+            provider.isRecording &&
+            provider.liveVoskTranscriptionPreview != null;
 
-        if (provider.sessionTranscriptions.isEmpty && !anyPreviewActive && !provider.isRecording) {
+        bool anyPreviewActive =
+            whisperPreviewIsActive ||
+            voskPreviewIsActive ||
+            whisperRealtimePreviewIsActive;
+
+        if (provider.sessionTranscriptions.isEmpty &&
+            !anyPreviewActive &&
+            !provider.isRecording) {
           return const EmptyTranscriptionsState();
         }
+
+        bool shouldShowLiveTranscription =
+            provider.isRecording ||
+            (provider.selectedModelType == ModelType.whisper &&
+                provider.whisperRealtime &&
+                provider.liveVoskTranscriptionPreview != null);
 
         return Positioned(
           top: 0,
@@ -61,16 +78,15 @@ class TranscriptionContentView extends StatelessWidget {
           bottom: 128,
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child:
-                provider.isRecording
-                    ? LiveTranscriptionView(controller: scrollController)
-                    : TranscriptionList(
-                      controller: scrollController,
-                      selectionMode: selectionMode,
-                      selectedTranscriptionIds: selectedTranscriptionIds,
-                      onTranscriptionTap: onTranscriptionTap,
-                      onTranscriptionLongPress: onTranscriptionLongPress,
-                    ),
+            child: shouldShowLiveTranscription
+                ? LiveTranscriptionView(controller: scrollController)
+                : TranscriptionList(
+                    controller: scrollController,
+                    selectionMode: selectionMode,
+                    selectedTranscriptionIds: selectedTranscriptionIds,
+                    onTranscriptionTap: onTranscriptionTap,
+                    onTranscriptionLongPress: onTranscriptionLongPress,
+                  ),
           ),
         );
       },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ui_components/ui_components.dart';
+
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
@@ -9,7 +10,6 @@ import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
-import 'dart:developer' as developer;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen>
         listen: false,
       ).removeListener(_scrollToBottom);
     } catch (e) {
-      developer.log('Error removing listener: $e', name: '_HomeScreenState');
+      // Ignore listener removal errors
     }
     _scrollController.dispose();
     super.dispose();
@@ -83,10 +83,9 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
       if (settingsProvider.isIncognitoMode) {
-        final incognitoSessions =
-            sessionProvider.sessions
-                .where((session) => session.isIncognito)
-                .toList();
+        final incognitoSessions = sessionProvider.sessions
+            .where((session) => session.isIncognito)
+            .toList();
         for (var session in incognitoSessions) {
           sessionProvider.deleteSession(session.id);
         }
@@ -131,9 +130,8 @@ class _HomeScreenState extends State<HomeScreen>
             selectionMode: selectionMode,
             selectedSessionIds: selectedSessionIds,
             onSessionLongPress: handleSessionLongPress,
-            onSessionTap:
-                (sessionId) =>
-                    openSession(sessionId, selectionMode: selectionMode),
+            onSessionTap: (sessionId) =>
+                openSession(sessionId, selectionMode: selectionMode),
             onSelectionToggle: toggleSessionSelection,
           ),
           Positioned(

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:developer' as developer;
 import 'package:vosk_flutter/vosk_flutter.dart';
 import 'dart:convert';
 
@@ -81,10 +80,6 @@ class VoskService {
   Future<bool> initialize(String assetPath) async {
     // Vosk only supports Android platform
     if (!Platform.isAndroid) {
-      developer.log(
-        'VoskService: iOS platform not supported, Vosk only works on Android',
-        name: 'VoskService',
-      );
       return false;
     }
 
@@ -93,7 +88,7 @@ class VoskService {
       // Initialize Vosk components only on Android
       _plugin = VoskFlutterPlugin.instance();
       _modelLoader = ModelLoader();
-      
+
       final modelPath = await _modelLoader!.loadFromAssets(assetPath);
       _model = await _plugin!.createModel(modelPath);
       if (_model == null) throw Exception('Failed to create Vosk model');
@@ -108,19 +103,8 @@ class VoskService {
 
       _speechService = await _plugin!.initSpeechService(_recognizer!);
       initResult = _speechService != null;
-      
-      if (initResult) {
-        developer.log(
-          'VoskService initialized successfully on Android',
-          name: 'VoskService',
-        );
-      }
-    } catch (e, stack) {
-      developer.log(
-        'VoskService initialization error: $e',
-        error: e,
-        stackTrace: stack,
-      );
+    } catch (e) {
+      // Vosk initialization failed
     }
     return initResult;
   }
@@ -150,7 +134,6 @@ class VoskService {
 
       timeoutTimer = Timer(timeout, () {
         if (!completer.isCompleted) {
-          developer.log('Final result timeout reached', name: 'VoskService');
           resultSub?.cancel();
           completer.complete(null);
         }
@@ -166,7 +149,7 @@ class VoskService {
             completer.complete(text);
           }
         } catch (e) {
-          developer.log('Error parsing final result: $e', name: 'VoskService');
+          // Error parsing final result
         }
       });
 
@@ -180,7 +163,6 @@ class VoskService {
 
       return await completer.future;
     } catch (e) {
-      developer.log('Error getting final result: $e', name: 'VoskService');
       return null;
     }
   }
@@ -205,19 +187,8 @@ class VoskService {
 
       final completeText = _resultBuffer.getCompleteText();
 
-      developer.log(
-        'Graceful shutdown complete. Buffer: ${_resultBuffer.getDebugInfo()}, Text: "$completeText"',
-        name: 'VoskService',
-      );
-
       return completeText;
-    } catch (e, stack) {
-      developer.log(
-        'Error during graceful shutdown: $e',
-        error: e,
-        stackTrace: stack,
-        name: 'VoskService',
-      );
+    } catch (e) {
       return _resultBuffer.getCompleteText();
     }
   }

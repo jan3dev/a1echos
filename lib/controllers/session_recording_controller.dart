@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:developer' as developer;
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 
@@ -42,41 +41,13 @@ class SessionRecordingController with ChangeNotifier {
   /// Starts recording for the current session with enhanced validation
   Future<bool> startRecording() async {
     if (!isReadyForRecording) {
-      developer.log(
-        'Cannot start recording - system not ready. Model ready: ${_transcriptionProvider.isModelReady}, Operation in progress: $isOperationInProgress',
-        name: 'SessionRecordingController',
-      );
       return false;
     }
 
     try {
-      developer.log(
-        'Starting recording for session: $currentSessionId',
-        name: 'SessionRecordingController',
-      );
-
       final success = await _transcriptionProvider.startRecording();
-
-      if (success) {
-        developer.log(
-          'Recording started successfully',
-          name: 'SessionRecordingController',
-        );
-      } else {
-        developer.log(
-          'Failed to start recording',
-          name: 'SessionRecordingController',
-        );
-      }
-
       return success;
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error starting recording: $e',
-        name: 'SessionRecordingController',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } catch (e) {
       rethrow;
     }
   }
@@ -84,32 +55,12 @@ class SessionRecordingController with ChangeNotifier {
   /// Stops recording and saves the transcription with enhanced validation
   Future<void> stopRecordingAndSave() async {
     if (!isRecording && !isTranscribing) {
-      developer.log(
-        'Cannot stop recording - no active recording or transcription',
-        name: 'SessionRecordingController',
-      );
       return;
     }
 
     try {
-      developer.log(
-        'Stopping recording and saving transcription',
-        name: 'SessionRecordingController',
-      );
-
       await _transcriptionProvider.stopRecordingAndSave();
-
-      developer.log(
-        'Recording stopped and transcription saved successfully',
-        name: 'SessionRecordingController',
-      );
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error stopping recording: $e',
-        name: 'SessionRecordingController',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } catch (e) {
       rethrow;
     }
   }
@@ -135,54 +86,24 @@ class SessionRecordingController with ChangeNotifier {
   Future<void> recoverFromError() async {
     if (error != null) {
       try {
-        developer.log(
-          'Attempting to recover from error state',
-          name: 'SessionRecordingController',
-        );
-
         if (error!.toLowerCase().contains('model not ready') ||
             error!.toLowerCase().contains('not initialized')) {
           await _transcriptionProvider.forceSystemReset();
         } else {
           await _transcriptionProvider.reinitializeModel();
         }
-
-        developer.log(
-          'Recovery attempt completed',
-          name: 'SessionRecordingController',
-        );
-      } catch (e, stackTrace) {
-        developer.log(
-          'Error during recovery attempt: $e',
-          name: 'SessionRecordingController',
-          error: e,
-          stackTrace: stackTrace,
-        );
+      } catch (e) {
+        // Ignore error
       }
     }
   }
 
-  /// Forces a complete system reset to clear stuck states
+  /// Forces a complete system reset
   Future<void> forceSystemReset() async {
     try {
-      developer.log(
-        'Forcing complete system reset',
-        name: 'SessionRecordingController',
-      );
-
       await _transcriptionProvider.forceSystemReset();
-
-      developer.log(
-        'System reset completed successfully',
-        name: 'SessionRecordingController',
-      );
-    } catch (e, stackTrace) {
-      developer.log(
-        'Error during system reset: $e',
-        name: 'SessionRecordingController',
-        error: e,
-        stackTrace: stackTrace,
-      );
+    } catch (e) {
+      // Ignore error
     }
   }
 }

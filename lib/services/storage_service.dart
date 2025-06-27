@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer' as developer;
 import '../models/transcription.dart';
 import 'encryption_service.dart';
 import 'package:path_provider/path_provider.dart';
@@ -97,7 +96,7 @@ class StorageService {
           await file.delete();
         }
       } catch (e) {
-        developer.log("Error deleting audio file $path: $e");
+        // Ignore audio file deletion errors
       }
     }
   }
