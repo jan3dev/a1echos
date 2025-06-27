@@ -37,6 +37,7 @@ class AppStrings {
   static const String selectAll = 'Select All';
   static const String deleteSelected = 'Delete Selected';
   static const String retry = 'Retry';
+  static const String share = 'Share';
 
   // HomeScreen strings
   static const String homeDeleteSelectedSessionsTitle =
@@ -60,11 +61,12 @@ class AppStrings {
       'Delete Selected Transcriptions?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
-  static const String sessionDeleteTranscriptionsButton = 'Delete Transcriptions';
+  static const String sessionDeleteTranscriptionsButton =
+      'Delete Transcriptions';
   static const String sessionTranscriptionsDeleted = 'Transcriptions deleted';
   static const String sessionErrorDeletingTranscriptions =
       'Error deleting transcriptions: {error}';
-  
+
   // Snackbar messages
   static const String noTranscriptionsToCopy = 'No transcriptions to copy';
   static const String allTranscriptionsCopied =
@@ -81,7 +83,7 @@ class AppStrings {
   static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
   static const String retryInitialization = 'Retry Initialization';
-  
+
   // Model error dialog
   static const String modelNotReady = 'Model Not Ready';
   static const String modelInitFailure =
@@ -93,33 +95,38 @@ class AppStrings {
   static const String transcriptionModelDescription =
       'Select which model to use. All processing happens on your device.';
   static const String voskModelTitle = 'Vosk';
-  static const String voskModelSubtitle =
-      'Fast, real-time';
+  static const String voskModelSubtitle = 'Fast, real-time';
   static const String whisperModelTitle = 'Whisper';
-  static const String whisperModelSubtitle =
-      'High accuracy';
-  
+  static const String whisperModelRealtimeTitle = 'Whisper (Real-time)';
+  static const String whisperModelFileTitle = 'Whisper (File-based)';
+  static const String whisperModelSubtitle = 'High accuracy';
+  static const String modelNotAvailable = 'not available';
+  static const String whisperModelError = 'Whisper Model Error';
+  static const String unknownErrorOccured = 'Unknown error occurred';
+  static const String trySwitchingModelOrRestartingApp =
+      'Try switching to a different model or restarting the app.';
+
   // Recording strings
   static const String recordingPrefix = 'Session';
-  
+
   // Empty states
   static const String emptySessionsMessage =
       'Hit the record button to start capturing and transcribing your voice notes.';
-  
+
   // TranscriptionItem
   static const String copyToClipboard = 'Copied to clipboard';
-  
+
   // SessionListItem
   static const String modifiedPrefix = 'Modified';
 
   // ErrorView
   static const String errorPrefix = 'Error:';
-  
+
   // SessionInputModal
   static const String sessionNameLabel = 'Session Name';
   static const String sessionNameHint = 'Enter session name';
   static const String sessionNameMaxLengthHelper = 'Max 30 characters.';
-  
+
   // ModelStatusTile
   static const String modelReadySuffix = 'model is ready.';
   static const String modelFailedInitSuffix = 'model failed to initialize.';

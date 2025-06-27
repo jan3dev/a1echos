@@ -1,11 +1,12 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:ui_components/ui_components.dart';
+
 import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
 import '../widgets/recording_controls_view.dart';
 import '../constants/app_constants.dart';
 import '../widgets/modals/session_input_modal.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
@@ -164,6 +165,10 @@ class _SessionScreenState extends State<SessionScreen>
     _selectionController.handleTranscriptionLongPress(id);
   }
 
+  void _handleSharePressed() {
+    _selectionController.shareSelectedTranscriptions(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
@@ -180,8 +185,8 @@ class _SessionScreenState extends State<SessionScreen>
             sessionName: _navigationController.sessionName,
             selectionMode: _selectionController.selectionMode,
             isIncognitoSession: _navigationController.isIncognitoSession,
-            onBackPressed:
-                () => _navigationController.handleBackNavigation(context),
+            onBackPressed: () =>
+                _navigationController.handleBackNavigation(context),
             onTitlePressed: _handleTitlePressed,
             onEditPressed: _handleEditPressed,
             onCopyAllPressed: _handleCopyAllPressed,
@@ -198,7 +203,22 @@ class _SessionScreenState extends State<SessionScreen>
                 onTranscriptionTap: _handleTranscriptionTap,
                 onTranscriptionLongPress: _handleTranscriptionLongPress,
               ),
-              const RecordingControlsView(),
+              if (_selectionController.selectionMode)
+                Positioned(
+                  bottom: 32,
+                  left: 16,
+                  right: 16,
+                  child: Center(
+                    child: AquaButton.primary(
+                      text: AppStrings.share,
+                      onPressed: _selectionController.hasSelectedItems
+                          ? _handleSharePressed
+                          : null,
+                    ),
+                  ),
+                )
+              else
+                const RecordingControlsView(),
             ],
           ),
         );

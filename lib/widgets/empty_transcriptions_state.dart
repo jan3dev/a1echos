@@ -18,12 +18,18 @@ class EmptyTranscriptionsState extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 140.0),
+          padding: const EdgeInsets.only(
+            bottom: 140.0,
+            left: 16.0,
+            right: 16.0,
+          ),
           child: Text(
             message,
             maxLines: 5,
             textAlign: TextAlign.center,
-            style: AquaTypography.subtitleMedium.copyWith(color: colors.textPrimary),
+            style: AquaTypography.subtitleMedium.copyWith(
+              color: colors.textPrimary,
+            ),
           ),
         ),
       ],

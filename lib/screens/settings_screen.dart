@@ -108,7 +108,7 @@ class SettingsScreen extends StatelessWidget {
                             items.add(
                               buildItem(
                                 key: 'whisper_file',
-                                title: 'Whisper (File-based)',
+                                title: AppStrings.whisperModelFileTitle,
                                 subtitle: AppStrings.whisperModelSubtitle,
                                 enabled: true,
                                 onTap: () async {
@@ -136,10 +136,10 @@ class SettingsScreen extends StatelessWidget {
                             items.add(
                               buildItem(
                                 key: 'whisper_rt',
-                                title: 'Whisper (Real-time)',
+                                title: AppStrings.whisperModelRealtimeTitle,
                                 subtitle: rtEnabled
                                     ? AppStrings.whisperModelSubtitle
-                                    : 'not available',
+                                    : AppStrings.modelNotAvailable,
                                 enabled: rtEnabled,
                                 onTap: rtEnabled
                                     ? () async {
@@ -173,7 +173,7 @@ class SettingsScreen extends StatelessWidget {
                                 title: AppStrings.voskModelTitle,
                                 subtitle: voskEnabled
                                     ? AppStrings.voskModelSubtitle
-                                    : 'not available',
+                                    : AppStrings.modelNotAvailable,
                                 enabled: voskEnabled,
                                 onTap: voskEnabled
                                     ? () async {
@@ -229,7 +229,7 @@ class SettingsScreen extends StatelessWidget {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      'Whisper Model Error',
+                                      AppStrings.whisperModelError,
                                       style: AquaTypography.body1SemiBold
                                           .copyWith(
                                             color: aquaColors.accentDanger,
@@ -242,14 +242,14 @@ class SettingsScreen extends StatelessWidget {
                               Text(
                                 provider.error ??
                                     provider.initializationStatus ??
-                                    'Unknown error occurred',
+                                    AppStrings.unknownErrorOccured,
                                 style: AquaTypography.body2.copyWith(
                                   color: aquaColors.textSecondary,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Try switching to a different model or restarting the app.',
+                                AppStrings.trySwitchingModelOrRestartingApp,
                                 style: AquaTypography.body2.copyWith(
                                   color: aquaColors.textSecondary,
                                 ),
@@ -271,7 +271,7 @@ class SettingsScreen extends StatelessWidget {
                                     ),
                                   ),
                                   child: Text(
-                                    'Retry Initialization',
+                                    AppStrings.retryInitialization,
                                     style: AquaTypography.body2SemiBold
                                         .copyWith(
                                           color: aquaColors.textPrimary,

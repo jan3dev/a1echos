@@ -21,10 +21,9 @@ class ModelStatusTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
-    final modelName =
-        selectedModelType == ModelType.vosk
-            ? AppStrings.voskModelTitle
-            : AppStrings.whisperModelTitle;
+    final modelName = selectedModelType == ModelType.vosk
+        ? AppStrings.voskModelTitle
+        : AppStrings.whisperModelTitle;
 
     if (isModelReady) {
       return Container(

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../providers/local_transcription_provider.dart';
 import '../widgets/modals/confirmation_modal.dart';
 import '../constants/app_constants.dart';
+import '../services/share_service.dart';
 
 /// Controller for managing transcription selection and bulk operations
 class TranscriptionSelectionController with ChangeNotifier {
@@ -141,5 +144,37 @@ class TranscriptionSelectionController with ChangeNotifier {
   /// Checks if a transcription is selected
   bool isTranscriptionSelected(String transcriptionId) {
     return _selectedTranscriptionIds.contains(transcriptionId);
+  }
+
+  /// Shares selected transcriptions using the native share dialog
+  Future<void> shareSelectedTranscriptions(BuildContext context) async {
+    if (_selectedTranscriptionIds.isEmpty) return;
+
+    final selectedTranscriptions = _transcriptionProvider.sessionTranscriptions
+        .where((t) => _selectedTranscriptionIds.contains(t.id))
+        .toList();
+
+    if (selectedTranscriptions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transcriptions selected to share')),
+      );
+      return;
+    }
+
+    try {
+      final result = await ShareService.shareTranscriptions(
+        selectedTranscriptions,
+      );
+
+      if (result.status == ShareResultStatus.success) {
+        exitSelectionMode();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share: ${e.toString()}')),
+        );
+      }
+    }
   }
 }
