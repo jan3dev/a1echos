@@ -296,10 +296,11 @@ packages:
   flutter_whisper_kit_apple:
     dependency: "direct main"
     description:
-      name: flutter_whisper_kit_apple
-      sha256: "633c95d8abb8380a223a2399ed00f6e3f791fdbd1d2d2dfaba4da49ea3856ce0"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_whisper_kit_apple"
+      ref: main
+      resolved-ref: f6b5c09af5325d9fb6ecefe02fb493985db276c7
+      url: "https://github.com/jan3dev/flutter_whisper_kit.git"
+    source: git
     version: "0.2.0"
   freezed_annotation:
     dependency: transitive
