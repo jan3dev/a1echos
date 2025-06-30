@@ -297,10 +297,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_whisper_kit_apple
-      sha256: ab06ba83ad7768c213523dc09fe908d4508542487db8090bdf3edd73529e58a7
+      sha256: "633c95d8abb8380a223a2399ed00f6e3f791fdbd1d2d2dfaba4da49ea3856ce0"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.0"
+    version: "0.2.0"
   freezed_annotation:
     dependency: transitive
     description:
