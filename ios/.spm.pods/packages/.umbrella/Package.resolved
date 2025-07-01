@@ -1,5 +1,4 @@
 {
-  "originHash" : "8808a68f9616495a82f73f8e471df763f4425391fbcca8824817906673f39b19",
   "pins" : [
     {
       "identity" : "jinja",
@@ -47,5 +46,5 @@
       }
     }
   ],
-  "version" : 3
+  "version" : 2
 }

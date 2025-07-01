@@ -288,19 +288,19 @@ packages:
   flutter_whisper_kit:
     dependency: "direct main"
     description:
-      name: flutter_whisper_kit
-      sha256: "22e35719c27c6db8e6e2049116934edb16b025be1c85dce4df21f3de94fdecea"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.0"
-  flutter_whisper_kit_apple:
-    dependency: "direct main"
-    description:
-      path: "packages/flutter_whisper_kit_apple"
+      path: "packages/flutter_whisper_kit"
       ref: main
-      resolved-ref: f6b5c09af5325d9fb6ecefe02fb493985db276c7
+      resolved-ref: ab5d651e20b89f102e1c672c59185aeb115057e2
       url: "https://github.com/jan3dev/flutter_whisper_kit.git"
     source: git
+    version: "0.2.0"
+  flutter_whisper_kit_apple:
+    dependency: transitive
+    description:
+      name: flutter_whisper_kit_apple
+      sha256: "633c95d8abb8380a223a2399ed00f6e3f791fdbd1d2d2dfaba4da49ea3856ce0"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.2.0"
   freezed_annotation:
     dependency: transitive
@@ -658,10 +658,10 @@ packages:
     dependency: transitive
     description:
       name: record_linux
-      sha256: "29e7735b05c1944bb6c9b72a36c08d4a1b24117e712d6a9523c003bde12bf484"
+      sha256: "0626678a092c75ce6af1e32fe7fd1dea709b92d308bc8e3b6d6348e2430beb95"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.0"
+    version: "1.1.1"
   record_macos:
     dependency: transitive
     description:
@@ -682,10 +682,10 @@ packages:
     dependency: transitive
     description:
       name: record_web
-      sha256: "024c81eb7f51468b1833a3eca8b461c7ca25c04899dba37abe580bb57afd32e4"
+      sha256: a12856d0b3dd03d336b4b10d7520a8b3e21649a06a8f95815318feaa8f07adbb
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.8"
+    version: "1.1.9"
   record_windows:
     dependency: transitive
     description:

@@ -29,11 +29,10 @@ dependencies:
       url: https://github.com/jan3dev/aqua-design-system.git
       ref: main
   url_launcher: ^6.3.1
-  flutter_whisper_kit: ^0.1.0
-  flutter_whisper_kit_apple:
+  flutter_whisper_kit:
     git:
       url: https://github.com/jan3dev/flutter_whisper_kit.git
-      path: packages/flutter_whisper_kit_apple
+      path: packages/flutter_whisper_kit
       ref: main
   share_plus: ^11.0.0
 
