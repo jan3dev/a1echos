@@ -295,12 +295,13 @@ packages:
     source: git
     version: "0.2.0"
   flutter_whisper_kit_apple:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: flutter_whisper_kit_apple
-      sha256: "633c95d8abb8380a223a2399ed00f6e3f791fdbd1d2d2dfaba4da49ea3856ce0"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_whisper_kit_apple"
+      ref: main
+      resolved-ref: ab5d651e20b89f102e1c672c59185aeb115057e2
+      url: "https://github.com/jan3dev/flutter_whisper_kit.git"
+    source: git
     version: "0.2.0"
   freezed_annotation:
     dependency: transitive
