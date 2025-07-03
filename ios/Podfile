@@ -32,7 +32,7 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
-  spm_pkg "WhisperKit", :git => "https://github.com/argmaxinc/WhisperKit.git", :up_to_next_major_version => "0.13.0"
+  spm_pkg "WhisperKit", :git => "https://github.com/argmaxinc/WhisperKit.git", :version => "0.13.0"
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
