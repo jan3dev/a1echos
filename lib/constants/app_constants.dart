@@ -41,11 +41,11 @@ class AppStrings {
 
   // HomeScreen strings
   static const String homeDeleteSelectedSessionsTitle =
-      'Delete Selected Sessions?';
+      'Delete Selected {sessions}?';
   static const String homeDeleteSelectedSessionsMessage =
       'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
-  static const String homeDeleteSessionsButton = 'Delete Sessions';
-  static const String homeSessionsDeleted = 'Sessions deleted';
+  static const String homeDeleteSessionsButton = 'Delete {sessions}';
+  static const String homeSessionsDeleted = '{sessions} deleted';
   static const String homeErrorCreatingSession =
       'Error creating session: {error}';
 
@@ -58,14 +58,14 @@ class AppStrings {
   // SessionScreen strings
   static const String sessionRenameTitle = 'Rename';
   static const String sessionDeleteTranscriptionsTitle =
-      'Delete Selected Transcriptions?';
+      'Delete Selected {transcriptions}?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
   static const String sessionDeleteTranscriptionsButton =
-      'Delete Transcriptions';
-  static const String sessionTranscriptionsDeleted = 'Transcriptions deleted';
+      'Delete {transcriptions}';
+  static const String sessionTranscriptionsDeleted = '{transcriptions} deleted';
   static const String sessionErrorDeletingTranscriptions =
-      'Error deleting transcriptions: {error}';
+      'Error deleting {transcriptions}: {error}';
 
   // Snackbar messages
   static const String noTranscriptionsToCopy = 'No transcriptions to copy';
@@ -76,11 +76,6 @@ class AppStrings {
       'All transcriptions cleared for this session';
 
   // Clear All dialog
-  static const String clearAllDialogTitle = 'Delete All Transcriptions?';
-  static const String clearAllDialogContent =
-      'Are you sure you want to delete all transcriptions for this session? This action cannot be undone.';
-  static const String paragraphDeleted = 'Paragraph deleted';
-  static const String paragraphDeleteFailed = 'Failed to delete paragraph';
   static const String copiedToClipboard = 'Copied to clipboard';
   static const String retryInitialization = 'Retry Initialization';
 

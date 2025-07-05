@@ -45,16 +45,23 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
 
     ConfirmationModal.show(
       context: context,
-      title: AppStrings.homeDeleteSelectedSessionsTitle,
+      title: AppStrings.homeDeleteSelectedSessionsTitle.replaceAll(
+        '{sessions}',
+        _selectedSessionIds.length == 1 ? 'Session' : 'Sessions',
+      ),
       message: AppStrings.homeDeleteSelectedSessionsMessage
           .replaceAll('{count}', _selectedSessionIds.length.toString())
           .replaceAll(
             '{sessions}',
             _selectedSessionIds.length == 1 ? 'session' : 'sessions',
           ),
-      confirmText: AppStrings.homeDeleteSessionsButton,
+      confirmText: AppStrings.homeDeleteSessionsButton.replaceAll(
+        '{sessions}',
+        _selectedSessionIds.length == 1 ? 'Session' : 'Sessions',
+      ),
       onConfirm: () {
         Navigator.pop(context);
+        final deletedCount = _selectedSessionIds.length;
         for (var sessionId in _selectedSessionIds) {
           sessionProvider.deleteSession(sessionId);
         }
@@ -62,17 +69,17 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
           _selectionMode = false;
           _selectedSessionIds.clear();
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(AppStrings.homeSessionsDeleted)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.homeSessionsDeleted.replaceAll(
+                '{sessions}',
+                deletedCount == 1 ? 'Session' : 'Sessions',
+              ),
+            ),
+          ),
+        );
       },
     );
-  }
-
-  void exitSelectionMode() {
-    setState(() {
-      _selectionMode = false;
-      _selectedSessionIds.clear();
-    });
   }
 }

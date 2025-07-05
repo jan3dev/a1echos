@@ -109,11 +109,17 @@ class SessionMoreMenu extends StatelessWidget {
       } else if (value == 'delete') {
         ConfirmationModal.show(
           context: context,
-          title: AppStrings.homeDeleteSelectedSessionsTitle,
+          title: AppStrings.homeDeleteSelectedSessionsTitle.replaceAll(
+            '{sessions}',
+            'Session',
+          ),
           message: AppStrings.homeDeleteSelectedSessionsMessage
               .replaceAll('{count}', 'this')
               .replaceAll('{sessions}', 'session'),
-          confirmText: AppStrings.homeDeleteSessionsButton,
+          confirmText: AppStrings.homeDeleteSessionsButton.replaceAll(
+            '{sessions}',
+            'Session',
+          ),
           onConfirm: () {
             Navigator.pop(context);
             final provider = Provider.of<SessionProvider>(
@@ -122,7 +128,12 @@ class SessionMoreMenu extends StatelessWidget {
             );
             provider.deleteSession(session.id);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(AppStrings.homeSessionsDeleted)),
+              SnackBar(
+                content: Text(AppStrings.homeSessionsDeleted.replaceAll(
+                  '{sessions}',
+                  'Session',
+                )),
+              ),
             );
           },
         );

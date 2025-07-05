@@ -69,7 +69,12 @@ class TranscriptionSelectionController with ChangeNotifier {
 
     ConfirmationModal.show(
       context: context,
-      title: AppStrings.sessionDeleteTranscriptionsTitle,
+      title: AppStrings.sessionDeleteTranscriptionsTitle.replaceAll(
+        '{transcriptions}',
+        _selectedTranscriptionIds.length == 1
+            ? 'Transcription'
+            : 'Transcriptions',
+      ),
       message: AppStrings.sessionDeleteTranscriptionsMessage
           .replaceAll('{count}', _selectedTranscriptionIds.length.toString())
           .replaceAll(
@@ -78,12 +83,18 @@ class TranscriptionSelectionController with ChangeNotifier {
                 ? 'transcription'
                 : 'transcriptions',
           ),
-      confirmText: AppStrings.sessionDeleteTranscriptionsButton,
+      confirmText: AppStrings.sessionDeleteTranscriptionsButton.replaceAll(
+        '{transcriptions}',
+        _selectedTranscriptionIds.length == 1
+            ? 'Transcription'
+            : 'Transcriptions',
+      ),
       cancelText: AppStrings.cancel,
       onConfirm: () async {
         Navigator.pop(context);
 
         try {
+          final deletedCount = _selectedTranscriptionIds.length;
           await _transcriptionProvider.deleteTranscriptions(
             _selectedTranscriptionIds,
           );
@@ -91,7 +102,16 @@ class TranscriptionSelectionController with ChangeNotifier {
 
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(AppStrings.sessionTranscriptionsDeleted)),
+              SnackBar(
+                content: Text(
+                  AppStrings.sessionTranscriptionsDeleted.replaceAll(
+                    '{transcriptions}',
+                    deletedCount == 1
+                        ? 'Transcription'
+                        : 'Transcriptions',
+                  ),
+                ),
+              ),
             );
           }
         } catch (e) {
