@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  archive: ^3.6.1
   cupertino_icons: ^1.0.8
   record: ^6.0.0
   path_provider: ^2.1.5
@@ -46,6 +47,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/
+    - assets/models/whisper/ios/openai_whisper-tiny.zip
+    - assets/models/whisper/android/ggml-tiny.bin.zip
     - assets/fonts/
     - assets/icons/
   fonts:
