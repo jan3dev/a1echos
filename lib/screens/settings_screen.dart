@@ -83,34 +83,38 @@ class SettingsScreen extends StatelessWidget {
                               required String key,
                               required String title,
                               required String subtitle,
-                              required bool enabled,
                               required VoidCallback? onTap,
                             }) {
                               return AquaListItem(
                                 title: title,
                                 titleTrailing: subtitle,
-                                titleTrailingColor: aquaColors.textSecondary
-                                    .withOpacity(enabled ? 1.0 : 0.5),
+                                titleTrailingColor: aquaColors.textSecondary,
                                 iconTrailing: AquaRadio<String>(
                                   value: key,
                                   groupValue: selectedKey,
-                                  onChanged: enabled
-                                      ? (_) => onTap?.call()
-                                      : null,
+                                  onChanged: (_) => onTap?.call(),
                                 ),
-                                onTap: enabled ? onTap : null,
-                                backgroundColor: aquaColors.surfacePrimary
-                                    .withOpacity(enabled ? 1.0 : 0.5),
+                                onTap: onTap,
+                                backgroundColor: aquaColors.surfacePrimary,
                               );
                             }
 
-                            // Whisper File-based
+                            // Helper to add divider between items
+                            void addDivider() {
+                              items.add(
+                                Divider(
+                                  height: 1,
+                                  color: aquaColors.surfaceBorderPrimary,
+                                ),
+                              );
+                            }
+
+                            // Whisper File-based (available on both platforms)
                             items.add(
                               buildItem(
                                 key: 'whisper_file',
                                 title: AppStrings.whisperModelFileTitle,
                                 subtitle: AppStrings.whisperModelSubtitle,
-                                enabled: true,
                                 onTap: () async {
                                   if (provider.whisperRealtime) {
                                     await provider.setWhisperRealtime(false);
@@ -125,65 +129,44 @@ class SettingsScreen extends StatelessWidget {
                               ),
                             );
 
-                            // Whisper Real-time (enabled only on iOS)
-                            final bool rtEnabled = Platform.isIOS;
-                            items.add(
-                              Divider(
-                                height: 1,
-                                color: aquaColors.surfaceBorderPrimary,
-                              ),
-                            );
-                            items.add(
-                              buildItem(
-                                key: 'whisper_rt',
-                                title: AppStrings.whisperModelRealtimeTitle,
-                                subtitle: rtEnabled
-                                    ? AppStrings.whisperModelSubtitle
-                                    : AppStrings.modelNotAvailable,
-                                enabled: rtEnabled,
-                                onTap: rtEnabled
-                                    ? () async {
-                                        if (!provider.whisperRealtime) {
-                                          await provider.setWhisperRealtime(
-                                            true,
-                                          );
-                                        }
-                                        if (provider.selectedModelType !=
-                                            ModelType.whisper) {
-                                          await provider.changeModel(
-                                            ModelType.whisper,
-                                          );
-                                        }
-                                      }
-                                    : null,
-                              ),
-                            );
-
-                            // Vosk (enabled only on Android)
-                            items.add(
-                              Divider(
-                                height: 1,
-                                color: aquaColors.surfaceBorderPrimary,
-                              ),
-                            );
-                            final bool voskEnabled = Platform.isAndroid;
-                            items.add(
-                              buildItem(
-                                key: 'vosk',
-                                title: AppStrings.voskModelTitle,
-                                subtitle: voskEnabled
-                                    ? AppStrings.voskModelSubtitle
-                                    : AppStrings.modelNotAvailable,
-                                enabled: voskEnabled,
-                                onTap: voskEnabled
-                                    ? () async {
-                                        await provider.changeModel(
-                                          ModelType.vosk,
-                                        );
-                                      }
-                                    : null,
-                              ),
-                            );
+                            // Platform-specific models
+                            if (Platform.isIOS) {
+                              // iOS: Add Whisper Real-time
+                              addDivider();
+                              items.add(
+                                buildItem(
+                                  key: 'whisper_rt',
+                                  title: AppStrings.whisperModelRealtimeTitle,
+                                  subtitle: AppStrings.whisperModelSubtitle,
+                                  onTap: () async {
+                                    if (!provider.whisperRealtime) {
+                                      await provider.setWhisperRealtime(true);
+                                    }
+                                    if (provider.selectedModelType !=
+                                        ModelType.whisper) {
+                                      await provider.changeModel(
+                                        ModelType.whisper,
+                                      );
+                                    }
+                                  },
+                                ),
+                              );
+                            } else if (Platform.isAndroid) {
+                              // Android: Add Vosk
+                              addDivider();
+                              items.add(
+                                buildItem(
+                                  key: 'vosk',
+                                  title: AppStrings.voskModelTitle,
+                                  subtitle: AppStrings.voskModelSubtitle,
+                                  onTap: () async {
+                                    await provider.changeModel(
+                                      ModelType.vosk,
+                                    );
+                                  },
+                                ),
+                              );
+                            }
 
                             return items;
                           }(),
