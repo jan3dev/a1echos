@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/session_provider.dart';
-import '../providers/settings_provider.dart';
 import '../models/session.dart';
 import '../widgets/session_list.dart';
-import '../widgets/empty_transcriptions_state.dart';
 
 class HomeContent extends StatelessWidget {
   final ScrollController scrollController;
@@ -26,18 +22,6 @@ class HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(context);
-    final settingsProvider = Provider.of<SettingsProvider>(context);
-
-    bool effectivelyEmpty = _calculateEffectivelyEmpty(
-      sessionProvider,
-      settingsProvider,
-    );
-
-    if (effectivelyEmpty) {
-      return const EmptyTranscriptionsState();
-    }
-
     return Positioned(
       top: 0,
       left: 0,
@@ -57,27 +41,5 @@ class HomeContent extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  bool _calculateEffectivelyEmpty(
-    SessionProvider sessionProvider,
-    SettingsProvider settingsProvider,
-  ) {
-    bool effectivelyEmpty = sessionProvider.sessions.isEmpty;
-
-    if (sessionProvider.sessions.length == 1 &&
-        sessionProvider.sessions.first.isIncognito) {
-      if (settingsProvider.isIncognitoMode) {
-        effectivelyEmpty = true;
-      } else {
-        effectivelyEmpty = false;
-      }
-    }
-
-    if (sessionProvider.sessions.length > 1) {
-      effectivelyEmpty = false;
-    }
-
-    return effectivelyEmpty;
   }
 }

@@ -10,6 +10,8 @@ import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
+import '../constants/app_constants.dart';
+import '../widgets/aqua_tooltip_with_pointer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -142,6 +144,17 @@ class _HomeScreenState extends State<HomeScreen>
               child: RecordingButton(onRecordingStart: startRecording),
             ),
           ),
+          if (effectivelyEmpty)
+            Positioned(
+              bottom: 120,
+              left: 0,
+              right: 0,
+              child: AquaTooltipWithPointer(
+                message: AppStrings.emptySessionsMessage,
+                backgroundColor: colors.glassInverse,
+                foregroundColor: colors.textInverse,
+              ),
+            ),
         ],
       ),
     );

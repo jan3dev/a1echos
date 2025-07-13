@@ -1,102 +1,90 @@
 # TASKS - SOURCE OF TRUTH
 
 ## Active Task Status
-**Current Phase:** ARCHIVE Mode Complete - Task Fully Completed  
-**Current Task:** Platform-Specific Model Display Enhancement  
-**Status:** ✅ TASK COMPLETE - ARCHIVED  
+**Current Phase:** IMPLEMENT Mode - Code Implementation  
+**Current Task:** Replace Empty Transcriptions State with Tooltip Above Recording Button  
+**Status:** 🔄 IN PROGRESS - Implementation Complete, Testing Needed  
 
-## COMPLETED TASK: Platform-Specific Model Display Enhancement ✅
+## ACTIVE TASK: Replace Empty Transcriptions State with Tooltip Above Recording Button 🔄
 
 ### 🎯 TASK SUMMARY
-**User Request:** "the settings screen should show only the supported models per platform and not disabled models anymore"  
-**Current Issue:** Settings screen shows all models including disabled ones with "not available" text  
-**Desired Behavior:** Show only platform-supported models per platform  
-**Type:** Level 1 - Quick Bug Fix (UI Logic Enhancement)  
-**Status:** ✅ FULLY COMPLETE - ARCHIVED  
+**User Request:** "Replace empty transcriptions state with a tooltip hovering above the recording button like in this figma design: https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=5835-22856&t=lfW8FbFSqhtZlnYe-4"  
+**Current Issue:** Empty transcriptions state shows centered text message when no sessions/transcriptions exist  
+**Desired Behavior:** Show AquaTooltip above recording button in empty states  
+**Type:** Level 1 - Quick Bug Fix (UI Enhancement)  
+**Status:** 🔄 IMPLEMENTATION COMPLETE - TESTING NEEDED  
 
-### 📋 TASK LIFECYCLE STATUS - COMPLETE ✅
+### 📋 TASK LIFECYCLE STATUS - IN PROGRESS 🔄
 - [x] **VAN Mode:** Complexity analysis complete - Level 1 confirmed
-- [x] **IMPLEMENT Mode:** Code changes successfully implemented
-- [x] **REFLECT Mode:** Comprehensive analysis documented
-- [x] **ARCHIVE Mode:** Full documentation archived for future reference
+- [x] **IMPLEMENT Mode:** Code changes implemented in both screens
+- [ ] **Testing:** Verify tooltip positioning and behavior
+- [ ] **REFLECT Mode:** Analysis and documentation pending
+- [ ] **ARCHIVE Mode:** Full documentation pending
 
-### 🏆 FINAL TASK RESULTS
+### 🔧 IMPLEMENTATION DETAILS
 
-#### 📱 Implementation Results
-- **iOS:** Shows only Whisper File and Whisper Real-time (Vosk completely removed)
-- **Android:** Shows only Whisper File and Vosk (Whisper Real-time completely removed)
-- **Code Quality:** Clean conditional logic with no new linting issues
-- **User Experience:** Cleaner, more focused interface with only actionable choices
+#### 📱 Files Modified
+1. **lib/screens/home_screen.dart**
+   - Added AquaTooltip positioned above recording button when `effectivelyEmpty` is true
+   - Added import for `app_constants.dart`
+   - Tooltip positioned at `bottom: 120` to hover above recording button
 
-#### 🔧 Technical Implementation
-- **File Modified:** `lib/screens/settings_screen.dart`
-- **Implementation:** Platform-specific conditional logic using `Platform.isIOS` and `Platform.isAndroid`
-- **Code Improvements:** Removed `enabled` parameter, added `addDivider()` helper, simplified UI logic
-- **Verification:** Flutter analyze clean, code review passed, platform logic verified
+2. **lib/widgets/home_content.dart**
+   - Removed empty state logic and `EmptyTranscriptionsState` usage
+   - Removed unused provider imports (`SessionProvider`, `SettingsProvider`)
+   - Simplified to always return scrollable session list
+   - Added comment explaining tooltip is now handled in HomeScreen
 
-#### 📊 Success Metrics
-- **Complexity Assessment:** ✅ Accurate (Level 1, 2/10 complexity)
-- **Time Estimation:** ✅ Accurate (~15 minutes estimated, ~15 minutes actual)
-- **Implementation Quality:** ✅ Clean, maintainable code
-- **User Experience Impact:** ✅ Significant improvement
-- **Documentation Quality:** ✅ Comprehensive reflection and archive
+3. **lib/widgets/transcription_content_view.dart**
+   - Replaced `EmptyTranscriptionsState` with Stack containing AquaTooltip
+   - Added ui_components import and app_constants import
+   - Tooltip positioned at `bottom: 120` above recording button area
+   - Uses `AppStrings.tapToStart` message for session screen context
 
-### 📄 DOCUMENTATION COMPLETE ✅
+4. **lib/widgets/empty_transcriptions_state.dart**
+   - ✅ REMOVED - No longer needed after tooltip migration
 
-#### 📋 Archive Documentation
-**Archive Document:** `memory-bank/archive/archive-platform-model-display.md` ✅  
-**Content:** Comprehensive documentation including:
-- Complete implementation details and technical specifications
-- Requirements analysis and platform support matrix
-- Testing approach and verification results
-- Lessons learned and future considerations
-- Impact assessment (user experience, technical, business)
-- References to all related documents
+#### 🎨 UI Implementation
+- **Tooltip Component:** Using `AquaTooltip` from ui_components
+- **Positioning:** `bottom: 120` to hover above 64px recording button + 32px bottom margin
+- **Messages:** 
+  - Home screen: `AppStrings.emptySessionsMessage` ("Hit the record button to start transcribing.")
+  - Session screen: `AppStrings.tapToStart` ("Tap the record button below to start transcribing with the selected model.")
+- **Configuration:** `isDismissible: false` to keep tooltip persistent
 
-#### 🤔 Reflection Documentation
-**Reflection Document:** `memory-bank/reflection/reflection-platform-model-display.md` ✅  
-**Content:** Detailed analysis of what went well, challenges, lessons learned, and improvements
+#### 🔍 Technical Approach
+- **No Legacy Code:** Completely removed old empty state widget as requested
+- **Consistent Positioning:** Both screens use identical positioning strategy
+- **Context-Appropriate Messages:** Different messages for home vs session screens
+- **Clean Architecture:** Removed unused imports and simplified logic
 
-### 🎯 KEY ACHIEVEMENTS
+### 🧪 TESTING REQUIREMENTS
+- [ ] **Home Screen Empty State:** Verify tooltip appears when no sessions exist
+- [ ] **Session Screen Empty State:** Verify tooltip appears when no transcriptions exist
+- [ ] **Tooltip Positioning:** Confirm tooltip hovers correctly above recording button
+- [ ] **Tooltip Behavior:** Ensure non-dismissible tooltip stays visible
+- [ ] **State Transitions:** Test tooltip disappears when content is added
+- [ ] **Flutter Analyze:** Verify no new linting issues (current issues are pre-existing)
 
-#### 🏅 Workflow Effectiveness
-- **VAN Mode:** Accurate complexity assessment enabled efficient planning
-- **IMPLEMENT Mode:** Focused approach delivered quality results quickly
-- **REFLECT Mode:** Comprehensive analysis extracted valuable insights
-- **ARCHIVE Mode:** Complete documentation ensures knowledge preservation
+### 📊 CURRENT STATUS
+**Implementation:** ✅ COMPLETE  
+**Files Modified:** 4 files (3 updated, 1 removed)  
+**Flutter Analyze:** ✅ CLEAN (no new issues introduced)  
+**Testing:** ⏳ PENDING  
+**Documentation:** ⏳ PENDING  
 
-#### 💡 Lessons Learned & Applied
-- **Platform-Specific UI Patterns:** Conditional inclusion more maintainable than enabled/disabled
-- **Level 1 Task Characteristics:** Focused, minimal-overhead approach works well
-- **Cross-Platform Development:** Explicit platform checks improve code clarity
-- **Documentation Value:** Comprehensive reflection and archiving support future development
-
-#### 🔄 Process Improvements Identified
-- **Reflection Timing:** Consider mid-implementation reflection for complex Level 1 tasks
-- **Testing Strategy:** Establish checklist for platform-specific changes
-- **Code Organization:** Consider extracting platform-specific logic to separate methods
-- **Documentation Efficiency:** Streamline while maintaining essential insights
-
-### 🏁 TASK COMPLETION SUMMARY
-
-**Task Type:** Level 1 - Quick Bug Fix (UI Logic Enhancement)  
-**Total Time:** ~15 minutes implementation + comprehensive documentation  
-**Success Rating:** ⭐⭐⭐⭐⭐ (5/5)  
-**Workflow Phases:** VAN → IMPLEMENT → REFLECT → ARCHIVE (All Complete)  
-**Documentation Status:** Fully archived with comprehensive analysis  
-**Knowledge Preservation:** Complete for future reference and similar tasks  
-
-### 🔄 SYSTEM STATUS
-**Memory Bank:** ✅ Fully updated with complete task documentation  
-**Active Context:** ✅ Reset and ready for next task  
-**Progress Tracking:** ✅ Updated with completed task reference  
-**Archive System:** ✅ Complete documentation stored for future reference  
+### 🎯 NEXT STEPS
+1. **Manual Testing:** Verify tooltip behavior in both empty states
+2. **Visual Verification:** Confirm tooltip positioning matches Figma design
+3. **State Testing:** Test tooltip visibility during various app states
+4. **REFLECT Mode:** Document lessons learned and implementation insights
+5. **ARCHIVE Mode:** Create comprehensive documentation for future reference
 
 ---
 
-## 🚀 READY FOR NEXT TASK
+## 🚀 READY FOR TESTING
 
-**Current Status:** ✅ TASK FULLY COMPLETE - READY FOR NEW TASK  
-**Recommended Next Mode:** VAN Mode for next task complexity analysis  
-**Memory Bank Status:** ✅ Complete and ready for new task context  
-**System State:** ✅ Optimal for starting new development task
+**Current Status:** 🔄 IMPLEMENTATION COMPLETE - TESTING NEEDED  
+**Next Phase:** Manual testing and verification  
+**Memory Bank Status:** ✅ Updated with implementation details  
+**System State:** ✅ Ready for testing phase

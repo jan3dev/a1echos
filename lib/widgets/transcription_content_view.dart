@@ -4,8 +4,10 @@ import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../widgets/transcription_list.dart';
 import '../widgets/live_transcription_view.dart';
-import '../widgets/empty_transcriptions_state.dart';
 import '../widgets/error_view.dart';
+import '../constants/app_constants.dart';
+import 'package:ui_components/ui_components.dart';
+import 'aqua_tooltip_with_pointer.dart';
 
 /// Content view component that manages the main transcription display area
 class TranscriptionContentView extends StatelessWidget {
@@ -26,6 +28,7 @@ class TranscriptionContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AquaColors.lightColors;
     return Consumer<LocalTranscriptionProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
@@ -59,11 +62,10 @@ class TranscriptionContentView extends StatelessWidget {
             voskPreviewIsActive ||
             whisperRealtimePreviewIsActive;
 
-        if (provider.sessionTranscriptions.isEmpty &&
+        bool isEmpty =
+            provider.sessionTranscriptions.isEmpty &&
             !anyPreviewActive &&
-            !provider.isRecording) {
-          return const EmptyTranscriptionsState();
-        }
+            !provider.isRecording;
 
         bool shouldShowLiveTranscription =
             provider.isRecording ||
@@ -71,23 +73,38 @@ class TranscriptionContentView extends StatelessWidget {
                 provider.whisperRealtime &&
                 provider.liveVoskTranscriptionPreview != null);
 
-        return Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 128,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: shouldShowLiveTranscription
-                ? LiveTranscriptionView(controller: scrollController)
-                : TranscriptionList(
-                    controller: scrollController,
-                    selectionMode: selectionMode,
-                    selectedTranscriptionIds: selectedTranscriptionIds,
-                    onTranscriptionTap: onTranscriptionTap,
-                    onTranscriptionLongPress: onTranscriptionLongPress,
-                  ),
-          ),
+        return Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 128,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: shouldShowLiveTranscription
+                    ? LiveTranscriptionView(controller: scrollController)
+                    : TranscriptionList(
+                        controller: scrollController,
+                        selectionMode: selectionMode,
+                        selectedTranscriptionIds: selectedTranscriptionIds,
+                        onTranscriptionTap: onTranscriptionTap,
+                        onTranscriptionLongPress: onTranscriptionLongPress,
+                      ),
+              ),
+            ),
+            if (isEmpty)
+              Positioned(
+                bottom: 120,
+                left: 0,
+                right: 0,
+                child: AquaTooltipWithPointer(
+                  message: AppStrings.emptySessionsMessage,
+                  backgroundColor: colors.glassInverse,
+                  foregroundColor: colors.textInverse,
+                ),
+              ),
+          ],
         );
       },
     );

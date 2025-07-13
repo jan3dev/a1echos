@@ -19,8 +19,6 @@ class AppConstants {
 
 // Common UI strings
 class AppStrings {
-  static const String tapToStart =
-      'Tap the record button below to start transcribing with the selected model.';
   // Standard UI labels
   static const String loading = 'Loading...';
   static const String transcribingStatus = 'Transcribing...';
@@ -106,7 +104,7 @@ class AppStrings {
 
   // Empty states
   static const String emptySessionsMessage =
-      'Hit the record button to start capturing and transcribing your voice notes.';
+      'Hit the record button to start transcribing';
 
   // TranscriptionItem
   static const String copyToClipboard = 'Copied to clipboard';
