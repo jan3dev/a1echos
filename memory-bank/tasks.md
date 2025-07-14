@@ -1,90 +1,73 @@
 # TASKS - SOURCE OF TRUTH
 
 ## Active Task Status
-**Current Phase:** IMPLEMENT Mode - Code Implementation  
-**Current Task:** Replace Empty Transcriptions State with Tooltip Above Recording Button  
-**Status:** 🔄 IN PROGRESS - Implementation Complete, Testing Needed  
+**Current Phase:** VAN Mode - Task Complete  
+**Current Task:** Tooltip Pointer & Hover Animation  
+**Status:** ✅ TASK COMPLETE - VAN MODE
 
-## ACTIVE TASK: Replace Empty Transcriptions State with Tooltip Above Recording Button 🔄
+## COMPLETED TASK: Tooltip Pointer & Hover Animation ✅
 
 ### 🎯 TASK SUMMARY
-**User Request:** "Replace empty transcriptions state with a tooltip hovering above the recording button like in this figma design: https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=5835-22856&t=lfW8FbFSqhtZlnYe-4"  
-**Current Issue:** Empty transcriptions state shows centered text message when no sessions/transcriptions exist  
-**Desired Behavior:** Show AquaTooltip above recording button in empty states  
-**Type:** Level 1 - Quick Bug Fix (UI Enhancement)  
-**Status:** 🔄 IMPLEMENTATION COMPLETE - TESTING NEEDED  
+**User Request:** Implement a tooltip with a pointer that visually matches the Figma, including a subtle up/down hover animation.
 
-### 📋 TASK LIFECYCLE STATUS - IN PROGRESS 🔄
-- [x] **VAN Mode:** Complexity analysis complete - Level 1 confirmed
-- [x] **IMPLEMENT Mode:** Code changes implemented in both screens
-- [ ] **Testing:** Verify tooltip positioning and behavior
-- [ ] **REFLECT Mode:** Analysis and documentation pending
-- [ ] **ARCHIVE Mode:** Full documentation pending
+### 📋 TASK LIFECYCLE STATUS - COMPLETE ✅
+- [x] **VAN Mode:** Complexity analysis, requirements, and completion
+- [x] **IMPLEMENT Mode:** Code changes implemented for pointer SVG and animation
+- [x] **Testing:** Visual verification and fine-tuning
+- [x] **REFLECT Mode:** Implementation and design lessons documented
+- [x] **ARCHIVE Mode:** Task archived for future reference
 
 ### 🔧 IMPLEMENTATION DETAILS
+- Created a new `pointer.svg` asset with a rounded tip and matching width to the tooltip (18x10), placed in `assets/icons/`.
+- Refactored the tooltip and pointer into a reusable `AquaTooltipWithPointer` widget.
+- Used a `StatefulWidget` and `AnimationController` to animate the tooltip and pointer up and down in a smooth, continuous loop (2s duration, 4px amplitude, sine wave motion).
+- The pointer is now perfectly aligned and visually connected to the tooltip, with a rounded tip for a seamless look.
+- The pointer's color is always in sync with the tooltip background.
+- The pointer is positioned with a -1px offset for a subtle overlap, matching the Figma reference.
 
-#### 📱 Files Modified
-1. **lib/screens/home_screen.dart**
-   - Added AquaTooltip positioned above recording button when `effectivelyEmpty` is true
-   - Added import for `app_constants.dart`
-   - Tooltip positioned at `bottom: 120` to hover above recording button
+### 🧪 TESTING & VERIFICATION
+- [x] Tooltip and pointer visually match Figma reference
+- [x] Animation is smooth and subtle
+- [x] Pointer is perfectly aligned and color-matched
+- [x] Widget is reusable and used in both home and transcription views
 
-2. **lib/widgets/home_content.dart**
-   - Removed empty state logic and `EmptyTranscriptionsState` usage
-   - Removed unused provider imports (`SessionProvider`, `SettingsProvider`)
-   - Simplified to always return scrollable session list
-   - Added comment explaining tooltip is now handled in HomeScreen
-
-3. **lib/widgets/transcription_content_view.dart**
-   - Replaced `EmptyTranscriptionsState` with Stack containing AquaTooltip
-   - Added ui_components import and app_constants import
-   - Tooltip positioned at `bottom: 120` above recording button area
-   - Uses `AppStrings.tapToStart` message for session screen context
-
-4. **lib/widgets/empty_transcriptions_state.dart**
-   - ✅ REMOVED - No longer needed after tooltip migration
-
-#### 🎨 UI Implementation
-- **Tooltip Component:** Using `AquaTooltip` from ui_components
-- **Positioning:** `bottom: 120` to hover above 64px recording button + 32px bottom margin
-- **Messages:** 
-  - Home screen: `AppStrings.emptySessionsMessage` ("Hit the record button to start transcribing.")
-  - Session screen: `AppStrings.tapToStart` ("Tap the record button below to start transcribing with the selected model.")
-- **Configuration:** `isDismissible: false` to keep tooltip persistent
-
-#### 🔍 Technical Approach
-- **No Legacy Code:** Completely removed old empty state widget as requested
-- **Consistent Positioning:** Both screens use identical positioning strategy
-- **Context-Appropriate Messages:** Different messages for home vs session screens
-- **Clean Architecture:** Removed unused imports and simplified logic
-
-### 🧪 TESTING REQUIREMENTS
-- [ ] **Home Screen Empty State:** Verify tooltip appears when no sessions exist
-- [ ] **Session Screen Empty State:** Verify tooltip appears when no transcriptions exist
-- [ ] **Tooltip Positioning:** Confirm tooltip hovers correctly above recording button
-- [ ] **Tooltip Behavior:** Ensure non-dismissible tooltip stays visible
-- [ ] **State Transitions:** Test tooltip disappears when content is added
-- [ ] **Flutter Analyze:** Verify no new linting issues (current issues are pre-existing)
-
-### 📊 CURRENT STATUS
+### 📊 FINAL STATUS
 **Implementation:** ✅ COMPLETE  
-**Files Modified:** 4 files (3 updated, 1 removed)  
-**Flutter Analyze:** ✅ CLEAN (no new issues introduced)  
-**Testing:** ⏳ PENDING  
-**Documentation:** ⏳ PENDING  
-
-### 🎯 NEXT STEPS
-1. **Manual Testing:** Verify tooltip behavior in both empty states
-2. **Visual Verification:** Confirm tooltip positioning matches Figma design
-3. **State Testing:** Test tooltip visibility during various app states
-4. **REFLECT Mode:** Document lessons learned and implementation insights
-5. **ARCHIVE Mode:** Create comprehensive documentation for future reference
+**Testing:** ✅ PASSED  
+**Documentation:** ✅ UPDATED  
+**Archive:** ✅ READY
 
 ---
 
-## 🚀 READY FOR TESTING
+## 🚀 READY FOR NEXT TASK
 
-**Current Status:** 🔄 IMPLEMENTATION COMPLETE - TESTING NEEDED  
-**Next Phase:** Manual testing and verification  
-**Memory Bank Status:** ✅ Updated with implementation details  
-**System State:** ✅ Ready for testing phase
+**Current Status:** ✅ TASK COMPLETE - VAN MODE  
+**Memory Bank Status:** ✅ Updated with final implementation details  
+**System State:** ✅ Ready for new task
+
+## 🚩 NEW TASK: Audio Wave Visualization Reactive to Speech (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:** Make the audio wave visualization move/react only when actual speech is detected, using voice activity detection (VAD) from whisperkit.
+
+### 🔍 CONTEXT & ANALYSIS
+- The current `AudioWaveVisualization` widget animates bars when recording, but is not reactive to actual speech/silence.
+- The codebase uses both `whisper_flutter_new` and `flutter_whisper_kit` (whisperkit).
+- No explicit VAD/speech activity stream is currently wired to the UI.
+- Goal: Use VAD from whisperkit to control the visualization's animation/highlight state.
+
+### 🧩 COMPLEXITY
+- **Level:** 1 (Quick Enhancement)
+- **Key Steps:**
+  1. Investigate if whisperkit exposes VAD/speech activity in Dart (stream, callback, etc).
+  2. Add a boolean (e.g., `isSpeechActive`) to the visualization widget.
+  3. Animate/highlight waveform only when speech is detected.
+
+### 🗺️ INITIAL PLAN
+- [ ] Check whisperkit/whisper_flutter_new for VAD/speech activity API.
+- [ ] Add `isSpeechActive` prop to `AudioWaveVisualization`.
+- [ ] Wire up VAD boolean to the widget via Provider or direct callback.
+- [ ] Update animation logic to respond to speech activity.
+- [ ] Test: Visualization only animates/highlights when speech is detected.
+
+---

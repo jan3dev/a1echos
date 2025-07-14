@@ -7,11 +7,13 @@ import '../models/model_type.dart';
 class AudioWaveVisualization extends StatefulWidget {
   final TranscriptionState state;
   final ModelType modelType;
+  final double audioLevel;
 
   const AudioWaveVisualization({
     super.key,
     required this.state,
     required this.modelType,
+    required this.audioLevel,
   });
 
   @override
@@ -20,70 +22,9 @@ class AudioWaveVisualization extends StatefulWidget {
 
 class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
     with TickerProviderStateMixin {
-  late List<AnimationController> _animationControllers;
-  late List<Animation<double>> _animations;
   final int barsPerSide = 11;
   final random = Random();
   final double maxBarHeight = 56.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeAnimations();
-  }
-
-  void _initializeAnimations() {
-    final totalBars = barsPerSide * 2;
-    _animationControllers = List.generate(
-      totalBars,
-      (index) => AnimationController(
-        vsync: this,
-        duration: Duration(milliseconds: 600 + random.nextInt(400)),
-      ),
-    );
-
-    _animations =
-        _animationControllers.map((controller) {
-          return Tween<double>(begin: 0.3, end: 1.0).animate(
-            CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-          );
-        }).toList();
-
-    for (var i = 0; i < totalBars; i++) {
-      Future.delayed(Duration(milliseconds: random.nextInt(200)), () {
-        if (mounted) {
-          _animationControllers[i].repeat(reverse: true);
-        }
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(AudioWaveVisualization oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.state == TranscriptionState.recording &&
-        oldWidget.state != TranscriptionState.recording) {
-      for (var controller in _animationControllers) {
-        controller.repeat(reverse: true);
-      }
-    }
-
-    if (widget.state != TranscriptionState.recording &&
-        oldWidget.state == TranscriptionState.recording) {
-      for (var controller in _animationControllers) {
-        controller.stop();
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    for (var controller in _animationControllers) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
 
   Widget _buildAudioWaveSide(int startIndex) {
     return SizedBox(
@@ -91,16 +32,13 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: List.generate(barsPerSide, (index) {
-          final animationIndex = startIndex + index;
           if (widget.state == TranscriptionState.recording) {
-            return AnimatedBuilder(
-              animation: _animations[animationIndex],
-              builder: (context, child) {
-                return _AudioBar(
-                  height: maxBarHeight * _animations[animationIndex].value,
-                );
-              },
-            );
+            // Vary each bar slightly for a more natural look
+            final barVariance = 0.85 + (random.nextDouble() * 0.3); // 0.85–1.15
+            final barHeight =
+                (widget.audioLevel * barVariance).clamp(0.0, 1.0) *
+                maxBarHeight;
+            return _AudioBar(height: barHeight);
           } else {
             return _AudioBar(height: maxBarHeight * 0.5);
           }

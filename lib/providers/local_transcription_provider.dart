@@ -9,6 +9,7 @@ import 'model_management_provider.dart';
 import 'transcription_ui_state_provider.dart';
 import 'transcription_operation_provider.dart';
 import 'transcription_data_provider.dart';
+import '../services/audio_service.dart';
 
 /// LocalTranscriptionProvider using composition of specialized providers
 class LocalTranscriptionProvider with ChangeNotifier {
@@ -23,6 +24,19 @@ class LocalTranscriptionProvider with ChangeNotifier {
   bool _isOperationLocked = false;
   DateTime? _lastOperationTime;
   final Set<String> _activeOperations = {};
+
+  double _audioLevel = 0.0;
+  double get audioLevel => _audioLevel;
+  void updateAudioLevel(double level) {
+    if ((level - _audioLevel).abs() > 0.01) {
+      // avoid excessive rebuilds
+      _audioLevel = level;
+      notifyListeners();
+    }
+  }
+
+  final AudioService _audioService = AudioService();
+  StreamSubscription<double>? _audioLevelSub;
 
   static const Duration _minimumOperationInterval = Duration(milliseconds: 500);
   static const Duration _operationTimeout = Duration(seconds: 30);
@@ -313,6 +327,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
     _uiStateProvider.setRecordingSessionId(sessionId);
 
     try {
+      _audioLevelSub?.cancel();
+      await _audioService.startRecording();
+      _audioLevelSub = _audioService.audioLevelStream.listen(updateAudioLevel);
       final success = await _operationProvider.startRecording(
         _modelManager.selectedModelType,
         sessionId,
@@ -406,6 +423,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
       _uiStateProvider.clearWhisperLoadingPreview();
     } finally {
       _uiStateProvider.clearRecordingSessionId();
+      _audioLevelSub?.cancel();
+      _audioLevelSub = null;
       _releaseOperationLock(operationName);
     }
   }
@@ -490,6 +509,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _audioLevelSub?.cancel();
+    _audioService.dispose();
     _sessionProvider.removeListener(_onSessionChanged);
     _stateManager.dispose();
     _modelManager.dispose();

@@ -26,6 +26,7 @@ class RecordingControlsView extends StatelessWidget {
                     AudioWaveVisualization(
                       state: transcriptionProvider.state,
                       modelType: transcriptionProvider.selectedModelType,
+                      audioLevel: transcriptionProvider.audioLevel,
                     ),
                     RecordingButton(useProviderState: true),
                   ],

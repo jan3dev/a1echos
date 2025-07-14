@@ -36,6 +36,7 @@ dependencies:
       path: packages/flutter_whisper_kit
       ref: main
   share_plus: ^11.0.0
+  vad: ^0.0.6
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:vad/vad.dart';
 import 'native_audio_permission_service.dart';
 
 class AudioService {
@@ -13,22 +15,17 @@ class AudioService {
     if (Platform.isIOS) {
       return await NativeAudioPermissionService.ensureRecordPermission();
     }
-
     final status = await Permission.microphone.status;
-
     if (status.isGranted) {
       return true;
     }
-
     if (status.isDenied) {
       final result = await Permission.microphone.request();
       return result.isGranted;
     }
-
     if (status.isPermanentlyDenied) {
       return false;
     }
-
     return false;
   }
 
@@ -41,11 +38,8 @@ class AudioService {
     if (!await hasPermission()) {
       throw Exception('Microphone permission denied');
     }
-
     await _cleanup();
-
     _recordingPath = await _generateRecordingPath();
-
     if (useStreaming) {
       await _audioRecorder.startStream(
         RecordConfig(
@@ -60,9 +54,7 @@ class AudioService {
         AudioEncoder.flac,
         AudioEncoder.aacLc,
       ];
-
       bool recordingStarted = false;
-
       for (final encoder in encoders) {
         try {
           final success = await _startFileRecording(encoder);
@@ -74,12 +66,11 @@ class AudioService {
           continue;
         }
       }
-
       if (!recordingStarted) {
         throw Exception('Failed to start recording with any encoder');
       }
     }
-
+    await startVad();
     return true;
   }
 
@@ -91,16 +82,12 @@ class AudioService {
         bitRate: 128000,
         numChannels: 1,
       );
-
       await _audioRecorder.start(config, path: _recordingPath!);
-
       await Future.delayed(const Duration(milliseconds: 500));
       final isRecording = await _audioRecorder.isRecording();
-
       if (!isRecording) {
         return false;
       }
-
       return true;
     } catch (e) {
       return false;
@@ -109,7 +96,6 @@ class AudioService {
 
   Future<File?> stopRecording() async {
     final isCurrentlyRecording = await _audioRecorder.isRecording();
-
     if (!isCurrentlyRecording) {
       if (_recordingPath != null) {
         final existingFile = File(_recordingPath!);
@@ -118,26 +104,20 @@ class AudioService {
           return size > 0 ? existingFile : null;
         }
       }
+      await stopVad();
       return _currentAudioFile;
     }
-
     File? recordedFile;
-
     try {
       final path = await _audioRecorder.stop();
-
       if (path != null) {
         if (path != _recordingPath) {
           _recordingPath = path;
         }
-
         final file = File(_recordingPath!);
-
         final fileExists = await file.exists();
-
         if (fileExists) {
           final fileSize = await file.length();
-
           if (fileSize > 0) {
             recordedFile = file;
           } else {
@@ -152,7 +132,7 @@ class AudioService {
     } catch (e) {
       recordedFile = null;
     }
-
+    await stopVad();
     return recordedFile;
   }
 
@@ -164,10 +144,39 @@ class AudioService {
     if (await _audioRecorder.isRecording()) {
       await _audioRecorder.stop();
     }
+    await stopVad();
+  }
+
+  final VadHandlerBase _vadHandler = VadHandler.create(isDebug: false);
+  final StreamController<double> _audioLevelController =
+      StreamController.broadcast();
+  Stream<double> get audioLevelStream => _audioLevelController.stream;
+  bool _vadListening = false;
+  StreamSubscription? _vadFrameSub;
+
+  Future<void> startVad() async {
+    if (_vadListening) return;
+    _vadListening = true;
+    _vadFrameSub?.cancel();
+    _vadFrameSub = _vadHandler.onFrameProcessed.listen((frameData) {
+      _audioLevelController.add(frameData.isSpeech);
+    });
+    await _vadHandler.startListening();
+  }
+
+  Future<void> stopVad() async {
+    if (!_vadListening) return;
+    _vadListening = false;
+    await _vadHandler.stopListening();
+    await _vadFrameSub?.cancel();
+    _vadFrameSub = null;
   }
 
   Future<void> dispose() async {
     await _cleanup();
     await _audioRecorder.dispose();
+    _vadFrameSub?.cancel();
+    _audioLevelController.close();
+    _vadHandler.dispose();
   }
 }
