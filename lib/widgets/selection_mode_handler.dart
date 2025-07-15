@@ -45,20 +45,17 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
 
     ConfirmationModal.show(
       context: context,
-      title: AppStrings.homeDeleteSelectedSessionsTitle.replaceAll(
-        '{sessions}',
-        _selectedSessionIds.length == 1 ? 'Session' : 'Sessions',
-      ),
+      title: AppStrings.homeDeleteSelectedSessionsTitle,
       message: AppStrings.homeDeleteSelectedSessionsMessage
-          .replaceAll('{count}', _selectedSessionIds.length.toString())
+          .replaceAll(
+            '{count}',
+            _selectedSessionIds.length == 1 ? 'this' : 'these',
+          )
           .replaceAll(
             '{sessions}',
             _selectedSessionIds.length == 1 ? 'session' : 'sessions',
           ),
-      confirmText: AppStrings.homeDeleteSessionsButton.replaceAll(
-        '{sessions}',
-        _selectedSessionIds.length == 1 ? 'Session' : 'Sessions',
-      ),
+      confirmText: AppStrings.homeDeleteSessionsButton,
       onConfirm: () {
         Navigator.pop(context);
         final deletedCount = _selectedSessionIds.length;

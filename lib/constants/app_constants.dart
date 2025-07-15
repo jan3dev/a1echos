@@ -39,10 +39,10 @@ class AppStrings {
 
   // HomeScreen strings
   static const String homeDeleteSelectedSessionsTitle =
-      'Delete Selected {sessions}?';
+      'Delete?';
   static const String homeDeleteSelectedSessionsMessage =
       'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
-  static const String homeDeleteSessionsButton = 'Delete {sessions}';
+  static const String homeDeleteSessionsButton = 'Delete';
   static const String homeSessionsDeleted = '{sessions} deleted';
   static const String homeErrorCreatingSession =
       'Error creating session: {error}';
@@ -56,11 +56,11 @@ class AppStrings {
   // SessionScreen strings
   static const String sessionRenameTitle = 'Rename';
   static const String sessionDeleteTranscriptionsTitle =
-      'Delete Selected {transcriptions}?';
+      'Delete?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
   static const String sessionDeleteTranscriptionsButton =
-      'Delete {transcriptions}';
+      'Delete';
   static const String sessionTranscriptionsDeleted = '{transcriptions} deleted';
   static const String sessionErrorDeletingTranscriptions =
       'Error deleting {transcriptions}: {error}';

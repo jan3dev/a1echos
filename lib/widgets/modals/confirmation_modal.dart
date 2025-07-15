@@ -28,14 +28,13 @@ class ConfirmationModal {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: AquaIcon.danger(color: colors.textInverse),
+      icon: AquaIcon.warning(color: colors.textInverse),
       title: title,
       message: message,
       primaryButtonText: confirmText,
       secondaryButtonText: cancelText,
       onPrimaryButtonTap: onConfirm,
       onSecondaryButtonTap: onCancel ?? () => Navigator.pop(context),
-      isDanger: isDanger,
     );
   }
 }

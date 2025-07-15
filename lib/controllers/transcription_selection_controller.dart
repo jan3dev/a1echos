@@ -69,26 +69,19 @@ class TranscriptionSelectionController with ChangeNotifier {
 
     ConfirmationModal.show(
       context: context,
-      title: AppStrings.sessionDeleteTranscriptionsTitle.replaceAll(
-        '{transcriptions}',
-        _selectedTranscriptionIds.length == 1
-            ? 'Transcription'
-            : 'Transcriptions',
-      ),
+      title: AppStrings.sessionDeleteTranscriptionsTitle,
       message: AppStrings.sessionDeleteTranscriptionsMessage
-          .replaceAll('{count}', _selectedTranscriptionIds.length.toString())
+          .replaceAll(
+            '{count}',
+            _selectedTranscriptionIds.length == 1 ? 'this' : 'these',
+          )
           .replaceAll(
             '{transcriptions}',
             _selectedTranscriptionIds.length == 1
                 ? 'transcription'
                 : 'transcriptions',
           ),
-      confirmText: AppStrings.sessionDeleteTranscriptionsButton.replaceAll(
-        '{transcriptions}',
-        _selectedTranscriptionIds.length == 1
-            ? 'Transcription'
-            : 'Transcriptions',
-      ),
+      confirmText: AppStrings.sessionDeleteTranscriptionsButton,
       cancelText: AppStrings.cancel,
       onConfirm: () async {
         Navigator.pop(context);
@@ -106,9 +99,7 @@ class TranscriptionSelectionController with ChangeNotifier {
                 content: Text(
                   AppStrings.sessionTranscriptionsDeleted.replaceAll(
                     '{transcriptions}',
-                    deletedCount == 1
-                        ? 'Transcription'
-                        : 'Transcriptions',
+                    deletedCount == 1 ? 'Transcription' : 'Transcriptions',
                   ),
                 ),
               ),
