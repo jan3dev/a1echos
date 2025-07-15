@@ -6,6 +6,8 @@ import '../../constants/app_constants.dart';
 import '../../providers/session_provider.dart';
 import '../modals/confirmation_modal.dart';
 import '../modals/session_input_modal.dart';
+import '../../utils/session_formatter.dart';
+import 'package:intl/intl.dart';
 
 class SessionMoreMenu extends StatelessWidget {
   final Session session;
@@ -83,6 +85,28 @@ class SessionMoreMenu extends StatelessWidget {
             backgroundColor: colors.surfacePrimary,
             titleColor: colors.textPrimary,
             onTap: null,
+          ),
+        ),
+        PopupMenuItem<String>(
+          enabled: false,
+          padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Modified: ${formatSessionSubtitle(now: DateTime.now(), created: session.timestamp, lastModified: session.lastModified, modifiedPrefix: AppStrings.modifiedPrefix)}',
+                style: AquaTypography.caption1Medium.copyWith(
+                  color: colors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Created: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
+                style: AquaTypography.caption1Medium.copyWith(
+                  color: colors.textTertiary,
+                ),
+              ),
+            ],
           ),
         ),
       ],

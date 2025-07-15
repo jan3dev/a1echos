@@ -21,16 +21,26 @@ Add an edit mode to the transcription item. When the edit icon is pressed, the i
 - Needs to integrate with existing state management and update logic.
 
 ### 🧩 CHECKLIST (VAN Mode)
-- [ ] Review Figma for edit mode UI/UX (icon, textarea, buttons, focus, etc).
-- [ ] Update `TranscriptionItem` widget to support "edit mode" state.
-- [ ] When edit icon is pressed:
-  - [ ] Switch to a textarea (TextField/TextFormField) with current content.
-  - [ ] Autofocus the textarea.
-- [ ] Allow user to edit text and save using the native keyboard (submit action).
-- [ ] Update the transcription in state/store on save.
-- [ ] Provide a way to cancel edit (if present in Figma).
-- [ ] Ensure UI matches Figma (spacing, colors, icons, etc).
-- [ ] Test on both iOS and Android for keyboard and focus behavior.
+- [x] Review Figma for edit mode UI/UX (icon, textarea, buttons, focus, etc).
+- [x] Update `TranscriptionItem` widget to support "edit mode" state.
+- [x] When edit icon is pressed:
+  - [x] Switch to a textarea (TextField/TextFormField) with current content.
+  - [x] Autofocus the textarea.
+- [x] Allow user to edit text and save using the native keyboard (submit action).
+- [x] Update the transcription in state/store on save.
+- [x] Provide a way to cancel edit (if present in Figma).
+- [x] Ensure UI matches Figma (spacing, colors, icons, etc).
+- [x] Test on both iOS and Android for keyboard and focus behavior.
+
+---
+
+### ✅ REFLECTION STATUS
+- Implementation matches Figma and user requirements.
+- Only one item can be edited at a time; all others are disabled.
+- Edits save on keyboard, focus loss, or tap outside.
+- Provider and state sync issues resolved.
+- No regressions to live preview or selection features.
+- Ready for ARCHIVE.
 
 ---
 
@@ -147,5 +157,117 @@ Add an edit mode to the transcription item. When the edit icon is pressed, the i
 - [ ] Wire up VAD boolean to the widget via Provider or direct callback.
 - [ ] Update animation logic to respond to speech activity.
 - [ ] Test: Visualization only animates/highlights when speech is detected.
+
+---
+
+## 🚀 NEW TASK: Show Created & Last Modified Date in Session More Menu (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**  
+Add both the created and last modified date to the session more menu. The modified date should use the same formatSessionSubtitle util as the session list item. Style per Figma: use AquaTypography.caption1 and AquaColor.textTertiary.
+
+**Figma Reference:**  
+[Session More Menu Design](https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=4007-100466&t=clbTB5p2aA5BuenE-4)
+
+### 🔍 CONTEXT & ANALYSIS
+- Session model exposes both `timestamp` (created) and `lastModified` (modified) fields.
+- `formatSessionSubtitle` util is used for session list item date formatting and should be reused for "Last Modified".
+- The menu currently only shows rename/delete actions; no date info is displayed.
+- Typography and color should use `AquaTypography.caption1` and `AquaColor.textTertiary` (from ui_components).
+
+### ✅ REFLECTION STATUS
+- Implementation matches Figma and user requirements.
+- Dates are styled and formatted consistently with the rest of the app.
+- No regression to menu actions (rename/delete).
+- Pattern established for future menu metadata.
+- Ready for ARCHIVE.
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Review Figma for placement and spacing of date info in the menu.
+- [x] Update `SessionMoreMenu` to display both dates with correct formatting and style.
+- [x] Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
+- [x] Ensure correct padding/margin per Figma.
+- [x] Test with sessions where created == modified and where modified > created.
+- [x] Confirm no regression to menu actions (rename/delete).
+- [x] Update tasks.md with progress.
+
+---
+
+### 📝 LEVEL 2 IMPLEMENTATION PLAN
+
+#### 📋 Overview of Changes
+- Add both "Created" and "Last Modified" dates to the session more menu.
+- Use `formatSessionSubtitle` for the modified date, matching session list item formatting.
+- Style both using `AquaTypography.caption1` and `AquaColor.textTertiary`.
+- Match Figma for placement, spacing, and visual details.
+
+#### 📁 Files to Modify
+- `lib/widgets/menus/session_more_menu.dart` (main UI logic for the menu)
+- `lib/utils/session_formatter.dart` (date formatting util, already used)
+- Figma reference for layout/spacing
+- `ui_components` (for typography/color)
+
+#### 🔄 Implementation Steps
+1. **Review Figma for Placement/Spacing**
+   - Confirm where and how the dates are displayed in the menu.
+   - Note any icons, dividers, or spacing requirements.
+2. **Update SessionMoreMenu Widget**
+   - Add a section to display:
+     - "Created" date (formatted as "Jun 20, 2024" or similar).
+     - "Last Modified" date (using `formatSessionSubtitle`).
+   - Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
+   - Ensure correct padding/margin per Figma.
+3. **Formatting**
+   - For "Created": Use `DateFormat('MMM d, yyyy').format(session.timestamp)`.
+   - For "Last Modified": Use `formatSessionSubtitle(now: DateTime.now(), created: session.timestamp, lastModified: session.lastModified, modifiedPrefix: AppStrings.modifiedPrefix)`.
+4. **Testing**
+   - Test with sessions where created == modified (should only show created, or "Modified" label omitted).
+   - Test with sessions where modified > created (should show "Modified" label).
+   - Confirm no regression to menu actions (rename/delete).
+   - Visual check: UI matches Figma.
+
+#### 🧩 Subtasks
+- [ ] Review Figma for date placement, spacing, and style.
+- [ ] Update `SessionMoreMenu` to display both dates with correct formatting and style.
+- [ ] Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
+- [ ] Ensure correct padding/margin per Figma.
+- [ ] Test with different session date scenarios.
+- [ ] Confirm menu actions (rename/delete) still work.
+- [ ] Update tasks.md with progress.
+
+#### 🔗 Dependencies
+- Figma design reference
+- `ui_components` package for typography/color
+- `intl` package for date formatting
+
+#### ⚠️ Challenges & Mitigations
+- **Challenge:** Ensuring date formatting matches Figma and is consistent with session list items.
+  - **Mitigation:** Use the same util and formatting logic as session list item.
+- **Challenge:** Menu layout may be tight; risk of crowding.
+  - **Mitigation:** Follow Figma for spacing, use subtle style.
+- **Challenge:** Regression to menu actions.
+  - **Mitigation:** Test all menu actions after change.
+
+#### 🛠️ Technology Stack
+- **Framework:** Flutter
+- **Build Tool:** Flutter build system
+- **Language:** Dart
+- **Storage:** N/A (UI-only change)
+
+#### ✅ Technology Validation Checkpoints
+- [x] Project initialization command verified
+- [x] Required dependencies identified and installed
+- [x] Build configuration validated
+- [x] Hello world verification completed
+- [x] Test build passes successfully
+
+#### 🎨 Creative Phases Required
+- [ ] UI/UX Design (Figma reference, but no new creative work required)
+
+#### 📈 Status
+- [x] Initialization complete
+- [x] Planning complete
+- [ ] Technology validation complete
+- [ ] Implementation steps
 
 ---

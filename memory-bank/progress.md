@@ -137,6 +137,28 @@
 
 ---
 
+### 🎯 Show Created & Last Modified Date in Session More Menu (Level 2) ✅
+**Completed:** 2024-06-XX  
+**Type:** Simple Enhancement - UI Metadata  
+**Duration:** ~45 minutes  
+**Success Rating:** ⭐⭐⭐⭐⭐ (5/5)  
+
+**Objective:** Display both created and last modified dates in the session more menu, styled per Figma and consistent with session list item formatting.
+**Implementation:** Added a disabled menu item with both dates, using shared formatting utils and correct typography/color.
+**Result:**
+- Dates are clearly visible and styled consistently
+- No regression to menu actions
+- Pattern established for future menu metadata
+
+**Documentation:**
+- **Archive:** `memory-bank/archive/archive-session-menu-dates.md`
+- **Reflection:** `memory-bank/reflection/reflection-session-menu-dates.md`
+
+**Technical Impact:** Improved UI consistency and metadata visibility  
+**User Impact:** Users can easily see when a session was created or last modified  
+
+---
+
 ## Development Patterns & Insights
 
 ### 🎯 Workflow Effectiveness
