@@ -10,7 +10,6 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isIncognitoSession;
   final VoidCallback? onBackPressed;
   final VoidCallback? onTitlePressed;
-  final VoidCallback? onEditPressed;
   final VoidCallback? onCopyAllPressed;
   final VoidCallback? onSelectAllPressed;
   final VoidCallback? onDeleteSelectedPressed;
@@ -22,7 +21,6 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isIncognitoSession,
     this.onBackPressed,
     this.onTitlePressed,
-    this.onEditPressed,
     this.onCopyAllPressed,
     this.onSelectAllPressed,
     this.onDeleteSelectedPressed,
@@ -43,13 +41,6 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   List<Widget> _buildNormalActions() {
     return [
-      if (!isIncognitoSession) ...[
-        IconButton(
-          icon: AquaIcon.edit(),
-          onPressed: onEditPressed,
-          tooltip: AppStrings.sessionRenameTitle,
-        ),
-      ],
       IconButton(
         icon: SvgPicture.asset('assets/icons/copy-multiple.svg'),
         onPressed: onCopyAllPressed,

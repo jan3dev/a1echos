@@ -5,8 +5,10 @@ import '../models/transcription.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:provider/provider.dart';
+import '../providers/local_transcription_provider.dart';
 
-class TranscriptionItem extends StatelessWidget {
+class TranscriptionItem extends StatefulWidget {
   final Transcription transcription;
   final bool selectionMode;
   final bool isSelected;
@@ -16,6 +18,10 @@ class TranscriptionItem extends StatelessWidget {
   final bool isWhisperRecording;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool isEditing;
+  final bool isAnyEditing;
+  final VoidCallback onStartEdit;
+  final VoidCallback onEndEdit;
 
   const TranscriptionItem({
     super.key,
@@ -28,40 +34,107 @@ class TranscriptionItem extends StatelessWidget {
     this.isWhisperRecording = false,
     required this.onTap,
     required this.onLongPress,
+    required this.isEditing,
+    required this.isAnyEditing,
+    required this.onStartEdit,
+    required this.onEndEdit,
   });
+
+  @override
+  State<TranscriptionItem> createState() => _TranscriptionItemState();
+}
+
+class _TranscriptionItemState extends State<TranscriptionItem> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.transcription.text);
+  }
+
+  @override
+  void didUpdateWidget(covariant TranscriptionItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.transcription.text != widget.transcription.text) {
+      _controller.text = widget.transcription.text;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveEdit() async {
+    final newText = _controller.text.trim();
+    if (newText.isEmpty || newText == widget.transcription.text) {
+      widget.onEndEdit();
+      _controller.text = widget.transcription.text;
+      return;
+    }
+    final updated = Transcription(
+      id: widget.transcription.id,
+      sessionId: widget.transcription.sessionId,
+      text: newText,
+      timestamp: widget.transcription.timestamp,
+      audioPath: widget.transcription.audioPath,
+    );
+    Provider.of<LocalTranscriptionProvider>(
+      context,
+      listen: false,
+    ).updateTranscription(updated);
+    widget.onEndEdit();
+  }
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final isOlderThanCurrentYear = transcription.timestamp.year < now.year;
-    final dateFormat =
-        isOlderThanCurrentYear
-            ? DateFormat('MMM d, yyyy')
-            : DateFormat('MMM d');
+    final isOlderThanCurrentYear =
+        widget.transcription.timestamp.year < now.year;
+    final dateFormat = isOlderThanCurrentYear
+        ? DateFormat('MMM d, yyyy')
+        : DateFormat('MMM d');
     final timeFormat = DateFormat('h:mm a');
     final colors = AquaColors.lightColors;
 
     Color backgroundColor = colors.surfacePrimary;
-    if (selectionMode && isSelected) {
+    if (widget.selectionMode && widget.isSelected) {
       backgroundColor = colors.surfaceSelected;
     }
 
     bool showSkeleton =
-        isLoadingWhisperResult || isLoadingVoskResult || isWhisperRecording;
-    bool enableInteractions = !isLivePreviewItem && !showSkeleton;
-    bool showCopyIcon = !isLivePreviewItem && !selectionMode;
-    bool showCheckbox = selectionMode && !isLivePreviewItem;
-    bool disableCopyIcon = showSkeleton;
+        widget.isLoadingWhisperResult ||
+        widget.isLoadingVoskResult ||
+        widget.isWhisperRecording;
+    bool enableInteractions = !widget.isLivePreviewItem && !showSkeleton;
+    bool showCopyIcon = !widget.isLivePreviewItem && !widget.selectionMode;
+    bool showEditIcon = !widget.isLivePreviewItem && !widget.selectionMode;
+    bool showCheckbox = widget.selectionMode && !widget.isLivePreviewItem;
+    bool disableIcons =
+        showSkeleton || (widget.isAnyEditing && !widget.isEditing);
 
     return GestureDetector(
-      onTap: enableInteractions ? onTap : null,
-      onLongPress: enableInteractions ? onLongPress : null,
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        if (widget.isEditing) {
+          _saveEdit();
+          FocusScope.of(context).unfocus();
+        } else if (enableInteractions) {
+          widget.onTap();
+        }
+      },
+      onLongPress: enableInteractions ? widget.onLongPress : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(8),
+          border: widget.isEditing
+              ? Border.all(color: colors.accentBrand, width: 1)
+              : null,
           boxShadow: [
             BoxShadow(
               color: colors.surfacePrimary.withOpacity(0.04),
@@ -82,10 +155,12 @@ class TranscriptionItem extends StatelessWidget {
                         TextSpan(
                           text:
                               (showSkeleton ||
-                                      !(isLivePreviewItem &&
-                                          transcription.text.isEmpty))
-                                  ? dateFormat.format(transcription.timestamp)
-                                  : "",
+                                  !(widget.isLivePreviewItem &&
+                                      widget.transcription.text.isEmpty))
+                              ? dateFormat.format(
+                                  widget.transcription.timestamp,
+                                )
+                              : "",
                           style: AquaTypography.caption1Medium.copyWith(
                             color: colors.textSecondary,
                           ),
@@ -94,10 +169,12 @@ class TranscriptionItem extends StatelessWidget {
                         TextSpan(
                           text:
                               (showSkeleton ||
-                                      !(isLivePreviewItem &&
-                                          transcription.text.isEmpty))
-                                  ? timeFormat.format(transcription.timestamp)
-                                  : "",
+                                  !(widget.isLivePreviewItem &&
+                                      widget.transcription.text.isEmpty))
+                              ? timeFormat.format(
+                                  widget.transcription.timestamp,
+                                )
+                              : "",
                           style: AquaTypography.caption1Medium.copyWith(
                             color: colors.textTertiary,
                           ),
@@ -107,22 +184,51 @@ class TranscriptionItem extends StatelessWidget {
                   ),
                 ),
                 if (showCheckbox) _buildCheckbox(colors),
-                if (showCopyIcon)
-                  _buildCopyIcon(context, colors, disableCopyIcon),
+                if (showEditIcon) _buildEditIcon(context, colors, disableIcons),
+                if (showEditIcon && showCopyIcon) const SizedBox(width: 16),
+                if (showCopyIcon) _buildCopyIcon(context, colors, disableIcons),
               ],
             ),
             const SizedBox(height: 8),
-            Skeletonizer(
-              enabled: showSkeleton,
-              child: Text(
-                showSkeleton
-                    ? 'Lorem ipsum dolor sit amet, consectetur adipi.'
-                    : transcription.text,
-                style: AquaTypography.body1.copyWith(
-                  color: colors.textSecondary,
+            if (widget.isEditing)
+              Focus(
+                onFocusChange: (hasFocus) {
+                  if (!hasFocus) {
+                    _saveEdit();
+                  }
+                },
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  minLines: 1,
+                  maxLines: 6,
+                  style: AquaTypography.body1.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    fillColor: colors.surfacePrimary,
+                    filled: true,
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _saveEdit(),
+                  textInputAction: TextInputAction.done,
+                  onEditingComplete: _saveEdit,
+                ),
+              )
+            else
+              Skeletonizer(
+                enabled: showSkeleton,
+                child: Text(
+                  showSkeleton
+                      ? 'Lorem ipsum dolor sit amet, consectetur adipi.'
+                      : widget.transcription.text,
+                  style: AquaTypography.body1.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -130,7 +236,7 @@ class TranscriptionItem extends StatelessWidget {
   }
 
   Widget _buildCheckbox(AquaColors colors) {
-    if (isSelected) {
+    if (widget.isSelected) {
       return AquaCheckBox.small(value: true, onChanged: null);
     } else {
       return AquaCheckBox.small(value: false, onChanged: null);
@@ -146,15 +252,35 @@ class TranscriptionItem extends StatelessWidget {
       width: 18,
       height: 18,
       child: GestureDetector(
-        onTap:
-            disabled
-                ? null
-                : () => _copyToClipboard(context, transcription.text),
+        onTap: disabled
+            ? null
+            : () => _copyToClipboard(context, widget.transcription.text),
         behavior: HitTestBehavior.opaque,
         child: Opacity(
           opacity: disabled ? 0.5 : 1.0,
           child: Center(
             child: AquaIcon.copy(size: 18, color: colors.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditIcon(
+    BuildContext context,
+    AquaColors colors,
+    bool disabled,
+  ) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: GestureDetector(
+        onTap: disabled ? null : widget.onStartEdit,
+        behavior: HitTestBehavior.opaque,
+        child: Opacity(
+          opacity: disabled ? 0.5 : 1.0,
+          child: Center(
+            child: AquaIcon.edit(size: 18, color: colors.textSecondary),
           ),
         ),
       ),

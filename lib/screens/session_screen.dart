@@ -131,18 +131,6 @@ class _SessionScreenState extends State<SessionScreen>
     );
   }
 
-  void _handleEditPressed() {
-    SessionInputModal.show(
-      context,
-      title: AppStrings.sessionRenameTitle,
-      buttonText: AppStrings.save,
-      initialValue: _navigationController.sessionName,
-      onSubmit: (name) {
-        _navigationController.renameSession(name);
-      },
-    );
-  }
-
   void _handleCopyAllPressed() {
     _selectionController.copyAllTranscriptions(context);
   }
@@ -188,38 +176,43 @@ class _SessionScreenState extends State<SessionScreen>
             onBackPressed: () =>
                 _navigationController.handleBackNavigation(context),
             onTitlePressed: _handleTitlePressed,
-            onEditPressed: _handleEditPressed,
             onCopyAllPressed: _handleCopyAllPressed,
             onSelectAllPressed: _handleSelectAllPressed,
             onDeleteSelectedPressed: _handleDeleteSelectedPressed,
           ),
-          body: Stack(
-            children: [
-              TranscriptionContentView(
-                scrollController: _scrollController,
-                selectionMode: _selectionController.selectionMode,
-                selectedTranscriptionIds:
-                    _selectionController.selectedTranscriptionIds,
-                onTranscriptionTap: _handleTranscriptionTap,
-                onTranscriptionLongPress: _handleTranscriptionLongPress,
-              ),
-              if (_selectionController.selectionMode)
-                Positioned(
-                  bottom: 32,
-                  left: 16,
-                  right: 16,
-                  child: Center(
-                    child: AquaButton.primary(
-                      text: AppStrings.share,
-                      onPressed: _selectionController.hasSelectedItems
-                          ? _handleSharePressed
-                          : null,
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              FocusScope.of(context).unfocus();
+            },
+            child: Stack(
+              children: [
+                TranscriptionContentView(
+                  scrollController: _scrollController,
+                  selectionMode: _selectionController.selectionMode,
+                  selectedTranscriptionIds:
+                      _selectionController.selectedTranscriptionIds,
+                  onTranscriptionTap: _handleTranscriptionTap,
+                  onTranscriptionLongPress: _handleTranscriptionLongPress,
+                ),
+                if (_selectionController.selectionMode)
+                  Positioned(
+                    bottom: 32,
+                    left: 16,
+                    right: 16,
+                    child: Center(
+                      child: AquaButton.primary(
+                        text: AppStrings.share,
+                        onPressed: _selectionController.hasSelectedItems
+                            ? _handleSharePressed
+                            : null,
+                      ),
                     ),
-                  ),
-                )
-              else
-                const RecordingControlsView(),
-            ],
+                  )
+                else
+                  const RecordingControlsView(),
+              ],
+            ),
           ),
         );
       },

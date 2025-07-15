@@ -57,6 +57,21 @@ class TranscriptionDataProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates an existing transcription by id
+  Future<void> updateTranscription(Transcription updated) async {
+    try {
+      final index = _transcriptions.indexWhere((t) => t.id == updated.id);
+      if (index == -1) throw Exception('Transcription not found');
+      _transcriptions[index] = updated;
+      await _repository.deleteTranscription(updated.id); // Remove old
+      await _repository.saveTranscription(updated); // Save new
+      await _sessionProvider.updateSessionModifiedTimestamp(updated.sessionId);
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to update transcription: $e');
+    }
+  }
+
   /// Deletes a single transcription
   Future<void> deleteTranscription(String id) async {
     try {

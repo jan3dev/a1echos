@@ -507,6 +507,11 @@ class LocalTranscriptionProvider with ChangeNotifier {
     await _modelManager.setWhisperRealtime(value);
   }
 
+  void updateTranscription(Transcription updated) {
+    _dataProvider.updateTranscription(updated);
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _audioLevelSub?.cancel();

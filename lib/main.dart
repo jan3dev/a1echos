@@ -5,6 +5,7 @@ import 'screens/settings_screen.dart';
 import 'providers/session_provider.dart';
 import 'providers/local_transcription_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/transcription_data_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +24,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
         ChangeNotifierProvider(
-          create:
-              (context) =>
-                  LocalTranscriptionProvider(context.read<SessionProvider>()),
+          create: (context) => TranscriptionDataProvider(context.read<SessionProvider>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => LocalTranscriptionProvider(context.read<SessionProvider>()),
         ),
       ],
       child: MaterialApp(

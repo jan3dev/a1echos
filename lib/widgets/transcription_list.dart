@@ -99,7 +99,7 @@ _ActivePreviewState _handleWhisperPreviewState(
   return _ActivePreviewState.empty();
 }
 
-class TranscriptionList extends StatelessWidget {
+class TranscriptionList extends StatefulWidget {
   final ScrollController controller;
   final bool selectionMode;
   final Set<String> selectedTranscriptionIds;
@@ -114,6 +114,25 @@ class TranscriptionList extends StatelessWidget {
     required this.onTranscriptionTap,
     required this.onTranscriptionLongPress,
   });
+
+  @override
+  State<TranscriptionList> createState() => _TranscriptionListState();
+}
+
+class _TranscriptionListState extends State<TranscriptionList> {
+  String? editingId;
+
+  void _handleStartEdit(String id) {
+    setState(() {
+      editingId = id;
+    });
+  }
+
+  void _handleEndEdit() {
+    setState(() {
+      editingId = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +154,7 @@ class TranscriptionList extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
 
     return ListView.builder(
-      controller: controller,
+      controller: widget.controller,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -148,24 +167,31 @@ class TranscriptionList extends StatelessWidget {
             ? previewState
             : _ActivePreviewState.empty();
 
+        final bool isEditing = editingId == transcription.id;
+        final bool isAnyEditing = editingId != null;
+
         return TranscriptionItem(
           transcription: transcription,
-          selectionMode: itemState.isPreviewItem ? false : selectionMode,
+          selectionMode: itemState.isPreviewItem ? false : widget.selectionMode,
           isSelected: itemState.isPreviewItem
               ? false
-              : selectedTranscriptionIds.contains(transcription.id),
+              : widget.selectedTranscriptionIds.contains(transcription.id),
           isLivePreviewItem: itemState.isVoskStreamingLive,
           isLoadingVoskResult: itemState.isVoskLoadingResult,
           isLoadingWhisperResult: itemState.isWhisperLoading,
           isWhisperRecording: itemState.isWhisperRecording,
+          isEditing: isEditing,
+          isAnyEditing: isAnyEditing,
+          onStartEdit: () => _handleStartEdit(transcription.id),
+          onEndEdit: _handleEndEdit,
           onTap: () {
             if (!itemState.isPreviewItem) {
-              onTranscriptionTap(transcription.id);
+              widget.onTranscriptionTap(transcription.id);
             }
           },
           onLongPress: () {
             if (!itemState.isPreviewItem) {
-              onTranscriptionLongPress(transcription.id);
+              widget.onTranscriptionLongPress(transcription.id);
             }
           },
         );
