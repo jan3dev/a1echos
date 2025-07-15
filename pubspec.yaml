@@ -27,9 +27,11 @@ dependencies:
   skeletonizer: ^2.0.1
   ui_components:
     git:
-      url: https://github.com/jan3dev/aqua-design-system.git
+      url: https://github.com/jan3dev/aqua-dev.git
+      path: packages/ui_components
       ref: main
   url_launcher: ^6.3.1
+  package_info_plus: ^8.3.0
   flutter_whisper_kit:
     git:
       url: https://github.com/jan3dev/flutter_whisper_kit.git

@@ -271,3 +271,65 @@ Add both the created and last modified date to the session more menu. The modifi
 - [ ] Implementation steps
 
 ---
+
+# Tasks
+
+## Active Enhancements
+
+## Enhancement Details
+
+## Completed Enhancements
+- [X] Settings Screen Footer & Banner Spacing (2024-07-15)
+
+### Settings Screen Footer & Banner Spacing Enhancement
+
+**Status**: Complete
+**Priority**: Medium
+**Estimated Effort**: Medium
+
+### Description
+Update the settings screen to:
+- Position the in-app banner 24px below the settings toggles (per Figma).
+- Add a footer with the app logo, "Follow us" tags (no links yet), and the app version, matching Figma design.
+
+### Requirements
+- Banner must be 24px below the settings toggles.
+- Footer must include:
+  - App logo (existing asset)
+  - "Follow us" tags (placeholders, no links yet)
+  - App version (dynamically fetched)
+- Footer layout and spacing must match Figma (node 6764-7367).
+- Responsive layout for different device sizes.
+- All changes must be tested on iOS and Android.
+
+### Subtasks
+- [X] Review Figma for banner/toggle spacing and footer design.
+- [X] Update settings screen layout for 24px banner spacing.
+- [X] Add footer widget to settings screen.
+- [X] Display logo in footer.
+- [X] Add "Follow us" tags (no links yet).
+- [X] Display app version (dynamic).
+- [X] Test layout and spacing on iOS and Android.
+
+### Dependencies
+- Figma design reference (node 6764-7367)
+- Existing logo asset
+- package_info_plus (for app version, if not already present)
+
+### Notes
+- Use url_launcher for links in the future, but not needed yet.
+- Use package_info_plus to fetch app version dynamically.
+- Footer links will be added in a later step.
+
+### Challenges & Mitigations
+- Ensuring spacing matches Figma exactly: Use Figma inspect tool for pixel-perfect values.
+- Footer layout may be tight on small screens: Use responsive layout and test on multiple devices.
+- Fetching app version dynamically: Use package_info_plus.
+
+### Progress
+[#######--] 100% Complete
+
+### Reflection Status
+- Implementation matches Figma and user requirements.
+- All subtasks completed and verified.
+- See reflection document for detailed analysis.

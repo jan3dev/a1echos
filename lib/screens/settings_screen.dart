@@ -7,6 +7,7 @@ import '../models/model_type.dart';
 import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
 import '../widgets/aqua_in_app_banner.dart';
+import '../widgets/settings_footer.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -160,9 +161,7 @@ class SettingsScreen extends StatelessWidget {
                                   title: AppStrings.voskModelTitle,
                                   subtitle: AppStrings.voskModelSubtitle,
                                   onTap: () async {
-                                    await provider.changeModel(
-                                      ModelType.vosk,
-                                    );
+                                    await provider.changeModel(ModelType.vosk);
                                   },
                                 ),
                               );
@@ -265,17 +264,15 @@ class SettingsScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                      const SizedBox(
-                        height: 235,
-                      ), // 211px banner + 24px spacing
+                      Padding(
+                        padding: const EdgeInsets.only(top: 24, bottom: 24),
+                        child: const AquaInAppBanner(),
+                      ),
                     ],
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: const AquaInAppBanner(),
-              ),
+              const SettingsFooter(),
             ],
           );
         },

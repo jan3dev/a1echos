@@ -88,13 +88,13 @@ class AppStrings {
   static const String voskModelSubtitle = 'Fast, real-time';
   static const String whisperModelTitle = 'Whisper';
   static const String whisperModelRealtimeTitle = 'Whisper (Real-time)';
-  static const String whisperModelFileTitle = 'Whisper (File-based)';
+  static const String whisperModelFileTitle = 'Whisper';
   static const String whisperModelSubtitle = 'High accuracy';
-  static const String modelNotAvailable = 'not available';
   static const String whisperModelError = 'Whisper Model Error';
   static const String unknownErrorOccured = 'Unknown error occurred';
   static const String trySwitchingModelOrRestartingApp =
       'Try switching to a different model or restarting the app.';
+  static const String followUs = 'Follow us';
 
   // Recording strings
   static const String recordingPrefix = 'Session';

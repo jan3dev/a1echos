@@ -455,6 +455,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  package_info_plus:
+    dependency: "direct main"
+    description:
+      name: package_info_plus
+      sha256: "7976bfe4c583170d6cdc7077e3237560b364149fcd268b5f53d95a991963b191"
+      url: "https://pub.dev"
+    source: hosted
+    version: "8.3.0"
+  package_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: package_info_plus_platform_interface
+      sha256: "6c935fb612dff8e3cc9632c2b301720c77450a126114126ffaafe28d2e87956c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.0"
   path:
     dependency: "direct main"
     description:
@@ -855,10 +871,10 @@ packages:
   ui_components:
     dependency: "direct main"
     description:
-      path: "."
+      path: "packages/ui_components"
       ref: main
-      resolved-ref: b7c614da5ebab9cb4ffafcf37bb3a4a893881ec3
-      url: "https://github.com/jan3dev/aqua-design-system.git"
+      resolved-ref: "59af9d38d648dde5f7dc143f852e5f25b3e490df"
+      url: "https://github.com/jan3dev/aqua-dev.git"
     source: git
     version: "0.0.1+1"
   url_launcher:
