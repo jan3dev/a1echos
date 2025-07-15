@@ -481,9 +481,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   Future<void> loadTranscriptions() => _dataProvider.loadTranscriptions();
 
-  Future<void> loadTranscriptionsForSession(String sessionId) =>
-      _dataProvider.loadTranscriptionsForSession(sessionId);
-
   Future<void> deleteTranscription(String id) =>
       _dataProvider.deleteTranscription(id);
 

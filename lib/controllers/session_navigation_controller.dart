@@ -98,7 +98,7 @@ class SessionNavigationController with ChangeNotifier {
   Future<void> initializeSession() async {
     _sessionProvider.switchSession(sessionId);
 
-    await _transcriptionProvider.loadTranscriptionsForSession(sessionId);
+    await _transcriptionProvider.loadTranscriptions();
   }
 
   /// Renames the current session

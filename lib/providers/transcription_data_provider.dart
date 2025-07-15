@@ -34,21 +34,6 @@ class TranscriptionDataProvider with ChangeNotifier {
     }
   }
 
-  /// Loads transcriptions for a specific session
-  Future<void> loadTranscriptionsForSession(String sessionId) async {
-    try {
-      final allTranscriptions = await _repository.getTranscriptions();
-      _transcriptions = allTranscriptions
-          .where((t) => t.sessionId == sessionId)
-          .toList();
-      _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      notifyListeners();
-    } catch (e) {
-      throw Exception('Failed to load transcriptions for session: $e');
-    }
-  }
-
   /// Adds a new transcription to the data set
   void addTranscription(Transcription transcription) {
     _transcriptions.add(transcription);

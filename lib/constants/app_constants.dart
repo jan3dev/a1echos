@@ -42,7 +42,6 @@ class AppStrings {
       'Delete?';
   static const String homeDeleteSelectedSessionsMessage =
       'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
-  static const String homeDeleteSessionsButton = 'Delete';
   static const String homeSessionsDeleted = '{sessions} deleted';
   static const String homeErrorCreatingSession =
       'Error creating session: {error}';
@@ -59,8 +58,6 @@ class AppStrings {
       'Delete?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
-  static const String sessionDeleteTranscriptionsButton =
-      'Delete';
   static const String sessionTranscriptionsDeleted = '{transcriptions} deleted';
   static const String sessionErrorDeletingTranscriptions =
       'Error deleting {transcriptions}: {error}';

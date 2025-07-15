@@ -137,7 +137,7 @@ class SessionMoreMenu extends StatelessWidget {
           message: AppStrings.homeDeleteSelectedSessionsMessage
               .replaceAll('{count}', 'this')
               .replaceAll('{sessions}', 'session'),
-          confirmText: AppStrings.homeDeleteSessionsButton,
+          confirmText: AppStrings.delete,
           onConfirm: () {
             Navigator.pop(context);
             final provider = Provider.of<SessionProvider>(

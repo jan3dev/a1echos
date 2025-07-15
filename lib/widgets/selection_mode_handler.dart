@@ -55,7 +55,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
             '{sessions}',
             _selectedSessionIds.length == 1 ? 'session' : 'sessions',
           ),
-      confirmText: AppStrings.homeDeleteSessionsButton,
+      confirmText: AppStrings.delete,
       onConfirm: () {
         Navigator.pop(context);
         final deletedCount = _selectedSessionIds.length;

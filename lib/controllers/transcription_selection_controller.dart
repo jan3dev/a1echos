@@ -81,7 +81,7 @@ class TranscriptionSelectionController with ChangeNotifier {
                 ? 'transcription'
                 : 'transcriptions',
           ),
-      confirmText: AppStrings.sessionDeleteTranscriptionsButton,
+      confirmText: AppStrings.delete,
       cancelText: AppStrings.cancel,
       onConfirm: () async {
         Navigator.pop(context);

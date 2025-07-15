@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:provider/provider.dart';
 import '../models/session.dart';
-import '../constants/app_constants.dart';
-import '../utils/session_formatter.dart';
+import '../providers/local_transcription_provider.dart';
 import 'menus/session_more_menu.dart';
 
 class SessionListItem extends StatelessWidget {
@@ -24,12 +24,11 @@ class SessionListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AquaColors.lightColors;
-    final String subtitle = formatSessionSubtitle(
-      now: DateTime.now(),
-      created: session.timestamp,
-      lastModified: session.lastModified,
-      modifiedPrefix: AppStrings.modifiedPrefix,
-    );
+    final transcriptions = Provider.of<LocalTranscriptionProvider>(context).allTranscriptions;
+    final count = transcriptions.where((t) => t.sessionId == session.id).length;
+    final String subtitle = count == 1
+        ? '1 Transcription'
+        : '$count Transcriptions';
 
     return GestureDetector(
       onLongPress: onLongPress,
