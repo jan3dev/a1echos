@@ -333,3 +333,8 @@ Update the settings screen to:
 - Implementation matches Figma and user requirements.
 - All subtasks completed and verified.
 - See reflection document for detailed analysis.
+
+# Task: Settings Screen Refactor (Model & Theme Selection)
+- Status: ARCHIVED/COMPLETE
+- Reflection: [reflection/reflection-settings-refactor.md](reflection/reflection-settings-refactor.md)
+- Archive: In progress

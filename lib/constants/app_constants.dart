@@ -38,8 +38,7 @@ class AppStrings {
   static const String share = 'Share';
 
   // HomeScreen strings
-  static const String homeDeleteSelectedSessionsTitle =
-      'Delete?';
+  static const String homeDeleteSelectedSessionsTitle = 'Delete?';
   static const String homeDeleteSelectedSessionsMessage =
       'Are you sure you want to delete {count} {sessions}? This action cannot be undone.';
   static const String homeSessionsDeleted = '{sessions} deleted';
@@ -54,8 +53,7 @@ class AppStrings {
 
   // SessionScreen strings
   static const String sessionRenameTitle = 'Rename';
-  static const String sessionDeleteTranscriptionsTitle =
-      'Delete?';
+  static const String sessionDeleteTranscriptionsTitle = 'Delete?';
   static const String sessionDeleteTranscriptionsMessage =
       'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.';
   static const String sessionTranscriptionsDeleted = '{transcriptions} deleted';
@@ -81,8 +79,12 @@ class AppStrings {
 
   // Settings Screen
   static const String settingsTitle = 'Settings';
-  static const String transcriptionModelTitle = 'Transcription Model';
-  static const String transcriptionModelDescription =
+  static const String modelTitle = 'Model';
+  static const String themeTitle = 'Theme';
+  static const String auto = 'Auto';
+  static const String light = 'Light';
+  static const String dark = 'Dark';
+  static const String modelDescription =
       'Select which model to use. All processing happens on your device.';
   static const String voskModelTitle = 'Vosk';
   static const String voskModelSubtitle = 'Fast, real-time';
@@ -90,10 +92,6 @@ class AppStrings {
   static const String whisperModelRealtimeTitle = 'Whisper (Real-time)';
   static const String whisperModelFileTitle = 'Whisper';
   static const String whisperModelSubtitle = 'High accuracy';
-  static const String whisperModelError = 'Whisper Model Error';
-  static const String unknownErrorOccured = 'Unknown error occurred';
-  static const String trySwitchingModelOrRestartingApp =
-      'Try switching to a different model or restarting the app.';
   static const String followUs = 'Follow us';
 
   // Recording strings

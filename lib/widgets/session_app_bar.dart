@@ -40,9 +40,15 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   List<Widget> _buildNormalActions() {
+    final colors = AquaColors.lightColors;
+
     return [
       IconButton(
-        icon: SvgPicture.asset('assets/icons/copy-multiple.svg'),
+        iconSize: 24,
+        icon: SvgPicture.asset(
+          'assets/icons/copy-multiple.svg',
+          colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+        ),
         onPressed: onCopyAllPressed,
         tooltip: AppStrings.copyAllTooltip,
       ),
@@ -50,13 +56,20 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   List<Widget> _buildSelectionActions() {
+    final colors = AquaColors.lightColors;
+
     return [
       IconButton(
-        icon: SvgPicture.asset('assets/icons/select-all.svg'),
+        iconSize: 24,
+        icon: SvgPicture.asset(
+          'assets/icons/select-all.svg',
+          colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+        ),
         onPressed: onSelectAllPressed,
         tooltip: AppStrings.selectAll,
       ),
       IconButton(
+        iconSize: 24,
         icon: AquaIcon.trash(),
         onPressed: onDeleteSelectedPressed,
         tooltip: AppStrings.deleteSelected,

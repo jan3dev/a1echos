@@ -181,6 +181,10 @@
 
 ---
 
+### - Settings Screen Refactor (Model & Theme Selection):
+  - Archived: [archive/archive-settings-refactor.md](archive/archive-settings-refactor.md)
+  - Status: COMPLETE
+
 ## Development Patterns & Insights
 
 ### 🎯 Workflow Effectiveness

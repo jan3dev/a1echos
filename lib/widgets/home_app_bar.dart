@@ -39,6 +39,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         if (selectionMode) ...[
           IconButton(
+            iconSize: 24,
             icon: AquaIcon.trash(),
             onPressed: onDeleteSelected,
             tooltip: AppStrings.deleteSelected,
@@ -46,10 +47,9 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ] else ...[
           IconButton(
+            iconSize: 24,
             icon: SvgPicture.asset(
               'assets/icons/ghost.svg',
-              width: 24,
-              height: 24,
               colorFilter: ColorFilter.mode(
                 settingsProvider.isIncognitoMode
                     ? colors.accentBrand
@@ -62,14 +62,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 !settingsProvider.isIncognitoMode,
               );
             },
-            tooltip:
-                settingsProvider.isIncognitoMode
-                    ? 'Turn off Incognito Mode'
-                    : 'Turn on Incognito Mode',
-            color:
-                settingsProvider.isIncognitoMode
-                    ? colors.accentBrand
-                    : colors.textPrimary,
+            tooltip: settingsProvider.isIncognitoMode
+                ? 'Turn off Incognito Mode'
+                : 'Turn on Incognito Mode',
+            color: settingsProvider.isIncognitoMode
+                ? colors.accentBrand
+                : colors.textPrimary,
           ),
           IconButton(
             icon: AquaIcon.hamburger(),
