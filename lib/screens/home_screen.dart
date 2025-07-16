@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:ui_components/ui_components.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
@@ -11,16 +12,17 @@ import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
 import '../constants/app_constants.dart';
-import '../widgets/aqua_tooltip_with_pointer.dart';
+import '../widgets/aqua_tooltip_with_animation.dart';
+import '../models/app_theme.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreenState extends ConsumerState<HomeScreen>
     with
         WidgetsBindingObserver,
         SelectionModeHandler,
@@ -32,11 +34,9 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<LocalTranscriptionProvider>(
-        context,
-        listen: false,
-      );
-      provider.addListener(_scrollToBottom);
+      final transcriptionProvider = provider
+          .Provider.of<LocalTranscriptionProvider>(context, listen: false);
+      transcriptionProvider.addListener(_scrollToBottom);
     });
   }
 
@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     try {
-      Provider.of<LocalTranscriptionProvider>(
+      provider.Provider.of<LocalTranscriptionProvider>(
         context,
         listen: false,
       ).removeListener(_scrollToBottom);
@@ -75,11 +75,11 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      final sessionProvider = Provider.of<SessionProvider>(
+      final sessionProvider = provider.Provider.of<SessionProvider>(
         context,
         listen: false,
       );
-      final settingsProvider = Provider.of<SettingsProvider>(
+      final settingsProvider = provider.Provider.of<SettingsProvider>(
         context,
         listen: false,
       );
@@ -96,8 +96,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   bool _calculateEffectivelyEmpty() {
-    final sessionProvider = Provider.of<SessionProvider>(context);
-    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final sessionProvider = provider.Provider.of<SessionProvider>(context);
+    final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
     bool effectivelyEmpty = sessionProvider.sessions.isEmpty;
     if (sessionProvider.sessions.length == 1 &&
@@ -115,14 +115,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     final effectivelyEmpty = _calculateEffectivelyEmpty();
 
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
       appBar: HomeAppBar(
         selectionMode: selectionMode,
-        onDeleteSelected: deleteSelectedSessions,
+        onDeleteSelected: () => deleteSelectedSessions(ref),
         effectivelyEmpty: effectivelyEmpty,
       ),
       body: Stack(
@@ -149,10 +150,8 @@ class _HomeScreenState extends State<HomeScreen>
               bottom: 120,
               left: 0,
               right: 0,
-              child: AquaTooltipWithPointer(
+              child: AquaTooltipWithAnimation(
                 message: AppStrings.emptySessionsMessage,
-                backgroundColor: colors.glassInverse,
-                foregroundColor: colors.textInverse,
               ),
             ),
         ],

@@ -338,3 +338,43 @@ Update the settings screen to:
 - Status: ARCHIVED/COMPLETE
 - Reflection: [reflection/reflection-settings-refactor.md](reflection/reflection-settings-refactor.md)
 - Archive: In progress
+
+---
+
+## 🚀 NEW TASK: Implement Theme Support (Dark Theme & Switching) (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+Implement dark theme support and theme switching in the app, with the switching logic working on the theme selection screen. Use Riverpod for state management, persist the theme selection, and ensure the UI updates accordingly. Create new files for app_theme, theme_provider, and extensions.
+
+### 🧩 CHECKLIST (VAN Mode)
+- [ ] **Add Theme Model**
+  - [ ] Create `AppTheme` enum and extension in `lib/models/app_theme.dart`.
+- [ ] **Add Theme Providers**
+  - [ ] Create `lib/providers/theme_provider.dart` with `themeProvider`, `prefsProvider`, `sharedPreferencesProvider`, and `UserPreferencesNotifier`.
+- [ ] **Add Extensions**
+  - [ ] Create `lib/extensions/context_extensions.dart` for `ContextX` and `AppThemeEx` extensions.
+- [ ] **Integrate Provider in main.dart**
+  - [ ] Wrap app with `ProviderScope`.
+  - [ ] Use `themeProvider` for the app's `theme` and `darkTheme`.
+- [ ] **Update Theme Selection Screen**
+  - [ ] Use `ref.watch(prefsProvider).selectedTheme` to get the current theme.
+  - [ ] Add a button or UI to switch theme using `ref.read(prefsProvider.notifier).switchTheme(...)`.
+  - [ ] Ensure the UI updates immediately on theme change.
+- [ ] **AquaColors Integration**
+  - [ ] Use `AquaColors.lightColors`, `AquaColors.darkColors`, etc., as needed.
+  - [ ] Add `AppThemeEx` extension for easy color access.
+- [ ] **SharedPreferences Initialization**
+  - [ ] Ensure `SharedPreferences` is initialized before use (async init in main or via provider).
+- [ ] **Test & Verify**
+  - [ ] Verify theme switching works and persists across app restarts.
+  - [ ] Ensure all screens respond to theme changes.
+
+### 📁 Files to Create/Update
+- `lib/models/app_theme.dart` (new)
+- `lib/providers/theme_provider.dart` (new)
+- `lib/extensions/context_extensions.dart` (new)
+- `lib/main.dart` (update)
+- `lib/screens/theme_selection_screen.dart` (update)
+
+---

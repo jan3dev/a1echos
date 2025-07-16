@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/theme_provider.dart';
 import '../providers/transcription_state_manager.dart';
 import '../models/model_type.dart';
+import '../models/app_theme.dart';
 
 class AudioWaveVisualization extends StatefulWidget {
   final TranscriptionState state;
@@ -64,18 +66,20 @@ class _AudioWaveVisualizationState extends State<AudioWaveVisualization>
   }
 }
 
-class _AudioBar extends StatelessWidget {
+class _AudioBar extends ConsumerWidget {
   final double height;
 
   const _AudioBar({required this.height});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     return Container(
       width: 8,
       height: height,
       decoration: BoxDecoration(
-        color: AquaColors.lightColors.accentBrand.withOpacity(0.5),
+        color: colors.accentBrand.withOpacity(0.5),
         borderRadius: BorderRadius.circular(4),
       ),
     );

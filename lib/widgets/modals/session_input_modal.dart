@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
-import '../../constants/app_constants.dart';
 
-class SessionInputModal extends StatefulWidget {
+import '../../constants/app_constants.dart';
+import '../../providers/theme_provider.dart';
+import '../../models/app_theme.dart';
+
+class SessionInputModal extends ConsumerStatefulWidget {
   final String title;
   final String buttonText;
   final String initialValue;
@@ -34,6 +38,7 @@ class SessionInputModal extends StatefulWidget {
   /// Show the session input modal
   static Future<void> show(
     BuildContext context, {
+    required WidgetRef ref,
     required String title,
     required String buttonText,
     String initialValue = '',
@@ -42,33 +47,34 @@ class SessionInputModal extends StatefulWidget {
     bool showCancelButton = false,
     String cancelButtonText = 'Cancel',
   }) {
+    final appTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = appTheme.colors(context);
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AquaColors.lightColors.surfaceBackground,
-      builder:
-          (dialogContext) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(dialogContext).viewInsets.bottom,
-            ),
-            child: SessionInputModal(
-              title: title,
-              buttonText: buttonText,
-              initialValue: initialValue,
-              onSubmit: onSubmit,
-              onCancel: onCancel,
-              showCancelButton: showCancelButton,
-              cancelButtonText: cancelButtonText,
-            ),
-          ),
+      backgroundColor: colors.surfacePrimary.withOpacity(0),
+      builder: (dialogContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(dialogContext).viewInsets.bottom,
+        ),
+        child: SessionInputModal(
+          title: title,
+          buttonText: buttonText,
+          initialValue: initialValue,
+          onSubmit: onSubmit,
+          onCancel: onCancel,
+          showCancelButton: showCancelButton,
+          cancelButtonText: cancelButtonText,
+        ),
+      ),
     );
   }
 
   @override
-  State<SessionInputModal> createState() => _SessionInputModalState();
+  ConsumerState<SessionInputModal> createState() => _SessionInputModalState();
 }
 
-class _SessionInputModalState extends State<SessionInputModal> {
+class _SessionInputModalState extends ConsumerState<SessionInputModal> {
   late TextEditingController _controller;
 
   @override
@@ -85,7 +91,8 @@ class _SessionInputModalState extends State<SessionInputModal> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+    final appTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = appTheme.colors(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -102,9 +109,10 @@ class _SessionInputModalState extends State<SessionInputModal> {
             colors: colors,
             title: widget.title,
             transparent: true,
+            showBackButton: false,
             actions: [
               IconButton(
-                icon: AquaIcon.close(),
+                icon: AquaIcon.close(color: colors.textPrimary),
                 onPressed: () {
                   Navigator.pop(context);
                   if (widget.onCancel != null) {

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
 import '../constants/app_constants.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
 /// Displays an error message with an optional retry action.
-class ErrorView extends StatelessWidget {
+class ErrorView extends ConsumerWidget {
   final String errorMessage;
   final VoidCallback? onRetry;
 
   const ErrorView({super.key, required this.errorMessage, this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),

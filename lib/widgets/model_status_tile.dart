@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ui_components/ui_components.dart';
 import '../models/model_type.dart';
 import '../constants/app_constants.dart';
-import 'package:ui_components/ui_components.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
 /// Shows the status of the selected transcription model and an optional retry button.
-class ModelStatusTile extends StatelessWidget {
+class ModelStatusTile extends ConsumerWidget {
   final ModelType selectedModelType;
   final bool isModelReady;
   final String? error;
@@ -19,8 +22,9 @@ class ModelStatusTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     final modelName = selectedModelType == ModelType.vosk
         ? AppStrings.voskModelTitle
         : AppStrings.whisperModelTitle;

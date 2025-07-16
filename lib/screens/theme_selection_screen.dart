@@ -1,41 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
 import '../constants/app_constants.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class ThemeSelectionScreen extends StatefulWidget {
+class ThemeSelectionScreen extends ConsumerWidget {
   const ThemeSelectionScreen({super.key});
 
   @override
-  State<ThemeSelectionScreen> createState() => _ThemeSelectionScreenState();
-}
-
-class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
-  // TODO: Replace with provider logic if available
-  String _selectedTheme = 'auto';
-
-  void _onSelect(String value) {
-    setState(() {
-      _selectedTheme = value;
-    });
-    // TODO: Update provider here
-    Navigator.of(context).pop();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final notifier = ref.read(prefsProvider.notifier);
+    final colors = selectedTheme.colors(context);
     return Scaffold(
-      backgroundColor: aquaColors.surfaceBackground,
-      appBar: AquaTopAppBar(colors: aquaColors, title: AppStrings.themeTitle),
+      backgroundColor: colors.surfaceBackground,
+      appBar: AquaTopAppBar(colors: colors, title: AppStrings.themeTitle),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Container(
           decoration: BoxDecoration(
-            color: aquaColors.surfacePrimary,
+            color: colors.surfacePrimary,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: aquaColors.surfaceInverse.withOpacity(0.04),
+                color: colors.surfaceInverse.withOpacity(0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 0),
               ),
@@ -47,35 +36,53 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
             children: [
               AquaListItem(
                 title: AppStrings.auto,
-                iconTrailing: AquaRadio<String>(
-                  value: 'auto',
-                  groupValue: _selectedTheme,
-                  onChanged: (_) => _onSelect('auto'),
+                iconTrailing: AquaRadio<AppTheme>(
+                  value: AppTheme.auto,
+                  groupValue: selectedTheme,
+                  onChanged: (_) {
+                    notifier.switchTheme(AppTheme.auto);
+                    Navigator.of(context).pop();
+                  },
                 ),
-                onTap: () => _onSelect('auto'),
-                backgroundColor: aquaColors.surfacePrimary,
+                onTap: () {
+                  notifier.switchTheme(AppTheme.auto);
+                  Navigator.of(context).pop();
+                },
+                backgroundColor: colors.surfacePrimary,
               ),
-              Divider(height: 1, color: aquaColors.surfaceBorderPrimary),
+              Divider(height: 1, color: colors.surfaceBorderPrimary),
               AquaListItem(
                 title: AppStrings.light,
-                iconTrailing: AquaRadio<String>(
-                  value: 'light',
-                  groupValue: _selectedTheme,
-                  onChanged: (_) => _onSelect('light'),
+                iconTrailing: AquaRadio<AppTheme>(
+                  value: AppTheme.light,
+                  groupValue: selectedTheme,
+                  onChanged: (_) {
+                    notifier.switchTheme(AppTheme.light);
+                    Navigator.of(context).pop();
+                  },
                 ),
-                onTap: () => _onSelect('light'),
-                backgroundColor: aquaColors.surfacePrimary,
+                onTap: () {
+                  notifier.switchTheme(AppTheme.light);
+                  Navigator.of(context).pop();
+                },
+                backgroundColor: colors.surfacePrimary,
               ),
-              Divider(height: 1, color: aquaColors.surfaceBorderPrimary),
+              Divider(height: 1, color: colors.surfaceBorderPrimary),
               AquaListItem(
                 title: AppStrings.dark,
-                iconTrailing: AquaRadio<String>(
-                  value: 'dark',
-                  groupValue: _selectedTheme,
-                  onChanged: (_) => _onSelect('dark'),
+                iconTrailing: AquaRadio<AppTheme>(
+                  value: AppTheme.dark,
+                  groupValue: selectedTheme,
+                  onChanged: (_) {
+                    notifier.switchTheme(AppTheme.dark);
+                    Navigator.of(context).pop();
+                  },
                 ),
-                onTap: () => _onSelect('dark'),
-                backgroundColor: aquaColors.surfacePrimary,
+                onTap: () {
+                  notifier.switchTheme(AppTheme.dark);
+                  Navigator.of(context).pop();
+                },
+                backgroundColor: colors.surfacePrimary,
               ),
             ],
           ),

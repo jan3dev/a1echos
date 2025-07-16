@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart' as provider;
 import '../../models/session.dart';
 import '../../constants/app_constants.dart';
-import '../../providers/session_provider.dart';
+import '../../utils/session_formatter.dart';
+import '../../providers/theme_provider.dart';
+import '../../models/app_theme.dart';
 import '../modals/confirmation_modal.dart';
 import '../modals/session_input_modal.dart';
-import '../../utils/session_formatter.dart';
-import 'package:intl/intl.dart';
+import '../../providers/session_provider.dart';
 
-class SessionMoreMenu extends StatelessWidget {
+class SessionMoreMenu extends ConsumerWidget {
   final Session session;
   final BuildContext listItemContext;
 
@@ -20,12 +23,19 @@ class SessionMoreMenu extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return AquaIcon.more(onTap: () => _showMoreMenu(context));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
+
+    return AquaIcon.more(
+      color: colors.textPrimary,
+      onTap: () => _showMoreMenu(context, ref),
+    );
   }
 
-  void _showMoreMenu(BuildContext context) {
-    final colors = AquaColors.lightColors;
+  void _showMoreMenu(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     final RenderBox? listItemBox =
         listItemContext.findRenderObject() as RenderBox?;
@@ -61,7 +71,7 @@ class SessionMoreMenu extends StatelessWidget {
           value: 'rename',
           padding: EdgeInsets.zero,
           child: AquaListItem(
-            iconLeading: AquaIcon.edit(),
+            iconLeading: AquaIcon.edit(color: colors.textPrimary),
             title: AppStrings.sessionRenameTitle,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,
@@ -76,7 +86,7 @@ class SessionMoreMenu extends StatelessWidget {
           value: 'delete',
           padding: EdgeInsets.zero,
           child: AquaListItem(
-            iconLeading: AquaIcon.trash(),
+            iconLeading: AquaIcon.trash(color: colors.textPrimary),
             title: AppStrings.delete,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,
@@ -89,7 +99,12 @@ class SessionMoreMenu extends StatelessWidget {
         ),
         PopupMenuItem<String>(
           enabled: false,
-          padding: EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 4),
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: 4,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -119,20 +134,22 @@ class SessionMoreMenu extends StatelessWidget {
       if (value == 'rename') {
         SessionInputModal.show(
           context,
+          ref: ref,
           title: AppStrings.sessionRenameTitle,
           buttonText: AppStrings.save,
           initialValue: session.name,
           onSubmit: (name) {
-            final provider = Provider.of<SessionProvider>(
+            final sessionProvider = provider.Provider.of<SessionProvider>(
               context,
               listen: false,
             );
-            provider.renameSession(session.id, name);
+            sessionProvider.renameSession(session.id, name);
           },
         );
       } else if (value == 'delete') {
         ConfirmationModal.show(
           context: context,
+          ref: ref,
           title: AppStrings.homeDeleteSelectedSessionsTitle,
           message: AppStrings.homeDeleteSelectedSessionsMessage
               .replaceAll('{count}', 'this')
@@ -140,11 +157,11 @@ class SessionMoreMenu extends StatelessWidget {
           confirmText: AppStrings.delete,
           onConfirm: () {
             Navigator.pop(context);
-            final provider = Provider.of<SessionProvider>(
+            final sessionProvider = provider.Provider.of<SessionProvider>(
               context,
               listen: false,
             );
-            provider.deleteSession(session.id);
+            sessionProvider.deleteSession(session.id);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(

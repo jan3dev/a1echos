@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/local_transcription_provider.dart';
@@ -19,11 +19,11 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> startRecording() async {
-    final sessionProvider = Provider.of<SessionProvider>(
+    final sessionProvider = provider.Provider.of<SessionProvider>(
       context,
       listen: false,
     );
-    final settingsProvider = Provider.of<SettingsProvider>(
+    final settingsProvider = provider.Provider.of<SettingsProvider>(
       context,
       listen: false,
     );
@@ -41,12 +41,10 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
 
       if (!mounted) return;
 
-      final provider = Provider.of<LocalTranscriptionProvider>(
-        context,
-        listen: false,
-      );
+      final localTranscriptionProvider = provider
+          .Provider.of<LocalTranscriptionProvider>(context, listen: false);
 
-      provider.startRecording();
+      localTranscriptionProvider.startRecording();
 
       Navigator.push(
         context,

@@ -8,13 +8,11 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:echos/main.dart';
-import 'package:echos/providers/settings_provider.dart';
 
 void main() async {
   testWidgets('App displays main title', (WidgetTester tester) async {
     // Build the app and trigger a frame.
-    final settingsProvider = await SettingsProvider.create();
-    await tester.pumpWidget(MyApp(settingsProvider: settingsProvider));
+    await tester.pumpWidget(MyApp());
 
     // Verify that the app title is shown.
     expect(find.text('Echos'), findsOneWidget);

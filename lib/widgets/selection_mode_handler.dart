@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
 import '../widgets/modals/confirmation_modal.dart';
@@ -35,8 +36,8 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
     }
   }
 
-  void deleteSelectedSessions() {
-    final sessionProvider = Provider.of<SessionProvider>(
+  void deleteSelectedSessions(WidgetRef ref) {
+    final sessionProvider = provider.Provider.of<SessionProvider>(
       context,
       listen: false,
     );
@@ -45,6 +46,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
 
     ConfirmationModal.show(
       context: context,
+      ref: ref,
       title: AppStrings.homeDeleteSelectedSessionsTitle,
       message: AppStrings.homeDeleteSelectedSessionsMessage
           .replaceAll(

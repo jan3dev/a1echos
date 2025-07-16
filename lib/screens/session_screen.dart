@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
@@ -13,17 +14,19 @@ import '../providers/settings_provider.dart';
 import '../controllers/session_recording_controller.dart';
 import '../controllers/transcription_selection_controller.dart';
 import '../controllers/session_navigation_controller.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class SessionScreen extends StatefulWidget {
+class SessionScreen extends ConsumerStatefulWidget {
   final String sessionId;
 
   const SessionScreen({super.key, required this.sessionId});
 
   @override
-  State<SessionScreen> createState() => _SessionScreenState();
+  ConsumerState<SessionScreen> createState() => _SessionScreenState();
 }
 
-class _SessionScreenState extends State<SessionScreen>
+class _SessionScreenState extends ConsumerState<SessionScreen>
     with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
 
@@ -39,12 +42,16 @@ class _SessionScreenState extends State<SessionScreen>
   void initState() {
     super.initState();
 
-    _localTranscriptionProvider = Provider.of<LocalTranscriptionProvider>(
+    _localTranscriptionProvider = provider
+        .Provider.of<LocalTranscriptionProvider>(context, listen: false);
+    _sessionProvider = provider.Provider.of<SessionProvider>(
       context,
       listen: false,
     );
-    _sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-    _settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    _settingsProvider = provider.Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
 
     _initializeControllers();
 
@@ -122,6 +129,7 @@ class _SessionScreenState extends State<SessionScreen>
   void _handleTitlePressed() {
     SessionInputModal.show(
       context,
+      ref: ref,
       title: AppStrings.sessionRenameTitle,
       buttonText: AppStrings.save,
       initialValue: _navigationController.sessionName,
@@ -140,7 +148,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   void _handleDeleteSelectedPressed() {
-    _selectionController.deleteSelectedTranscriptions(context);
+    _selectionController.deleteSelectedTranscriptions(context, ref);
   }
 
   void _handleTranscriptionTap(String id) {
@@ -159,7 +167,8 @@ class _SessionScreenState extends State<SessionScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     return ListenableBuilder(
       listenable: Listenable.merge([

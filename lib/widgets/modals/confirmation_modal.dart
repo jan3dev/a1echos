@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/app_theme.dart';
 import '../../constants/app_constants.dart';
+import '../../providers/theme_provider.dart';
 
 class ConfirmationModal {
   /// Shows a confirmation modal with warning icon
@@ -12,18 +15,18 @@ class ConfirmationModal {
   /// [cancelText] - Text for the secondary/cancel button
   /// [onConfirm] - Callback function when user confirms the action
   /// [onCancel] - Optional callback function when user cancels
-  /// [isDanger] - Whether to style as a dangerous action (red styling)
   static void show({
     required BuildContext context,
+    required WidgetRef ref,
     required String title,
     required String message,
     required String confirmText,
     String cancelText = AppStrings.cancel,
     required VoidCallback onConfirm,
     VoidCallback? onCancel,
-    bool isDanger = true,
   }) {
-    final colors = AquaColors.lightColors;
+    final appTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = appTheme.colors(context);
 
     AquaModalSheet.show(
       context,
@@ -35,6 +38,7 @@ class ConfirmationModal {
       secondaryButtonText: cancelText,
       onPrimaryButtonTap: onConfirm,
       onSecondaryButtonTap: onCancel ?? () => Navigator.pop(context),
+      iconVariant: AquaModalSheetVariant.warning,
     );
   }
 }

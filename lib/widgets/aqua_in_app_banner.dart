@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:ui_components/ui_components.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class AquaInAppBanner extends StatelessWidget {
+class AquaInAppBanner extends ConsumerWidget {
   const AquaInAppBanner({super.key});
 
   Future<void> _launchAquaApp() async {
@@ -40,8 +42,9 @@ class AquaInAppBanner extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     return GestureDetector(
       onTap: _launchAquaApp,
@@ -52,7 +55,7 @@ class AquaInAppBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: aquaColors.surfaceInverse.withOpacity(0.04),
+              color: colors.surfaceInverse.withOpacity(0.04),
               blurRadius: 16,
               offset: const Offset(0, 0),
             ),

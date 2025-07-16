@@ -1,15 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class RecordingButton extends StatefulWidget {
+class RecordingButton extends ConsumerStatefulWidget {
   /// Callback that gets triggered when recording is started
   final VoidCallback? onRecordingStart;
 
@@ -31,10 +34,10 @@ class RecordingButton extends StatefulWidget {
   });
 
   @override
-  State<RecordingButton> createState() => _RecordingButtonState();
+  ConsumerState<RecordingButton> createState() => _RecordingButtonState();
 }
 
-class _RecordingButtonState extends State<RecordingButton> {
+class _RecordingButtonState extends ConsumerState<RecordingButton> {
   bool _isDebouncing = false;
   bool _gestureIsolationActive = false;
   Timer? _debounceTimer;
@@ -144,10 +147,11 @@ class _RecordingButtonState extends State<RecordingButton> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     if (widget.useProviderState) {
-      return Consumer<LocalTranscriptionProvider>(
+      return provider.Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           final state = provider.state;
 

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_constants.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
 /// App bar component for the session screen that handles both normal and selection modes
-class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
+class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String sessionName;
   final bool selectionMode;
   final bool isIncognitoSession;
@@ -27,21 +30,20 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     return AquaTopAppBar(
       colors: colors,
       onBackPressed: onBackPressed,
       title: sessionName,
-      actions: selectionMode ? _buildSelectionActions() : _buildNormalActions(),
+      actions: selectionMode ? _buildSelectionActions(colors) : _buildNormalActions(colors),
       onTitlePressed: !isIncognitoSession ? onTitlePressed : null,
     );
   }
 
-  List<Widget> _buildNormalActions() {
-    final colors = AquaColors.lightColors;
-
+  List<Widget> _buildNormalActions(AquaColors colors) {
     return [
       IconButton(
         iconSize: 24,
@@ -55,9 +57,7 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
     ];
   }
 
-  List<Widget> _buildSelectionActions() {
-    final colors = AquaColors.lightColors;
-
+  List<Widget> _buildSelectionActions(AquaColors colors) {
     return [
       IconButton(
         iconSize: 24,
@@ -70,7 +70,7 @@ class SessionAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       IconButton(
         iconSize: 24,
-        icon: AquaIcon.trash(),
+        icon: AquaIcon.trash(color: colors.textPrimary),
         onPressed: onDeleteSelectedPressed,
         tooltip: AppStrings.deleteSelected,
       ),

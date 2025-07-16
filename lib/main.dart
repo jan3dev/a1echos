@@ -1,47 +1,119 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart' as provider;
+import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'providers/session_provider.dart';
 import 'providers/local_transcription_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/transcription_data_provider.dart';
+import 'package:flutter/services.dart';
+import 'models/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final settingsProvider = await SettingsProvider.create();
-  runApp(MyApp(settingsProvider: settingsProvider));
+  final sharedPrefs = await SharedPreferences.getInstance();
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
+      child: provider.MultiProvider(
+        providers: [
+          provider.ChangeNotifierProvider.value(value: settingsProvider),
+          provider.ChangeNotifierProvider(create: (_) => SessionProvider()),
+          provider.ChangeNotifierProvider(
+            create: (context) => TranscriptionDataProvider(
+              provider.Provider.of<SessionProvider>(context, listen: false),
+            ),
+          ),
+          provider.ChangeNotifierProvider(
+            create: (context) => LocalTranscriptionProvider(
+              provider.Provider.of<SessionProvider>(context, listen: false),
+            ),
+          ),
+        ],
+        child: const MyApp(),
+      ),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
-  final SettingsProvider settingsProvider;
-  const MyApp({super.key, required this.settingsProvider});
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: settingsProvider),
-        ChangeNotifierProvider(create: (_) => SessionProvider()),
-        ChangeNotifierProvider(
-          create: (context) => TranscriptionDataProvider(context.read<SessionProvider>()),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => LocalTranscriptionProvider(context.read<SessionProvider>()),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'Echos',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const AppInitializer(child: HomeScreen()),
-          '/settings': (context) => const SettingsScreen(),
-        },
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final lightTheme = ref.watch(lightThemeProvider);
+    final darkTheme = ref.watch(darkThemeProvider);
+
+    final appTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = appTheme.colors(context);
+    final surfaceBackground = colors.surfaceBackground;
+    final isDark =
+        (appTheme == AppTheme.dark) ||
+        (appTheme == AppTheme.auto &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+    final statusBarIconBrightness = isDark ? Brightness.light : Brightness.dark;
+
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: surfaceBackground,
+        statusBarIconBrightness: statusBarIconBrightness,
+        systemNavigationBarColor: surfaceBackground,
+        systemNavigationBarIconBrightness: statusBarIconBrightness,
+        systemStatusBarContrastEnforced: false,
+        systemNavigationBarContrastEnforced: true,
       ),
+    );
+
+    return MaterialApp(
+      title: 'Echos',
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const AppInitializer(child: HomeScreen()),
+        '/settings': (context) => const SettingsScreen(),
+      },
+      builder: (context, child) {
+        final appTheme = ref.watch(prefsProvider).selectedTheme;
+        final colors = appTheme.colors(context);
+        final surfaceBackground = colors.surfaceBackground;
+        final isDark =
+            (appTheme == AppTheme.dark) ||
+            (appTheme == AppTheme.auto &&
+                MediaQuery.of(context).platformBrightness == Brightness.dark);
+        final statusBarIconBrightness = isDark
+            ? Brightness.light
+            : Brightness.dark;
+
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: surfaceBackground,
+            statusBarIconBrightness: statusBarIconBrightness,
+            systemNavigationBarColor: surfaceBackground,
+            systemNavigationBarIconBrightness: statusBarIconBrightness,
+            systemStatusBarContrastEnforced: false,
+            systemNavigationBarContrastEnforced: true,
+          ),
+        );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: surfaceBackground,
+            statusBarIconBrightness: statusBarIconBrightness,
+            systemNavigationBarColor: surfaceBackground,
+            systemNavigationBarIconBrightness: statusBarIconBrightness,
+            systemStatusBarContrastEnforced: false,
+            systemNavigationBarContrastEnforced: true,
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

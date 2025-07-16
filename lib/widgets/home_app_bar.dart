@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../screens/settings_screen.dart';
 import '../constants/app_constants.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final bool selectionMode;
   final VoidCallback? onDeleteSelected;
   final bool effectivelyEmpty;
@@ -19,9 +22,10 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
-    final settingsProvider = Provider.of<SettingsProvider>(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
+    final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
     return AppBar(
       backgroundColor: colors.surfaceBackground,
@@ -31,16 +35,19 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: 16,
       title: Row(
         children: [
-          SvgPicture.asset('assets/icons/echos-logo.svg'),
+          SvgPicture.asset(
+            'assets/icons/echos-logo.svg',
+            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
+          ),
           const SizedBox(width: 10),
-          const AquaText.subtitleSemiBold(text: 'Echos'),
+          AquaText.subtitleSemiBold(text: 'Echos', color: colors.textPrimary),
         ],
       ),
       actions: [
         if (selectionMode) ...[
           IconButton(
             iconSize: 24,
-            icon: AquaIcon.trash(),
+            icon: AquaIcon.trash(color: colors.textPrimary),
             onPressed: onDeleteSelected,
             tooltip: AppStrings.deleteSelected,
             color: colors.textPrimary,
@@ -70,7 +77,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 : colors.textPrimary,
           ),
           IconButton(
-            icon: AquaIcon.hamburger(),
+            icon: AquaIcon.hamburger(color: colors.textPrimary),
             onPressed: () {
               Navigator.push(
                 context,

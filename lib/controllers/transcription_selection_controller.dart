@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../providers/local_transcription_provider.dart';
@@ -64,11 +65,12 @@ class TranscriptionSelectionController with ChangeNotifier {
   }
 
   /// Deletes selected transcriptions with confirmation
-  void deleteSelectedTranscriptions(BuildContext context) {
+  void deleteSelectedTranscriptions(BuildContext context, WidgetRef ref) {
     if (_selectedTranscriptionIds.isEmpty) return;
 
     ConfirmationModal.show(
       context: context,
+      ref: ref,
       title: AppStrings.sessionDeleteTranscriptionsTitle,
       message: AppStrings.sessionDeleteTranscriptionsMessage
           .replaceAll(

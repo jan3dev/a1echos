@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:provider/provider.dart' as provider;
+import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../constants/app_constants.dart';
 import '../widgets/aqua_in_app_banner.dart';
 import '../widgets/settings_footer.dart';
+import '../models/app_theme.dart';
 import 'model_selection_screen.dart';
 import 'theme_selection_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     return Scaffold(
-      backgroundColor: aquaColors.surfaceBackground,
-      appBar: AquaTopAppBar(
-        colors: aquaColors,
-        title: AppStrings.settingsTitle,
-      ),
-      body: Consumer<LocalTranscriptionProvider>(
+      backgroundColor: colors.surfaceBackground,
+      appBar: AquaTopAppBar(colors: colors, title: AppStrings.settingsTitle),
+      body: provider.Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           String modelDisplay;
           if (provider.selectedModelType == ModelType.vosk) {
@@ -32,8 +33,7 @@ class SettingsScreen extends StatelessWidget {
                 ? AppStrings.whisperModelRealtimeTitle
                 : AppStrings.whisperModelFileTitle;
           }
-          // TODO: Replace with actual theme provider logic
-          String themeDisplay = 'Auto';
+          String themeDisplay = selectedTheme.name;
 
           return Column(
             children: [
@@ -44,13 +44,11 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: aquaColors.surfacePrimary,
+                          color: colors.surfacePrimary,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: aquaColors.surfaceInverse.withOpacity(
-                                0.04,
-                              ),
+                              color: colors.surfaceInverse.withOpacity(0.04),
                               blurRadius: 16,
                               offset: const Offset(0, 0),
                             ),
@@ -62,17 +60,19 @@ class SettingsScreen extends StatelessWidget {
                             AquaListItem(
                               title: AppStrings.modelTitle,
                               titleTrailing: modelDisplay,
-                              titleTrailingColor: aquaColors.textSecondary,
+                              titleTrailingColor: colors.textSecondary,
                               iconLeading: SvgPicture.asset(
                                 'assets/icons/mic.svg',
                                 width: 24,
                                 height: 24,
                                 colorFilter: ColorFilter.mode(
-                                  aquaColors.textSecondary,
+                                  colors.textSecondary,
                                   BlendMode.srcIn,
                                 ),
                               ),
-                              iconTrailing: AquaIcon.chevronRight(),
+                              iconTrailing: AquaIcon.chevronRight(
+                                color: colors.textSecondary,
+                              ),
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -80,26 +80,28 @@ class SettingsScreen extends StatelessWidget {
                                   ),
                                 );
                               },
-                              backgroundColor: aquaColors.surfacePrimary,
+                              backgroundColor: colors.surfacePrimary,
                             ),
                             Divider(
                               height: 1,
-                              color: aquaColors.surfaceBorderPrimary,
+                              color: colors.surfaceBorderPrimary,
                             ),
                             AquaListItem(
                               title: AppStrings.themeTitle,
                               titleTrailing: themeDisplay,
-                              titleTrailingColor: aquaColors.textSecondary,
+                              titleTrailingColor: colors.textSecondary,
                               iconLeading: SvgPicture.asset(
                                 'assets/icons/palette.svg',
                                 width: 24,
                                 height: 24,
                                 colorFilter: ColorFilter.mode(
-                                  aquaColors.textSecondary,
+                                  colors.textSecondary,
                                   BlendMode.srcIn,
                                 ),
                               ),
-                              iconTrailing: AquaIcon.chevronRight(),
+                              iconTrailing: AquaIcon.chevronRight(
+                                color: colors.textSecondary,
+                              ),
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -107,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
                                   ),
                                 );
                               },
-                              backgroundColor: aquaColors.surfacePrimary,
+                              backgroundColor: colors.surfacePrimary,
                             ),
                           ],
                         ),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 import 'session_list_item.dart';
-import 'package:ui_components/ui_components.dart';
 
-class SessionList extends StatelessWidget {
+class SessionList extends ConsumerWidget {
   final bool selectionMode;
   final Set<String> selectedSessionIds;
   final Function(Session) onSessionLongPress;
@@ -22,9 +24,10 @@ class SessionList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AquaColors.lightColors;
-    return Consumer<SessionProvider>(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
+    return provider.Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
         final sessions = sessionProvider.sessions;
 
@@ -51,11 +54,9 @@ class SessionList extends StatelessWidget {
                     session: session,
                     selectionMode: selectionMode,
                     isSelected: selectedSessionIds.contains(session.id),
-                    onTap:
-                        () =>
-                            selectionMode
-                                ? onSelectionToggle(session.id)
-                                : onSessionTap(session.id),
+                    onTap: () => selectionMode
+                        ? onSelectionToggle(session.id)
+                        : onSessionTap(session.id),
                     onLongPress: () => onSessionLongPress(session),
                   ),
                   if (index < sessions.length - 1)

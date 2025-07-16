@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui_components/ui_components.dart';
-import '../models/transcription.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../constants/app_constants.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
+import '../models/transcription.dart';
+import '../constants/app_constants.dart';
 import '../providers/local_transcription_provider.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class TranscriptionItem extends StatefulWidget {
+class TranscriptionItem extends ConsumerStatefulWidget {
   final Transcription transcription;
   final bool selectionMode;
   final bool isSelected;
@@ -41,10 +44,10 @@ class TranscriptionItem extends StatefulWidget {
   });
 
   @override
-  State<TranscriptionItem> createState() => _TranscriptionItemState();
+  ConsumerState<TranscriptionItem> createState() => _TranscriptionItemState();
 }
 
-class _TranscriptionItemState extends State<TranscriptionItem> {
+class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
   late TextEditingController _controller;
 
   @override
@@ -81,7 +84,7 @@ class _TranscriptionItemState extends State<TranscriptionItem> {
       timestamp: widget.transcription.timestamp,
       audioPath: widget.transcription.audioPath,
     );
-    Provider.of<LocalTranscriptionProvider>(
+    provider.Provider.of<LocalTranscriptionProvider>(
       context,
       listen: false,
     ).updateTranscription(updated);
@@ -97,7 +100,8 @@ class _TranscriptionItemState extends State<TranscriptionItem> {
         ? DateFormat('MMM d, yyyy')
         : DateFormat('MMM d');
     final timeFormat = DateFormat('h:mm a');
-    final colors = AquaColors.lightColors;
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
 
     Color backgroundColor = colors.surfacePrimary;
     if (widget.selectionMode && widget.isSelected) {

@@ -1,21 +1,25 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/local_transcription_provider.dart';
 import '../constants/app_constants.dart';
 import '../models/model_type.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
 
-class ModelSelectionScreen extends StatelessWidget {
+class ModelSelectionScreen extends ConsumerWidget {
   const ModelSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final aquaColors = AquaColors.lightColors;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
     return Scaffold(
-      backgroundColor: aquaColors.surfaceBackground,
-      appBar: AquaTopAppBar(colors: aquaColors, title: AppStrings.modelTitle),
-      body: Consumer<LocalTranscriptionProvider>(
+      backgroundColor: colors.surfaceBackground,
+      appBar: AquaTopAppBar(colors: colors, title: AppStrings.modelTitle),
+      body: provider.Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           final String selectedKey =
               provider.selectedModelType == ModelType.vosk
@@ -33,21 +37,19 @@ class ModelSelectionScreen extends StatelessWidget {
             return AquaListItem(
               title: title,
               titleTrailing: subtitle,
-              titleTrailingColor: aquaColors.textSecondary,
+              titleTrailingColor: colors.textSecondary,
               iconTrailing: AquaRadio<String>(
                 value: key,
                 groupValue: selectedKey,
                 onChanged: (_) => onTap?.call(),
               ),
               onTap: onTap,
-              backgroundColor: aquaColors.surfacePrimary,
+              backgroundColor: colors.surfacePrimary,
             );
           }
 
           void addDivider() {
-            items.add(
-              Divider(height: 1, color: aquaColors.surfaceBorderPrimary),
-            );
+            items.add(Divider(height: 1, color: colors.surfaceBorderPrimary));
           }
 
           // Whisper File-based (available on both platforms)
@@ -110,17 +112,17 @@ class ModelSelectionScreen extends StatelessWidget {
                 Text(
                   AppStrings.modelDescription,
                   style: AquaTypography.body1.copyWith(
-                    color: aquaColors.textPrimary,
+                    color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: aquaColors.surfacePrimary,
+                    color: colors.surfacePrimary,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: aquaColors.surfaceInverse.withOpacity(0.04),
+                        color: colors.surfaceInverse.withOpacity(0.04),
                         blurRadius: 16,
                         offset: const Offset(0, 0),
                       ),
