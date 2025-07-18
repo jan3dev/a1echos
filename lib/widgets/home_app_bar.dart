@@ -5,7 +5,6 @@ import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
 import '../screens/settings_screen.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -45,12 +44,10 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       actions: [
         if (selectionMode) ...[
-          IconButton(
-            iconSize: 24,
-            icon: AquaIcon.trash(color: colors.textPrimary),
-            onPressed: onDeleteSelected,
-            tooltip: AppStrings.deleteSelected,
+          AquaIcon.trash(
             color: colors.textPrimary,
+            size: 24,
+            onTap: onDeleteSelected,
           ),
         ] else ...[
           IconButton(
@@ -76,16 +73,15 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ? colors.accentBrand
                 : colors.textPrimary,
           ),
-          IconButton(
-            icon: AquaIcon.hamburger(color: colors.textPrimary),
-            onPressed: () {
+          AquaIcon.hamburger(
+            color: colors.textPrimary,
+            size: 24,
+            onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
             },
-            tooltip: AppStrings.settingsTooltip,
-            color: colors.textPrimary,
           ),
         ],
         const SizedBox(width: 8),

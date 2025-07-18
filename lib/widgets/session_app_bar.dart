@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -38,41 +36,34 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       colors: colors,
       onBackPressed: onBackPressed,
       title: sessionName,
-      actions: selectionMode ? _buildSelectionActions(colors) : _buildNormalActions(colors),
+      actions: selectionMode
+          ? _buildSelectionActions(colors)
+          : _buildNormalActions(colors),
       onTitlePressed: !isIncognitoSession ? onTitlePressed : null,
     );
   }
 
-  List<Widget> _buildNormalActions(AquaColors colors) {
+  List<AquaIcon> _buildNormalActions(AquaColors colors) {
     return [
-      IconButton(
-        iconSize: 24,
-        icon: SvgPicture.asset(
-          'assets/icons/copy-multiple.svg',
-          colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-        ),
-        onPressed: onCopyAllPressed,
-        tooltip: AppStrings.copyAllTooltip,
+      AquaIcon.copyMultiple(
+        color: colors.textPrimary,
+        size: 24,
+        onTap: onCopyAllPressed,
       ),
     ];
   }
 
-  List<Widget> _buildSelectionActions(AquaColors colors) {
+  List<AquaIcon> _buildSelectionActions(AquaColors colors) {
     return [
-      IconButton(
-        iconSize: 24,
-        icon: SvgPicture.asset(
-          'assets/icons/select-all.svg',
-          colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-        ),
-        onPressed: onSelectAllPressed,
-        tooltip: AppStrings.selectAll,
+      AquaIcon.selectAll(
+        color: colors.textPrimary,
+        size: 24,
+        onTap: onSelectAllPressed,
       ),
-      IconButton(
-        iconSize: 24,
-        icon: AquaIcon.trash(color: colors.textPrimary),
-        onPressed: onDeleteSelectedPressed,
-        tooltip: AppStrings.deleteSelected,
+      AquaIcon.trash(
+        color: colors.textPrimary,
+        size: 24,
+        onTap: onDeleteSelectedPressed,
       ),
     ];
   }

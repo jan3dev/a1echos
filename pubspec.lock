@@ -905,7 +905,7 @@ packages:
     description:
       path: "packages/ui_components"
       ref: main
-      resolved-ref: d3657ec73054dd1474d3e6e0f794cc345b8e7edd
+      resolved-ref: "729335eeb3c62f153bf2624d797c52cbd1936252"
       url: "https://github.com/jan3dev/aqua-dev.git"
     source: git
     version: "0.0.1+1"

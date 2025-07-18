@@ -90,14 +90,9 @@ class SettingsScreen extends ConsumerWidget {
                               title: AppStrings.themeTitle,
                               titleTrailing: themeDisplay,
                               titleTrailingColor: colors.textSecondary,
-                              iconLeading: SvgPicture.asset(
-                                'assets/icons/palette.svg',
-                                width: 24,
-                                height: 24,
-                                colorFilter: ColorFilter.mode(
-                                  colors.textSecondary,
-                                  BlendMode.srcIn,
-                                ),
+                              iconLeading: AquaIcon.theme(
+                                color: colors.textSecondary,
+                                size: 24,
                               ),
                               iconTrailing: AquaIcon.chevronRight(
                                 color: colors.textSecondary,

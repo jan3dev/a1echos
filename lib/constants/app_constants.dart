@@ -32,8 +32,6 @@ class AppStrings {
   static const String ok = 'OK';
   static const String delete = 'Delete';
   static const String clear = 'Delete All Transcriptions';
-  static const String selectAll = 'Select All';
-  static const String deleteSelected = 'Delete Selected';
   static const String retry = 'Retry';
   static const String share = 'Share';
 
@@ -46,9 +44,7 @@ class AppStrings {
       'Error creating session: {error}';
 
   // HomeScreen actions
-  static const String copyAllTooltip = 'Copy All';
   static const String clearAllTooltip = 'Clear All';
-  static const String settingsTooltip = 'Settings';
   static const String newSessionTooltip = 'New Session';
 
   // SessionScreen strings
