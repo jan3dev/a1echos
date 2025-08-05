@@ -112,7 +112,7 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
             showBackButton: false,
             actions: [
               IconButton(
-                icon: AquaIcon.close(color: colors.textPrimary),
+                icon: AquaIcon.close(color: colors.textPrimary, size: 24),
                 onPressed: () {
                   Navigator.pop(context);
                   if (widget.onCancel != null) {
@@ -123,71 +123,40 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: colors.surfacePrimary,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colors.surfaceInverse.withOpacity(0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 0),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: Column(
+                Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          AppStrings.sessionNameLabel,
-                          style: AquaTypography.body1.copyWith(
-                            color: colors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      TextField(
+                      // TODO: remove border when focused
+                      AquaTextField(
                         controller: _controller,
-                        decoration: InputDecoration(
-                          hintText: AppStrings.sessionNameHint,
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.only(
-                            top: 4,
-                            bottom: 12,
-                          ),
-                          counterText: '',
-                        ),
-                        style: AquaTypography.body1.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        autofocus: true,
-                        textInputAction: TextInputAction.done,
+                        label: AppStrings.sessionNameLabel,
                         maxLength: AppConstants.sessionNameMaxLength,
-                        onSubmitted: (_) => _handleSubmit(),
+                        assistiveText: AppStrings.sessionNameMaxLengthHelper,
+                        trailingIcon: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: colors.surfaceSecondary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: AquaIcon.close(
+                              color: colors.textTertiary,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                        onTrailingTap: () {
+                          _controller.clear();
+                        },
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  AppStrings.sessionNameMaxLengthHelper,
-                  style: AquaTypography.caption1Medium.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
                 SizedBox(
                   width: double.infinity,
                   child: AquaButton.primary(

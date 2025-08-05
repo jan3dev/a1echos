@@ -109,7 +109,6 @@ class AppStrings {
 
   // SessionInputModal
   static const String sessionNameLabel = 'Session Name';
-  static const String sessionNameHint = 'Enter session name';
   static const String sessionNameMaxLengthHelper = 'Max 30 characters.';
 
   // ModelStatusTile
