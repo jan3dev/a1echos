@@ -34,6 +34,7 @@ class AppStrings {
   static const String clear = 'Delete All Transcriptions';
   static const String retry = 'Retry';
   static const String share = 'Share';
+  static const String edit = 'Edit';
 
   // HomeScreen strings
   static const String homeDeleteSelectedSessionsTitle = 'Delete?';

@@ -18,9 +18,9 @@ class SettingsFooter extends ConsumerStatefulWidget {
 class _SettingsFooterState extends ConsumerState<SettingsFooter> {
   String _version = '';
   static const _tags = [
-    {'tag': '@Echos', 'handle': 'echos'}, // TODO: add real handle
-    {'tag': '@A1Lab', 'handle': 'a1lab'}, // TODO: add real handle
-    {'tag': '@JAN3', 'handle': 'jan3com'},
+    {'tag': 'Echos', 'handle': 'a1echos'},
+    {'tag': 'A1Lab', 'handle': 'a1laboratory'},
+    {'tag': 'JAN3', 'handle': 'jan3com'},
   ];
 
   @override
@@ -99,7 +99,6 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
                           tagData['tag']!,
                           style: AquaTypography.body2SemiBold.copyWith(
                             color: colors.textPrimary,
-                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),

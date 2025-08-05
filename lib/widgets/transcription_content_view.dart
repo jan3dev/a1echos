@@ -17,6 +17,11 @@ class TranscriptionContentView extends ConsumerWidget {
   final Function(String) onTranscriptionTap;
   final Function(String) onTranscriptionLongPress;
 
+  final VoidCallback onEditStart;
+  final VoidCallback onEditEnd;
+
+  final GlobalKey<TranscriptionListState>? listKey;
+
   const TranscriptionContentView({
     super.key,
     required this.scrollController,
@@ -24,6 +29,9 @@ class TranscriptionContentView extends ConsumerWidget {
     required this.selectedTranscriptionIds,
     required this.onTranscriptionTap,
     required this.onTranscriptionLongPress,
+    required this.onEditStart,
+    required this.onEditEnd,
+    this.listKey,
   });
 
   @override
@@ -84,11 +92,14 @@ class TranscriptionContentView extends ConsumerWidget {
                 child: shouldShowLiveTranscription
                     ? LiveTranscriptionView(controller: scrollController)
                     : TranscriptionList(
+                        key: listKey,
                         controller: scrollController,
                         selectionMode: selectionMode,
                         selectedTranscriptionIds: selectedTranscriptionIds,
                         onTranscriptionTap: onTranscriptionTap,
                         onTranscriptionLongPress: onTranscriptionLongPress,
+                        onEditModeStarted: onEditStart,
+                        onEditModeEnded: onEditEnd,
                       ),
               ),
             ),
