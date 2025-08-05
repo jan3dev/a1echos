@@ -88,7 +88,7 @@ class AppStrings {
   static const String whisperModelRealtimeTitle = 'Whisper (Real-time)';
   static const String whisperModelFileTitle = 'Whisper';
   static const String whisperModelSubtitle = 'High accuracy';
-  static const String followUs = 'Follow us';
+  static const String followUs = 'Follow us on X';
 
   // Recording strings
   static const String recordingPrefix = 'Session';
