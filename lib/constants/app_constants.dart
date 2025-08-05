@@ -120,4 +120,9 @@ class AppStrings {
 
   // Incognito Mode Settings
   static const String incognitoModeTitle = 'Incognito';
+  // Incognito Explainer Modal
+  static const String incognitoExplainerTitle = 'Incognito Mode';
+  static const String incognitoExplainerBody =
+      'Transcibe without saving. This session won\'t be stored or synced anywhere.';
+  static const String incognitoExplainerCta = 'Got it!';
 }
