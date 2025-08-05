@@ -84,7 +84,7 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: _tags

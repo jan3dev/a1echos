@@ -26,7 +26,7 @@ class IncognitoExplainerModal {
         height: 24,
         colorFilter: ColorFilter.mode(colors.textInverse, BlendMode.srcIn),
       ),
-      iconVariant: AquaModalSheetVariant.success, // TODO: change to info
+      iconVariant: AquaModalSheetVariant.info,
       title: AppStrings.incognitoExplainerTitle,
       message: AppStrings.incognitoExplainerBody,
       primaryButtonText: AppStrings.incognitoExplainerCta,
