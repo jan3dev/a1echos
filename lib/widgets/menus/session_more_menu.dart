@@ -50,7 +50,7 @@ class SessionMoreMenu extends ConsumerWidget {
     );
     final Size listItemSize = listItemBox.size;
 
-    const double estimatedMenuHeight = 136;
+    const double estimatedMenuHeight = 181;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         listItemPosition.dx + listItemSize.width - 240,
@@ -102,8 +102,8 @@ class SessionMoreMenu extends ConsumerWidget {
           padding: const EdgeInsets.only(
             left: 16,
             right: 16,
-            top: 12,
-            bottom: 4,
+            top: 20,
+            bottom: 8,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +114,7 @@ class SessionMoreMenu extends ConsumerWidget {
                   color: colors.textTertiary,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 5),
               Text(
                 'Created: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
                 style: AquaTypography.caption1Medium.copyWith(
