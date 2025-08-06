@@ -31,8 +31,13 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to load transcriptions');
-      throw Exception('Failed to load transcriptions: $e');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to load transcriptions',
+      );
+      Error.throwWithStackTrace(e, st);
     }
   }
 
@@ -55,7 +60,12 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _sessionProvider.updateSessionModifiedTimestamp(updated.sessionId);
       notifyListeners();
     } catch (e, st) {
-      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to update transcription');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to update transcription',
+      );
       throw Exception('Failed to update transcription: $e');
     }
   }
@@ -73,7 +83,12 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to delete transcription');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to delete transcription',
+      );
       throw Exception('Failed to delete transcription: $e');
     }
   }
@@ -97,7 +112,12 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to delete transcriptions');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to delete transcriptions',
+      );
       throw Exception('Failed to delete transcriptions: $e');
     }
   }
@@ -108,7 +128,12 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _repository.clearTranscriptions();
       await loadTranscriptions();
     } catch (e, st) {
-      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to clear transcriptions');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to clear transcriptions',
+      );
       throw Exception('Failed to clear transcriptions: $e');
     }
   }
@@ -132,10 +157,12 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e,
-          stackTrace: st,
-          flag: FeatureFlag.provider,
-          message: 'Failed to delete paragraph from transcription');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to delete paragraph from transcription',
+      );
       throw Exception('Failed to delete paragraph: $e');
     }
   }
@@ -150,10 +177,12 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e,
-          stackTrace: st,
-          flag: FeatureFlag.provider,
-          message: 'Failed to clear transcriptions for session');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to clear transcriptions for session',
+      );
       throw Exception('Failed to clear session transcriptions: $e');
     }
   }
@@ -166,10 +195,12 @@ class TranscriptionDataProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e, st) {
-      logger.error(e,
-          stackTrace: st,
-          flag: FeatureFlag.provider,
-          message: 'Failed to delete all transcriptions for session');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to delete all transcriptions for session',
+      );
       throw Exception('Failed to delete transcriptions for session: $e');
     }
   }

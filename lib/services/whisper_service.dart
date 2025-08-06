@@ -284,7 +284,7 @@ class WhisperService {
         flag: FeatureFlag.service,
         message: 'Whisper file transcription failed',
       );
-      return null;
+      Error.throwWithStackTrace(e, st);
     } finally {
       _isTranscribing = false;
     }

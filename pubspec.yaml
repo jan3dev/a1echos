@@ -42,6 +42,7 @@ dependencies:
       ref: main
   share_plus: ^11.0.0
   vad: ^0.0.6
+  synchronized: ^3.4.0
 
 dev_dependencies:
   flutter_test:

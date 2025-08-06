@@ -1,14 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../models/transcription.dart';
-import 'encryption_service.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'encryption_service.dart';
+import '../models/transcription.dart';
 import '../logger.dart';
 
 class StorageService {
   static const String _fileName = 'transcriptions.json';
   static const String _pendingDeletesFileName = 'pending_deletes.json';
+
+  final _lock = Lock();
 
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
@@ -40,21 +44,49 @@ class StorageService {
         e,
         stackTrace: st,
         flag: FeatureFlag.storage,
-        message: 'Failed to read pending deletes file',
+        message: 'Failed to read pending deletes file. It may be corrupt.',
       );
-      await file.delete();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final backupPath = '${file.path}.corrupted.$timestamp';
+      try {
+        await file.rename(backupPath);
+        logger.info(
+          'Corrupted pending deletes file backed up to $backupPath',
+          flag: FeatureFlag.storage,
+        );
+      } catch (renameError, renameSt) {
+        logger.error(
+          renameError,
+          stackTrace: renameSt,
+          flag: FeatureFlag.storage,
+          message:
+              'Failed to rename corrupted pending deletes file to $backupPath',
+        );
+      }
       return [];
     }
   }
 
   Future<void> _savePendingDeletes(List<String> list) async {
     final file = await _pendingDeletesFile;
-    if (list.isEmpty) {
-      if (await file.exists()) await file.delete();
-      return;
+    try {
+      if (list.isEmpty) {
+        if (await file.exists()) {
+          await file.delete();
+        }
+        return;
+      }
+      final rawJson = json.encode(list);
+      await file.writeAsString(rawJson);
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.storage,
+        message: 'Failed to save pending deletes to ${file.path}',
+      );
+      rethrow;
     }
-    final rawJson = json.encode(list);
-    await file.writeAsString(rawJson);
   }
 
   /// Attempts to delete any files that failed to delete previously.
@@ -214,12 +246,15 @@ class StorageService {
         }
 
         if (deletionStillPending) {
-          // Persist the path so we can retry later.
-          final pending = await _loadPendingDeletes();
-          if (!pending.contains(path)) {
-            pending.add(path);
-            await _savePendingDeletes(pending);
-          }
+          // Use a lock to ensure that the read-modify-write operation is atomic.
+          await _lock.synchronized(() async {
+            // Persist the path so we can retry later.
+            final pending = await _loadPendingDeletes();
+            if (!pending.contains(path)) {
+              pending.add(path);
+              await _savePendingDeletes(pending);
+            }
+          });
         }
       }
     }
