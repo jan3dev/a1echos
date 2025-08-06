@@ -85,3 +85,9 @@ dependency_overrides:
       url: https://github.com/jan3dev/flutter_whisper_kit.git
       path: packages/flutter_whisper_kit_apple
       ref: main
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/app-icon.jpg"
+  remove_alpha_channel_ios: true
