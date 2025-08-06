@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 class StorageService {
   static const String _fileName = 'transcriptions.json';
+  static const String _pendingDeletesFileName = 'pending_deletes.json';
 
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
@@ -15,6 +16,73 @@ class StorageService {
   Future<File> get _localFile async {
     final path = await _localPath;
     return File('$path/$_fileName');
+  }
+
+  Future<File> get _pendingDeletesFile async {
+    final path = await _localPath;
+    return File('$path/$_pendingDeletesFileName');
+  }
+
+  /// Loads the list of file paths that previously failed to delete.
+  Future<List<String>> _loadPendingDeletes() async {
+    final file = await _pendingDeletesFile;
+    if (!await file.exists()) return [];
+
+    try {
+      final contents = await file.readAsString();
+      if (contents.isEmpty) return [];
+      final List<dynamic> jsonList = json.decode(contents);
+      return jsonList.cast<String>();
+    } catch (_) {
+      await file.delete();
+      return [];
+    }
+  }
+
+  Future<void> _savePendingDeletes(List<String> list) async {
+    final file = await _pendingDeletesFile;
+    if (list.isEmpty) {
+      if (await file.exists()) await file.delete();
+      return;
+    }
+    final rawJson = json.encode(list);
+    await file.writeAsString(rawJson);
+  }
+
+  /// Attempts to delete any files that failed to delete previously.
+  Future<void> processPendingDeletes() async {
+    final pending = await _loadPendingDeletes();
+    if (pending.isEmpty) return;
+
+    final List<String> stillPending = [];
+
+    for (final path in pending) {
+      var success = false;
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+        success = true;
+      } catch (_) {
+        try {
+          final file = File(path);
+          if (await file.exists()) {
+            await file.writeAsBytes([]);
+            await file.delete();
+          }
+          success = true;
+        } catch (_) {
+          // Keep in list.
+        }
+      }
+
+      if (!success) {
+        stillPending.add(path);
+      }
+    }
+
+    await _savePendingDeletes(stillPending);
   }
 
   final _encryptor = EncryptionService();
@@ -95,8 +163,27 @@ class StorageService {
         if (await file.exists()) {
           await file.delete();
         }
-      } catch (e) {
-        // Ignore audio file deletion errors
+      } catch (_) {
+        bool deletionStillPending = false;
+        try {
+          final file = File(path);
+          if (await file.exists()) {
+            // Overwrite the file with empty bytes before attempting deletion again.
+            await file.writeAsBytes([]);
+            await file.delete();
+          }
+        } catch (_) {
+          deletionStillPending = true;
+        }
+
+        if (deletionStillPending) {
+          // Persist the path so we can retry later.
+          final pending = await _loadPendingDeletes();
+          if (!pending.contains(path)) {
+            pending.add(path);
+            await _savePendingDeletes(pending);
+          }
+        }
       }
     }
   }
