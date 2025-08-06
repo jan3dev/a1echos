@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../services/encryption_service.dart';
 import '../models/session.dart';
 import '../constants/app_constants.dart';
 
@@ -9,6 +10,7 @@ class SessionProvider with ChangeNotifier {
   static const String _prefsKeySessions = 'sessions';
   static const String _prefsKeyActiveSession = 'active_session';
   final Uuid _uuid = const Uuid();
+  final EncryptionService _encryptionService = EncryptionService();
 
   List<Session> _sessions = [];
   String _activeSessionId = '';
@@ -39,10 +41,18 @@ class SessionProvider with ChangeNotifier {
 
   Future<void> _loadSessions() async {
     final prefs = await SharedPreferences.getInstance();
-    final sessionsJson = prefs.getString(_prefsKeySessions);
-    if (sessionsJson != null) {
+    final storedSessions = prefs.getString(_prefsKeySessions);
+
+    if (storedSessions != null) {
+      String? plainSessions;
       try {
-        final List<dynamic> list = jsonDecode(sessionsJson);
+        plainSessions = await _encryptionService.decrypt(storedSessions);
+      } catch (_) {
+        plainSessions = storedSessions;
+      }
+
+      try {
+        final List<dynamic> list = jsonDecode(plainSessions);
         _sessions = list.map((m) => Session.fromJson(m)).toList();
       } catch (e) {
         debugPrint("Error loading sessions: $e. Resetting to default.");
@@ -52,9 +62,17 @@ class SessionProvider with ChangeNotifier {
 
     _needsSort = true;
 
-    final active = prefs.getString(_prefsKeyActiveSession);
-    if (active != null && _sessions.any((s) => s.id == active)) {
-      _activeSessionId = active;
+    String? storedActive = prefs.getString(_prefsKeyActiveSession);
+    if (storedActive != null) {
+      try {
+        storedActive = await _encryptionService.decrypt(storedActive);
+      } catch (_) {
+        // Legacy plain text, keep value as-is
+      }
+    }
+
+    if (storedActive != null && _sessions.any((s) => s.id == storedActive)) {
+      _activeSessionId = storedActive;
     } else if (_sessions.isNotEmpty) {
       _activeSessionId = _sessions.first.id;
       await _saveActiveSession();
@@ -67,32 +85,31 @@ class SessionProvider with ChangeNotifier {
   Future<void> _saveSessions() async {
     final prefs = await SharedPreferences.getInstance();
     _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
-    await prefs.setString(
-      _prefsKeySessions,
-      jsonEncode(_sessions.map((s) => s.toJson()).toList()),
-    );
+    final jsonStr = jsonEncode(_sessions.map((s) => s.toJson()).toList());
+    final encrypted = await _encryptionService.encrypt(jsonStr);
+    await prefs.setString(_prefsKeySessions, encrypted);
   }
 
   Future<void> _saveActiveSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKeyActiveSession, _activeSessionId);
+    final encrypted = await _encryptionService.encrypt(_activeSessionId);
+    await prefs.setString(_prefsKeyActiveSession, encrypted);
   }
 
   String getNewSessionName() {
     const baseName = "${AppStrings.recordingPrefix} ";
-    final existingSessionNumbers =
-        _sessions
-            .where((s) => s.name.startsWith(baseName))
-            .map((s) {
-              try {
-                return int.parse(s.name.substring(baseName.length));
-              } catch (e) {
-                return null;
-              }
-            })
-            .where((count) => count != null)
-            .cast<int>()
-            .toList();
+    final existingSessionNumbers = _sessions
+        .where((s) => s.name.startsWith(baseName))
+        .map((s) {
+          try {
+            return int.parse(s.name.substring(baseName.length));
+          } catch (e) {
+            return null;
+          }
+        })
+        .where((count) => count != null)
+        .cast<int>()
+        .toList();
 
     int nextNumber = 1;
     if (existingSessionNumbers.isNotEmpty) {
