@@ -54,10 +54,13 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ),
         centerTitle: true,
         actions: [
-          AquaIcon.check(
-            color: colors.textPrimary,
-            size: 24,
-            onTap: onSaveEditPressed,
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: AquaIcon.check(
+              color: colors.textPrimary,
+              size: 24,
+              onTap: onSaveEditPressed,
+            ),
           ),
         ],
       );

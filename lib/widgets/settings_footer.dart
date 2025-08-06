@@ -62,8 +62,6 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
           Center(
             child: SvgPicture.asset(
               'assets/icons/footer-logo.svg',
-              width: 80,
-              height: 40,
               colorFilter: ColorFilter.mode(
                 colors.textPrimary,
                 BlendMode.srcIn,

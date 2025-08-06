@@ -71,7 +71,7 @@ class SessionMoreMenu extends ConsumerWidget {
           value: 'rename',
           padding: EdgeInsets.zero,
           child: AquaListItem(
-            iconLeading: AquaIcon.edit(color: colors.textPrimary),
+            iconLeading: AquaIcon.note(color: colors.textPrimary),
             title: AppStrings.sessionRenameTitle,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,

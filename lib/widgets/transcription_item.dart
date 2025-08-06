@@ -290,7 +290,7 @@ class TranscriptionItemState extends ConsumerState<TranscriptionItem> {
         child: Opacity(
           opacity: disabled ? 0.5 : 1.0,
           child: Center(
-            child: AquaIcon.edit(size: 18, color: colors.textSecondary),
+            child: AquaIcon.note(size: 18, color: colors.textSecondary),
           ),
         ),
       ),

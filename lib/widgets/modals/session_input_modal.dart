@@ -130,12 +130,12 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
                 Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // TODO: remove border when focused
                       AquaTextField(
                         controller: _controller,
                         label: AppStrings.sessionNameLabel,
                         maxLength: AppConstants.sessionNameMaxLength,
                         assistiveText: AppStrings.sessionNameMaxLengthHelper,
+                        transparentBorder: true,
                         trailingIcon: Container(
                           width: 18,
                           height: 18,
