@@ -3,6 +3,7 @@ import '../models/transcription.dart';
 import '../repositories/transcription_repository.dart';
 import '../managers/session_transcription_manager.dart';
 import 'session_provider.dart';
+import '../logger.dart';
 
 class TranscriptionDataProvider with ChangeNotifier {
   final TranscriptionRepository _repository = TranscriptionRepository();
@@ -29,7 +30,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       _transcriptions.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to load transcriptions');
       throw Exception('Failed to load transcriptions: $e');
     }
   }
@@ -52,7 +54,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _repository.saveTranscription(updated); // Save new
       await _sessionProvider.updateSessionModifiedTimestamp(updated.sessionId);
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to update transcription');
       throw Exception('Failed to update transcription: $e');
     }
   }
@@ -69,7 +72,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to delete transcription');
       throw Exception('Failed to delete transcription: $e');
     }
   }
@@ -92,7 +96,8 @@ class TranscriptionDataProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to delete transcriptions');
       throw Exception('Failed to delete transcriptions: $e');
     }
   }
@@ -102,7 +107,8 @@ class TranscriptionDataProvider with ChangeNotifier {
     try {
       await _repository.clearTranscriptions();
       await loadTranscriptions();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.provider, message: 'Failed to clear transcriptions');
       throw Exception('Failed to clear transcriptions: $e');
     }
   }
@@ -125,7 +131,11 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e,
+          stackTrace: st,
+          flag: FeatureFlag.provider,
+          message: 'Failed to delete paragraph from transcription');
       throw Exception('Failed to delete paragraph: $e');
     }
   }
@@ -139,7 +149,11 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _sessionProvider.updateSessionModifiedTimestamp(sessionId);
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e,
+          stackTrace: st,
+          flag: FeatureFlag.provider,
+          message: 'Failed to clear transcriptions for session');
       throw Exception('Failed to clear session transcriptions: $e');
     }
   }
@@ -151,7 +165,11 @@ class TranscriptionDataProvider with ChangeNotifier {
       await _repository.deleteTranscriptionsForSession(sessionId);
 
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(e,
+          stackTrace: st,
+          flag: FeatureFlag.provider,
+          message: 'Failed to delete all transcriptions for session');
       throw Exception('Failed to delete transcriptions for session: $e');
     }
   }

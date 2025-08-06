@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
+import '../logger.dart';
 
 class AquaInAppBanner extends ConsumerWidget {
   const AquaInAppBanner({super.key});
@@ -26,18 +26,15 @@ class AquaInAppBanner extends ConsumerWidget {
           await launchUrl(url, mode: LaunchMode.platformDefault);
         }
       } else {
-        if (kDebugMode) {
-          debugPrint('Cannot launch URL: $url');
-          debugPrint('This is expected behavior in iOS Simulator');
-        }
+        logger.warning('Cannot launch URL: $url');
       }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error launching URL: $e');
-        debugPrint(
-          'This is expected behavior in iOS Simulator - URL launching is limited',
-        );
-      }
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Error launching AQUA app URL',
+      );
     }
   }
 

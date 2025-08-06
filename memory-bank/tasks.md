@@ -1,9 +1,9 @@
 # TASKS - SOURCE OF TRUTH
 
 ## Active Task Status
-**Current Phase:** VAN Mode - Task In Progress  
+**Current Phase:** VAN Mode - Task Complete  
 **Current Task:** Add Edit Mode to Transcription Item  
-**Status:** 🚧 IN PROGRESS - VAN MODE
+**Status:** ✅ TASK COMPLETE - VAN MODE
 
 ## 🚀 NEW TASK: Add Edit Mode to Transcription Item (VAN Mode, Level 1)
 
@@ -378,3 +378,30 @@ Implement dark theme support and theme switching in the app, with the switching 
 - `lib/screens/theme_selection_screen.dart` (update)
 
 ---
+
+## 🚀 NEW TASK: Centralized Error Logging with talker_flutter (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**  
+Errors are currently caught silently throughout the app. Implement a centralized logging system using the `talker_flutter` package, following the logging architecture described in `LOGGING_REPORT.md` (AQUA app). Ensure all caught errors are logged.
+
+### 🔍 CONTEXT & ANALYSIS
+- Multiple try/catch blocks and `.catchError` handlers suppress exceptions without visibility.
+- The AQUA app uses `talker_flutter` with `CustomLogger` and `FeatureFlag` for granular, filterable logs.
+- Adopting the same pattern will improve debugging, monitoring, and maintenance.
+
+### 🧩 CHECKLIST (VAN Mode)
+- [ ] Add `talker_flutter` (and any peers like `talker_dio_logger`) to `pubspec.yaml`.
+- [ ] Create `lib/logger.dart` implementing:
+  - `FeatureFlag` enum listing major domains (Recording, Transcription, Session, Settings, Models, Storage, Networking, UI).
+  - `CustomLogger` singleton wrapping a `TalkerFlutter` instance.
+  - `enabledLogFlags` list for developer-controlled filtering.
+- [ ] Initialize `CustomLogger` early in `main.dart` so logs are available app-wide (no extra UI).
+- [ ] Scan the codebase for `catch` blocks / `.catchError`; replace silent handling with `logger.error(...)`.
+- [ ] Add logging to `onError` callbacks in streams/providers.
+- [ ] (If using Dio) Integrate `CurlLogInterceptor` to output API calls as `cURL` commands via logger.
+- [ ] Smoke-test: intentionally trigger common error paths; verify logs appear in the console during debug builds.
+- [ ] Update tasks.md with progress.
+
+### 📁 Files to Create/Update
+- `pubspec.yaml`

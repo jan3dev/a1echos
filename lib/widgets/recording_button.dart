@@ -11,6 +11,7 @@ import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
+import '../logger.dart';
 
 class RecordingButton extends ConsumerStatefulWidget {
   /// Callback that gets triggered when recording is started
@@ -105,14 +106,20 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
           setState(() => _gestureIsolationActive = false);
         }
       });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isDebouncing = false;
-          _gestureIsolationActive = false;
-        });
-        _showActionErrorDialog(context, actionName, e.toString());
-      }
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Error handling recording action: $actionName',
+      );
+    } finally {
+      _gestureIsolationTimer?.cancel();
+      _gestureIsolationTimer = Timer(_gestureIsolationDuration, () {
+        if (mounted) {
+          setState(() => _gestureIsolationActive = false);
+        }
+      });
     }
   }
 
@@ -303,28 +310,6 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
       builder: (context) => AlertDialog(
         title: Text(AppStrings.modelNotReady),
         content: Text(errorMessage ?? AppStrings.modelInitFailure),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.ok),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showActionErrorDialog(
-    BuildContext context,
-    String action,
-    String error,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('$action Failed'),
-        content: Text(
-          'An error occurred: $error\n\nPlease try again in a moment.',
-        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

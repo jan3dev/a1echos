@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:vosk_flutter/vosk_flutter.dart';
 import 'dart:convert';
+import '../logger.dart';
 
 /// A buffer system for managing Vosk transcription results
 class VoskResultBuffer {
@@ -103,8 +104,13 @@ class VoskService {
 
       _speechService = await _plugin!.initSpeechService(_recognizer!);
       initResult = _speechService != null;
-    } catch (e) {
-      // Vosk initialization failed
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Vosk initialization failed',
+      );
     }
     return initResult;
   }
@@ -148,8 +154,13 @@ class VoskService {
             resultSub?.cancel();
             completer.complete(text);
           }
-        } catch (e) {
-          // Error parsing final result
+        } catch (e, st) {
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.model,
+            message: 'Error parsing Vosk final result',
+          );
         }
       });
 
@@ -162,7 +173,13 @@ class VoskService {
       }
 
       return await completer.future;
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Error getting Vosk final result',
+      );
       return null;
     }
   }
@@ -188,7 +205,13 @@ class VoskService {
       final completeText = _resultBuffer.getCompleteText();
 
       return completeText;
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Error during Vosk graceful stop',
+      );
       return _resultBuffer.getCompleteText();
     }
   }
@@ -198,10 +221,14 @@ class VoskService {
     _isShuttingDown = true;
     try {
       await _speechService?.dispose();
-    } catch (_) {}
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.model, message: 'Error disposing speechService');
+    }
     try {
       await _recognizer?.dispose();
-    } catch (_) {}
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.model, message: 'Error disposing recognizer');
+    }
     _model?.dispose();
     _resultBuffer.clear();
   }

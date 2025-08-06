@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+
 import '../models/transcription.dart';
 import 'encryption_service.dart';
 import 'package:path_provider/path_provider.dart';
+import '../logger.dart';
 
 class StorageService {
   static const String _fileName = 'transcriptions.json';
@@ -33,7 +35,13 @@ class StorageService {
       if (contents.isEmpty) return [];
       final List<dynamic> jsonList = json.decode(contents);
       return jsonList.cast<String>();
-    } catch (_) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.storage,
+        message: 'Failed to read pending deletes file',
+      );
       await file.delete();
       return [];
     }
@@ -64,7 +72,13 @@ class StorageService {
           await file.delete();
         }
         success = true;
-      } catch (_) {
+      } catch (e, st) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.storage,
+          message: 'Error deleting file $path, attempting overwrite',
+        );
         try {
           final file = File(path);
           if (await file.exists()) {
@@ -72,8 +86,13 @@ class StorageService {
             await file.delete();
           }
           success = true;
-        } catch (_) {
-          // Keep in list.
+        } catch (e2, st2) {
+          logger.error(
+            e2,
+            stackTrace: st2,
+            flag: FeatureFlag.storage,
+            message: 'Second attempt failed deleting file $path',
+          );
         }
       }
 
@@ -99,7 +118,13 @@ class StorageService {
       final jsonString = await _encryptor.decrypt(encrypted);
       final List<dynamic> jsonList = json.decode(jsonString);
       return jsonList.map((m) => Transcription.fromJson(m)).toList();
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.storage,
+        message: 'Error decrypting or parsing transcriptions',
+      );
       await file.delete();
       return [];
     }
@@ -163,7 +188,13 @@ class StorageService {
         if (await file.exists()) {
           await file.delete();
         }
-      } catch (_) {
+      } catch (e, st) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.storage,
+          message: 'Error deleting audio file $path',
+        );
         bool deletionStillPending = false;
         try {
           final file = File(path);
@@ -172,7 +203,13 @@ class StorageService {
             await file.writeAsBytes([]);
             await file.delete();
           }
-        } catch (_) {
+        } catch (e2, st2) {
+          logger.error(
+            e2,
+            stackTrace: st2,
+            flag: FeatureFlag.storage,
+            message: 'Second deletion attempt failed for $path',
+          );
           deletionStillPending = true;
         }
 

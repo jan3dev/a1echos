@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:vad/vad.dart';
 import 'native_audio_permission_service.dart';
+import '../logger.dart';
 
 class AudioService {
   Future<List<String>> _getAllowedDirectories() async {
@@ -88,7 +89,13 @@ class AudioService {
             recordingStarted = true;
             break;
           }
-        } catch (e) {
+        } catch (e, st) {
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.recording,
+            message: 'Failed to start recording with $encoder',
+          );
           continue;
         }
       }
@@ -115,7 +122,13 @@ class AudioService {
         return false;
       }
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.recording,
+        message: 'Error starting file recording with $encoder',
+      );
       return false;
     }
   }
@@ -158,7 +171,13 @@ class AudioService {
       } else {
         recordedFile = null;
       }
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.recording,
+        message: 'Error stopping recording',
+      );
       recordedFile = null;
     }
     await stopVad();

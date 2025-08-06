@@ -13,6 +13,7 @@ import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
 import '../constants/app_constants.dart';
 import '../widgets/aqua_tooltip_with_animation.dart';
+import '../logger.dart';
 import '../models/app_theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -62,8 +63,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         context,
         listen: false,
       ).removeListener(_scrollToBottom);
-    } catch (e) {
-      // Ignore listener removal errors
+    } catch (e, st) {
+      logger.error(e,
+          stackTrace: st,
+          flag: FeatureFlag.ui,
+          message: 'Error removing scroll-to-bottom listener on HomeScreen');
     }
     _scrollController.dispose();
     super.dispose();

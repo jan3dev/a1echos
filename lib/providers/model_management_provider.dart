@@ -8,6 +8,7 @@ import '../services/vosk_service.dart';
 import '../services/whisper_service.dart';
 import '../managers/transcription_orchestrator.dart';
 import '../services/audio_service.dart';
+import '../logger.dart';
 
 class ModelManagementProvider with ChangeNotifier {
   final VoskService _voskService = VoskService();
@@ -98,10 +99,13 @@ class ModelManagementProvider with ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      _selectedModelType = Platform.isIOS ? ModelType.whisper : ModelType.vosk;
-      _whisperRealtime = false;
-      notifyListeners();
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error loading selected model type',
+      );
     }
   }
 
@@ -111,8 +115,13 @@ class ModelManagementProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKeyModelType, type.name);
       await prefs.setBool(_prefsKeyWhisperRealtime, _whisperRealtime);
-    } catch (e) {
-      // Ignore save errors - use defaults on next load
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error saving selected model type',
+      );
     }
   }
 
@@ -168,9 +177,15 @@ class ModelManagementProvider with ChangeNotifier {
       _isInitialized = initResult;
 
       return null;
-    } catch (e) {
+    } catch (e, st) {
       final errorMessage =
           'Error initializing ${_selectedModelType.name} model: $e';
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: errorMessage,
+      );
       _isInitialized = false;
       return errorMessage;
     } finally {
@@ -201,15 +216,11 @@ class ModelManagementProvider with ChangeNotifier {
     return error;
   }
 
-  /// Checks if the orchestrator is busy with an operation
   bool get isOperationInProgress => _orchestrator.isOperationInProgress;
-
-  /// Forces reinitialization (for error recovery)
   Future<String?> forceReinitialize() async {
     _isInitialized = false;
     _isInitializing = false;
     _lastInitializationAttempt = null;
-
     return await initializeSelectedModel();
   }
 

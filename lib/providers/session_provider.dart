@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../services/encryption_service.dart';
 import '../models/session.dart';
 import '../constants/app_constants.dart';
+import '../logger.dart';
 
 class SessionProvider with ChangeNotifier {
   static const String _prefsKeySessions = 'sessions';
@@ -47,15 +48,24 @@ class SessionProvider with ChangeNotifier {
       String? plainSessions;
       try {
         plainSessions = await _encryptionService.decrypt(storedSessions);
-      } catch (_) {
+      } catch (e) {
+        logger.warning(
+          'Failed to decrypt sessions, attempting to read as plain text.',
+          flag: FeatureFlag.provider,
+        );
         plainSessions = storedSessions;
       }
 
       try {
         final List<dynamic> list = jsonDecode(plainSessions);
         _sessions = list.map((m) => Session.fromJson(m)).toList();
-      } catch (e) {
-        debugPrint("Error loading sessions: $e. Resetting to default.");
+      } catch (e, st) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.provider,
+          message: 'Failed to decode sessions JSON',
+        );
         _sessions = [];
       }
     }
@@ -66,8 +76,11 @@ class SessionProvider with ChangeNotifier {
     if (storedActive != null) {
       try {
         storedActive = await _encryptionService.decrypt(storedActive);
-      } catch (_) {
-        // Legacy plain text, keep value as-is
+      } catch (e) {
+        logger.warning(
+          'Failed to decrypt active session ID, assuming legacy plain text.',
+          flag: FeatureFlag.provider,
+        );
       }
     }
 
@@ -104,6 +117,10 @@ class SessionProvider with ChangeNotifier {
           try {
             return int.parse(s.name.substring(baseName.length));
           } catch (e) {
+            logger.warning(
+              'Could not parse session number from name: ${s.name}',
+              flag: FeatureFlag.provider,
+            );
             return null;
           }
         })
