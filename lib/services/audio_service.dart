@@ -2,11 +2,28 @@ import 'dart:async';
 import 'dart:io';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:vad/vad.dart';
 import 'native_audio_permission_service.dart';
 
 class AudioService {
+  Future<List<String>> _getAllowedDirectories() async {
+    final tempDir = await getTemporaryDirectory();
+    final docDir = await getApplicationDocumentsDirectory();
+    return [tempDir.path, docDir.path];
+  }
+
+  Future<bool> _isPathAllowed(String path) async {
+    final allowedDirs = await _getAllowedDirectories();
+    for (final dir in allowedDirs) {
+      if (p.equals(dir, path) || p.isWithin(dir, path)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   final AudioRecorder _audioRecorder = AudioRecorder();
   String? _recordingPath;
   File? _currentAudioFile;
@@ -31,7 +48,16 @@ class AudioService {
 
   Future<String> _generateRecordingPath() async {
     final tempDir = await getTemporaryDirectory();
-    return '${tempDir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final proposedPath =
+        '${tempDir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    if (!await _isPathAllowed(proposedPath)) {
+      throw Exception(
+        'Attempted to generate recording path outside of allowed directories',
+      );
+    }
+
+    return proposedPath;
   }
 
   Future<bool> startRecording({bool useStreaming = false}) async {
@@ -110,6 +136,9 @@ class AudioService {
     File? recordedFile;
     try {
       final path = await _audioRecorder.stop();
+      if (path != null && !await _isPathAllowed(path)) {
+        throw Exception('Recording saved to disallowed directory');
+      }
       if (path != null) {
         if (path != _recordingPath) {
           _recordingPath = path;
