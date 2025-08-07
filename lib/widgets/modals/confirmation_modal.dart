@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/app_theme.dart';
-import '../../constants/app_constants.dart';
 import '../../providers/theme_provider.dart';
 
 class ConfirmationModal {
@@ -21,7 +20,7 @@ class ConfirmationModal {
     required String title,
     required String message,
     required String confirmText,
-    String cancelText = AppStrings.cancel,
+    required String cancelText,
     required VoidCallback onConfirm,
     VoidCallback? onCancel,
   }) {

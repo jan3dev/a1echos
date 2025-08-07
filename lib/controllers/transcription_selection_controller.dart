@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 
 import '../providers/local_transcription_provider.dart';
 import '../widgets/modals/confirmation_modal.dart';
-import '../constants/app_constants.dart';
 import '../services/share_service.dart';
 import '../logger.dart';
 
@@ -72,20 +72,15 @@ class TranscriptionSelectionController with ChangeNotifier {
     ConfirmationModal.show(
       context: context,
       ref: ref,
-      title: AppStrings.sessionDeleteTranscriptionsTitle,
-      message: AppStrings.sessionDeleteTranscriptionsMessage
-          .replaceAll(
-            '{count}',
-            _selectedTranscriptionIds.length == 1 ? 'this' : 'these',
-          )
-          .replaceAll(
-            '{transcriptions}',
-            _selectedTranscriptionIds.length == 1
-                ? 'transcription'
-                : 'transcriptions',
-          ),
-      confirmText: AppStrings.delete,
-      cancelText: AppStrings.cancel,
+      title: context.loc.sessionDeleteTranscriptionsTitle,
+      message: context.loc.sessionDeleteTranscriptionsMessage(
+        _selectedTranscriptionIds.length == 1 ? 'this' : 'these',
+        _selectedTranscriptionIds.length == 1
+            ? 'transcription'
+            : 'transcriptions',
+      ),
+      confirmText: context.loc.delete,
+      cancelText: context.loc.cancel,
       onConfirm: () async {
         Navigator.pop(context);
 
@@ -100,8 +95,7 @@ class TranscriptionSelectionController with ChangeNotifier {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  AppStrings.sessionTranscriptionsDeleted.replaceAll(
-                    '{transcriptions}',
+                  context.loc.sessionTranscriptionsDeleted(
                     deletedCount == 1 ? 'Transcription' : 'Transcriptions',
                   ),
                 ),
@@ -119,9 +113,9 @@ class TranscriptionSelectionController with ChangeNotifier {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  AppStrings.sessionErrorDeletingTranscriptions.replaceAll(
-                    '{error}',
-                    'An error occurred.',
+                  context.loc.sessionErrorDeletingTranscriptions(
+                    e.toString(),
+                    'transcriptions',
                   ),
                 ),
               ),
@@ -138,7 +132,7 @@ class TranscriptionSelectionController with ChangeNotifier {
 
     if (transcriptions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(AppStrings.noTranscriptionsToCopy)),
+        SnackBar(content: Text(context.loc.noTranscriptionsToCopy)),
       );
       return;
     }
@@ -149,7 +143,7 @@ class TranscriptionSelectionController with ChangeNotifier {
       await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.allTranscriptionsCopied)),
+          SnackBar(content: Text(context.loc.allTranscriptionsCopied)),
         );
       }
     } catch (e, st) {

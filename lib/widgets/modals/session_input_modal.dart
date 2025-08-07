@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
@@ -132,9 +133,9 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
                     children: [
                       AquaTextField(
                         controller: _controller,
-                        label: AppStrings.sessionNameLabel,
+                        label: context.loc.sessionNameLabel,
                         maxLength: AppConstants.sessionNameMaxLength,
-                        assistiveText: AppStrings.sessionNameMaxLengthHelper,
+                        assistiveText: context.loc.sessionNameMaxLengthHelper,
                         transparentBorder: true,
                         trailingIcon: Container(
                           width: 18,

@@ -1,0 +1,98 @@
+{
+  "@@locale": "en",
+  "loading": "Loading...",
+  "transcribingStatus": "Transcribing...",
+  "liveTranscriptionTitle": "Live Transcription",
+  "speakNow": "Speak now...",
+  "encryptedAtRest": "Encrypted at rest",
+  "save": "Save",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "delete": "Delete",
+  "clear": "Delete All Transcriptions",
+  "retry": "Retry",
+  "share": "Share",
+  "edit": "Edit",
+  "homeDeleteSelectedSessionsTitle": "Delete?",
+  "homeDeleteSelectedSessionsMessage": "Are you sure you want to delete {count} {sessions}? This action cannot be undone.",
+  "@homeDeleteSelectedSessionsMessage": {
+    "placeholders": {
+      "count": {},
+      "sessions": {}
+    }
+  },
+  "homeSessionsDeleted": "{sessions} deleted",
+  "@homeSessionsDeleted": {
+    "placeholders": {
+      "sessions": {}
+    }
+  },
+  "homeErrorCreatingSession": "Error creating session: {error}",
+  "@homeErrorCreatingSession": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "clearAllTooltip": "Clear All",
+  "newSessionTooltip": "New Session",
+  "sessionRenameTitle": "Rename",
+  "sessionDeleteTranscriptionsTitle": "Delete?",
+  "sessionDeleteTranscriptionsMessage": "Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.",
+  "@sessionDeleteTranscriptionsMessage": {
+    "placeholders": {
+      "count": {},
+      "transcriptions": {}
+    }
+  },
+  "sessionTranscriptionsDeleted": "{transcriptions} deleted",
+  "@sessionTranscriptionsDeleted": {
+    "placeholders": {
+      "transcriptions": {}
+    }
+  },
+  "sessionErrorDeletingTranscriptions": "Error deleting {transcriptions}: {error}",
+  "@sessionErrorDeletingTranscriptions": {
+    "placeholders": {
+      "transcriptions": {},
+      "error": {}
+    }
+  },
+  "noTranscriptionsToCopy": "No transcriptions to copy",
+  "allTranscriptionsCopied": "All transcriptions copied to clipboard",
+  "noTranscriptionsToClear": "No transcriptions to clear",
+  "allTranscriptionsClearedSession": "All transcriptions cleared for this session",
+  "copiedToClipboard": "Copied to clipboard",
+  "retryInitialization": "Retry Initialization",
+  "modelNotReady": "Model Not Ready",
+  "modelInitFailure": "The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.",
+  "settingsTitle": "Settings",
+  "modelTitle": "Model",
+  "themeTitle": "Theme",
+  "auto": "Auto",
+  "light": "Light",
+  "dark": "Dark",
+  "modelDescription": "Select which model to use. All processing happens on your device.",
+  "voskModelTitle": "Vosk",
+  "voskModelSubtitle": "Fast, real-time",
+  "whisperModelTitle": "Whisper",
+  "whisperModelRealtimeTitle": "Whisper (Real-time)",
+  "whisperModelFileTitle": "Whisper",
+  "whisperModelSubtitle": "High accuracy",
+  "followUs": "Follow us on X",
+  "recordingPrefix": "Session",
+  "emptySessionsMessage": "Hit the record button to start transcribing",
+  "copyToClipboard": "Copied to clipboard",
+  "modifiedPrefix": "Modified",
+  "errorPrefix": "Error:",
+  "sessionNameLabel": "Session Name",
+  "sessionNameMaxLengthHelper": "Max 30 characters.",
+  "modelReadySuffix": "model is ready.",
+  "modelFailedInitSuffix": "model failed to initialize.",
+  "initializingModelPrefix": "Initializing",
+  "modelSuffix": "model...",
+  "retryInitializationButton": "Retry Initialization",
+  "incognitoModeTitle": "Incognito",
+  "incognitoExplainerTitle": "Incognito Mode",
+  "incognitoExplainerBody": "Transcibe without saving. This session won't be stored or synced anywhere.",
+  "incognitoExplainerCta": "Got it!"
+}

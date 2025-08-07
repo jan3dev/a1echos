@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui_components/ui_components.dart';
@@ -301,7 +302,7 @@ class TranscriptionItemState extends ConsumerState<TranscriptionItem> {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppStrings.copiedToClipboard),
+        content: Text(context.loc.copiedToClipboard),
         duration: AppConstants.snackBarDurationShort,
       ),
     );

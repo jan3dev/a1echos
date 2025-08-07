@@ -1,9 +1,9 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:ui_components/ui_components.dart';
 
-import '../../constants/app_constants.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
 
@@ -27,9 +27,9 @@ class IncognitoExplainerModal {
         colorFilter: ColorFilter.mode(colors.textInverse, BlendMode.srcIn),
       ),
       iconVariant: AquaModalSheetVariant.info,
-      title: AppStrings.incognitoExplainerTitle,
-      message: AppStrings.incognitoExplainerBody,
-      primaryButtonText: AppStrings.incognitoExplainerCta,
+      title: context.loc.incognitoExplainerTitle,
+      message: context.loc.incognitoExplainerBody,
+      primaryButtonText: context.loc.incognitoExplainerCta,
       onPrimaryButtonTap: onDismiss ?? () => Navigator.pop(context),
     );
   }

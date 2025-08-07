@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
@@ -7,7 +8,6 @@ import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
 import '../widgets/recording_controls_view.dart';
 import '../widgets/transcription_list.dart';
-import '../constants/app_constants.dart';
 import '../widgets/modals/session_input_modal.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
@@ -135,8 +135,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     SessionInputModal.show(
       context,
       ref: ref,
-      title: AppStrings.sessionRenameTitle,
-      buttonText: AppStrings.save,
+      title: context.loc.sessionRenameTitle,
+      buttonText: context.loc.save,
       initialValue: _navigationController.sessionName,
       onSubmit: (name) {
         _navigationController.renameSession(name);
@@ -252,7 +252,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                       right: 16,
                       child: Center(
                         child: AquaButton.primary(
-                          text: AppStrings.share,
+                          text: context.loc.share,
                           onPressed: _selectionController.hasSelectedItems
                               ? _handleSharePressed
                               : null,

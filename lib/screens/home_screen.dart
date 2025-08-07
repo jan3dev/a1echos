@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +12,6 @@ import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
-import '../constants/app_constants.dart';
 import '../widgets/aqua_tooltip_with_animation.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
@@ -171,7 +171,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               left: 0,
               right: 0,
               child: AquaTooltipWithAnimation(
-                message: AppStrings.emptySessionsMessage,
+                message: context.loc.emptySessionsMessage,
               ),
             ),
         ],

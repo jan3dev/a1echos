@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_svg/flutter_svg.dart';
@@ -7,7 +8,6 @@ import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/local_transcription_provider.dart';
-import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
@@ -308,12 +308,12 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppStrings.modelNotReady),
-        content: Text(errorMessage ?? AppStrings.modelInitFailure),
+        title: Text(context.loc.modelNotReady),
+        content: Text(errorMessage ?? context.loc.modelInitFailure),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.ok),
+            child: Text(context.loc.ok),
           ),
         ],
       ),

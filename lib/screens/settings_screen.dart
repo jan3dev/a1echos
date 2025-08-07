@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +7,6 @@ import 'package:provider/provider.dart' as provider;
 import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
-import '../constants/app_constants.dart';
 import '../widgets/aqua_in_app_banner.dart';
 import '../widgets/settings_footer.dart';
 import '../models/app_theme.dart';
@@ -22,16 +22,16 @@ class SettingsScreen extends ConsumerWidget {
     final colors = selectedTheme.colors(context);
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
-      appBar: AquaTopAppBar(colors: colors, title: AppStrings.settingsTitle),
+      appBar: AquaTopAppBar(colors: colors, title: context.loc.settingsTitle),
       body: provider.Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           String modelDisplay;
           if (provider.selectedModelType == ModelType.vosk) {
-            modelDisplay = AppStrings.voskModelTitle;
+            modelDisplay = context.loc.voskModelTitle;
           } else {
             modelDisplay = provider.whisperRealtime
-                ? AppStrings.whisperModelRealtimeTitle
-                : AppStrings.whisperModelFileTitle;
+                ? context.loc.whisperModelRealtimeTitle
+                : context.loc.whisperModelFileTitle;
           }
           String themeDisplay = selectedTheme.name;
 
@@ -58,7 +58,7 @@ class SettingsScreen extends ConsumerWidget {
                         child: Column(
                           children: [
                             AquaListItem(
-                              title: AppStrings.modelTitle,
+                              title: context.loc.modelTitle,
                               titleTrailing: modelDisplay,
                               titleTrailingColor: colors.textSecondary,
                               iconLeading: SvgPicture.asset(
@@ -87,7 +87,7 @@ class SettingsScreen extends ConsumerWidget {
                               color: colors.surfaceBorderPrimary,
                             ),
                             AquaListItem(
-                              title: AppStrings.themeTitle,
+                              title: context.loc.themeTitle,
                               titleTrailing: themeDisplay,
                               titleTrailingColor: colors.textSecondary,
                               iconLeading: AquaIcon.theme(

@@ -4,7 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../constants/app_constants.dart';
+import 'package:echos/utils/utils.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -76,7 +76,7 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
           ),
           const SizedBox(height: 16),
           Text(
-            AppStrings.followUs,
+            context.loc.followUs,
             style: AquaTypography.body2Medium.copyWith(
               color: colors.textTertiary,
             ),

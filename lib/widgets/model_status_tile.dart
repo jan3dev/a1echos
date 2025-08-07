@@ -1,8 +1,8 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
 import '../models/model_type.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -26,8 +26,8 @@ class ModelStatusTile extends ConsumerWidget {
     final selectedTheme = ref.watch(prefsProvider).selectedTheme;
     final colors = selectedTheme.colors(context);
     final modelName = selectedModelType == ModelType.vosk
-        ? AppStrings.voskModelTitle
-        : AppStrings.whisperModelTitle;
+        ? context.loc.voskModelTitle
+        : context.loc.whisperModelTitle;
 
     if (isModelReady) {
       return Container(
@@ -43,7 +43,7 @@ class ModelStatusTile extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '$modelName ${AppStrings.modelReadySuffix}',
+                '$modelName ${context.loc.modelReadySuffix}',
                 style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               ),
             ),
@@ -68,7 +68,7 @@ class ModelStatusTile extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$modelName ${AppStrings.modelFailedInitSuffix}',
+                    '$modelName ${context.loc.modelFailedInitSuffix}',
                     style: AquaTypography.body1.copyWith(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.bold,
@@ -84,7 +84,7 @@ class ModelStatusTile extends ConsumerWidget {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: onRetry,
-                    child: Text(AppStrings.retryInitializationButton),
+                    child: Text(context.loc.retryInitializationButton),
                   ),
                 ],
               ),
@@ -110,7 +110,7 @@ class ModelStatusTile extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '${AppStrings.initializingModelPrefix} $modelName ${AppStrings.modelSuffix}',
+                '${context.loc.initializingModelPrefix} $modelName ${context.loc.modelSuffix}',
                 style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               ),
             ),

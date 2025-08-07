@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:echos/utils/utils.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../widgets/transcription_list.dart';
 import '../widgets/live_transcription_view.dart';
 import '../widgets/error_view.dart';
-import '../constants/app_constants.dart';
 import 'aqua_tooltip_with_animation.dart';
 
 /// Content view component that manages the main transcription display area
@@ -109,7 +109,7 @@ class TranscriptionContentView extends ConsumerWidget {
                 left: 0,
                 right: 0,
                 child: AquaTooltipWithAnimation(
-                  message: AppStrings.emptySessionsMessage,
+                  message: context.loc.emptySessionsMessage,
                 ),
               ),
           ],

@@ -1,7 +1,7 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -49,7 +49,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onTap: onCancelEditPressed,
         ),
         title: AquaText.subtitleSemiBold(
-          text: AppStrings.edit,
+          text: context.loc.edit,
           color: colors.textPrimary,
         ),
         centerTitle: true,

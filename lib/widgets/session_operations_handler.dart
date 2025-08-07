@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
+import 'package:echos/utils/utils.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../screens/session_screen.dart';
-import '../constants/app_constants.dart';
 import '../logger.dart';
 
 mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
@@ -33,11 +33,12 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
       String sessionId;
       if (settingsProvider.isIncognitoMode) {
         sessionId = await sessionProvider.createSession(
+          context,
           null,
           isIncognito: true,
         );
       } else {
-        sessionId = await sessionProvider.createSession(null);
+        sessionId = await sessionProvider.createSession(context, null);
       }
 
       if (!mounted) return;
@@ -64,12 +65,7 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppStrings.homeErrorCreatingSession.replaceAll(
-              '{error}',
-              'An unexpected error occurred.',
-            ),
-          ),
+          content: Text(context.loc.homeErrorCreatingSession(e.toString())),
         ),
       );
     }

@@ -1,10 +1,10 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
 import '../widgets/modals/confirmation_modal.dart';
-import '../constants/app_constants.dart';
 
 mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
   bool _selectionMode = false;
@@ -47,17 +47,13 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
     ConfirmationModal.show(
       context: context,
       ref: ref,
-      title: AppStrings.homeDeleteSelectedSessionsTitle,
-      message: AppStrings.homeDeleteSelectedSessionsMessage
-          .replaceAll(
-            '{count}',
-            _selectedSessionIds.length == 1 ? 'this' : 'these',
-          )
-          .replaceAll(
-            '{sessions}',
-            _selectedSessionIds.length == 1 ? 'session' : 'sessions',
-          ),
-      confirmText: AppStrings.delete,
+      title: context.loc.homeDeleteSelectedSessionsTitle,
+      message: context.loc.homeDeleteSelectedSessionsMessage(
+        _selectedSessionIds.length == 1 ? 'this' : 'these',
+        _selectedSessionIds.length == 1 ? 'session' : 'sessions',
+      ),
+      confirmText: context.loc.delete,
+      cancelText: context.loc.cancel,
       onConfirm: () {
         Navigator.pop(context);
         final deletedCount = _selectedSessionIds.length;
@@ -71,8 +67,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppStrings.homeSessionsDeleted.replaceAll(
-                '{sessions}',
+              context.loc.homeSessionsDeleted(
                 deletedCount == 1 ? 'Session' : 'Sessions',
               ),
             ),
