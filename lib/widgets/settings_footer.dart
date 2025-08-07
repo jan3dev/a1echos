@@ -39,11 +39,10 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
   Future<void> _launchX(BuildContext context, String handle) async {
     final sanitized = handle.replaceFirst(RegExp(r'^@'), '');
     final url = Uri.https('x.com', sanitized);
-    final messenger = ScaffoldMessenger.of(context);
     final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not open link')),
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.loc.couldNotOpenLink)),
       );
     }
   }

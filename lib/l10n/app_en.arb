@@ -14,17 +14,20 @@
   "share": "Share",
   "edit": "Edit",
   "homeDeleteSelectedSessionsTitle": "Delete?",
-  "homeDeleteSelectedSessionsMessage": "Are you sure you want to delete {count} {sessions}? This action cannot be undone.",
+  "homeDeleteSelectedSessionsMessage": "Are you sure you want to delete {count,plural, =1{1 session} other{{count} sessions}}? This action cannot be undone.",
   "@homeDeleteSelectedSessionsMessage": {
     "placeholders": {
-      "count": {},
-      "sessions": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "homeSessionsDeleted": "{sessions} deleted",
+  "homeSessionsDeleted": "{count,plural, =1{1 session deleted} other{{count} sessions deleted}}",
   "@homeSessionsDeleted": {
     "placeholders": {
-      "sessions": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "homeErrorCreatingSession": "Error creating session: {error}",
@@ -37,17 +40,20 @@
   "newSessionTooltip": "New Session",
   "sessionRenameTitle": "Rename",
   "sessionDeleteTranscriptionsTitle": "Delete?",
-  "sessionDeleteTranscriptionsMessage": "Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.",
+  "sessionDeleteTranscriptionsMessage": "Are you sure you want to delete {count,plural, =1{1 transcription} other{{count} transcriptions}}? This action cannot be undone.",
   "@sessionDeleteTranscriptionsMessage": {
     "placeholders": {
-      "count": {},
-      "transcriptions": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "sessionTranscriptionsDeleted": "{transcriptions} deleted",
+  "sessionTranscriptionsDeleted": "{count,plural, =1{1 transcription deleted} other{{count} transcriptions deleted}}",
   "@sessionTranscriptionsDeleted": {
     "placeholders": {
-      "transcriptions": {}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "sessionErrorDeletingTranscriptions": "Error deleting {transcriptions}: {error}",
@@ -94,5 +100,32 @@
   "incognitoModeTitle": "Incognito",
   "incognitoExplainerTitle": "Incognito Mode",
   "incognitoExplainerBody": "Transcibe without saving. This session won't be stored or synced anywhere.",
-  "incognitoExplainerCta": "Got it!"
+  "incognitoExplainerCta": "Got it!",
+  "copyFailed": "Failed to copy: {error}",
+  "@copyFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "noTranscriptionsSelectedToShare": "No transcriptions selected to share",
+  "shareFailed": "Failed to share: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "actionFailedTitle": "{action} Failed",
+  "@actionFailedTitle": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "genericErrorRetry": "An error occurred: {error}\\n\\nPlease try again in a moment.",
+  "@genericErrorRetry": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "couldNotOpenLink": "Could not open link",
+  "createdPrefix": "Created"
 }

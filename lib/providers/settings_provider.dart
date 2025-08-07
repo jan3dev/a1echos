@@ -35,6 +35,7 @@ class SettingsProvider with ChangeNotifier {
         message: 'Failed to load incognito preference',
       );
       _isIncognitoMode = false;
+      _hasSeenIncognitoExplainer = false;
     }
     notifyListeners();
   }

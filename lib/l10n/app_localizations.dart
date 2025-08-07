@@ -181,14 +181,14 @@ abstract class AppLocalizations {
   /// No description provided for @homeDeleteSelectedSessionsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete {count} {sessions}? This action cannot be undone.'**
-  String homeDeleteSelectedSessionsMessage(Object count, Object sessions);
+  /// **'Are you sure you want to delete {count,plural, =1{1 session} other{{count} sessions}}? This action cannot be undone.'**
+  String homeDeleteSelectedSessionsMessage(int count);
 
   /// No description provided for @homeSessionsDeleted.
   ///
   /// In en, this message translates to:
-  /// **'{sessions} deleted'**
-  String homeSessionsDeleted(Object sessions);
+  /// **'{count,plural, =1{1 session deleted} other{{count} sessions deleted}}'**
+  String homeSessionsDeleted(int count);
 
   /// No description provided for @homeErrorCreatingSession.
   ///
@@ -223,17 +223,14 @@ abstract class AppLocalizations {
   /// No description provided for @sessionDeleteTranscriptionsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete {count} {transcriptions}? This action cannot be undone.'**
-  String sessionDeleteTranscriptionsMessage(
-    Object count,
-    Object transcriptions,
-  );
+  /// **'Are you sure you want to delete {count,plural, =1{1 transcription} other{{count} transcriptions}}? This action cannot be undone.'**
+  String sessionDeleteTranscriptionsMessage(int count);
 
   /// No description provided for @sessionTranscriptionsDeleted.
   ///
   /// In en, this message translates to:
-  /// **'{transcriptions} deleted'**
-  String sessionTranscriptionsDeleted(Object transcriptions);
+  /// **'{count,plural, =1{1 transcription deleted} other{{count} transcriptions deleted}}'**
+  String sessionTranscriptionsDeleted(int count);
 
   /// No description provided for @sessionErrorDeletingTranscriptions.
   ///
@@ -471,6 +468,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Got it!'**
   String get incognitoExplainerCta;
+
+  /// No description provided for @copyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to copy: {error}'**
+  String copyFailed(Object error);
+
+  /// No description provided for @noTranscriptionsSelectedToShare.
+  ///
+  /// In en, this message translates to:
+  /// **'No transcriptions selected to share'**
+  String get noTranscriptionsSelectedToShare;
+
+  /// No description provided for @shareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share: {error}'**
+  String shareFailed(Object error);
+
+  /// No description provided for @actionFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{action} Failed'**
+  String actionFailedTitle(Object action);
+
+  /// No description provided for @genericErrorRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred: {error}\\n\\nPlease try again in a moment.'**
+  String genericErrorRetry(Object error);
+
+  /// No description provided for @couldNotOpenLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open link'**
+  String get couldNotOpenLink;
+
+  /// No description provided for @createdPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get createdPrefix;
 }
 
 class _AppLocalizationsDelegate

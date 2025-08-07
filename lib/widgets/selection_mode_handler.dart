@@ -49,8 +49,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
       ref: ref,
       title: context.loc.homeDeleteSelectedSessionsTitle,
       message: context.loc.homeDeleteSelectedSessionsMessage(
-        _selectedSessionIds.length == 1 ? 'this' : 'these',
-        _selectedSessionIds.length == 1 ? 'session' : 'sessions',
+        _selectedSessionIds.length,
       ),
       confirmText: context.loc.delete,
       cancelText: context.loc.cancel,
@@ -67,9 +66,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.loc.homeSessionsDeleted(
-                deletedCount == 1 ? 'Session' : 'Sessions',
-              ),
+              context.loc.homeSessionsDeleted(deletedCount),
             ),
           ),
         );

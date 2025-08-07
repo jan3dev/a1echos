@@ -74,10 +74,7 @@ class TranscriptionSelectionController with ChangeNotifier {
       ref: ref,
       title: context.loc.sessionDeleteTranscriptionsTitle,
       message: context.loc.sessionDeleteTranscriptionsMessage(
-        _selectedTranscriptionIds.length == 1 ? 'this' : 'these',
-        _selectedTranscriptionIds.length == 1
-            ? 'transcription'
-            : 'transcriptions',
+        _selectedTranscriptionIds.length,
       ),
       confirmText: context.loc.delete,
       cancelText: context.loc.cancel,
@@ -95,9 +92,7 @@ class TranscriptionSelectionController with ChangeNotifier {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  context.loc.sessionTranscriptionsDeleted(
-                    deletedCount == 1 ? 'Transcription' : 'Transcriptions',
-                  ),
+                  context.loc.sessionTranscriptionsDeleted(deletedCount),
                 ),
               ),
             );
@@ -155,7 +150,7 @@ class TranscriptionSelectionController with ChangeNotifier {
           message: 'Failed to copy all transcriptions to clipboard',
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to copy transcriptions.')),
+          SnackBar(content: Text(context.loc.copyFailed(e.toString()))),
         );
       }
     }
@@ -176,7 +171,7 @@ class TranscriptionSelectionController with ChangeNotifier {
 
     if (selectedTranscriptions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No transcriptions selected to share')),
+        SnackBar(content: Text(context.loc.noTranscriptionsSelectedToShare)),
       );
       return;
     }
@@ -198,7 +193,7 @@ class TranscriptionSelectionController with ChangeNotifier {
           message: 'Failed to share selected transcriptions',
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to share transcriptions.')),
+          SnackBar(content: Text(context.loc.shareFailed(e.toString()))),
         );
       }
     }

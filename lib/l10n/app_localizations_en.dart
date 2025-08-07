@@ -51,13 +51,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDeleteSelectedSessionsTitle => 'Delete?';
 
   @override
-  String homeDeleteSelectedSessionsMessage(Object count, Object sessions) {
-    return 'Are you sure you want to delete $count $sessions? This action cannot be undone.';
+  String homeDeleteSelectedSessionsMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return 'Are you sure you want to delete $_temp0? This action cannot be undone.';
   }
 
   @override
-  String homeSessionsDeleted(Object sessions) {
-    return '$sessions deleted';
+  String homeSessionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions deleted',
+      one: '1 session deleted',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -78,16 +90,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionDeleteTranscriptionsTitle => 'Delete?';
 
   @override
-  String sessionDeleteTranscriptionsMessage(
-    Object count,
-    Object transcriptions,
-  ) {
-    return 'Are you sure you want to delete $count $transcriptions? This action cannot be undone.';
+  String sessionDeleteTranscriptionsMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transcriptions',
+      one: '1 transcription',
+    );
+    return 'Are you sure you want to delete $_temp0? This action cannot be undone.';
   }
 
   @override
-  String sessionTranscriptionsDeleted(Object transcriptions) {
-    return '$transcriptions deleted';
+  String sessionTranscriptionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transcriptions deleted',
+      one: '1 transcription deleted',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -217,4 +238,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get incognitoExplainerCta => 'Got it!';
+
+  @override
+  String copyFailed(Object error) {
+    return 'Failed to copy: $error';
+  }
+
+  @override
+  String get noTranscriptionsSelectedToShare =>
+      'No transcriptions selected to share';
+
+  @override
+  String shareFailed(Object error) {
+    return 'Failed to share: $error';
+  }
+
+  @override
+  String actionFailedTitle(Object action) {
+    return '$action Failed';
+  }
+
+  @override
+  String genericErrorRetry(Object error) {
+    return 'An error occurred: $error\\n\\nPlease try again in a moment.';
+  }
+
+  @override
+  String get couldNotOpenLink => 'Could not open link';
+
+  @override
+  String get createdPrefix => 'Created';
 }

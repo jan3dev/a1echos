@@ -115,7 +115,7 @@ class SessionMoreMenu extends ConsumerWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                'Created: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
+                '${context.loc.createdPrefix}: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
                 style: AquaTypography.caption1Medium.copyWith(
                   color: colors.textTertiary,
                 ),
@@ -146,14 +146,11 @@ class SessionMoreMenu extends ConsumerWidget {
           },
         );
       } else if (value == 'delete') {
-        ConfirmationModal.show( 
+        ConfirmationModal.show(
           context: context,
           ref: ref,
           title: context.loc.homeDeleteSelectedSessionsTitle,
-          message: context.loc.homeDeleteSelectedSessionsMessage(
-            'this',
-            'session',
-          ),
+          message: context.loc.homeDeleteSelectedSessionsMessage(1),
           confirmText: context.loc.delete,
           cancelText: context.loc.cancel,
           onConfirm: () {
@@ -164,9 +161,7 @@ class SessionMoreMenu extends ConsumerWidget {
             );
             sessionProvider.deleteSession(session.id);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.loc.homeSessionsDeleted('Session')),
-              ),
+              SnackBar(content: Text(context.loc.homeSessionsDeleted(1))),
             );
           },
         );
