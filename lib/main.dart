@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart' as provider;
+import 'l10n/app_localizations.dart';
 import 'services/storage_service.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'providers/theme_provider.dart';
@@ -20,8 +21,7 @@ import 'logger.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterForegroundTask.initCommunicationPort();
-
-  logger.info('App initialising', flag: FeatureFlag.general);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   FlutterError.onError = (FlutterErrorDetails details) {
     logger.error(
@@ -75,31 +75,13 @@ class MyApp extends ConsumerWidget {
     final lightTheme = ref.watch(lightThemeProvider);
     final darkTheme = ref.watch(darkThemeProvider);
 
-    final appTheme = ref.watch(prefsProvider).selectedTheme;
-    final colors = appTheme.colors(context);
-    final surfaceBackground = colors.surfaceBackground;
-    final isDark =
-        (appTheme == AppTheme.dark) ||
-        (appTheme == AppTheme.auto &&
-            MediaQuery.of(context).platformBrightness == Brightness.dark);
-    final statusBarIconBrightness = isDark ? Brightness.light : Brightness.dark;
-
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: surfaceBackground,
-        statusBarIconBrightness: statusBarIconBrightness,
-        systemNavigationBarColor: surfaceBackground,
-        systemNavigationBarIconBrightness: statusBarIconBrightness,
-        systemStatusBarContrastEnforced: false,
-        systemNavigationBarContrastEnforced: true,
-      ),
-    );
-
     return MaterialApp(
       title: 'Echos',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: themeMode,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       initialRoute: '/',
       routes: {
         '/': (context) => const AppInitializer(child: HomeScreen()),
@@ -107,8 +89,6 @@ class MyApp extends ConsumerWidget {
       },
       builder: (context, child) {
         final appTheme = ref.watch(prefsProvider).selectedTheme;
-        final colors = appTheme.colors(context);
-        final surfaceBackground = colors.surfaceBackground;
         final isDark =
             (appTheme == AppTheme.dark) ||
             (appTheme == AppTheme.auto &&
@@ -117,25 +97,14 @@ class MyApp extends ConsumerWidget {
             ? Brightness.light
             : Brightness.dark;
 
-        SystemChrome.setSystemUIOverlayStyle(
-          SystemUiOverlayStyle(
-            statusBarColor: surfaceBackground,
-            statusBarIconBrightness: statusBarIconBrightness,
-            systemNavigationBarColor: surfaceBackground,
-            systemNavigationBarIconBrightness: statusBarIconBrightness,
-            systemStatusBarContrastEnforced: false,
-            systemNavigationBarContrastEnforced: true,
-          ),
-        );
-
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
-            statusBarColor: surfaceBackground,
+            statusBarColor: Colors.transparent,
             statusBarIconBrightness: statusBarIconBrightness,
-            systemNavigationBarColor: surfaceBackground,
+            systemNavigationBarColor: Colors.transparent,
             systemNavigationBarIconBrightness: statusBarIconBrightness,
             systemStatusBarContrastEnforced: false,
-            systemNavigationBarContrastEnforced: true,
+            systemNavigationBarContrastEnforced: false,
           ),
           child: child!,
         );
