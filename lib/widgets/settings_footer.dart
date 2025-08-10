@@ -19,7 +19,7 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
   String _version = '';
   static const _tags = [
     {'tag': 'Echos', 'handle': 'a1echos'},
-    {'tag': 'A1Lab', 'handle': 'a1laboratory'},
+    {'tag': 'A1 Lab', 'handle': 'a1laboratory'},
     {'tag': 'JAN3', 'handle': 'jan3com'},
   ];
 
