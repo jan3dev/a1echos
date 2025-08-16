@@ -14,6 +14,7 @@ class ModelManagementProvider with ChangeNotifier {
   final VoskService _voskService = VoskService();
   WhisperService? _whisperService;
   late TranscriptionOrchestrator _orchestrator;
+  final AudioService _sharedAudioService;
 
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
@@ -45,11 +46,11 @@ class ModelManagementProvider with ChangeNotifier {
     return null;
   }
 
-  ModelManagementProvider() {
+  ModelManagementProvider(this._sharedAudioService) {
     _whisperService = WhisperService();
 
     _orchestrator = TranscriptionOrchestrator(
-      AudioService(),
+      _sharedAudioService,
       _voskService,
       _whisperService,
     );

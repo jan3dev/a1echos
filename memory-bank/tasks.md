@@ -1,11 +1,149 @@
 # TASKS - SOURCE OF TRUTH
 
 ## Active Task Status
-**Current Phase:** ARCHIVE Mode - ARCHIVING COMPLETE  
-**Current Task:** Background Recording with Bulletproof Incognito Cleanup  
-**Status:** ✅ FULLY COMPLETED & ARCHIVED
+**Current Phase:** VAN Mode - Task Complete  
+**Current Task:** Switch from flutter_sound to record package  
+**Status:** ✅ COMPLETE - VAN MODE
 
-## 📋 TASK COMPLETION STATUS
+## ✅ COMPLETED TASK: Switch from flutter_sound to record package (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+Switch from flutter_sound to record package for audio recording and amplitude monitoring to simplify the codebase and reduce dependencies.
+
+### ✅ IMPLEMENTATION DETAILS
+- **Replaced FlutterSoundRecorder**: Switched to `AudioRecorder` from record package
+- **Simplified amplitude processing**: Removed complex calibration and decibel conversion
+- **Cleaner API**: Record package provides normalized amplitude values (0.0-1.0)
+- **Maintained functionality**: All recording and monitoring features preserved
+- **Reduced complexity**: Removed 200+ lines of complex amplitude processing code
+- **Better performance**: Simpler amplitude handling with clean dB to 0-1 conversion
+- **Removed FFmpeg dependency**: No longer needed since we record directly in WAV format
+- **Eliminated audio conversion**: Direct WAV recording eliminates conversion step
+
+### 🧩 CHANGES MADE
+- [x] Replace `flutter_sound` import with `record` package
+- [x] Replace `FlutterSoundRecorder` with `AudioRecorder`
+- [x] Replace `onProgress` stream with `onAmplitudeChanged` stream
+- [x] Simplify amplitude processing (removed calibration, decibel complexity)
+- [x] Update recording configuration to use `RecordConfig`
+- [x] Clean up unused flutter_sound-specific code
+- [x] Remove flutter_sound dependency from pubspec.yaml
+- [x] Remove ffmpeg_kit_flutter_new dependency (no longer needed)
+- [x] Remove audio format conversion logic from whisper service
+- [x] Test amplitude monitoring with new sine wave visualization
+
+### 🔧 TECHNICAL CHANGES
+- **Recording**: Uses `RecordConfig` with WAV encoder, 16kHz sample rate
+- **Amplitude**: Direct dB to 0-1 conversion with simple smoothing
+- **Monitoring**: Cleaner temporary file handling
+- **File validation**: Simplified size check (1KB minimum)
+
+---
+
+## ✅ COMPLETED TASK: Audio Wave Visualization Non-Symmetrical Enhancement (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+Change the audio wave visualization. It should not be symmetrical anymore. The height can vary depending on the amplitude of the voice input. Use context7 to check audio_waveforms package how they implemented it because it looks natural.
+
+### 🔍 CONTEXT & ANALYSIS
+- Current implementation uses symmetrical waveform with identical left/right sides
+- Current implementation uses cosine bell envelope for symmetric display
+- User wants natural, non-symmetrical waveform based on actual voice amplitude
+- Research flutter_soloud waveform implementation for natural patterns
+- Heights should vary dynamically with voice input amplitude
+
+### ✅ IMPLEMENTATION DETAILS
+- **Removed symmetric envelope**: Replaced `_envelopeForIndex` with asymmetric `_getAsymmetricEnvelope`
+- **Individual bar data**: Each bar now has its own waveform data, target height, and animation speed
+- **Natural wave patterns**: Multi-layer sine waves (similar to SoLoud) create complex, natural movement
+- **Smooth interpolation**: Bars smoothly animate to target heights with individual speeds
+- **Asymmetric envelope**: Peak around 35% position with different slopes for natural appearance
+- **Minimum height**: Bars maintain minimum visibility even in idle state
+- **Time-based animation**: Continuous wave motion driven by time offset
+- **Randomization**: Small random factors prevent artificial uniformity
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Research natural waveform patterns from audio libraries
+- [x] Remove symmetric envelope function (`_envelopeForIndex`)
+- [x] Implement individual bar heights based on amplitude and time
+- [x] Add randomization/variation to bar heights for natural appearance
+- [x] Use actual audio level data to drive individual bar animations
+- [x] Test with voice input to ensure natural wave motion
+- [x] Update animation timing for more realistic wave behavior
+
+---
+
+## 🚀 NEW TASK: Debug Android Whisper File-Based Transcription Issue (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+The whisper file-based transcription doesn't work on Android. When I press stop, it is not transcribing, just closes. No errors are visible in the logs.
+
+### 🔍 CONTEXT & ANALYSIS
+- iOS whisper file-based transcription works fine
+- Android whisper file-based transcription fails silently
+- No error messages in logs
+- Need to add debugging to identify where the flow is failing
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Add debug logging to `WhisperService.transcribeFile()` method
+- [x] Add debug logging to `TranscriptionOrchestrator.stopRecording()` method  
+- [x] Add debug logging to `AudioService.stopRecording()` method
+- [x] Add debug logging to `WhisperService.initialize()` method
+- [x] Test on Android device to capture debug logs
+- [x] Identify the exact failure point in the transcription flow
+- [ ] Fix the identified issue
+- [ ] Remove debug logging after fix is confirmed
+
+### 🔍 DEBUGGING APPROACH
+- Added comprehensive logging to track the entire flow from recording stop to transcription completion
+- **ISSUE IDENTIFIED**: Audio recording is only creating a 44-byte WAV header with no actual audio data
+- **ROOT CAUSE**: Audio recording configuration not working properly on Android
+- **KEY INSIGHT**: Vosk recording works (uses same flutter_sound), but whisper_flutter_new doesn't
+- **FIX ATTEMPT 1**: Changed sample rate from 16kHz to 44.1kHz for better Android compatibility ❌
+- **FIX ATTEMPT 2**: Reverted to 16kHz (required by whisper.cpp) and added more debugging ✅
+- **FIX ATTEMPT 3**: Copy audio file to documents directory for better whisper_flutter_new access ❌
+- **FIX ATTEMPT 4**: Use PCM16 codec and manually create WAV file (bypass flutter_sound WAV issues) ❌
+- **FIX ATTEMPT 5**: Use PCM16 codec as recommended in Flutter Sound docs (bypass WAV codec issues) ❌
+- **FIX ATTEMPT 6**: Use WAV with bit rate parameter for better Android compatibility ❌
+- **FIX ATTEMPT 7**: Implement documented approach: PCM16 recording + pcm16ToWave conversion 🔄
+- **CURRENT APPROACH**: Record as PCM16 and manually convert to WAV using documented method
+- Focus areas:
+  1. Audio recording completion and file creation ✅ (issue found)
+  2. Audio recording start and amplitude events ✅ (debugging added)
+  3. Whisper service initialization on Android ✅ (debugging added)
+  4. File transcription call to Android whisper implementation 🔄 (PCM to WAV conversion)
+  5. Result handling and return
+
+---
+
+## 🚀 NEW TASK: Audio Wave Dynamics & Natural VAD Smoothing (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+- Make audio waves less sensitive so bars don’t max out immediately
+- Keep transitions smoother; bars should not drop to zero instantly when speech stops
+- Move bars at different speeds/phases to create a natural wave form
+- Continue using VAD as the driver
+
+### 🔍 CONTEXT & APPROACH
+- Replace binary VAD level with a smoothed envelope (attack/release, hangover, noise floor)
+- Add secondary UI smoothing and per-bar oscillation with varying speed, phase, and bias
+- Keep envelope driven by VAD; visuals reflect speech energy naturally
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Implement smoothed VAD envelope in `AudioService` (attack/release + hangover + noise floor)
+- [x] Expose smoothed level through existing `audioLevelStream`
+- [x] Add per-bar animation in `AudioWaveVisualization` (different speed/phase/bias)
+- [x] Add UI-level smoothing for additional natural decay
+- [ ] Visual QA on device: confirm bars don’t peg/max instantly, smooth tail-off, natural wave motion
+- [ ] Tune constants if needed (attack/release/hangover, UI durations)
+
+---
+
+## ✅ NEW TASK: Add Edit Mode to Transcription Item (VAN Mode, Level 1)
 
 - [x] **Initialization complete** - Problem identified and scope defined
 - [x] **Planning complete** - Solution approach determined
@@ -13,11 +151,11 @@
 - [x] **Reflection complete** - Comprehensive reflection documented
 - [x] **Archiving complete** - Final archive documentation created
 
-## 📄 ARCHIVE DOCUMENTATION
-
-**Archive Document**: [memory-bank/archive/archive-background-recording-incognito-cleanup.md](archive/archive-background-recording-incognito-cleanup.md)  
-**Date Archived**: 2024-12-19  
-**Final Status**: COMPLETED & ARCHIVED
+### 🔍 CONTEXT & ANALYSIS
+- Editing is a key part of the "Review & Edit" user journey.
+- Must match Figma for visual and interaction details.
+- Should use native keyboard for save/submit.
+- Needs to integrate with existing state management and update logic.
 
 ### Archive Summary
 Comprehensive documentation of the background recording and incognito session cleanup feature, including:
@@ -218,218 +356,129 @@ Add both the created and last modified date to the session more menu. The modifi
    - Add a section to display:
      - "Created" date (formatted as "Jun 20, 2024" or similar).
      - "Last Modified" date (using `formatSessionSubtitle`).
-   - Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
-   - Ensure correct padding/margin per Figma.
-3. **Formatting**
-   - For "Created": Use `DateFormat('MMM d, yyyy').format(session.timestamp)`.
-   - For "Last Modified": Use `formatSessionSubtitle(now: DateTime.now(), created: session.timestamp, lastModified: session.lastModified, modifiedPrefix: AppStrings.modifiedPrefix)`.
-4. **Testing**
-   - Test with sessions where created == modified (should only show created, or "Modified" label omitted).
-   - Test with sessions where modified > created (should show "Modified" label).
-   - Confirm no regression to menu actions (rename/delete).
-   - Visual check: UI matches Figma.
+   - Use `AquaTypography.caption1` and `
 
-#### 🧩 Subtasks
-- [ ] Review Figma for date placement, spacing, and style.
-- [ ] Update `SessionMoreMenu` to display both dates with correct formatting and style.
-- [ ] Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
-- [ ] Ensure correct padding/margin per Figma.
-- [ ] Test with different session date scenarios.
-- [ ] Confirm menu actions (rename/delete) still work.
-- [ ] Update tasks.md with progress.
-
-#### 🔗 Dependencies
-- Figma design reference
-- `ui_components` package for typography/color
-- `intl` package for date formatting
-
-#### ⚠️ Challenges & Mitigations
-- **Challenge:** Ensuring date formatting matches Figma and is consistent with session list items.
-  - **Mitigation:** Use the same util and formatting logic as session list item.
-- **Challenge:** Menu layout may be tight; risk of crowding.
-  - **Mitigation:** Follow Figma for spacing, use subtle style.
-- **Challenge:** Regression to menu actions.
-  - **Mitigation:** Test all menu actions after change.
-
-#### 🛠️ Technology Stack
-- **Framework:** Flutter
-- **Build Tool:** Flutter build system
-- **Language:** Dart
-- **Storage:** N/A (UI-only change)
-
-#### ✅ Technology Validation Checkpoints
-- [x] Project initialization command verified
-- [x] Required dependencies identified and installed
-- [x] Build configuration validated
-- [x] Hello world verification completed
-- [x] Test build passes successfully
-
-#### 🎨 Creative Phases Required
-- [ ] UI/UX Design (Figma reference, but no new creative work required)
-
-#### 📈 Status
-- [x] Initialization complete
-- [x] Planning complete
-- [ ] Technology validation complete
-- [ ] Implementation steps
-
----
-
-# Tasks
-
-## Active Enhancements
-
-## Enhancement Details
-
-## Completed Enhancements
-- [X] Settings Screen Footer & Banner Spacing (2024-07-15)
-
-### Settings Screen Footer & Banner Spacing Enhancement
-
-**Status**: Complete
-**Priority**: Medium
-**Estimated Effort**: Medium
-
-### Description
-Update the settings screen to:
-- Position the in-app banner 24px below the settings toggles (per Figma).
-- Add a footer with the app logo, "Follow us" tags (no links yet), and the app version, matching Figma design.
-
-### Requirements
-- Banner must be 24px below the settings toggles.
-- Footer must include:
-  - App logo (existing asset)
-  - "Follow us" tags (placeholders, no links yet)
-  - App version (dynamically fetched)
-- Footer layout and spacing must match Figma (node 6764-7367).
-- Responsive layout for different device sizes.
-- All changes must be tested on iOS and Android.
-
-### Subtasks
-- [X] Review Figma for banner/toggle spacing and footer design.
-- [X] Update settings screen layout for 24px banner spacing.
-- [X] Add footer widget to settings screen.
-- [X] Display logo in footer.
-- [X] Add "Follow us" tags (no links yet).
-- [X] Display app version (dynamic).
-- [X] Test layout and spacing on iOS and Android.
-
-### Dependencies
-- Figma design reference (node 6764-7367)
-- Existing logo asset
-- package_info_plus (for app version, if not already present)
-
-### Notes
-- Use url_launcher for links in the future, but not needed yet.
-- Use package_info_plus to fetch app version dynamically.
-- Footer links will be added in a later step.
-
-### Challenges & Mitigations
-- Ensuring spacing matches Figma exactly: Use Figma inspect tool for pixel-perfect values.
-- Footer layout may be tight on small screens: Use responsive layout and test on multiple devices.
-- Fetching app version dynamically: Use package_info_plus.
-
-### Progress
-[#######--] 100% Complete
-
-### Reflection Status
-- Implementation matches Figma and user requirements.
-- All subtasks completed and verified.
-- See reflection document for detailed analysis.
-
-# Task: Settings Screen Refactor (Model & Theme Selection)
-- Status: ARCHIVED/COMPLETE
-- Reflection: [reflection/reflection-settings-refactor.md](reflection/reflection-settings-refactor.md)
-- Archive: In progress
-
----
-
-## 🚀 NEW TASK: Implement Theme Support (Dark Theme & Switching) (VAN Mode, Level 1)
+## 🚀 NEW TASK: Audio Wave Snappier Response to Voice (VAN Mode, Level 1)
 
 ### 📝 TASK SUMMARY
-**User Request:**
-Implement dark theme support and theme switching in the app, with the switching logic working on the theme selection screen. Use Riverpod for state management, persist the theme selection, and ensure the UI updates accordingly. Create new files for app_theme, theme_provider, and extensions.
-
-### 🧩 CHECKLIST (VAN Mode)
-- [ ] **Add Theme Model**
-  - [ ] Create `AppTheme` enum and extension in `lib/models/app_theme.dart`.
-- [ ] **Add Theme Providers**
-  - [ ] Create `lib/providers/theme_provider.dart` with `themeProvider`, `prefsProvider`, `sharedPreferencesProvider`, and `UserPreferencesNotifier`.
-- [ ] **Add Extensions**
-  - [ ] Create `lib/extensions/context_extensions.dart` for `ContextX` and `AppThemeEx` extensions.
-- [ ] **Integrate Provider in main.dart**
-  - [ ] Wrap app with `ProviderScope`.
-  - [ ] Use `themeProvider` for the app's `theme` and `darkTheme`.
-- [ ] **Update Theme Selection Screen**
-  - [ ] Use `ref.watch(prefsProvider).selectedTheme` to get the current theme.
-  - [ ] Add a button or UI to switch theme using `ref.read(prefsProvider.notifier).switchTheme(...)`.
-  - [ ] Ensure the UI updates immediately on theme change.
-- [ ] **AquaColors Integration**
-  - [ ] Use `AquaColors.lightColors`, `AquaColors.darkColors`, etc., as needed.
-  - [ ] Add `AppThemeEx` extension for easy color access.
-- [ ] **SharedPreferences Initialization**
-  - [ ] Ensure `SharedPreferences` is initialized before use (async init in main or via provider).
-- [ ] **Test & Verify**
-  - [ ] Verify theme switching works and persists across app restarts.
-  - [ ] Ensure all screens respond to theme changes.
-
-### 📁 Files to Create/Update
-- `lib/models/app_theme.dart` (new)
-- `lib/providers/theme_provider.dart` (new)
-- `lib/extensions/context_extensions.dart` (new)
-- `lib/main.dart` (update)
-- `lib/screens/theme_selection_screen.dart` (update)
-
----
-
-## 🚀 NEW TASK: Incognito Mode Explainer Modal (VAN Mode, Level 1)
-
-### 📝 TASK SUMMARY
-**User Request:**  
-When the user enables Incognito mode for the first time, display an Aqua modal sheet explainer matching the Figma design. The modal uses the `aquaicon.ghost` icon and all text strings are stored in constants.
-
-**Figma Reference:**  
-[Incognito Explainer](https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=7659-3668)
+**User Request:** The audio wave could react snappier and as fast as possible to voice. Currently it's moving up and down with a delay.
 
 ### 🔍 CONTEXT & ANALYSIS
-- Incognito mode is toggled in the Settings screen (see `SettingsProvider` and corresponding toggle widget).
-- The explainer should appear **only once** – the first time the user turns Incognito **on** – and never again unless preferences are cleared.
-- Persist a `hasSeenIncognitoExplainer` boolean via `SharedPreferences` (handled in `SettingsProvider`).
-- Follow the existing `AquaModalSheet` visual style to ensure consistency across the app.
+- Current system has multiple delay layers:
+  1. Amplitude monitoring: 50ms interval in AudioService
+  2. Audio service smoothing: Heavy attack/release smoothing (15-30% alpha)
+  3. Widget animation: 10ms duration with easeOutCubic curve adds smoothing
+  4. Individual bars: 30ms AnimatedContainer duration
+- Need to reduce latency while maintaining visual quality
+- Focus on immediate response to voice onset, faster decay on silence
 
 ### 🧩 CHECKLIST (VAN Mode)
-- [x] Locate Incognito toggle implementation and its persistence logic.
-- [x] Add `hasSeenIncognitoExplainer` boolean flag to user preferences.
-- [x] Add explainer text constants (title, body, button) to `lib/constants/app_constants.dart`.
-- [x] Create `IncognitoExplainerModal` widget in `lib/widgets/modals/incognito_explainer_modal.dart`:
-  - [x] Display `ghost.svg` (64×64) centered at the top.
-  - [x] Show title and body text per Figma spec.
-  - [x] Provide primary CTA button "Got it" that simply dismisses the modal.
-- [x] Show modal when Incognito is toggled **on** and `hasSeenIncognitoExplainer` is `false`; afterwards set the flag to `true`.
-- [x] Test on iOS and Android: ensure modal shows exactly once and respects persisted flag.
-- [x] Verify spacing, typography, and colors match Figma.
+- [x] Reduce amplitude monitoring interval from 50ms to 16ms (60fps equivalent)
+- [x] Increase attack rate in AudioService smoothing for faster rise
+- [x] Change widget animation curve from easeOutCubic to linear for immediate response
+- [x] Reduce individual bar animation duration from 30ms to 10ms
+- [x] Test responsiveness with voice input to ensure snappy reaction
+- [x] Ensure visual quality is maintained despite faster response
 
-### ✅ COMPLETION STATUS
-- Implementation matches Figma and user requirements.
-- Modal shows on first toggle or ghost icon tap and never again.
-- All code merged and lints resolved.
-- Task **COMPLETE** – ready for reflection & archive.
+### ✅ IMPLEMENTATION DETAILS
+- **Reduced monitoring interval**: From 50ms to 16ms (60fps equivalent) for near real-time response
+- **Faster attack rate**: Increased from 30% to 60% base alpha for immediate voice onset detection
+- **Linear animation**: Removed easeOutCubic smoothing for instant visual response
+- **Faster bar animations**: Reduced from 30ms to 10ms for snappier individual bar movement
+- **Maintained visual quality**: Preserved natural wave motion while improving responsiveness
 
-### 📁 Files to Create/Update
-- `lib/widgets/modals/incognito_explainer_modal.dart` (new)
-- `lib/providers/settings_provider.dart` (update – add flag logic)
-- `lib/constants/app_constants.dart` (update – add text constants)
-- `assets/icons/ghost.svg` (already present)
+---
 
-### ⚠️ Potential Challenges
-- Triggering the modal at the correct lifecycle moment after the toggle state updates.
-- Preventing duplicate modals if the toggle is switched rapidly.
-- Ensuring the persisted flag is reliably read/written on both platforms.
+## 🚀 NEW TASK: Full-Width Audio Wave Under Recording Button (VAN Mode, Level 1)
 
-### ✅ Testing Strategy
-- Fresh install ➜ enable Incognito ➜ modal appears once.
-- Disable Incognito, re-enable within same session ➜ modal does **not** reappear.
-- Restart app ➜ enable/disable Incognito ➜ modal remains suppressed.
-- Visual verification on both iOS and Android devices.
+### 📝 TASK SUMMARY
+**User Request:** Have the audio wave run under the recording button all the way from left to right side of the screen.
+
+### 🔍 CONTEXT & ANALYSIS
+- Current layout: Two separate wave sections (left/right) with 96px gap for recording button
+- New requirement: Single continuous wave spanning full screen width
+- Recording button should overlay on top of the wave visualization
+- Need to adjust layout structure and positioning
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Remove the split left/right wave design
+- [x] Create single continuous wave spanning full screen width
+- [x] Adjust wave bar count to fill entire screen width appropriately (increased from 22 to 40 bars)
+- [x] Ensure recording button overlays properly on top of the wave
+- [ ] Test visual appearance and wave motion across full width
+- [ ] Verify no layout issues on different screen sizes
+- [x] Fix wave positioning: should be underneath button, not behind it
+- [x] Add 24px vertical padding between wave and recording button
+- [x] Remove left/right padding from wave (should extend to screen edges)
+- [x] Maintain proper padding for recording button
+- [x] Fix button position jumping when transitioning between recording/processing states
+
+### ✅ IMPLEMENTATION DETAILS
+- **Layout change**: Switched from Stack to Column layout for proper positioning
+- **State condition**: Show wave during both recording AND transcribing states to maintain button position
+- **Spacing**: 24px vertical gap between button and wave as requested
+- **Padding**: Button maintains 16px horizontal padding, wave extends to screen edges
+- **Position stability**: Button no longer jumps when transitioning between states
+
+---
+
+## 🚀 NEW TASK: Refine Audio Wave Visual Dynamics (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:** Refine the audio wave visualization - minimal horizontal shift, focus on vertical movement, and dynamic opacity for bars (higher bars = higher opacity, minimum 50% opacity).
+
+### 🔍 CONTEXT & ANALYSIS
+- Current horizontal shift is too pronounced and distracting
+- Need to emphasize vertical bar movement over horizontal wave motion
+- Implement dynamic opacity: higher bars should have higher opacity
+- Set minimum opacity to 50% (0.5) for visual consistency
+- Maximum opacity should be 100% (1.0) for prominent bars
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Reduce horizontal shift speed and amplitude significantly
+- [x] Enhance vertical bar height variation and responsiveness
+- [x] Implement dynamic opacity calculation based on bar height
+- [x] Set minimum opacity to 50% (0.5) for all bars
+- [x] Set maximum opacity to 100% (1.0) for highest bars
+- [ ] Test visual refinements with voice input
+- [ ] Ensure smooth opacity transitions
+- [x] Replicate SuperWhisper-style dynamic wave patterns
+- [x] Create irregular, natural-looking bar height variations
+- [x] Remove smooth sine wave in favor of more random, organic patterns
+- [x] Increase bar count for denser visualization (40 → 60 bars)
+- [x] Make animation super snappy with instant voice reaction
+- [x] Remove all animation delays and smoothing
+- [x] Reduce flutter/sensitivity while maintaining fast animation speeds
+- [x] Find optimal balance between responsiveness and stability
+- [x] Adjust center-focused amplitude distribution like SuperWhisper
+- [x] Reduce height differences between adjacent bars for smoother transitions
+- [x] Add tiny spacing between bars for visual separation
+- [x] Ensure wave doesn't overflow screen width
+- [x] Reduce smoothing to prevent lip-like shapes while maintaining natural transitions
+- [x] Remove smoothing entirely to achieve jagged, individual bar variations like bottom example
+- [x] Create grouped/clustered patterns like real audio waveforms (video editing style)
+- [x] Implement longer-lasting patterns that evolve more gradually
+- [x] Add natural "phrase" groupings instead of purely random bars
+
+---
+
+## 🚀 NEW TASK: Recording Button Scale Animation (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:** Make the record button grow slightly in size when pressed (recording state).
+
+### 🔍 CONTEXT & ANALYSIS
+- Current button: Static 64x64px size in all states
+- Need: Subtle scale increase when in recording state
+- Animation: Smooth transition between normal and enlarged states
+- Visual feedback: Better user experience showing active recording
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Add AnimationController for scale animation
+- [x] Wrap button containers in AnimatedBuilder with Transform.scale
+- [x] Scale up slightly (1.0 → 1.1) when recording
+- [x] Smooth transition animation between states (200ms, easeInOut)
+- [x] Handle animation for both provider and non-provider state modes
+- [ ] Test scale animation on state changes
 
 ---

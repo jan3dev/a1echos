@@ -86,7 +86,7 @@ class TranscriptionOperationProvider with ChangeNotifier {
         if (await tempFile.exists()) {
           audioPath = await _repository.saveAudioFile(
             tempFile,
-            'whisper_${_uuid.v4()}.m4a',
+            'whisper_${_uuid.v4()}.wav',
           );
           try {
             await tempFile.delete();

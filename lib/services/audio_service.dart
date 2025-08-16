@@ -4,7 +4,6 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:vad/vad.dart';
 import 'native_audio_permission_service.dart';
 import '../logger.dart';
 import 'background_recording_service.dart';
@@ -26,12 +25,15 @@ class AudioService {
     return false;
   }
 
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioRecorder _recorder = AudioRecorder();
   final BackgroundRecordingService _backgroundService =
       BackgroundRecordingService.instance;
   String? _recordingPath;
   File? _currentAudioFile;
   bool _backgroundServiceInitialized = false;
+  bool _isMonitoring = false;
+  String? _monitorTempPath;
+  DateTime? _recordStart;
 
   Future<bool> hasPermission() async {
     if (Platform.isIOS) {
@@ -51,10 +53,10 @@ class AudioService {
     return false;
   }
 
-  Future<String> _generateRecordingPath() async {
+  Future<String> _generateRecordingPath({String extension = 'wav'}) async {
     final tempDir = await getTemporaryDirectory();
-    final proposedPath =
-        '${tempDir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final proposedPath = '${tempDir.path}/rec_$ts.$extension';
 
     if (!await _isPathAllowed(proposedPath)) {
       throw Exception(
@@ -105,73 +107,98 @@ class AudioService {
     }
 
     await _cleanup();
+
     _recordingPath = await _generateRecordingPath();
 
-    if (useStreaming) {
-      await _audioRecorder.startStream(
-        RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-        ),
-      );
-    } else {
-      final encoders = [
-        AudioEncoder.wav,
-        AudioEncoder.flac,
-        AudioEncoder.aacLc,
-      ];
-      bool recordingStarted = false;
-      for (final encoder in encoders) {
-        try {
-          final success = await _startFileRecording(encoder);
-          if (success) {
-            recordingStarted = true;
-            break;
-          }
-        } catch (e, st) {
-          logger.error(
-            e,
-            stackTrace: st,
-            flag: FeatureFlag.recording,
-            message: 'Failed to start recording with $encoder',
-          );
-          continue;
-        }
-      }
-      if (!recordingStarted) {
-        throw Exception('Failed to start recording with any encoder');
-      }
-    }
-
-    await startVad();
-    _backgroundService.updateRecordingState(true);
-    return true;
-  }
-
-  Future<bool> _startFileRecording(AudioEncoder encoder) async {
     try {
-      final config = RecordConfig(
-        encoder: encoder,
+      const config = RecordConfig(
+        encoder: AudioEncoder.wav,
         sampleRate: 16000,
         bitRate: 128000,
         numChannels: 1,
       );
-      await _audioRecorder.start(config, path: _recordingPath!);
-      await Future.delayed(const Duration(milliseconds: 500));
-      final isRecording = await _audioRecorder.isRecording();
-      if (!isRecording) {
-        return false;
-      }
+
+      await _recorder.start(config, path: _recordingPath!);
+      _recordStart = DateTime.now();
+
+      _startAmplitudeMonitoring();
+
+      return true;
+    } catch (e) {
+      try {
+        await _recorder.stop();
+      } catch (_) {}
+      return Future.error(e);
+    }
+  }
+
+  /// Starts monitoring levels without creating a persistent audio file.
+  Future<bool> startMonitoring() async {
+    if (!await hasPermission()) {
+      throw Exception('Microphone permission denied');
+    }
+
+    if (await _recorder.isRecording()) {
+      return true;
+    }
+
+    try {
+      const config = RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        bitRate: 128000,
+        numChannels: 1,
+      );
+
+      _monitorTempPath = await _generateRecordingPath();
+
+      await _recorder.start(config, path: _monitorTempPath!);
+      _isMonitoring = true;
+
+      _startAmplitudeMonitoring();
+
       return true;
     } catch (e, st) {
       logger.error(
         e,
         stackTrace: st,
         flag: FeatureFlag.recording,
-        message: 'Error starting file recording with $encoder',
+        message: 'Error starting file recording',
       );
       return false;
+    }
+  }
+
+  void _startAmplitudeMonitoring() {
+    _amplitudeSubscription?.cancel();
+
+    _amplitudeSubscription = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 16))
+        .listen((amplitude) {
+          _handleAmplitudeEvent(amplitude);
+        });
+  }
+
+  /// Stops monitoring levels and cleans up any temporary file created.
+  Future<void> stopMonitoring() async {
+    if (!_isMonitoring) return;
+
+    try {
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
+    } catch (_) {}
+
+    await _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = null;
+    _isMonitoring = false;
+
+    if (_monitorTempPath != null) {
+      try {
+        final f = File(_monitorTempPath!);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+      _monitorTempPath = null;
     }
   }
 
@@ -188,42 +215,39 @@ class AudioService {
       );
     }
 
-    final isCurrentlyRecording = await _audioRecorder.isRecording();
+    final isCurrentlyRecording = await _recorder.isRecording();
+
     if (!isCurrentlyRecording) {
-      if (_recordingPath != null) {
-        final existingFile = File(_recordingPath!);
-        if (await existingFile.exists()) {
-          final size = await existingFile.length();
-          return size > 0 ? existingFile : null;
-        }
-      }
-      await stopVad();
+      await _amplitudeSubscription?.cancel();
+      _amplitudeSubscription = null;
       return _currentAudioFile;
     }
+
+    try {
+      final startedAt = _recordStart ?? DateTime.now();
+      final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+      const int minMs = 250;
+      final int waitMs = elapsedMs >= minMs ? 0 : (minMs - elapsedMs);
+      if (waitMs > 0) {
+        await Future.delayed(Duration(milliseconds: waitMs));
+      }
+    } catch (_) {}
+
     File? recordedFile;
     try {
-      final path = await _audioRecorder.stop();
+      final String? path = await _recorder.stop();
       if (path != null && !await _isPathAllowed(path)) {
         throw Exception('Recording saved to disallowed directory');
       }
+
       if (path != null) {
-        if (path != _recordingPath) {
-          _recordingPath = path;
-        }
-        final file = File(_recordingPath!);
-        final fileExists = await file.exists();
-        if (fileExists) {
+        final file = File(path);
+        if (await file.exists()) {
           final fileSize = await file.length();
-          if (fileSize > 0) {
+          if (fileSize > 1024) {
             recordedFile = file;
-          } else {
-            recordedFile = null;
           }
-        } else {
-          recordedFile = null;
         }
-      } else {
-        recordedFile = null;
       }
     } catch (e, st) {
       logger.error(
@@ -234,51 +258,87 @@ class AudioService {
       );
       recordedFile = null;
     }
-    await stopVad();
+
+    await _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = null;
+    _recordStart = null;
+
+    _currentAudioFile = recordedFile;
     return recordedFile;
   }
 
   Future<bool> isRecording() async {
-    return await _audioRecorder.isRecording();
+    return await _recorder.isRecording();
   }
 
   Future<void> _cleanup() async {
-    if (await _audioRecorder.isRecording()) {
-      await _audioRecorder.stop();
+    if (await _recorder.isRecording()) {
+      await _recorder.stop();
     }
-    await stopVad();
+    await _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = null;
+    _currentAudioFile = null;
+    _resetLevelState();
   }
 
-  final VadHandlerBase _vadHandler = VadHandler.create(isDebug: false);
   final StreamController<double> _audioLevelController =
       StreamController.broadcast();
   Stream<double> get audioLevelStream => _audioLevelController.stream;
-  bool _vadListening = false;
-  StreamSubscription? _vadFrameSub;
 
-  Future<void> startVad() async {
-    if (_vadListening) return;
-    _vadListening = true;
-    _vadFrameSub?.cancel();
-    _vadFrameSub = _vadHandler.onFrameProcessed.listen((frameData) {
-      _audioLevelController.add(frameData.isSpeech);
-    });
-    await _vadHandler.startListening();
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+
+  double _smoothedLevel = 0.0;
+  DateTime? _lastUpdateTime;
+
+  void _resetLevelState() {
+    _smoothedLevel = 0.0;
+    _lastUpdateTime = null;
   }
 
-  Future<void> stopVad() async {
-    if (!_vadListening) return;
-    _vadListening = false;
-    await _vadHandler.stopListening();
-    await _vadFrameSub?.cancel();
-    _vadFrameSub = null;
+  void _handleAmplitudeEvent(Amplitude amplitude) {
+    double level = 0.02;
+
+    if (amplitude.current.isFinite && amplitude.current > -160) {
+      final double db = amplitude.current.clamp(-60.0, -10.0);
+      level = ((db - (-60.0)) / ((-10.0) - (-60.0))).clamp(0.0, 1.0);
+
+      level = level * level;
+      level = level.clamp(0.02, 1.0);
+    }
+
+    final now = DateTime.now();
+    final int dtMs = _lastUpdateTime == null
+        ? 16
+        : now.difference(_lastUpdateTime!).inMilliseconds.clamp(0, 150);
+    _lastUpdateTime = now;
+
+    final bool rising = level > _smoothedLevel;
+    final double baseAlpha = rising ? 0.6 : 0.2;
+    final double alpha = (baseAlpha * (dtMs / 16.0)).clamp(
+      0.2,
+      rising ? 0.8 : 0.3,
+    );
+    _smoothedLevel = _smoothedLevel + (level - _smoothedLevel) * alpha;
+
+    double visual = _smoothedLevel.clamp(0.02, 1.0);
+    _emitVisual(visual);
+  }
+
+  void _emitVisual(double v) {
+    _audioLevelController.add(v);
   }
 
   Future<void> dispose() async {
-    await _cleanup();
-    await _audioRecorder.dispose();
-    _vadFrameSub?.cancel();
-    _audioLevelController.close();
-    _vadHandler.dispose();
+    try {
+      await _amplitudeSubscription?.cancel();
+      _amplitudeSubscription = null;
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
+      await _recorder.dispose();
+    } catch (_) {}
+    try {
+      await _audioLevelController.close();
+    } catch (_) {}
   }
 }

@@ -38,7 +38,8 @@ class RecordingButton extends ConsumerStatefulWidget {
   ConsumerState<RecordingButton> createState() => _RecordingButtonState();
 }
 
-class _RecordingButtonState extends ConsumerState<RecordingButton> {
+class _RecordingButtonState extends ConsumerState<RecordingButton>
+    with TickerProviderStateMixin {
   bool _isDebouncing = false;
   bool _gestureIsolationActive = false;
   Timer? _debounceTimer;
@@ -47,6 +48,9 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
   String? _lastActionType;
   TranscriptionState? _lastKnownState;
 
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
   static const Duration _debounceDuration = Duration(milliseconds: 800);
   static const Duration _minimumActionInterval = Duration(milliseconds: 1200);
   static const Duration _gestureIsolationDuration = Duration(
@@ -54,7 +58,20 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
   void dispose() {
+    _scaleController.dispose();
     _debounceTimer?.cancel();
     _gestureIsolationTimer?.cancel();
     super.dispose();
@@ -168,6 +185,12 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
                 state == TranscriptionState.error) {
               _gestureIsolationActive = false;
             }
+
+            if (state == TranscriptionState.recording) {
+              _scaleController.forward();
+            } else {
+              _scaleController.reverse();
+            }
           }
 
           return _buildButtonForState(state, colors, provider);
@@ -177,11 +200,37 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
       final state = widget.isRecording
           ? TranscriptionState.recording
           : TranscriptionState.ready;
+
+      if (_lastKnownState != state) {
+        _lastKnownState = state;
+        if (state == TranscriptionState.recording) {
+          _scaleController.forward();
+        } else {
+          _scaleController.reverse();
+        }
+      }
+
       return _buildButtonForState(state, colors, null);
     }
   }
 
   Widget _buildButtonForState(
+    TranscriptionState state,
+    AquaColors colors,
+    LocalTranscriptionProvider? provider,
+  ) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: _buildButtonContainer(state, colors, provider),
+        );
+      },
+    );
+  }
+
+  Widget _buildButtonContainer(
     TranscriptionState state,
     AquaColors colors,
     LocalTranscriptionProvider? provider,

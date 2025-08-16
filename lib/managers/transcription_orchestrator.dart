@@ -56,6 +56,7 @@ class TranscriptionOrchestrator {
   StreamSubscription<String>? _partialSub;
   StreamSubscription<String>? _resultSub;
   bool _isRecording = false;
+  bool _voskMonitorActive = false;
 
   final StreamController<String> _partialController =
       StreamController.broadcast();
@@ -122,6 +123,12 @@ class TranscriptionOrchestrator {
         });
 
         await service.start();
+        try {
+          final ok = await _audioService.startMonitoring();
+          _voskMonitorActive = ok;
+        } catch (_) {
+          _voskMonitorActive = false;
+        }
         _isRecording = true;
         return true;
       } else {
@@ -173,6 +180,12 @@ class TranscriptionOrchestrator {
         final service = _voskService.speechService;
         if (service == null) {
           _isRecording = false;
+          if (_voskMonitorActive) {
+            try {
+              await _audioService.stopMonitoring();
+            } catch (_) {}
+            _voskMonitorActive = false;
+          }
           return TranscriptionOutput(text: '', audioPath: '');
         }
 
@@ -183,6 +196,13 @@ class TranscriptionOrchestrator {
           await _resultSub?.cancel();
           _partialSub = null;
           _resultSub = null;
+
+          if (_voskMonitorActive) {
+            try {
+              await _audioService.stopMonitoring();
+            } catch (_) {}
+            _voskMonitorActive = false;
+          }
 
           _isRecording = false;
 
@@ -199,6 +219,13 @@ class TranscriptionOrchestrator {
           _partialSub = null;
           _resultSub = null;
           _isRecording = false;
+
+          if (_voskMonitorActive) {
+            try {
+              await _audioService.stopMonitoring();
+            } catch (_) {}
+            _voskMonitorActive = false;
+          }
 
           return TranscriptionOutput(text: '', audioPath: '');
         }
@@ -232,8 +259,8 @@ class TranscriptionOrchestrator {
 
           final fileSize = await audioFile.length();
 
-          // Check for truly empty files (header-only or corrupt files)
-          if (fileSize < 300) {
+          if (fileSize <= 44) {
+            // WAV header is typically 44 bytes
             return TranscriptionOutput(text: '', audioPath: '');
           }
 

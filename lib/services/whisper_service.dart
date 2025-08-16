@@ -252,6 +252,10 @@ class WhisperService {
       _isTranscribing = true;
 
       if (Platform.isAndroid) {
+        if (_androidWhisper == null) {
+          return null;
+        }
+
         final result = await _androidWhisper?.transcribe(
           transcribeRequest: fwn.TranscribeRequest(
             audio: audioPath,

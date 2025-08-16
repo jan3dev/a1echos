@@ -15,29 +15,34 @@ class RecordingControlsView extends ConsumerWidget {
       bottom: 32,
       left: 0,
       right: 0,
-      child: Center(
-        child: provider.Consumer<LocalTranscriptionProvider>(
-          builder: (context, transcriptionProvider, _) {
-            if (transcriptionProvider.isRecording) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    AudioWaveVisualization(
-                      state: transcriptionProvider.state,
-                      modelType: transcriptionProvider.selectedModelType,
-                      audioLevel: transcriptionProvider.audioLevel,
-                    ),
-                    RecordingButton(useProviderState: true),
-                  ],
+      child: provider.Consumer<LocalTranscriptionProvider>(
+        builder: (context, transcriptionProvider, _) {
+          if (transcriptionProvider.isRecording ||
+              transcriptionProvider.isTranscribing) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: RecordingButton(useProviderState: true),
                 ),
-              );
-            } else {
-              return RecordingButton(useProviderState: true);
-            }
-          },
-        ),
+                const SizedBox(height: 24),
+                AudioWaveVisualization(
+                  state: transcriptionProvider.state,
+                  modelType: transcriptionProvider.selectedModelType,
+                  audioLevel: transcriptionProvider.audioLevel,
+                ),
+              ],
+            );
+          } else {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: RecordingButton(useProviderState: true),
+              ),
+            );
+          }
+        },
       ),
     );
   }

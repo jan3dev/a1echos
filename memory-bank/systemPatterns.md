@@ -94,4 +94,12 @@ Session Creation → SessionProvider → SessionRecordingController → AudioSer
 ## Security Patterns
 - **Encryption at Rest** - All stored data encrypted
 - **Local Processing** - Privacy-first approach
-- **Minimal External Dependencies** - Reduced attack surface 
+- **Minimal External Dependencies** - Reduced attack surface
+
+## Code Quality Patterns
+
+### Comment Guidelines
+- **Minimal Comments Policy** - Only add comments to codebase when absolutely essential
+- **Self-Documenting Code** - Prefer clear variable names, method names, and structure over comments
+- **Essential Comments Only** - Reserve comments for complex algorithms, non-obvious business logic, or critical warnings
+- **Clean Code Priority** - Focus on readable code structure rather than explanatory comments 

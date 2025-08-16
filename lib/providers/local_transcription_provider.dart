@@ -29,11 +29,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
   double _audioLevel = 0.0;
   double get audioLevel => _audioLevel;
   void updateAudioLevel(double level) {
-    if ((level - _audioLevel).abs() > 0.01) {
-      // avoid excessive rebuilds
-      _audioLevel = level;
-      notifyListeners();
-    }
+    _audioLevel = level;
+    notifyListeners();
   }
 
   final AudioService _audioService = AudioService();
@@ -52,7 +49,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   /// Initialize all specialized providers
   void _initializeProviders() {
     _stateManager = TranscriptionStateManager();
-    _modelManager = ModelManagementProvider();
+    _modelManager = ModelManagementProvider(_audioService);
     _uiStateProvider = TranscriptionUIStateProvider();
     _operationProvider = TranscriptionOperationProvider(_sessionProvider);
     _dataProvider = TranscriptionDataProvider(_sessionProvider);
@@ -335,8 +332,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     try {
       _audioLevelSub?.cancel();
-      await _audioService.startRecording();
-      _audioLevelSub = _audioService.audioLevelStream.listen(updateAudioLevel);
       final success = await _operationProvider.startRecording(
         _modelManager.selectedModelType,
         sessionId,
@@ -348,6 +343,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _uiStateProvider.clearRecordingSessionId();
         return false;
       }
+
+      _audioLevelSub = _audioService.audioLevelStream.listen(updateAudioLevel);
 
       final isLivePreview =
           _modelManager.selectedModelType == ModelType.vosk ||
