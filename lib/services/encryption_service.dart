@@ -6,7 +6,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class EncryptionService {
   static const _keyStorageKey = 'aes_data_key';
-  final _secureStorage = FlutterSecureStorage();
+  final _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
 
   Future<Encrypter> _getEncrypter() async {
     // 1) Fetch or generate a 256-bit key
@@ -21,7 +26,7 @@ class EncryptionService {
     }
 
     final key = Key(base64Decode(base64Key));
-    return Encrypter(AES(key, mode: AESMode.cbc, padding: 'PKCS7'));
+    return Encrypter(AES(key, mode: AESMode.gcm));
   }
 
   Future<String> encrypt(String plainText) async {
