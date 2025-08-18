@@ -7,6 +7,7 @@ import '../providers/local_transcription_provider.dart';
 import '../widgets/modals/confirmation_modal.dart';
 import '../constants/app_constants.dart';
 import '../services/share_service.dart';
+import '../logger.dart';
 
 /// Controller for managing transcription selection and bulk operations
 class TranscriptionSelectionController with ChangeNotifier {
@@ -107,14 +108,20 @@ class TranscriptionSelectionController with ChangeNotifier {
               ),
             );
           }
-        } catch (e) {
+        } catch (e, st) {
           if (context.mounted) {
+            logger.error(
+              e,
+              stackTrace: st,
+              flag: FeatureFlag.ui,
+              message: 'Failed to delete selected transcriptions',
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
                   AppStrings.sessionErrorDeletingTranscriptions.replaceAll(
                     '{error}',
-                    e.toString(),
+                    'An error occurred.',
                   ),
                 ),
               ),
@@ -145,10 +152,16 @@ class TranscriptionSelectionController with ChangeNotifier {
           const SnackBar(content: Text(AppStrings.allTranscriptionsCopied)),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
       if (context.mounted) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.ui,
+          message: 'Failed to copy all transcriptions to clipboard',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to copy: ${e.toString()}')),
+          const SnackBar(content: Text('Failed to copy transcriptions.')),
         );
       }
     }
@@ -182,10 +195,16 @@ class TranscriptionSelectionController with ChangeNotifier {
       if (result.status == ShareResultStatus.success) {
         exitSelectionMode();
       }
-    } catch (e) {
+    } catch (e, st) {
       if (context.mounted) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.ui,
+          message: 'Failed to share selected transcriptions',
+        );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: ${e.toString()}')),
+          const SnackBar(content: Text('Failed to share transcriptions.')),
         );
       }
     }

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import '../logger.dart';
 
 /// Service for handling native audio permissions on iOS using AVAudioSession
 /// This uses the same permission system as FlutterWhisperKit
@@ -20,7 +21,13 @@ class NativeAudioPermissionService {
         'requestRecordPermission',
       );
       return granted;
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Failed to request iOS record permission',
+      );
       return false;
     }
   }
@@ -36,7 +43,13 @@ class NativeAudioPermissionService {
         'getRecordPermissionStatus',
       );
       return status;
-    } catch (e) {
+    } on PlatformException catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Failed to get iOS record permission status',
+      );
       return 'error';
     }
   }

@@ -15,6 +15,7 @@ import '../controllers/session_recording_controller.dart';
 import '../controllers/transcription_selection_controller.dart';
 import '../controllers/session_navigation_controller.dart';
 import '../providers/theme_provider.dart';
+import '../logger.dart';
 import '../models/app_theme.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
@@ -103,8 +104,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
     try {
       _localTranscriptionProvider.removeListener(_scrollToBottom);
-    } catch (e) {
-      debugPrint('Error removing listener: $e');
+    } catch (e, st) {
+      logger.error(e,
+          stackTrace: st,
+          flag: FeatureFlag.ui,
+          message: 'Error removing scroll-to-bottom listener');
     }
 
     _scrollController.dispose();

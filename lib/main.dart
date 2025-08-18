@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart' as provider;
+import 'services/storage_service.dart';
 import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
@@ -11,32 +14,52 @@ import 'providers/settings_provider.dart';
 import 'providers/transcription_data_provider.dart';
 import 'package:flutter/services.dart';
 import 'models/app_theme.dart';
+import 'logger.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final settingsProvider = await SettingsProvider.create();
-  final sharedPrefs = await SharedPreferences.getInstance();
-  runApp(
-    ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
-      child: provider.MultiProvider(
-        providers: [
-          provider.ChangeNotifierProvider.value(value: settingsProvider),
-          provider.ChangeNotifierProvider(create: (_) => SessionProvider()),
-          provider.ChangeNotifierProvider(
-            create: (context) => TranscriptionDataProvider(
-              provider.Provider.of<SessionProvider>(context, listen: false),
-            ),
+  logger.info('App initialising', flag: FeatureFlag.general);
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    logger.error(
+      details.exception,
+      stackTrace: details.stack,
+      flag: FeatureFlag.ui,
+    );
+    FlutterError.presentError(details);
+  };
+
+  await runZonedGuarded(
+    () async {
+      final settingsProvider = await SettingsProvider.create();
+      final sharedPrefs = await SharedPreferences.getInstance();
+
+      runApp(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
+          child: provider.MultiProvider(
+            providers: [
+              provider.ChangeNotifierProvider.value(value: settingsProvider),
+              provider.ChangeNotifierProvider(create: (_) => SessionProvider()),
+              provider.ChangeNotifierProvider(
+                create: (context) => TranscriptionDataProvider(
+                  provider.Provider.of<SessionProvider>(context, listen: false),
+                ),
+              ),
+              provider.ChangeNotifierProvider(
+                create: (context) => LocalTranscriptionProvider(
+                  provider.Provider.of<SessionProvider>(context, listen: false),
+                ),
+              ),
+            ],
+            child: const MyApp(),
           ),
-          provider.ChangeNotifierProvider(
-            create: (context) => LocalTranscriptionProvider(
-              provider.Provider.of<SessionProvider>(context, listen: false),
-            ),
-          ),
-        ],
-        child: const MyApp(),
-      ),
-    ),
+        ),
+      );
+    },
+    (Object error, StackTrace stack) {
+      logger.error(error, stackTrace: stack, flag: FeatureFlag.general);
+    },
   );
 }
 
@@ -134,7 +157,7 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
-    _initFuture = Future.value();
+    _initFuture = StorageService().processPendingDeletes();
   }
 
   @override

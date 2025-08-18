@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:whisper_flutter_new/whisper_flutter_new.dart' as fwn;
 import 'package:flutter_whisper_kit/flutter_whisper_kit.dart' as kit;
 import 'package:archive/archive.dart';
+import '../logger.dart';
 
 /// A service that abstracts Whisper functionality for both Android (whisper_flutter_new)
 /// and iOS (flutter_whisper_kit) back-ends.
@@ -135,8 +136,13 @@ class WhisperService {
           return modelPath;
         }
       }
-      throw 'ggml-tiny.bin not found inside zip';
-    } catch (e) {
+      logger.error(
+        'ggml-tiny.bin not found inside Android asset zip',
+        flag: FeatureFlag.service,
+      );
+      throw Exception('ggml-tiny.bin not found inside zip');
+    } catch (e, st) {
+      logger.error(e, stackTrace: st, flag: FeatureFlag.service);
       throw Exception('Failed to prepare Whisper model: $e');
     }
   }
@@ -188,10 +194,16 @@ class WhisperService {
           } else {
             throw Exception('loadModel() returned an empty result');
           }
-        } catch (e) {
+        } catch (e, st) {
           _initializationStatus =
               'Error loading local CoreML model: ${e.toString()}';
-          throw Exception('Failed to load local CoreML model: $e');
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.service,
+            message: _initializationStatus,
+          );
+          throw Exception(_initializationStatus);
         }
 
         _initializationStatus = 'Flutter Whisper Kit ready with local model';
@@ -204,8 +216,14 @@ class WhisperService {
 
       _isInitialized = true;
       return true;
-    } catch (e) {
+    } catch (e, st) {
       _initializationStatus = 'Initialization failed: $e';
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Whisper initialization failed',
+      );
       _resetState();
       return false;
     } finally {
@@ -259,8 +277,14 @@ class WhisperService {
       } else {
         throw Exception('Unsupported platform');
       }
-    } catch (e) {
-      rethrow;
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Whisper file transcription failed',
+      );
+      Error.throwWithStackTrace(e, st);
     } finally {
       _isTranscribing = false;
     }
@@ -300,7 +324,13 @@ class WhisperService {
 
       _isRealtimeRecording = true;
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Error starting realtime recording',
+      );
       await _iosPartialSub?.cancel();
       _isRealtimeRecording = false;
       return false;
@@ -316,10 +346,22 @@ class WhisperService {
         (event) {
           _handleTranscriptionEvent(event);
         },
-        onError: (error) {},
+        onError: (error) {
+          logger.error(
+            error,
+            flag: FeatureFlag.model,
+            message: 'Whisper transcription stream error',
+          );
+        },
         onDone: () {},
       );
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Error setting up transcription listener',
+      );
       rethrow;
     }
   }
@@ -340,7 +382,13 @@ class WhisperService {
         _currentTranscription = text;
         _partialController.add(text);
       }
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.model,
+        message: 'Error handling transcription event',
+      );
       rethrow;
     }
   }
@@ -354,6 +402,14 @@ class WhisperService {
     try {
       await _iosKit!.stopRecording();
       return _currentTranscription;
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Failed to stop real-time recording',
+      );
+      return _currentTranscription; // Return whatever we have
     } finally {
       _isRealtimeRecording = false;
       await _iosPartialSub?.cancel();

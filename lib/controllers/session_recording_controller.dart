@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
+import '../logger.dart';
 
 /// Controller for managing recording operations within a session
 class SessionRecordingController with ChangeNotifier {
@@ -47,8 +48,14 @@ class SessionRecordingController with ChangeNotifier {
     try {
       final success = await _transcriptionProvider.startRecording();
       return success;
-    } catch (e) {
-      rethrow;
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Failed to start recording via controller',
+      );
+      return false;
     }
   }
 
@@ -60,8 +67,13 @@ class SessionRecordingController with ChangeNotifier {
 
     try {
       await _transcriptionProvider.stopRecordingAndSave();
-    } catch (e) {
-      rethrow;
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Failed to stop recording and save via controller',
+      );
     }
   }
 
@@ -92,8 +104,13 @@ class SessionRecordingController with ChangeNotifier {
         } else {
           await _transcriptionProvider.reinitializeModel();
         }
-      } catch (e) {
-        // Ignore error
+      } catch (e, st) {
+        logger.error(
+          e,
+          stackTrace: st,
+          flag: FeatureFlag.ui,
+          message: 'Failed to recover from error state',
+        );
       }
     }
   }
@@ -102,8 +119,13 @@ class SessionRecordingController with ChangeNotifier {
   Future<void> forceSystemReset() async {
     try {
       await _transcriptionProvider.forceSystemReset();
-    } catch (e) {
-      // Ignore error
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Failed to force system reset',
+      );
     }
   }
 }

@@ -10,6 +10,7 @@ import 'transcription_ui_state_provider.dart';
 import 'transcription_operation_provider.dart';
 import 'transcription_data_provider.dart';
 import '../services/audio_service.dart';
+import '../logger.dart';
 
 /// LocalTranscriptionProvider using composition of specialized providers
 class LocalTranscriptionProvider with ChangeNotifier {
@@ -211,7 +212,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
       _operationProvider.initializeOrchestrator(_modelManager.orchestrator);
 
       _stateManager.transitionTo(TranscriptionState.ready);
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Failed to initialize transcription system',
+      );
       _stateManager.setError('Failed to initialize transcription system: $e');
     } finally {
       _releaseOperationLock(operationName);
@@ -353,10 +360,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
       }
 
       return true;
-    } catch (e) {
-      final errorMessage = 'Failed to start recording: $e';
-
-      _stateManager.setError(errorMessage);
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error starting recording',
+      );
+      _stateManager.setError('Error starting recording: $e');
       _uiStateProvider.clearRecordingSessionId();
       return false;
     } finally {
@@ -416,8 +427,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
         final errorMessage = result.errorMessage ?? 'Unknown error';
         _stateManager.setError(errorMessage);
       }
-    } catch (e) {
-      _stateManager.setError('Error stopping/saving transcription: $e');
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error stopping recording',
+      );
+      _stateManager.setError('Error stopping recording: $e');
 
       _uiStateProvider.clearLivePreview();
       _uiStateProvider.clearWhisperLoadingPreview();

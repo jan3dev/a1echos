@@ -5,6 +5,7 @@ import '../services/audio_service.dart';
 import '../services/vosk_service.dart';
 import '../services/whisper_service.dart';
 import '../models/model_type.dart';
+import '../logger.dart';
 
 /// Output of a transcription stop operation, including text and audio path.
 class TranscriptionOutput {
@@ -95,7 +96,10 @@ class TranscriptionOrchestrator {
               );
             }
           } catch (e) {
-            // Ignore parsing errors for partial results
+            logger.warning(
+              'Failed to parse Vosk partial result: $e',
+              flag: FeatureFlag.general,
+            );
           }
         });
 
@@ -110,7 +114,10 @@ class TranscriptionOrchestrator {
               );
             }
           } catch (e) {
-            // Ignore parsing errors for final results
+            logger.warning(
+              'Failed to parse Vosk final result: $e',
+              flag: FeatureFlag.general,
+            );
           }
         });
 
@@ -139,8 +146,14 @@ class TranscriptionOrchestrator {
             _isRecording = true;
           }
           return success;
-        } catch (e) {
-          rethrow;
+        } catch (e, st) {
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.general,
+            message: 'Failed to start audio service for Whisper',
+          );
+          return false;
         }
       }
     });
@@ -174,8 +187,14 @@ class TranscriptionOrchestrator {
           _isRecording = false;
 
           return TranscriptionOutput(text: completeText, audioPath: '');
-        } catch (e) {
+        } catch (e, st) {
           await _partialSub?.cancel();
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.general,
+            message: 'Failed to stop Vosk gracefully',
+          );
           await _resultSub?.cancel();
           _partialSub = null;
           _resultSub = null;
@@ -232,8 +251,14 @@ class TranscriptionOrchestrator {
           final text = transcriptionText?.trim() ?? '';
 
           return TranscriptionOutput(text: text, audioPath: audioFile.path);
-        } catch (e) {
+        } catch (e, st) {
           _isRecording = false;
+          logger.error(
+            e,
+            stackTrace: st,
+            flag: FeatureFlag.general,
+            message: 'Failed to transcribe file with Whisper',
+          );
           return TranscriptionOutput(text: '', audioPath: '');
         }
       }

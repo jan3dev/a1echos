@@ -5,6 +5,7 @@ import '../providers/settings_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../screens/session_screen.dart';
 import '../constants/app_constants.dart';
+import '../logger.dart';
 
 mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
   void openSession(String sessionId, {bool selectionMode = false}) {
@@ -51,16 +52,22 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
         MaterialPageRoute(
           builder: (context) => SessionScreen(sessionId: sessionId),
         ),
-      ).then((_) {});
-    } catch (e) {
+      );
+    } catch (e, st) {
       if (!mounted) return;
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Failed to start recording from SessionOperationsHandler',
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             AppStrings.homeErrorCreatingSession.replaceAll(
               '{error}',
-              e.toString(),
+              'An unexpected error occurred.',
             ),
           ),
         ),

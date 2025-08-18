@@ -3,6 +3,7 @@ import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/session.dart';
+import '../logger.dart';
 
 /// Controller for managing session navigation and lifecycle operations
 class SessionNavigationController with ChangeNotifier {
@@ -77,6 +78,7 @@ class SessionNavigationController with ChangeNotifier {
     try {
       return _sessionProvider.sessions.firstWhere((s) => s.id == id);
     } catch (e) {
+      logger.warning('Session with ID $id not found.', flag: FeatureFlag.ui);
       return null;
     }
   }

@@ -8,6 +8,7 @@ import '../repositories/transcription_repository.dart';
 import '../utils/transcription_formatter.dart';
 import '../managers/transcription_orchestrator.dart';
 import 'session_provider.dart';
+import '../logger.dart';
 
 class TranscriptionOperationProvider with ChangeNotifier {
   final TranscriptionRepository _repository = TranscriptionRepository();
@@ -50,7 +51,13 @@ class TranscriptionOperationProvider with ChangeNotifier {
       );
 
       return success;
-    } catch (e) {
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error starting recording in TranscriptionOperationProvider',
+      );
       return false;
     }
   }
@@ -83,8 +90,12 @@ class TranscriptionOperationProvider with ChangeNotifier {
           );
           try {
             await tempFile.delete();
-          } catch (e) {
-            // Ignore temp file deletion errors
+          } catch (e, st) {
+            logger.warning(
+              'Failed to delete temporary audio file: $e',
+              flag: FeatureFlag.provider,
+            );
+            logger.error(e, stackTrace: st, flag: FeatureFlag.provider);
           }
         }
       }
@@ -96,8 +107,14 @@ class TranscriptionOperationProvider with ChangeNotifier {
       );
 
       return TranscriptionResult.success(transcription);
-    } catch (e) {
+    } catch (e, st) {
       final errorMessage = 'Error stopping/saving transcription: $e';
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: errorMessage,
+      );
       return TranscriptionResult.error(errorMessage);
     }
   }
