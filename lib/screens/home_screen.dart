@@ -35,10 +35,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cleanupIncognitoSessionsIfNeeded();
       final transcriptionProvider = provider
           .Provider.of<LocalTranscriptionProvider>(context, listen: false);
       transcriptionProvider.addListener(_scrollToBottom);
     });
+  }
+
+  void _cleanupIncognitoSessionsIfNeeded() {
+    final sessionProvider = provider.Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final settingsProvider = provider.Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    final localTranscriptionProvider = provider
+        .Provider.of<LocalTranscriptionProvider>(context, listen: false);
+
+    if ((!settingsProvider.isIncognitoMode) ||
+        (settingsProvider.isIncognitoMode &&
+            !localTranscriptionProvider.isRecording)) {
+      _deleteIncognitoSessions(sessionProvider);
+    }
   }
 
   void _scrollToBottom() {
@@ -64,10 +84,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         listen: false,
       ).removeListener(_scrollToBottom);
     } catch (e, st) {
-      logger.error(e,
-          stackTrace: st,
-          flag: FeatureFlag.ui,
-          message: 'Error removing scroll-to-bottom listener on HomeScreen');
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Error removing scroll-to-bottom listener on HomeScreen',
+      );
     }
     _scrollController.dispose();
     super.dispose();
@@ -77,25 +99,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
 
+    final sessionProvider = provider.Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final settingsProvider = provider.Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    final localTranscriptionProvider = provider
+        .Provider.of<LocalTranscriptionProvider>(context, listen: false);
+
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      final sessionProvider = provider.Provider.of<SessionProvider>(
-        context,
-        listen: false,
-      );
-      final settingsProvider = provider.Provider.of<SettingsProvider>(
-        context,
-        listen: false,
-      );
-
-      if (settingsProvider.isIncognitoMode) {
-        final incognitoSessions = sessionProvider.sessions
-            .where((session) => session.isIncognito)
-            .toList();
-        for (var session in incognitoSessions) {
-          sessionProvider.deleteSession(session.id);
-        }
+      if (settingsProvider.isIncognitoMode &&
+          !localTranscriptionProvider.isRecording) {
+        _deleteIncognitoSessions(sessionProvider);
       }
+    } else if (state == AppLifecycleState.resumed) {
+      if (settingsProvider.isIncognitoMode &&
+          !localTranscriptionProvider.isRecording) {
+        _deleteIncognitoSessions(sessionProvider);
+      }
+    }
+  }
+
+  void _deleteIncognitoSessions(SessionProvider sessionProvider) {
+    final incognitoSessions = sessionProvider.sessions
+        .where((session) => session.isIncognito)
+        .toList();
+    for (var session in incognitoSessions) {
+      sessionProvider.deleteSession(session.id);
     }
   }
 

@@ -1,5 +1,7 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_foreground_task (0.0.1):
+    - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
   - flutter_whisper_kit_apple (0.2.0):
@@ -34,6 +36,7 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_foreground_task (from `.symlinks/plugins/flutter_foreground_task/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - flutter_whisper_kit_apple (from `.symlinks/plugins/flutter_whisper_kit_apple/darwin`)
   - onnxruntime (from `.symlinks/plugins/onnxruntime/ios`)
@@ -54,6 +57,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_foreground_task:
+    :path: ".symlinks/plugins/flutter_foreground_task/ios"
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   flutter_whisper_kit_apple:
@@ -79,6 +84,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   flutter_whisper_kit_apple: a67682d8dcdb02e781f9ae37ce18b39b10e0cf29
   onnxruntime: 2ab1957eb029c71d47f7bb35cc4efc9f0d297828

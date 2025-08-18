@@ -35,6 +35,7 @@ dependencies:
   url_launcher: ^6.3.1
   package_info_plus: ^8.3.0
   talker_flutter: ^4.9.3
+  flutter_foreground_task: ^9.1.0
   flutter_whisper_kit:
     git:
       url: https://github.com/jan3dev/flutter_whisper_kit.git
