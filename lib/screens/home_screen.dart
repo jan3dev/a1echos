@@ -13,6 +13,7 @@ import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
 import '../widgets/aqua_tooltip_with_animation.dart';
+import '../widgets/static_wave_bars.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
 
@@ -161,8 +162,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             bottom: 32,
             left: 0,
             right: 0,
-            child: Center(
-              child: RecordingButton(onRecordingStart: startRecording),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: RecordingButton(onRecordingStart: startRecording),
+                ),
+                const SizedBox(height: 50),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: StaticWaveBars(),
+                ),
+                const SizedBox(height: 26),
+              ],
             ),
           ),
           if (effectivelyEmpty)

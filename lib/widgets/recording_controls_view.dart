@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/local_transcription_provider.dart';
 import '../widgets/recording_button.dart';
 import '../widgets/audio_wave_visualization.dart';
+import '../widgets/static_wave_bars.dart';
 
 /// Recording controls component that manages the bottom recording area
 class RecordingControlsView extends ConsumerWidget {
@@ -35,11 +36,20 @@ class RecordingControlsView extends ConsumerWidget {
               ],
             );
           } else {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: RecordingButton(useProviderState: true),
-              ),
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: RecordingButton(useProviderState: true),
+                ),
+                const SizedBox(height: 50),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: StaticWaveBars(),
+                ),
+                const SizedBox(height: 26),
+              ],
             );
           }
         },

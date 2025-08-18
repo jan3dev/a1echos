@@ -26,7 +26,7 @@ class HomeContent extends StatelessWidget {
       top: 0,
       left: 0,
       right: 0,
-      bottom: 128,
+      bottom: 208,
       child: SingleChildScrollView(
         controller: scrollController,
         child: Padding(

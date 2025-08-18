@@ -2,8 +2,40 @@
 
 ## Active Task Status
 **Current Phase:** VAN Mode - Task Complete  
-**Current Task:** Switch from flutter_sound to record package  
+**Current Task:** Static Wave Bars Refinement & Home Screen Integration  
 **Status:** ✅ COMPLETE - VAN MODE
+
+## ✅ COMPLETED TASK: Static Wave Bars Refinement & Home Screen Integration (VAN Mode, Level 1)
+
+### 📝 TASK SUMMARY
+**User Request:**
+1. The vertical paddings should be the same as in the recording state so that the recording button doesn't jump up.
+2. Also the static wave bars should be visible on the home screen.
+3. Don't repeat yourself - add a widget for the static wave bars.
+
+### ✅ IMPLEMENTATION DETAILS
+- **Consistent vertical spacing**: Both recording and non-recording states use identical 24px spacing
+- **Home screen integration**: Static bars now appear on home screen below recording button
+- **Reusable widget**: Created dedicated `StaticWaveBars` widget to eliminate code duplication
+- **No button jumping**: Recording button maintains same position in all states
+- **Theme integration**: Widget uses proper theme color access pattern
+
+### 🧩 CHANGES MADE
+- [x] Created `lib/widgets/static_wave_bars.dart` as reusable widget
+- [x] Updated `RecordingControlsView` to use new `StaticWaveBars` widget
+- [x] Updated `HomeScreen` to include static bars with consistent layout
+- [x] Removed duplicate code from both files
+- [x] Verified consistent 24px vertical spacing between button and bars
+- [x] Applied proper 16px horizontal padding in both contexts
+
+### 🔧 TECHNICAL CHANGES
+- **New widget**: `StaticWaveBars` as ConsumerWidget with theme integration
+- **DRY principle**: Single source of truth for static bar rendering
+- **Layout consistency**: Column structure with identical spacing across screens
+- **Theme-aware**: Automatic surfaceTertiary color from current theme
+- **Responsive**: LayoutBuilder for proper bar width calculation
+
+---
 
 ## ✅ COMPLETED TASK: Switch from flutter_sound to record package (VAN Mode, Level 1)
 

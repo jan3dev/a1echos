@@ -44,6 +44,7 @@ dependencies:
   talker_flutter: ^4.9.3
   flutter_foreground_task: ^9.1.0
   share_plus: ^11.0.0
+  synchronized: ^3.4.0
 
 dev_dependencies:
   flutter_test:
