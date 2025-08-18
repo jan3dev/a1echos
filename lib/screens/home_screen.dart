@@ -96,31 +96,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
+  void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    final sessionProvider = provider.Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-    final settingsProvider = provider.Provider.of<SettingsProvider>(
-      context,
-      listen: false,
-    );
-    final localTranscriptionProvider = provider
-        .Provider.of<LocalTranscriptionProvider>(context, listen: false);
-
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      if (settingsProvider.isIncognitoMode &&
-          !localTranscriptionProvider.isRecording) {
-        _deleteIncognitoSessions(sessionProvider);
-      }
-    } else if (state == AppLifecycleState.resumed) {
-      if (settingsProvider.isIncognitoMode &&
-          !localTranscriptionProvider.isRecording) {
-        _deleteIncognitoSessions(sessionProvider);
-      }
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.resumed) {
+      _cleanupIncognitoSessionsIfNeeded();
     }
   }
 

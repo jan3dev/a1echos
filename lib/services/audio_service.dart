@@ -144,9 +144,8 @@ class AudioService {
       }
     }
 
-    _backgroundService.updateRecordingState(true);
-
     await startVad();
+    _backgroundService.updateRecordingState(true);
     return true;
   }
 
