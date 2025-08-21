@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
@@ -177,53 +176,51 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
         _navigationController,
       ]),
       builder: (context, child) {
-        return WithForegroundTask(
-          child: Scaffold(
-            backgroundColor: colors.surfaceBackground,
-            appBar: SessionAppBar(
-              sessionName: _navigationController.sessionName,
-              selectionMode: _selectionController.selectionMode,
-              isIncognitoSession: _navigationController.isIncognitoSession,
-              onBackPressed: () =>
-                  _navigationController.handleBackNavigation(context),
-              onTitlePressed: _handleTitlePressed,
-              onCopyAllPressed: _handleCopyAllPressed,
-              onSelectAllPressed: _handleSelectAllPressed,
-              onDeleteSelectedPressed: _handleDeleteSelectedPressed,
-            ),
-            body: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                FocusScope.of(context).unfocus();
-              },
-              child: Stack(
-                children: [
-                  TranscriptionContentView(
-                    scrollController: _scrollController,
-                    selectionMode: _selectionController.selectionMode,
-                    selectedTranscriptionIds:
-                        _selectionController.selectedTranscriptionIds,
-                    onTranscriptionTap: _handleTranscriptionTap,
-                    onTranscriptionLongPress: _handleTranscriptionLongPress,
-                  ),
-                  if (_selectionController.selectionMode)
-                    Positioned(
-                      bottom: 32,
-                      left: 16,
-                      right: 16,
-                      child: Center(
-                        child: AquaButton.primary(
-                          text: AppStrings.share,
-                          onPressed: _selectionController.hasSelectedItems
-                              ? _handleSharePressed
-                              : null,
-                        ),
+        return Scaffold(
+          backgroundColor: colors.surfaceBackground,
+          appBar: SessionAppBar(
+            sessionName: _navigationController.sessionName,
+            selectionMode: _selectionController.selectionMode,
+            isIncognitoSession: _navigationController.isIncognitoSession,
+            onBackPressed: () =>
+                _navigationController.handleBackNavigation(context),
+            onTitlePressed: _handleTitlePressed,
+            onCopyAllPressed: _handleCopyAllPressed,
+            onSelectAllPressed: _handleSelectAllPressed,
+            onDeleteSelectedPressed: _handleDeleteSelectedPressed,
+          ),
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              FocusScope.of(context).unfocus();
+            },
+            child: Stack(
+              children: [
+                TranscriptionContentView(
+                  scrollController: _scrollController,
+                  selectionMode: _selectionController.selectionMode,
+                  selectedTranscriptionIds:
+                      _selectionController.selectedTranscriptionIds,
+                  onTranscriptionTap: _handleTranscriptionTap,
+                  onTranscriptionLongPress: _handleTranscriptionLongPress,
+                ),
+                if (_selectionController.selectionMode)
+                  Positioned(
+                    bottom: 32,
+                    left: 16,
+                    right: 16,
+                    child: Center(
+                      child: AquaButton.primary(
+                        text: AppStrings.share,
+                        onPressed: _selectionController.hasSelectedItems
+                            ? _handleSharePressed
+                            : null,
                       ),
-                    )
-                  else
-                    const RecordingControlsView(),
-                ],
-              ),
+                    ),
+                  )
+                else
+                  const RecordingControlsView(),
+              ],
             ),
           ),
         );
