@@ -42,12 +42,14 @@ class TranscriptionOperationProvider with ChangeNotifier {
   Future<bool> startRecording(
     ModelType modelType,
     String sessionId,
-    bool whisperRealtime,
-  ) async {
+    bool whisperRealtime, {
+    String? languageCode,
+  }) async {
     try {
       final success = await _orchestrator.startRecording(
         modelType,
         whisperRealtime: whisperRealtime,
+        languageCode: languageCode,
       );
 
       return success;
@@ -66,12 +68,14 @@ class TranscriptionOperationProvider with ChangeNotifier {
   Future<TranscriptionResult> stopRecordingAndTranscribe(
     ModelType modelType,
     String sessionId,
-    bool whisperRealtime,
-  ) async {
+    bool whisperRealtime, {
+    String? languageCode,
+  }) async {
     try {
       final output = await _orchestrator.stopRecording(
         modelType,
         whisperRealtime: whisperRealtime,
+        languageCode: languageCode,
       );
 
       final resultText = output.text.trim();

@@ -2,8 +2,55 @@
 
 ## Active Task Status
 **Current Phase:** VAN Mode - Task Complete  
-**Current Task:** Static Wave Bars Refinement & Home Screen Integration  
+**Current Task:** Add Spoken Language Selection Feature  
 **Status:** ✅ COMPLETE - VAN MODE
+
+## ✅ COMPLETED TASK: Add Spoken Language Selection Feature (VAN Mode, Level 2)
+
+### 📝 TASK SUMMARY
+**User Request:**
+Add a spoken language list item to the settings_screen with AquaIcon.language. Add translations to .arb file. On press it navigates to a spoken language selection screen structured like the model selection screen but with available languages for whisper models with country flags. The vosk model only supports english, so the setting should be disabled when vosk is selected.
+
+**Figma References:**
+- Settings Screen: https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=6764-7380&t=KFzJto14wGpMbsaJ-4
+- Language Selection Screen: https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=9017-11771&t=KFzJto14wGpMbsaJ-4
+
+### ✅ IMPLEMENTATION DETAILS
+- **Language Model**: Created comprehensive `SpokenLanguage` model with 90+ supported languages and country flags
+- **Settings Integration**: Added conditional language selection list item (only visible for Whisper models)
+- **Language Selection Screen**: Implemented full-screen language picker matching Figma design with country flags and radio selection
+- **State Management**: Added language selection to model management provider with SharedPreferences persistence
+- **Whisper Integration**: Updated whisper service to accept and use language parameters for both file-based and real-time transcription
+- **Vosk Compatibility**: Language selection is disabled/hidden when Vosk model is selected (Vosk only supports English)
+- **Localization**: Added proper translations for spoken language feature
+
+### 🧩 CHECKLIST (VAN Mode)
+- [x] Add spoken language translations to app_en.arb
+- [x] Create language data model/constants with country codes and flags
+- [x] Add language selection to settings provider/state management
+- [x] Update settings screen to include spoken language list item
+- [x] Create spoken language selection screen (similar to model selection)
+- [x] Implement country flag display for each language
+- [x] Add language parameter to whisper service transcription calls
+- [x] Disable language selection when Vosk model is selected
+- [x] Test language selection with whisper transcription
+- [x] Verify UI matches Figma designs
+- [x] Generate localization files (flutter gen-l10n)
+- [x] Update hardcoded strings to use proper localization
+
+### 🔧 TECHNICAL CHANGES
+- **New Model**: `SpokenLanguage` with code, name, and flag properties
+- **Provider Updates**: Added language selection methods to `ModelManagementProvider` and `LocalTranscriptionProvider`
+- **Service Updates**: Enhanced `WhisperService` with language parameter support for both Android and iOS
+- **Screen Creation**: New `SpokenLanguageSelectionScreen` with comprehensive language list and radio selection
+- **Settings Enhancement**: Conditional language selection item in settings (Whisper models only)
+- **Orchestrator Updates**: Language parameter propagation through transcription orchestrator
+- **Persistence**: Language preference saved to SharedPreferences and loaded on app start
+
+### 📋 SUPPORTED LANGUAGES (90+)
+Complete language support including: English, Chinese, German, Spanish, Russian, Korean, French, Japanese, Portuguese, Turkish, Polish, Catalan, Dutch, Arabic, Swedish, Italian, Indonesian, Hindi, Finnish, Vietnamese, Hebrew, Ukrainian, Greek, Malay, Czech, Romanian, Danish, Hungarian, Tamil, Norwegian, Thai, Urdu, Croatian, Bulgarian, Lithuanian, Latin, and many more with proper country flag emojis.
+
+---
 
 ## ✅ COMPLETED TASK: Static Wave Bars Refinement & Home Screen Integration (VAN Mode, Level 1)
 
@@ -236,281 +283,45 @@ Comprehensive documentation of the background recording and incognito session cl
 
 #### 🔄 Implementation Steps
 1. **Review Figma for UI/UX details** (icon placement, textarea style, save/cancel actions).
-2. **Add local state** to `TranscriptionItem` to track edit mode and edited text.
-3. **Render edit icon** (if not already present).
-4. **On edit icon press:**
-   - Switch to edit mode.
-   - Render a `TextField` or `TextFormField` with the current transcription as initial value.
-   - Autofocus the field.
-5. **Handle save action:**
-   - On submit (keyboard "done"/"save"), call the provider to update the transcription.
-   - Exit edit mode.
-6. **Handle cancel action** (if present in Figma):
-   - Revert to view mode without saving changes.
-7. **Ensure UI matches Figma** (spacing, colors, icons, etc).
-8. **Test on iOS and Android** for keyboard and focus behavior.
-
-#### ⚠️ Potential Challenges
-- Ensuring the keyboard "done" action triggers save reliably on both platforms.
-- Managing focus and keyboard dismissal cleanly.
-- Avoiding unnecessary rebuilds or state loss when switching modes.
-- Matching Figma design exactly (padding, border, icon alignment).
-- Handling long transcriptions or edge cases (empty, very long, special characters).
-
-#### ✅ Testing Strategy
-- Manual test: Edit a transcription, save, and verify update.
-- Manual test: Edit, cancel, and verify no change.
-- Test keyboard behavior on both iOS and Android.
-- Visual check: UI matches Figma in both modes.
-- Edge case: Edit with empty/long/special character text.
+2. **Add local state** to `TranscriptionItem`
 
 ---
 
-## COMPLETED TASK: Tooltip Pointer & Hover Animation ✅
-
-### 🎯 TASK SUMMARY
-**User Request:** Implement a tooltip with a pointer that visually matches the Figma, including a subtle up/down hover animation.
-
-### 📋 TASK LIFECYCLE STATUS - COMPLETE ✅
-- [x] **VAN Mode:** Complexity analysis, requirements, and completion
-- [x] **IMPLEMENT Mode:** Code changes implemented for pointer SVG and animation
-- [x] **Testing:** Visual verification and fine-tuning
-- [x] **REFLECT Mode:** Implementation and design lessons documented
-- [x] **ARCHIVE Mode:** Task archived for future reference
-
-### 🔧 IMPLEMENTATION DETAILS
-- Created a new `pointer.svg` asset with a rounded tip and matching width to the tooltip (18x10), placed in `assets/icons/`.
-- Refactored the tooltip and pointer into a reusable `AquaTooltipWithPointer` widget.
-- Used a `StatefulWidget` and `AnimationController` to animate the tooltip and pointer up and down in a smooth, continuous loop (2s duration, 4px amplitude, sine wave motion).
-- The pointer is now perfectly aligned and visually connected to the tooltip, with a rounded tip for a seamless look.
-- The pointer's color is always in sync with the tooltip background.
-- The pointer is positioned with a -1px offset for a subtle overlap, matching the Figma reference.
-
-### 🧪 TESTING & VERIFICATION
-- [x] Tooltip and pointer visually match Figma reference
-- [x] Animation is smooth and subtle
-- [x] Pointer is perfectly aligned and color-matched
-- [x] Widget is reusable and used in both home and transcription views
-
-### 📊 FINAL STATUS
-**Implementation:** ✅ COMPLETE  
-**Testing:** ✅ PASSED  
-**Documentation:** ✅ UPDATED  
-**Archive:** ✅ READY
-
----
-
-## 🚀 READY FOR NEXT TASK
-
-**Current Status:** ✅ TASK COMPLETE - VAN MODE  
-**Memory Bank Status:** ✅ Updated with final implementation details  
-**System State:** ✅ Ready for new task
-
-## 🚩 NEW TASK: Audio Wave Visualization Reactive to Speech (VAN Mode, Level 1)
+## ✅ COMPLETED TASK: Safe Space & Language Flag Enhancements (VAN Mode, Level 1)
 
 ### 📝 TASK SUMMARY
-**User Request:** Make the audio wave visualization move/react only when actual speech is detected, using voice activity detection (VAD) from whisperkit.
-
-### 🔍 CONTEXT & ANALYSIS
-- The current `AudioWaveVisualization` widget animates bars when recording, but is not reactive to actual speech/silence.
-- The codebase uses both `whisper_flutter_new` and `flutter_whisper_kit` (whisperkit).
-- No explicit VAD/speech activity stream is currently wired to the UI.
-- Goal: Use VAD from whisperkit to control the visualization's animation/highlight state.
-
-### 🧩 COMPLEXITY
-- **Level:** 1 (Quick Enhancement)
-- **Key Steps:**
-  1. Investigate if whisperkit exposes VAD/speech activity in Dart (stream, callback, etc).
-  2. Add a boolean (e.g., `isSpeechActive`) to the visualization widget.
-  3. Animate/highlight waveform only when speech is detected.
-
-### 🗺️ INITIAL PLAN
-- [ ] Check whisperkit/whisper_flutter_new for VAD/speech activity API.
-- [ ] Add `isSpeechActive` prop to `AudioWaveVisualization`.
-- [ ] Wire up VAD boolean to the widget via Provider or direct callback.
-- [ ] Update animation logic to respond to speech activity.
-- [ ] Test: Visualization only animates/highlights when speech is detected.
-
----
-
-## 🚀 NEW TASK: Show Created & Last Modified Date in Session More Menu (VAN Mode, Level 1)
-
-### 📝 TASK SUMMARY
-**User Request:**  
-Add both the created and last modified date to the session more menu. The modified date should use the same formatSessionSubtitle util as the session list item. Style per Figma: use AquaTypography.caption1 and AquaColor.textTertiary.
-
-**Figma Reference:**  
-[Session More Menu Design](https://www.figma.com/design/9rnvs9nW71VAxiXeDBTcL1/Aqua-Flows?node-id=4007-100466&t=clbTB5p2aA5BuenE-4)
-
-### 🔍 CONTEXT & ANALYSIS
-- Session model exposes both `timestamp` (created) and `lastModified` (modified) fields.
-- `formatSessionSubtitle` util is used for session list item date formatting and should be reused for "Last Modified".
-- The menu currently only shows rename/delete actions; no date info is displayed.
-- Typography and color should use `AquaTypography.caption1` and `AquaColor.textTertiary` (from ui_components).
-
-### ✅ REFLECTION STATUS
-- Implementation matches Figma and user requirements.
-- Dates are styled and formatted consistently with the rest of the app.
-- No regression to menu actions (rename/delete).
-- Pattern established for future menu metadata.
-- Ready for ARCHIVE.
-
-### 🧩 CHECKLIST (VAN Mode)
-- [x] Review Figma for placement and spacing of date info in the menu.
-- [x] Update `SessionMoreMenu` to display both dates with correct formatting and style.
-- [x] Use `AquaTypography.caption1` and `AquaColor.textTertiary` for both.
-- [x] Ensure correct padding/margin per Figma.
-- [x] Test with sessions where created == modified and where modified > created.
-- [x] Confirm no regression to menu actions (rename/delete).
-- [x] Update tasks.md with progress.
-
----
-
-### 📝 LEVEL 2 IMPLEMENTATION PLAN
-
-#### 📋 Overview of Changes
-- Add both "Created" and "Last Modified" dates to the session more menu.
-- Use `formatSessionSubtitle` for the modified date, matching session list item formatting.
-- Style both using `AquaTypography.caption1` and `AquaColor.textTertiary`.
-- Match Figma for placement, spacing, and visual details.
-
-#### 📁 Files to Modify
-- `lib/widgets/menus/session_more_menu.dart` (main UI logic for the menu)
-- `lib/utils/session_formatter.dart` (date formatting util, already used)
-- Figma reference for layout/spacing
-- `ui_components` (for typography/color)
-
-#### 🔄 Implementation Steps
-1. **Review Figma for Placement/Spacing**
-   - Confirm where and how the dates are displayed in the menu.
-   - Note any icons, dividers, or spacing requirements.
-2. **Update SessionMoreMenu Widget**
-   - Add a section to display:
-     - "Created" date (formatted as "Jun 20, 2024" or similar).
-     - "Last Modified" date (using `formatSessionSubtitle`).
-   - Use `AquaTypography.caption1` and `
-
-## 🚀 NEW TASK: Audio Wave Snappier Response to Voice (VAN Mode, Level 1)
-
-### 📝 TASK SUMMARY
-**User Request:** The audio wave could react snappier and as fast as possible to voice. Currently it's moving up and down with a delay.
-
-### 🔍 CONTEXT & ANALYSIS
-- Current system has multiple delay layers:
-  1. Amplitude monitoring: 50ms interval in AudioService
-  2. Audio service smoothing: Heavy attack/release smoothing (15-30% alpha)
-  3. Widget animation: 10ms duration with easeOutCubic curve adds smoothing
-  4. Individual bars: 30ms AnimatedContainer duration
-- Need to reduce latency while maintaining visual quality
-- Focus on immediate response to voice onset, faster decay on silence
-
-### 🧩 CHECKLIST (VAN Mode)
-- [x] Reduce amplitude monitoring interval from 50ms to 16ms (60fps equivalent)
-- [x] Increase attack rate in AudioService smoothing for faster rise
-- [x] Change widget animation curve from easeOutCubic to linear for immediate response
-- [x] Reduce individual bar animation duration from 30ms to 10ms
-- [x] Test responsiveness with voice input to ensure snappy reaction
-- [x] Ensure visual quality is maintained despite faster response
+**User Request:**
+1. Add safe space to the bottom of the spoken language selection screen
+2. Add the currently selected language flag to the session screen app bar left of the copy all icon
+3. On press it navigates to the spoken language selection screen
 
 ### ✅ IMPLEMENTATION DETAILS
-- **Reduced monitoring interval**: From 50ms to 16ms (60fps equivalent) for near real-time response
-- **Faster attack rate**: Increased from 30% to 60% base alpha for immediate voice onset detection
-- **Linear animation**: Removed easeOutCubic smoothing for instant visual response
-- **Faster bar animations**: Reduced from 30ms to 10ms for snappier individual bar movement
-- **Maintained visual quality**: Preserved natural wave motion while improving responsiveness
+- **Safe Area**: Wrapped spoken language selection screen body in SafeArea widget for proper bottom spacing
+- **Session App Bar Enhancement**: Added language flag display in session app bar for Whisper models only
+- **Navigation Integration**: Language flag tap navigates to spoken language selection screen
+- **Conditional Display**: Language flag only appears when language selection is available (Whisper models)
+- **Visual Integration**: Language flag positioned before copy all icon with proper spacing
 
----
+### 🔧 TECHNICAL CHANGES
+- **Screen Update**: Added SafeArea wrapper to `SpokenLanguageSelectionScreen`
+- **App Bar Enhancement**: Updated `SessionAppBar` to include conditional language flag display
+- **Provider Integration**: Language flag uses LocalTranscriptionProvider to get current language
+- **Navigation**: Added navigation callback from session screen to language selection screen
+- **Responsive Design**: Language flag automatically hides for Vosk model (English only)
 
-## 🚀 NEW TASK: Full-Width Audio Wave Under Recording Button (VAN Mode, Level 1)
+### 🧩 CHECKLIST
+- [x] Add SafeArea to spoken language selection screen
+- [x] Add language flag to session app bar
+- [x] Position language flag left of copy all icon
+- [x] Add navigation from language flag to selection screen
+- [x] Ensure conditional display based on model type
+- [x] Test navigation flow and visual positioning
+- [x] Fix icon sizing inconsistency in session app bar
 
-### 📝 TASK SUMMARY
-**User Request:** Have the audio wave run under the recording button all the way from left to right side of the screen.
-
-### 🔍 CONTEXT & ANALYSIS
-- Current layout: Two separate wave sections (left/right) with 96px gap for recording button
-- New requirement: Single continuous wave spanning full screen width
-- Recording button should overlay on top of the wave visualization
-- Need to adjust layout structure and positioning
-
-### 🧩 CHECKLIST (VAN Mode)
-- [x] Remove the split left/right wave design
-- [x] Create single continuous wave spanning full screen width
-- [x] Adjust wave bar count to fill entire screen width appropriately (increased from 22 to 40 bars)
-- [x] Ensure recording button overlays properly on top of the wave
-- [ ] Test visual appearance and wave motion across full width
-- [ ] Verify no layout issues on different screen sizes
-- [x] Fix wave positioning: should be underneath button, not behind it
-- [x] Add 24px vertical padding between wave and recording button
-- [x] Remove left/right padding from wave (should extend to screen edges)
-- [x] Maintain proper padding for recording button
-- [x] Fix button position jumping when transitioning between recording/processing states
-
-### ✅ IMPLEMENTATION DETAILS
-- **Layout change**: Switched from Stack to Column layout for proper positioning
-- **State condition**: Show wave during both recording AND transcribing states to maintain button position
-- **Spacing**: 24px vertical gap between button and wave as requested
-- **Padding**: Button maintains 16px horizontal padding, wave extends to screen edges
-- **Position stability**: Button no longer jumps when transitioning between states
-
----
-
-## 🚀 NEW TASK: Refine Audio Wave Visual Dynamics (VAN Mode, Level 1)
-
-### 📝 TASK SUMMARY
-**User Request:** Refine the audio wave visualization - minimal horizontal shift, focus on vertical movement, and dynamic opacity for bars (higher bars = higher opacity, minimum 50% opacity).
-
-### 🔍 CONTEXT & ANALYSIS
-- Current horizontal shift is too pronounced and distracting
-- Need to emphasize vertical bar movement over horizontal wave motion
-- Implement dynamic opacity: higher bars should have higher opacity
-- Set minimum opacity to 50% (0.5) for visual consistency
-- Maximum opacity should be 100% (1.0) for prominent bars
-
-### 🧩 CHECKLIST (VAN Mode)
-- [x] Reduce horizontal shift speed and amplitude significantly
-- [x] Enhance vertical bar height variation and responsiveness
-- [x] Implement dynamic opacity calculation based on bar height
-- [x] Set minimum opacity to 50% (0.5) for all bars
-- [x] Set maximum opacity to 100% (1.0) for highest bars
-- [ ] Test visual refinements with voice input
-- [ ] Ensure smooth opacity transitions
-- [x] Replicate SuperWhisper-style dynamic wave patterns
-- [x] Create irregular, natural-looking bar height variations
-- [x] Remove smooth sine wave in favor of more random, organic patterns
-- [x] Increase bar count for denser visualization (40 → 60 bars)
-- [x] Make animation super snappy with instant voice reaction
-- [x] Remove all animation delays and smoothing
-- [x] Reduce flutter/sensitivity while maintaining fast animation speeds
-- [x] Find optimal balance between responsiveness and stability
-- [x] Adjust center-focused amplitude distribution like SuperWhisper
-- [x] Reduce height differences between adjacent bars for smoother transitions
-- [x] Add tiny spacing between bars for visual separation
-- [x] Ensure wave doesn't overflow screen width
-- [x] Reduce smoothing to prevent lip-like shapes while maintaining natural transitions
-- [x] Remove smoothing entirely to achieve jagged, individual bar variations like bottom example
-- [x] Create grouped/clustered patterns like real audio waveforms (video editing style)
-- [x] Implement longer-lasting patterns that evolve more gradually
-- [x] Add natural "phrase" groupings instead of purely random bars
-
----
-
-## 🚀 NEW TASK: Recording Button Scale Animation (VAN Mode, Level 1)
-
-### 📝 TASK SUMMARY
-**User Request:** Make the record button grow slightly in size when pressed (recording state).
-
-### 🔍 CONTEXT & ANALYSIS
-- Current button: Static 64x64px size in all states
-- Need: Subtle scale increase when in recording state
-- Animation: Smooth transition between normal and enlarged states
-- Visual feedback: Better user experience showing active recording
-
-### 🧩 CHECKLIST (VAN Mode)
-- [x] Add AnimationController for scale animation
-- [x] Wrap button containers in AnimatedBuilder with Transform.scale
-- [x] Scale up slightly (1.0 → 1.1) when recording
-- [x] Smooth transition animation between states (200ms, easeInOut)
-- [x] Handle animation for both provider and non-provider state modes
-- [ ] Test scale animation on state changes
+### 🐛 BUG FIX: Session App Bar Icon Sizing
+**Issue**: Icons in session app bar (back, copy all, delete, etc.) were smaller than in other screens using AquaTopAppBar
+**Root Cause**: Inconsistent return types between `_buildNormalActions` (List<Widget>) and `_buildSelectionActions` (List<AquaIcon>)
+**Solution**: Changed both methods to return `List<Widget>` for consistent icon rendering
+**Result**: All icons now display at proper 24px size matching other screens
 
 ---

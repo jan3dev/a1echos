@@ -89,6 +89,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ? colors.accentBrand
                 : colors.textPrimary,
           ),
+          const SizedBox(width: 8),
           AquaIcon.hamburger(
             color: colors.textPrimary,
             size: 24,

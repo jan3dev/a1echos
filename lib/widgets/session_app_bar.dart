@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
+import '../providers/local_transcription_provider.dart';
 import '../models/app_theme.dart';
+import 'package:provider/provider.dart' as provider;
 
 /// App bar component for the session screen that handles both normal and selection modes
 class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -14,6 +16,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final VoidCallback? onBackPressed;
   final VoidCallback? onTitlePressed;
   final VoidCallback? onCopyAllPressed;
+  final VoidCallback? onLanguageFlagPressed;
   final VoidCallback? onSelectAllPressed;
   final VoidCallback? onDeleteSelectedPressed;
   final VoidCallback? onCancelEditPressed;
@@ -28,6 +31,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     this.onBackPressed,
     this.onTitlePressed,
     this.onCopyAllPressed,
+    this.onLanguageFlagPressed,
     this.onSelectAllPressed,
     this.onDeleteSelectedPressed,
     this.onCancelEditPressed,
@@ -71,37 +75,51 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
       onBackPressed: onBackPressed,
       title: sessionName,
       actions: selectionMode
-          ? _buildSelectionActions(colors)
-          : _buildNormalActions(colors),
+          ? [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: AquaIcon.selectAll(
+                  color: colors.textPrimary,
+                  size: 24,
+                  onTap: onSelectAllPressed,
+                ),
+              ),
+              AquaIcon.trash(
+                color: colors.textPrimary,
+                size: 24,
+                onTap: onDeleteSelectedPressed,
+              ),
+            ]
+          : [
+              // Language flag - only show for Whisper models
+              provider.Consumer<LocalTranscriptionProvider>(
+                builder: (context, transcriptionProvider, child) {
+                  if (!transcriptionProvider.isLanguageSelectionAvailable) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: GestureDetector(
+                      onTap: onLanguageFlagPressed,
+                      child: Text(
+                        transcriptionProvider.selectedLanguage.flag,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              AquaIcon.copyMultiple(
+                color: colors.textPrimary,
+                size: 24,
+                onTap: onCopyAllPressed,
+              ),
+            ],
       onTitlePressed: !isIncognitoSession ? onTitlePressed : null,
     );
   }
 
-  List<AquaIcon> _buildNormalActions(AquaColors colors) {
-    return [
-      AquaIcon.copyMultiple(
-        color: colors.textPrimary,
-        size: 24,
-        onTap: onCopyAllPressed,
-      ),
-    ];
-  }
-
-  List<AquaIcon> _buildSelectionActions(AquaColors colors) {
-    return [
-      AquaIcon.selectAll(
-        color: colors.textPrimary,
-        size: 24,
-        onTap: onSelectAllPressed,
-      ),
-      AquaIcon.trash(
-        color: colors.textPrimary,
-        size: 24,
-        onTap: onDeleteSelectedPressed,
-      ),
-    ];
-  }
-
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kAppBarHeight);
 }

@@ -12,6 +12,7 @@ import '../widgets/settings_footer.dart';
 import '../models/app_theme.dart';
 import 'model_selection_screen.dart';
 import 'theme_selection_screen.dart';
+import 'spoken_language_selection_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -106,6 +107,34 @@ class SettingsScreen extends ConsumerWidget {
                               },
                               backgroundColor: colors.surfacePrimary,
                             ),
+                            Divider(
+                              height: 1,
+                              color: colors.surfaceBorderPrimary,
+                            ),
+                            // Only show language selection for Whisper models
+                            if (provider.selectedModelType == ModelType.whisper)
+                              AquaListItem(
+                                title: context.loc.spokenLanguageTitle,
+                                titleTrailing: provider.selectedLanguage
+                                    .getName(context),
+                                titleTrailingColor: colors.textSecondary,
+                                iconLeading: AquaIcon.language(
+                                  color: colors.textSecondary,
+                                  size: 24,
+                                ),
+                                iconTrailing: AquaIcon.chevronRight(
+                                  color: colors.textSecondary,
+                                ),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const SpokenLanguageSelectionScreen(),
+                                    ),
+                                  );
+                                },
+                                backgroundColor: colors.surfacePrimary,
+                              ),
                           ],
                         ),
                       ),

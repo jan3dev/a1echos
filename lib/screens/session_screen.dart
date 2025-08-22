@@ -18,6 +18,7 @@ import '../controllers/session_navigation_controller.dart';
 import '../providers/theme_provider.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
+import 'spoken_language_selection_screen.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
   final String sessionId;
@@ -156,6 +157,14 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     _selectionController.deleteSelectedTranscriptions(context, ref);
   }
 
+  void _handleLanguageFlagPressed() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SpokenLanguageSelectionScreen(),
+      ),
+    );
+  }
+
   void _handleTranscriptionTap(String id) {
     if (_selectionController.selectionMode) {
       _selectionController.toggleTranscriptionSelection(id);
@@ -222,6 +231,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                   : () => _navigationController.handleBackNavigation(context),
               onTitlePressed: _handleTitlePressed,
               onCopyAllPressed: _handleCopyAllPressed,
+              onLanguageFlagPressed: _handleLanguageFlagPressed,
               onSelectAllPressed: _handleSelectAllPressed,
               onDeleteSelectedPressed: _handleDeleteSelectedPressed,
               onCancelEditPressed: _cancelEdit,

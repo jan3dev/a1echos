@@ -68,10 +68,11 @@ class TranscriptionOrchestrator {
     this._whisperService,
   );
 
-  /// Starts recording or streaming based on [type].
+  /// Starts recording/streaming based on the selected model type.
   Future<bool> startRecording(
     ModelType type, {
     bool whisperRealtime = false,
+    String? languageCode,
   }) async {
     return await _operationManager.executeSequentially(() async {
       if (_isRecording) {
@@ -80,9 +81,12 @@ class TranscriptionOrchestrator {
 
       if (type == ModelType.vosk) {
         final service = _voskService.speechService;
-        if (service == null) throw Exception('Vosk service not available');
+        if (service == null) {
+          return false;
+        }
 
         _voskService.resultBuffer.clear();
+
         await _partialSub?.cancel();
         await _resultSub?.cancel();
 
@@ -138,7 +142,9 @@ class TranscriptionOrchestrator {
             _partialController.add(p);
           });
 
-          final success = await _whisperService.startRealtimeRecording();
+          final success = await _whisperService.startRealtimeRecording(
+            languageCode: languageCode,
+          );
           if (success) {
             _isRecording = true;
           }
@@ -170,6 +176,7 @@ class TranscriptionOrchestrator {
   Future<TranscriptionOutput> stopRecording(
     ModelType type, {
     bool whisperRealtime = false,
+    String? languageCode,
   }) async {
     return await _operationManager.executeSequentially(() async {
       if (!_isRecording) {
@@ -273,6 +280,7 @@ class TranscriptionOrchestrator {
 
           final transcriptionText = await _whisperService.transcribeFile(
             audioFile.path,
+            languageCode: languageCode,
           );
 
           final text = transcriptionText?.trim() ?? '';

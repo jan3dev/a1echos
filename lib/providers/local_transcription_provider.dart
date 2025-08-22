@@ -3,6 +3,7 @@ import 'dart:async';
 
 import '../models/transcription.dart';
 import '../models/model_type.dart';
+import '../models/spoken_language.dart';
 import 'session_provider.dart';
 import 'transcription_state_manager.dart';
 import 'model_management_provider.dart';
@@ -258,6 +259,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   bool get whisperRealtime => _modelManager.whisperRealtime;
 
+  SpokenLanguage get selectedLanguage => _modelManager.selectedLanguage;
+  bool get isLanguageSelectionAvailable => _modelManager.isLanguageSelectionAvailable;
+
+  /// Sets the selected spoken language
+  Future<void> setSelectedLanguage(SpokenLanguage language) async {
+    await _modelManager.setSelectedLanguage(language);
+  }
+
   // ============================================================================
   // PUBLIC API - Operations
   // ============================================================================
@@ -336,6 +345,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _modelManager.selectedModelType,
         sessionId,
         _modelManager.whisperRealtime,
+        languageCode: _modelManager.isLanguageSelectionAvailable 
+            ? _modelManager.selectedLanguage.code 
+            : null,
       );
 
       if (!success) {
@@ -403,6 +415,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
         modelType,
         sessionId,
         _modelManager.whisperRealtime,
+        languageCode: _modelManager.isLanguageSelectionAvailable 
+            ? _modelManager.selectedLanguage.code 
+            : null,
       );
 
       final isLivePreview =
