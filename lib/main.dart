@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart' as provider;
 import 'services/storage_service.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
@@ -18,6 +19,8 @@ import 'logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterForegroundTask.initCommunicationPort();
+
   logger.info('App initialising', flag: FeatureFlag.general);
 
   FlutterError.onError = (FlutterErrorDetails details) {

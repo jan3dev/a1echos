@@ -40,10 +40,24 @@ class SessionNavigationController with ChangeNotifier {
       await _transcriptionProvider.stopRecordingAndSave();
     }
 
-    if (_settingsProvider.isIncognitoMode) {
-      _deleteIncognitoSessionIfNeeded();
+    _setDefaultNameIfNeeded();
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Navigates back to the home screen
+  Future<void> navigateToHome(BuildContext context) async {
+    if (isIncognitoSession) {
+      _sessionProvider.deleteSession(sessionId);
     } else {
       _setDefaultNameIfNeeded();
+    }
+
+    if (!_settingsProvider.isIncognitoMode ||
+        !_transcriptionProvider.isRecording) {
+      _cleanupAllIncognitoSessions();
     }
 
     if (context.mounted) {
@@ -51,13 +65,14 @@ class SessionNavigationController with ChangeNotifier {
     }
   }
 
-  /// Deletes incognito session if needed
-  void _deleteIncognitoSessionIfNeeded() {
-    if (!_settingsProvider.isIncognitoMode) return;
+  /// Cleans up all incognito sessions
+  void _cleanupAllIncognitoSessions() {
+    final incognitoSessions = _sessionProvider.sessions
+        .where((session) => session.isIncognito)
+        .toList();
 
-    final currentSession = _findSessionById(sessionId);
-    if (currentSession != null && currentSession.isIncognito) {
-      _sessionProvider.deleteSession(sessionId);
+    for (var session in incognitoSessions) {
+      _sessionProvider.deleteSession(session.id);
     }
   }
 
@@ -80,19 +95,6 @@ class SessionNavigationController with ChangeNotifier {
     } catch (e) {
       logger.warning('Session with ID $id not found.', flag: FeatureFlag.ui);
       return null;
-    }
-  }
-
-  /// Handles app lifecycle changes for cleanup
-  Future<void> handleAppLifecycleChange(AppLifecycleState state) async {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      if (_transcriptionProvider.isRecording ||
-          _transcriptionProvider.isTranscribing) {
-        await _transcriptionProvider.stopRecordingAndSave();
-      }
-
-      _deleteIncognitoSessionIfNeeded();
     }
   }
 

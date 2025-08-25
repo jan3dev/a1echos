@@ -79,9 +79,30 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    _navigationController.handleAppLifecycleChange(state);
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    try {
+      _localTranscriptionProvider.removeListener(_scrollToBottom);
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.ui,
+        message: 'Error removing scroll-to-bottom listener',
+      );
+    }
+
+    _scrollController.dispose();
+    _recordingController.dispose();
+    _selectionController.dispose();
+    _navigationController.dispose();
+
+    if (_recordingController.hasActiveOperation) {
+      _recordingController.stopRecordingAndSave();
+    }
+
+    super.dispose();
   }
 
   void _scrollToBottom() {
@@ -96,31 +117,6 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
         }
       });
     }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-
-    try {
-      _localTranscriptionProvider.removeListener(_scrollToBottom);
-    } catch (e, st) {
-      logger.error(e,
-          stackTrace: st,
-          flag: FeatureFlag.ui,
-          message: 'Error removing scroll-to-bottom listener');
-    }
-
-    _scrollController.dispose();
-    _recordingController.dispose();
-    _selectionController.dispose();
-    _navigationController.dispose();
-
-    if (_recordingController.hasActiveOperation) {
-      _recordingController.stopRecordingAndSave();
-    }
-
-    super.dispose();
   }
 
   void _initializeSession() {

@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:vad/vad.dart';
 import 'native_audio_permission_service.dart';
 import '../logger.dart';
+import 'background_recording_service.dart';
 
 class AudioService {
   Future<List<String>> _getAllowedDirectories() async {
@@ -26,8 +27,11 @@ class AudioService {
   }
 
   final AudioRecorder _audioRecorder = AudioRecorder();
+  final BackgroundRecordingService _backgroundService =
+      BackgroundRecordingService.instance;
   String? _recordingPath;
   File? _currentAudioFile;
+  bool _backgroundServiceInitialized = false;
 
   Future<bool> hasPermission() async {
     if (Platform.isIOS) {
@@ -65,8 +69,44 @@ class AudioService {
     if (!await hasPermission()) {
       throw Exception('Microphone permission denied');
     }
+
+    if (!_backgroundServiceInitialized) {
+      try {
+        await _backgroundService.initialize();
+
+        _backgroundService.setOnStopRecordingCallback(() async {
+          await stopRecording();
+        });
+
+        _backgroundServiceInitialized = true;
+      } catch (e, stackTrace) {
+        logger.error(
+          'Background service initialization failed: $e',
+          stackTrace: stackTrace,
+          flag: FeatureFlag.service,
+        );
+      }
+    }
+
+    try {
+      final success = await _backgroundService.startBackgroundService();
+      if (!success) {
+        logger.error(
+          'Background service failed to start',
+          flag: FeatureFlag.service,
+        );
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to start background service: $e',
+        stackTrace: stackTrace,
+        flag: FeatureFlag.service,
+      );
+    }
+
     await _cleanup();
     _recordingPath = await _generateRecordingPath();
+
     if (useStreaming) {
       await _audioRecorder.startStream(
         RecordConfig(
@@ -103,7 +143,9 @@ class AudioService {
         throw Exception('Failed to start recording with any encoder');
       }
     }
+
     await startVad();
+    _backgroundService.updateRecordingState(true);
     return true;
   }
 
@@ -134,6 +176,18 @@ class AudioService {
   }
 
   Future<File?> stopRecording() async {
+    _backgroundService.updateRecordingState(false);
+
+    try {
+      await _backgroundService.stopBackgroundService();
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to stop background service: $e',
+        stackTrace: stackTrace,
+        flag: FeatureFlag.service,
+      );
+    }
+
     final isCurrentlyRecording = await _audioRecorder.isRecording();
     if (!isCurrentlyRecording) {
       if (_recordingPath != null) {

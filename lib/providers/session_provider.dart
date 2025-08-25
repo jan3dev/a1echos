@@ -68,31 +68,61 @@ class SessionProvider with ChangeNotifier {
         );
         _sessions = [];
       }
+    } else {
+      _sessions = [];
     }
 
-    _needsSort = true;
+    await _cleanupStaleIncognitoSessions();
 
-    String? storedActive = prefs.getString(_prefsKeyActiveSession);
+    final storedActive = prefs.getString(_prefsKeyActiveSession);
     if (storedActive != null) {
       try {
-        storedActive = await _encryptionService.decrypt(storedActive);
+        final decryptedActive = await _encryptionService.decrypt(storedActive);
+        if (_sessions.any((s) => s.id == decryptedActive)) {
+          _activeSessionId = decryptedActive;
+        } else if (_sessions.isNotEmpty) {
+          _activeSessionId = _sessions.first.id;
+          await _saveActiveSession();
+        } else {
+          _activeSessionId = '';
+        }
       } catch (e) {
         logger.warning(
           'Failed to decrypt active session ID, assuming legacy plain text.',
           flag: FeatureFlag.provider,
         );
+        if (_sessions.any((s) => s.id == storedActive)) {
+          _activeSessionId = storedActive;
+        } else if (_sessions.isNotEmpty) {
+          _activeSessionId = _sessions.first.id;
+          await _saveActiveSession();
+        } else {
+          _activeSessionId = '';
+        }
+      }
+    } else {
+      if (_sessions.isNotEmpty) {
+        _activeSessionId = _sessions.first.id;
+        await _saveActiveSession();
+      } else {
+        _activeSessionId = '';
       }
     }
-
-    if (storedActive != null && _sessions.any((s) => s.id == storedActive)) {
-      _activeSessionId = storedActive;
-    } else if (_sessions.isNotEmpty) {
-      _activeSessionId = _sessions.first.id;
-      await _saveActiveSession();
-    } else {
-      _activeSessionId = '';
-    }
     notifyListeners();
+  }
+
+  Future<void> _cleanupStaleIncognitoSessions() async {
+    final incognitoSessions = _sessions
+        .where((session) => session.isIncognito)
+        .toList();
+    if (incognitoSessions.isNotEmpty) {
+      for (var session in incognitoSessions) {
+        _sessions.removeWhere((s) => s.id == session.id);
+      }
+
+      _needsSort = true;
+      await _saveSessions();
+    }
   }
 
   Future<void> _saveSessions() async {
