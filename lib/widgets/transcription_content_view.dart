@@ -105,7 +105,7 @@ class TranscriptionContentView extends ConsumerWidget {
             ),
             if (isEmpty)
               Positioned(
-                bottom: 196,
+                bottom: 160,
                 left: 0,
                 right: 0,
                 child: AquaTooltipWithAnimation(

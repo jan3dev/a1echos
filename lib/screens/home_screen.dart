@@ -159,7 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             onSelectionToggle: toggleSessionSelection,
           ),
           Positioned(
-            bottom: 32,
+            bottom: 16,
             left: 0,
             right: 0,
             child: Column(
@@ -169,7 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: RecordingButton(onRecordingStart: startRecording),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 42),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: StaticWaveBars(),
@@ -180,7 +180,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           if (effectivelyEmpty)
             Positioned(
-              bottom: 196,
+              bottom: 160,
               left: 0,
               right: 0,
               child: AquaTooltipWithAnimation(
