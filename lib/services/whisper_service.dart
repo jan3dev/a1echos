@@ -235,7 +235,10 @@ class WhisperService {
   // FILE-BASED TRANSCRIPTION
   // =========================================================================
 
-  Future<String?> transcribeFile(String audioPath, {String? languageCode}) async {
+  Future<String?> transcribeFile(
+    String audioPath, {
+    String? languageCode,
+  }) async {
     if (!_isInitialized) {
       throw Exception('Whisper service not initialized.');
     }
@@ -271,6 +274,8 @@ class WhisperService {
           task: kit.DecodingTask.transcribe,
           detectLanguage: languageCode == null,
           language: languageCode,
+          usePrefillPrompt: true,
+          usePrefillCache: true,
         );
 
         final transcription = await _iosKit!.transcribeFromFile(
@@ -324,6 +329,8 @@ class WhisperService {
           task: kit.DecodingTask.transcribe,
           detectLanguage: languageCode == null,
           language: languageCode,
+          usePrefillPrompt: true,
+          usePrefillCache: true,
         ),
       );
 
