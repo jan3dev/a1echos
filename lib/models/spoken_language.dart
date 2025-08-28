@@ -3,220 +3,16 @@ import '../l10n/app_localizations.dart';
 
 class SpokenLanguage {
   final String code;
-  final String nameKey;
-  final String flag;
 
-  const SpokenLanguage({
-    required this.code,
-    required this.nameKey,
-    required this.flag,
-  });
+  const SpokenLanguage({required this.code});
+
+  /// Asset path to the SVG flag icon for this language
+  String get flagAssetPath => SupportedLanguages.flagAssetFor(code);
 
   /// Get the localized name for this language
   String getName(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    switch (nameKey) {
-      case 'languageEnglish':
-        return loc.languageEnglish;
-      case 'languageChinese':
-        return loc.languageChinese;
-      case 'languageGerman':
-        return loc.languageGerman;
-      case 'languageSpanish':
-        return loc.languageSpanish;
-      case 'languageRussian':
-        return loc.languageRussian;
-      case 'languageKorean':
-        return loc.languageKorean;
-      case 'languageFrench':
-        return loc.languageFrench;
-      case 'languageJapanese':
-        return loc.languageJapanese;
-      case 'languagePortuguese':
-        return loc.languagePortuguese;
-      case 'languageTurkish':
-        return loc.languageTurkish;
-      case 'languagePolish':
-        return loc.languagePolish;
-      case 'languageCatalan':
-        return loc.languageCatalan;
-      case 'languageDutch':
-        return loc.languageDutch;
-      case 'languageArabic':
-        return loc.languageArabic;
-      case 'languageSwedish':
-        return loc.languageSwedish;
-      case 'languageItalian':
-        return loc.languageItalian;
-      case 'languageIndonesian':
-        return loc.languageIndonesian;
-      case 'languageHindi':
-        return loc.languageHindi;
-      case 'languageFinnish':
-        return loc.languageFinnish;
-      case 'languageVietnamese':
-        return loc.languageVietnamese;
-      case 'languageHebrew':
-        return loc.languageHebrew;
-      case 'languageUkrainian':
-        return loc.languageUkrainian;
-      case 'languageGreek':
-        return loc.languageGreek;
-      case 'languageMalay':
-        return loc.languageMalay;
-      case 'languageCzech':
-        return loc.languageCzech;
-      case 'languageRomanian':
-        return loc.languageRomanian;
-      case 'languageDanish':
-        return loc.languageDanish;
-      case 'languageHungarian':
-        return loc.languageHungarian;
-      case 'languageTamil':
-        return loc.languageTamil;
-      case 'languageNorwegian':
-        return loc.languageNorwegian;
-      case 'languageThai':
-        return loc.languageThai;
-      case 'languageUrdu':
-        return loc.languageUrdu;
-      case 'languageCroatian':
-        return loc.languageCroatian;
-      case 'languageBulgarian':
-        return loc.languageBulgarian;
-      case 'languageLithuanian':
-        return loc.languageLithuanian;
-      case 'languageLatin':
-        return loc.languageLatin;
-      case 'languageMaori':
-        return loc.languageMaori;
-      case 'languageMalayalam':
-        return loc.languageMalayalam;
-      case 'languageWelsh':
-        return loc.languageWelsh;
-      case 'languageSlovak':
-        return loc.languageSlovak;
-      case 'languageTelugu':
-        return loc.languageTelugu;
-      case 'languagePersian':
-        return loc.languagePersian;
-      case 'languageLatvian':
-        return loc.languageLatvian;
-      case 'languageBengali':
-        return loc.languageBengali;
-      case 'languageSerbian':
-        return loc.languageSerbian;
-      case 'languageAzerbaijani':
-        return loc.languageAzerbaijani;
-      case 'languageSlovenian':
-        return loc.languageSlovenian;
-      case 'languageKannada':
-        return loc.languageKannada;
-      case 'languageEstonian':
-        return loc.languageEstonian;
-      case 'languageMacedonian':
-        return loc.languageMacedonian;
-      case 'languageBreton':
-        return loc.languageBreton;
-      case 'languageBasque':
-        return loc.languageBasque;
-      case 'languageIcelandic':
-        return loc.languageIcelandic;
-      case 'languageArmenian':
-        return loc.languageArmenian;
-      case 'languageNepali':
-        return loc.languageNepali;
-      case 'languageMongolian':
-        return loc.languageMongolian;
-      case 'languageBosnian':
-        return loc.languageBosnian;
-      case 'languageKazakh':
-        return loc.languageKazakh;
-      case 'languageAlbanian':
-        return loc.languageAlbanian;
-      case 'languageSwahili':
-        return loc.languageSwahili;
-      case 'languageGalician':
-        return loc.languageGalician;
-      case 'languageMarathi':
-        return loc.languageMarathi;
-      case 'languagePunjabi':
-        return loc.languagePunjabi;
-      case 'languageSinhala':
-        return loc.languageSinhala;
-      case 'languageKhmer':
-        return loc.languageKhmer;
-      case 'languageShona':
-        return loc.languageShona;
-      case 'languageYoruba':
-        return loc.languageYoruba;
-      case 'languageSomali':
-        return loc.languageSomali;
-      case 'languageAfrikaans':
-        return loc.languageAfrikaans;
-      case 'languageOccitan':
-        return loc.languageOccitan;
-      case 'languageGeorgian':
-        return loc.languageGeorgian;
-      case 'languageBelarusian':
-        return loc.languageBelarusian;
-      case 'languageTajik':
-        return loc.languageTajik;
-      case 'languageSindhi':
-        return loc.languageSindhi;
-      case 'languageGujarati':
-        return loc.languageGujarati;
-      case 'languageAmharic':
-        return loc.languageAmharic;
-      case 'languageYiddish':
-        return loc.languageYiddish;
-      case 'languageLao':
-        return loc.languageLao;
-      case 'languageUzbek':
-        return loc.languageUzbek;
-      case 'languageFaroese':
-        return loc.languageFaroese;
-      case 'languageHaitianCreole':
-        return loc.languageHaitianCreole;
-      case 'languagePashto':
-        return loc.languagePashto;
-      case 'languageTurkmen':
-        return loc.languageTurkmen;
-      case 'languageNynorsk':
-        return loc.languageNynorsk;
-      case 'languageMaltese':
-        return loc.languageMaltese;
-      case 'languageSanskrit':
-        return loc.languageSanskrit;
-      case 'languageLuxembourgish':
-        return loc.languageLuxembourgish;
-      case 'languageMyanmar':
-        return loc.languageMyanmar;
-      case 'languageTibetan':
-        return loc.languageTibetan;
-      case 'languageTagalog':
-        return loc.languageTagalog;
-      case 'languageMalagasy':
-        return loc.languageMalagasy;
-      case 'languageAssamese':
-        return loc.languageAssamese;
-      case 'languageTatar':
-        return loc.languageTatar;
-      case 'languageHawaiian':
-        return loc.languageHawaiian;
-      case 'languageLingala':
-        return loc.languageLingala;
-      case 'languageHausa':
-        return loc.languageHausa;
-      case 'languageBashkir':
-        return loc.languageBashkir;
-      case 'languageJavanese':
-        return loc.languageJavanese;
-      case 'languageSundanese':
-        return loc.languageSundanese;
-      default:
-        return nameKey; // Fallback to key if not found
-    }
+    return SupportedLanguages.localizedNameFor(code, loc);
   }
 
   @override
@@ -229,120 +25,436 @@ class SpokenLanguage {
   int get hashCode => code.hashCode;
 
   @override
-  String toString() =>
-      'SpokenLanguage(code: $code, nameKey: $nameKey, flag: $flag)';
+  String toString() => 'SpokenLanguage(code: $code)';
+}
+
+class _LanguageInfo {
+  final String flagAssetFilename;
+  final String Function(AppLocalizations) nameSelector;
+
+  const _LanguageInfo({
+    required this.flagAssetFilename,
+    required this.nameSelector,
+  });
 }
 
 class SupportedLanguages {
-  static const List<SpokenLanguage> all = [
-    SpokenLanguage(code: 'en', nameKey: 'languageEnglish', flag: '🇺🇸'),
-    SpokenLanguage(code: 'zh', nameKey: 'languageChinese', flag: '🇨🇳'),
-    SpokenLanguage(code: 'de', nameKey: 'languageGerman', flag: '🇩🇪'),
-    SpokenLanguage(code: 'es', nameKey: 'languageSpanish', flag: '🇪🇸'),
-    SpokenLanguage(code: 'ru', nameKey: 'languageRussian', flag: '🇷🇺'),
-    SpokenLanguage(code: 'ko', nameKey: 'languageKorean', flag: '🇰🇷'),
-    SpokenLanguage(code: 'fr', nameKey: 'languageFrench', flag: '🇫🇷'),
-    SpokenLanguage(code: 'ja', nameKey: 'languageJapanese', flag: '🇯🇵'),
-    SpokenLanguage(code: 'pt', nameKey: 'languagePortuguese', flag: '🇵🇹'),
-    SpokenLanguage(code: 'tr', nameKey: 'languageTurkish', flag: '🇹🇷'),
-    SpokenLanguage(code: 'pl', nameKey: 'languagePolish', flag: '🇵🇱'),
-    SpokenLanguage(code: 'ca', nameKey: 'languageCatalan', flag: '🇪🇸'),
-    SpokenLanguage(code: 'nl', nameKey: 'languageDutch', flag: '🇳🇱'),
-    SpokenLanguage(code: 'ar', nameKey: 'languageArabic', flag: '🇸🇦'),
-    SpokenLanguage(code: 'sv', nameKey: 'languageSwedish', flag: '🇸🇪'),
-    SpokenLanguage(code: 'it', nameKey: 'languageItalian', flag: '🇮🇹'),
-    SpokenLanguage(code: 'id', nameKey: 'languageIndonesian', flag: '🇮🇩'),
-    SpokenLanguage(code: 'hi', nameKey: 'languageHindi', flag: '🇮🇳'),
-    SpokenLanguage(code: 'fi', nameKey: 'languageFinnish', flag: '🇫🇮'),
-    SpokenLanguage(code: 'vi', nameKey: 'languageVietnamese', flag: '🇻🇳'),
-    SpokenLanguage(code: 'he', nameKey: 'languageHebrew', flag: '🇮🇱'),
-    SpokenLanguage(code: 'uk', nameKey: 'languageUkrainian', flag: '🇺🇦'),
-    SpokenLanguage(code: 'el', nameKey: 'languageGreek', flag: '🇬🇷'),
-    SpokenLanguage(code: 'ms', nameKey: 'languageMalay', flag: '🇲🇾'),
-    SpokenLanguage(code: 'cs', nameKey: 'languageCzech', flag: '🇨🇿'),
-    SpokenLanguage(code: 'ro', nameKey: 'languageRomanian', flag: '🇷🇴'),
-    SpokenLanguage(code: 'da', nameKey: 'languageDanish', flag: '🇩🇰'),
-    SpokenLanguage(code: 'hu', nameKey: 'languageHungarian', flag: '🇭🇺'),
-    SpokenLanguage(code: 'ta', nameKey: 'languageTamil', flag: '🇮🇳'),
-    SpokenLanguage(code: 'no', nameKey: 'languageNorwegian', flag: '🇳🇴'),
-    SpokenLanguage(code: 'th', nameKey: 'languageThai', flag: '🇹🇭'),
-    SpokenLanguage(code: 'ur', nameKey: 'languageUrdu', flag: '🇵🇰'),
-    SpokenLanguage(code: 'hr', nameKey: 'languageCroatian', flag: '🇭🇷'),
-    SpokenLanguage(code: 'bg', nameKey: 'languageBulgarian', flag: '🇧🇬'),
-    SpokenLanguage(code: 'lt', nameKey: 'languageLithuanian', flag: '🇱🇹'),
-    SpokenLanguage(code: 'la', nameKey: 'languageLatin', flag: '🇻🇦'),
-    SpokenLanguage(code: 'mi', nameKey: 'languageMaori', flag: '🇳🇿'),
-    SpokenLanguage(code: 'ml', nameKey: 'languageMalayalam', flag: '🇮🇳'),
-    SpokenLanguage(code: 'cy', nameKey: 'languageWelsh', flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿'),
-    SpokenLanguage(code: 'sk', nameKey: 'languageSlovak', flag: '🇸🇰'),
-    SpokenLanguage(code: 'te', nameKey: 'languageTelugu', flag: '🇮🇳'),
-    SpokenLanguage(code: 'fa', nameKey: 'languagePersian', flag: '🇮🇷'),
-    SpokenLanguage(code: 'lv', nameKey: 'languageLatvian', flag: '🇱🇻'),
-    SpokenLanguage(code: 'bn', nameKey: 'languageBengali', flag: '🇧🇩'),
-    SpokenLanguage(code: 'sr', nameKey: 'languageSerbian', flag: '🇷🇸'),
-    SpokenLanguage(code: 'az', nameKey: 'languageAzerbaijani', flag: '🇦🇿'),
-    SpokenLanguage(code: 'sl', nameKey: 'languageSlovenian', flag: '🇸🇮'),
-    SpokenLanguage(code: 'kn', nameKey: 'languageKannada', flag: '🇮🇳'),
-    SpokenLanguage(code: 'et', nameKey: 'languageEstonian', flag: '🇪🇪'),
-    SpokenLanguage(code: 'mk', nameKey: 'languageMacedonian', flag: '🇲🇰'),
-    SpokenLanguage(code: 'br', nameKey: 'languageBreton', flag: '🇫🇷'),
-    SpokenLanguage(code: 'eu', nameKey: 'languageBasque', flag: '🇪🇸'),
-    SpokenLanguage(code: 'is', nameKey: 'languageIcelandic', flag: '🇮🇸'),
-    SpokenLanguage(code: 'hy', nameKey: 'languageArmenian', flag: '🇦🇲'),
-    SpokenLanguage(code: 'ne', nameKey: 'languageNepali', flag: '🇳🇵'),
-    SpokenLanguage(code: 'mn', nameKey: 'languageMongolian', flag: '🇲🇳'),
-    SpokenLanguage(code: 'bs', nameKey: 'languageBosnian', flag: '🇧🇦'),
-    SpokenLanguage(code: 'kk', nameKey: 'languageKazakh', flag: '🇰🇿'),
-    SpokenLanguage(code: 'sq', nameKey: 'languageAlbanian', flag: '🇦🇱'),
-    SpokenLanguage(code: 'sw', nameKey: 'languageSwahili', flag: '🇰🇪'),
-    SpokenLanguage(code: 'gl', nameKey: 'languageGalician', flag: '🇪🇸'),
-    SpokenLanguage(code: 'mr', nameKey: 'languageMarathi', flag: '🇮🇳'),
-    SpokenLanguage(code: 'pa', nameKey: 'languagePunjabi', flag: '🇮🇳'),
-    SpokenLanguage(code: 'si', nameKey: 'languageSinhala', flag: '🇱🇰'),
-    SpokenLanguage(code: 'km', nameKey: 'languageKhmer', flag: '🇰🇭'),
-    SpokenLanguage(code: 'sn', nameKey: 'languageShona', flag: '🇿🇼'),
-    SpokenLanguage(code: 'yo', nameKey: 'languageYoruba', flag: '🇳🇬'),
-    SpokenLanguage(code: 'so', nameKey: 'languageSomali', flag: '🇸🇴'),
-    SpokenLanguage(code: 'af', nameKey: 'languageAfrikaans', flag: '🇿🇦'),
-    SpokenLanguage(code: 'oc', nameKey: 'languageOccitan', flag: '🇫🇷'),
-    SpokenLanguage(code: 'ka', nameKey: 'languageGeorgian', flag: '🇬🇪'),
-    SpokenLanguage(code: 'be', nameKey: 'languageBelarusian', flag: '🇧🇾'),
-    SpokenLanguage(code: 'tg', nameKey: 'languageTajik', flag: '🇹🇯'),
-    SpokenLanguage(code: 'sd', nameKey: 'languageSindhi', flag: '🇵🇰'),
-    SpokenLanguage(code: 'gu', nameKey: 'languageGujarati', flag: '🇮🇳'),
-    SpokenLanguage(code: 'am', nameKey: 'languageAmharic', flag: '🇪🇹'),
-    SpokenLanguage(code: 'yi', nameKey: 'languageYiddish', flag: '🇮🇱'),
-    SpokenLanguage(code: 'lo', nameKey: 'languageLao', flag: '🇱🇦'),
-    SpokenLanguage(code: 'uz', nameKey: 'languageUzbek', flag: '🇺🇿'),
-    SpokenLanguage(code: 'fo', nameKey: 'languageFaroese', flag: '🇫🇴'),
-    SpokenLanguage(code: 'ht', nameKey: 'languageHaitianCreole', flag: '🇭🇹'),
-    SpokenLanguage(code: 'ps', nameKey: 'languagePashto', flag: '🇦🇫'),
-    SpokenLanguage(code: 'tk', nameKey: 'languageTurkmen', flag: '🇹🇲'),
-    SpokenLanguage(code: 'nn', nameKey: 'languageNynorsk', flag: '🇳🇴'),
-    SpokenLanguage(code: 'mt', nameKey: 'languageMaltese', flag: '🇲🇹'),
-    SpokenLanguage(code: 'sa', nameKey: 'languageSanskrit', flag: '🇮🇳'),
-    SpokenLanguage(code: 'lb', nameKey: 'languageLuxembourgish', flag: '🇱🇺'),
-    SpokenLanguage(code: 'my', nameKey: 'languageMyanmar', flag: '🇲🇲'),
-    SpokenLanguage(code: 'bo', nameKey: 'languageTibetan', flag: '🇨🇳'),
-    SpokenLanguage(code: 'tl', nameKey: 'languageTagalog', flag: '🇵🇭'),
-    SpokenLanguage(code: 'mg', nameKey: 'languageMalagasy', flag: '🇲🇬'),
-    SpokenLanguage(code: 'as', nameKey: 'languageAssamese', flag: '🇮🇳'),
-    SpokenLanguage(code: 'tt', nameKey: 'languageTatar', flag: '🇷🇺'),
-    SpokenLanguage(code: 'haw', nameKey: 'languageHawaiian', flag: '🇺🇸'),
-    SpokenLanguage(code: 'ln', nameKey: 'languageLingala', flag: '🇨🇩'),
-    SpokenLanguage(code: 'ha', nameKey: 'languageHausa', flag: '🇳🇬'),
-    SpokenLanguage(code: 'ba', nameKey: 'languageBashkir', flag: '🇷🇺'),
-    SpokenLanguage(code: 'jw', nameKey: 'languageJavanese', flag: '🇮🇩'),
-    SpokenLanguage(code: 'su', nameKey: 'languageSundanese', flag: '🇮🇩'),
-  ];
+  static final Map<String, _LanguageInfo> _languageData = {
+    'en': _LanguageInfo(
+      flagAssetFilename: 'english',
+      nameSelector: (loc) => loc.languageEnglish,
+    ),
+    'zh': _LanguageInfo(
+      flagAssetFilename: 'chinese',
+      nameSelector: (loc) => loc.languageChinese,
+    ),
+    'de': _LanguageInfo(
+      flagAssetFilename: 'german',
+      nameSelector: (loc) => loc.languageGerman,
+    ),
+    'es': _LanguageInfo(
+      flagAssetFilename: 'spanish',
+      nameSelector: (loc) => loc.languageSpanish,
+    ),
+    'ru': _LanguageInfo(
+      flagAssetFilename: 'russian',
+      nameSelector: (loc) => loc.languageRussian,
+    ),
+    'ko': _LanguageInfo(
+      flagAssetFilename: 'korean',
+      nameSelector: (loc) => loc.languageKorean,
+    ),
+    'fr': _LanguageInfo(
+      flagAssetFilename: 'french',
+      nameSelector: (loc) => loc.languageFrench,
+    ),
+    'ja': _LanguageInfo(
+      flagAssetFilename: 'japanese',
+      nameSelector: (loc) => loc.languageJapanese,
+    ),
+    'pt': _LanguageInfo(
+      flagAssetFilename: 'portuguese',
+      nameSelector: (loc) => loc.languagePortuguese,
+    ),
+    'tr': _LanguageInfo(
+      flagAssetFilename: 'turkish',
+      nameSelector: (loc) => loc.languageTurkish,
+    ),
+    'pl': _LanguageInfo(
+      flagAssetFilename: 'polish',
+      nameSelector: (loc) => loc.languagePolish,
+    ),
+    'ca': _LanguageInfo(
+      flagAssetFilename: 'spanish',
+      nameSelector: (loc) => loc.languageCatalan,
+    ), // Catalan uses Spanish flag
+    'nl': _LanguageInfo(
+      flagAssetFilename: 'dutch',
+      nameSelector: (loc) => loc.languageDutch,
+    ),
+    'ar': _LanguageInfo(
+      flagAssetFilename: 'arabic',
+      nameSelector: (loc) => loc.languageArabic,
+    ),
+    'sv': _LanguageInfo(
+      flagAssetFilename: 'swedish',
+      nameSelector: (loc) => loc.languageSwedish,
+    ),
+    'it': _LanguageInfo(
+      flagAssetFilename: 'italian',
+      nameSelector: (loc) => loc.languageItalian,
+    ),
+    'id': _LanguageInfo(
+      flagAssetFilename: 'indonesian',
+      nameSelector: (loc) => loc.languageIndonesian,
+    ),
+    'hi': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageHindi,
+    ),
+    'fi': _LanguageInfo(
+      flagAssetFilename: 'finnish',
+      nameSelector: (loc) => loc.languageFinnish,
+    ),
+    'vi': _LanguageInfo(
+      flagAssetFilename: 'vietnamese',
+      nameSelector: (loc) => loc.languageVietnamese,
+    ),
+    'he': _LanguageInfo(
+      flagAssetFilename: 'hebrew',
+      nameSelector: (loc) => loc.languageHebrew,
+    ),
+    'uk': _LanguageInfo(
+      flagAssetFilename: 'ukrainian',
+      nameSelector: (loc) => loc.languageUkrainian,
+    ),
+    'el': _LanguageInfo(
+      flagAssetFilename: 'greek',
+      nameSelector: (loc) => loc.languageGreek,
+    ),
+    'ms': _LanguageInfo(
+      flagAssetFilename: 'malay',
+      nameSelector: (loc) => loc.languageMalay,
+    ),
+    'cs': _LanguageInfo(
+      flagAssetFilename: 'czech',
+      nameSelector: (loc) => loc.languageCzech,
+    ),
+    'ro': _LanguageInfo(
+      flagAssetFilename: 'romanian',
+      nameSelector: (loc) => loc.languageRomanian,
+    ),
+    'da': _LanguageInfo(
+      flagAssetFilename: 'danish',
+      nameSelector: (loc) => loc.languageDanish,
+    ),
+    'hu': _LanguageInfo(
+      flagAssetFilename: 'hungarian',
+      nameSelector: (loc) => loc.languageHungarian,
+    ),
+    'ta': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageTamil,
+    ), // Tamil uses Hindi flag
+    'no': _LanguageInfo(
+      flagAssetFilename: 'norwegian',
+      nameSelector: (loc) => loc.languageNorwegian,
+    ),
+    'th': _LanguageInfo(
+      flagAssetFilename: 'thai',
+      nameSelector: (loc) => loc.languageThai,
+    ),
+    'ur': _LanguageInfo(
+      flagAssetFilename: 'urdu',
+      nameSelector: (loc) => loc.languageUrdu,
+    ),
+    'hr': _LanguageInfo(
+      flagAssetFilename: 'croatian',
+      nameSelector: (loc) => loc.languageCroatian,
+    ),
+    'bg': _LanguageInfo(
+      flagAssetFilename: 'bulgarian',
+      nameSelector: (loc) => loc.languageBulgarian,
+    ),
+    'lt': _LanguageInfo(
+      flagAssetFilename: 'lithuanian',
+      nameSelector: (loc) => loc.languageLithuanian,
+    ),
+    'la': _LanguageInfo(
+      flagAssetFilename: 'latin',
+      nameSelector: (loc) => loc.languageLatin,
+    ),
+    'mi': _LanguageInfo(
+      flagAssetFilename: 'maori',
+      nameSelector: (loc) => loc.languageMaori,
+    ),
+    'ml': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageMalayalam,
+    ), // Malayalam uses Hindi flag
+    'cy': _LanguageInfo(
+      flagAssetFilename: 'welsh',
+      nameSelector: (loc) => loc.languageWelsh,
+    ),
+    'sk': _LanguageInfo(
+      flagAssetFilename: 'slovak',
+      nameSelector: (loc) => loc.languageSlovak,
+    ),
+    'te': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageTelugu,
+    ), // Telugu uses Hindi flag
+    'fa': _LanguageInfo(
+      flagAssetFilename: 'persian',
+      nameSelector: (loc) => loc.languagePersian,
+    ),
+    'lv': _LanguageInfo(
+      flagAssetFilename: 'latvian',
+      nameSelector: (loc) => loc.languageLatvian,
+    ),
+    'bn': _LanguageInfo(
+      flagAssetFilename: 'bengali',
+      nameSelector: (loc) => loc.languageBengali,
+    ),
+    'sr': _LanguageInfo(
+      flagAssetFilename: 'serbian',
+      nameSelector: (loc) => loc.languageSerbian,
+    ),
+    'az': _LanguageInfo(
+      flagAssetFilename: 'azerbaijani',
+      nameSelector: (loc) => loc.languageAzerbaijani,
+    ),
+    'sl': _LanguageInfo(
+      flagAssetFilename: 'slovenian',
+      nameSelector: (loc) => loc.languageSlovenian,
+    ),
+    'kn': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageKannada,
+    ), // Kannada uses Hindi flag
+    'et': _LanguageInfo(
+      flagAssetFilename: 'estonian',
+      nameSelector: (loc) => loc.languageEstonian,
+    ),
+    'mk': _LanguageInfo(
+      flagAssetFilename: 'macedonian',
+      nameSelector: (loc) => loc.languageMacedonian,
+    ),
+    'br': _LanguageInfo(
+      flagAssetFilename: 'french',
+      nameSelector: (loc) => loc.languageBreton,
+    ), // Breton uses French flag
+    'eu': _LanguageInfo(
+      flagAssetFilename: 'spanish',
+      nameSelector: (loc) => loc.languageBasque,
+    ), // Basque uses Spanish flag
+    'is': _LanguageInfo(
+      flagAssetFilename: 'icelandic',
+      nameSelector: (loc) => loc.languageIcelandic,
+    ),
+    'hy': _LanguageInfo(
+      flagAssetFilename: 'armenian',
+      nameSelector: (loc) => loc.languageArmenian,
+    ),
+    'ne': _LanguageInfo(
+      flagAssetFilename: 'nepali',
+      nameSelector: (loc) => loc.languageNepali,
+    ),
+    'mn': _LanguageInfo(
+      flagAssetFilename: 'mongolian',
+      nameSelector: (loc) => loc.languageMongolian,
+    ),
+    'bs': _LanguageInfo(
+      flagAssetFilename: 'bosnian',
+      nameSelector: (loc) => loc.languageBosnian,
+    ),
+    'kk': _LanguageInfo(
+      flagAssetFilename: 'kazakh',
+      nameSelector: (loc) => loc.languageKazakh,
+    ),
+    'sq': _LanguageInfo(
+      flagAssetFilename: 'albanian',
+      nameSelector: (loc) => loc.languageAlbanian,
+    ),
+    'sw': _LanguageInfo(
+      flagAssetFilename: 'swahili',
+      nameSelector: (loc) => loc.languageSwahili,
+    ),
+    'gl': _LanguageInfo(
+      flagAssetFilename: 'spanish',
+      nameSelector: (loc) => loc.languageGalician,
+    ), // Galician uses Spanish flag
+    'mr': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageMarathi,
+    ), // Marathi uses Hindi flag
+    'pa': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languagePunjabi,
+    ), // Punjabi uses Hindi flag
+    'si': _LanguageInfo(
+      flagAssetFilename: 'sinhala',
+      nameSelector: (loc) => loc.languageSinhala,
+    ),
+    'km': _LanguageInfo(
+      flagAssetFilename: 'khmer',
+      nameSelector: (loc) => loc.languageKhmer,
+    ),
+    'sn': _LanguageInfo(
+      flagAssetFilename: 'shona',
+      nameSelector: (loc) => loc.languageShona,
+    ),
+    'yo': _LanguageInfo(
+      flagAssetFilename: 'yoruba',
+      nameSelector: (loc) => loc.languageYoruba,
+    ),
+    'so': _LanguageInfo(
+      flagAssetFilename: 'somali',
+      nameSelector: (loc) => loc.languageSomali,
+    ),
+    'af': _LanguageInfo(
+      flagAssetFilename: 'afrikaans',
+      nameSelector: (loc) => loc.languageAfrikaans,
+    ),
+    'oc': _LanguageInfo(
+      flagAssetFilename: 'french',
+      nameSelector: (loc) => loc.languageOccitan,
+    ), // Occitan uses French flag
+    'ka': _LanguageInfo(
+      flagAssetFilename: 'georgian',
+      nameSelector: (loc) => loc.languageGeorgian,
+    ),
+    'be': _LanguageInfo(
+      flagAssetFilename: 'belarusian',
+      nameSelector: (loc) => loc.languageBelarusian,
+    ),
+    'tg': _LanguageInfo(
+      flagAssetFilename: 'tajik',
+      nameSelector: (loc) => loc.languageTajik,
+    ),
+    'sd': _LanguageInfo(
+      flagAssetFilename: 'urdu',
+      nameSelector: (loc) => loc.languageSindhi,
+    ), // Sindhi uses Urdu flag
+    'gu': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageGujarati,
+    ), // Gujarati uses Hindi flag
+    'am': _LanguageInfo(
+      flagAssetFilename: 'amharic',
+      nameSelector: (loc) => loc.languageAmharic,
+    ),
+    'yi': _LanguageInfo(
+      flagAssetFilename: 'hebrew',
+      nameSelector: (loc) => loc.languageYiddish,
+    ), // Yiddish uses Hebrew flag
+    'lo': _LanguageInfo(
+      flagAssetFilename: 'lao',
+      nameSelector: (loc) => loc.languageLao,
+    ),
+    'uz': _LanguageInfo(
+      flagAssetFilename: 'uzbek',
+      nameSelector: (loc) => loc.languageUzbek,
+    ),
+    'fo': _LanguageInfo(
+      flagAssetFilename: 'danish',
+      nameSelector: (loc) => loc.languageFaroese,
+    ), // Faroese uses Danish flag
+    'ht': _LanguageInfo(
+      flagAssetFilename: 'haitianCreole',
+      nameSelector: (loc) => loc.languageHaitianCreole,
+    ),
+    'ps': _LanguageInfo(
+      flagAssetFilename: 'pashto',
+      nameSelector: (loc) => loc.languagePashto,
+    ),
+    'tk': _LanguageInfo(
+      flagAssetFilename: 'turkmen',
+      nameSelector: (loc) => loc.languageTurkmen,
+    ),
+    'nn': _LanguageInfo(
+      flagAssetFilename: 'norwegian',
+      nameSelector: (loc) => loc.languageNynorsk,
+    ), // Nynorsk uses Norwegian flag
+    'mt': _LanguageInfo(
+      flagAssetFilename: 'maltese',
+      nameSelector: (loc) => loc.languageMaltese,
+    ),
+    'sa': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageSanskrit,
+    ), // Sanskrit uses Hindi flag
+    'lb': _LanguageInfo(
+      flagAssetFilename: 'luxembourgish',
+      nameSelector: (loc) => loc.languageLuxembourgish,
+    ),
+    'my': _LanguageInfo(
+      flagAssetFilename: 'myanmar',
+      nameSelector: (loc) => loc.languageMyanmar,
+    ),
+    'bo': _LanguageInfo(
+      flagAssetFilename: 'tibetan',
+      nameSelector: (loc) => loc.languageTibetan,
+    ),
+    'tl': _LanguageInfo(
+      flagAssetFilename: 'tagalog',
+      nameSelector: (loc) => loc.languageTagalog,
+    ),
+    'mg': _LanguageInfo(
+      flagAssetFilename: 'malagasy',
+      nameSelector: (loc) => loc.languageMalagasy,
+    ),
+    'as': _LanguageInfo(
+      flagAssetFilename: 'hindi',
+      nameSelector: (loc) => loc.languageAssamese,
+    ), // Assamese uses Hindi flag
+    'tt': _LanguageInfo(
+      flagAssetFilename: 'tatar',
+      nameSelector: (loc) => loc.languageTatar,
+    ),
+    'haw': _LanguageInfo(
+      flagAssetFilename: 'hawaiian',
+      nameSelector: (loc) => loc.languageHawaiian,
+    ),
+    'ln': _LanguageInfo(
+      flagAssetFilename: 'lingala',
+      nameSelector: (loc) => loc.languageLingala,
+    ),
+    'ha': _LanguageInfo(
+      flagAssetFilename: 'yoruba',
+      nameSelector: (loc) => loc.languageHausa,
+    ), // Hausa uses Yoruba flag
+    'ba': _LanguageInfo(
+      flagAssetFilename: 'russian',
+      nameSelector: (loc) => loc.languageBashkir,
+    ), // Bashkir uses Russian flag
+    'jw': _LanguageInfo(
+      flagAssetFilename: 'indonesian',
+      nameSelector: (loc) => loc.languageJavanese,
+    ), // Javanese uses Indonesian flag
+    'su': _LanguageInfo(
+      flagAssetFilename: 'indonesian',
+      nameSelector: (loc) => loc.languageSundanese,
+    ), // Sundanese uses Indonesian flag
+  };
 
-  static SpokenLanguage get defaultLanguage => all.first; // English
+  static List<SpokenLanguage> get all =>
+      _languageData.keys.map((code) => SpokenLanguage(code: code)).toList();
+
+  static SpokenLanguage get defaultLanguage => SpokenLanguage(code: 'en');
 
   static SpokenLanguage? findByCode(String code) {
-    try {
-      return all.firstWhere((lang) => lang.code == code);
-    } catch (e) {
-      return null;
-    }
+    return _languageData.containsKey(code) ? SpokenLanguage(code: code) : null;
+  }
+
+  static String flagAssetFor(String code) {
+    final info = _languageData[code];
+    final filename = info?.flagAssetFilename ?? 'english';
+    return 'assets/icons/flags/$filename.svg';
+  }
+
+  static String localizedNameFor(String code, AppLocalizations loc) {
+    final info = _languageData[code];
+    return info?.nameSelector(loc) ?? code;
   }
 }

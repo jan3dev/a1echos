@@ -1,5 +1,6 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,9 +35,10 @@ class SpokenLanguageSelectionScreen extends ConsumerWidget {
                 title: language.getName(context),
                 titleTrailing: language.code.toUpperCase(),
                 titleTrailingColor: colors.textSecondary,
-                iconLeading: Text(
-                  language.flag,
-                  style: const TextStyle(fontSize: 24),
+                iconLeading: SvgPicture.asset(
+                  language.flagAssetPath,
+                  width: 24,
+                  height: 24,
                 ),
                 iconTrailing: AquaRadio<String>(
                   value: language.code,

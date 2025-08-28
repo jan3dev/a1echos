@@ -1,6 +1,7 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
@@ -102,9 +103,10 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     padding: const EdgeInsets.only(right: 16),
                     child: GestureDetector(
                       onTap: onLanguageFlagPressed,
-                      child: Text(
-                        transcriptionProvider.selectedLanguage.flag,
-                        style: const TextStyle(fontSize: 24),
+                      child: SvgPicture.asset(
+                        transcriptionProvider.selectedLanguage.flagAssetPath,
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   );
