@@ -13,8 +13,11 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SessionScreen(sessionId: sessionId),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            SessionScreen(sessionId: sessionId),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
   }
@@ -36,9 +39,14 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
           context,
           null,
           isIncognito: true,
+          notifyListenersImmediately: false,
         );
       } else {
-        sessionId = await sessionProvider.createSession(context, null);
+        sessionId = await sessionProvider.createSession(
+          context,
+          null,
+          notifyListenersImmediately: false,
+        );
       }
 
       if (!mounted) return;
@@ -46,14 +54,25 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
       final localTranscriptionProvider = provider
           .Provider.of<LocalTranscriptionProvider>(context, listen: false);
 
-      localTranscriptionProvider.startRecording();
-
-      Navigator.push(
+      final navigationFuture = Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => SessionScreen(sessionId: sessionId),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SessionScreen(sessionId: sessionId),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
         ),
       );
+
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (mounted) {
+        localTranscriptionProvider.startRecording();
+      }
+
+      await navigationFuture;
+      if (mounted) {
+        sessionProvider.notifySessionCreated();
+      }
     } catch (e, st) {
       if (!mounted) return;
       logger.error(

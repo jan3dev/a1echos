@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:echos/utils/utils.dart';
 import '../providers/local_transcription_provider.dart';
 import '../models/model_type.dart';
 import '../widgets/transcription_list.dart';
 import '../widgets/live_transcription_view.dart';
 import '../widgets/error_view.dart';
-import 'aqua_tooltip_with_animation.dart';
 
 /// Content view component that manages the main transcription display area
 class TranscriptionContentView extends ConsumerWidget {
@@ -46,34 +44,6 @@ class TranscriptionContentView extends ConsumerWidget {
           return ErrorView(errorMessage: provider.error!);
         }
 
-        bool whisperPreviewIsActive =
-            provider.selectedModelType == ModelType.whisper &&
-            provider.isTranscribing &&
-            provider.loadingWhisperTranscriptionPreview != null;
-
-        bool voskPreviewIsActive =
-            provider.selectedModelType == ModelType.vosk &&
-            ((provider.isRecording &&
-                    provider.liveVoskTranscriptionPreview != null) ||
-                (provider.isTranscribing &&
-                    provider.liveVoskTranscriptionPreview != null));
-
-        bool whisperRealtimePreviewIsActive =
-            provider.selectedModelType == ModelType.whisper &&
-            provider.whisperRealtime &&
-            provider.isRecording &&
-            provider.liveVoskTranscriptionPreview != null;
-
-        bool anyPreviewActive =
-            whisperPreviewIsActive ||
-            voskPreviewIsActive ||
-            whisperRealtimePreviewIsActive;
-
-        bool isEmpty =
-            provider.sessionTranscriptions.isEmpty &&
-            !anyPreviewActive &&
-            !provider.isRecording;
-
         bool shouldShowLiveTranscription =
             provider.isRecording ||
             (provider.selectedModelType == ModelType.whisper &&
@@ -103,15 +73,6 @@ class TranscriptionContentView extends ConsumerWidget {
                       ),
               ),
             ),
-            if (isEmpty)
-              Positioned(
-                bottom: 160,
-                left: 0,
-                right: 0,
-                child: AquaTooltipWithAnimation(
-                  message: context.loc.emptySessionsMessage,
-                ),
-              ),
           ],
         );
       },

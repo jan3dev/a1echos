@@ -175,6 +175,7 @@ class SessionProvider with ChangeNotifier {
     BuildContext context,
     String? name, {
     bool isIncognito = false,
+    bool notifyListenersImmediately = true,
   }) async {
     final now = DateTime.now();
     final sessionId = _uuid.v4();
@@ -211,8 +212,17 @@ class SessionProvider with ChangeNotifier {
     await _saveSessions();
     _activeSessionId = session.id;
     await _saveActiveSession();
-    notifyListeners();
+
+    if (notifyListenersImmediately) {
+      notifyListeners();
+    }
+
     return sessionId;
+  }
+
+  /// Manually notifies listeners (used when notifyListenersImmediately was false)
+  void notifySessionCreated() {
+    notifyListeners();
   }
 
   /// Checks if the active session is incognito

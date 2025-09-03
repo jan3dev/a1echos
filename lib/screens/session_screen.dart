@@ -159,8 +159,11 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   void _handleLanguageFlagPressed() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SpokenLanguageSelectionScreen(),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const SpokenLanguageSelectionScreen(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
   }
