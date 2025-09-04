@@ -30,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         SelectionModeHandler,
         SessionOperationsHandler {
   final ScrollController _scrollController = ScrollController();
+  bool _tooltipShouldDisappear = false;
 
   @override
   void initState() {
@@ -116,7 +117,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  bool _calculateEffectivelyEmpty() {
+  void _onTooltipDisappearComplete() {
+    setState(() {
+      _tooltipShouldDisappear = false;
+    });
+  }
+
+  void _startTooltipDisappearAnimation() {
+    setState(() {
+      _tooltipShouldDisappear = true;
+    });
+  }
+
+  Future<void> _startRecordingWithAnimation() async {
+    final sessionProvider = provider.Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final settingsProvider = provider.Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+
+    bool isCurrentlyEmpty = sessionProvider.sessions.isEmpty;
+    if (sessionProvider.sessions.length == 1 &&
+        sessionProvider.sessions.first.isIncognito) {
+      if (settingsProvider.isIncognitoMode) {
+        isCurrentlyEmpty = true;
+      } else {
+        isCurrentlyEmpty = false;
+      }
+    }
+    if (sessionProvider.sessions.length > 1) isCurrentlyEmpty = false;
+
+    await startRecording(
+      onTooltipAnimationStart: isCurrentlyEmpty
+          ? _startTooltipDisappearAnimation
+          : null,
+    );
+
+    if (mounted) {
+      setState(() {
+        _tooltipShouldDisappear = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
+
     final sessionProvider = provider.Provider.of<SessionProvider>(context);
     final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
@@ -131,14 +182,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     if (sessionProvider.sessions.length > 1) effectivelyEmpty = false;
 
-    return effectivelyEmpty;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
-    final colors = selectedTheme.colors(context);
-    final effectivelyEmpty = _calculateEffectivelyEmpty();
+    if (effectivelyEmpty && _tooltipShouldDisappear) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _tooltipShouldDisappear = false;
+          });
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
@@ -167,7 +219,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: RecordingButton(onRecordingStart: startRecording),
+                  child: RecordingButton(
+                    onRecordingStart: _startRecordingWithAnimation,
+                  ),
                 ),
                 const SizedBox(height: 42),
                 Padding(
@@ -185,6 +239,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               right: 0,
               child: AquaTooltipWithAnimation(
                 message: context.loc.emptySessionsMessage,
+                shouldDisappear: _tooltipShouldDisappear,
+                onDisappearComplete: _onTooltipDisappearComplete,
               ),
             ),
         ],

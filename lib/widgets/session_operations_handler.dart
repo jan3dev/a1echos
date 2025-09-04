@@ -22,7 +22,14 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
     );
   }
 
-  Future<void> startRecording() async {
+  Future<void> startRecording({VoidCallback? onTooltipAnimationStart}) async {
+    if (onTooltipAnimationStart != null) {
+      onTooltipAnimationStart();
+      // Wait for tooltip animation to complete before proceeding (shrink-in effect = 250ms)
+      await Future.delayed(const Duration(milliseconds: 270));
+    }
+    if (!mounted) return;
+
     final sessionProvider = provider.Provider.of<SessionProvider>(
       context,
       listen: false,
@@ -53,8 +60,13 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
 
       final localTranscriptionProvider = provider
           .Provider.of<LocalTranscriptionProvider>(context, listen: false);
+      localTranscriptionProvider.startRecording();
 
-      final navigationFuture = Navigator.push(
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      if (!mounted) return;
+
+      Navigator.push(
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
@@ -64,15 +76,7 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
         ),
       );
 
-      await Future.delayed(const Duration(milliseconds: 150));
-      if (mounted) {
-        localTranscriptionProvider.startRecording();
-      }
-
-      await navigationFuture;
-      if (mounted) {
-        sessionProvider.notifySessionCreated();
-      }
+      sessionProvider.notifySessionCreated();
     } catch (e, st) {
       if (!mounted) return;
       logger.error(
