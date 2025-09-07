@@ -952,10 +952,8 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/ui_components"
-      ref: main
-      resolved-ref: "70d0e999f74b767719a244c33be38bc606866c56"
-      url: "https://github.com/jan3dev/aqua-dev.git"
-    source: git
+      relative: true
+    source: path
     version: "0.0.1+1"
   url_launcher:
     dependency: "direct main"
