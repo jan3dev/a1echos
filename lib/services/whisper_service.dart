@@ -235,7 +235,10 @@ class WhisperService {
   // FILE-BASED TRANSCRIPTION
   // =========================================================================
 
-  Future<String?> transcribeFile(String audioPath) async {
+  Future<String?> transcribeFile(
+    String audioPath, {
+    String? languageCode,
+  }) async {
     if (!_isInitialized) {
       throw Exception('Whisper service not initialized.');
     }
@@ -252,11 +255,16 @@ class WhisperService {
       _isTranscribing = true;
 
       if (Platform.isAndroid) {
+        if (_androidWhisper == null) {
+          return null;
+        }
+
         final result = await _androidWhisper?.transcribe(
           transcribeRequest: fwn.TranscribeRequest(
             audio: audioPath,
             isTranslate: false,
             isNoTimestamps: true,
+            language: languageCode ?? 'en',
           ),
         );
 
@@ -264,8 +272,10 @@ class WhisperService {
       } else if (Platform.isIOS) {
         final options = kit.DecodingOptions(
           task: kit.DecodingTask.transcribe,
-          detectLanguage: true,
-          language: null,
+          detectLanguage: languageCode == null,
+          language: languageCode,
+          usePrefillPrompt: true,
+          usePrefillCache: true,
         );
 
         final transcription = await _iosKit!.transcribeFromFile(
@@ -295,7 +305,7 @@ class WhisperService {
   // =========================================================================
 
   /// Starts real-time transcription. Returns true when recording started.
-  Future<bool> startRealtimeRecording() async {
+  Future<bool> startRealtimeRecording({String? languageCode}) async {
     if (!Platform.isIOS) {
       return false;
     }
@@ -317,8 +327,10 @@ class WhisperService {
       await _iosKit!.startRecording(
         options: kit.DecodingOptions(
           task: kit.DecodingTask.transcribe,
-          detectLanguage: true,
-          language: null,
+          detectLanguage: languageCode == null,
+          language: languageCode,
+          usePrefillPrompt: true,
+          usePrefillCache: true,
         ),
       );
 

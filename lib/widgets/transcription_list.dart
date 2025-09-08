@@ -105,6 +105,8 @@ class TranscriptionList extends StatefulWidget {
   final Set<String> selectedTranscriptionIds;
   final Function(String) onTranscriptionTap;
   final Function(String) onTranscriptionLongPress;
+  final Function()? onEditModeStarted;
+  final Function()? onEditModeEnded;
 
   const TranscriptionList({
     super.key,
@@ -113,25 +115,54 @@ class TranscriptionList extends StatefulWidget {
     this.selectedTranscriptionIds = const {},
     required this.onTranscriptionTap,
     required this.onTranscriptionLongPress,
+    this.onEditModeStarted,
+    this.onEditModeEnded,
   });
 
   @override
-  State<TranscriptionList> createState() => _TranscriptionListState();
+  State<TranscriptionList> createState() => TranscriptionListState();
 }
 
-class _TranscriptionListState extends State<TranscriptionList> {
+class TranscriptionListState extends State<TranscriptionList> {
   String? editingId;
+  GlobalKey<TranscriptionItemState>? _editingItemKey;
 
   void _handleStartEdit(String id) {
     setState(() {
       editingId = id;
+      _editingItemKey = GlobalKey<TranscriptionItemState>();
     });
+    widget.onEditModeStarted?.call();
   }
 
   void _handleEndEdit() {
     setState(() {
       editingId = null;
+      _editingItemKey = null;
     });
+    widget.onEditModeEnded?.call();
+  }
+
+  /// Cancels current editing without saving changes
+  void cancelEditing() {
+    if (editingId != null) {
+      _editingItemKey?.currentState?.cancelEdit();
+      setState(() {
+        editingId = null;
+        _editingItemKey = null;
+      });
+      widget.onEditModeEnded?.call();
+    }
+  }
+
+  /// Returns whether any item is currently in edit mode
+  bool get isEditing => editingId != null;
+
+  /// Saves current edit by unfocusing the active TextField.
+  void saveCurrentEdit() {
+    if (editingId != null) {
+      FocusScope.of(context).unfocus();
+    }
   }
 
   @override
@@ -170,7 +201,12 @@ class _TranscriptionListState extends State<TranscriptionList> {
         final bool isEditing = editingId == transcription.id;
         final bool isAnyEditing = editingId != null;
 
+        final Key itemKey = isEditing
+            ? (_editingItemKey ??= GlobalKey<TranscriptionItemState>())
+            : ValueKey(transcription.id);
+
         return TranscriptionItem(
+          key: itemKey,
           transcription: transcription,
           selectionMode: itemState.isPreviewItem ? false : widget.selectionMode,
           isSelected: itemState.isPreviewItem

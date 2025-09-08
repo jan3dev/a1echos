@@ -1,29 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/local_transcription_provider.dart';
-import '../constants/app_constants.dart';
 import '../providers/transcription_state_manager.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 import '../logger.dart';
 
 class RecordingButton extends ConsumerStatefulWidget {
-  /// Callback that gets triggered when recording is started
   final VoidCallback? onRecordingStart;
-
-  /// Callback that gets triggered when recording is stopped
   final VoidCallback? onRecordingStop;
-
-  /// Whether the button should show in recording state
   final bool isRecording;
-
-  /// Whether to use the provider for state or rely on passed parameters
   final bool useProviderState;
 
   const RecordingButton({
@@ -38,7 +31,8 @@ class RecordingButton extends ConsumerStatefulWidget {
   ConsumerState<RecordingButton> createState() => _RecordingButtonState();
 }
 
-class _RecordingButtonState extends ConsumerState<RecordingButton> {
+class _RecordingButtonState extends ConsumerState<RecordingButton>
+    with TickerProviderStateMixin {
   bool _isDebouncing = false;
   bool _gestureIsolationActive = false;
   Timer? _debounceTimer;
@@ -47,17 +41,68 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
   String? _lastActionType;
   TranscriptionState? _lastKnownState;
 
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  AnimationController? _glowController;
+  Animation<double>? _glowAnimation;
+
+  Timer? _scaleAnimationDelayTimer;
+
   static const Duration _debounceDuration = Duration(milliseconds: 800);
   static const Duration _minimumActionInterval = Duration(milliseconds: 1200);
   static const Duration _gestureIsolationDuration = Duration(
     milliseconds: 2000,
   );
+  static const Duration _scaleAnimationDelay = Duration(milliseconds: 300);
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOut));
+
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+    _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController!, curve: Curves.easeInOut),
+    );
+  }
 
   @override
   void dispose() {
+    _scaleController.dispose();
+    _glowController?.dispose();
     _debounceTimer?.cancel();
     _gestureIsolationTimer?.cancel();
+    _scaleAnimationDelayTimer?.cancel();
     super.dispose();
+  }
+
+  /// Triggers smooth scale animation for visual feedback
+  void _triggerScaleAnimation() {
+    if (_scaleController.isAnimating) return;
+    _scaleController.forward().then((_) {
+      _scaleController.reverse();
+    });
+  }
+
+  /// Triggers delayed scale animation for state changes (after navigation)
+  void _triggerDelayedScaleAnimation() {
+    _scaleAnimationDelayTimer?.cancel();
+    _scaleAnimationDelayTimer = Timer(_scaleAnimationDelay, () {
+      if (mounted && !_scaleController.isAnimating) {
+        _scaleController.forward();
+      }
+    });
   }
 
   /// Handles recording actions with enhanced debouncing and validation
@@ -123,10 +168,12 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
     }
   }
 
-  /// Handles start recording action with validation
+  /// Handles start recording action with validation and haptic feedback
   Future<void> _handleStartRecording(
     LocalTranscriptionProvider? provider,
   ) async {
+    HapticFeedback.mediumImpact();
+
     await _handleRecordingAction(() async {
       if (widget.onRecordingStart != null) {
         widget.onRecordingStart!();
@@ -139,10 +186,14 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
     }, 'Start Recording');
   }
 
-  /// Handles stop recording action with validation
+  /// Handles stop recording action with validation, haptic feedback, and smooth animation
   Future<void> _handleStopRecording(
     LocalTranscriptionProvider? provider,
   ) async {
+    _triggerScaleAnimation();
+
+    HapticFeedback.lightImpact();
+
     await _handleRecordingAction(() async {
       if (widget.onRecordingStop != null) {
         widget.onRecordingStop!();
@@ -168,6 +219,15 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
                 state == TranscriptionState.error) {
               _gestureIsolationActive = false;
             }
+
+            if (state == TranscriptionState.recording) {
+              _triggerDelayedScaleAnimation();
+              _glowController?.forward();
+            } else {
+              _scaleAnimationDelayTimer?.cancel();
+              _scaleController.reverse();
+              _glowController?.reverse();
+            }
           }
 
           return _buildButtonForState(state, colors, provider);
@@ -177,6 +237,19 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
       final state = widget.isRecording
           ? TranscriptionState.recording
           : TranscriptionState.ready;
+
+      if (_lastKnownState != state) {
+        _lastKnownState = state;
+        if (state == TranscriptionState.recording) {
+          _triggerDelayedScaleAnimation();
+          _glowController?.forward();
+        } else {
+          _scaleAnimationDelayTimer?.cancel();
+          _scaleController.reverse();
+          _glowController?.reverse();
+        }
+      }
+
       return _buildButtonForState(state, colors, null);
     }
   }
@@ -186,8 +259,25 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
     AquaColors colors,
     LocalTranscriptionProvider? provider,
   ) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: _buildButtonContainer(state, colors, provider),
+        );
+      },
+    );
+  }
+
+  Widget _buildButtonContainer(
+    TranscriptionState state,
+    AquaColors colors,
+    LocalTranscriptionProvider? provider,
+  ) {
     switch (state) {
       case TranscriptionState.loading:
+      case TranscriptionState.error:
       case TranscriptionState.transcribing:
         return Container(
           width: 64,
@@ -215,62 +305,83 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
             ),
           ),
         );
-      case TranscriptionState.error:
-        return Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: colors.accentDanger,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: colors.surfaceInverse.withOpacity(0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 0),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: (_isDebouncing || _gestureIsolationActive)
-                ? null
-                : () {
-                    if (provider != null) {
-                      _showModelErrorDialog(context, provider.error);
-                    }
-                  },
-            icon: Icon(Icons.error_outline, color: colors.textInverse),
-          ),
-        );
       case TranscriptionState.recording:
-        return Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: colors.accentBrand,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: colors.accentBrand.withOpacity(0.3),
-                blurRadius: 24,
-                offset: const Offset(0, 0),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: (_isDebouncing || _gestureIsolationActive)
-                ? null
-                : () => _handleStopRecording(provider),
-            icon: SvgPicture.asset(
-              'assets/icons/rectangle.svg',
-              width: 14,
-              height: 14,
-              colorFilter: ColorFilter.mode(
-                colors.textInverse,
-                BlendMode.srcIn,
+        if (_glowAnimation != null) {
+          return AnimatedBuilder(
+            animation: _glowAnimation!,
+            builder: (context, child) {
+              return Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: colors.accentBrand,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.accentBrand.withOpacity(
+                        0.3 + _glowAnimation!.value * 0.4,
+                      ),
+                      blurRadius: 24 + _glowAnimation!.value * 16,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: colors.accentBrand.withOpacity(
+                        _glowAnimation!.value * 0.2,
+                      ),
+                      blurRadius: 8 + _glowAnimation!.value * 8,
+                      offset: const Offset(0, 0),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: (_isDebouncing || _gestureIsolationActive)
+                      ? null
+                      : () => _handleStopRecording(provider),
+                  icon: SvgPicture.asset(
+                    'assets/icons/rectangle.svg',
+                    width: 14,
+                    height: 14,
+                    colorFilter: ColorFilter.mode(
+                      colors.textInverse,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        } else {
+          // Fallback when glow animation is not initialized yet
+          return Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: colors.accentBrand,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: colors.accentBrand.withOpacity(0.3),
+                  blurRadius: 24,
+                  offset: const Offset(0, 0),
+                ),
+              ],
+            ),
+            child: IconButton(
+              onPressed: (_isDebouncing || _gestureIsolationActive)
+                  ? null
+                  : () => _handleStopRecording(provider),
+              icon: SvgPicture.asset(
+                'assets/icons/rectangle.svg',
+                width: 14,
+                height: 14,
+                colorFilter: ColorFilter.mode(
+                  colors.textInverse,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
-          ),
-        );
+          );
+        }
       case TranscriptionState.ready:
         return Container(
           width: 64,
@@ -302,21 +413,5 @@ class _RecordingButtonState extends ConsumerState<RecordingButton> {
           ),
         );
     }
-  }
-
-  void _showModelErrorDialog(BuildContext context, String? errorMessage) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.modelNotReady),
-        content: Text(errorMessage ?? AppStrings.modelInitFailure),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.ok),
-          ),
-        ],
-      ),
-    );
   }
 }

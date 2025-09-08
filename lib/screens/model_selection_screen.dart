@@ -1,10 +1,10 @@
 import 'dart:io';
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/local_transcription_provider.dart';
-import '../constants/app_constants.dart';
 import '../models/model_type.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
@@ -18,7 +18,7 @@ class ModelSelectionScreen extends ConsumerWidget {
     final colors = selectedTheme.colors(context);
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
-      appBar: AquaTopAppBar(colors: colors, title: AppStrings.modelTitle),
+      appBar: AquaTopAppBar(colors: colors, title: context.loc.modelTitle),
       body: provider.Consumer<LocalTranscriptionProvider>(
         builder: (context, provider, child) {
           final String selectedKey =
@@ -56,8 +56,8 @@ class ModelSelectionScreen extends ConsumerWidget {
           items.add(
             buildItem(
               key: 'whisper_file',
-              title: AppStrings.whisperModelFileTitle,
-              subtitle: AppStrings.whisperModelSubtitle,
+              title: context.loc.whisperModelFileTitle,
+              subtitle: context.loc.whisperModelSubtitle,
               onTap: () async {
                 if (provider.whisperRealtime) {
                   await provider.setWhisperRealtime(false);
@@ -76,8 +76,8 @@ class ModelSelectionScreen extends ConsumerWidget {
             items.add(
               buildItem(
                 key: 'whisper_rt',
-                title: AppStrings.whisperModelRealtimeTitle,
-                subtitle: AppStrings.whisperModelSubtitle,
+                title: context.loc.whisperModelRealtimeTitle,
+                subtitle: context.loc.whisperModelSubtitle,
                 onTap: () async {
                   if (!provider.whisperRealtime) {
                     await provider.setWhisperRealtime(true);
@@ -94,8 +94,8 @@ class ModelSelectionScreen extends ConsumerWidget {
             items.add(
               buildItem(
                 key: 'vosk',
-                title: AppStrings.voskModelTitle,
-                subtitle: AppStrings.voskModelSubtitle,
+                title: context.loc.voskModelTitle,
+                subtitle: context.loc.voskModelSubtitle,
                 onTap: () async {
                   await provider.changeModel(ModelType.vosk);
                   Navigator.of(context).pop();
@@ -110,7 +110,7 @@ class ModelSelectionScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppStrings.modelDescription,
+                  context.loc.modelDescription,
                   style: AquaTypography.body1.copyWith(
                     color: colors.textPrimary,
                   ),

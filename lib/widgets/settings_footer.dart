@@ -3,7 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../constants/app_constants.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:echos/utils/utils.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -16,6 +17,11 @@ class SettingsFooter extends ConsumerStatefulWidget {
 
 class _SettingsFooterState extends ConsumerState<SettingsFooter> {
   String _version = '';
+  static const _tags = [
+    {'tag': 'Echos', 'handle': 'a1echos'},
+    {'tag': 'A1 Lab', 'handle': 'a1laboratory'},
+    {'tag': 'JAN3', 'handle': 'jan3com'},
+  ];
 
   @override
   void initState() {
@@ -30,11 +36,22 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
     });
   }
 
+  Future<void> _launchX(BuildContext context, String handle) async {
+    final sanitized = handle.replaceFirst(RegExp(r'^@'), '');
+    final url = Uri.https('x.com', sanitized);
+    final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.loc.couldNotOpenLink)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedTheme = ref.watch(prefsProvider).selectedTheme;
     final colors = selectedTheme.colors(context);
-    final tags = ['@Echos', '@A1Lab', '@JAN3'];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -44,8 +61,6 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
           Center(
             child: SvgPicture.asset(
               'assets/icons/footer-logo.svg',
-              width: 80,
-              height: 40,
               colorFilter: ColorFilter.mode(
                 colors.textPrimary,
                 BlendMode.srcIn,
@@ -60,23 +75,29 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
           ),
           const SizedBox(height: 16),
           Text(
-            AppStrings.followUs,
+            context.loc.followUs,
             style: AquaTypography.body2Medium.copyWith(
               color: colors.textTertiary,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: tags
+            children: _tags
                 .map(
-                  (tag) => Padding(
+                  (tagData) => Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      tag,
-                      style: AquaTypography.body2SemiBold.copyWith(
-                        color: colors.textPrimary,
+                    child: Semantics(
+                      label: 'Open ${tagData['tag']} on X',
+                      child: InkWell(
+                        onTap: () => _launchX(context, tagData['handle']!),
+                        child: Text(
+                          tagData['tag']!,
+                          style: AquaTypography.body2SemiBold.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
                       ),
                     ),
                   ),

@@ -1,7 +1,7 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -25,13 +25,13 @@ class ErrorView extends ConsumerWidget {
             AquaIcon.warning(color: colors.textInverse),
             const SizedBox(height: 16),
             Text(
-              '${AppStrings.errorPrefix} $errorMessage',
+              '${context.loc.errorPrefix} $errorMessage',
               style: AquaTypography.body1.copyWith(color: colors.textPrimary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             if (onRetry != null)
-              AquaButton.primary(text: AppStrings.retry, onPressed: onRetry),
+              AquaButton.primary(text: context.loc.retry, onPressed: onRetry),
           ],
         ),
       ),

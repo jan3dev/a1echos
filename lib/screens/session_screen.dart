@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
@@ -6,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
 import '../widgets/recording_controls_view.dart';
-import '../constants/app_constants.dart';
+import '../widgets/transcription_list.dart';
 import '../widgets/modals/session_input_modal.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
@@ -17,6 +18,7 @@ import '../controllers/session_navigation_controller.dart';
 import '../providers/theme_provider.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
+import 'spoken_language_selection_screen.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
   final String sessionId;
@@ -34,6 +36,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   late SessionRecordingController _recordingController;
   late TranscriptionSelectionController _selectionController;
   late SessionNavigationController _navigationController;
+
+  bool _isEditing = false;
+  final GlobalKey<TranscriptionListState> _listKey =
+      GlobalKey<TranscriptionListState>();
 
   late LocalTranscriptionProvider _localTranscriptionProvider;
   late SessionProvider _sessionProvider;
@@ -130,8 +136,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     SessionInputModal.show(
       context,
       ref: ref,
-      title: AppStrings.sessionRenameTitle,
-      buttonText: AppStrings.save,
+      title: context.loc.sessionRenameTitle,
+      buttonText: context.loc.save,
       initialValue: _navigationController.sessionName,
       onSubmit: (name) {
         _navigationController.renameSession(name);
@@ -151,6 +157,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     _selectionController.deleteSelectedTranscriptions(context, ref);
   }
 
+  void _handleLanguageFlagPressed() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const SpokenLanguageSelectionScreen(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
+  }
+
   void _handleTranscriptionTap(String id) {
     if (_selectionController.selectionMode) {
       _selectionController.toggleTranscriptionSelection(id);
@@ -159,6 +176,30 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   void _handleTranscriptionLongPress(String id) {
     _selectionController.handleTranscriptionLongPress(id);
+  }
+
+  void _onEditStart() {
+    setState(() {
+      _isEditing = true;
+    });
+  }
+
+  void _onEditEnd() {
+    setState(() {
+      _isEditing = false;
+    });
+  }
+
+  void _cancelEdit() {
+    _listKey.currentState?.cancelEditing();
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isEditing = false;
+    });
+  }
+
+  void _saveEdit() {
+    _listKey.currentState?.saveCurrentEdit();
   }
 
   void _handleSharePressed() {
@@ -176,51 +217,65 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
         _navigationController,
       ]),
       builder: (context, child) {
-        return Scaffold(
-          backgroundColor: colors.surfaceBackground,
-          appBar: SessionAppBar(
-            sessionName: _navigationController.sessionName,
-            selectionMode: _selectionController.selectionMode,
-            isIncognitoSession: _navigationController.isIncognitoSession,
-            onBackPressed: () =>
-                _navigationController.handleBackNavigation(context),
-            onTitlePressed: _handleTitlePressed,
-            onCopyAllPressed: _handleCopyAllPressed,
-            onSelectAllPressed: _handleSelectAllPressed,
-            onDeleteSelectedPressed: _handleDeleteSelectedPressed,
-          ),
-          body: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () {
-              FocusScope.of(context).unfocus();
-            },
-            child: Stack(
-              children: [
-                TranscriptionContentView(
-                  scrollController: _scrollController,
-                  selectionMode: _selectionController.selectionMode,
-                  selectedTranscriptionIds:
-                      _selectionController.selectedTranscriptionIds,
-                  onTranscriptionTap: _handleTranscriptionTap,
-                  onTranscriptionLongPress: _handleTranscriptionLongPress,
-                ),
-                if (_selectionController.selectionMode)
-                  Positioned(
-                    bottom: 32,
-                    left: 16,
-                    right: 16,
-                    child: Center(
-                      child: AquaButton.primary(
-                        text: AppStrings.share,
-                        onPressed: _selectionController.hasSelectedItems
-                            ? _handleSharePressed
-                            : null,
+        return PopScope(
+          canPop: !_isEditing,
+          onPopInvokedWithResult: (didPop, result) {
+            if (_isEditing) _cancelEdit();
+          },
+          child: Scaffold(
+            backgroundColor: colors.surfaceBackground,
+            appBar: SessionAppBar(
+              sessionName: _navigationController.sessionName,
+              selectionMode: _selectionController.selectionMode,
+              editMode: _isEditing,
+              isIncognitoSession: _navigationController.isIncognitoSession,
+              onBackPressed: _isEditing
+                  ? _cancelEdit
+                  : () => _navigationController.handleBackNavigation(context),
+              onTitlePressed: _handleTitlePressed,
+              onCopyAllPressed: _handleCopyAllPressed,
+              onLanguageFlagPressed: _handleLanguageFlagPressed,
+              onSelectAllPressed: _handleSelectAllPressed,
+              onDeleteSelectedPressed: _handleDeleteSelectedPressed,
+              onCancelEditPressed: _cancelEdit,
+              onSaveEditPressed: _saveEdit,
+            ),
+            body: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                if (!_isEditing) FocusScope.of(context).unfocus();
+              },
+              child: Stack(
+                children: [
+                  TranscriptionContentView(
+                    listKey: _listKey,
+                    scrollController: _scrollController,
+                    selectionMode: _selectionController.selectionMode,
+                    selectedTranscriptionIds:
+                        _selectionController.selectedTranscriptionIds,
+                    onTranscriptionTap: _handleTranscriptionTap,
+                    onTranscriptionLongPress: _handleTranscriptionLongPress,
+                    onEditStart: _onEditStart,
+                    onEditEnd: _onEditEnd,
+                  ),
+                  if (_selectionController.selectionMode)
+                    Positioned(
+                      bottom: 32,
+                      left: 16,
+                      right: 16,
+                      child: Center(
+                        child: AquaButton.primary(
+                          text: context.loc.share,
+                          onPressed: _selectionController.hasSelectedItems
+                              ? _handleSharePressed
+                              : null,
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  const RecordingControlsView(),
-              ],
+                    )
+                  else
+                    const RecordingControlsView(),
+                ],
+              ),
             ),
           ),
         );

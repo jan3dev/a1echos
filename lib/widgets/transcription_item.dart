@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui_components/ui_components.dart';
@@ -44,11 +45,12 @@ class TranscriptionItem extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TranscriptionItem> createState() => _TranscriptionItemState();
+  ConsumerState<TranscriptionItem> createState() => TranscriptionItemState();
 }
 
-class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
+class TranscriptionItemState extends ConsumerState<TranscriptionItem> {
   late TextEditingController _controller;
+  bool _cancelled = false;
 
   @override
   void initState() {
@@ -71,6 +73,11 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
   }
 
   Future<void> _saveEdit() async {
+    if (_cancelled) {
+      _cancelled = false;
+      widget.onEndEdit();
+      return;
+    }
     final newText = _controller.text.trim();
     if (newText.isEmpty || newText == widget.transcription.text) {
       widget.onEndEdit();
@@ -89,6 +96,11 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
       listen: false,
     ).updateTranscription(updated);
     widget.onEndEdit();
+  }
+
+  void cancelEdit() {
+    _cancelled = true;
+    _controller.text = widget.transcription.text;
   }
 
   @override
@@ -122,10 +134,7 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () {
-        if (widget.isEditing) {
-          _saveEdit();
-          FocusScope.of(context).unfocus();
-        } else if (enableInteractions) {
+        if (!widget.isEditing && enableInteractions) {
           widget.onTap();
         }
       },
@@ -216,9 +225,7 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
                     filled: true,
                     isDense: true,
                   ),
-                  onSubmitted: (_) => _saveEdit(),
-                  textInputAction: TextInputAction.done,
-                  onEditingComplete: _saveEdit,
+                  textInputAction: TextInputAction.newline,
                 ),
               )
             else
@@ -284,7 +291,7 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
         child: Opacity(
           opacity: disabled ? 0.5 : 1.0,
           child: Center(
-            child: AquaIcon.edit(size: 18, color: colors.textSecondary),
+            child: AquaIcon.note(size: 18, color: colors.textSecondary),
           ),
         ),
       ),
@@ -295,7 +302,7 @@ class _TranscriptionItemState extends ConsumerState<TranscriptionItem> {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppStrings.copiedToClipboard),
+        content: Text(context.loc.copiedToClipboard),
         duration: AppConstants.snackBarDurationShort,
       ),
     );

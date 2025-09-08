@@ -1,7 +1,7 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
-import '../constants/app_constants.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
 
@@ -15,7 +15,7 @@ class ThemeSelectionScreen extends ConsumerWidget {
     final colors = selectedTheme.colors(context);
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
-      appBar: AquaTopAppBar(colors: colors, title: AppStrings.themeTitle),
+      appBar: AquaTopAppBar(colors: colors, title: context.loc.themeTitle),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -35,7 +35,7 @@ class ThemeSelectionScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               AquaListItem(
-                title: AppStrings.auto,
+                title: context.loc.auto,
                 iconTrailing: AquaRadio<AppTheme>(
                   value: AppTheme.auto,
                   groupValue: selectedTheme,
@@ -52,7 +52,7 @@ class ThemeSelectionScreen extends ConsumerWidget {
               ),
               Divider(height: 1, color: colors.surfaceBorderPrimary),
               AquaListItem(
-                title: AppStrings.light,
+                title: context.loc.light,
                 iconTrailing: AquaRadio<AppTheme>(
                   value: AppTheme.light,
                   groupValue: selectedTheme,
@@ -69,7 +69,7 @@ class ThemeSelectionScreen extends ConsumerWidget {
               ),
               Divider(height: 1, color: colors.surfaceBorderPrimary),
               AquaListItem(
-                title: AppStrings.dark,
+                title: context.loc.dark,
                 iconTrailing: AquaRadio<AppTheme>(
                   value: AppTheme.dark,
                   groupValue: selectedTheme,

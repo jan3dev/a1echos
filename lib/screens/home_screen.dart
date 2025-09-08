@@ -1,3 +1,4 @@
+import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,8 @@ import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
-import '../constants/app_constants.dart';
 import '../widgets/aqua_tooltip_with_animation.dart';
+import '../widgets/static_wave_bars.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
 
@@ -29,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         SelectionModeHandler,
         SessionOperationsHandler {
   final ScrollController _scrollController = ScrollController();
+  bool _tooltipShouldDisappear = false;
 
   @override
   void initState() {
@@ -115,7 +117,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  bool _calculateEffectivelyEmpty() {
+  void _onTooltipDisappearComplete() {
+    setState(() {
+      _tooltipShouldDisappear = false;
+    });
+  }
+
+  void _startTooltipDisappearAnimation() {
+    setState(() {
+      _tooltipShouldDisappear = true;
+    });
+  }
+
+  Future<void> _startRecordingWithAnimation() async {
+    final sessionProvider = provider.Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final settingsProvider = provider.Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+
+    bool isCurrentlyEmpty = sessionProvider.sessions.isEmpty;
+    if (sessionProvider.sessions.length == 1 &&
+        sessionProvider.sessions.first.isIncognito) {
+      if (settingsProvider.isIncognitoMode) {
+        isCurrentlyEmpty = true;
+      } else {
+        isCurrentlyEmpty = false;
+      }
+    }
+    if (sessionProvider.sessions.length > 1) isCurrentlyEmpty = false;
+
+    await startRecording(
+      onTooltipAnimationStart: isCurrentlyEmpty
+          ? _startTooltipDisappearAnimation
+          : null,
+    );
+
+    if (mounted) {
+      setState(() {
+        _tooltipShouldDisappear = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = selectedTheme.colors(context);
+
     final sessionProvider = provider.Provider.of<SessionProvider>(context);
     final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
@@ -130,14 +182,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     if (sessionProvider.sessions.length > 1) effectivelyEmpty = false;
 
-    return effectivelyEmpty;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedTheme = ref.watch(prefsProvider).selectedTheme;
-    final colors = selectedTheme.colors(context);
-    final effectivelyEmpty = _calculateEffectivelyEmpty();
+    if (effectivelyEmpty && _tooltipShouldDisappear) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _tooltipShouldDisappear = false;
+          });
+        }
+      });
+    }
 
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
@@ -158,20 +211,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             onSelectionToggle: toggleSessionSelection,
           ),
           Positioned(
-            bottom: 32,
+            bottom: 16,
             left: 0,
             right: 0,
-            child: Center(
-              child: RecordingButton(onRecordingStart: startRecording),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: RecordingButton(
+                    onRecordingStart: _startRecordingWithAnimation,
+                  ),
+                ),
+                const SizedBox(height: 42),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: StaticWaveBars(),
+                ),
+                const SizedBox(height: 26),
+              ],
             ),
           ),
           if (effectivelyEmpty)
             Positioned(
-              bottom: 120,
+              bottom: 160,
               left: 0,
               right: 0,
               child: AquaTooltipWithAnimation(
-                message: AppStrings.emptySessionsMessage,
+                message: context.loc.emptySessionsMessage,
+                shouldDisappear: _tooltipShouldDisappear,
+                onDisappearComplete: _onTooltipDisappearComplete,
               ),
             ),
         ],

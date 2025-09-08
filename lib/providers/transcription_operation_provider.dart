@@ -42,12 +42,14 @@ class TranscriptionOperationProvider with ChangeNotifier {
   Future<bool> startRecording(
     ModelType modelType,
     String sessionId,
-    bool whisperRealtime,
-  ) async {
+    bool whisperRealtime, {
+    String? languageCode,
+  }) async {
     try {
       final success = await _orchestrator.startRecording(
         modelType,
         whisperRealtime: whisperRealtime,
+        languageCode: languageCode,
       );
 
       return success;
@@ -66,12 +68,14 @@ class TranscriptionOperationProvider with ChangeNotifier {
   Future<TranscriptionResult> stopRecordingAndTranscribe(
     ModelType modelType,
     String sessionId,
-    bool whisperRealtime,
-  ) async {
+    bool whisperRealtime, {
+    String? languageCode,
+  }) async {
     try {
       final output = await _orchestrator.stopRecording(
         modelType,
         whisperRealtime: whisperRealtime,
+        languageCode: languageCode,
       );
 
       final resultText = output.text.trim();
@@ -86,7 +90,7 @@ class TranscriptionOperationProvider with ChangeNotifier {
         if (await tempFile.exists()) {
           audioPath = await _repository.saveAudioFile(
             tempFile,
-            'whisper_${_uuid.v4()}.m4a',
+            'whisper_${_uuid.v4()}.wav',
           );
           try {
             await tempFile.delete();

@@ -4,8 +4,7 @@ import 'package:ui_components/ui_components.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart' as provider;
 import '../../models/session.dart';
-import '../../constants/app_constants.dart';
-import '../../utils/session_formatter.dart';
+import 'package:echos/utils/utils.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
 import '../modals/confirmation_modal.dart';
@@ -50,7 +49,7 @@ class SessionMoreMenu extends ConsumerWidget {
     );
     final Size listItemSize = listItemBox.size;
 
-    const double estimatedMenuHeight = 136;
+    const double estimatedMenuHeight = 181;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         listItemPosition.dx + listItemSize.width - 240,
@@ -71,8 +70,8 @@ class SessionMoreMenu extends ConsumerWidget {
           value: 'rename',
           padding: EdgeInsets.zero,
           child: AquaListItem(
-            iconLeading: AquaIcon.edit(color: colors.textPrimary),
-            title: AppStrings.sessionRenameTitle,
+            iconLeading: AquaIcon.note(color: colors.textPrimary),
+            title: context.loc.sessionRenameTitle,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,
               color: colors.textSecondary,
@@ -87,7 +86,7 @@ class SessionMoreMenu extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: AquaListItem(
             iconLeading: AquaIcon.trash(color: colors.textPrimary),
-            title: AppStrings.delete,
+            title: context.loc.delete,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,
               color: colors.textSecondary,
@@ -102,21 +101,21 @@ class SessionMoreMenu extends ConsumerWidget {
           padding: const EdgeInsets.only(
             left: 16,
             right: 16,
-            top: 12,
-            bottom: 4,
+            top: 20,
+            bottom: 8,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Modified: ${formatSessionSubtitle(now: DateTime.now(), created: session.timestamp, lastModified: session.lastModified, modifiedPrefix: AppStrings.modifiedPrefix)}',
+                'Modified: ${formatSessionSubtitle(now: DateTime.now(), created: session.timestamp, lastModified: session.lastModified, modifiedPrefix: context.loc.modifiedPrefix)}',
                 style: AquaTypography.caption1Medium.copyWith(
                   color: colors.textTertiary,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 5),
               Text(
-                'Created: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
+                '${context.loc.createdPrefix}: ${DateFormat('MMM d, yyyy').format(session.timestamp)}',
                 style: AquaTypography.caption1Medium.copyWith(
                   color: colors.textTertiary,
                 ),
@@ -135,8 +134,8 @@ class SessionMoreMenu extends ConsumerWidget {
         SessionInputModal.show(
           context,
           ref: ref,
-          title: AppStrings.sessionRenameTitle,
-          buttonText: AppStrings.save,
+          title: context.loc.sessionRenameTitle,
+          buttonText: context.loc.save,
           initialValue: session.name,
           onSubmit: (name) {
             final sessionProvider = provider.Provider.of<SessionProvider>(
@@ -150,11 +149,10 @@ class SessionMoreMenu extends ConsumerWidget {
         ConfirmationModal.show(
           context: context,
           ref: ref,
-          title: AppStrings.homeDeleteSelectedSessionsTitle,
-          message: AppStrings.homeDeleteSelectedSessionsMessage
-              .replaceAll('{count}', 'this')
-              .replaceAll('{sessions}', 'session'),
-          confirmText: AppStrings.delete,
+          title: context.loc.homeDeleteSelectedSessionsTitle,
+          message: context.loc.homeDeleteSelectedSessionsMessage(1),
+          confirmText: context.loc.delete,
+          cancelText: context.loc.cancel,
           onConfirm: () {
             Navigator.pop(context);
             final sessionProvider = provider.Provider.of<SessionProvider>(
@@ -163,14 +161,7 @@ class SessionMoreMenu extends ConsumerWidget {
             );
             sessionProvider.deleteSession(session.id);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppStrings.homeSessionsDeleted.replaceAll(
-                    '{sessions}',
-                    'Session',
-                  ),
-                ),
-              ),
+              SnackBar(content: Text(context.loc.homeSessionsDeleted(1))),
             );
           },
         );

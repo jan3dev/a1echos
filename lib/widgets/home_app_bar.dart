@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 import '../screens/settings_screen.dart';
 import '../providers/theme_provider.dart';
 import '../models/app_theme.dart';
+import '../widgets/modals/incognito_explainer_modal.dart';
 
 class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final bool selectionMode;
@@ -62,9 +63,24 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
               ),
             ),
             onPressed: () async {
-              await settingsProvider.setIncognitoMode(
-                !settingsProvider.isIncognitoMode,
-              );
+              final newValue = !settingsProvider.isIncognitoMode;
+              final shouldShowModal =
+                  newValue && !settingsProvider.hasSeenIncognitoExplainer;
+
+              await settingsProvider.setIncognitoMode(newValue);
+
+              if (!context.mounted) return;
+
+              if (shouldShowModal) {
+                IncognitoExplainerModal.show(
+                  context: context,
+                  ref: ref,
+                  onDismiss: () async {
+                    await settingsProvider.markIncognitoExplainerSeen();
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                );
+              }
             },
             tooltip: settingsProvider.isIncognitoMode
                 ? 'Turn off Incognito Mode'
@@ -73,6 +89,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ? colors.accentBrand
                 : colors.textPrimary,
           ),
+          const SizedBox(width: 8),
           AquaIcon.hamburger(
             color: colors.textPrimary,
             size: 24,

@@ -1,5 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+
+import 'package:echos/utils/utils.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../services/encryption_service.dart';
@@ -139,8 +141,8 @@ class SessionProvider with ChangeNotifier {
     await prefs.setString(_prefsKeyActiveSession, encrypted);
   }
 
-  String getNewSessionName() {
-    const baseName = "${AppStrings.recordingPrefix} ";
+  String getNewSessionName(BuildContext context) {
+    final baseName = "${context.loc.recordingPrefix} ";
     final existingSessionNumbers = _sessions
         .where((s) => s.name.startsWith(baseName))
         .map((s) {
@@ -169,16 +171,21 @@ class SessionProvider with ChangeNotifier {
   /// Incognito sessions are created with a default name.
   /// Normal sessions can be created with an empty name and should be named later.
   /// Returns the ID of the newly created session
-  Future<String> createSession(String? name, {bool isIncognito = false}) async {
+  Future<String> createSession(
+    BuildContext context,
+    String? name, {
+    bool isIncognito = false,
+    bool notifyListenersImmediately = true,
+  }) async {
     final now = DateTime.now();
     final sessionId = _uuid.v4();
     String sessionNameToUse = '';
 
     if (isIncognito) {
-      sessionNameToUse = AppStrings.incognitoModeTitle;
+      sessionNameToUse = context.loc.incognitoModeTitle;
     } else {
       if (name == null || name.trim().isEmpty) {
-        sessionNameToUse = getNewSessionName();
+        sessionNameToUse = getNewSessionName(context);
         if (sessionNameToUse.trim().isEmpty) {
           throw ArgumentError('Session name cannot be empty.');
         }
@@ -205,8 +212,17 @@ class SessionProvider with ChangeNotifier {
     await _saveSessions();
     _activeSessionId = session.id;
     await _saveActiveSession();
-    notifyListeners();
+
+    if (notifyListenersImmediately) {
+      notifyListeners();
+    }
+
     return sessionId;
+  }
+
+  /// Manually notifies listeners (used when notifyListenersImmediately was false)
+  void notifySessionCreated() {
+    notifyListeners();
   }
 
   /// Checks if the active session is incognito

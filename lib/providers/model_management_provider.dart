@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../models/model_type.dart';
+import '../models/spoken_language.dart';
 import '../services/vosk_service.dart';
 import '../services/whisper_service.dart';
 import '../managers/transcription_orchestrator.dart';
@@ -14,13 +15,18 @@ class ModelManagementProvider with ChangeNotifier {
   final VoskService _voskService = VoskService();
   WhisperService? _whisperService;
   late TranscriptionOrchestrator _orchestrator;
+  final AudioService _sharedAudioService;
 
   ModelType _selectedModelType = ModelType.vosk;
   static const String _prefsKeyModelType = 'selected_model_type';
   static const String _prefsKeyWhisperRealtime = 'whisper_realtime';
+  static const String _prefsKeySpokenLanguage = 'spoken_language';
   bool _isInitialized = false;
   bool _isInitializing = false;
   DateTime? _lastInitializationAttempt;
+
+  SpokenLanguage _selectedLanguage = SupportedLanguages.defaultLanguage;
+  SpokenLanguage get selectedLanguage => _selectedLanguage;
 
   static const Duration _minimumInitializationInterval = Duration(
     milliseconds: 500,
@@ -37,6 +43,9 @@ class ModelManagementProvider with ChangeNotifier {
   bool _whisperRealtime = false;
   bool get whisperRealtime => _whisperRealtime;
 
+  /// Returns whether language selection is available for the current model
+  bool get isLanguageSelectionAvailable => _selectedModelType == ModelType.whisper;
+
   /// Returns the current initialization status message
   String? get initializationStatus {
     if (_selectedModelType == ModelType.whisper) {
@@ -45,11 +54,11 @@ class ModelManagementProvider with ChangeNotifier {
     return null;
   }
 
-  ModelManagementProvider() {
+  ModelManagementProvider(this._sharedAudioService) {
     _whisperService = WhisperService();
 
     _orchestrator = TranscriptionOrchestrator(
-      AudioService(),
+      _sharedAudioService,
       _voskService,
       _whisperService,
     );
@@ -84,6 +93,10 @@ class ModelManagementProvider with ChangeNotifier {
       );
 
       _whisperRealtime = prefs.getBool(_prefsKeyWhisperRealtime) ?? false;
+
+      final languageCode = prefs.getString(_prefsKeySpokenLanguage) ?? 'en';
+      _selectedLanguage = SupportedLanguages.findByCode(languageCode) ?? 
+                         SupportedLanguages.defaultLanguage;
 
       // Disable real-time flag on non-iOS platforms where it is unsupported.
       if (!Platform.isIOS && _whisperRealtime) {
@@ -240,6 +253,26 @@ class ModelManagementProvider with ChangeNotifier {
     if (_selectedModelType == ModelType.whisper && !_whisperRealtime) {
       _isInitialized = true;
       notifyListeners();
+    }
+  }
+
+  /// Sets the selected spoken language
+  Future<void> setSelectedLanguage(SpokenLanguage language) async {
+    if (_selectedLanguage == language) return;
+    
+    _selectedLanguage = language;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefsKeySpokenLanguage, language.code);
+      notifyListeners();
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.provider,
+        message: 'Error saving selected language',
+      );
     }
   }
 

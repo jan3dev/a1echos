@@ -3,6 +3,7 @@ import 'dart:async';
 
 import '../models/transcription.dart';
 import '../models/model_type.dart';
+import '../models/spoken_language.dart';
 import 'session_provider.dart';
 import 'transcription_state_manager.dart';
 import 'model_management_provider.dart';
@@ -29,11 +30,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
   double _audioLevel = 0.0;
   double get audioLevel => _audioLevel;
   void updateAudioLevel(double level) {
-    if ((level - _audioLevel).abs() > 0.01) {
-      // avoid excessive rebuilds
-      _audioLevel = level;
-      notifyListeners();
-    }
+    _audioLevel = level;
+    notifyListeners();
   }
 
   final AudioService _audioService = AudioService();
@@ -52,7 +50,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
   /// Initialize all specialized providers
   void _initializeProviders() {
     _stateManager = TranscriptionStateManager();
-    _modelManager = ModelManagementProvider();
+    _modelManager = ModelManagementProvider(_audioService);
     _uiStateProvider = TranscriptionUIStateProvider();
     _operationProvider = TranscriptionOperationProvider(_sessionProvider);
     _dataProvider = TranscriptionDataProvider(_sessionProvider);
@@ -261,6 +259,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
   bool get whisperRealtime => _modelManager.whisperRealtime;
 
+  SpokenLanguage get selectedLanguage => _modelManager.selectedLanguage;
+  bool get isLanguageSelectionAvailable => _modelManager.isLanguageSelectionAvailable;
+
+  /// Sets the selected spoken language
+  Future<void> setSelectedLanguage(SpokenLanguage language) async {
+    await _modelManager.setSelectedLanguage(language);
+  }
+
   // ============================================================================
   // PUBLIC API - Operations
   // ============================================================================
@@ -335,12 +341,13 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     try {
       _audioLevelSub?.cancel();
-      await _audioService.startRecording();
-      _audioLevelSub = _audioService.audioLevelStream.listen(updateAudioLevel);
       final success = await _operationProvider.startRecording(
         _modelManager.selectedModelType,
         sessionId,
         _modelManager.whisperRealtime,
+        languageCode: _modelManager.isLanguageSelectionAvailable 
+            ? _modelManager.selectedLanguage.code 
+            : null,
       );
 
       if (!success) {
@@ -348,6 +355,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _uiStateProvider.clearRecordingSessionId();
         return false;
       }
+
+      _audioLevelSub = _audioService.audioLevelStream.listen(updateAudioLevel);
 
       final isLivePreview =
           _modelManager.selectedModelType == ModelType.vosk ||
@@ -406,6 +415,9 @@ class LocalTranscriptionProvider with ChangeNotifier {
         modelType,
         sessionId,
         _modelManager.whisperRealtime,
+        languageCode: _modelManager.isLanguageSelectionAvailable 
+            ? _modelManager.selectedLanguage.code 
+            : null,
       );
 
       final isLivePreview =

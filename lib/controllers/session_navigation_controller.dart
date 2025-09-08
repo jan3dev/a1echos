@@ -40,9 +40,9 @@ class SessionNavigationController with ChangeNotifier {
       await _transcriptionProvider.stopRecordingAndSave();
     }
 
-    _setDefaultNameIfNeeded();
-
     if (context.mounted) {
+      _setDefaultNameIfNeeded(context);
+
       Navigator.of(context).pop();
     }
   }
@@ -52,7 +52,7 @@ class SessionNavigationController with ChangeNotifier {
     if (isIncognitoSession) {
       _sessionProvider.deleteSession(sessionId);
     } else {
-      _setDefaultNameIfNeeded();
+      _setDefaultNameIfNeeded(context);
     }
 
     if (!_settingsProvider.isIncognitoMode ||
@@ -77,13 +77,13 @@ class SessionNavigationController with ChangeNotifier {
   }
 
   /// Sets default name for session if it's empty
-  void _setDefaultNameIfNeeded() {
+  void _setDefaultNameIfNeeded(BuildContext context) {
     final currentSession = _findSessionById(sessionId);
 
     if (currentSession != null &&
         !currentSession.isIncognito &&
         currentSession.name.isEmpty) {
-      final defaultName = _sessionProvider.getNewSessionName();
+      final defaultName = _sessionProvider.getNewSessionName(context);
       _sessionProvider.renameSession(sessionId, defaultName);
     }
   }

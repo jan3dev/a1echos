@@ -1,0 +1,233 @@
+{
+  "@@locale": "en",
+  "loading": "Loading...",
+  "transcribingStatus": "Transcribing...",
+  "liveTranscriptionTitle": "Live Transcription",
+  "speakNow": "Speak now...",
+  "encryptedAtRest": "Encrypted at rest",
+  "save": "Save",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "delete": "Delete",
+  "clear": "Delete All Transcriptions",
+  "retry": "Retry",
+  "share": "Share",
+  "edit": "Edit",
+  "homeDeleteSelectedSessionsTitle": "Delete?",
+  "homeDeleteSelectedSessionsMessage": "Are you sure you want to delete {count,plural, =1{1 session} other{{count} sessions}}? This action cannot be undone.",
+  "@homeDeleteSelectedSessionsMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSessionsDeleted": "{count,plural, =1{1 session deleted} other{{count} sessions deleted}}",
+  "@homeSessionsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeErrorCreatingSession": "Error creating session: {error}",
+  "@homeErrorCreatingSession": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "clearAllTooltip": "Clear All",
+  "newSessionTooltip": "New Session",
+  "sessionRenameTitle": "Rename",
+  "sessionDeleteTranscriptionsTitle": "Delete?",
+  "sessionDeleteTranscriptionsMessage": "Are you sure you want to delete {count,plural, =1{1 transcription} other{{count} transcriptions}}? This action cannot be undone.",
+  "@sessionDeleteTranscriptionsMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionTranscriptionsDeleted": "{count,plural, =1{1 transcription deleted} other{{count} transcriptions deleted}}",
+  "@sessionTranscriptionsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionErrorDeletingTranscriptions": "Error deleting {transcriptions}: {error}",
+  "@sessionErrorDeletingTranscriptions": {
+    "placeholders": {
+      "transcriptions": {},
+      "error": {}
+    }
+  },
+  "noTranscriptionsToCopy": "No transcriptions to copy",
+  "allTranscriptionsCopied": "All transcriptions copied to clipboard",
+  "noTranscriptionsToClear": "No transcriptions to clear",
+  "allTranscriptionsClearedSession": "All transcriptions cleared for this session",
+  "copiedToClipboard": "Copied to clipboard",
+  "retryInitialization": "Retry Initialization",
+  "modelNotReady": "Model Not Ready",
+  "modelInitFailure": "The selected speech recognition model failed to initialize. Please check settings, ensure model files are present, and restart the app.",
+  "settingsTitle": "Settings",
+  "modelTitle": "Model",
+  "themeTitle": "Theme",
+  "auto": "Auto",
+  "light": "Light",
+  "dark": "Dark",
+  "modelDescription": "Select which model to use. All processing happens on your device.",
+  "voskModelTitle": "Vosk",
+  "voskModelSubtitle": "Fast, real-time",
+  "whisperModelTitle": "Whisper",
+  "whisperModelRealtimeTitle": "Whisper (Real-time)",
+  "whisperModelFileTitle": "Whisper",
+  "whisperModelSubtitle": "High accuracy",
+  "followUs": "Follow us on X",
+  "recordingPrefix": "Session",
+  "emptySessionsMessage": "Hit the record button to start transcribing",
+  "copyToClipboard": "Copied to clipboard",
+  "modifiedPrefix": "Modified",
+  "errorPrefix": "Error:",
+  "sessionNameLabel": "Session Name",
+  "sessionNameMaxLengthHelper": "Max 30 characters.",
+  "modelReadySuffix": "model is ready.",
+  "modelFailedInitSuffix": "model failed to initialize.",
+  "initializingModelPrefix": "Initializing",
+  "modelSuffix": "model...",
+  "retryInitializationButton": "Retry Initialization",
+  "incognitoModeTitle": "Incognito",
+  "incognitoExplainerTitle": "Incognito Mode",
+  "incognitoExplainerBody": "Transcibe without saving. This session won't be stored or synced anywhere.",
+  "incognitoExplainerCta": "Got it!",
+  "copyFailed": "Failed to copy: {error}",
+  "@copyFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "noTranscriptionsSelectedToShare": "No transcriptions selected to share",
+  "shareFailed": "Failed to share: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "actionFailedTitle": "{action} Failed",
+  "@actionFailedTitle": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "genericErrorRetry": "An error occurred: {error}\\n\\nPlease try again in a moment.",
+  "@genericErrorRetry": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "couldNotOpenLink": "Could not open link",
+  "createdPrefix": "Created",
+  "spokenLanguageTitle": "Spoken Language",
+  "spokenLanguageDescription": "Choose which language the model should detect. For best results, select the language you mainly speak.",
+  "spokenLanguageDisabledForVosk": "Language selection is only available for Whisper models. Vosk only supports English.",
+  "languageEnglish": "English",
+  "languageChinese": "Chinese",
+  "languageGerman": "German",
+  "languageSpanish": "Spanish",
+  "languageRussian": "Russian",
+  "languageKorean": "Korean",
+  "languageFrench": "French",
+  "languageJapanese": "Japanese",
+  "languagePortuguese": "Portuguese",
+  "languageTurkish": "Turkish",
+  "languagePolish": "Polish",
+  "languageCatalan": "Catalan",
+  "languageDutch": "Dutch",
+  "languageArabic": "Arabic",
+  "languageSwedish": "Swedish",
+  "languageItalian": "Italian",
+  "languageIndonesian": "Indonesian",
+  "languageHindi": "Hindi",
+  "languageFinnish": "Finnish",
+  "languageVietnamese": "Vietnamese",
+  "languageHebrew": "Hebrew",
+  "languageUkrainian": "Ukrainian",
+  "languageGreek": "Greek",
+  "languageMalay": "Malay",
+  "languageCzech": "Czech",
+  "languageRomanian": "Romanian",
+  "languageDanish": "Danish",
+  "languageHungarian": "Hungarian",
+  "languageTamil": "Tamil",
+  "languageNorwegian": "Norwegian",
+  "languageThai": "Thai",
+  "languageUrdu": "Urdu",
+  "languageCroatian": "Croatian",
+  "languageBulgarian": "Bulgarian",
+  "languageLithuanian": "Lithuanian",
+  "languageLatin": "Latin",
+  "languageMaori": "Maori",
+  "languageMalayalam": "Malayalam",
+  "languageWelsh": "Welsh",
+  "languageSlovak": "Slovak",
+  "languageTelugu": "Telugu",
+  "languagePersian": "Persian",
+  "languageLatvian": "Latvian",
+  "languageBengali": "Bengali",
+  "languageSerbian": "Serbian",
+  "languageAzerbaijani": "Azerbaijani",
+  "languageSlovenian": "Slovenian",
+  "languageKannada": "Kannada",
+  "languageEstonian": "Estonian",
+  "languageMacedonian": "Macedonian",
+  "languageBreton": "Breton",
+  "languageBasque": "Basque",
+  "languageIcelandic": "Icelandic",
+  "languageArmenian": "Armenian",
+  "languageNepali": "Nepali",
+  "languageMongolian": "Mongolian",
+  "languageBosnian": "Bosnian",
+  "languageKazakh": "Kazakh",
+  "languageAlbanian": "Albanian",
+  "languageSwahili": "Swahili",
+  "languageGalician": "Galician",
+  "languageMarathi": "Marathi",
+  "languagePunjabi": "Punjabi",
+  "languageSinhala": "Sinhala",
+  "languageKhmer": "Khmer",
+  "languageShona": "Shona",
+  "languageYoruba": "Yoruba",
+  "languageSomali": "Somali",
+  "languageAfrikaans": "Afrikaans",
+  "languageOccitan": "Occitan",
+  "languageGeorgian": "Georgian",
+  "languageBelarusian": "Belarusian",
+  "languageTajik": "Tajik",
+  "languageSindhi": "Sindhi",
+  "languageGujarati": "Gujarati",
+  "languageAmharic": "Amharic",
+  "languageYiddish": "Yiddish",
+  "languageLao": "Lao",
+  "languageUzbek": "Uzbek",
+  "languageFaroese": "Faroese",
+  "languageHaitianCreole": "Haitian Creole",
+  "languagePashto": "Pashto",
+  "languageTurkmen": "Turkmen",
+  "languageNynorsk": "Nynorsk",
+  "languageMaltese": "Maltese",
+  "languageSanskrit": "Sanskrit",
+  "languageLuxembourgish": "Luxembourgish",
+  "languageMyanmar": "Myanmar",
+  "languageTibetan": "Tibetan",
+  "languageTagalog": "Tagalog",
+  "languageMalagasy": "Malagasy",
+  "languageAssamese": "Assamese",
+  "languageTatar": "Tatar",
+  "languageHawaiian": "Hawaiian",
+  "languageLingala": "Lingala",
+  "languageHausa": "Hausa",
+  "languageBashkir": "Bashkir",
+  "languageJavanese": "Javanese",
+  "languageSundanese": "Sundanese"
+}
