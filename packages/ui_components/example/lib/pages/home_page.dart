@@ -17,13 +17,16 @@ class HomeScreen extends HookConsumerWidget {
     final demoItems = {
       'Button': const ButtonDemoPage(),
       'Dimmer': const DimmerDemoPage(),
+      'Footer': const FooterDemoPage(),
       'Header': const TopAppbarDemoPage(),
       'Icon': const IconDemoPage(),
       'List Item': const ListItemDemoPage(),
       'Modal Sheet': const ModalSheetDemoPage(),
+      'Transcribe Buttons': const RecordingButtonDemoPage(),
       'Surface': const SurfaceDemoPage(),
-      'Tooltip': const TabChipTooltipDemoPage(),
       'Textfield': const TextfieldDemoPage(),
+      'Transcription Item': const TranscriptionItemDemoPage(),
+      'Tooltip': const TabChipTooltipDemoPage(),
       'Utility Item': const UtilityItemDemoPage(),
     };
 

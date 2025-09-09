@@ -16,8 +16,11 @@ typedef AquaIconBuilder = AquaIcon Function({
 class AquaIcon extends StatelessWidget {
   const AquaIcon._({
     required this.asset,
+    // ignore: unused_element_parameter
     this.color,
+    // ignore: unused_element_parameter
     this.onTap,
+    // ignore: unused_element_parameter
     this.padding,
   }) : size = _defaultSize;
 
@@ -715,27 +718,6 @@ class AquaIcon extends StatelessWidget {
     this.padding,
     this.size = _defaultSize,
   }) : asset = AquaUiAssets.svgs.calendar;
-  AquaIcon.checkboxSelected({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.checkboxSelected;
-  AquaIcon.checkboxUnselected({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.checkboxUnselected;
-  AquaIcon.checkboxUnselectedSmall({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.checkboxUnselectedSmall;
   AquaIcon.chevronUpDown({
     super.key,
     this.color,
@@ -750,20 +732,6 @@ class AquaIcon extends StatelessWidget {
     this.padding,
     this.size = _defaultSize,
   }) : asset = AquaUiAssets.svgs.circularProgress;
-  AquaIcon.contextualIcon24({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.contextualIcon24;
-  AquaIcon.contextualIcon40({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.contextualIcon40;
   AquaIcon.contractCheck({
     super.key,
     this.color,
@@ -918,34 +886,6 @@ class AquaIcon extends StatelessWidget {
     this.padding,
     this.size = _defaultSize,
   }) : asset = AquaUiAssets.svgs.paragraph;
-  AquaIcon.radioSelected({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.radioSelected;
-  AquaIcon.radioUnselected({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.radioUnselected;
-  AquaIcon.radioSelectedSmall({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.radioSelectedSmall;
-  AquaIcon.radioUnselectedSmall({
-    super.key,
-    this.color,
-    this.onTap,
-    this.padding,
-    this.size = _defaultSize,
-  }) : asset = AquaUiAssets.svgs.radioUnselectedSmall;
   AquaIcon.switchIcon({
     super.key,
     this.color,

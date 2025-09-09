@@ -103,18 +103,6 @@ class $AssetsSvgsGen {
   SvgGenImage get checkCircle =>
       const SvgGenImage('assets/svgs/check_circle.svg');
 
-  /// File path: assets/svgs/checkbox_selected.svg
-  SvgGenImage get checkboxSelected =>
-      const SvgGenImage('assets/svgs/checkbox_selected.svg');
-
-  /// File path: assets/svgs/checkbox_unselected.svg
-  SvgGenImage get checkboxUnselected =>
-      const SvgGenImage('assets/svgs/checkbox_unselected.svg');
-
-  /// File path: assets/svgs/checkbox_unselected_small.svg
-  SvgGenImage get checkboxUnselectedSmall =>
-      const SvgGenImage('assets/svgs/checkbox_unselected_small.svg');
-
   /// File path: assets/svgs/chevron_down.svg
   SvgGenImage get chevronDown =>
       const SvgGenImage('assets/svgs/chevron_down.svg');
@@ -140,14 +128,6 @@ class $AssetsSvgsGen {
 
   /// File path: assets/svgs/close.svg
   SvgGenImage get close => const SvgGenImage('assets/svgs/close.svg');
-
-  /// File path: assets/svgs/contextual_icon_24.svg
-  SvgGenImage get contextualIcon24 =>
-      const SvgGenImage('assets/svgs/contextual_icon_24.svg');
-
-  /// File path: assets/svgs/contextual_icon_40.svg
-  SvgGenImage get contextualIcon40 =>
-      const SvgGenImage('assets/svgs/contextual_icon_40.svg');
 
   /// File path: assets/svgs/contract_check.svg
   SvgGenImage get contractCheck =>
@@ -273,6 +253,10 @@ class $AssetsSvgsGen {
   SvgGenImage get infoCircle =>
       const SvgGenImage('assets/svgs/info_circle.svg');
 
+  /// File path: assets/svgs/input_clear_icon.svg
+  SvgGenImage get inputClearIcon =>
+      const SvgGenImage('assets/svgs/input_clear_icon.svg');
+
   /// File path: assets/svgs/instagram_logo.svg
   SvgGenImage get instagramLogo =>
       const SvgGenImage('assets/svgs/instagram_logo.svg');
@@ -355,21 +339,8 @@ class $AssetsSvgsGen {
   /// File path: assets/svgs/qr_icon.svg
   SvgGenImage get qrIcon => const SvgGenImage('assets/svgs/qr_icon.svg');
 
-  /// File path: assets/svgs/radio_selected.svg
-  SvgGenImage get radioSelected =>
-      const SvgGenImage('assets/svgs/radio_selected.svg');
-
-  /// File path: assets/svgs/radio_selected_small.svg
-  SvgGenImage get radioSelectedSmall =>
-      const SvgGenImage('assets/svgs/radio_selected_small.svg');
-
-  /// File path: assets/svgs/radio_unselected.svg
-  SvgGenImage get radioUnselected =>
-      const SvgGenImage('assets/svgs/radio_unselected.svg');
-
-  /// File path: assets/svgs/radio_unselected_small.svg
-  SvgGenImage get radioUnselectedSmall =>
-      const SvgGenImage('assets/svgs/radio_unselected_small.svg');
+  /// File path: assets/svgs/rectangle.svg
+  SvgGenImage get rectangle => const SvgGenImage('assets/svgs/rectangle.svg');
 
   /// File path: assets/svgs/redo.svg
   SvgGenImage get redo => const SvgGenImage('assets/svgs/redo.svg');
@@ -447,8 +418,9 @@ class $AssetsSvgsGen {
   SvgGenImage get swapVertical =>
       const SvgGenImage('assets/svgs/swap_vertical.svg');
 
-  /// File path: assets/svgs/switchIcon.svg
-  SvgGenImage get switchIcon => const SvgGenImage('assets/svgs/switchIcon.svg');
+  /// File path: assets/svgs/switch_icon.svg
+  SvgGenImage get switchIcon =>
+      const SvgGenImage('assets/svgs/switch_icon.svg');
 
   /// File path: assets/svgs/telegram_logo.svg
   SvgGenImage get telegramLogo =>
@@ -515,9 +487,6 @@ class $AssetsSvgsGen {
         chart,
         check,
         checkCircle,
-        checkboxSelected,
-        checkboxUnselected,
-        checkboxUnselectedSmall,
         chevronDown,
         chevronLeft,
         chevronRight,
@@ -525,8 +494,6 @@ class $AssetsSvgsGen {
         chevronUpDown,
         circularProgress,
         close,
-        contextualIcon24,
-        contextualIcon40,
         contractCheck,
         contractSearch,
         copy,
@@ -563,6 +530,7 @@ class $AssetsSvgsGen {
         images,
         incognito,
         infoCircle,
+        inputClearIcon,
         instagramLogo,
         jan3Logo,
         key,
@@ -589,10 +557,7 @@ class $AssetsSvgsGen {
         plus,
         pokerchip,
         qrIcon,
-        radioSelected,
-        radioSelectedSmall,
-        radioUnselected,
-        radioUnselectedSmall,
+        rectangle,
         redo,
         referenceRate,
         refresh,
@@ -1144,11 +1109,12 @@ class $AssetsSvgsFlagsGen {
   /// File path: assets/svgs/flags/madeira.svg
   SvgGenImage get madeira => const SvgGenImage('assets/svgs/flags/madeira.svg');
 
-  /// File path: assets/svgs/flags/malasya.svg
-  SvgGenImage get malasya => const SvgGenImage('assets/svgs/flags/malasya.svg');
-
   /// File path: assets/svgs/flags/malawi.svg
   SvgGenImage get malawi => const SvgGenImage('assets/svgs/flags/malawi.svg');
+
+  /// File path: assets/svgs/flags/malaysia.svg
+  SvgGenImage get malaysia =>
+      const SvgGenImage('assets/svgs/flags/malaysia.svg');
 
   /// File path: assets/svgs/flags/maldives.svg
   SvgGenImage get maldives =>
@@ -1552,9 +1518,9 @@ class $AssetsSvgsFlagsGen {
   /// File path: assets/svgs/flags/uruguay.svg
   SvgGenImage get uruguay => const SvgGenImage('assets/svgs/flags/uruguay.svg');
 
-  /// File path: assets/svgs/flags/uzbekistn.svg
-  SvgGenImage get uzbekistn =>
-      const SvgGenImage('assets/svgs/flags/uzbekistn.svg');
+  /// File path: assets/svgs/flags/uzbekistan.svg
+  SvgGenImage get uzbekistan =>
+      const SvgGenImage('assets/svgs/flags/uzbekistan.svg');
 
   /// File path: assets/svgs/flags/vanuatu.svg
   SvgGenImage get vanuatu => const SvgGenImage('assets/svgs/flags/vanuatu.svg');
@@ -1725,8 +1691,8 @@ class $AssetsSvgsFlagsGen {
         macao,
         madagascar,
         madeira,
-        malasya,
         malawi,
+        malaysia,
         maldives,
         mali,
         malta,
@@ -1839,7 +1805,7 @@ class $AssetsSvgsFlagsGen {
         unitedNations,
         unitedStates,
         uruguay,
-        uzbekistn,
+        uzbekistan,
         vanuatu,
         vaticanCity,
         venezuela,

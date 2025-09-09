@@ -1,7 +1,6 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:ui_components/ui_components.dart';
 
 import '../../providers/theme_provider.dart';
@@ -20,12 +19,7 @@ class IncognitoExplainerModal {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: SvgPicture.asset(
-        'assets/icons/ghost.svg',
-        width: 24,
-        height: 24,
-        colorFilter: ColorFilter.mode(colors.textInverse, BlendMode.srcIn),
-      ),
+      icon: AquaIcon.ghost(color: colors.textInverse, size: 24),
       iconVariant: AquaModalSheetVariant.info,
       title: context.loc.incognitoExplainerTitle,
       message: context.loc.incognitoExplainerBody,

@@ -57,7 +57,7 @@ flutter:
     - assets/models/whisper/ios/openai_whisper-tiny.zip
     - assets/models/whisper/android/ggml-tiny.bin.zip
     - assets/icons/
-    - assets/icons/flags/
+    - assets/images/
   fonts:
     - family: Manrope
       fonts:

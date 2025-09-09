@@ -14,7 +14,7 @@ dependencies:
   intl: any
   flutter_localizations:
     sdk: flutter
-  skeletonizer: ^1.0.1
+  skeletonizer: ^2.0.1
 
 dev_dependencies:
   build_runner: ^2.4.8

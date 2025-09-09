@@ -38,7 +38,6 @@ class DesignSystemPlaygroundApp extends HookConsumerWidget {
     return MaterialApp(
       theme: theme,
       debugShowCheckedModeBanner: false,
-      useInheritedMediaQuery: true,
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
       localizationsDelegates: UiLocalizations.localizationsDelegates,

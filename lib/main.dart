@@ -19,21 +19,21 @@ import 'models/app_theme.dart';
 import 'logger.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  FlutterForegroundTask.initCommunicationPort();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-  FlutterError.onError = (FlutterErrorDetails details) {
-    logger.error(
-      details.exception,
-      stackTrace: details.stack,
-      flag: FeatureFlag.ui,
-    );
-    FlutterError.presentError(details);
-  };
-
   await runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      FlutterForegroundTask.initCommunicationPort();
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+      FlutterError.onError = (FlutterErrorDetails details) {
+        logger.error(
+          details.exception,
+          stackTrace: details.stack,
+          flag: FeatureFlag.ui,
+        );
+        FlutterError.presentError(details);
+      };
+
       final settingsProvider = await SettingsProvider.create();
       final sharedPrefs = await SharedPreferences.getInstance();
 

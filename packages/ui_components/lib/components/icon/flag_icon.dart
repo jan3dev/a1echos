@@ -15,6 +15,7 @@ class FlagIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return SvgPicture.asset(
       'assets/svgs/flags/$countryCode.svg',
+      package: 'ui_components',
       width: size,
       height: size,
     );

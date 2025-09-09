@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/settings_provider.dart';
@@ -27,22 +26,10 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final colors = selectedTheme.colors(context);
     final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
-    return AppBar(
-      backgroundColor: colors.surfaceBackground,
-      elevation: 0,
-      leadingWidth: effectivelyEmpty || selectionMode ? 56 : 0,
-      automaticallyImplyLeading: false,
-      titleSpacing: 16,
-      title: Row(
-        children: [
-          SvgPicture.asset(
-            'assets/icons/echos-logo.svg',
-            colorFilter: ColorFilter.mode(colors.textPrimary, BlendMode.srcIn),
-          ),
-          const SizedBox(width: 10),
-          AquaText.subtitleSemiBold(text: 'Echos', color: colors.textPrimary),
-        ],
-      ),
+    return AquaTopAppBar(
+      colors: colors,
+      showBackButton: false,
+      leading: AquaIcon.echosLogo(color: colors.textPrimary),
       actions: [
         if (selectionMode) ...[
           AquaIcon.trash(
@@ -51,18 +38,12 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             onTap: onDeleteSelected,
           ),
         ] else ...[
-          IconButton(
-            iconSize: 24,
-            icon: SvgPicture.asset(
-              'assets/icons/ghost.svg',
-              colorFilter: ColorFilter.mode(
-                settingsProvider.isIncognitoMode
-                    ? colors.accentBrand
-                    : colors.textPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            onPressed: () async {
+          AquaIcon.ghost(
+            size: 24,
+            color: settingsProvider.isIncognitoMode
+                ? colors.accentBrand
+                : colors.textPrimary,
+            onTap: () async {
               final newValue = !settingsProvider.isIncognitoMode;
               final shouldShowModal =
                   newValue && !settingsProvider.hasSeenIncognitoExplainer;
@@ -82,12 +63,6 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 );
               }
             },
-            tooltip: settingsProvider.isIncognitoMode
-                ? 'Turn off Incognito Mode'
-                : 'Turn on Incognito Mode',
-            color: settingsProvider.isIncognitoMode
-                ? colors.accentBrand
-                : colors.textPrimary,
           ),
           const SizedBox(width: 8),
           AquaIcon.hamburger(
@@ -101,11 +76,10 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             },
           ),
         ],
-        const SizedBox(width: 8),
       ],
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kAppBarHeight);
 }

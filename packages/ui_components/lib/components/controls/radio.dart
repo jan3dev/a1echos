@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ui_components/gen/assets.gen.dart';
 import 'package:ui_components/ui_components.dart';
 
 class AquaRadio<T> extends StatelessWidget {
@@ -28,6 +27,8 @@ class AquaRadio<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = value == groupValue;
+    final boxSize = size == AquaControlSize.large ? 24.0 : 18.0;
+    final dotSize = size == AquaControlSize.large ? 10.0 : 7.5;
 
     return Material(
       color: Colors.transparent,
@@ -41,30 +42,40 @@ class AquaRadio<T> extends StatelessWidget {
         child: Opacity(
           opacity: enabled ? 1 : 0.5,
           child: Container(
-            width: size == AquaControlSize.large ? 24 : 18,
-            height: size == AquaControlSize.large ? 24 : 18,
+            width: boxSize,
+            height: boxSize,
             decoration: BoxDecoration(
-              color: !isSelected
-                  ? Theme.of(context).colorScheme.surfaceContainerHigh
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              border: !isSelected
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 2.0,
+                    )
                   : null,
-              borderRadius: BorderRadius.circular(100),
+              shape: BoxShape.circle,
             ),
-            child: switch (size) {
-              AquaControlSize.large => isSelected
-                  ? AquaUiAssets.svgs.radioSelected.svg(
-                      package: AquaUiAssets.package,
-                    )
-                  : AquaUiAssets.svgs.radioUnselected.svg(
-                      package: AquaUiAssets.package,
+            child: isSelected
+                ? Container(
+                    width: boxSize,
+                    height: boxSize,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
                     ),
-              AquaControlSize.small => isSelected
-                  ? AquaUiAssets.svgs.radioSelectedSmall.svg(
-                      package: AquaUiAssets.package,
-                    )
-                  : AquaUiAssets.svgs.radioUnselectedSmall.svg(
-                      package: AquaUiAssets.package,
+                    child: Center(
+                      child: Container(
+                        width: dotSize,
+                        height: dotSize,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHigh,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ),
-            },
+                  )
+                : null,
           ),
         ),
       ),

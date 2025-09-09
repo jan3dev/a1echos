@@ -18,8 +18,23 @@ class ListItemDemoPage extends HookConsumerWidget {
       );
     }, [theme]);
     final contextualIconLeading = useMemoized(() {
-      return AquaIcon.contextualIcon40(
-        size: 40,
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: theme.colors.surfaceSecondary,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: theme.colors.surfaceBorderSecondary,
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: AquaIcon.arrowDownLeft(
+            color: theme.colors.textSecondary,
+            size: 18,
+          ),
+        ),
       );
     }, [theme]);
     final iconTrailing = useMemoized(() {

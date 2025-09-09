@@ -59,7 +59,10 @@ class AquaInAppBanner extends ConsumerWidget {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Image.asset('assets/icons/in-app-banner.png', fit: BoxFit.cover),
+        child: Image.asset(
+          'assets/images/in-app-banner.png',
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
