@@ -68,5 +68,5 @@ node_modules/
 tasks.json
 tasks/ 
 
-# YoYo AI version control directory
+# AI related
 .yoyo/

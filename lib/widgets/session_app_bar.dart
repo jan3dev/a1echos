@@ -1,7 +1,6 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:ui_components/ui_components.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
@@ -45,27 +44,20 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final colors = selectedTheme.colors(context);
 
     if (editMode) {
-      return AppBar(
-        backgroundColor: colors.surfaceBackground,
-        elevation: 0,
+      return AquaTopAppBar(
+        colors: colors,
+        showBackButton: false,
         leading: AquaIcon.close(
           color: colors.textPrimary,
           size: 24,
           onTap: onCancelEditPressed,
         ),
-        title: AquaText.subtitleSemiBold(
-          text: context.loc.edit,
-          color: colors.textPrimary,
-        ),
-        centerTitle: true,
+        title: context.loc.edit,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: AquaIcon.check(
-              color: colors.textPrimary,
-              size: 24,
-              onTap: onSaveEditPressed,
-            ),
+          AquaIcon.check(
+            color: colors.textPrimary,
+            size: 24,
+            onTap: onSaveEditPressed,
           ),
         ],
       );
@@ -100,13 +92,11 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   }
 
                   return Padding(
-                    padding: const EdgeInsets.only(right: 16),
+                    padding: const EdgeInsets.fromLTRB(4, 0, 20, 0),
                     child: GestureDetector(
                       onTap: onLanguageFlagPressed,
-                      child: SvgPicture.asset(
-                        transcriptionProvider.selectedLanguage.flagAssetPath,
-                        width: 24,
-                        height: 24,
+                      child: transcriptionProvider.selectedLanguage.getFlagIcon(
+                        size: 24,
                       ),
                     ),
                   );

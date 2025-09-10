@@ -1,0 +1,114 @@
+name: Design Review Builds (Web App)
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    # Only run on PRs that start with ui_lib/
+    if: startsWith(github.head_ref, 'ui_lib/')
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: example
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+          cache: true
+
+      - name: Setup project
+        run: |
+          flutter config --no-analytics
+          flutter pub get
+          flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build web
+        run: |
+          flutter build web \
+            --release \
+            --web-renderer html \
+            --base-href /pr-${{ github.event.number }}/ \
+            --dart-define=FLUTTER_WEB_CANVASKIT_URL=/pr-${{ github.event.number }}/canvaskit/ \
+            --pwa-strategy none
+
+      - name: Deploy to Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DESIGN_SYSTEM_DEMO_DEPLOYMENT_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.DESIGN_SYSTEM_DEMO_SERVER_HOST }}
+          SERVER_USER: github-deploy
+        run: |
+          # Ensure clean and secure SSH directory
+          rm -rf ~/.ssh
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Write the SSH key securely
+          echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # Ensure correct key format
+          ssh-keygen -p -f ~/.ssh/id_ed25519 -N ""
+
+          # Add server to known hosts
+          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+
+          # Extremely verbose SSH debugging
+          ssh -vvvv -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              $SERVER_USER@$SERVER_HOST \
+              'whoami && pwd'
+
+          # Check if directory exists and is writable
+          ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              $SERVER_USER@$SERVER_HOST \
+              "test -w /var/www/demos || exit 1"
+
+          # Create temporary directory on server
+          REMOTE_TEMP=$(ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              $SERVER_USER@$SERVER_HOST "mktemp -d")
+
+          # Upload files to temporary directory
+          rsync -avz \
+            --no-times \
+            --no-perms \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
+            build/web/ \
+            $SERVER_USER@$SERVER_HOST:$REMOTE_TEMP/
+
+          # Execute deployment commands
+          ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              $SERVER_USER@$SERVER_HOST \
+              "sudo /bin/rm -rf /var/www/demos/pr-${{ github.event.number }} && \
+               sudo /bin/mkdir -p /var/www/demos && \
+               sudo /bin/mv $REMOTE_TEMP /var/www/demos/pr-${{ github.event.number }} && \
+               sudo /bin/chown -R github-deploy:www-data /var/www/demos/pr-${{ github.event.number }} && \
+               sudo /bin/chmod -R u=rwX,g=rX,o=rX /var/www/demos/pr-${{ github.event.number }}"
+
+      - name: Comment PR with deployed URL
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const serverHost = '${{ secrets.DESIGN_SYSTEM_DEMO_SERVER_HOST }}';
+            const deployedUrl = `http://${serverHost}/pr-${{ github.event.number }}/`;
+            const comment = `🚀 UI Components Demo Deployed!\n\nYou can view the demo here:\n${deployedUrl}`;
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });

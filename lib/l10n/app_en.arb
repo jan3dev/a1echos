@@ -99,7 +99,7 @@
   "retryInitializationButton": "Retry Initialization",
   "incognitoModeTitle": "Incognito",
   "incognitoExplainerTitle": "Incognito Mode",
-  "incognitoExplainerBody": "Transcibe without saving. This session won't be stored or synced anywhere.",
+  "incognitoExplainerBody": "Transcribe without saving. This session won't be stored or synced anywhere.",
   "incognitoExplainerCta": "Got it!",
   "copyFailed": "Failed to copy: {error}",
   "@copyFailed": {

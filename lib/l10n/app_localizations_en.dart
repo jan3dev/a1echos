@@ -234,7 +234,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get incognitoExplainerBody =>
-      'Transcibe without saving. This session won\'t be stored or synced anywhere.';
+      'Transcribe without saving. This session won\'t be stored or synced anywhere.';
 
   @override
   String get incognitoExplainerCta => 'Got it!';

@@ -1,6 +1,5 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:ui_components/ui_components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,30 +15,26 @@ class SpokenLanguageSelectionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedTheme = ref.watch(prefsProvider).selectedTheme;
     final colors = selectedTheme.colors(context);
-    
+
     return Scaffold(
       backgroundColor: colors.surfaceBackground,
       appBar: AquaTopAppBar(
-        colors: colors, 
+        colors: colors,
         title: context.loc.spokenLanguageTitle,
       ),
       body: SafeArea(
         child: provider.Consumer<LocalTranscriptionProvider>(
           builder: (context, transcriptionProvider, child) {
             final selectedLanguage = transcriptionProvider.selectedLanguage;
-            
+
             List<Widget> items = [];
-            
+
             Widget buildLanguageItem(SpokenLanguage language) {
               return AquaListItem(
                 title: language.getName(context),
                 titleTrailing: language.code.toUpperCase(),
                 titleTrailingColor: colors.textSecondary,
-                iconLeading: SvgPicture.asset(
-                  language.flagAssetPath,
-                  width: 24,
-                  height: 24,
-                ),
+                iconLeading: language.getFlagIcon(size: 24),
                 iconTrailing: AquaRadio<String>(
                   value: language.code,
                   groupValue: selectedLanguage.code,
@@ -59,11 +54,11 @@ class SpokenLanguageSelectionScreen extends ConsumerWidget {
                 backgroundColor: colors.surfacePrimary,
               );
             }
-            
+
             void addDivider() {
               items.add(Divider(height: 1, color: colors.surfaceBorderPrimary));
             }
-            
+
             // Add all supported languages
             for (int i = 0; i < SupportedLanguages.all.length; i++) {
               if (i > 0) {
@@ -71,7 +66,7 @@ class SpokenLanguageSelectionScreen extends ConsumerWidget {
               }
               items.add(buildLanguageItem(SupportedLanguages.all[i]));
             }
-            
+
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(

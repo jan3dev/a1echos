@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ui_components/ui_components.dart';
+import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
-import 'transcription_item.dart';
 import '../models/transcription.dart';
 import '../models/model_type.dart';
+import '../models/app_theme.dart';
 
 class _ActivePreviewState {
   final Transcription? item;
@@ -99,7 +102,7 @@ _ActivePreviewState _handleWhisperPreviewState(
   return _ActivePreviewState.empty();
 }
 
-class TranscriptionList extends StatefulWidget {
+class TranscriptionList extends ConsumerStatefulWidget {
   final ScrollController controller;
   final bool selectionMode;
   final Set<String> selectedTranscriptionIds;
@@ -120,17 +123,17 @@ class TranscriptionList extends StatefulWidget {
   });
 
   @override
-  State<TranscriptionList> createState() => TranscriptionListState();
+  ConsumerState<TranscriptionList> createState() => TranscriptionListState();
 }
 
-class TranscriptionListState extends State<TranscriptionList> {
+class TranscriptionListState extends ConsumerState<TranscriptionList> {
   String? editingId;
-  GlobalKey<TranscriptionItemState>? _editingItemKey;
+  GlobalKey<AquaTranscriptionItemState>? _editingItemKey;
 
   void _handleStartEdit(String id) {
     setState(() {
       editingId = id;
-      _editingItemKey = GlobalKey<TranscriptionItemState>();
+      _editingItemKey = GlobalKey<AquaTranscriptionItemState>();
     });
     widget.onEditModeStarted?.call();
   }
@@ -167,11 +170,16 @@ class TranscriptionListState extends State<TranscriptionList> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<LocalTranscriptionProvider>(context);
-    List<Transcription> items = List.from(provider.sessionTranscriptions);
+    final transcriptionProvider =
+        provider.Provider.of<LocalTranscriptionProvider>(context);
+    final appTheme = ref.watch(prefsProvider).selectedTheme;
+    final colors = appTheme.colors(context);
+    List<Transcription> items = List.from(
+      transcriptionProvider.sessionTranscriptions,
+    );
 
     final _ActivePreviewState previewState = _determineActivePreviewState(
-      provider,
+      transcriptionProvider,
     );
     final Transcription? activePreviewItem = previewState.item;
 
@@ -202,12 +210,19 @@ class TranscriptionListState extends State<TranscriptionList> {
         final bool isAnyEditing = editingId != null;
 
         final Key itemKey = isEditing
-            ? (_editingItemKey ??= GlobalKey<TranscriptionItemState>())
+            ? (_editingItemKey ??= GlobalKey<AquaTranscriptionItemState>())
             : ValueKey(transcription.id);
 
-        return TranscriptionItem(
+        return AquaTranscriptionItem(
+          colors: colors,
           key: itemKey,
-          transcription: transcription,
+          transcription: TranscriptionItemData(
+            id: transcription.id,
+            sessionId: transcription.sessionId,
+            text: transcription.text,
+            timestamp: transcription.timestamp,
+            audioPath: transcription.audioPath,
+          ),
           selectionMode: itemState.isPreviewItem ? false : widget.selectionMode,
           isSelected: itemState.isPreviewItem
               ? false
@@ -220,6 +235,16 @@ class TranscriptionListState extends State<TranscriptionList> {
           isAnyEditing: isAnyEditing,
           onStartEdit: () => _handleStartEdit(transcription.id),
           onEndEdit: _handleEndEdit,
+          onTranscriptionUpdate: (updatedTranscription) {
+            final updated = Transcription(
+              id: updatedTranscription.id,
+              sessionId: updatedTranscription.sessionId,
+              text: updatedTranscription.text,
+              timestamp: updatedTranscription.timestamp,
+              audioPath: updatedTranscription.audioPath,
+            );
+            transcriptionProvider.updateTranscription(updated);
+          },
           onTap: () {
             if (!itemState.isPreviewItem) {
               widget.onTranscriptionTap(transcription.id);

@@ -4,8 +4,13 @@ import 'transcription_list.dart';
 /// Shows the live streaming transcription UI and the transcript list below.
 class LiveTranscriptionView extends StatelessWidget {
   final ScrollController controller;
+  final GlobalKey<TranscriptionListState>? listKey;
 
-  const LiveTranscriptionView({super.key, required this.controller});
+  const LiveTranscriptionView({
+    super.key,
+    required this.controller,
+    this.listKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +18,7 @@ class LiveTranscriptionView extends StatelessWidget {
       children: [
         Expanded(
           child: TranscriptionList(
+            key: listKey,
             controller: controller,
             selectionMode: false,
             selectedTranscriptionIds: const {},

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui_components/components/icon/flag_icon.dart';
 import '../l10n/app_localizations.dart';
 
 class SpokenLanguage {
@@ -6,8 +7,13 @@ class SpokenLanguage {
 
   const SpokenLanguage({required this.code});
 
-  /// Asset path to the SVG flag icon for this language
-  String get flagAssetPath => SupportedLanguages.flagAssetFor(code);
+  /// Get the country code for this language's flag
+  String get countryCode => SupportedLanguages.countryCodeFor(code);
+
+  /// Get the FlagIcon widget for this language
+  Widget getFlagIcon({double size = 24.0}) {
+    return FlagIcon(countryCode, size: size);
+  }
 
   /// Get the localized name for this language
   String getName(BuildContext context) {
@@ -29,413 +35,410 @@ class SpokenLanguage {
 }
 
 class _LanguageInfo {
-  final String flagAssetFilename;
+  final String countryCode;
   final String Function(AppLocalizations) nameSelector;
 
-  const _LanguageInfo({
-    required this.flagAssetFilename,
-    required this.nameSelector,
-  });
+  const _LanguageInfo({required this.countryCode, required this.nameSelector});
 }
 
 class SupportedLanguages {
   static final Map<String, _LanguageInfo> _languageData = {
     'en': _LanguageInfo(
-      flagAssetFilename: 'english',
+      countryCode: 'united_states',
       nameSelector: (loc) => loc.languageEnglish,
     ),
     'zh': _LanguageInfo(
-      flagAssetFilename: 'chinese',
+      countryCode: 'china',
       nameSelector: (loc) => loc.languageChinese,
     ),
     'de': _LanguageInfo(
-      flagAssetFilename: 'german',
+      countryCode: 'germany',
       nameSelector: (loc) => loc.languageGerman,
     ),
     'es': _LanguageInfo(
-      flagAssetFilename: 'spanish',
+      countryCode: 'spain',
       nameSelector: (loc) => loc.languageSpanish,
     ),
     'ru': _LanguageInfo(
-      flagAssetFilename: 'russian',
+      countryCode: 'russia',
       nameSelector: (loc) => loc.languageRussian,
     ),
     'ko': _LanguageInfo(
-      flagAssetFilename: 'korean',
+      countryCode: 'south_korea',
       nameSelector: (loc) => loc.languageKorean,
     ),
     'fr': _LanguageInfo(
-      flagAssetFilename: 'french',
+      countryCode: 'france',
       nameSelector: (loc) => loc.languageFrench,
     ),
     'ja': _LanguageInfo(
-      flagAssetFilename: 'japanese',
+      countryCode: 'japan',
       nameSelector: (loc) => loc.languageJapanese,
     ),
     'pt': _LanguageInfo(
-      flagAssetFilename: 'portuguese',
+      countryCode: 'portugal',
       nameSelector: (loc) => loc.languagePortuguese,
     ),
     'tr': _LanguageInfo(
-      flagAssetFilename: 'turkish',
+      countryCode: 'turkey',
       nameSelector: (loc) => loc.languageTurkish,
     ),
     'pl': _LanguageInfo(
-      flagAssetFilename: 'polish',
+      countryCode: 'poland',
       nameSelector: (loc) => loc.languagePolish,
     ),
     'ca': _LanguageInfo(
-      flagAssetFilename: 'spanish',
+      countryCode: 'spain',
       nameSelector: (loc) => loc.languageCatalan,
     ), // Catalan uses Spanish flag
     'nl': _LanguageInfo(
-      flagAssetFilename: 'dutch',
+      countryCode: 'netherlands',
       nameSelector: (loc) => loc.languageDutch,
     ),
     'ar': _LanguageInfo(
-      flagAssetFilename: 'arabic',
+      countryCode: 'saudi_arabia',
       nameSelector: (loc) => loc.languageArabic,
-    ),
+    ), // Arabic uses Saudi Arabia flag
     'sv': _LanguageInfo(
-      flagAssetFilename: 'swedish',
+      countryCode: 'sweden',
       nameSelector: (loc) => loc.languageSwedish,
     ),
     'it': _LanguageInfo(
-      flagAssetFilename: 'italian',
+      countryCode: 'italy',
       nameSelector: (loc) => loc.languageItalian,
     ),
     'id': _LanguageInfo(
-      flagAssetFilename: 'indonesian',
+      countryCode: 'indonesia',
       nameSelector: (loc) => loc.languageIndonesian,
     ),
     'hi': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageHindi,
     ),
     'fi': _LanguageInfo(
-      flagAssetFilename: 'finnish',
+      countryCode: 'finland',
       nameSelector: (loc) => loc.languageFinnish,
     ),
     'vi': _LanguageInfo(
-      flagAssetFilename: 'vietnamese',
+      countryCode: 'vietnam',
       nameSelector: (loc) => loc.languageVietnamese,
     ),
     'he': _LanguageInfo(
-      flagAssetFilename: 'hebrew',
+      countryCode: 'israel',
       nameSelector: (loc) => loc.languageHebrew,
     ),
     'uk': _LanguageInfo(
-      flagAssetFilename: 'ukrainian',
+      countryCode: 'ukraine',
       nameSelector: (loc) => loc.languageUkrainian,
     ),
     'el': _LanguageInfo(
-      flagAssetFilename: 'greek',
+      countryCode: 'greece',
       nameSelector: (loc) => loc.languageGreek,
     ),
     'ms': _LanguageInfo(
-      flagAssetFilename: 'malay',
+      countryCode: 'malaysia',
       nameSelector: (loc) => loc.languageMalay,
     ),
     'cs': _LanguageInfo(
-      flagAssetFilename: 'czech',
+      countryCode: 'czech_republic',
       nameSelector: (loc) => loc.languageCzech,
     ),
     'ro': _LanguageInfo(
-      flagAssetFilename: 'romanian',
+      countryCode: 'romania',
       nameSelector: (loc) => loc.languageRomanian,
     ),
     'da': _LanguageInfo(
-      flagAssetFilename: 'danish',
+      countryCode: 'denmark',
       nameSelector: (loc) => loc.languageDanish,
     ),
     'hu': _LanguageInfo(
-      flagAssetFilename: 'hungarian',
+      countryCode: 'hungary',
       nameSelector: (loc) => loc.languageHungarian,
     ),
     'ta': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageTamil,
-    ), // Tamil uses Hindi flag
+    ), // Tamil uses India flag
     'no': _LanguageInfo(
-      flagAssetFilename: 'norwegian',
+      countryCode: 'norway',
       nameSelector: (loc) => loc.languageNorwegian,
     ),
     'th': _LanguageInfo(
-      flagAssetFilename: 'thai',
+      countryCode: 'thailand',
       nameSelector: (loc) => loc.languageThai,
     ),
     'ur': _LanguageInfo(
-      flagAssetFilename: 'urdu',
+      countryCode: 'pakistan',
       nameSelector: (loc) => loc.languageUrdu,
-    ),
+    ), // Urdu uses Pakistan flag
     'hr': _LanguageInfo(
-      flagAssetFilename: 'croatian',
+      countryCode: 'croatia',
       nameSelector: (loc) => loc.languageCroatian,
     ),
     'bg': _LanguageInfo(
-      flagAssetFilename: 'bulgarian',
+      countryCode: 'bulgaria',
       nameSelector: (loc) => loc.languageBulgarian,
     ),
     'lt': _LanguageInfo(
-      flagAssetFilename: 'lithuanian',
+      countryCode: 'lithuania',
       nameSelector: (loc) => loc.languageLithuanian,
     ),
     'la': _LanguageInfo(
-      flagAssetFilename: 'latin',
+      countryCode: 'vatican_city',
       nameSelector: (loc) => loc.languageLatin,
-    ),
+    ), // Latin uses Vatican City flag
     'mi': _LanguageInfo(
-      flagAssetFilename: 'maori',
+      countryCode: 'new_zealand',
       nameSelector: (loc) => loc.languageMaori,
-    ),
+    ), // Maori uses New Zealand flag
     'ml': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageMalayalam,
-    ), // Malayalam uses Hindi flag
+    ), // Malayalam uses India flag
     'cy': _LanguageInfo(
-      flagAssetFilename: 'welsh',
+      countryCode: 'united_kingdom',
       nameSelector: (loc) => loc.languageWelsh,
-    ),
+    ), // Welsh uses UK flag
     'sk': _LanguageInfo(
-      flagAssetFilename: 'slovak',
+      countryCode: 'slovakia',
       nameSelector: (loc) => loc.languageSlovak,
     ),
     'te': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageTelugu,
-    ), // Telugu uses Hindi flag
+    ), // Telugu uses India flag
     'fa': _LanguageInfo(
-      flagAssetFilename: 'persian',
+      countryCode: 'iran',
       nameSelector: (loc) => loc.languagePersian,
     ),
     'lv': _LanguageInfo(
-      flagAssetFilename: 'latvian',
+      countryCode: 'latvia',
       nameSelector: (loc) => loc.languageLatvian,
     ),
     'bn': _LanguageInfo(
-      flagAssetFilename: 'bengali',
+      countryCode: 'bangladesh',
       nameSelector: (loc) => loc.languageBengali,
     ),
     'sr': _LanguageInfo(
-      flagAssetFilename: 'serbian',
+      countryCode: 'serbia',
       nameSelector: (loc) => loc.languageSerbian,
     ),
     'az': _LanguageInfo(
-      flagAssetFilename: 'azerbaijani',
+      countryCode: 'azerbaijan',
       nameSelector: (loc) => loc.languageAzerbaijani,
     ),
     'sl': _LanguageInfo(
-      flagAssetFilename: 'slovenian',
+      countryCode: 'slovenia',
       nameSelector: (loc) => loc.languageSlovenian,
     ),
     'kn': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageKannada,
-    ), // Kannada uses Hindi flag
+    ), // Kannada uses India flag
     'et': _LanguageInfo(
-      flagAssetFilename: 'estonian',
+      countryCode: 'estonia',
       nameSelector: (loc) => loc.languageEstonian,
     ),
     'mk': _LanguageInfo(
-      flagAssetFilename: 'macedonian',
+      countryCode: 'republic_of_macedonia',
       nameSelector: (loc) => loc.languageMacedonian,
     ),
     'br': _LanguageInfo(
-      flagAssetFilename: 'french',
+      countryCode: 'france',
       nameSelector: (loc) => loc.languageBreton,
-    ), // Breton uses French flag
+    ), // Breton uses France flag
     'eu': _LanguageInfo(
-      flagAssetFilename: 'spanish',
+      countryCode: 'spain',
       nameSelector: (loc) => loc.languageBasque,
-    ), // Basque uses Spanish flag
+    ), // Basque uses Spain flag
     'is': _LanguageInfo(
-      flagAssetFilename: 'icelandic',
+      countryCode: 'iceland',
       nameSelector: (loc) => loc.languageIcelandic,
     ),
     'hy': _LanguageInfo(
-      flagAssetFilename: 'armenian',
+      countryCode: 'armenia',
       nameSelector: (loc) => loc.languageArmenian,
     ),
     'ne': _LanguageInfo(
-      flagAssetFilename: 'nepali',
+      countryCode: 'nepal',
       nameSelector: (loc) => loc.languageNepali,
     ),
     'mn': _LanguageInfo(
-      flagAssetFilename: 'mongolian',
+      countryCode: 'mongolia',
       nameSelector: (loc) => loc.languageMongolian,
     ),
     'bs': _LanguageInfo(
-      flagAssetFilename: 'bosnian',
+      countryCode: 'bosnia_and_herzegovina',
       nameSelector: (loc) => loc.languageBosnian,
     ),
     'kk': _LanguageInfo(
-      flagAssetFilename: 'kazakh',
+      countryCode: 'kazakhstan',
       nameSelector: (loc) => loc.languageKazakh,
     ),
     'sq': _LanguageInfo(
-      flagAssetFilename: 'albanian',
+      countryCode: 'albania',
       nameSelector: (loc) => loc.languageAlbanian,
     ),
     'sw': _LanguageInfo(
-      flagAssetFilename: 'swahili',
+      countryCode: 'kenya',
       nameSelector: (loc) => loc.languageSwahili,
-    ),
+    ), // Swahili uses Kenya flag
     'gl': _LanguageInfo(
-      flagAssetFilename: 'spanish',
+      countryCode: 'spain',
       nameSelector: (loc) => loc.languageGalician,
-    ), // Galician uses Spanish flag
+    ), // Galician uses Spain flag
     'mr': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageMarathi,
-    ), // Marathi uses Hindi flag
+    ), // Marathi uses India flag
     'pa': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languagePunjabi,
-    ), // Punjabi uses Hindi flag
+    ), // Punjabi uses India flag
     'si': _LanguageInfo(
-      flagAssetFilename: 'sinhala',
+      countryCode: 'sri_lanka',
       nameSelector: (loc) => loc.languageSinhala,
     ),
     'km': _LanguageInfo(
-      flagAssetFilename: 'khmer',
+      countryCode: 'cambodia',
       nameSelector: (loc) => loc.languageKhmer,
     ),
     'sn': _LanguageInfo(
-      flagAssetFilename: 'shona',
+      countryCode: 'zimbabwe',
       nameSelector: (loc) => loc.languageShona,
     ),
     'yo': _LanguageInfo(
-      flagAssetFilename: 'yoruba',
+      countryCode: 'nigeria',
       nameSelector: (loc) => loc.languageYoruba,
-    ),
+    ), // Yoruba uses Nigeria flag
     'so': _LanguageInfo(
-      flagAssetFilename: 'somali',
+      countryCode: 'somalia',
       nameSelector: (loc) => loc.languageSomali,
     ),
     'af': _LanguageInfo(
-      flagAssetFilename: 'afrikaans',
+      countryCode: 'south_africa',
       nameSelector: (loc) => loc.languageAfrikaans,
     ),
     'oc': _LanguageInfo(
-      flagAssetFilename: 'french',
+      countryCode: 'france',
       nameSelector: (loc) => loc.languageOccitan,
-    ), // Occitan uses French flag
+    ), // Occitan uses France flag
     'ka': _LanguageInfo(
-      flagAssetFilename: 'georgian',
+      countryCode: 'georgia',
       nameSelector: (loc) => loc.languageGeorgian,
     ),
     'be': _LanguageInfo(
-      flagAssetFilename: 'belarusian',
+      countryCode: 'belarus',
       nameSelector: (loc) => loc.languageBelarusian,
     ),
     'tg': _LanguageInfo(
-      flagAssetFilename: 'tajik',
+      countryCode: 'tajikistan',
       nameSelector: (loc) => loc.languageTajik,
     ),
     'sd': _LanguageInfo(
-      flagAssetFilename: 'urdu',
+      countryCode: 'pakistan',
       nameSelector: (loc) => loc.languageSindhi,
-    ), // Sindhi uses Urdu flag
+    ), // Sindhi uses Pakistan flag
     'gu': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageGujarati,
-    ), // Gujarati uses Hindi flag
+    ), // Gujarati uses India flag
     'am': _LanguageInfo(
-      flagAssetFilename: 'amharic',
+      countryCode: 'ethiopia',
       nameSelector: (loc) => loc.languageAmharic,
     ),
     'yi': _LanguageInfo(
-      flagAssetFilename: 'hebrew',
+      countryCode: 'israel',
       nameSelector: (loc) => loc.languageYiddish,
-    ), // Yiddish uses Hebrew flag
+    ), // Yiddish uses Israel flag
     'lo': _LanguageInfo(
-      flagAssetFilename: 'lao',
+      countryCode: 'laos',
       nameSelector: (loc) => loc.languageLao,
     ),
     'uz': _LanguageInfo(
-      flagAssetFilename: 'uzbek',
+      countryCode: 'uzbekistan',
       nameSelector: (loc) => loc.languageUzbek,
     ),
     'fo': _LanguageInfo(
-      flagAssetFilename: 'danish',
+      countryCode: 'denmark',
       nameSelector: (loc) => loc.languageFaroese,
-    ), // Faroese uses Danish flag
+    ), // Faroese uses Denmark flag
     'ht': _LanguageInfo(
-      flagAssetFilename: 'haitianCreole',
+      countryCode: 'haiti',
       nameSelector: (loc) => loc.languageHaitianCreole,
     ),
     'ps': _LanguageInfo(
-      flagAssetFilename: 'pashto',
+      countryCode: 'afghanistan',
       nameSelector: (loc) => loc.languagePashto,
     ),
     'tk': _LanguageInfo(
-      flagAssetFilename: 'turkmen',
+      countryCode: 'turkmenistan',
       nameSelector: (loc) => loc.languageTurkmen,
     ),
     'nn': _LanguageInfo(
-      flagAssetFilename: 'norwegian',
+      countryCode: 'norway',
       nameSelector: (loc) => loc.languageNynorsk,
-    ), // Nynorsk uses Norwegian flag
+    ), // Nynorsk uses Norway flag
     'mt': _LanguageInfo(
-      flagAssetFilename: 'maltese',
+      countryCode: 'malta',
       nameSelector: (loc) => loc.languageMaltese,
     ),
     'sa': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageSanskrit,
-    ), // Sanskrit uses Hindi flag
+    ), // Sanskrit uses India flag
     'lb': _LanguageInfo(
-      flagAssetFilename: 'luxembourgish',
+      countryCode: 'luxembourg',
       nameSelector: (loc) => loc.languageLuxembourgish,
     ),
     'my': _LanguageInfo(
-      flagAssetFilename: 'myanmar',
+      countryCode: 'myanmar',
       nameSelector: (loc) => loc.languageMyanmar,
     ),
     'bo': _LanguageInfo(
-      flagAssetFilename: 'tibetan',
+      countryCode: 'tibet',
       nameSelector: (loc) => loc.languageTibetan,
     ),
     'tl': _LanguageInfo(
-      flagAssetFilename: 'tagalog',
+      countryCode: 'philippines',
       nameSelector: (loc) => loc.languageTagalog,
     ),
     'mg': _LanguageInfo(
-      flagAssetFilename: 'malagasy',
+      countryCode: 'madagascar',
       nameSelector: (loc) => loc.languageMalagasy,
     ),
     'as': _LanguageInfo(
-      flagAssetFilename: 'hindi',
+      countryCode: 'india',
       nameSelector: (loc) => loc.languageAssamese,
-    ), // Assamese uses Hindi flag
+    ), // Assamese uses India flag
     'tt': _LanguageInfo(
-      flagAssetFilename: 'tatar',
+      countryCode: 'russia',
       nameSelector: (loc) => loc.languageTatar,
-    ),
+    ), // Tatar uses Russia flag
     'haw': _LanguageInfo(
-      flagAssetFilename: 'hawaiian',
+      countryCode: 'hawaii',
       nameSelector: (loc) => loc.languageHawaiian,
     ),
     'ln': _LanguageInfo(
-      flagAssetFilename: 'lingala',
+      countryCode: 'democratic_republic_of_congo',
       nameSelector: (loc) => loc.languageLingala,
-    ),
+    ), // Lingala uses DRC flag
     'ha': _LanguageInfo(
-      flagAssetFilename: 'yoruba',
+      countryCode: 'nigeria',
       nameSelector: (loc) => loc.languageHausa,
-    ), // Hausa uses Yoruba flag
+    ), // Hausa uses Nigeria flag
     'ba': _LanguageInfo(
-      flagAssetFilename: 'russian',
+      countryCode: 'russia',
       nameSelector: (loc) => loc.languageBashkir,
-    ), // Bashkir uses Russian flag
+    ), // Bashkir uses Russia flag
     'jw': _LanguageInfo(
-      flagAssetFilename: 'indonesian',
+      countryCode: 'indonesia',
       nameSelector: (loc) => loc.languageJavanese,
-    ), // Javanese uses Indonesian flag
+    ), // Javanese uses Indonesia flag
     'su': _LanguageInfo(
-      flagAssetFilename: 'indonesian',
+      countryCode: 'indonesia',
       nameSelector: (loc) => loc.languageSundanese,
-    ), // Sundanese uses Indonesian flag
+    ), // Sundanese uses Indonesia flag
   };
 
   static List<SpokenLanguage> get all =>
@@ -447,10 +450,9 @@ class SupportedLanguages {
     return _languageData.containsKey(code) ? SpokenLanguage(code: code) : null;
   }
 
-  static String flagAssetFor(String code) {
+  static String countryCodeFor(String code) {
     final info = _languageData[code];
-    final filename = info?.flagAssetFilename ?? 'english';
-    return 'assets/icons/flags/$filename.svg';
+    return info?.countryCode ?? 'united_states';
   }
 
   static String localizedNameFor(String code, AppLocalizations loc) {

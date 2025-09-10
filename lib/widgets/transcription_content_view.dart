@@ -60,7 +60,10 @@ class TranscriptionContentView extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: shouldShowLiveTranscription
-                    ? LiveTranscriptionView(controller: scrollController)
+                    ? LiveTranscriptionView(
+                        controller: scrollController,
+                        listKey: listKey,
+                      )
                     : TranscriptionList(
                         key: listKey,
                         controller: scrollController,

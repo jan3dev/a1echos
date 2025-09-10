@@ -7,13 +7,12 @@ import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
-import '../widgets/recording_button.dart';
+import 'package:ui_components/ui_components.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
 import '../widgets/selection_mode_handler.dart';
 import '../widgets/session_operations_handler.dart';
 import '../widgets/aqua_tooltip_with_animation.dart';
-import '../widgets/static_wave_bars.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
 
@@ -210,27 +209,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 openSession(sessionId, selectionMode: selectionMode),
             onSelectionToggle: toggleSessionSelection,
           ),
-          Positioned(
-            bottom: 16,
-            left: 0,
-            right: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: RecordingButton(
-                    onRecordingStart: _startRecordingWithAnimation,
-                  ),
-                ),
-                const SizedBox(height: 42),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: StaticWaveBars(),
-                ),
-                const SizedBox(height: 26),
-              ],
-            ),
+          provider.Consumer<LocalTranscriptionProvider>(
+            builder: (context, transcriptionProvider, _) {
+              final recordingControlsState =
+                  StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
+                    transcriptionProvider.state,
+                  );
+
+              return AquaRecordingControlsView(
+                state: recordingControlsState,
+                audioLevel: transcriptionProvider.audioLevel,
+                onRecordingStart: _startRecordingWithAnimation,
+                onRecordingStop: () =>
+                    transcriptionProvider.stopRecordingAndSave(),
+              );
+            },
           ),
           if (effectivelyEmpty)
             Positioned(

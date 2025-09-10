@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/session_app_bar.dart';
 import '../widgets/transcription_content_view.dart';
-import '../widgets/recording_controls_view.dart';
 import '../widgets/transcription_list.dart';
 import '../widgets/modals/session_input_modal.dart';
 import '../providers/local_transcription_provider.dart';
@@ -273,7 +272,23 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                       ),
                     )
                   else
-                    const RecordingControlsView(),
+                    provider.Consumer<LocalTranscriptionProvider>(
+                      builder: (context, transcriptionProvider, _) {
+                        final recordingControlsState =
+                            StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
+                              transcriptionProvider.state,
+                            );
+
+                        return AquaRecordingControlsView(
+                          state: recordingControlsState,
+                          audioLevel: transcriptionProvider.audioLevel,
+                          onRecordingStart: () =>
+                              _recordingController.startRecording(),
+                          onRecordingStop: () =>
+                              transcriptionProvider.stopRecordingAndSave(),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),

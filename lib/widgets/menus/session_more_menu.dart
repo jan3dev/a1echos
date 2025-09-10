@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart' as provider;
-import '../../models/session.dart';
 import 'package:echos/utils/utils.dart';
+import '../../models/session.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
 import '../modals/confirmation_modal.dart';
@@ -49,13 +49,11 @@ class SessionMoreMenu extends ConsumerWidget {
     );
     final Size listItemSize = listItemBox.size;
 
-    const double estimatedMenuHeight = 181;
+    const double offsetY = -16.0;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromLTWH(
         listItemPosition.dx + listItemSize.width - 240,
-        listItemPosition.dy +
-            (listItemSize.height / 2) -
-            (estimatedMenuHeight / 2),
+        listItemPosition.dy + listItemSize.height + offsetY,
         240,
         0,
       ),
@@ -70,7 +68,7 @@ class SessionMoreMenu extends ConsumerWidget {
           value: 'rename',
           padding: EdgeInsets.zero,
           child: AquaListItem(
-            iconLeading: AquaIcon.note(color: colors.textPrimary),
+            iconLeading: AquaIcon.edit(color: colors.textPrimary),
             title: context.loc.sessionRenameTitle,
             iconTrailing: AquaIcon.chevronRight(
               size: 18,

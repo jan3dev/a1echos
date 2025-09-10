@@ -1,6 +1,5 @@
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:provider/provider.dart' as provider;
@@ -62,14 +61,9 @@ class SettingsScreen extends ConsumerWidget {
                               title: context.loc.modelTitle,
                               titleTrailing: modelDisplay,
                               titleTrailingColor: colors.textSecondary,
-                              iconLeading: SvgPicture.asset(
-                                'assets/icons/mic.svg',
-                                width: 24,
-                                height: 24,
-                                colorFilter: ColorFilter.mode(
-                                  colors.textSecondary,
-                                  BlendMode.srcIn,
-                                ),
+                              iconLeading: AquaIcon.mic(
+                                color: colors.textSecondary,
+                                size: 24,
                               ),
                               iconTrailing: AquaIcon.chevronRight(
                                 color: colors.textSecondary,

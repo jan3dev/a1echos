@@ -110,7 +110,6 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
             colors: colors,
             title: widget.title,
             transparent: true,
-            showBackButton: false,
             actions: [
               IconButton(
                 icon: AquaIcon.close(color: colors.textPrimary, size: 24),
@@ -129,34 +128,21 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AquaTextField(
-                        controller: _controller,
-                        label: context.loc.sessionNameLabel,
-                        maxLength: AppConstants.sessionNameMaxLength,
-                        assistiveText: context.loc.sessionNameMaxLengthHelper,
-                        transparentBorder: true,
-                        trailingIcon: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: colors.surfaceSecondary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: AquaIcon.close(
-                              color: colors.textTertiary,
-                              size: 14,
-                            ),
-                          ),
-                        ),
-                        onTrailingTap: () {
-                          _controller.clear();
-                        },
-                      ),
-                    ],
-                  ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AquaTextField(
+                      controller: _controller,
+                      label: context.loc.sessionNameLabel,
+                      maxLength: AppConstants.sessionNameMaxLength,
+                      assistiveText: context.loc.sessionNameMaxLengthHelper,
+                      transparentBorder: true,
+                      showClearIcon: true,
+                      onClear: () {
+                        _controller.clear();
+                      },
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 48),
                 SizedBox(
                   width: double.infinity,
