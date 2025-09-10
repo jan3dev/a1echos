@@ -460,7 +460,7 @@ abstract class AppLocalizations {
   /// No description provided for @incognitoExplainerBody.
   ///
   /// In en, this message translates to:
-  /// **'Transcibe without saving. This session won\'t be stored or synced anywhere.'**
+  /// **'Transcribe without saving. This session won\'t be stored or synced anywhere.'**
   String get incognitoExplainerBody;
 
   /// No description provided for @incognitoExplainerCta.
