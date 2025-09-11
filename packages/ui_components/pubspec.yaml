@@ -34,7 +34,6 @@ flutter:
     - assets/fonts/public_sans/
     - assets/svgs/
     - assets/svgs/flags/
-    - assets/images/
   fonts:
     - family: Manrope
       fonts:
