@@ -48,17 +48,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get edit => 'Edit';
 
   @override
-  String get homeDeleteSelectedSessionsTitle => 'Delete?';
+  String get homeDeleteSelectedSessionsTitle => 'Delete Selected Sessions?';
 
   @override
   String homeDeleteSelectedSessionsMessage(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count sessions',
-      one: '1 session',
-    );
-    return 'Are you sure you want to delete $_temp0? This action cannot be undone.';
+    return 'This action cannot be undone.';
   }
 
   @override
@@ -87,17 +81,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionRenameTitle => 'Rename';
 
   @override
-  String get sessionDeleteTranscriptionsTitle => 'Delete?';
+  String get sessionDeleteTranscriptionsTitle =>
+      'Delete Selected Transcriptions?';
 
   @override
   String sessionDeleteTranscriptionsMessage(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count transcriptions',
-      one: '1 transcription',
-    );
-    return 'Are you sure you want to delete $_temp0? This action cannot be undone.';
+    return 'This action cannot be undone.';
   }
 
   @override

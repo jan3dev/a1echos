@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       FlutterForegroundTask.initCommunicationPort();
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
@@ -75,40 +77,50 @@ class MyApp extends ConsumerWidget {
     final lightTheme = ref.watch(lightThemeProvider);
     final darkTheme = ref.watch(darkThemeProvider);
 
-    return MaterialApp(
-      title: 'Echos',
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: themeMode,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AppInitializer(child: HomeScreen()),
-        '/settings': (context) => const SettingsScreen(),
-      },
-      builder: (context, child) {
-        final appTheme = ref.watch(prefsProvider).selectedTheme;
-        final isDark =
-            (appTheme == AppTheme.dark) ||
-            (appTheme == AppTheme.auto &&
-                MediaQuery.of(context).platformBrightness == Brightness.dark);
-        final statusBarIconBrightness = isDark
-            ? Brightness.light
-            : Brightness.dark;
+    return Container(
+      color: themeMode == ThemeMode.dark
+          ? darkTheme.scaffoldBackgroundColor
+          : lightTheme.scaffoldBackgroundColor,
+      child: SafeArea(
+        top: false,
+        bottom: Platform.isAndroid ? true : false,
+        child: MaterialApp(
+          title: 'Echos',
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const AppInitializer(child: HomeScreen()),
+            '/settings': (context) => const SettingsScreen(),
+          },
+          builder: (context, child) {
+            final appTheme = ref.watch(prefsProvider).selectedTheme;
+            final isDark =
+                (appTheme == AppTheme.dark) ||
+                (appTheme == AppTheme.auto &&
+                    MediaQuery.of(context).platformBrightness ==
+                        Brightness.dark);
+            final statusBarIconBrightness = isDark
+                ? Brightness.light
+                : Brightness.dark;
 
-        return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: statusBarIconBrightness,
-            systemNavigationBarColor: Colors.transparent,
-            systemNavigationBarIconBrightness: statusBarIconBrightness,
-            systemStatusBarContrastEnforced: false,
-            systemNavigationBarContrastEnforced: false,
-          ),
-          child: child!,
-        );
-      },
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: statusBarIconBrightness,
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarIconBrightness: statusBarIconBrightness,
+                systemStatusBarContrastEnforced: false,
+                systemNavigationBarContrastEnforced: false,
+              ),
+              child: child!,
+            );
+          },
+        ),
+      ),
     );
   }
 }

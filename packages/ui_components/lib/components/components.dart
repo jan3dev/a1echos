@@ -4,6 +4,7 @@ export 'dimmer/dimmer.dart';
 export 'icon/icon.dart';
 export 'list_item/list_item.dart';
 export 'modal_sheet/modal_sheet.dart';
+export 'toast/toast.dart';
 export 'progress/progress.dart';
 export 'recording_controls/recording_controls.dart';
 export 'slider/slider.dart';

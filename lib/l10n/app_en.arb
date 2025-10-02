@@ -13,8 +13,8 @@
   "retry": "Retry",
   "share": "Share",
   "edit": "Edit",
-  "homeDeleteSelectedSessionsTitle": "Delete?",
-  "homeDeleteSelectedSessionsMessage": "Are you sure you want to delete {count,plural, =1{1 session} other{{count} sessions}}? This action cannot be undone.",
+  "homeDeleteSelectedSessionsTitle": "Delete Selected Sessions?",
+  "homeDeleteSelectedSessionsMessage": "This action cannot be undone.",
   "@homeDeleteSelectedSessionsMessage": {
     "placeholders": {
       "count": {
@@ -39,8 +39,8 @@
   "clearAllTooltip": "Clear All",
   "newSessionTooltip": "New Session",
   "sessionRenameTitle": "Rename",
-  "sessionDeleteTranscriptionsTitle": "Delete?",
-  "sessionDeleteTranscriptionsMessage": "Are you sure you want to delete {count,plural, =1{1 transcription} other{{count} transcriptions}}? This action cannot be undone.",
+  "sessionDeleteTranscriptionsTitle": "Delete Selected Transcriptions?",
+  "sessionDeleteTranscriptionsMessage": "This action cannot be undone.",
   "@sessionDeleteTranscriptionsMessage": {
     "placeholders": {
       "count": {
