@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../providers/local_transcription_provider.dart';
-import '../widgets/modals/confirmation_modal.dart';
 import '../services/share_service.dart';
 import '../logger.dart';
+import '../widgets/toast/confirmation_toast.dart';
 
 /// Controller for managing transcription selection and bulk operations
 class TranscriptionSelectionController with ChangeNotifier {
@@ -69,7 +69,7 @@ class TranscriptionSelectionController with ChangeNotifier {
   void deleteSelectedTranscriptions(BuildContext context, WidgetRef ref) {
     if (_selectedTranscriptionIds.isEmpty) return;
 
-    ConfirmationModal.show(
+    ConfirmationToast.show(
       context: context,
       ref: ref,
       title: context.loc.sessionDeleteTranscriptionsTitle,

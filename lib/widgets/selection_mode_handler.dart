@@ -1,10 +1,10 @@
 import 'package:echos/utils/utils.dart';
+import 'package:echos/widgets/toast/confirmation_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
-import '../widgets/modals/confirmation_modal.dart';
 
 mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
   bool _selectionMode = false;
@@ -44,7 +44,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
 
     if (_selectedSessionIds.isEmpty) return;
 
-    ConfirmationModal.show(
+    ConfirmationToast.show(
       context: context,
       ref: ref,
       title: context.loc.homeDeleteSelectedSessionsTitle,
@@ -65,9 +65,7 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              context.loc.homeSessionsDeleted(deletedCount),
-            ),
+            content: Text(context.loc.homeSessionsDeleted(deletedCount)),
           ),
         );
       },

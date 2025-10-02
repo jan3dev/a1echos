@@ -175,13 +175,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeDeleteSelectedSessionsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete?'**
+  /// **'Delete Selected Sessions?'**
   String get homeDeleteSelectedSessionsTitle;
 
   /// No description provided for @homeDeleteSelectedSessionsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete {count,plural, =1{1 session} other{{count} sessions}}? This action cannot be undone.'**
+  /// **'This action cannot be undone.'**
   String homeDeleteSelectedSessionsMessage(int count);
 
   /// No description provided for @homeSessionsDeleted.
@@ -217,13 +217,13 @@ abstract class AppLocalizations {
   /// No description provided for @sessionDeleteTranscriptionsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete?'**
+  /// **'Delete Selected Transcriptions?'**
   String get sessionDeleteTranscriptionsTitle;
 
   /// No description provided for @sessionDeleteTranscriptionsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Are you sure you want to delete {count,plural, =1{1 transcription} other{{count} transcriptions}}? This action cannot be undone.'**
+  /// **'This action cannot be undone.'**
   String sessionDeleteTranscriptionsMessage(int count);
 
   /// No description provided for @sessionTranscriptionsDeleted.

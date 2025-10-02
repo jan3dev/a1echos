@@ -1,3 +1,4 @@
+import 'package:echos/widgets/toast/confirmation_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ui_components/ui_components.dart';
@@ -7,7 +8,6 @@ import 'package:echos/utils/utils.dart';
 import '../../models/session.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
-import '../modals/confirmation_modal.dart';
 import '../modals/session_input_modal.dart';
 import '../../providers/session_provider.dart';
 
@@ -144,7 +144,7 @@ class SessionMoreMenu extends ConsumerWidget {
           },
         );
       } else if (value == 'delete') {
-        ConfirmationModal.show(
+        ConfirmationToast.show(
           context: context,
           ref: ref,
           title: context.loc.homeDeleteSelectedSessionsTitle,
