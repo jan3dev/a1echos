@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
@@ -17,6 +18,7 @@ import '../controllers/session_navigation_controller.dart';
 import '../providers/theme_provider.dart';
 import '../logger.dart';
 import '../models/app_theme.dart';
+import '../models/model_type.dart';
 import 'spoken_language_selection_screen.dart';
 
 class SessionScreen extends ConsumerStatefulWidget {
@@ -39,6 +41,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   bool _isEditing = false;
   final GlobalKey<TranscriptionListState> _listKey =
       GlobalKey<TranscriptionListState>();
+  Timer? _scrollDebounceTimer;
 
   late LocalTranscriptionProvider _localTranscriptionProvider;
   late SessionProvider _sessionProvider;
@@ -87,6 +90,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
 
+    _scrollDebounceTimer?.cancel();
+
     try {
       _localTranscriptionProvider.removeListener(_scrollToBottom);
     } catch (e, st) {
@@ -111,17 +116,31 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
+    // Only scroll during live transcription, not during editing
+    final shouldScroll = _localTranscriptionProvider.isRecording ||
+        (_localTranscriptionProvider.selectedModelType == ModelType.whisper &&
+         _localTranscriptionProvider.whisperRealtime &&
+         _localTranscriptionProvider.liveVoskTranscriptionPreview != null);
+
+    if (!shouldScroll) return;
+
+    // Cancel previous debounce timer
+    _scrollDebounceTimer?.cancel();
+    
+    // Debounce rapid calls (wait 50ms for pause in updates)
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 50), () {
+      if (_scrollController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
   }
 
   void _initializeSession() {

@@ -58,23 +58,6 @@ flutter:
     - assets/models/whisper/android/ggml-tiny.bin.zip
     - assets/icons/
     - assets/images/
-  fonts:
-    - family: Manrope
-      fonts:
-        - asset: packages/ui_components/assets/fonts/manrope/Manrope-Regular.ttf
-          weight: 400
-        - asset: packages/ui_components/assets/fonts/manrope/Manrope-Medium.ttf
-          weight: 500
-        - asset: packages/ui_components/assets/fonts/manrope/Manrope-SemiBold.ttf
-          weight: 600
-    - family: PublicSans
-      fonts:
-        - asset: packages/ui_components/assets/fonts/public_sans/PublicSans-Regular.ttf
-          weight: 400
-        - asset: packages/ui_components/assets/fonts/public_sans/PublicSans-Medium.ttf
-          weight: 500
-        - asset: packages/ui_components/assets/fonts/public_sans/PublicSans-SemiBold.ttf
-          weight: 600
 
 dependency_overrides:
   permission_handler: ^12.0.0+1
