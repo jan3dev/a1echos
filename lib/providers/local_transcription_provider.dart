@@ -118,17 +118,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
     _activeOperations.remove(operationName);
   }
 
-  /// Validates if an operation can be performed in current state
-  bool _validateOperationState(
-    String operationName,
-    TranscriptionState requiredState,
-  ) {
-    if (_stateManager.state != requiredState) {
-      return false;
-    }
-    return true;
-  }
-
   /// Handles partial transcription updates during recording
   void _onPartialTranscription(String partial) {
     _uiStateProvider.updateStreamingText(partial);
@@ -309,32 +298,38 @@ class LocalTranscriptionProvider with ChangeNotifier {
   Future<bool> startRecording() async {
     const operationName = 'startRecording';
 
-    // Real-time modes (Vosk, Whisper RT) require an initialized model upfront.
-    // File-based Whisper does not.
     final bool isRealtime =
         _modelManager.selectedModelType == ModelType.vosk ||
         (_modelManager.selectedModelType == ModelType.whisper &&
             _modelManager.whisperRealtime);
 
     if (isRealtime && !_modelManager.isInitialized) {
-      await _modelManager.forceReinitialize();
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      if (!_modelManager.isInitialized) {
-        _stateManager.setError(
-          'Model failed to initialize. Please try switching models.',
-        );
-        return false;
-      }
+      _stateManager.setError(
+        'Model not ready. Please restart the app or switch to Whisper (file-based) model.',
+      );
+      return false;
     }
 
     if (!await _acquireOperationLock(operationName)) {
       return false;
     }
 
-    if (!_validateOperationState(operationName, TranscriptionState.ready)) {
+    final currentState = _stateManager.state;
+    if (currentState != TranscriptionState.ready && 
+        currentState != TranscriptionState.error) {
       _releaseOperationLock(operationName);
       return false;
+    }
+
+    if (currentState == TranscriptionState.error) {
+      if (!_stateManager.transitionTo(TranscriptionState.ready)) {
+        logger.error(
+          'Failed to transition from error to ready',
+          flag: FeatureFlag.provider,
+        );
+        _releaseOperationLock(operationName);
+        return false;
+      }
     }
 
     if (!_stateManager.transitionTo(TranscriptionState.recording)) {
@@ -382,7 +377,20 @@ class LocalTranscriptionProvider with ChangeNotifier {
         flag: FeatureFlag.provider,
         message: 'Error starting recording',
       );
-      _stateManager.setError('Error starting recording: $e');
+      
+      final errorMessage = e.toString();
+      if (errorMessage.contains('permission') && errorMessage.toLowerCase().contains('denied')) {
+        if (errorMessage.contains('Settings')) {
+          _stateManager.setError('Microphone access denied. Please enable it in Settings.');
+        } else if (errorMessage.contains('permanently denied')) {
+          _stateManager.setError('Microphone access denied. Please enable it in Settings.');
+        } else {
+          _stateManager.setError('Microphone permission required. Please tap the button again to grant access.');
+        }
+      } else {
+        _stateManager.setError('Error starting recording: $e');
+      }
+      
       _uiStateProvider.clearRecordingSessionId();
       return false;
     } finally {
@@ -557,3 +565,4 @@ class LocalTranscriptionProvider with ChangeNotifier {
     super.dispose();
   }
 }
+

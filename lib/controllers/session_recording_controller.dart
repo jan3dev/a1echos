@@ -41,7 +41,11 @@ class SessionRecordingController with ChangeNotifier {
 
   /// Starts recording for the current session with enhanced validation
   Future<bool> startRecording() async {
-    if (!isReadyForRecording) {
+    if (isRecording || isTranscribing) {
+      return false;
+    }
+
+    if (isLoading) {
       return false;
     }
 

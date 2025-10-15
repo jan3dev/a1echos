@@ -39,17 +39,30 @@ class AudioService {
     if (Platform.isIOS) {
       return await NativeAudioPermissionService.ensureRecordPermission();
     }
+
     final status = await Permission.microphone.status;
     if (status.isGranted) {
       return true;
     }
-    if (status.isDenied) {
-      final result = await Permission.microphone.request();
-      return result.isGranted;
-    }
+
     if (status.isPermanentlyDenied) {
-      return false;
+      throw Exception(
+        'Microphone permission permanently denied. Please enable it in Settings.',
+      );
     }
+
+    final result = await Permission.microphone.request();
+
+    if (result.isGranted) {
+      return true;
+    }
+
+    if (result.isPermanentlyDenied) {
+      throw Exception(
+        'Microphone permission permanently denied. Please enable it in Settings.',
+      );
+    }
+
     return false;
   }
 

@@ -85,12 +85,16 @@ class ModelManagementProvider with ChangeNotifier {
   Future<void> loadSelectedModelType() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final modelName =
-          prefs.getString(_prefsKeyModelType) ?? ModelType.vosk.name;
-      _selectedModelType = ModelType.values.firstWhere(
-        (e) => e.name == modelName,
-        orElse: () => ModelType.vosk,
-      );
+      final modelName = prefs.getString(_prefsKeyModelType);
+      
+      if (modelName != null) {
+        _selectedModelType = ModelType.values.firstWhere(
+          (e) => e.name == modelName,
+          orElse: () => Platform.isAndroid ? ModelType.whisper : ModelType.vosk,
+        );
+      } else {
+        _selectedModelType = Platform.isAndroid ? ModelType.whisper : ModelType.vosk;
+      }
 
       _whisperRealtime = prefs.getBool(_prefsKeyWhisperRealtime) ?? false;
 

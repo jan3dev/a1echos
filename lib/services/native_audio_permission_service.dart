@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../logger.dart';
 
 /// Service for handling native audio permissions on iOS using AVAudioSession
@@ -63,13 +64,47 @@ class NativeAudioPermissionService {
     }
 
     if (status == 'denied') {
-      return false;
+      throw Exception(
+        'Microphone permission denied. Please enable it in Settings > Echos > Microphone.',
+      );
     }
 
     if (status == 'undetermined') {
-      return await requestRecordPermission();
+      logger.info(
+        'Requesting iOS microphone permission...',
+        flag: FeatureFlag.service,
+      );
+      final granted = await requestRecordPermission();
+      logger.info(
+        'iOS permission request result: $granted',
+        flag: FeatureFlag.service,
+      );
+      return granted;
     }
 
     return false;
+  }
+
+  /// Opens the app settings page where user can enable microphone permission
+  static Future<bool> openAppSettings() async {
+    if (!Platform.isIOS) {
+      return false;
+    }
+
+    try {
+      final uri = Uri.parse('app-settings:');
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri);
+      }
+      return false;
+    } catch (e, st) {
+      logger.error(
+        e,
+        stackTrace: st,
+        flag: FeatureFlag.service,
+        message: 'Failed to open app settings',
+      );
+      return false;
+    }
   }
 }

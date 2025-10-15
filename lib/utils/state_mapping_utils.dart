@@ -9,13 +9,13 @@ class StateMappingUtils {
   ) {
     switch (state) {
       case TranscriptionState.ready:
+      case TranscriptionState.error:
         return RecordingControlsState.ready;
       case TranscriptionState.recording:
         return RecordingControlsState.recording;
       case TranscriptionState.transcribing:
         return RecordingControlsState.transcribing;
       case TranscriptionState.loading:
-      case TranscriptionState.error:
         return RecordingControlsState.loading;
     }
   }
