@@ -18,6 +18,7 @@ class SessionProvider with ChangeNotifier {
   List<Session> _sessions = [];
   String _activeSessionId = '';
   bool _needsSort = true;
+  Session? _incognitoSession;
 
   List<Session> get sessions {
     if (_needsSort) {
@@ -28,15 +29,21 @@ class SessionProvider with ChangeNotifier {
   }
 
   String get activeSessionId => _activeSessionId;
-  Session get activeSession => _sessions.firstWhere(
-    (s) => s.id == _activeSessionId,
-    orElse: () {
-      if (_sessions.isNotEmpty) {
-        return _sessions.first;
-      }
-      throw Exception("No sessions available to be active.");
-    },
-  );
+  Session get activeSession {
+    if (_incognitoSession != null &&
+        _incognitoSession!.id == _activeSessionId) {
+      return _incognitoSession!;
+    }
+    return _sessions.firstWhere(
+      (s) => s.id == _activeSessionId,
+      orElse: () {
+        if (_sessions.isNotEmpty) {
+          return _sessions.first;
+        }
+        throw Exception("No sessions available to be active.");
+      },
+    );
+  }
 
   SessionProvider() {
     _loadSessions();
@@ -74,8 +81,6 @@ class SessionProvider with ChangeNotifier {
       _sessions = [];
     }
 
-    await _cleanupStaleIncognitoSessions();
-
     final storedActive = prefs.getString(_prefsKeyActiveSession);
     if (storedActive != null) {
       try {
@@ -111,20 +116,6 @@ class SessionProvider with ChangeNotifier {
       }
     }
     notifyListeners();
-  }
-
-  Future<void> _cleanupStaleIncognitoSessions() async {
-    final incognitoSessions = _sessions
-        .where((session) => session.isIncognito)
-        .toList();
-    if (incognitoSessions.isNotEmpty) {
-      for (var session in incognitoSessions) {
-        _sessions.removeWhere((s) => s.id == session.id);
-      }
-
-      _needsSort = true;
-      await _saveSessions();
-    }
   }
 
   Future<void> _saveSessions() async {
@@ -207,11 +198,18 @@ class SessionProvider with ChangeNotifier {
       lastModified: now,
       isIncognito: isIncognito,
     );
-    _sessions.add(session);
-    _needsSort = true;
-    await _saveSessions();
-    _activeSessionId = session.id;
-    await _saveActiveSession();
+
+    if (isIncognito) {
+      _incognitoSession = session;
+      _activeSessionId = session.id;
+      await _saveActiveSession();
+    } else {
+      _sessions.add(session);
+      _needsSort = true;
+      await _saveSessions();
+      _activeSessionId = session.id;
+      await _saveActiveSession();
+    }
 
     if (notifyListenersImmediately) {
       notifyListeners();
@@ -225,8 +223,11 @@ class SessionProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Checks if the active session is incognito
   bool isActiveSessionIncognito() {
+    if (_incognitoSession != null &&
+        _incognitoSession!.id == _activeSessionId) {
+      return true;
+    }
     final idx = _sessions.indexWhere((s) => s.id == _activeSessionId);
     return idx >= 0 ? _sessions[idx].isIncognito : false;
   }
@@ -251,6 +252,7 @@ class SessionProvider with ChangeNotifier {
 
   Future<void> switchSession(String id) async {
     if (_activeSessionId != id && _sessions.any((s) => s.id == id)) {
+      _incognitoSession = null;
       _activeSessionId = id;
       await _saveActiveSession();
       notifyListeners();
@@ -258,6 +260,19 @@ class SessionProvider with ChangeNotifier {
   }
 
   Future<void> deleteSession(String id) async {
+    if (_incognitoSession != null && _incognitoSession!.id == id) {
+      _incognitoSession = null;
+      if (_sessions.isNotEmpty) {
+        _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
+        _activeSessionId = _sessions.first.id;
+        await _saveActiveSession();
+      } else {
+        _activeSessionId = '';
+      }
+      notifyListeners();
+      return;
+    }
+
     _sessions.removeWhere((s) => s.id == id);
     _needsSort = true;
     if (_sessions.isEmpty) {
@@ -273,12 +288,43 @@ class SessionProvider with ChangeNotifier {
   }
 
   Future<void> updateSessionModifiedTimestamp(String sessionId) async {
+    if (_incognitoSession != null && _incognitoSession!.id == sessionId) {
+      _incognitoSession!.lastModified = DateTime.now();
+      notifyListeners();
+      return;
+    }
+
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx >= 0) {
       _sessions[idx].lastModified = DateTime.now();
       _needsSort = true;
       await _saveSessions();
       notifyListeners();
+    }
+  }
+
+  void clearIncognitoSession() {
+    if (_incognitoSession != null) {
+      _incognitoSession = null;
+      if (_sessions.isNotEmpty) {
+        _sessions.sort((a, b) => b.lastModified.compareTo(a.lastModified));
+        _activeSessionId = _sessions.first.id;
+      } else {
+        _activeSessionId = '';
+      }
+      notifyListeners();
+    }
+  }
+
+  Session? findSessionById(String id) {
+    if (_incognitoSession != null && _incognitoSession!.id == id) {
+      return _incognitoSession;
+    }
+
+    try {
+      return _sessions.firstWhere((s) => s.id == id);
+    } catch (e) {
+      return null;
     }
   }
 }

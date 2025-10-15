@@ -8,7 +8,6 @@ import '../logger.dart';
 /// Controller for managing session navigation and lifecycle operations
 class SessionNavigationController with ChangeNotifier {
   final SessionProvider _sessionProvider;
-  final SettingsProvider _settingsProvider;
   final LocalTranscriptionProvider _transcriptionProvider;
   final String sessionId;
 
@@ -18,7 +17,6 @@ class SessionNavigationController with ChangeNotifier {
     required LocalTranscriptionProvider transcriptionProvider,
     required this.sessionId,
   }) : _sessionProvider = sessionProvider,
-       _settingsProvider = settingsProvider,
        _transcriptionProvider = transcriptionProvider {
     _sessionProvider.addListener(_onSessionProviderChanged);
   }
@@ -47,32 +45,15 @@ class SessionNavigationController with ChangeNotifier {
     }
   }
 
-  /// Navigates back to the home screen
   Future<void> navigateToHome(BuildContext context) async {
     if (isIncognitoSession) {
-      _sessionProvider.deleteSession(sessionId);
+      _sessionProvider.clearIncognitoSession();
     } else {
       _setDefaultNameIfNeeded(context);
     }
 
-    if (!_settingsProvider.isIncognitoMode ||
-        !_transcriptionProvider.isRecording) {
-      _cleanupAllIncognitoSessions();
-    }
-
     if (context.mounted) {
       Navigator.of(context).pop();
-    }
-  }
-
-  /// Cleans up all incognito sessions
-  void _cleanupAllIncognitoSessions() {
-    final incognitoSessions = _sessionProvider.sessions
-        .where((session) => session.isIncognito)
-        .toList();
-
-    for (var session in incognitoSessions) {
-      _sessionProvider.deleteSession(session.id);
     }
   }
 
@@ -88,14 +69,12 @@ class SessionNavigationController with ChangeNotifier {
     }
   }
 
-  /// Finds a session by ID
   Session? _findSessionById(String id) {
-    try {
-      return _sessionProvider.sessions.firstWhere((s) => s.id == id);
-    } catch (e) {
+    final session = _sessionProvider.findSessionById(id);
+    if (session == null) {
       logger.warning('Session with ID $id not found.', flag: FeatureFlag.ui);
-      return null;
     }
+    return session;
   }
 
   /// Initializes the session and loads data

@@ -161,9 +161,14 @@ class LocalTranscriptionProvider with ChangeNotifier {
     }
   }
 
-  /// Handles session changes
   void _onSessionChanged() async {
     final validSessionIds = _sessionProvider.sessions.map((s) => s.id).toSet();
+    final incognitoSession = _sessionProvider.findSessionById(
+      _sessionProvider.activeSessionId,
+    );
+    if (incognitoSession != null && incognitoSession.isIncognito) {
+      validSessionIds.add(incognitoSession.id);
+    }
     await _dataProvider.cleanupDeletedSessions(validSessionIds);
 
     if (_uiStateProvider.recordingSessionId != null &&
@@ -260,7 +265,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
   bool get whisperRealtime => _modelManager.whisperRealtime;
 
   SpokenLanguage get selectedLanguage => _modelManager.selectedLanguage;
-  bool get isLanguageSelectionAvailable => _modelManager.isLanguageSelectionAvailable;
+  bool get isLanguageSelectionAvailable =>
+      _modelManager.isLanguageSelectionAvailable;
 
   /// Sets the selected spoken language
   Future<void> setSelectedLanguage(SpokenLanguage language) async {
@@ -345,8 +351,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
         _modelManager.selectedModelType,
         sessionId,
         _modelManager.whisperRealtime,
-        languageCode: _modelManager.isLanguageSelectionAvailable 
-            ? _modelManager.selectedLanguage.code 
+        languageCode: _modelManager.isLanguageSelectionAvailable
+            ? _modelManager.selectedLanguage.code
             : null,
       );
 
@@ -415,8 +421,8 @@ class LocalTranscriptionProvider with ChangeNotifier {
         modelType,
         sessionId,
         _modelManager.whisperRealtime,
-        languageCode: _modelManager.isLanguageSelectionAvailable 
-            ? _modelManager.selectedLanguage.code 
+        languageCode: _modelManager.isLanguageSelectionAvailable
+            ? _modelManager.selectedLanguage.code
             : null,
       );
 
