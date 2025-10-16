@@ -42,6 +42,7 @@ dependencies:
   flutter_foreground_task: ^9.1.0
   share_plus: ^11.0.0
   synchronized: ^3.4.0
+  haptic_feedback: ^0.5.1+1
 
 dev_dependencies:
   flutter_test:

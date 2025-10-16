@@ -1,6 +1,7 @@
 import 'package:echos/utils/utils.dart';
 import 'package:echos/widgets/toast/confirmation_toast.dart';
 import 'package:flutter/material.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/session_provider.dart';
@@ -27,12 +28,16 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
     });
   }
 
-  void handleSessionLongPress(Session session) {
+  void handleSessionLongPress(Session session) async {
     if (!_selectionMode) {
       setState(() {
         _selectionMode = true;
         _selectedSessionIds.add(session.id);
       });
+      final canVibrate = await Haptics.canVibrate();
+      if (canVibrate) {
+        Haptics.vibrate(HapticsType.heavy);
+      }
     }
   }
 

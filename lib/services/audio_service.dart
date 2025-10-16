@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -120,6 +122,12 @@ class AudioService {
 
       await _recorder.start(config, path: _recordingPath!);
       _recordStart = DateTime.now();
+      // HapticFeedback.lightImpact();
+      final canVibrate = await Haptics.canVibrate();
+
+      if (canVibrate) {
+        Haptics.vibrate(HapticsType.medium);
+      }
 
       _startAmplitudeMonitoring();
 
@@ -236,6 +244,11 @@ class AudioService {
     File? recordedFile;
     try {
       final String? path = await _recorder.stop();
+      final canVibrate = await Haptics.canVibrate();
+
+      if (canVibrate) {
+        Haptics.vibrate(HapticsType.success);
+      }
       if (path != null && !await _isPathAllowed(path)) {
         throw Exception('Recording saved to disallowed directory');
       }

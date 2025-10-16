@@ -2,6 +2,7 @@ import 'package:echos/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../providers/local_transcription_provider.dart';
@@ -39,10 +40,14 @@ class TranscriptionSelectionController with ChangeNotifier {
   }
 
   /// Handles long press on a transcription to enter/toggle selection mode
-  void handleTranscriptionLongPress(String transcriptionId) {
+  void handleTranscriptionLongPress(String transcriptionId) async {
     if (!_selectionMode) {
       _selectionMode = true;
       _selectedTranscriptionIds.add(transcriptionId);
+      final canVibrate = await Haptics.canVibrate();
+      if (canVibrate) {
+        Haptics.vibrate(HapticsType.heavy);
+      }
     } else {
       toggleTranscriptionSelection(transcriptionId);
     }
