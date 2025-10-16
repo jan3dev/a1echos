@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/theme_provider.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
-import '../providers/settings_provider.dart';
 import 'package:ui_components/ui_components.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/home_content.dart';
@@ -36,30 +35,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _cleanupIncognitoSessionsIfNeeded();
       final transcriptionProvider = provider
           .Provider.of<LocalTranscriptionProvider>(context, listen: false);
       transcriptionProvider.addListener(_scrollToBottom);
     });
-  }
-
-  void _cleanupIncognitoSessionsIfNeeded() {
-    final sessionProvider = provider.Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
-    final settingsProvider = provider.Provider.of<SettingsProvider>(
-      context,
-      listen: false,
-    );
-    final localTranscriptionProvider = provider
-        .Provider.of<LocalTranscriptionProvider>(context, listen: false);
-
-    if ((!settingsProvider.isIncognitoMode) ||
-        (settingsProvider.isIncognitoMode &&
-            !localTranscriptionProvider.isRecording)) {
-      _deleteIncognitoSessions(sessionProvider);
-    }
   }
 
   void _scrollToBottom() {
@@ -99,21 +78,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.resumed) {
-      _cleanupIncognitoSessionsIfNeeded();
-    }
-  }
-
-  void _deleteIncognitoSessions(SessionProvider sessionProvider) {
-    final incognitoSessions = sessionProvider.sessions
-        .where((session) => session.isIncognito)
-        .toList();
-    for (var session in incognitoSessions) {
-      sessionProvider.deleteSession(session.id);
-    }
   }
 
   void _onTooltipDisappearComplete() {
@@ -133,21 +97,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context,
       listen: false,
     );
-    final settingsProvider = provider.Provider.of<SettingsProvider>(
-      context,
-      listen: false,
-    );
 
     bool isCurrentlyEmpty = sessionProvider.sessions.isEmpty;
-    if (sessionProvider.sessions.length == 1 &&
-        sessionProvider.sessions.first.isIncognito) {
-      if (settingsProvider.isIncognitoMode) {
-        isCurrentlyEmpty = true;
-      } else {
-        isCurrentlyEmpty = false;
-      }
-    }
-    if (sessionProvider.sessions.length > 1) isCurrentlyEmpty = false;
 
     await startRecording(
       onTooltipAnimationStart: isCurrentlyEmpty
@@ -168,18 +119,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final colors = selectedTheme.colors(context);
 
     final sessionProvider = provider.Provider.of<SessionProvider>(context);
-    final settingsProvider = provider.Provider.of<SettingsProvider>(context);
 
     bool effectivelyEmpty = sessionProvider.sessions.isEmpty;
-    if (sessionProvider.sessions.length == 1 &&
-        sessionProvider.sessions.first.isIncognito) {
-      if (settingsProvider.isIncognitoMode) {
-        effectivelyEmpty = true;
-      } else {
-        effectivelyEmpty = false;
-      }
-    }
-    if (sessionProvider.sessions.length > 1) effectivelyEmpty = false;
 
     if (effectivelyEmpty && _tooltipShouldDisappear) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
