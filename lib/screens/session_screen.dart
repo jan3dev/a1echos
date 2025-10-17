@@ -39,6 +39,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   late SessionNavigationController _navigationController;
 
   bool _isEditing = false;
+  bool _isInitializing = true;
   final GlobalKey<TranscriptionListState> _listKey =
       GlobalKey<TranscriptionListState>();
   Timer? _scrollDebounceTimer;
@@ -117,16 +118,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   void _scrollToBottom() {
     // Only scroll during live transcription, not during editing
-    final shouldScroll = _localTranscriptionProvider.isRecording ||
+    final shouldScroll =
+        _localTranscriptionProvider.isRecording ||
         (_localTranscriptionProvider.selectedModelType == ModelType.whisper &&
-         _localTranscriptionProvider.whisperRealtime &&
-         _localTranscriptionProvider.liveVoskTranscriptionPreview != null);
+            _localTranscriptionProvider.whisperRealtime &&
+            _localTranscriptionProvider.liveVoskTranscriptionPreview != null);
 
     if (!shouldScroll) return;
 
     // Cancel previous debounce timer
     _scrollDebounceTimer?.cancel();
-    
+
     // Debounce rapid calls (wait 50ms for pause in updates)
     _scrollDebounceTimer = Timer(const Duration(milliseconds: 50), () {
       if (_scrollController.hasClients) {
@@ -146,6 +148,10 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   void _initializeSession() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _navigationController.initializeSession();
+      if (!mounted) return;
+      setState(() {
+        _isInitializing = false;
+      });
       _localTranscriptionProvider.addListener(_scrollToBottom);
     });
   }
@@ -265,17 +271,20 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
               },
               child: Stack(
                 children: [
-                  TranscriptionContentView(
-                    listKey: _listKey,
-                    scrollController: _scrollController,
-                    selectionMode: _selectionController.selectionMode,
-                    selectedTranscriptionIds:
-                        _selectionController.selectedTranscriptionIds,
-                    onTranscriptionTap: _handleTranscriptionTap,
-                    onTranscriptionLongPress: _handleTranscriptionLongPress,
-                    onEditStart: _onEditStart,
-                    onEditEnd: _onEditEnd,
-                  ),
+                  _isInitializing
+                      ? const SizedBox.shrink()
+                      : TranscriptionContentView(
+                          listKey: _listKey,
+                          scrollController: _scrollController,
+                          selectionMode: _selectionController.selectionMode,
+                          selectedTranscriptionIds:
+                              _selectionController.selectedTranscriptionIds,
+                          onTranscriptionTap: _handleTranscriptionTap,
+                          onTranscriptionLongPress:
+                              _handleTranscriptionLongPress,
+                          onEditStart: _onEditStart,
+                          onEditEnd: _onEditEnd,
+                        ),
                   if (_selectionController.selectionMode)
                     Positioned(
                       bottom: 32,
@@ -290,7 +299,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                         ),
                       ),
                     )
-                  else
+                  else if (!_isInitializing)
                     provider.Consumer<LocalTranscriptionProvider>(
                       builder: (context, transcriptionProvider, _) {
                         final recordingControlsState =
