@@ -25,12 +25,10 @@ class PermissionDialogs {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: AquaIcon.mic(color: Colors.white),
-      iconVariant: AquaModalSheetVariant.warning,
+      icon: AquaIcon.mic(color: colors.textPrimary),
       title: context.loc.microphoneAccessRequiredTitle,
       message: context.loc.microphoneAccessRequiredMessageIOS,
       primaryButtonText: context.loc.openSettings,
-      primaryButtonVariant: AquaButtonVariant.warning,
       secondaryButtonText: context.loc.cancel,
       onPrimaryButtonTap: () {
         Navigator.of(context).pop();
@@ -50,12 +48,10 @@ class PermissionDialogs {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: AquaIcon.mic(color: Colors.white),
-      iconVariant: AquaModalSheetVariant.warning,
+      icon: AquaIcon.mic(color: colors.textPrimary),
       title: context.loc.microphoneAccessRequiredTitle,
       message: context.loc.microphoneAccessRequiredMessageAndroid,
       primaryButtonText: context.loc.grantPermission,
-      primaryButtonVariant: AquaButtonVariant.warning,
       secondaryButtonText: context.loc.cancel,
       onPrimaryButtonTap: () {
         Navigator.of(context).pop();
@@ -74,12 +70,10 @@ class PermissionDialogs {
     AquaModalSheet.show(
       context,
       colors: colors,
-      icon: AquaIcon.danger(color: Colors.white),
-      iconVariant: AquaModalSheetVariant.danger,
+      icon: AquaIcon.infoCircle(color: colors.textPrimary),
       title: context.loc.microphoneAccessDeniedTitle,
       message: context.loc.microphoneAccessDeniedMessage,
       primaryButtonText: context.loc.openSettings,
-      primaryButtonVariant: AquaButtonVariant.error,
       secondaryButtonText: context.loc.cancel,
       onPrimaryButtonTap: () {
         Navigator.of(context).pop();
@@ -91,4 +85,3 @@ class PermissionDialogs {
     );
   }
 }
-
