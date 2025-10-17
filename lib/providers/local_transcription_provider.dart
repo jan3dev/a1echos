@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'dart:async';
 
 import '../models/transcription.dart';
@@ -323,10 +324,6 @@ class LocalTranscriptionProvider with ChangeNotifier {
 
     if (currentState == TranscriptionState.error) {
       if (!_stateManager.transitionTo(TranscriptionState.ready)) {
-        logger.error(
-          'Failed to transition from error to ready',
-          flag: FeatureFlag.provider,
-        );
         _releaseOperationLock(operationName);
         return false;
       }
@@ -378,19 +375,7 @@ class LocalTranscriptionProvider with ChangeNotifier {
         message: 'Error starting recording',
       );
       
-      final errorMessage = e.toString();
-      if (errorMessage.contains('permission') && errorMessage.toLowerCase().contains('denied')) {
-        if (errorMessage.contains('Settings')) {
-          _stateManager.setError('Microphone access denied. Please enable it in Settings.');
-        } else if (errorMessage.contains('permanently denied')) {
-          _stateManager.setError('Microphone access denied. Please enable it in Settings.');
-        } else {
-          _stateManager.setError('Microphone permission required. Please tap the button again to grant access.');
-        }
-      } else {
-        _stateManager.setError('Error starting recording: $e');
-      }
-      
+      _stateManager.setError('Error starting recording: $e');
       _uiStateProvider.clearRecordingSessionId();
       return false;
     } finally {

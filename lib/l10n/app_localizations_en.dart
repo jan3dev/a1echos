@@ -565,4 +565,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageSundanese => 'Sundanese';
+
+  @override
+  String get microphoneAccessRequiredTitle => 'Microphone Access Required';
+
+  @override
+  String get microphoneAccessRequiredMessageIOS =>
+      'Echos needs access to your microphone to record audio. Please enable it in Settings.';
+
+  @override
+  String get microphoneAccessRequiredMessageAndroid =>
+      'Echos needs access to your microphone to record audio. Please grant permission to continue.';
+
+  @override
+  String get microphoneAccessDeniedTitle => 'Microphone Access Denied';
+
+  @override
+  String get microphoneAccessDeniedMessage =>
+      'You have permanently denied microphone access. Please enable it in Settings to use recording features.';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get grantPermission => 'Grant Permission';
 }

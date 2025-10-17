@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:echos/utils/utils.dart';
+import 'package:ui_components/ui_components.dart';
 import '../providers/session_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/local_transcription_provider.dart';
+import '../providers/theme_provider.dart';
+import '../models/app_theme.dart';
+import '../services/audio_service.dart';
+import '../utils/permission_dialogs.dart';
 import '../screens/session_screen.dart';
 import '../logger.dart';
 
 mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
+  
+  AquaColors? _getColors() {
+    if (this is ConsumerState) {
+      final consumerState = this as ConsumerState;
+      return consumerState.ref.watch(prefsProvider).selectedTheme.colors(context);
+    }
+    return Theme.of(context).extension<AquaColors>();
+  }
   void openSession(String sessionId, {bool selectionMode = false}) {
     if (selectionMode) return;
 
@@ -23,6 +37,38 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> startRecording({VoidCallback? onTooltipAnimationStart}) async {
+    final audioService = AudioService();
+    final hasPermission = await audioService.hasPermission();
+    
+    if (!hasPermission) {
+      if (!mounted) {
+        return;
+      }
+      
+      final colors = _getColors();
+      if (colors == null) {
+        return;
+      }
+      
+      final isPermanentlyDenied = await audioService.isPermanentlyDenied();
+      
+      if (!mounted) return;
+      
+      if (isPermanentlyDenied) {
+        PermissionDialogs.showMicrophonePermanentlyDenied(context, colors);
+      } else {
+        PermissionDialogs.showMicrophonePermissionDenied(
+          context,
+          colors,
+          onRetry: () async {
+            await Future.delayed(const Duration(milliseconds: 300));
+            startRecording(onTooltipAnimationStart: onTooltipAnimationStart);
+          },
+        );
+      }
+      return;
+    }
+    
     if (onTooltipAnimationStart != null) {
       onTooltipAnimationStart();
       // Wait for tooltip animation to complete before proceeding (shrink-in effect = 250ms)

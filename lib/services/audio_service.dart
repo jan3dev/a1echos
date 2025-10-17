@@ -46,24 +46,19 @@ class AudioService {
     }
 
     if (status.isPermanentlyDenied) {
-      throw Exception(
-        'Microphone permission permanently denied. Please enable it in Settings.',
-      );
+      return false;
     }
 
     final result = await Permission.microphone.request();
+    return result.isGranted;
+  }
 
-    if (result.isGranted) {
-      return true;
+  Future<bool> isPermanentlyDenied() async {
+    if (Platform.isIOS) {
+      return await NativeAudioPermissionService.isDenied();
     }
-
-    if (result.isPermanentlyDenied) {
-      throw Exception(
-        'Microphone permission permanently denied. Please enable it in Settings.',
-      );
-    }
-
-    return false;
+    final status = await Permission.microphone.status;
+    return status.isPermanentlyDenied;
   }
 
   Future<String> _generateRecordingPath({String extension = 'wav'}) async {
@@ -82,7 +77,7 @@ class AudioService {
 
   Future<bool> startRecording({bool useStreaming = false}) async {
     if (!await hasPermission()) {
-      throw Exception('Microphone permission denied');
+      return false;
     }
 
     if (!_backgroundServiceInitialized) {
@@ -148,7 +143,7 @@ class AudioService {
   /// Starts monitoring levels without creating a persistent audio file.
   Future<bool> startMonitoring() async {
     if (!await hasPermission()) {
-      throw Exception('Microphone permission denied');
+      return false;
     }
 
     if (await _recorder.isRecording()) {

@@ -64,25 +64,23 @@ class NativeAudioPermissionService {
     }
 
     if (status == 'denied') {
-      throw Exception(
-        'Microphone permission denied. Please enable it in Settings > Echos > Microphone.',
-      );
+      return false;
     }
 
     if (status == 'undetermined') {
-      logger.info(
-        'Requesting iOS microphone permission...',
-        flag: FeatureFlag.service,
-      );
-      final granted = await requestRecordPermission();
-      logger.info(
-        'iOS permission request result: $granted',
-        flag: FeatureFlag.service,
-      );
-      return granted;
+      return await requestRecordPermission();
     }
 
     return false;
+  }
+  
+  /// Checks if permission is in denied state (not undetermined, not granted)
+  static Future<bool> isDenied() async {
+    if (!Platform.isIOS) {
+      return false;
+    }
+    final status = await getRecordPermissionStatus();
+    return status == 'denied';
   }
 
   /// Opens the app settings page where user can enable microphone permission

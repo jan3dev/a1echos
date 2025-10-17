@@ -1122,6 +1122,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sundanese'**
   String get languageSundanese;
+
+  /// No description provided for @microphoneAccessRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone Access Required'**
+  String get microphoneAccessRequiredTitle;
+
+  /// No description provided for @microphoneAccessRequiredMessageIOS.
+  ///
+  /// In en, this message translates to:
+  /// **'Echos needs access to your microphone to record audio. Please enable it in Settings.'**
+  String get microphoneAccessRequiredMessageIOS;
+
+  /// No description provided for @microphoneAccessRequiredMessageAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Echos needs access to your microphone to record audio. Please grant permission to continue.'**
+  String get microphoneAccessRequiredMessageAndroid;
+
+  /// No description provided for @microphoneAccessDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone Access Denied'**
+  String get microphoneAccessDeniedTitle;
+
+  /// No description provided for @microphoneAccessDeniedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have permanently denied microphone access. Please enable it in Settings to use recording features.'**
+  String get microphoneAccessDeniedMessage;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// No description provided for @grantPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Permission'**
+  String get grantPermission;
 }
 
 class _AppLocalizationsDelegate
