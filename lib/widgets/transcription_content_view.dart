@@ -9,6 +9,8 @@ import '../widgets/error_view.dart';
 
 /// Content view component that manages the main transcription display area
 class TranscriptionContentView extends ConsumerWidget {
+  static const double _scrollableAreaBottomOffset = 167;
+  
   final ScrollController scrollController;
   final bool selectionMode;
   final Set<String> selectedTranscriptionIds;
@@ -56,7 +58,7 @@ class TranscriptionContentView extends ConsumerWidget {
               top: 0,
               left: 0,
               right: 0,
-              bottom: 167,
+              bottom: _scrollableAreaBottomOffset,
               child: Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: shouldShowLiveTranscription

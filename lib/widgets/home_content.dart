@@ -3,6 +3,8 @@ import '../models/session.dart';
 import '../widgets/session_list.dart';
 
 class HomeContent extends StatelessWidget {
+  static const double _scrollableAreaBottomOffset = 167;
+  
   final ScrollController scrollController;
   final bool selectionMode;
   final Set<String> selectedSessionIds;
@@ -26,7 +28,7 @@ class HomeContent extends StatelessWidget {
       top: 0,
       left: 0,
       right: 0,
-      bottom: 167,
+      bottom: _scrollableAreaBottomOffset,
       child: SingleChildScrollView(
         controller: scrollController,
         child: Padding(
