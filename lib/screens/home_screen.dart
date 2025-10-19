@@ -75,11 +75,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-  }
-
   void _onTooltipDisappearComplete() {
     setState(() {
       _tooltipShouldDisappear = false;
@@ -158,6 +153,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   );
 
               return AquaRecordingControlsView(
+                colors: colors,
                 state: recordingControlsState,
                 audioLevel: transcriptionProvider.audioLevel,
                 onRecordingStart: _startRecordingWithAnimation,

@@ -131,6 +131,7 @@ class _StateButtonPanel extends StatelessWidget {
           enabled: enabled,
           onRecordingStart: enabled ? () {} : null,
           onRecordingStop: enabled ? () {} : null,
+          colors: theme.colors,
         ),
       ],
     );
@@ -180,6 +181,7 @@ class _InteractiveRecordingButtonSection extends HookWidget {
                     recordingState.value = RecordingButtonState.transcribing;
                     isSimulating.value = true;
                   },
+                  colors: theme.colors,
                 ),
                 const SizedBox(height: 24),
                 AquaText.body1(

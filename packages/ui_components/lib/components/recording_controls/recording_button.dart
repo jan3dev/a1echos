@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:ui_components/config/colors.dart';
+import 'package:ui_components/config/theme_colors.dart';
 
 /// Enum representing the different states of the recording button
 enum RecordingButtonState {
@@ -45,6 +47,9 @@ class AquaRecordingButton extends StatefulWidget {
   /// Debounce duration between actions
   final Duration debounceDuration;
 
+  /// Theme colors for the component
+  final AquaColors colors;
+
   const AquaRecordingButton({
     super.key,
     this.onRecordingStart,
@@ -55,6 +60,7 @@ class AquaRecordingButton extends StatefulWidget {
     this.scaleAnimationDuration = const Duration(milliseconds: 250),
     this.glowAnimationDuration = const Duration(milliseconds: 2000),
     this.debounceDuration = const Duration(milliseconds: 800),
+    required this.colors,
   });
 
   @override
@@ -244,54 +250,50 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
   }
 
   Widget _buildButtonContainer() {
-    final colorScheme = Theme.of(context).colorScheme;
-
     switch (widget.state) {
       case RecordingButtonState.loading:
       case RecordingButtonState.transcribing:
-        return _buildTranscribingButton(colorScheme);
+        return _buildTranscribingButton();
       case RecordingButtonState.recording:
-        return _buildRecordingButton(colorScheme);
+        return _buildRecordingButton();
       case RecordingButtonState.ready:
-        return _buildReadyButton(colorScheme);
+        return _buildReadyButton();
     }
   }
 
-  Widget _buildTranscribingButton(ColorScheme colorScheme) {
-    return Opacity(
-      opacity: 0.5,
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          color: colorScheme.onSurface,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.onSurface.withOpacity(0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 0),
-            ),
-          ],
-        ),
-        child: IconButton(
-          onPressed: null, // Disabled during transcribing/loading
-          icon: SvgPicture.asset(
-            'assets/svgs/mic.svg',
-            package: 'ui_components',
-            width: 24,
-            height: 24,
-            colorFilter: ColorFilter.mode(
-              colorScheme.surface,
-              BlendMode.srcIn,
-            ),
+  Widget _buildTranscribingButton() {
+    return Container(
+      width: widget.size,
+      height: widget.size,
+      decoration: BoxDecoration(
+        color: widget.colors.glassInverse.withOpacity(0.5),
+        shape: BoxShape.circle,
+        boxShadow: const [
+          BoxShadow(
+            color: AquaPrimitiveColors.shadow,
+            blurRadius: 20,
+            offset: Offset(0, 0),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: null, // Disabled during transcribing/loading
+        icon: SvgPicture.asset(
+          'assets/svgs/mic.svg',
+          package: 'ui_components',
+          width: 24,
+          height: 24,
+          colorFilter: ColorFilter.mode(
+            widget.colors.textInverse,
+            BlendMode.srcIn,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildRecordingButton(ColorScheme colorScheme) {
+  Widget _buildRecordingButton() {
     if (_glowAnimation != null) {
       return AnimatedBuilder(
         animation: _glowAnimation!,
@@ -300,18 +302,18 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
             width: widget.size,
             height: widget.size,
             decoration: BoxDecoration(
-              color: colorScheme.primary,
+              color: widget.colors.accentBrand,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(
+                  color: widget.colors.accentBrand.withOpacity(
                     0.3 + _glowAnimation!.value * 0.4,
                   ),
                   blurRadius: 24 + _glowAnimation!.value * 16,
                   offset: const Offset(0, 0),
                 ),
                 BoxShadow(
-                  color: colorScheme.primary.withOpacity(
+                  color: widget.colors.accentBrand.withOpacity(
                     _glowAnimation!.value * 0.2,
                   ),
                   blurRadius: 8 + _glowAnimation!.value * 8,
@@ -330,7 +332,7 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
                 width: 14,
                 height: 14,
                 colorFilter: ColorFilter.mode(
-                  colorScheme.onPrimary,
+                  widget.colors.textInverse,
                   BlendMode.srcIn,
                 ),
               ),
@@ -344,11 +346,11 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
         width: widget.size,
         height: widget.size,
         decoration: BoxDecoration(
-          color: colorScheme.primary,
+          color: widget.colors.accentBrand,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.3),
+              color: widget.colors.accentBrand.withOpacity(0.3),
               blurRadius: 24,
               offset: const Offset(0, 0),
             ),
@@ -365,7 +367,7 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
             width: 14,
             height: 14,
             colorFilter: ColorFilter.mode(
-              colorScheme.onPrimary,
+              widget.colors.textInverse,
               BlendMode.srcIn,
             ),
           ),
@@ -374,18 +376,19 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
     }
   }
 
-  Widget _buildReadyButton(ColorScheme colorScheme) {
+  Widget _buildReadyButton() {
     return Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
-        color: colorScheme.onSurface,
+        color: widget.colors.glassInverse,
         shape: BoxShape.circle,
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: colorScheme.onSurface.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 0),
+            color: AquaPrimitiveColors.shadow,
+            blurRadius: 20,
+            offset: Offset(0, 0),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -399,7 +402,7 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
           width: 24,
           height: 24,
           colorFilter: ColorFilter.mode(
-            colorScheme.surface,
+            widget.colors.textInverse,
             BlendMode.srcIn,
           ),
         ),

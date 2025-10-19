@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.jan3.a1lab.a1echos"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {

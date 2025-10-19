@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui_components/config/theme_colors.dart';
 import 'dart:math' as math;
 
 /// Audio wave visualization component for the design system
@@ -25,16 +26,20 @@ class AquaAudioWaveVisualization extends StatefulWidget {
   /// Wave animation duration
   final Duration waveDuration;
 
+  /// Theme colors for the component
+  final AquaColors colors;
+
   const AquaAudioWaveVisualization({
     super.key,
     this.audioLevel = 0.0,
-    this.height = 64.0,
+    this.height = 42.0,
     this.totalBars = 60,
     this.barSpacing = 1.0,
     this.minBarWidth = 2.0,
     this.maxBarWidth = 8.0,
     this.animationDuration = const Duration(milliseconds: 10),
     this.waveDuration = const Duration(milliseconds: 8),
+    required this.colors,
   });
 
   @override
@@ -230,8 +235,6 @@ class _AquaAudioWaveVisualizationState extends State<AquaAudioWaveVisualization>
   }
 
   Widget _buildFullWidthWave() {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SizedBox(
       height: widget.height,
       child: LayoutBuilder(
@@ -254,7 +257,7 @@ class _AquaAudioWaveVisualizationState extends State<AquaAudioWaveVisualization>
                     height: math.max(minBarHeight, barHeight),
                     maxHeight: widget.height,
                     width: barWidth.clamp(widget.minBarWidth, widget.maxBarWidth),
-                    colorScheme: colorScheme,
+                    colors: widget.colors,
                   ),
                   if (index < widget.totalBars - 1) SizedBox(width: widget.barSpacing),
                 ],
@@ -288,13 +291,13 @@ class _AudioBar extends StatelessWidget {
   final double height;
   final double maxHeight;
   final double width;
-  final ColorScheme colorScheme;
+  final AquaColors colors;
 
   const _AudioBar({
     required this.height,
     required this.maxHeight,
     required this.width,
-    required this.colorScheme,
+    required this.colors,
   });
 
   @override
@@ -310,7 +313,7 @@ class _AudioBar extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: colorScheme.primary.withOpacity(opacity),
+        color: colors.accentBrand.withOpacity(opacity),
         borderRadius: BorderRadius.circular(4),
       ),
     );

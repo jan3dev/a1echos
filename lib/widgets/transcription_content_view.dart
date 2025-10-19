@@ -56,7 +56,7 @@ class TranscriptionContentView extends ConsumerWidget {
               top: 0,
               left: 0,
               right: 0,
-              bottom: 208,
+              bottom: 167,
               child: Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: shouldShowLiveTranscription

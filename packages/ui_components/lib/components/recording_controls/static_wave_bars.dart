@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui_components/config/theme_colors.dart';
 
 /// Static wave bars shown when not recording
 class AquaStaticWaveBars extends StatelessWidget {
@@ -15,6 +16,9 @@ class AquaStaticWaveBars extends StatelessWidget {
   final double minBarWidth;
   final double maxBarWidth;
 
+  /// Theme colors for the component
+  final AquaColors colors;
+
   const AquaStaticWaveBars({
     super.key,
     this.height = 12.0,
@@ -22,12 +26,11 @@ class AquaStaticWaveBars extends StatelessWidget {
     this.barSpacing = 1.0,
     this.minBarWidth = 2.0,
     this.maxBarWidth = 8.0,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SizedBox(
       height: height,
       child: LayoutBuilder(
@@ -45,7 +48,7 @@ class AquaStaticWaveBars extends StatelessWidget {
                     width: barWidth.clamp(minBarWidth, maxBarWidth),
                     height: height,
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurface.withOpacity(0.3),
+                      color: colors.surfaceTertiary,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

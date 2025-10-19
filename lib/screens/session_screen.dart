@@ -311,6 +311,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                             );
 
                         return AquaRecordingControlsView(
+                          colors: colors,
                           state: recordingControlsState,
                           audioLevel: transcriptionProvider.audioLevel,
                           onRecordingStart: () =>
