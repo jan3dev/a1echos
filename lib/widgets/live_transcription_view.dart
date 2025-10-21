@@ -5,11 +5,13 @@ import 'transcription_list.dart';
 class LiveTranscriptionView extends StatelessWidget {
   final ScrollController controller;
   final GlobalKey<TranscriptionListState>? listKey;
+  final double bottomPadding;
 
   const LiveTranscriptionView({
     super.key,
     required this.controller,
     this.listKey,
+    this.bottomPadding = 16.0,
   });
 
   @override
@@ -24,6 +26,7 @@ class LiveTranscriptionView extends StatelessWidget {
             selectedTranscriptionIds: const {},
             onTranscriptionTap: (_) {},
             onTranscriptionLongPress: (_) {},
+            bottomPadding: bottomPadding,
           ),
         ),
       ],

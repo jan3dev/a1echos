@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/transcription.dart';
 
@@ -5,15 +6,19 @@ import '../models/transcription.dart';
 class ShareService {
   /// Shares a list of transcriptions using the native share dialog
   static Future<ShareResult> shareTranscriptions(
-    List<Transcription> transcriptions,
-  ) async {
+    List<Transcription> transcriptions, {
+    Rect? sharePositionOrigin,
+  }) async {
     if (transcriptions.isEmpty) {
       throw ArgumentError('Cannot share empty transcription list');
     }
 
     final content = formatTranscriptions(transcriptions);
 
-    final params = ShareParams(text: content);
+    final params = ShareParams(
+      text: content,
+      sharePositionOrigin: sharePositionOrigin,
+    );
 
     return await SharePlus.instance.share(params);
   }

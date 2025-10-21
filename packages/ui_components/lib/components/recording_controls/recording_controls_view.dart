@@ -60,11 +60,37 @@ class AquaRecordingControlsView extends StatelessWidget {
       bottom: 16,
       left: 0,
       right: 0,
-      child: Container(
-        color: colors.glassBackground,
-        child: _buildControlsForState(),
+      child: IgnorePointer(
+        ignoring: false,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  height: _getControlsHeight(),
+                  decoration: BoxDecoration(
+                    color: colors.glassBackground,
+                  ),
+                ),
+              ),
+            ),
+            _buildControlsForState(),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Calculate the height of the controls based on the current state
+  double _getControlsHeight() {
+    switch (state) {
+      case RecordingControlsState.recording:
+      case RecordingControlsState.transcribing:
+      case RecordingControlsState.loading:
+      case RecordingControlsState.ready:
+        // Button height (64) + spacing (16) + wave height (42) + padding (16 top + 16 bottom) = 154
+        return 154.0;
+    }
   }
 
   Widget _buildControlsForState() {
@@ -80,25 +106,31 @@ class AquaRecordingControlsView extends StatelessWidget {
   }
 
   Widget _buildRecordingLayout() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AquaRecordingButton(
-          state: RecordingButtonState.recording,
-          onRecordingStart: onRecordingStart,
-          onRecordingStop: onRecordingStop,
-          enabled: enabled,
-          colors: colors,
-        ),
-        SizedBox(height: spacing),
-        SizedBox(
-          height: 42,
-          child: AquaAudioWaveVisualization(
-            audioLevel: audioLevel,
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 16.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AquaRecordingButton(
+            state: RecordingButtonState.recording,
+            onRecordingStart: onRecordingStart,
+            onRecordingStop: onRecordingStop,
+            enabled: enabled,
             colors: colors,
           ),
-        ),
-      ],
+          SizedBox(height: spacing),
+          SizedBox(
+            height: 42,
+            child: AquaAudioWaveVisualization(
+              audioLevel: audioLevel,
+              colors: colors,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -107,48 +139,54 @@ class AquaRecordingControlsView extends StatelessWidget {
         ? RecordingButtonState.transcribing
         : RecordingButtonState.loading;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AquaRecordingButton(
-          state: buttonState,
-          onRecordingStart: onRecordingStart,
-          onRecordingStop: onRecordingStop,
-          enabled: enabled,
-          colors: colors,
-        ),
-        SizedBox(height: spacing),
-        SizedBox(
-          height: 42,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 16.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AquaRecordingButton(
+            state: buttonState,
+            onRecordingStart: onRecordingStart,
+            onRecordingStop: onRecordingStop,
+            enabled: enabled,
+            colors: colors,
+          ),
+          SizedBox(height: spacing),
+          SizedBox(
+            height: 42,
             child: AquaStaticWaveBars(colors: colors),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildReadyLayout() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AquaRecordingButton(
-          state: RecordingButtonState.ready,
-          onRecordingStart: onRecordingStart,
-          onRecordingStop: onRecordingStop,
-          enabled: enabled,
-          colors: colors,
-        ),
-        SizedBox(height: spacing),
-        SizedBox(
-          height: 42,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 16.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AquaRecordingButton(
+            state: RecordingButtonState.ready,
+            onRecordingStart: onRecordingStart,
+            onRecordingStop: onRecordingStop,
+            enabled: enabled,
+            colors: colors,
+          ),
+          SizedBox(height: spacing),
+          SizedBox(
+            height: 42,
             child: AquaStaticWaveBars(colors: colors),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

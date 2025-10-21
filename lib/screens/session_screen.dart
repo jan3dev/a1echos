@@ -274,20 +274,26 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
               },
               child: Stack(
                 children: [
-                  _isInitializing
-                      ? const SizedBox.shrink()
-                      : TranscriptionContentView(
-                          listKey: _listKey,
-                          scrollController: _scrollController,
-                          selectionMode: _selectionController.selectionMode,
-                          selectedTranscriptionIds:
-                              _selectionController.selectedTranscriptionIds,
-                          onTranscriptionTap: _handleTranscriptionTap,
-                          onTranscriptionLongPress:
-                              _handleTranscriptionLongPress,
-                          onEditStart: _onEditStart,
-                          onEditEnd: _onEditEnd,
-                        ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _isInitializing
+                        ? const SizedBox.shrink()
+                        : TranscriptionContentView(
+                            listKey: _listKey,
+                            scrollController: _scrollController,
+                            selectionMode: _selectionController.selectionMode,
+                            selectedTranscriptionIds:
+                                _selectionController.selectedTranscriptionIds,
+                            onTranscriptionTap: _handleTranscriptionTap,
+                            onTranscriptionLongPress:
+                                _handleTranscriptionLongPress,
+                            onEditStart: _onEditStart,
+                            onEditEnd: _onEditEnd,
+                          ),
+                  ),
                   if (_selectionController.selectionMode)
                     Positioned(
                       bottom: 32,
