@@ -60,38 +60,25 @@ class AquaRecordingControlsView extends StatelessWidget {
       bottom: 16,
       left: 0,
       right: 0,
-      child: IgnorePointer(
-        ignoring: false,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  height: _getControlsHeight(),
-                  decoration: BoxDecoration(
-                    color: colors.glassBackground,
-                  ),
-                ),
+      child: Stack(
+        children: [
+          IgnorePointer(
+            child: Container(
+              height: _getControlsHeight(),
+              decoration: BoxDecoration(
+                color: colors.glassBackground,
               ),
             ),
-            _buildControlsForState(),
-          ],
-        ),
+          ),
+          _buildControlsForState(),
+        ],
       ),
     );
   }
 
   /// Calculate the height of the controls based on the current state
-  double _getControlsHeight() {
-    switch (state) {
-      case RecordingControlsState.recording:
-      case RecordingControlsState.transcribing:
-      case RecordingControlsState.loading:
-      case RecordingControlsState.ready:
-        // Button height (64) + spacing (16) + wave height (42) + padding (16 top + 16 bottom) = 154
-        return 154.0;
-    }
-  }
+  /// Button height (64) + spacing (16) + wave height (42) + padding (16 top + 16 bottom) = 154
+  double _getControlsHeight() => 154.0;
 
   Widget _buildControlsForState() {
     switch (state) {
