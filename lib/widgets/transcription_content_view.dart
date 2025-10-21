@@ -9,6 +9,8 @@ import '../widgets/error_view.dart';
 
 /// Content view component that manages the main transcription display area
 class TranscriptionContentView extends ConsumerWidget {
+  static const double _recordingControlsHeight = 167;
+
   final ScrollController scrollController;
   final bool selectionMode;
   final Set<String> selectedTranscriptionIds;
@@ -50,34 +52,23 @@ class TranscriptionContentView extends ConsumerWidget {
                 provider.whisperRealtime &&
                 provider.liveVoskTranscriptionPreview != null);
 
-        return Stack(
-          children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 208,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: shouldShowLiveTranscription
-                    ? LiveTranscriptionView(
-                        controller: scrollController,
-                        listKey: listKey,
-                      )
-                    : TranscriptionList(
-                        key: listKey,
-                        controller: scrollController,
-                        selectionMode: selectionMode,
-                        selectedTranscriptionIds: selectedTranscriptionIds,
-                        onTranscriptionTap: onTranscriptionTap,
-                        onTranscriptionLongPress: onTranscriptionLongPress,
-                        onEditModeStarted: onEditStart,
-                        onEditModeEnded: onEditEnd,
-                      ),
-              ),
-            ),
-          ],
-        );
+        return shouldShowLiveTranscription
+            ? LiveTranscriptionView(
+                controller: scrollController,
+                listKey: listKey,
+                bottomPadding: _recordingControlsHeight,
+              )
+            : TranscriptionList(
+                key: listKey,
+                controller: scrollController,
+                selectionMode: selectionMode,
+                selectedTranscriptionIds: selectedTranscriptionIds,
+                onTranscriptionTap: onTranscriptionTap,
+                onTranscriptionLongPress: onTranscriptionLongPress,
+                onEditModeStarted: onEditStart,
+                onEditModeEnded: onEditEnd,
+                bottomPadding: _recordingControlsHeight,
+              );
       },
     );
   }

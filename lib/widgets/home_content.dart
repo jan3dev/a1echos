@@ -3,6 +3,8 @@ import '../models/session.dart';
 import '../widgets/session_list.dart';
 
 class HomeContent extends StatelessWidget {
+  static const double _recordingControlsHeight = 167;
+
   final ScrollController scrollController;
   final bool selectionMode;
   final Set<String> selectedSessionIds;
@@ -26,11 +28,16 @@ class HomeContent extends StatelessWidget {
       top: 0,
       left: 0,
       right: 0,
-      bottom: 208,
+      bottom: 0,
       child: SingleChildScrollView(
         controller: scrollController,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          padding: EdgeInsets.only(
+            left: 16.0,
+            right: 16.0,
+            top: 16.0,
+            bottom: _recordingControlsHeight,
+          ),
           child: SessionList(
             selectionMode: selectionMode,
             selectedSessionIds: selectedSessionIds,

@@ -110,6 +110,7 @@ class TranscriptionList extends ConsumerStatefulWidget {
   final Function(String) onTranscriptionLongPress;
   final Function()? onEditModeStarted;
   final Function()? onEditModeEnded;
+  final double bottomPadding;
 
   const TranscriptionList({
     super.key,
@@ -120,6 +121,7 @@ class TranscriptionList extends ConsumerStatefulWidget {
     required this.onTranscriptionLongPress,
     this.onEditModeStarted,
     this.onEditModeEnded,
+    this.bottomPadding = 16.0,
   });
 
   @override
@@ -194,7 +196,12 @@ class TranscriptionListState extends ConsumerState<TranscriptionList> {
 
     return ListView.builder(
       controller: widget.controller,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: widget.bottomPadding,
+      ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final transcription = items[index];

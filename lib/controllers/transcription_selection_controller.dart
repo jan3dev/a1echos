@@ -177,8 +177,19 @@ class TranscriptionSelectionController with ChangeNotifier {
     }
 
     try {
+      // Calculate share position origin for iOS (centered at bottom of screen)
+      final box = context.findRenderObject() as RenderBox?;
+      final sharePositionOrigin = box != null
+          ? Rect.fromCenter(
+              center: Offset(box.size.width / 2, box.size.height - 100),
+              width: 10,
+              height: 10,
+            )
+          : null;
+
       final result = await ShareService.shareTranscriptions(
         selectedTranscriptions,
+        sharePositionOrigin: sharePositionOrigin,
       );
 
       if (result.status == ShareResultStatus.success) {

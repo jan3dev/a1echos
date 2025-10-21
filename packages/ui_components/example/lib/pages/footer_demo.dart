@@ -7,6 +7,7 @@ import 'package:ui_components/ui_components.dart';
 import 'package:ui_components_playground/models/models.dart';
 
 import '../providers/providers.dart';
+import '../shared/extensions/extensions.dart';
 
 class FooterDemoPage extends HookConsumerWidget {
   const FooterDemoPage({super.key});
@@ -55,35 +56,39 @@ class _RecordingControlsStatesSection extends HookWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: const Column(
+      child: Column(
         children: [
           _StatePanel(
             title: 'Ready State',
             description:
                 'Ready to start recording - shows dark microphone button (in light theme) and static wave bars',
             state: RecordingControlsState.ready,
+            theme: theme,
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           _StatePanel(
             title: 'Recording State',
             description:
                 'Currently recording - shows animated wave visualization',
             state: RecordingControlsState.recording,
             audioLevel: 0.7,
+            theme: theme,
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           _StatePanel(
             title: 'Transcribing State',
             description:
                 'Processing recording - shows faded dark button (in light theme) and static wave bars',
             state: RecordingControlsState.transcribing,
+            theme: theme,
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
           _StatePanel(
             title: 'Loading State',
             description:
                 'Loading state - shows faded dark button (in light theme) with disabled interaction',
             state: RecordingControlsState.loading,
+            theme: theme,
           ),
         ],
       ),
@@ -96,12 +101,14 @@ class _StatePanel extends StatelessWidget {
     required this.title,
     required this.description,
     required this.state,
+    required this.theme,
     this.audioLevel = 0.0,
   });
 
   final String title;
   final String description;
   final RecordingControlsState state;
+  final AppTheme theme;
   final double audioLevel;
 
   @override
@@ -129,6 +136,7 @@ class _StatePanel extends StatelessWidget {
               AquaRecordingControlsView(
                 state: state,
                 audioLevel: audioLevel,
+                colors: theme.colors,
                 onRecordingStart: () {},
                 onRecordingStop: () {},
               ),
@@ -188,6 +196,7 @@ class _InteractiveRecordingControlsDemo extends HookWidget {
                 AquaRecordingControlsView(
                   state: recordingState.value,
                   audioLevel: audioLevel.value,
+                  colors: theme.colors,
                   onRecordingStart: () {
                     recordingState.value = RecordingControlsState.recording;
                     isSimulating.value = true;

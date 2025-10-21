@@ -37,16 +37,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final transcriptionProvider = provider
           .Provider.of<LocalTranscriptionProvider>(context, listen: false);
-      transcriptionProvider.addListener(_scrollToBottom);
+      transcriptionProvider.addListener(_scrollToTop);
     });
   }
 
-  void _scrollToBottom() {
+  void _scrollToTop() {
     if (_scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
+            0.0, // Scroll to top to show newest sessions
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );
@@ -62,22 +62,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       provider.Provider.of<LocalTranscriptionProvider>(
         context,
         listen: false,
-      ).removeListener(_scrollToBottom);
+      ).removeListener(_scrollToTop);
     } catch (e, st) {
       logger.error(
         e,
         stackTrace: st,
         flag: FeatureFlag.ui,
-        message: 'Error removing scroll-to-bottom listener on HomeScreen',
+        message: 'Error removing scroll-to-top listener on HomeScreen',
       );
     }
     _scrollController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
   }
 
   void _onTooltipDisappearComplete() {
@@ -158,6 +153,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   );
 
               return AquaRecordingControlsView(
+                colors: colors,
                 state: recordingControlsState,
                 audioLevel: transcriptionProvider.audioLevel,
                 onRecordingStart: _startRecordingWithAnimation,
