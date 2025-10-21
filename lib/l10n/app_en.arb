@@ -229,5 +229,12 @@
   "languageHausa": "Hausa",
   "languageBashkir": "Bashkir",
   "languageJavanese": "Javanese",
-  "languageSundanese": "Sundanese"
+  "languageSundanese": "Sundanese",
+  "microphoneAccessRequiredTitle": "Microphone Access Required",
+  "microphoneAccessRequiredMessageIOS": "Echos needs access to your microphone to record audio. Please enable it in Settings.",
+  "microphoneAccessRequiredMessageAndroid": "Echos needs access to your microphone to record audio. Please grant permission to continue.",
+  "microphoneAccessDeniedTitle": "Microphone Access Denied",
+  "microphoneAccessDeniedMessage": "You have permanently denied microphone access. Please enable it in Settings to use recording features.",
+  "openSettings": "Open Settings",
+  "grantPermission": "Grant Permission"
 }

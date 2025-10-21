@@ -145,6 +145,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   void _initializeSession() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final selectedTheme = ref.read(prefsProvider).selectedTheme;
+      final colors = selectedTheme.colors(context);
+      _recordingController.setContext(context, colors);
       await _navigationController.initializeSession();
       _localTranscriptionProvider.addListener(_scrollToBottom);
     });

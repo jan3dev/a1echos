@@ -1,12 +1,19 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components/ui_components.dart';
 import '../providers/local_transcription_provider.dart';
 import '../providers/session_provider.dart';
+import '../services/audio_service.dart';
+import '../utils/permission_dialogs.dart';
 import '../logger.dart';
 
 /// Controller for managing recording operations within a session
 class SessionRecordingController with ChangeNotifier {
   final LocalTranscriptionProvider _transcriptionProvider;
   final SessionProvider _sessionProvider;
+  final AudioService _audioService = AudioService();
+  
+  BuildContext? _context;
+  AquaColors? _colors;
 
   SessionRecordingController({
     required LocalTranscriptionProvider transcriptionProvider,
@@ -14,6 +21,11 @@ class SessionRecordingController with ChangeNotifier {
   }) : _transcriptionProvider = transcriptionProvider,
        _sessionProvider = sessionProvider {
     _transcriptionProvider.addListener(_onTranscriptionStateChanged);
+  }
+  
+  void setContext(BuildContext context, AquaColors colors) {
+    _context = context;
+    _colors = colors;
   }
 
   @override
@@ -41,7 +53,22 @@ class SessionRecordingController with ChangeNotifier {
 
   /// Starts recording for the current session with enhanced validation
   Future<bool> startRecording() async {
-    if (!isReadyForRecording) {
+    if (isRecording || isTranscribing) {
+      return false;
+    }
+
+    if (isLoading) {
+      return false;
+    }
+
+    final hasPermission = await _audioService.hasPermission();
+    if (!hasPermission) {
+      final isPermanentlyDenied = await _audioService.isPermanentlyDenied();
+      if (isPermanentlyDenied) {
+        _handlePermissionPermanentlyDenied();
+      } else {
+        _handlePermissionDenied();
+      }
       return false;
     }
 
@@ -57,6 +84,32 @@ class SessionRecordingController with ChangeNotifier {
       );
       return false;
     }
+  }
+  
+  void _handlePermissionDenied() {
+    if (_context == null || !_context!.mounted || _colors == null) {
+      return;
+    }
+    
+    PermissionDialogs.showMicrophonePermissionDenied(
+      _context!,
+      _colors!,
+      onRetry: () async {
+        await Future.delayed(const Duration(milliseconds: 300));
+        startRecording();
+      },
+    );
+  }
+  
+  void _handlePermissionPermanentlyDenied() {
+    if (_context == null || !_context!.mounted || _colors == null) {
+      return;
+    }
+    
+    PermissionDialogs.showMicrophonePermanentlyDenied(
+      _context!,
+      _colors!,
+    );
   }
 
   /// Stops recording and saves the transcription with enhanced validation
