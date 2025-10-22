@@ -65,21 +65,21 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
       ),
       confirmText: context.loc.delete,
       cancelText: context.loc.cancel,
-      onConfirm: () {
+      onConfirm: () async {
         Navigator.pop(context);
-        final deletedCount = _selectedSessionIds.length;
+
+        // Delete all sessions
         for (var sessionId in _selectedSessionIds) {
-          sessionProvider.deleteSession(sessionId);
+          await sessionProvider.deleteSession(sessionId);
         }
-        setState(() {
-          _selectionMode = false;
-          _selectedSessionIds.clear();
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.loc.homeSessionsDeleted(deletedCount)),
-          ),
-        );
+
+        // Clear selection state
+        if (mounted) {
+          setState(() {
+            _selectionMode = false;
+            _selectedSessionIds.clear();
+          });
+        }
       },
     );
   }

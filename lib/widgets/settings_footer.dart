@@ -41,8 +41,12 @@ class _SettingsFooterState extends ConsumerState<SettingsFooter> {
     final url = Uri.https('x.com', sanitized);
     final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.loc.couldNotOpenLink)),
+      final colors = ref.read(prefsProvider).selectedTheme.colors(context);
+      AquaTooltip.show(
+        context,
+        message: context.loc.couldNotOpenLink,
+        variant: AquaTooltipVariant.error,
+        colors: colors,
       );
     }
   }

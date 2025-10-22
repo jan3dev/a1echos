@@ -173,7 +173,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   void _handleCopyAllPressed() {
-    _selectionController.copyAllTranscriptions(context);
+    _selectionController.copyAllTranscriptions(context, ref);
   }
 
   void _handleSelectAllPressed() {
@@ -230,7 +230,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   void _handleSharePressed() {
-    _selectionController.shareSelectedTranscriptions(context);
+    _selectionController.shareSelectedTranscriptions(context, ref);
   }
 
   @override

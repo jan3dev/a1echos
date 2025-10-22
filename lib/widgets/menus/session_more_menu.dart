@@ -151,16 +151,28 @@ class SessionMoreMenu extends ConsumerWidget {
           message: context.loc.homeDeleteSelectedSessionsMessage(1),
           confirmText: context.loc.delete,
           cancelText: context.loc.cancel,
-          onConfirm: () {
+          onConfirm: () async {
             Navigator.pop(context);
             final sessionProvider = provider.Provider.of<SessionProvider>(
               context,
               listen: false,
             );
             sessionProvider.deleteSession(session.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.loc.homeSessionsDeleted(1))),
-            );
+
+            // Wait for dialog to fully dismiss before showing tooltip
+            await Future.delayed(const Duration(milliseconds: 300));
+
+            if (context.mounted) {
+              final colors = ref
+                  .read(prefsProvider)
+                  .selectedTheme
+                  .colors(context);
+              AquaTooltip.show(
+                context,
+                message: context.loc.homeSessionsDeleted(1),
+                colors: colors,
+              );
+            }
           },
         );
       }
