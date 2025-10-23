@@ -11,12 +11,14 @@ import '../widgets/modals/incognito_explainer_modal.dart';
 class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final bool selectionMode;
   final VoidCallback? onDeleteSelected;
+  final VoidCallback? onExitSelectionMode;
   final bool effectivelyEmpty;
 
   const HomeAppBar({
     super.key,
     required this.selectionMode,
     this.onDeleteSelected,
+    this.onExitSelectionMode,
     required this.effectivelyEmpty,
   });
 
@@ -29,7 +31,13 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     return AquaTopAppBar(
       colors: colors,
       showBackButton: false,
-      leading: AquaIcon.echosLogo(color: colors.textPrimary),
+      leading: selectionMode
+          ? AquaIcon.chevronLeft(
+              color: colors.textPrimary,
+              size: 24,
+              onTap: onExitSelectionMode,
+            )
+          : AquaIcon.echosLogo(color: colors.textPrimary),
       actions: [
         if (selectionMode) ...[
           AquaIcon.trash(
