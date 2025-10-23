@@ -69,7 +69,7 @@ class LightColors implements AquaColors {
   @override
   Color get surfaceBackground => AquaPrimitiveColors.gray50;
   @override
-  Color get surfaceSelected => AquaPrimitiveColors.neonBlue8;
+  Color get surfaceSelected => AquaPrimitiveColors.gray100;
   @override
   Color get surfaceBorderSelected => AquaPrimitiveColors.neonBlue400;
 
@@ -134,7 +134,7 @@ class DarkColors implements AquaColors {
   @override
   Color get surfaceBackground => AquaPrimitiveColors.gray1000;
   @override
-  Color get surfaceSelected => AquaPrimitiveColors.neonBlue8;
+  Color get surfaceSelected => AquaPrimitiveColors.gray850;
   @override
   Color get surfaceBorderSelected => AquaPrimitiveColors.neonBlue800;
 
