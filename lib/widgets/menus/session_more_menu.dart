@@ -10,15 +10,18 @@ import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
 import '../modals/session_input_modal.dart';
 import '../../providers/session_provider.dart';
+import '../../logger.dart';
 
 class SessionMoreMenu extends ConsumerWidget {
   final Session session;
   final BuildContext listItemContext;
+  final BuildContext stableContext;
 
   const SessionMoreMenu({
     super.key,
     required this.session,
     required this.listItemContext,
+    required this.stableContext,
   });
 
   @override
@@ -144,6 +147,9 @@ class SessionMoreMenu extends ConsumerWidget {
           },
         );
       } else if (value == 'delete') {
+        final selectedTheme = ref.read(prefsProvider).selectedTheme;
+        final colors = selectedTheme.colors(stableContext);
+
         ConfirmationToast.show(
           context: context,
           ref: ref,
@@ -162,15 +168,16 @@ class SessionMoreMenu extends ConsumerWidget {
             // Wait for dialog to fully dismiss before showing tooltip
             await Future.delayed(const Duration(milliseconds: 300));
 
-            if (context.mounted) {
-              final colors = ref
-                  .read(prefsProvider)
-                  .selectedTheme
-                  .colors(context);
+            try {
               AquaTooltip.show(
-                context,
-                message: context.loc.homeSessionsDeleted(1),
+                stableContext,
+                message: stableContext.loc.homeSessionsDeleted(1),
                 colors: colors,
+              );
+            } catch (e) {
+              logger.error(
+                '[SessionMenu] AquaTooltip.show failed: $e',
+                flag: FeatureFlag.ui,
               );
             }
           },

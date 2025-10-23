@@ -138,7 +138,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         backgroundColor: colors.surfaceBackground,
         appBar: HomeAppBar(
           selectionMode: selectionMode,
-          onDeleteSelected: () => deleteSelectedSessions(ref),
+          onDeleteSelected: () {
+            deleteSelectedSessions(ref, context, colors);
+          },
           onExitSelectionMode: exitSelectionMode,
           effectivelyEmpty: effectivelyEmpty,
         ),
@@ -152,6 +154,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               onSessionTap: (sessionId) =>
                   openSession(sessionId, selectionMode: selectionMode),
               onSelectionToggle: toggleSessionSelection,
+              stableContext: context,
             ),
             provider.Consumer<LocalTranscriptionProvider>(
               builder: (context, transcriptionProvider, _) {

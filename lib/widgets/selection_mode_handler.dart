@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ui_components/ui_components.dart';
 import '../providers/session_provider.dart';
 import '../models/session.dart';
+import '../logger.dart';
 
 mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
   bool _selectionMode = false;
@@ -48,13 +50,19 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
     });
   }
 
-  void deleteSelectedSessions(WidgetRef ref) {
+  void deleteSelectedSessions(
+    WidgetRef ref,
+    BuildContext? callerContext,
+    AquaColors? colors,
+  ) {
     final sessionProvider = provider.Provider.of<SessionProvider>(
       context,
       listen: false,
     );
 
-    if (_selectedSessionIds.isEmpty) return;
+    if (_selectedSessionIds.isEmpty) {
+      return;
+    }
 
     ConfirmationToast.show(
       context: context,
@@ -66,9 +74,26 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
       confirmText: context.loc.delete,
       cancelText: context.loc.cancel,
       onConfirm: () async {
+        final deletedCount = _selectedSessionIds.length;
         Navigator.pop(context);
 
-        // Delete all sessions
+        // Wait for dialog to fully dismiss
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // Show tooltip BEFORE deletions to capture stable context
+        if (mounted && callerContext != null && colors != null) {
+          try {
+            AquaTooltip.show(
+              callerContext,
+              message: callerContext.loc.homeSessionsDeleted(deletedCount),
+              colors: colors,
+            );
+          } catch (e) {
+            logger.error('AquaTooltip.show failed: $e', flag: FeatureFlag.ui);
+          }
+        }
+
+        // Delete all sessions (this triggers rebuilds)
         for (var sessionId in _selectedSessionIds) {
           await sessionProvider.deleteSession(sessionId);
         }
