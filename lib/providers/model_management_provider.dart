@@ -25,7 +25,10 @@ class ModelManagementProvider with ChangeNotifier {
   bool _isInitializing = false;
   DateTime? _lastInitializationAttempt;
 
+  // Remembers the spoken language preference even when Vosk forces English.
   SpokenLanguage _selectedLanguage = SupportedLanguages.defaultLanguage;
+  SpokenLanguage _whisperLanguagePreference =
+      SupportedLanguages.defaultLanguage;
   SpokenLanguage get selectedLanguage => _selectedLanguage;
 
   static const Duration _minimumInitializationInterval = Duration(
@@ -44,7 +47,8 @@ class ModelManagementProvider with ChangeNotifier {
   bool get whisperRealtime => _whisperRealtime;
 
   /// Returns whether language selection is available for the current model
-  bool get isLanguageSelectionAvailable => _selectedModelType == ModelType.whisper;
+  bool get isLanguageSelectionAvailable =>
+      _selectedModelType == ModelType.whisper;
 
   /// Returns the current initialization status message
   String? get initializationStatus {
@@ -86,21 +90,24 @@ class ModelManagementProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final modelName = prefs.getString(_prefsKeyModelType);
-      
+
       if (modelName != null) {
         _selectedModelType = ModelType.values.firstWhere(
           (e) => e.name == modelName,
           orElse: () => Platform.isAndroid ? ModelType.whisper : ModelType.vosk,
         );
       } else {
-        _selectedModelType = Platform.isAndroid ? ModelType.whisper : ModelType.vosk;
+        _selectedModelType = Platform.isAndroid
+            ? ModelType.whisper
+            : ModelType.vosk;
       }
 
       _whisperRealtime = prefs.getBool(_prefsKeyWhisperRealtime) ?? false;
 
       final languageCode = prefs.getString(_prefsKeySpokenLanguage) ?? 'en';
-      _selectedLanguage = SupportedLanguages.findByCode(languageCode) ?? 
-                         SupportedLanguages.defaultLanguage;
+      _whisperLanguagePreference =
+          SupportedLanguages.findByCode(languageCode) ??
+          SupportedLanguages.defaultLanguage;
 
       // Disable real-time flag on non-iOS platforms where it is unsupported.
       if (!Platform.isIOS && _whisperRealtime) {
@@ -114,6 +121,10 @@ class ModelManagementProvider with ChangeNotifier {
         _whisperRealtime = false;
         await _saveSelectedModelType(_selectedModelType);
       }
+
+      _selectedLanguage = _selectedModelType == ModelType.vosk
+          ? SupportedLanguages.defaultLanguage
+          : _whisperLanguagePreference;
 
       notifyListeners();
     } catch (e, st) {
@@ -221,6 +232,9 @@ class ModelManagementProvider with ChangeNotifier {
     if (newModelType == ModelType.vosk) {
       await _voskService.dispose();
       _whisperRealtime = false;
+      _selectedLanguage = SupportedLanguages.defaultLanguage;
+    } else if (newModelType == ModelType.whisper) {
+      _selectedLanguage = _whisperLanguagePreference;
     }
 
     _selectedModelType = newModelType;
@@ -262,14 +276,24 @@ class ModelManagementProvider with ChangeNotifier {
 
   /// Sets the selected spoken language
   Future<void> setSelectedLanguage(SpokenLanguage language) async {
-    if (_selectedLanguage == language) return;
-    
-    _selectedLanguage = language;
-    
+    final bool isWhisper = _selectedModelType == ModelType.whisper;
+    final bool preferenceChanged = _whisperLanguagePreference != language;
+
+    if (!preferenceChanged && (!isWhisper || _selectedLanguage == language)) {
+      return;
+    }
+
+    if (preferenceChanged) {
+      _whisperLanguagePreference = language;
+    }
+
+    if (isWhisper) {
+      _selectedLanguage = language;
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKeySpokenLanguage, language.code);
-      notifyListeners();
     } catch (e, st) {
       logger.error(
         e,
@@ -277,6 +301,10 @@ class ModelManagementProvider with ChangeNotifier {
         flag: FeatureFlag.provider,
         message: 'Error saving selected language',
       );
+    }
+
+    if (isWhisper) {
+      notifyListeners();
     }
   }
 

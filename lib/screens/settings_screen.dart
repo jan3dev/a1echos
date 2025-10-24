@@ -34,6 +34,10 @@ class SettingsScreen extends ConsumerWidget {
                 : context.loc.whisperModelFileTitle;
           }
           String themeDisplay = selectedTheme.name;
+          final bool isVoskSelected =
+              provider.selectedModelType == ModelType.vosk;
+          final String languageDisplay = provider.selectedLanguage.code
+              .toUpperCase();
 
           return Column(
             children: [
@@ -105,30 +109,44 @@ class SettingsScreen extends ConsumerWidget {
                               height: 1,
                               color: colors.surfaceBorderPrimary,
                             ),
-                            // Only show language selection for Whisper models
-                            if (provider.selectedModelType == ModelType.whisper)
-                              AquaListItem(
-                                title: context.loc.spokenLanguageTitle,
-                                titleTrailing: provider.selectedLanguage
-                                    .getName(context),
-                                titleTrailingColor: colors.textSecondary,
-                                iconLeading: AquaIcon.language(
-                                  color: colors.textSecondary,
-                                  size: 24,
-                                ),
-                                iconTrailing: AquaIcon.chevronRight(
-                                  color: colors.textSecondary,
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const SpokenLanguageSelectionScreen(),
-                                    ),
-                                  );
-                                },
-                                backgroundColor: colors.surfacePrimary,
+                            AquaListItem(
+                              title: context.loc.spokenLanguageTitle,
+                              titleColor: colors.textPrimary.withOpacity(
+                                isVoskSelected ? 0.5 : 1.0,
                               ),
+                              subtitle: isVoskSelected
+                                  ? context.loc.spokenLanguageWhisperOnly
+                                  : null,
+                              subtitleColor: colors.textSecondary.withOpacity(
+                                isVoskSelected ? 0.5 : 1.0,
+                              ),
+                              titleTrailing: languageDisplay,
+                              titleTrailingColor: isVoskSelected
+                                  ? colors.textSecondary.withOpacity(0.5)
+                                  : colors.textSecondary,
+                              iconLeading: AquaIcon.language(
+                                color: colors.textSecondary.withOpacity(
+                                  isVoskSelected ? 0.5 : 1.0,
+                                ),
+                                size: 24,
+                              ),
+                              iconTrailing: AquaIcon.chevronRight(
+                                color: colors.textSecondary.withOpacity(
+                                  isVoskSelected ? 0.5 : 1.0,
+                                ),
+                              ),
+                              onTap: isVoskSelected
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const SpokenLanguageSelectionScreen(),
+                                        ),
+                                      );
+                                    },
+                              backgroundColor: colors.surfacePrimary,
+                            ),
                           ],
                         ),
                       ),
