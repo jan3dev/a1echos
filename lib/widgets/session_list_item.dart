@@ -28,7 +28,9 @@ class SessionListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedTheme = ref.watch(prefsProvider).selectedTheme;
     final colors = selectedTheme.colors(context);
-    final transcriptions = provider.Provider.of<LocalTranscriptionProvider>(context).allTranscriptions;
+    final transcriptions = provider.Provider.of<LocalTranscriptionProvider>(
+      context,
+    ).allTranscriptions;
     final count = transcriptions.where((t) => t.sessionId == session.id).length;
     final String subtitle = count == 1
         ? '1 Transcription'
@@ -39,11 +41,10 @@ class SessionListItem extends ConsumerWidget {
       child: AquaListItem(
         title: session.name,
         subtitle: subtitle,
-        iconLeading: selectionMode ? _buildCheckbox() : null,
-        iconTrailing: SessionMoreMenu(
-          session: session,
-          listItemContext: context,
-        ),
+        iconLeading: null,
+        iconTrailing: selectionMode
+            ? _buildCheckbox()
+            : SessionMoreMenu(session: session, listItemContext: context),
         backgroundColor: colors.surfacePrimary,
         titleColor: colors.textPrimary,
         subtitleColor: colors.textSecondary,
