@@ -41,6 +41,13 @@ mixin SelectionModeHandler<T extends StatefulWidget> on State<T> {
     }
   }
 
+  void exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedSessionIds.clear();
+    });
+  }
+
   void deleteSelectedSessions(WidgetRef ref) {
     final sessionProvider = provider.Provider.of<SessionProvider>(
       context,

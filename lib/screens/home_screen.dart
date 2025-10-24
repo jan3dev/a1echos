@@ -127,53 +127,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       });
     }
 
-    return Scaffold(
-      backgroundColor: colors.surfaceBackground,
-      appBar: HomeAppBar(
-        selectionMode: selectionMode,
-        onDeleteSelected: () => deleteSelectedSessions(ref),
-        effectivelyEmpty: effectivelyEmpty,
-      ),
-      body: Stack(
-        children: [
-          HomeContent(
-            scrollController: _scrollController,
-            selectionMode: selectionMode,
-            selectedSessionIds: selectedSessionIds,
-            onSessionLongPress: handleSessionLongPress,
-            onSessionTap: (sessionId) =>
-                openSession(sessionId, selectionMode: selectionMode),
-            onSelectionToggle: toggleSessionSelection,
-          ),
-          provider.Consumer<LocalTranscriptionProvider>(
-            builder: (context, transcriptionProvider, _) {
-              final recordingControlsState =
-                  StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
-                    transcriptionProvider.state,
-                  );
-
-              return AquaRecordingControlsView(
-                colors: colors,
-                state: recordingControlsState,
-                audioLevel: transcriptionProvider.audioLevel,
-                onRecordingStart: _startRecordingWithAnimation,
-                onRecordingStop: () =>
-                    transcriptionProvider.stopRecordingAndSave(),
-              );
-            },
-          ),
-          if (effectivelyEmpty)
-            Positioned(
-              bottom: 160,
-              left: 0,
-              right: 0,
-              child: AquaTooltipWithAnimation(
-                message: context.loc.emptySessionsMessage,
-                shouldDisappear: _tooltipShouldDisappear,
-                onDisappearComplete: _onTooltipDisappearComplete,
-              ),
+    return PopScope(
+      canPop: !selectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && selectionMode) {
+          exitSelectionMode();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: colors.surfaceBackground,
+        appBar: HomeAppBar(
+          selectionMode: selectionMode,
+          onDeleteSelected: () => deleteSelectedSessions(ref),
+          onExitSelectionMode: exitSelectionMode,
+          effectivelyEmpty: effectivelyEmpty,
+        ),
+        body: Stack(
+          children: [
+            HomeContent(
+              scrollController: _scrollController,
+              selectionMode: selectionMode,
+              selectedSessionIds: selectedSessionIds,
+              onSessionLongPress: handleSessionLongPress,
+              onSessionTap: (sessionId) =>
+                  openSession(sessionId, selectionMode: selectionMode),
+              onSelectionToggle: toggleSessionSelection,
             ),
-        ],
+            provider.Consumer<LocalTranscriptionProvider>(
+              builder: (context, transcriptionProvider, _) {
+                final recordingControlsState =
+                    StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
+                      transcriptionProvider.state,
+                    );
+
+                return AquaRecordingControlsView(
+                  colors: colors,
+                  state: recordingControlsState,
+                  audioLevel: transcriptionProvider.audioLevel,
+                  onRecordingStart: _startRecordingWithAnimation,
+                  onRecordingStop: () =>
+                      transcriptionProvider.stopRecordingAndSave(),
+                );
+              },
+            ),
+            if (effectivelyEmpty)
+              Positioned(
+                bottom: 160,
+                left: 0,
+                right: 0,
+                child: AquaTooltipWithAnimation(
+                  message: context.loc.emptySessionsMessage,
+                  shouldDisappear: _tooltipShouldDisappear,
+                  onDisappearComplete: _onTooltipDisappearComplete,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
