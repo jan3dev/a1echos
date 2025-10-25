@@ -308,13 +308,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                         ),
                       ),
                     )
-                  else if (!_isInitializing)
+                  else
                     provider.Consumer<LocalTranscriptionProvider>(
                       builder: (context, transcriptionProvider, _) {
                         final recordingControlsState =
                             StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
                               transcriptionProvider.state,
                             );
+                        final controlsEnabled =
+                            !_isInitializing ||
+                            transcriptionProvider.isRecording ||
+                            transcriptionProvider.isTranscribing;
 
                         return AquaRecordingControlsView(
                           colors: colors,
@@ -324,6 +328,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                               _recordingController.startRecording(),
                           onRecordingStop: () =>
                               transcriptionProvider.stopRecordingAndSave(),
+                          enabled: controlsEnabled,
                         );
                       },
                     ),
