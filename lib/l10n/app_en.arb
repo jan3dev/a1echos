@@ -130,6 +130,7 @@
   "createdPrefix": "Created",
   "spokenLanguageTitle": "Spoken Language",
   "spokenLanguageDescription": "Choose which language the model should detect. For best results, select the language you mainly speak.",
+  "spokenLanguageWhisperOnly": "Whisper Mode only",
   "spokenLanguageDisabledForVosk": "Language selection is only available for Whisper models. Vosk only supports English.",
   "languageEnglish": "English",
   "languageChinese": "Chinese",

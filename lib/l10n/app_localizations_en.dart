@@ -266,6 +266,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose which language the model should detect. For best results, select the language you mainly speak.';
 
   @override
+  String get spokenLanguageWhisperOnly => 'Whisper Mode only';
+
+  @override
   String get spokenLanguageDisabledForVosk =>
       'Language selection is only available for Whisper models. Vosk only supports English.';
 

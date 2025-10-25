@@ -523,6 +523,12 @@ abstract class AppLocalizations {
   /// **'Choose which language the model should detect. For best results, select the language you mainly speak.'**
   String get spokenLanguageDescription;
 
+  /// No description provided for @spokenLanguageWhisperOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Whisper Mode only'**
+  String get spokenLanguageWhisperOnly;
+
   /// No description provided for @spokenLanguageDisabledForVosk.
   ///
   /// In en, this message translates to:
