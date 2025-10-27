@@ -112,7 +112,11 @@ class _SessionInputModalState extends ConsumerState<SessionInputModal> {
             transparent: true,
             actions: [
               IconButton(
-                icon: AquaIcon.close(color: colors.textPrimary, size: 24),
+                icon: AquaIcon.close(
+                  color: colors.textPrimary,
+                  size: 24,
+                  enforceMinTouchTarget: false,
+                ),
                 onPressed: () {
                   Navigator.pop(context);
                   if (widget.onCancel != null) {

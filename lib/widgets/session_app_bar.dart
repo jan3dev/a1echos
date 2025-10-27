@@ -50,6 +50,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
         leading: AquaIcon.close(
           color: colors.textPrimary,
           size: 24,
+          enforceMinTouchTarget: false,
           onTap: onCancelEditPressed,
         ),
         title: context.loc.edit,
@@ -57,6 +58,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           AquaIcon.check(
             color: colors.textPrimary,
             size: 24,
+            enforceMinTouchTarget: false,
             onTap: onSaveEditPressed,
           ),
         ],
@@ -74,12 +76,14 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 child: AquaIcon.selectAll(
                   color: colors.textPrimary,
                   size: 24,
+                  enforceMinTouchTarget: false,
                   onTap: onSelectAllPressed,
                 ),
               ),
               AquaIcon.trash(
                 color: colors.textPrimary,
                 size: 24,
+                enforceMinTouchTarget: false,
                 onTap: onDeleteSelectedPressed,
               ),
             ]
@@ -106,6 +110,7 @@ class SessionAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 color: colors.textPrimary,
                 size: 24,
                 onTap: onCopyAllPressed,
+                enforceMinTouchTarget: false,
               ),
             ],
       onTitlePressed: !isIncognitoSession ? onTitlePressed : null,

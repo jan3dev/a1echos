@@ -1,9 +1,11 @@
 // ignore_for_file: unused_element
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ui_components/gen/assets.gen.dart';
 
 const _defaultSize = 24.0;
+const _minTouchTarget = 44.0;
 
 typedef AquaIconBuilder = AquaIcon Function({
   Color? color,
@@ -11,6 +13,7 @@ typedef AquaIconBuilder = AquaIcon Function({
   VoidCallback? onTap,
   EdgeInsets? padding,
   double size,
+  bool enforceMinTouchTarget,
 });
 
 class AquaIcon extends StatelessWidget {
@@ -22,6 +25,8 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     // ignore: unused_element_parameter
     this.padding,
+    // ignore: unused_element_parameter
+    this.enforceMinTouchTarget = true,
   }) : size = _defaultSize;
 
   AquaIcon.arrowLeft({
@@ -30,6 +35,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowLeft;
   AquaIcon.arrowUp({
     super.key,
@@ -37,6 +43,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowUp;
   AquaIcon.arrowRight({
     super.key,
@@ -44,6 +51,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowRight;
   AquaIcon.arrowDown({
     super.key,
@@ -51,6 +59,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowDown;
   AquaIcon.arrowDownRight({
     super.key,
@@ -58,6 +67,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowDownRight;
   AquaIcon.arrowDownLeft({
     super.key,
@@ -65,6 +75,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowDownLeft;
   AquaIcon.arrowUpLeft({
     super.key,
@@ -72,6 +83,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowUpLeft;
   AquaIcon.arrowUpRight({
     super.key,
@@ -79,6 +91,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.arrowUpRight;
   AquaIcon.chevronDown({
     super.key,
@@ -86,6 +99,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chevronDown;
   AquaIcon.chevronLeft({
     super.key,
@@ -93,6 +107,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chevronLeft;
   AquaIcon.chevronUp({
     super.key,
@@ -100,6 +115,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chevronUp;
   AquaIcon.chevronRight({
     super.key,
@@ -107,6 +123,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chevronRight;
   AquaIcon.star({
     super.key,
@@ -114,6 +131,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.star;
   AquaIcon.starFilled({
     super.key,
@@ -121,6 +139,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.starFilled;
   AquaIcon.caret({
     super.key,
@@ -128,6 +147,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.caret;
   AquaIcon.check({
     super.key,
@@ -135,6 +155,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.check;
   AquaIcon.pending({
     super.key,
@@ -142,6 +163,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.pending;
 
   AquaIcon.notification({
@@ -150,6 +172,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.notification;
   AquaIcon.notificationIndicator({
     super.key,
@@ -157,6 +180,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.notificationIndicator;
   AquaIcon.eyeOpen({
     super.key,
@@ -164,6 +188,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.eyeOpen;
   AquaIcon.eyeClose({
     super.key,
@@ -171,6 +196,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.eyeClose;
   AquaIcon.swap({
     super.key,
@@ -178,6 +204,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.swap;
   AquaIcon.swapVertical({
     super.key,
@@ -185,6 +212,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.swapVertical;
   AquaIcon.scan({
     super.key,
@@ -192,6 +220,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.scan;
   AquaIcon.filter({
     super.key,
@@ -199,6 +228,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.filter;
   AquaIcon.paste({
     super.key,
@@ -206,6 +236,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.paste;
   AquaIcon.danger({
     super.key,
@@ -213,6 +244,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.danger;
   AquaIcon.wallet({
     super.key,
@@ -220,6 +252,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.wallet;
   AquaIcon.hardwareWallet({
     super.key,
@@ -227,6 +260,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.hardwareWallet;
   AquaIcon.aquaIcon({
     super.key,
@@ -234,6 +268,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.aquaIcon;
   AquaIcon.refresh({
     super.key,
@@ -241,6 +276,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.refresh;
   AquaIcon.warning({
     super.key,
@@ -248,6 +284,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.warning;
   AquaIcon.marketplace({
     super.key,
@@ -255,6 +292,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.marketplace;
   AquaIcon.export({
     super.key,
@@ -262,6 +300,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.export;
   AquaIcon.remove({
     super.key,
@@ -269,6 +308,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.remove;
   AquaIcon.images({
     super.key,
@@ -276,6 +316,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.images;
   AquaIcon.settings({
     super.key,
@@ -283,6 +324,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.settings;
   AquaIcon.edit({
     super.key,
@@ -290,6 +332,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.edit;
   AquaIcon.externalLink({
     super.key,
@@ -297,6 +340,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.externalLink;
   AquaIcon.image({
     super.key,
@@ -304,6 +348,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.image;
   AquaIcon.account({
     super.key,
@@ -311,6 +356,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.account;
   AquaIcon.fees({
     super.key,
@@ -318,6 +364,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.fees;
   AquaIcon.lightbulb({
     super.key,
@@ -325,6 +372,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.lightbulb;
   AquaIcon.plus({
     super.key,
@@ -332,6 +380,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.plus;
   AquaIcon.close({
     super.key,
@@ -339,6 +388,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.close;
   AquaIcon.checkCircle({
     super.key,
@@ -346,6 +396,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.checkCircle;
   AquaIcon.logout({
     super.key,
@@ -353,6 +404,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.logout;
   AquaIcon.minus({
     super.key,
@@ -360,6 +412,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.minus;
   AquaIcon.infoCircle({
     super.key,
@@ -367,6 +420,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.infoCircle;
   AquaIcon.more({
     super.key,
@@ -374,6 +428,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.more;
   AquaIcon.language({
     super.key,
@@ -381,6 +436,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.language;
   AquaIcon.history({
     super.key,
@@ -388,6 +444,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.history;
   AquaIcon.share({
     super.key,
@@ -395,6 +452,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.share;
   AquaIcon.rotate({
     super.key,
@@ -402,6 +460,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.rotate;
   AquaIcon.referenceRate({
     super.key,
@@ -409,6 +468,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.referenceRate;
   AquaIcon.spinnerLoading({
     super.key,
@@ -416,6 +476,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.spinnerLoading;
   AquaIcon.box({
     super.key,
@@ -423,6 +484,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.box;
   AquaIcon.map({
     super.key,
@@ -430,6 +492,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.map;
   AquaIcon.theme({
     super.key,
@@ -437,6 +500,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.theme;
   AquaIcon.copy({
     super.key,
@@ -444,6 +508,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.copy;
   AquaIcon.key({
     super.key,
@@ -451,6 +516,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.key;
   AquaIcon.globe({
     super.key,
@@ -458,6 +524,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.globe;
   AquaIcon.biometricFingerprint({
     super.key,
@@ -465,6 +532,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.biometricFingerprint;
   AquaIcon.pokerchip({
     super.key,
@@ -472,6 +540,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.pokerchip;
   AquaIcon.assets({
     super.key,
@@ -479,6 +548,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.assets;
   AquaIcon.pegIn({
     super.key,
@@ -486,6 +556,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.pegIn;
   AquaIcon.passcode({
     super.key,
@@ -493,6 +564,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.passcode;
   AquaIcon.qrIcon({
     super.key,
@@ -500,6 +572,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.qrIcon;
   AquaIcon.experimental({
     super.key,
@@ -507,6 +580,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.experimental;
   AquaIcon.shield({
     super.key,
@@ -514,6 +588,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.shield;
   AquaIcon.helpSupport({
     super.key,
@@ -521,6 +596,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.helpSupport;
   AquaIcon.redo({
     super.key,
@@ -528,6 +604,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.redo;
   AquaIcon.home({
     super.key,
@@ -535,6 +612,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.home;
   AquaIcon.chart({
     super.key,
@@ -542,6 +620,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chart;
   AquaIcon.tool({
     super.key,
@@ -549,6 +628,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.tool;
   AquaIcon.upload({
     super.key,
@@ -556,6 +636,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.upload;
   AquaIcon.user({
     super.key,
@@ -563,6 +644,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.user;
   AquaIcon.search({
     super.key,
@@ -570,6 +652,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.search;
   AquaIcon.sidebarVisibilityLeft({
     super.key,
@@ -577,6 +660,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.sidebarVisibilityLeft;
   AquaIcon.sidebarVisibilityRight({
     super.key,
@@ -584,6 +668,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.sidebarVisibilityRight;
   AquaIcon.creditCard({
     super.key,
@@ -591,6 +676,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.creditCard;
   AquaIcon.hamburger({
     super.key,
@@ -598,6 +684,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.hamburger;
   AquaIcon.grab({
     super.key,
@@ -605,6 +692,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.grab;
   AquaIcon.trendUp({
     super.key,
@@ -612,6 +700,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.trendUp;
   AquaIcon.statusSuccess({
     super.key,
@@ -619,6 +708,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.statusSuccess;
   AquaIcon.statusWarning({
     super.key,
@@ -626,6 +716,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.statusWarning;
   AquaIcon.statusDanger({
     super.key,
@@ -633,6 +724,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.statusDanger;
   AquaIcon.statusNeutral({
     super.key,
@@ -640,6 +732,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.statusNeutral;
   AquaIcon.lock({
     super.key,
@@ -647,6 +740,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.lock;
   AquaIcon.trash({
     super.key,
@@ -654,6 +748,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.trash;
   AquaIcon.selectAll({
     super.key,
@@ -661,6 +756,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.selectAll;
   AquaIcon.copyMultiple({
     super.key,
@@ -668,6 +764,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.copyMultiple;
   AquaIcon.web({
     super.key,
@@ -675,6 +772,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.web;
   AquaIcon.addAlert({
     super.key,
@@ -682,6 +780,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.addAlert;
   AquaIcon.bank({
     super.key,
@@ -689,6 +788,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.bank;
   AquaIcon.bitcoinGeneric({
     super.key,
@@ -696,6 +796,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.bitcoinGeneric;
   AquaIcon.boltAlt({
     super.key,
@@ -703,6 +804,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.boltAlt;
   AquaIcon.btcpayServer({
     super.key,
@@ -710,6 +812,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.btcpayServer;
   AquaIcon.calendar({
     super.key,
@@ -717,6 +820,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.calendar;
   AquaIcon.chevronUpDown({
     super.key,
@@ -724,6 +828,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.chevronUpDown;
   AquaIcon.circularProgress({
     super.key,
@@ -731,6 +836,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.circularProgress;
   AquaIcon.contractCheck({
     super.key,
@@ -738,6 +844,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.contractCheck;
   AquaIcon.contractSearch({
     super.key,
@@ -745,6 +852,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.contractSearch;
   AquaIcon.crossing({
     super.key,
@@ -752,6 +860,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.crossing;
   AquaIcon.crossingDown({
     super.key,
@@ -759,6 +868,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.crossingDown;
   AquaIcon.crossingUp({
     super.key,
@@ -766,6 +876,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.crossingUp;
   AquaIcon.documentLayoutLeft({
     super.key,
@@ -773,6 +884,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.documentLayoutLeft;
   AquaIcon.echosIcon({
     super.key,
@@ -780,6 +892,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.echosIcon;
   AquaIcon.echosLogo({
     super.key,
@@ -787,6 +900,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.echosLogo;
   AquaIcon.faq({
     super.key,
@@ -794,6 +908,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.faq;
   AquaIcon.ghost({
     super.key,
@@ -801,6 +916,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.ghost;
   AquaIcon.gift({
     super.key,
@@ -808,6 +924,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.gift;
   AquaIcon.heart({
     super.key,
@@ -815,6 +932,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.heart;
   AquaIcon.heartFilled({
     super.key,
@@ -822,6 +940,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.heartFilled;
   AquaIcon.incognito({
     super.key,
@@ -829,6 +948,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.incognito;
   AquaIcon.instagramLogo({
     super.key,
@@ -836,6 +956,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.instagramLogo;
   AquaIcon.jan3Logo({
     super.key,
@@ -843,6 +964,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.jan3Logo;
   AquaIcon.linkedin({
     super.key,
@@ -850,6 +972,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.linkedin;
   AquaIcon.list({
     super.key,
@@ -857,6 +980,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.list;
   AquaIcon.loans({
     super.key,
@@ -864,6 +988,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.loans;
   AquaIcon.mic({
     super.key,
@@ -871,6 +996,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.mic;
   AquaIcon.p2p({
     super.key,
@@ -878,6 +1004,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.p2p;
   AquaIcon.paragraph({
     super.key,
@@ -885,6 +1012,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.paragraph;
   AquaIcon.switchIcon({
     super.key,
@@ -892,6 +1020,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.switchIcon;
   AquaIcon.telegramLogo({
     super.key,
@@ -899,6 +1028,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.telegramLogo;
   AquaIcon.unlink({
     super.key,
@@ -906,6 +1036,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.unlink;
   AquaIcon.xLogo({
     super.key,
@@ -913,6 +1044,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.xLogo;
   AquaIcon.zendesk({
     super.key,
@@ -920,6 +1052,7 @@ class AquaIcon extends StatelessWidget {
     this.onTap,
     this.padding,
     this.size = _defaultSize,
+    this.enforceMinTouchTarget = true,
   }) : asset = AquaUiAssets.svgs.zendesk;
 
   final SvgGenImage asset;
@@ -927,9 +1060,36 @@ class AquaIcon extends StatelessWidget {
   final Color? color;
   final EdgeInsets? padding;
   final VoidCallback? onTap;
+  final bool enforceMinTouchTarget;
 
   @override
   Widget build(BuildContext context) {
+    final EdgeInsets effectivePadding;
+    if (onTap != null && enforceMinTouchTarget) {
+      // Calculate padding needed to reach minimum touch target
+      final minPadding = math.max(0.0, (_minTouchTarget - size) / 2);
+      if (padding != null) {
+        // Ensure custom padding meets minimum requirements
+        effectivePadding = EdgeInsets.only(
+          left: math.max(padding!.left, minPadding),
+          top: math.max(padding!.top, minPadding),
+          right: math.max(padding!.right, minPadding),
+          bottom: math.max(padding!.bottom, minPadding),
+        );
+      } else {
+        effectivePadding = EdgeInsets.all(minPadding);
+      }
+    } else if (padding != null) {
+      // Use custom padding if explicitly provided and enforcement is off
+      effectivePadding = padding!;
+    } else if (onTap != null) {
+      // Default padding for interactive icons without enforcement
+      effectivePadding = const EdgeInsets.all(4);
+    } else {
+      // No padding for non-interactive icons
+      effectivePadding = EdgeInsets.zero;
+    }
+
     return Container(
       alignment: Alignment.center,
       child: InkWell(
@@ -944,8 +1104,7 @@ class AquaIcon extends StatelessWidget {
           return null;
         }),
         child: Ink(
-          padding: padding ??
-              (onTap != null ? const EdgeInsets.all(4) : EdgeInsets.zero),
+          padding: effectivePadding,
           child: asset.svg(
             width: size.toDouble(),
             height: size.toDouble(),

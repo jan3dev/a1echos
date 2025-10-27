@@ -35,6 +35,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ? AquaIcon.chevronLeft(
               color: colors.textPrimary,
               size: 24,
+              enforceMinTouchTarget: false,
               onTap: onExitSelectionMode,
             )
           : AquaIcon.echosLogo(color: colors.textPrimary),
@@ -43,6 +44,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           AquaIcon.trash(
             color: colors.textPrimary,
             size: 24,
+            enforceMinTouchTarget: false,
             onTap: onDeleteSelected,
           ),
         ] else ...[
@@ -51,6 +53,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             color: settingsProvider.isIncognitoMode
                 ? colors.accentBrand
                 : colors.textPrimary,
+            enforceMinTouchTarget: false,
             onTap: () async {
               final newValue = !settingsProvider.isIncognitoMode;
               final shouldShowModal =
@@ -76,6 +79,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           AquaIcon.hamburger(
             color: colors.textPrimary,
             size: 24,
+            enforceMinTouchTarget: false,
             onTap: () {
               Navigator.push(
                 context,

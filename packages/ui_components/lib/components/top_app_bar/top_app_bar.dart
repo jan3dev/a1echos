@@ -75,6 +75,7 @@ class AquaTopAppBar extends HookWidget implements PreferredSizeWidget {
                 AquaIcon.chevronLeft(
                   size: 24,
                   color: transparent ? colors.textInverse : colors.textPrimary,
+                  enforceMinTouchTarget: false,
                   onTap: () {
                     if (onBackPressed != null) {
                       onBackPressed?.call();
@@ -170,6 +171,7 @@ class AquaHeader extends StatelessWidget implements PreferredSizeWidget {
                     AquaIcon.notification(
                       size: 24,
                       padding: const EdgeInsets.all(4),
+                      enforceMinTouchTarget: false,
                       onTap: onNotificationsPressed,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
