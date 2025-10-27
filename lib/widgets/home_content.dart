@@ -11,6 +11,7 @@ class HomeContent extends StatelessWidget {
   final Function(Session) onSessionLongPress;
   final Function(String) onSessionTap;
   final Function(String) onSelectionToggle;
+  final BuildContext stableContext;
 
   const HomeContent({
     super.key,
@@ -20,6 +21,7 @@ class HomeContent extends StatelessWidget {
     required this.onSessionLongPress,
     required this.onSessionTap,
     required this.onSelectionToggle,
+    required this.stableContext,
   });
 
   @override
@@ -44,6 +46,7 @@ class HomeContent extends StatelessWidget {
             onSessionLongPress: onSessionLongPress,
             onSessionTap: onSessionTap,
             onSelectionToggle: onSelectionToggle,
+            stableContext: stableContext,
           ),
         ),
       ),

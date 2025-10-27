@@ -14,6 +14,7 @@ class SessionListItem extends ConsumerWidget {
   final VoidCallback onLongPress;
   final bool selectionMode;
   final bool isSelected;
+  final BuildContext stableContext;
 
   const SessionListItem({
     super.key,
@@ -22,6 +23,7 @@ class SessionListItem extends ConsumerWidget {
     required this.onLongPress,
     this.selectionMode = false,
     this.isSelected = false,
+    required this.stableContext,
   });
 
   @override
@@ -44,7 +46,11 @@ class SessionListItem extends ConsumerWidget {
         iconLeading: null,
         iconTrailing: selectionMode
             ? _buildCheckbox()
-            : SessionMoreMenu(session: session, listItemContext: context),
+            : SessionMoreMenu(
+                session: session,
+                listItemContext: context,
+                stableContext: stableContext,
+              ),
         backgroundColor: colors.surfacePrimary,
         titleColor: colors.textPrimary,
         subtitleColor: colors.textSecondary,

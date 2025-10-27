@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ui_components/ui_components.dart';
 import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 /// A simple transcription model for the design system component
 class TranscriptionItemData {
@@ -346,14 +348,42 @@ class AquaTranscriptionItemState extends State<AquaTranscriptionItem> {
     );
   }
 
-  void _copyToClipboard(BuildContext context, String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    // Show confirmation snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _copyToClipboard(BuildContext context, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+
+    final shouldShow = await _shouldShowClipboardTooltip();
+    if (shouldShow && context.mounted) {
+      final colors = widget.colors;
+      if (colors != null) {
+        AquaTooltip.show(
+          context,
+          message: 'Copied to clipboard',
+          colors: colors,
+        );
+      }
+    }
+  }
+
+  /// Checks if custom tooltip should be shown for clipboard operations
+  /// Returns true for iOS and Android < 12, false for Android >= 12
+  Future<bool> _shouldShowClipboardTooltip() async {
+    if (Platform.isIOS) {
+      return true;
+    }
+
+    if (Platform.isAndroid) {
+      try {
+        final deviceInfo = DeviceInfoPlugin();
+        final androidInfo = await deviceInfo.androidInfo;
+        // Android 12 is SDK version 31
+        return androidInfo.version.sdkInt < 31;
+      } catch (e) {
+        // If we can't determine the version, assume we should show tooltip
+        return true;
+      }
+    }
+
+    // Default to showing tooltip for other platforms
+    return true;
   }
 }

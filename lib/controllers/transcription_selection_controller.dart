@@ -4,10 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:ui_components/ui_components.dart';
 
 import '../providers/local_transcription_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/share_service.dart';
 import '../logger.dart';
+import '../utils/platform_utils.dart';
+import '../models/app_theme.dart';
 import '../widgets/toast/confirmation_toast.dart';
 
 /// Controller for managing transcription selection and bulk operations
@@ -86,6 +90,9 @@ class TranscriptionSelectionController with ChangeNotifier {
       onConfirm: () async {
         Navigator.pop(context);
 
+        // Wait for dialog to fully dismiss before showing tooltip
+        await Future.delayed(const Duration(milliseconds: 300));
+
         try {
           final deletedCount = _selectedTranscriptionIds.length;
           await _transcriptionProvider.deleteTranscriptions(
@@ -94,12 +101,14 @@ class TranscriptionSelectionController with ChangeNotifier {
           exitSelectionMode();
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  context.loc.sessionTranscriptionsDeleted(deletedCount),
-                ),
-              ),
+            final colors = ref
+                .read(prefsProvider)
+                .selectedTheme
+                .colors(context);
+            AquaTooltip.show(
+              context,
+              message: context.loc.sessionTranscriptionsDeleted(deletedCount),
+              colors: colors,
             );
           }
         } catch (e, st) {
@@ -110,15 +119,18 @@ class TranscriptionSelectionController with ChangeNotifier {
               flag: FeatureFlag.ui,
               message: 'Failed to delete selected transcriptions',
             );
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  context.loc.sessionErrorDeletingTranscriptions(
-                    e.toString(),
-                    'transcriptions',
-                  ),
-                ),
+            final colors = ref
+                .read(prefsProvider)
+                .selectedTheme
+                .colors(context);
+            AquaTooltip.show(
+              context,
+              message: context.loc.sessionErrorDeletingTranscriptions(
+                e.toString(),
+                'transcriptions',
               ),
+              variant: AquaTooltipVariant.error,
+              colors: colors,
             );
           }
         }
@@ -127,12 +139,19 @@ class TranscriptionSelectionController with ChangeNotifier {
   }
 
   /// Copies all transcriptions to clipboard
-  Future<void> copyAllTranscriptions(BuildContext context) async {
+  Future<void> copyAllTranscriptions(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final transcriptions = _transcriptionProvider.sessionTranscriptions;
 
     if (transcriptions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.loc.noTranscriptionsToCopy)),
+      final colors = ref.read(prefsProvider).selectedTheme.colors(context);
+      AquaTooltip.show(
+        context,
+        message: context.loc.noTranscriptionsToCopy,
+        variant: AquaTooltipVariant.warning,
+        colors: colors,
       );
       return;
     }
@@ -142,9 +161,20 @@ class TranscriptionSelectionController with ChangeNotifier {
     try {
       await Clipboard.setData(ClipboardData(text: text));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.loc.allTranscriptionsCopied)),
-        );
+        final shouldShow = await PlatformUtils.shouldShowClipboardTooltip();
+        if (shouldShow) {
+          if (context.mounted) {
+            final colors = ref
+                .read(prefsProvider)
+                .selectedTheme
+                .colors(context);
+            AquaTooltip.show(
+              context,
+              message: context.loc.allTranscriptionsCopied,
+              colors: colors,
+            );
+          }
+        }
       }
     } catch (e, st) {
       if (context.mounted) {
@@ -154,8 +184,12 @@ class TranscriptionSelectionController with ChangeNotifier {
           flag: FeatureFlag.ui,
           message: 'Failed to copy all transcriptions to clipboard',
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.loc.copyFailed(e.toString()))),
+        final colors = ref.read(prefsProvider).selectedTheme.colors(context);
+        AquaTooltip.show(
+          context,
+          message: context.loc.copyFailed(e.toString()),
+          variant: AquaTooltipVariant.error,
+          colors: colors,
         );
       }
     }
@@ -167,7 +201,10 @@ class TranscriptionSelectionController with ChangeNotifier {
   }
 
   /// Shares selected transcriptions using the native share dialog
-  Future<void> shareSelectedTranscriptions(BuildContext context) async {
+  Future<void> shareSelectedTranscriptions(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     if (_selectedTranscriptionIds.isEmpty) return;
 
     final selectedTranscriptions = _transcriptionProvider.sessionTranscriptions
@@ -175,8 +212,12 @@ class TranscriptionSelectionController with ChangeNotifier {
         .toList();
 
     if (selectedTranscriptions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.loc.noTranscriptionsSelectedToShare)),
+      final colors = ref.read(prefsProvider).selectedTheme.colors(context);
+      AquaTooltip.show(
+        context,
+        message: context.loc.noTranscriptionsSelectedToShare,
+        variant: AquaTooltipVariant.warning,
+        colors: colors,
       );
       return;
     }
@@ -208,8 +249,12 @@ class TranscriptionSelectionController with ChangeNotifier {
           flag: FeatureFlag.ui,
           message: 'Failed to share selected transcriptions',
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.loc.shareFailed(e.toString()))),
+        final colors = ref.read(prefsProvider).selectedTheme.colors(context);
+        AquaTooltip.show(
+          context,
+          message: context.loc.shareFailed(e.toString()),
+          variant: AquaTooltipVariant.error,
+          colors: colors,
         );
       }
     }

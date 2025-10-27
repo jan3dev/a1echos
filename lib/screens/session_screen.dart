@@ -173,7 +173,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   void _handleCopyAllPressed() {
-    _selectionController.copyAllTranscriptions(context);
+    _selectionController.copyAllTranscriptions(context, ref);
   }
 
   void _handleSelectAllPressed() {
@@ -230,7 +230,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 
   void _handleSharePressed() {
-    _selectionController.shareSelectedTranscriptions(context);
+    _selectionController.shareSelectedTranscriptions(context, ref);
   }
 
   @override
@@ -308,13 +308,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                         ),
                       ),
                     )
-                  else if (!_isInitializing)
+                  else
                     provider.Consumer<LocalTranscriptionProvider>(
                       builder: (context, transcriptionProvider, _) {
                         final recordingControlsState =
                             StateMappingUtils.mapTranscriptionStateToRecordingControlsState(
                               transcriptionProvider.state,
                             );
+                        final controlsEnabled =
+                            !_isInitializing ||
+                            transcriptionProvider.isRecording ||
+                            transcriptionProvider.isTranscribing;
 
                         return AquaRecordingControlsView(
                           colors: colors,
@@ -324,6 +328,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                               _recordingController.startRecording(),
                           onRecordingStop: () =>
                               transcriptionProvider.stopRecordingAndSave(),
+                          enabled: controlsEnabled,
                         );
                       },
                     ),

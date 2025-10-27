@@ -14,14 +14,17 @@ import '../screens/session_screen.dart';
 import '../logger.dart';
 
 mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
-  
   AquaColors? _getColors() {
     if (this is ConsumerState) {
       final consumerState = this as ConsumerState;
-      return consumerState.ref.watch(prefsProvider).selectedTheme.colors(context);
+      return consumerState.ref
+          .watch(prefsProvider)
+          .selectedTheme
+          .colors(context);
     }
     return Theme.of(context).extension<AquaColors>();
   }
+
   void openSession(String sessionId, {bool selectionMode = false}) {
     if (selectionMode) return;
 
@@ -39,21 +42,21 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
   Future<void> startRecording({VoidCallback? onTooltipAnimationStart}) async {
     final audioService = AudioService();
     final hasPermission = await audioService.hasPermission();
-    
+
     if (!hasPermission) {
       if (!mounted) {
         return;
       }
-      
+
       final colors = _getColors();
       if (colors == null) {
         return;
       }
-      
+
       final isPermanentlyDenied = await audioService.isPermanentlyDenied();
-      
+
       if (!mounted) return;
-      
+
       if (isPermanentlyDenied) {
         PermissionDialogs.showMicrophonePermanentlyDenied(context, colors);
       } else {
@@ -68,7 +71,7 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
       }
       return;
     }
-    
+
     if (onTooltipAnimationStart != null) {
       onTooltipAnimationStart();
       // Wait for tooltip animation to complete before proceeding (shrink-in effect = 250ms)
@@ -132,11 +135,15 @@ mixin SessionOperationsHandler<T extends StatefulWidget> on State<T> {
         message: 'Failed to start recording from SessionOperationsHandler',
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.loc.homeErrorCreatingSession(e.toString())),
-        ),
-      );
+      final colors = _getColors();
+      if (colors != null) {
+        AquaTooltip.show(
+          context,
+          message: context.loc.homeErrorCreatingSession(e.toString()),
+          variant: AquaTooltipVariant.error,
+          colors: colors,
+        );
+      }
     }
   }
 }

@@ -10,15 +10,18 @@ import '../../providers/theme_provider.dart';
 import '../../models/app_theme.dart';
 import '../modals/session_input_modal.dart';
 import '../../providers/session_provider.dart';
+import '../../logger.dart';
 
 class SessionMoreMenu extends ConsumerWidget {
   final Session session;
   final BuildContext listItemContext;
+  final BuildContext stableContext;
 
   const SessionMoreMenu({
     super.key,
     required this.session,
     required this.listItemContext,
+    required this.stableContext,
   });
 
   @override
@@ -144,6 +147,9 @@ class SessionMoreMenu extends ConsumerWidget {
           },
         );
       } else if (value == 'delete') {
+        final selectedTheme = ref.read(prefsProvider).selectedTheme;
+        final colors = selectedTheme.colors(stableContext);
+
         ConfirmationToast.show(
           context: context,
           ref: ref,
@@ -151,16 +157,29 @@ class SessionMoreMenu extends ConsumerWidget {
           message: context.loc.homeDeleteSelectedSessionsMessage(1),
           confirmText: context.loc.delete,
           cancelText: context.loc.cancel,
-          onConfirm: () {
+          onConfirm: () async {
             Navigator.pop(context);
             final sessionProvider = provider.Provider.of<SessionProvider>(
               context,
               listen: false,
             );
             sessionProvider.deleteSession(session.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.loc.homeSessionsDeleted(1))),
-            );
+
+            // Wait for dialog to fully dismiss before showing tooltip
+            await Future.delayed(const Duration(milliseconds: 300));
+
+            try {
+              AquaTooltip.show(
+                stableContext,
+                message: stableContext.loc.homeSessionsDeleted(1),
+                colors: colors,
+              );
+            } catch (e) {
+              logger.error(
+                '[SessionMenu] AquaTooltip.show failed: $e',
+                flag: FeatureFlag.ui,
+              );
+            }
           },
         );
       }

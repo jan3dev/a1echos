@@ -13,6 +13,7 @@ class SessionList extends ConsumerWidget {
   final Function(Session) onSessionLongPress;
   final Function(String) onSessionTap;
   final Function(String) onSelectionToggle;
+  final BuildContext stableContext;
 
   const SessionList({
     super.key,
@@ -21,6 +22,7 @@ class SessionList extends ConsumerWidget {
     required this.onSessionLongPress,
     required this.onSessionTap,
     required this.onSelectionToggle,
+    required this.stableContext,
   });
 
   @override
@@ -58,6 +60,7 @@ class SessionList extends ConsumerWidget {
                         ? onSelectionToggle(session.id)
                         : onSessionTap(session.id),
                     onLongPress: () => onSessionLongPress(session),
+                    stableContext: stableContext,
                   ),
                   if (index < sessions.length - 1)
                     Divider(height: 1, color: colors.surfaceBorderPrimary),
