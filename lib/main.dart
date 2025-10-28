@@ -68,17 +68,48 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    print('main app init state');
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    print('main app dispose');
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    // Trigger rebuild when system theme changes
+    print('main app didChangePlatformBrightness');
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final lightTheme = ref.watch(lightThemeProvider);
     final darkTheme = ref.watch(darkThemeProvider);
 
     return Container(
-      color: themeMode == ThemeMode.dark
+      color: themeMode == ThemeMode.system
+          ? (WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                    Brightness.dark
+                ? darkTheme.scaffoldBackgroundColor
+                : lightTheme.scaffoldBackgroundColor)
+          : themeMode == ThemeMode.dark
           ? darkTheme.scaffoldBackgroundColor
           : lightTheme.scaffoldBackgroundColor,
       child: SafeArea(
