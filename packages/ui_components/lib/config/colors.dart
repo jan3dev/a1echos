@@ -56,4 +56,11 @@ mixin AquaPrimitiveColors {
   static const Color scarlet16 = Color(0x29FF3B13);
 
   //!SECTION
+
+  //SECTION - Wave Colors (Specific to wave animations)
+
+  static const Color waveOrange = Color(0xFFF7931A);
+  static const Color waveCyan = Color(0xFF16BAC5);
+
+  //!SECTION
 }
