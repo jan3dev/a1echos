@@ -175,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             if (effectivelyEmpty)
               Positioned(
-                bottom: 160,
+                bottom: 112,
                 left: 0,
                 right: 0,
                 child: AquaTooltipWithAnimation(

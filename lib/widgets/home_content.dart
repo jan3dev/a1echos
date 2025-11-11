@@ -3,7 +3,7 @@ import '../models/session.dart';
 import '../widgets/session_list.dart';
 
 class HomeContent extends StatelessWidget {
-  static const double _recordingControlsHeight = 167;
+  static const double _recordingControlsHeight = 96;
 
   final ScrollController scrollController;
   final bool selectionMode;

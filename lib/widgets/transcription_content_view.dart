@@ -9,7 +9,7 @@ import '../widgets/error_view.dart';
 
 /// Content view component that manages the main transcription display area
 class TranscriptionContentView extends ConsumerWidget {
-  static const double _recordingControlsHeight = 167;
+  static const double _recordingControlsHeight = 96;
 
   final ScrollController scrollController;
   final bool selectionMode;

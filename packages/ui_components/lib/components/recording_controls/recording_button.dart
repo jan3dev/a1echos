@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -262,31 +263,36 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
   }
 
   Widget _buildTranscribingButton() {
-    return Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        color: widget.colors.glassInverse.withOpacity(0.5),
-        shape: BoxShape.circle,
-        boxShadow: const [
-          BoxShadow(
-            color: AquaPrimitiveColors.shadow,
-            blurRadius: 20,
-            offset: Offset(0, 0),
-            spreadRadius: 0,
+    return ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: widget.colors.glassInverse.withOpacity(0.5),
+            shape: BoxShape.circle,
+            boxShadow: const [
+              BoxShadow(
+                color: AquaPrimitiveColors.shadow,
+                blurRadius: 20,
+                offset: Offset(0, 0),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: IconButton(
-        onPressed: null, // Disabled during transcribing/loading
-        icon: SvgPicture.asset(
-          'assets/svgs/mic.svg',
-          package: 'ui_components',
-          width: 24,
-          height: 24,
-          colorFilter: ColorFilter.mode(
-            widget.colors.textInverse,
-            BlendMode.srcIn,
+          child: IconButton(
+            onPressed: null, // Disabled during transcribing/loading
+            icon: SvgPicture.asset(
+              'assets/svgs/mic.svg',
+              package: 'ui_components',
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                widget.colors.textInverse,
+                BlendMode.srcIn,
+              ),
+            ),
           ),
         ),
       ),
@@ -377,33 +383,38 @@ class _AquaRecordingButtonState extends State<AquaRecordingButton>
   }
 
   Widget _buildReadyButton() {
-    return Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        color: widget.colors.glassInverse,
-        shape: BoxShape.circle,
-        boxShadow: const [
-          BoxShadow(
-            color: AquaPrimitiveColors.shadow,
-            blurRadius: 20,
-            offset: Offset(0, 0),
-            spreadRadius: 0,
+    return ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: widget.colors.glassInverse,
+            shape: BoxShape.circle,
+            boxShadow: const [
+              BoxShadow(
+                color: AquaPrimitiveColors.shadow,
+                blurRadius: 20,
+                offset: Offset(0, 0),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: IconButton(
-        onPressed: (_isDebouncing || _gestureIsolationActive || !widget.enabled)
-            ? null
-            : _handleStartRecording,
-        icon: SvgPicture.asset(
-          'assets/svgs/mic.svg',
-          package: 'ui_components',
-          width: 24,
-          height: 24,
-          colorFilter: ColorFilter.mode(
-            widget.colors.textInverse,
-            BlendMode.srcIn,
+          child: IconButton(
+            onPressed: (_isDebouncing || _gestureIsolationActive || !widget.enabled)
+                ? null
+                : _handleStartRecording,
+            icon: SvgPicture.asset(
+              'assets/svgs/mic.svg',
+              package: 'ui_components',
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                widget.colors.textInverse,
+                BlendMode.srcIn,
+              ),
+            ),
           ),
         ),
       ),
