@@ -30,9 +30,15 @@ dependencies:
   uuid: ^4.5.1
   intl: ^0.20.2
   path: ^1.9.1
-  vosk_flutter: ^0.3.48
+  vosk_flutter:
+    git:
+      url: https://github.com/jan3dev/vosk-flutter.git
+      ref: 3f908da
   shared_preferences: ^2.5.3
-  whisper_flutter_new: ^1.0.1
+  whisper_flutter_new: 
+    git:
+      url: https://github.com/jan3dev/whisper_flutter
+      ref: d094ebd
   skeletonizer: ^2.0.1
   ui_components:
     path: packages/ui_components/
