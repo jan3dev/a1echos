@@ -64,10 +64,13 @@ class AquaRecordingControlsView extends StatelessWidget {
             child: ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  height: _getControlsHeight(),
-                  decoration: BoxDecoration(
-                    color: colors.glassBackground,
+                child: CustomPaint(
+                  foregroundPainter: const _FadeMaskPainter(fadeHeight: 32.0),
+                  child: Container(
+                    height: _getControlsHeight(),
+                    decoration: BoxDecoration(
+                      color: colors.glassBackground,
+                    ),
                   ),
                 ),
               ),
@@ -214,5 +217,35 @@ class AquaRecordingControlsView extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _FadeMaskPainter extends CustomPainter {
+  const _FadeMaskPainter({required this.fadeHeight});
+
+  final double fadeHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fadeStop = (fadeHeight / size.height).clamp(0.0, 1.0);
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: const [
+          Colors.transparent,
+          Colors.white,
+          Colors.white,
+        ],
+        stops: [0.0, fadeStop, 1.0],
+      ).createShader(Offset.zero & size)
+      ..blendMode = BlendMode.dstIn;
+
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FadeMaskPainter oldDelegate) {
+    return oldDelegate.fadeHeight != fadeHeight;
   }
 }

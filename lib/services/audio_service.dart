@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
