@@ -14,7 +14,9 @@ export interface TranscriptionJSON {
   audioPath: string;
 }
 
-export const transcriptionToJSON = (transcription: Transcription): TranscriptionJSON => {
+export const transcriptionToJSON = (
+  transcription: Transcription
+): TranscriptionJSON => {
   return {
     id: transcription.id,
     sessionId: transcription.sessionId,
@@ -24,7 +26,9 @@ export const transcriptionToJSON = (transcription: Transcription): Transcription
   };
 };
 
-export const transcriptionFromJSON = (json: TranscriptionJSON): Transcription => {
+export const transcriptionFromJSON = (
+  json: TranscriptionJSON
+): Transcription => {
   const parsedDate = new Date(json.timestamp);
   if (isNaN(parsedDate.getTime())) {
     throw new Error(`Invalid timestamp: ${json.timestamp}`);
@@ -54,5 +58,3 @@ export const createTranscription = (params: {
     audioPath: params.audioPath,
   };
 };
-
-

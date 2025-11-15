@@ -6,5 +6,3 @@ export enum TranscriptionState {
   STREAMING = 'streaming',
   ERROR = 'error',
 }
-
-

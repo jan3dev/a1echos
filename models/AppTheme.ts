@@ -29,5 +29,3 @@ export const getThemeByName = (name: string): AppTheme => {
       return AppTheme.LIGHT;
   }
 };
-
-

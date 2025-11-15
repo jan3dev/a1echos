@@ -96,5 +96,3 @@ export class SupportedLanguages {
 export const getCountryCode = (language: SpokenLanguage): string => {
   return SupportedLanguages.countryCodeFor(language.code);
 };
-
-
