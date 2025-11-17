@@ -104,3 +104,160 @@ const decrypted = await encryptionService.decrypt(encrypted);
 
 See `EncryptionService.ts` for implementation details.
 
+## Audio Service
+
+The AudioService provides audio recording functionality with background recording support for both iOS and Android platforms.
+
+### Features
+
+- **Audio Recording**: 16kHz WAV format recording with mono channel
+- **Background Recording**: Continues recording when app is in background (iOS & Android)
+- **Amplitude Monitoring**: Real-time audio level streaming for visualization
+- **Monitoring Mode**: Test audio levels without saving files
+- **Haptic Feedback**: Vibration feedback on recording start/stop
+- **Permission Management**: Microphone permission handling
+- **File Management**: Automatic file generation and cleanup
+
+### Usage
+
+#### Initialize Service
+
+```typescript
+import AudioService from './services/AudioService';
+
+const audioService = AudioService.getInstance();
+```
+
+#### Check Permissions
+
+```typescript
+const hasPermission = await audioService.hasPermission();
+const isPermanentlyDenied = await audioService.isPermanentlyDenied();
+```
+
+#### Start Recording
+
+```typescript
+const success = await audioService.startRecording();
+if (success) {
+  console.log('Recording started');
+}
+```
+
+#### Stop Recording
+
+```typescript
+const audioFilePath = await audioService.stopRecording();
+if (audioFilePath) {
+  console.log('Recording saved to:', audioFilePath);
+}
+```
+
+#### Subscribe to Audio Levels
+
+```typescript
+const unsubscribe = audioService.subscribeToAudioLevel((level) => {
+  console.log('Audio level (0-1):', level);
+});
+
+// Later, unsubscribe
+unsubscribe();
+```
+
+#### Monitoring Mode (Test Audio Levels)
+
+```typescript
+// Start monitoring without saving
+await audioService.startMonitoring();
+
+// Stop monitoring
+await audioService.stopMonitoring();
+```
+
+#### Check Recording Status
+
+```typescript
+const isRecording = await audioService.isRecording();
+```
+
+#### Cleanup
+
+```typescript
+await audioService.dispose();
+```
+
+### Background Recording
+
+#### iOS
+Background audio is enabled via `UIBackgroundModes: ["audio"]` in app.json. The audio session is configured to stay active in the background.
+
+#### Android
+Uses expo-notifications to display a foreground service notification during recording. The notification includes a "Stop Recording" action button.
+
+### Audio Configuration
+
+- **Sample Rate**: 16kHz (optimal for speech recognition)
+- **Channels**: 1 (mono)
+- **Bit Rate**: 128kbps
+- **Format**: WAV (uncompressed, best for transcription)
+- **Amplitude Update Rate**: ~60fps (16ms intervals)
+
+### Audio Level Processing
+
+The service implements an exponential smoothing algorithm for audio level visualization:
+
+1. Raw amplitude (dB) is normalized to 0-1 range
+2. Squared for perceptual scaling
+3. Exponentially smoothed with adaptive alpha
+4. Different smoothing for rising vs falling levels
+5. Clamped to 0.02-1.0 range for visualization
+
+### Required Dependencies
+
+- `expo-av` - Audio recording and permissions
+- `expo-audio` - Audio API
+- `expo-haptics` - Haptic feedback
+- `expo-file-system` - File operations
+- `expo-task-manager` - Background tasks
+- `expo-notifications` - Foreground service (Android)
+
+### Required Permissions
+
+#### iOS (Info.plist)
+```xml
+<key>NSMicrophoneUsageDescription</key>
+<string>Echos needs access to your microphone to record audio for transcription.</string>
+<key>UIBackgroundModes</key>
+<array>
+  <string>audio</string>
+</array>
+```
+
+#### Android (AndroidManifest.xml)
+```xml
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+```
+
+### Migration Notes
+
+This service was migrated from Flutter's AudioService which used:
+- `record` package for audio recording
+- `haptic_feedback` for haptics
+- `flutter_foreground_task` for background service
+
+Key differences:
+- expo-av handles recording instead of record package
+- Amplitude metering extracted from recording status
+- EventEmitter pattern replaces Dart Streams
+- expo-notifications provides foreground service on Android
+
+### Error Handling
+
+All public methods include comprehensive error handling:
+- Permission errors return false
+- Recording errors cleanup and return null/false
+- Cleanup methods catch and log errors silently
+- Background service failures don't prevent recording
+

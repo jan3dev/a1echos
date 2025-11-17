@@ -1,46 +1,32 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import {
-    Transcription,
-    TranscriptionJSON,
-    transcriptionFromJSON,
-    transcriptionToJSON,
+  Transcription,
+  TranscriptionJSON,
+  transcriptionFromJSON,
+  transcriptionToJSON,
 } from '../models/Transcription';
-import { EncryptionService } from './EncryptionService';
+import { encryptionService } from './EncryptionService';
 
 const TRANSCRIPTIONS_FILE = 'transcriptions.json';
 const PENDING_DELETES_FILE = 'pending_deletes.json';
 const AUDIO_DIR = 'audio';
 
-export class StorageService {
-  private static instance: StorageService;
-  private encryptionService: EncryptionService;
-
-  private constructor() {
-    this.encryptionService = EncryptionService.getInstance();
-  }
-
-  static getInstance(): StorageService {
-    if (!StorageService.instance) {
-      StorageService.instance = new StorageService();
-    }
-    return StorageService.instance;
-  }
-
-  private get transcriptionsFile(): File {
+const createStorageService = () => {
+  const getTranscriptionsFile = (): File => {
     return new File(Paths.document, TRANSCRIPTIONS_FILE);
-  }
+  };
 
-  private get pendingDeletesFile(): File {
+  const getPendingDeletesFile = (): File => {
     return new File(Paths.document, PENDING_DELETES_FILE);
-  }
+  };
 
-  private get audioDirectory(): Directory {
+  const getAudioDirectory = (): Directory => {
     return new Directory(Paths.document, AUDIO_DIR);
-  }
+  };
 
-  private async loadPendingDeletes(): Promise<string[]> {
+  const loadPendingDeletes = async (): Promise<string[]> => {
     try {
-      const file = this.pendingDeletesFile;
+      const file = getPendingDeletesFile();
 
       if (!file.exists) {
         return [];
@@ -61,7 +47,7 @@ export class StorageService {
       );
 
       const timestamp = Date.now();
-      const file = this.pendingDeletesFile;
+      const file = getPendingDeletesFile();
 
       try {
         file.move(
@@ -80,11 +66,11 @@ export class StorageService {
 
       return [];
     }
-  }
+  };
 
-  private async savePendingDeletes(list: string[]): Promise<void> {
+  const savePendingDeletes = async (list: string[]): Promise<void> => {
     try {
-      const file = this.pendingDeletesFile;
+      const file = getPendingDeletesFile();
 
       if (list.length === 0) {
         if (file.exists) {
@@ -99,10 +85,10 @@ export class StorageService {
       console.error('Failed to save pending deletes', error);
       throw error;
     }
-  }
+  };
 
-  async processPendingDeletes(): Promise<void> {
-    const pending = await this.loadPendingDeletes();
+  const processPendingDeletes = async (): Promise<void> => {
+    const pending = await loadPendingDeletes();
     if (pending.length === 0) {
       return;
     }
@@ -141,12 +127,12 @@ export class StorageService {
       }
     }
 
-    await this.savePendingDeletes(stillPending);
-  }
+    await savePendingDeletes(stillPending);
+  };
 
-  async getTranscriptions(): Promise<Transcription[]> {
+  const getTranscriptions = async (): Promise<Transcription[]> => {
     try {
-      const file = this.transcriptionsFile;
+      const file = getTranscriptionsFile();
 
       if (!file.exists) {
         return [];
@@ -158,7 +144,7 @@ export class StorageService {
         return [];
       }
 
-      const jsonString = await this.encryptionService.decrypt(encrypted);
+      const jsonString = await encryptionService.decrypt(encrypted);
       const jsonList: TranscriptionJSON[] = JSON.parse(jsonString);
 
       return jsonList.map((json) => transcriptionFromJSON(json));
@@ -166,7 +152,7 @@ export class StorageService {
       console.error('Error decrypting or parsing transcriptions', error);
 
       try {
-        const file = this.transcriptionsFile;
+        const file = getTranscriptionsFile();
         if (file.exists) {
           file.delete();
         }
@@ -179,21 +165,23 @@ export class StorageService {
 
       return [];
     }
-  }
+  };
 
-  private async saveTranscriptions(
+  const saveTranscriptions = async (
     transcriptions: Transcription[]
-  ): Promise<void> {
+  ): Promise<void> => {
     const jsonList = transcriptions.map((t) => transcriptionToJSON(t));
     const rawJson = JSON.stringify(jsonList);
-    const encrypted = await this.encryptionService.encrypt(rawJson);
+    const encrypted = await encryptionService.encrypt(rawJson);
 
-    const file = this.transcriptionsFile;
+    const file = getTranscriptionsFile();
     file.write(encrypted);
-  }
+  };
 
-  async saveTranscription(transcription: Transcription): Promise<void> {
-    const transcriptions = await this.getTranscriptions();
+  const saveTranscription = async (
+    transcription: Transcription
+  ): Promise<void> => {
+    const transcriptions = await getTranscriptions();
     const existingIndex = transcriptions.findIndex(
       (t) => t.id === transcription.id
     );
@@ -202,39 +190,39 @@ export class StorageService {
     } else {
       transcriptions.push(transcription);
     }
-    await this.saveTranscriptions(transcriptions);
-  }
+    await saveTranscriptions(transcriptions);
+  };
 
-  async deleteTranscription(id: string): Promise<void> {
-    const transcriptions = await this.getTranscriptions();
+  const deleteTranscription = async (id: string): Promise<void> => {
+    const transcriptions = await getTranscriptions();
     const toDelete = transcriptions.find((item) => item.id === id);
     const filtered = transcriptions.filter((item) => item.id !== id);
 
-    await this.saveTranscriptions(filtered);
+    await saveTranscriptions(filtered);
 
     if (toDelete?.audioPath && toDelete.audioPath.trim() !== '') {
-      await this.deleteAudioFile(toDelete.audioPath);
+      await deleteAudioFile(toDelete.audioPath);
     }
-  }
+  };
 
-  async clearTranscriptions(): Promise<void> {
-    const transcriptions = await this.getTranscriptions();
+  const clearTranscriptions = async (): Promise<void> => {
+    const transcriptions = await getTranscriptions();
 
-    await this.saveTranscriptions([]);
+    await saveTranscriptions([]);
 
     for (const transcription of transcriptions) {
       if (transcription.audioPath && transcription.audioPath.trim() !== '') {
-        await this.deleteAudioFile(transcription.audioPath);
+        await deleteAudioFile(transcription.audioPath);
       }
     }
-  }
+  };
 
-  async saveAudioFile(
+  const saveAudioFile = async (
     audioFilePath: string,
     fileName: string
-  ): Promise<string> {
+  ): Promise<string> => {
     try {
-      const dir = this.audioDirectory;
+      const dir = getAudioDirectory();
 
       if (!dir.exists) {
         dir.create({ intermediates: true });
@@ -249,9 +237,9 @@ export class StorageService {
       console.error(`Error saving audio file ${audioFilePath}`, error);
       throw error;
     }
-  }
+  };
 
-  private async deleteAudioFile(path: string): Promise<void> {
+  const deleteAudioFile = async (path: string): Promise<void> => {
     try {
       const file = new File(path);
       if (file.exists) {
@@ -274,17 +262,19 @@ export class StorageService {
       }
 
       if (deletionStillPending) {
-        const pending = await this.loadPendingDeletes();
+        const pending = await loadPendingDeletes();
         if (!pending.includes(path)) {
           pending.push(path);
-          await this.savePendingDeletes(pending);
+          await savePendingDeletes(pending);
         }
       }
     }
-  }
+  };
 
-  async deleteTranscriptionsForSession(sessionId: string): Promise<void> {
-    const transcriptions = await this.getTranscriptions();
+  const deleteTranscriptionsForSession = async (
+    sessionId: string
+  ): Promise<void> => {
+    const transcriptions = await getTranscriptions();
     const transcriptionsToKeep: Transcription[] = [];
     const audioPathsToDelete: string[] = [];
 
@@ -298,12 +288,23 @@ export class StorageService {
       }
     }
 
-    await this.saveTranscriptions(transcriptionsToKeep);
+    await saveTranscriptions(transcriptionsToKeep);
 
     for (const path of audioPathsToDelete) {
-      await this.deleteAudioFile(path);
+      await deleteAudioFile(path);
     }
-  }
-}
+  };
 
-export default StorageService.getInstance();
+  return {
+    processPendingDeletes,
+    getTranscriptions,
+    saveTranscription,
+    deleteTranscription,
+    clearTranscriptions,
+    saveAudioFile,
+    deleteTranscriptionsForSession,
+  };
+};
+
+export const storageService = createStorageService();
+export default storageService;

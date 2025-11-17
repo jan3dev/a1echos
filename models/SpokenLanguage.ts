@@ -74,24 +74,26 @@ const languageData: Record<string, LanguageInfo> = {
   ba: { countryCode: 'russia' },
 };
 
-export class SupportedLanguages {
-  static get all(): SpokenLanguage[] {
-    return Object.keys(languageData).map((code) => ({ code }));
-  }
+const allLanguages = Object.keys(languageData).map((code) => ({ code }));
 
-  static get defaultLanguage(): SpokenLanguage {
+export const SupportedLanguages = {
+  get all(): SpokenLanguage[] {
+    return allLanguages;
+  },
+
+  get defaultLanguage(): SpokenLanguage {
     return { code: 'en' };
-  }
+  },
 
-  static findByCode(code: string): SpokenLanguage | null {
+  findByCode(code: string): SpokenLanguage | null {
     const normalizedCode = code.toLowerCase();
     return languageData[normalizedCode] ? { code: normalizedCode } : null;
-  }
+  },
 
-  static countryCodeFor(code: string): string {
+  countryCodeFor(code: string): string {
     return languageData[code]?.countryCode ?? 'united_states';
-  }
-}
+  },
+};
 
 export const getCountryCode = (language: SpokenLanguage): string => {
   return SupportedLanguages.countryCodeFor(language.code);

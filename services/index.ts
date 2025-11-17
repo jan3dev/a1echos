@@ -1,6 +1,17 @@
 export {
-    EncryptionService,
-    default as encryptionService
+    encryptionService,
+    default as encryptionServiceDefault
 } from './EncryptionService';
 
-export { StorageService, default as storageService } from './StorageService';
+export {
+    storageService,
+    default as storageServiceDefault
+} from './StorageService';
+
+export { audioService, default as audioServiceDefault } from './AudioService';
+
+export {
+    backgroundRecordingService,
+    default as backgroundRecordingServiceDefault
+} from './BackgroundRecordingService';
+

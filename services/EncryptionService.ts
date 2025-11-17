@@ -5,19 +5,8 @@ import AesGcmCrypto from 'react-native-aes-gcm-crypto';
 
 const KEY_STORAGE_KEY = 'aes_data_key';
 
-export class EncryptionService {
-  private static instance: EncryptionService;
-
-  private constructor() {}
-
-  static getInstance(): EncryptionService {
-    if (!EncryptionService.instance) {
-      EncryptionService.instance = new EncryptionService();
-    }
-    return EncryptionService.instance;
-  }
-
-  private async getKey(): Promise<string> {
+const createEncryptionService = () => {
+  const getKey = async (): Promise<string> => {
     try {
       let base64Key = await SecureStore.getItemAsync(KEY_STORAGE_KEY);
 
@@ -34,11 +23,11 @@ export class EncryptionService {
         `Failed to retrieve or generate encryption key: ${message}`
       );
     }
-  }
+  };
 
-  async encrypt(plainText: string): Promise<string> {
+  const encrypt = async (plainText: string): Promise<string> => {
     try {
-      const key = await this.getKey();
+      const key = await getKey();
       const result = await AesGcmCrypto.encrypt(plainText, false, key);
 
       return `${result.iv}:${result.content}${result.tag}`;
@@ -46,9 +35,9 @@ export class EncryptionService {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Encryption failed: ${message}`);
     }
-  }
+  };
 
-  async decrypt(cipherText: string): Promise<string> {
+  const decrypt = async (cipherText: string): Promise<string> => {
     try {
       const parts = cipherText.split(':');
 
@@ -59,7 +48,7 @@ export class EncryptionService {
       }
 
       const [iv, contentWithTag] = parts;
-      const key = await this.getKey();
+      const key = await getKey();
 
       const tag = contentWithTag.slice(-32);
       const content = contentWithTag.slice(0, -32);
@@ -77,7 +66,13 @@ export class EncryptionService {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Decryption failed: ${message}`);
     }
-  }
-}
+  };
 
-export default EncryptionService.getInstance();
+  return {
+    encrypt,
+    decrypt,
+  };
+};
+
+export const encryptionService = createEncryptionService();
+export default encryptionService;
