@@ -20,3 +20,4 @@ export {
     default as whisperServiceDefault
 } from './WhisperService';
 
+export { shareService, default as shareServiceDefault } from './ShareService';
