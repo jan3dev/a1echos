@@ -15,3 +15,8 @@ export {
     default as backgroundRecordingServiceDefault
 } from './BackgroundRecordingService';
 
+export {
+    whisperService,
+    default as whisperServiceDefault
+} from './WhisperService';
+

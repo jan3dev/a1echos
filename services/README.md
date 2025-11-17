@@ -1,5 +1,67 @@
 # Services
 
+## WhisperService
+
+The `WhisperService` provides offline speech-to-text transcription using OpenAI's Whisper model via whisper.rn.
+
+### Features
+
+- **Offline Transcription**: Uses bundled tiny model (no internet required)
+- **File-based Transcription**: Transcribe audio files with language selection
+- **Real-time Transcription**: Live microphone transcription with partial results
+- **Language Support**: Supports all Whisper languages
+- **Partial Results**: Subscribe to streaming transcription updates during real-time mode
+- **Cross-platform**: Works on both iOS and Android
+
+### Usage
+
+```typescript
+import { whisperService } from './services';
+
+// Initialize the service (loads model)
+const success = await whisperService.initialize();
+
+// Check initialization status
+console.log(whisperService.isInitialized);
+console.log(whisperService.initializationStatus);
+
+// Transcribe an audio file
+const text = await whisperService.transcribeFile(
+  '/path/to/audio.wav',
+  'en' // optional language code
+);
+
+// Start real-time transcription
+const started = await whisperService.startRealtimeTranscription('en');
+
+// Subscribe to partial results
+const unsubscribe = whisperService.subscribeToPartialResults((text) => {
+  console.log('Partial:', text);
+});
+
+// Stop real-time transcription
+const finalText = await whisperService.stopRealtimeTranscription();
+
+// Clean up
+unsubscribe();
+await whisperService.dispose();
+```
+
+### Model
+
+- **Size**: Tiny (~75MB)
+- **Location**: `assets/models/whisper/ggml-tiny.bin`
+- **Format**: GGML (works on both iOS and Android)
+- **Performance**: Fast inference, suitable for real-time use on mobile
+
+### Notes
+
+- Real-time transcription requires microphone permissions
+- The current implementation uses `transcribeRealtime()` which is deprecated in whisper.rn
+- For production with VAD and advanced features, consider upgrading to `RealtimeTranscriber`
+
+---
+
 ## StorageService
 
 The `StorageService` provides encrypted persistent storage for transcriptions and audio files.
