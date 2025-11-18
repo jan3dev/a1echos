@@ -21,3 +21,9 @@ export {
 } from './WhisperService';
 
 export { shareService, default as shareServiceDefault } from './ShareService';
+
+export {
+    permissionService,
+    default as permissionServiceDefault
+} from './PermissionService';
+
