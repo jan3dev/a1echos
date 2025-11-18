@@ -1,4 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
+import {
+  Session,
+  SessionJSON,
+  sessionFromJSON,
+  sessionToJSON,
+} from '../models/Session';
 import {
   Transcription,
   TranscriptionJSON,
@@ -10,6 +17,8 @@ import { encryptionService } from './EncryptionService';
 const TRANSCRIPTIONS_FILE = 'transcriptions.json';
 const PENDING_DELETES_FILE = 'pending_deletes.json';
 const AUDIO_DIR = 'audio';
+const SESSIONS_KEY = 'sessions';
+const ACTIVE_SESSION_KEY = 'active_session';
 
 const createStorageService = () => {
   const getTranscriptionsFile = (): File => {
@@ -295,6 +304,102 @@ const createStorageService = () => {
     }
   };
 
+  const getSessions = async (): Promise<Session[]> => {
+    try {
+      const storedSessions = await AsyncStorage.getItem(SESSIONS_KEY);
+
+      if (!storedSessions) {
+        return [];
+      }
+
+      let plainSessions: string;
+      let wasPlainText = false;
+      try {
+        plainSessions = await encryptionService.decrypt(storedSessions);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          'Failed to decrypt sessions, attempting to read as plain text.',
+          message
+        );
+        plainSessions = storedSessions;
+        wasPlainText = true;
+      }
+
+      const jsonList: SessionJSON[] = JSON.parse(plainSessions);
+      const sessions = jsonList.map((json) => sessionFromJSON(json));
+
+      // Re-encrypt legacy plain-text data
+      if (wasPlainText) {
+        await saveSessions(sessions).catch((error) => {
+          console.warn('Failed to re-encrypt legacy sessions', error);
+        });
+      }
+
+      return sessions;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Failed to decode sessions JSON', message);
+      return [];
+    }
+  };
+
+  const saveSessions = async (sessions: Session[]): Promise<void> => {
+    if (!sessions) {
+      throw new Error('sessions parameter is required');
+    }
+    const sorted = [...sessions].sort(
+      (a, b) => b.lastModified.getTime() - a.lastModified.getTime()
+    );
+    const jsonList = sorted.map((s) => sessionToJSON(s));
+    const rawJson = JSON.stringify(jsonList);
+    const encrypted = await encryptionService.encrypt(rawJson);
+    await AsyncStorage.setItem(SESSIONS_KEY, encrypted);
+  };
+
+  const getActiveSessionId = async (): Promise<string | null> => {
+    try {
+      const storedActive = await AsyncStorage.getItem(ACTIVE_SESSION_KEY);
+
+      if (!storedActive) {
+        return null;
+      }
+
+      try {
+        const decryptedActive = await encryptionService.decrypt(storedActive);
+        return decryptedActive;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          'Failed to decrypt active session ID, assuming legacy plain text.',
+          message
+        );
+        // Re-encrypt legacy plain-text data
+        try {
+          await saveActiveSessionId(storedActive);
+        } catch (encryptError) {
+          console.warn(
+            'Failed to re-encrypt legacy active session ID',
+            encryptError
+          );
+        }
+        return storedActive;
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Failed to load active session ID', message);
+      return null;
+    }
+  };
+
+  const saveActiveSessionId = async (id: string): Promise<void> => {
+    if (!id || id.trim() === '') {
+      throw new Error('id parameter must be a non-empty string');
+    }
+    const encrypted = await encryptionService.encrypt(id);
+    await AsyncStorage.setItem(ACTIVE_SESSION_KEY, encrypted);
+  };
+
   return {
     processPendingDeletes,
     getTranscriptions,
@@ -303,6 +408,10 @@ const createStorageService = () => {
     clearTranscriptions,
     saveAudioFile,
     deleteTranscriptionsForSession,
+    getSessions,
+    saveSessions,
+    getActiveSessionId,
+    saveActiveSessionId,
   };
 };
 
