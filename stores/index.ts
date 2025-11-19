@@ -21,4 +21,18 @@ export {
     useTranscriptionState,
     useTranscriptionStore
 } from './transcriptionStore';
+export {
+    default as uiStore,
+    useHasAnyLoading,
+    useIsSessionSelectionMode,
+    useIsTranscriptionSelectionMode,
+    useSelectedSessionCount,
+    useSelectedSessionIds,
+    useSelectedTranscriptionCount,
+    useSelectedTranscriptionIds,
+    useToasts,
+    useUIStore,
+    useVisibleModals
+} from './uiStore';
+export type { Toast, ToastVariant } from './uiStore';
 
