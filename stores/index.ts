@@ -1,5 +1,16 @@
 export { default as sessionStore, useSessionStore } from './sessionStore';
 export {
+    initializeSettingsStore,
+    useHasSeenIncognitoExplainer,
+    useIsIncognitoMode,
+    useIsSettingsLoaded,
+    useSelectedLanguage,
+    useSelectedModelType,
+    useSelectedTheme,
+    useSettingsStore,
+    useWhisperRealtime
+} from './settingsStore';
+export {
     initializeTranscriptionStore,
     default as transcriptionStore,
     useAudioLevel,
