@@ -1,6 +1,12 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 
+const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
+
+export const unstable_settings = {
+  initialRouteName: StorybookEnabled ? '(storybook)/index' : '(pages)/index',
+};
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
@@ -19,5 +25,13 @@ export default function RootLayout() {
     return null; // or a splash screen/loader
   }
 
-  return <Stack />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={StorybookEnabled}>
+        <Stack.Screen name="(storybook)/index" />
+      </Stack.Protected>
+
+      <Stack.Screen name="(pages)/index" />
+    </Stack>
+  );
 }
