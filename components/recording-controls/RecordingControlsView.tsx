@@ -1,3 +1,5 @@
+import { AppTheme } from '@/models/AppTheme';
+import { useThemeStore } from '@/theme/useThemeStore';
 import { BlurView } from 'expo-blur';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -26,9 +28,21 @@ export const RecordingControlsView = ({
   colors,
 }: RecordingControlsViewProps) => {
   const controlsHeight = 96.0;
+  const { currentTheme } = useThemeStore();
+  const blurTint = currentTheme === AppTheme.DARK ? 'light' : 'dark';
 
-  const renderLayout = () => {
-    return (
+  return (
+    <View style={[styles.container, { height: controlsHeight }]}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <BlurView
+          intensity={20}
+          tint={blurTint}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: colors.glassBackground },
+          ]}
+        />
+      </View>
       <View style={[styles.contentContainer, { paddingVertical: spacing }]}>
         <View style={styles.waveContainer}>
           <ThreeWaveLines
@@ -47,25 +61,6 @@ export const RecordingControlsView = ({
           />
         </View>
       </View>
-    );
-  };
-
-  return (
-    <View style={[styles.container, { height: controlsHeight }]}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <BlurView
-          intensity={20}
-          tint="default"
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: colors.glassBackground,
-              height: controlsHeight,
-            },
-          ]}
-        />
-      </View>
-      {renderLayout()}
     </View>
   );
 };
@@ -90,8 +85,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     position: 'absolute',
     top: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
-

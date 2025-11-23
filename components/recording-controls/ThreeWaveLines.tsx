@@ -78,6 +78,13 @@ const WAVE_PROFILES: WaveProfile[] = [
 
 const PHASE_OFFSETS = [0.0, Math.PI, Math.PI * 2];
 
+const hexToRgba = (hex: string, opacity: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
 export const ThreeWaveLines = ({
   audioLevel = 0.0,
   height = 42.0,
@@ -85,6 +92,7 @@ export const ThreeWaveLines = ({
   state = TranscriptionState.RECORDING,
 }: ThreeWaveLinesProps) => {
   const [, forceUpdate] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(400);
   const wavesRef = useRef<WaveState[]>([]);
   const displayLevelRef = useRef(audioLevel);
   const transcribingInversionTimeRef = useRef(0.0);
@@ -314,13 +322,6 @@ export const ThreeWaveLines = ({
       stateOpacity = 0.75;
     }
 
-    const hexToRgba = (hex: string, opacity: number): string => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
-
     switch (index) {
       case 0:
         return hexToRgba(AquaPrimitiveColors.waveOrange, stateOpacity);
@@ -407,12 +408,20 @@ export const ThreeWaveLines = ({
   };
 
   return (
-    <View style={[styles.container, { height }]}>
+    <View
+      style={[styles.container, { height }]}
+      onLayout={(event) => {
+        const { width } = event.nativeEvent.layout;
+        if (width > 0 && width !== containerWidth) {
+          setContainerWidth(width);
+        }
+      }}
+    >
       <Svg width="100%" height={height} style={styles.svg}>
         {wavesRef.current.map((wave, index) => (
           <Path
             key={index}
-            d={generateWavePath(wave, 400, height / 2)}
+            d={generateWavePath(wave, containerWidth, height / 2)}
             stroke={resolveWaveColor(index)}
             strokeWidth={wave.profile.strokeWidth}
             fill="none"

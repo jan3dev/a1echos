@@ -7,11 +7,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AquaPrimitiveColors } from '../../theme/colors';
 import { AquaColors } from '../../theme/themeColors';
+import { useThemeStore } from '../../theme/useThemeStore';
 import { Icon } from '../icon';
 
 interface LockIndicatorProps {
   progress: SharedValue<number>;
-  isLocked: boolean;
   colors: AquaColors;
   width?: number;
   height?: number;
@@ -20,7 +20,6 @@ interface LockIndicatorProps {
 
 export const LockIndicator = ({
   progress,
-  isLocked,
   colors,
   width = 32.0,
   height = 72.0,
@@ -33,6 +32,9 @@ export const LockIndicator = ({
       opacity: progress.value,
     };
   });
+
+  const { currentTheme } = useThemeStore();
+  const blurTint = currentTheme === 'dark' ? 'light' : 'dark';
 
   return (
     <Animated.View style={[styles.container, { width, height }, animatedStyle]}>
@@ -49,7 +51,7 @@ export const LockIndicator = ({
       >
         <BlurView
           intensity={80}
-          tint="light"
+          tint={blurTint}
           style={[
             StyleSheet.absoluteFill,
             styles.blurContainer,

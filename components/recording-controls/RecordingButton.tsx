@@ -1,3 +1,4 @@
+import { AppTheme } from '@/models/AppTheme';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -42,9 +43,9 @@ export const RecordingButton = ({
 }: RecordingButtonProps) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
-  const { currentTheme } = useThemeStore();
   
-  const isDarkTheme = currentTheme === 'dark';
+  const { currentTheme } = useThemeStore();
+  const blurTint = currentTheme === AppTheme.DARK ? 'light' : 'dark';
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gestureIsolationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -53,9 +54,13 @@ export const RecordingButton = ({
   const scaleAnimationDelayTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const pulseAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const scale = useSharedValue(1);
   const glowProgress = useSharedValue(0);
+  const isPulseAnimating = useRef(false);
 
   const SCALE_ANIMATION_DELAY = 300;
   const GESTURE_ISOLATION_DURATION = 2000;
@@ -67,6 +72,8 @@ export const RecordingButton = ({
         clearTimeout(gestureIsolationTimerRef.current);
       if (scaleAnimationDelayTimerRef.current)
         clearTimeout(scaleAnimationDelayTimerRef.current);
+      if (pulseAnimationTimerRef.current)
+        clearTimeout(pulseAnimationTimerRef.current);
     };
   }, []);
 
@@ -101,10 +108,12 @@ export const RecordingButton = ({
       if (scaleAnimationDelayTimerRef.current) {
         clearTimeout(scaleAnimationDelayTimerRef.current);
       }
-      scale.value = withTiming(1, {
-        duration: scaleAnimationDuration,
-        easing: Easing.out(Easing.ease),
-      });
+      if (!isPulseAnimating.current) {
+        scale.value = withTiming(1, {
+          duration: scaleAnimationDuration,
+          easing: Easing.out(Easing.ease),
+        });
+      }
       cancelAnimation(glowProgress);
       glowProgress.value = 0;
     }
@@ -130,10 +139,7 @@ export const RecordingButton = ({
     );
   };
 
-  const handleRecordingAction = async (
-    action: () => void,
-    actionName: string
-  ) => {
+  const handleRecordingAction = async (action: () => void) => {
     if (gestureIsolationActive || isDebouncing) {
       return;
     }
@@ -163,15 +169,24 @@ export const RecordingButton = ({
   const handleStartRecording = () => {
     if (onRecordingStart) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      handleRecordingAction(onRecordingStart, 'Start Recording');
+      handleRecordingAction(onRecordingStart);
     }
   };
 
   const handleStopRecording = () => {
     if (onRecordingStop) {
+      isPulseAnimating.current = true;
       triggerScaleAnimation();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      handleRecordingAction(onRecordingStop, 'Stop Recording');
+
+      const pulseDuration = scaleAnimationDuration * 2;
+      if (pulseAnimationTimerRef.current) {
+        clearTimeout(pulseAnimationTimerRef.current);
+      }
+      pulseAnimationTimerRef.current = setTimeout(() => {
+        isPulseAnimating.current = false;
+        handleRecordingAction(onRecordingStop);
+      }, pulseDuration);
     }
   };
 
@@ -203,13 +218,15 @@ export const RecordingButton = ({
     >
       <BlurView
         intensity={80}
-        tint={isDarkTheme ? 'light' : 'dark'}
+        tint={blurTint}
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
           style={styles.buttonTouchable}
           disabled={true}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Transcribing"
         >
           <Icon name="mic" size={24} color={colors.textInverse} />
         </TouchableOpacity>
@@ -246,6 +263,8 @@ export const RecordingButton = ({
           onPress={handleStopRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Stop Recording"
         >
           <Icon name="rectangle" size={14} color={colors.textInverse} />
         </TouchableOpacity>
@@ -264,7 +283,7 @@ export const RecordingButton = ({
     >
       <BlurView
         intensity={80}
-        tint={isDarkTheme ? 'light' : 'dark'}
+        tint={blurTint}
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
@@ -272,6 +291,8 @@ export const RecordingButton = ({
           onPress={handleStartRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Start Recording"
         >
           <Icon name="mic" size={24} color={colors.textInverse} />
         </TouchableOpacity>

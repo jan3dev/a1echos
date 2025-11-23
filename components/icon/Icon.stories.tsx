@@ -1,15 +1,19 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
+import type { Meta } from '@storybook/react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Icon, IconName } from './Icon';
+import { Icon, iconNames } from './Icon';
 
 const IconMeta: Meta<typeof Icon> = {
   title: 'Foundation/Icon',
   component: Icon,
+  args: {
+    size: 24,
+    color: '#090A0B',
+  },
   argTypes: {
     name: {
       control: 'select',
-      options: ['mic', 'rectangle', 'lock', 'chevron-up', 'settings'],
+      options: [...iconNames],
     },
     size: {
       control: { type: 'range', min: 16, max: 64, step: 4 },
@@ -36,51 +40,7 @@ const IconMeta: Meta<typeof Icon> = {
 
 export default IconMeta;
 
-type Story = StoryObj<typeof Icon>;
-
-export const Microphone: Story = {
-  args: {
-    name: 'mic',
-    size: 24,
-    color: '#090A0B',
-  },
-};
-
-export const Rectangle: Story = {
-  args: {
-    name: 'rectangle',
-    size: 24,
-    color: '#090A0B',
-  },
-};
-
-export const Lock: Story = {
-  args: {
-    name: 'lock',
-    size: 24,
-    color: '#090A0B',
-  },
-};
-
-export const ChevronUp: Story = {
-  args: {
-    name: 'chevron-up',
-    size: 24,
-    color: '#090A0B',
-  },
-};
-
-export const Settings: Story = {
-  args: {
-    name: 'settings',
-    size: 24,
-    color: '#090A0B',
-  },
-};
-
 export const AllIcons = () => {
-  const iconNames: IconName[] = ['mic', 'rectangle', 'lock', 'chevron-up', 'settings'];
-
   return (
     <View style={styles.container}>
       {iconNames.map((name) => (
@@ -124,7 +84,7 @@ export const Colors = () => {
           <View
             style={[
               styles.colorBackground,
-              { backgroundColor: name === 'White' ? '#27292C' : '#F4F5F6' },
+              { backgroundColor: value === '#FFFFFF' ? '#27292C' : '#F4F5F6' },
             ]}
           >
             <Icon name="mic" size={32} color={value} />
@@ -158,4 +118,3 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 });
-
