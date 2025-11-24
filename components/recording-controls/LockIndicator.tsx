@@ -2,8 +2,8 @@ import { BlurView } from 'expo-blur';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
-    SharedValue,
-    useAnimatedStyle,
+  SharedValue,
+  useAnimatedStyle,
 } from 'react-native-reanimated';
 import { AquaPrimitiveColors } from '../../theme/colors';
 import { AquaColors } from '../../theme/themeColors';
@@ -74,7 +74,7 @@ export const LockIndicator = ({
             )}
             <Icon name="lock" size={24} color={colors.textPrimary} />
             <View style={styles.iconSpacer} />
-            <Icon name="chevron-up" size={24} color={colors.textTertiary} />
+            <Icon name="chevron_up" size={24} color={colors.textTertiary} />
           </View>
         </BlurView>
       </View>

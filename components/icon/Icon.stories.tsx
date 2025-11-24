@@ -1,7 +1,9 @@
 import type { Meta } from '@storybook/react-native';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Icon, iconNames } from './Icon';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../text/Text';
+import { Icon } from './Icon';
+import { iconMap, IconName } from './iconMap';
 
 const IconMeta: Meta<typeof Icon> = {
   title: 'Foundation/Icon',
@@ -9,11 +11,12 @@ const IconMeta: Meta<typeof Icon> = {
   args: {
     size: 24,
     color: '#090A0B',
+    name: 'mic',
   },
   argTypes: {
     name: {
       control: 'select',
-      options: [...iconNames],
+      options: Object.keys(iconMap).sort(),
     },
     size: {
       control: { type: 'range', min: 16, max: 64, step: 4 },
@@ -30,6 +33,7 @@ const IconMeta: Meta<typeof Icon> = {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#F4F5F6',
+          padding: 16,
         }}
       >
         <Story />
@@ -42,14 +46,18 @@ export default IconMeta;
 
 export const AllIcons = () => {
   return (
-    <View style={styles.container}>
-      {iconNames.map((name) => (
-        <View key={name} style={styles.iconItem}>
-          <Icon name={name} size={32} color="#090A0B" />
-          <Text style={styles.iconLabel}>{name}</Text>
-        </View>
-      ))}
-    </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      {Object.keys(iconMap)
+        .sort()
+        .map((name) => (
+          <View key={name} style={styles.iconItem}>
+            <Icon name={name as IconName} size={32} color="#090A0B" />
+            <Text variant="caption2" style={styles.iconLabel}>
+              {name}
+            </Text>
+          </View>
+        ))}
+    </ScrollView>
   );
 };
 
@@ -61,7 +69,9 @@ export const Sizes = () => {
       {sizes.map((size) => (
         <View key={size} style={styles.iconItem}>
           <Icon name="mic" size={size} color="#090A0B" />
-          <Text style={styles.iconLabel}>{size}px</Text>
+          <Text variant="caption2" style={styles.iconLabel}>
+            {size}px
+          </Text>
         </View>
       ))}
     </View>
@@ -84,12 +94,14 @@ export const Colors = () => {
           <View
             style={[
               styles.colorBackground,
-              { backgroundColor: value === '#FFFFFF' ? '#27292C' : '#F4F5F6' },
+              { backgroundColor: value === '#FFFFFF' ? '#27292C' : '#E9EBEC' },
             ]}
           >
             <Icon name="mic" size={32} color={value} />
           </View>
-          <Text style={styles.iconLabel}>{name}</Text>
+          <Text variant="caption2" style={styles.iconLabel}>
+            {name}
+          </Text>
         </View>
       ))}
     </View>
@@ -108,9 +120,10 @@ const styles = StyleSheet.create({
   iconItem: {
     alignItems: 'center',
     gap: 8,
+    width: 80,
   },
   iconLabel: {
-    fontSize: 12,
+    textAlign: 'center',
     color: '#4C5357',
   },
   colorBackground: {

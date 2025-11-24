@@ -46,7 +46,7 @@ export const ProgressIndicator = ({
       accessibilityLabel="Loading"
       accessibilityLiveRegion="polite"
     >
-      <Icon name="circular-progress" size={size} color={color} />
+      <Icon name="circular_progress" size={size} color={color} />
     </Animated.View>
   );
 };

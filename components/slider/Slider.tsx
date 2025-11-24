@@ -151,7 +151,7 @@ export const Slider = ({
   const renderThumb = () => {
     switch (sliderState) {
       case 'initial':
-        return <Icon name="arrow-right" size={24} color={colors.textInverse} />;
+        return <Icon name="arrow_right" size={24} color={colors.textInverse} />;
       case 'inProgress':
         return (
           <View style={styles.thumbCenter}>
