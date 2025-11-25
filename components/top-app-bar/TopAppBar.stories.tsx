@@ -38,10 +38,10 @@ export const WithActions: Story = {
   args: {
     title: 'Details',
     showBackButton: true,
-    actions: [
-      <Icon key="1" name="search" size={24} />,
-      <Icon key="2" name="more" size={24} />,
-    ],
+    // actions: [
+    //   <Icon key="1" name="search" size={24} />,
+    //   <Icon key="2" name="more" size={24} />,
+    // ],
   },
   argTypes: {
     actions: {
@@ -96,7 +96,7 @@ export const LongTitle: Story = {
   args: {
     title: 'Very Long Page Title That Should Truncate Or Handle Gracefully',
     showBackButton: true,
-    actions: [<Icon key="1" name="more" size={24} />],
+    // actions: [<Icon key="1" name="more" size={24} />],
   },
   argTypes: {
     actions: {
