@@ -1,0 +1,277 @@
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Platform,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from 'react-native';
+
+import { Transcription } from '../../../models/Transcription';
+import { useUIStore } from '../../../stores/uiStore';
+import { AquaPrimitiveColors } from '../../../theme/colors';
+import { useTheme } from '../../../theme/useTheme';
+import { Checkbox } from '../../ui/checkbox';
+import { Icon } from '../../ui/icon';
+import { Skeleton } from '../../ui/skeleton';
+import { Text } from '../../ui/text';
+
+interface TranscriptionItemProps {
+  transcription: Transcription;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  isLivePreviewItem?: boolean;
+  isLoadingWhisperResult?: boolean;
+  isWhisperRecording?: boolean;
+  onTap?: () => void;
+  onLongPress?: () => void;
+  isEditing?: boolean;
+  isAnyEditing?: boolean;
+  onStartEdit?: () => void;
+  onEndEdit?: () => void;
+  onTranscriptionUpdate?: (updated: Transcription) => void;
+  style?: ViewStyle;
+}
+
+export const TranscriptionItem = ({
+  transcription,
+  selectionMode = false,
+  isSelected = false,
+  isLivePreviewItem = false,
+  isLoadingWhisperResult = false,
+  isWhisperRecording = false,
+  onTap,
+  onLongPress,
+  isEditing = false,
+  isAnyEditing = false,
+  onStartEdit,
+  onEndEdit,
+  onTranscriptionUpdate,
+  style,
+}: TranscriptionItemProps) => {
+  const { theme } = useTheme();
+  const showToast = useUIStore((state) => state.showToast);
+  const [editText, setEditText] = useState(transcription.text);
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditText(transcription.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
+
+  const handleSaveEdit = () => {
+    const newText = editText.trim();
+    if (newText) {
+      if (newText !== transcription.text) {
+        onTranscriptionUpdate?.({
+          ...transcription,
+          text: newText,
+        });
+      }
+    } else {
+      // Revert to original text if empty
+      setEditText(transcription.text);
+    }
+    onEndEdit?.();
+  };
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await Clipboard.setStringAsync(transcription.text);
+      await Haptics.selectionAsync();
+
+      // Show toast on iOS or Android < 12 (API 31 has native clipboard feedback)
+      if (
+        Platform.OS === 'ios' ||
+        (Platform.OS === 'android' && Number(Platform.Version) < 31)
+      ) {
+        showToast('Copied to clipboard', 'success');
+      }
+    } catch (error) {
+      showToast('Failed to copy to clipboard', 'error');
+      console.error(error);
+    }
+  };
+
+  const now = new Date();
+  const isOlderThanCurrentYear =
+    transcription.timestamp.getFullYear() < now.getFullYear();
+
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: isOlderThanCurrentYear ? 'numeric' : undefined,
+  });
+
+  const timeFormat = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true,
+  });
+
+  const showSkeleton = isLoadingWhisperResult || isWhisperRecording;
+
+  const enableInteractions = !isLivePreviewItem && !showSkeleton;
+  const showCopyIcon = !isLivePreviewItem && !selectionMode;
+  const showEditIcon = !isLivePreviewItem && !selectionMode;
+  const showCheckbox = selectionMode && !isLivePreviewItem;
+  const disableIcons = showSkeleton || (isAnyEditing && !isEditing);
+
+  const backgroundColor =
+    selectionMode && isSelected
+      ? theme.colors.surfaceSelected
+      : theme.colors.surfacePrimary;
+
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        if (!isEditing && enableInteractions) {
+          onTap?.();
+        }
+      }}
+      onLongPress={() => {
+        if (enableInteractions) {
+          onLongPress?.();
+        }
+      }}
+      activeOpacity={enableInteractions ? 0.7 : 1}
+      disabled={!enableInteractions && !isEditing}
+      style={[
+        styles.container,
+        {
+          backgroundColor,
+          borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
+          borderWidth: isEditing ? 1 : 0,
+          shadowColor: AquaPrimitiveColors.shadow,
+        },
+        style,
+      ]}
+    >
+      <View style={styles.headerRow}>
+        <View style={styles.timestampContainer}>
+          {(showSkeleton ||
+            !(isLivePreviewItem && transcription.text === '')) && (
+            <Text variant="caption1" color={theme.colors.textSecondary}>
+              {dateFormat.format(transcription.timestamp)}
+              {'  '}
+              <Text variant="caption1" color={theme.colors.textTertiary}>
+                {timeFormat.format(transcription.timestamp)}
+              </Text>
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.actionsContainer}>
+          {showCheckbox && (
+            <Checkbox
+              value={isSelected}
+              onValueChange={() => {}}
+              enabled={true}
+            />
+          )}
+
+          {showEditIcon && (
+            <TouchableOpacity
+              onPress={onStartEdit}
+              disabled={disableIcons}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
+            >
+              <Icon name="edit" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+
+          {showEditIcon && showCopyIcon && <View style={{ width: 16 }} />}
+
+          {showCopyIcon && (
+            <TouchableOpacity
+              onPress={handleCopyToClipboard}
+              disabled={disableIcons}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
+            >
+              <Icon name="copy" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.contentContainer}>
+        {isEditing ? (
+          <TextInput
+            ref={inputRef}
+            value={editText}
+            onChangeText={setEditText}
+            onBlur={handleSaveEdit}
+            multiline
+            autoFocus
+            style={[
+              styles.input,
+              {
+                color: theme.colors.textSecondary,
+                ...theme.typography.body1,
+              },
+            ]}
+          />
+        ) : showSkeleton ? (
+          <View>
+            <Skeleton
+              borderRadius={16}
+              width="100%"
+              height={20}
+              style={{ marginBottom: 8 }}
+            />
+            <Skeleton borderRadius={16} width="50%" height={20} />
+          </View>
+        ) : (
+          <Text variant="body1" color="textSecondary">
+            {transcription.text}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  timestampContainer: {
+    flex: 1,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentContainer: {
+    minHeight: 24,
+  },
+  input: {
+    padding: 0,
+    textAlignVertical: 'top',
+  },
+});
