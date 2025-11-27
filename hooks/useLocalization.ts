@@ -1,4 +1,4 @@
-export const useLoc = () => {
+export const useLocalization = () => {
   return {
     loc: {
       sessionRenameTitle: 'Rename',
@@ -12,8 +12,11 @@ export const useLoc = () => {
       sessionNameMaxLengthHelper: 'Max 30 characters.',
       homeDeleteSelectedSessionsTitle: 'Delete Selected Sessions?',
       homeDeleteSelectedSessionsMessage: (count: number) =>
-        `This action cannot be undone.`,
-      homeSessionsDeleted: (count: number) => `Session deleted`,
+        `Delete ${count} session${
+          count === 1 ? '' : 's'
+        }? This action cannot be undone.`,
+      homeSessionsDeleted: (count: number) =>
+        `${count} Session${count === 1 ? '' : 's'} deleted`,
       transcriptionCount: (count: number) =>
         `${count} Transcription${count === 1 ? '' : 's'}`,
       // Settings Footer

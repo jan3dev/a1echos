@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { getCountryCode } from '../../../models/SpokenLanguage';
 import { useSelectedLanguage } from '../../../stores/settingsStore';
 import { useTheme } from '../../../theme/useTheme';
@@ -38,7 +38,7 @@ export const SessionAppBar = ({
   onSaveEditPressed,
 }: SessionAppBarProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const selectedLanguage = useSelectedLanguage();
 
   if (editMode) {

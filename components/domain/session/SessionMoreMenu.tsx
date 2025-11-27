@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { Session } from '../../../models/Session';
 import { useSessionStore } from '../../../stores/sessionStore';
 import { useTheme } from '../../../theme/useTheme';
@@ -26,7 +26,7 @@ interface SessionMoreMenuProps {
 
 export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const [menuVisible, setMenuVisible] = useState(false);
   const [renameVisible, setRenameVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{

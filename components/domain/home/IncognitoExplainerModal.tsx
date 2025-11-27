@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { useTheme } from '../../../theme';
 import { Icon } from '../../ui/icon';
 import { Modal } from '../../ui/modal';
@@ -14,7 +14,7 @@ export const IncognitoExplainerModal = ({
   onDismiss,
 }: IncognitoExplainerModalProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
 
   return (
     <Modal

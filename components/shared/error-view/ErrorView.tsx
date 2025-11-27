@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { useTheme } from '../../../theme';
 import { Button } from '../../ui/button';
 import { Icon } from '../../ui/icon';
@@ -13,7 +13,7 @@ interface ErrorViewProps {
 
 export const ErrorView = ({ errorMessage, onRetry }: ErrorViewProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const colors = theme.colors;
 
   return (

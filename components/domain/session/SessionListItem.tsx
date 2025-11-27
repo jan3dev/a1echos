@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { Session } from '../../../models/Session';
 import { useSessionTranscriptions } from '../../../stores/transcriptionStore';
 import { useTheme } from '../../../theme/useTheme';
@@ -24,7 +24,7 @@ export const SessionListItem = ({
   isSelected = false,
 }: SessionListItemProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const transcriptions = useSessionTranscriptions(session.id);
   const count = transcriptions.length;
   const subtitle = loc.transcriptionCount(count);

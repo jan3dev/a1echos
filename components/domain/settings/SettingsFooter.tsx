@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { useTheme } from '../../../theme';
 import { Divider } from '../../ui/divider';
 import { Icon } from '../../ui/icon';
@@ -22,7 +22,7 @@ const SOCIAL_TAGS: SocialTag[] = [
 
 export const SettingsFooter = () => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const { show: showTooltip, tooltipState } = useTooltip();
   const [version, setVersion] = useState('');
 

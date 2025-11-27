@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { AppConstants } from '../../../constants/AppConstants';
-import { useLoc } from '../../../hooks/useLoc';
+import { useLocalization } from '../../../hooks/useLocalization';
 import { useTheme } from '../../../theme/useTheme';
 import { Button } from '../../ui/button';
 import { Icon } from '../../ui/icon';
@@ -37,7 +37,7 @@ export const SessionInputModal = ({
   onCancel,
 }: SessionInputModalProps) => {
   const { theme } = useTheme();
-  const { loc } = useLoc();
+  const { loc } = useLocalization();
   const { height: screenHeight } = useWindowDimensions();
   const [text, setText] = useState(initialValue);
 
