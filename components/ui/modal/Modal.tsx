@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Pressable,
-  Modal as RNModal,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -10,6 +9,7 @@ import {
 import { useTheme } from '../../../theme';
 import { Button, ButtonVariant } from '../button';
 import { Text } from '../text';
+import { Dimmer } from './Dimmer';
 
 export type ModalVariant = 'normal' | 'success' | 'danger' | 'warning' | 'info';
 
@@ -54,11 +54,9 @@ export const Modal = ({
   const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [internalVisible, setInternalVisible] = React.useState(visible);
 
   useEffect(() => {
     if (visible) {
-      setInternalVisible(true);
       Animated.spring(slideAnim, {
         toValue: 1,
         useNativeDriver: true,
@@ -70,9 +68,7 @@ export const Modal = ({
         toValue: 0,
         duration: 250,
         useNativeDriver: true,
-      }).start(() => {
-        setInternalVisible(false);
-      });
+      }).start();
     }
   }, [visible, slideAnim]);
 
@@ -119,14 +115,8 @@ export const Modal = ({
   const maxWidth = width >= 768 ? 343 : undefined;
 
   return (
-    <RNModal
-      visible={internalVisible}
-      transparent
-      animationType="none"
-      onRequestClose={onDismiss}
-      statusBarTranslucent
-    >
-      <Pressable style={styles.modalOverlay} onPress={onDismiss}>
+    <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
+      <View style={styles.contentWrapper}>
         <Animated.View
           style={[
             styles.container,
@@ -137,7 +127,7 @@ export const Modal = ({
             },
           ]}
         >
-          <Pressable>
+          <Pressable onPress={(e) => e.stopPropagation()}>
             <View
               style={[styles.card, { backgroundColor: colors.surfacePrimary }]}
             >
@@ -239,17 +229,16 @@ export const Modal = ({
             </View>
           </Pressable>
         </Animated.View>
-      </Pressable>
-    </RNModal>
+      </View>
+    </Dimmer>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  contentWrapper: {
     flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   container: {
     width: '100%',
