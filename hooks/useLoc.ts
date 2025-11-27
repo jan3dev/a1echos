@@ -16,6 +16,9 @@ export const useLoc = () => {
       homeSessionsDeleted: (count: number) => `Session deleted`,
       transcriptionCount: (count: number) =>
         `${count} Transcription${count === 1 ? '' : 's'}`,
+      // Settings Footer
+      followUsOnX: 'Follow us on X',
+      couldNotOpenLink: 'Could not open link',
     },
   };
 };

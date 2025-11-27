@@ -51,6 +51,7 @@ import EyeOpen from '../../../assets/icons/eye_open.svg';
 import Faq from '../../../assets/icons/faq.svg';
 import Fees from '../../../assets/icons/fees.svg';
 import Filter from '../../../assets/icons/filter.svg';
+import FooterLogo from '../../../assets/icons/footer_logo.svg';
 import Ghost from '../../../assets/icons/ghost.svg';
 import Gift from '../../../assets/icons/gift.svg';
 import Globe from '../../../assets/icons/globe.svg';
@@ -183,6 +184,7 @@ export const iconMap: Record<string, React.FC<SvgProps>> = {
   faq: Faq,
   fees: Fees,
   filter: Filter,
+  footer_logo: FooterLogo,
   ghost: Ghost,
   gift: Gift,
   globe: Globe,
