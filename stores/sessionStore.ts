@@ -347,6 +347,8 @@ export const useSessionStore = create<SessionStore>((set, get) => {
   };
 });
 
-useSessionStore.getState().loadSessions();
+export const initializeSessionStore = async (): Promise<void> => {
+  await useSessionStore.getState().loadSessions();
+};
 
 export default useSessionStore;

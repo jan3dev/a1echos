@@ -1,4 +1,6 @@
-export { default as sessionStore, useSessionStore } from './sessionStore';
+export {
+    initializeSessionStore, default as sessionStore, useSessionStore
+} from './sessionStore';
 export {
     initializeSettingsStore,
     useHasSeenIncognitoExplainer,
