@@ -108,7 +108,8 @@ export const HomeAppBar = ({
       />
       <IncognitoExplainerModal
         visible={showIncognitoModal}
-        onDismiss={handleIncognitoDismiss}
+        onConfirm={handleIncognitoDismiss}
+        onCancel={() => setShowIncognitoModal(false)}
       />
     </>
   );

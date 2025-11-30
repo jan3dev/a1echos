@@ -30,6 +30,15 @@ export const useLocalization = () => {
       // Error View
       errorPrefix: 'Error:',
       retry: 'Retry',
+      // Home Screen
+      emptySessionsMessage: 'Hit the record button to start transcribing',
+      homeMicrophoneDenied:
+        'Microphone access denied. Please enable it in Settings.',
+      homeMicrophonePermissionRequired:
+        'Microphone permission required to record.',
+      homeFailedStartRecording: 'Failed to start recording',
+      homeErrorCreatingSession: (error: string) =>
+        `Failed to create session: ${error}`,
     },
   };
 };

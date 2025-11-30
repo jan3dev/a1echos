@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 import { Transcription } from '../models/Transcription';
 import { TranscriptionState } from '../models/TranscriptionState';
 import { storageService } from '../services/StorageService';
@@ -56,6 +58,7 @@ interface TranscriptionStore {
   updateAudioLevel: (level: number) => void;
   cleanupPreviewsForSessionChange: (currentSessionId: string | null) => void;
 
+  _loadTranscriptionsInternal: () => Promise<void>;
   loadTranscriptions: () => Promise<void>;
   addTranscription: (transcription: Transcription) => void;
   updateTranscription: (transcription: Transcription) => Promise<void>;
@@ -342,6 +345,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
     },
 
+    _loadTranscriptionsInternal: async () => {
+      const transcriptions = await storageService.getTranscriptions();
+      transcriptions.sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+      );
+
+      set({
+        transcriptions,
+        isLoaded: true,
+      });
+    },
+
     loadTranscriptions: async () => {
       const operationName = 'loadTranscriptions';
 
@@ -350,15 +365,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
 
       try {
-        const transcriptions = await storageService.getTranscriptions();
-        transcriptions.sort(
-          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-        );
-
-        set({
-          transcriptions,
-          isLoaded: true,
-        });
+        await get()._loadTranscriptionsInternal();
       } catch (error) {
         console.error('Failed to load transcriptions', error);
         throw error;
@@ -677,7 +684,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           initError: null,
         });
 
-        await get().loadTranscriptions();
+        await get()._loadTranscriptionsInternal();
 
         get().transitionTo(TranscriptionState.READY);
 
@@ -719,12 +726,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 export const useTranscriptionState = () =>
   useTranscriptionStore((s) => s.state);
 
+export const useTranscriptions = () =>
+  useTranscriptionStore(useShallow((s) => s.transcriptions));
+
 export const useSessionTranscriptions = (sessionId?: string) => {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const finalSessionId = sessionId ?? activeSessionId;
-  const transcriptions = useTranscriptionStore((s) => s.transcriptions);
+  const transcriptions = useTranscriptions();
 
-  return transcriptions.filter((t) => t.sessionId === finalSessionId);
+  return useMemo(
+    () => transcriptions.filter((t) => t.sessionId === finalSessionId),
+    [transcriptions, finalSessionId]
+  );
 };
 
 export const useIsRecording = () =>
@@ -734,6 +747,23 @@ export const useIsTranscribing = () =>
 export const useCurrentStreamingText = () =>
   useTranscriptionStore((s) => s.currentStreamingText);
 export const useAudioLevel = () => useTranscriptionStore((s) => s.audioLevel);
+export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
+export const useLoadingPreview = () =>
+  useTranscriptionStore((s) => s.loadingPreview);
+export const useRecordingSessionId = () =>
+  useTranscriptionStore((s) => s.recordingSessionId);
+export const useStartRecording = () =>
+  useTranscriptionStore((s) => s.startRecording);
+export const useStopRecordingAndSave = () =>
+  useTranscriptionStore((s) => s.stopRecordingAndSave);
+export const useAddTranscription = () =>
+  useTranscriptionStore((s) => s.addTranscription);
+export const useUpdateTranscription = () =>
+  useTranscriptionStore((s) => s.updateTranscription);
+export const useDeleteTranscription = () =>
+  useTranscriptionStore((s) => s.deleteTranscription);
+export const useDeleteTranscriptions = () =>
+  useTranscriptionStore((s) => s.deleteTranscriptions);
 
 export const initializeTranscriptionStore = async () => {
   return useTranscriptionStore.getState().initialize();

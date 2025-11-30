@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { lightColors } from '../../../theme/themeColors';
 import { useTheme } from '../../../theme/useTheme';
 import { Icon } from '../icon';
 
@@ -56,12 +57,12 @@ export const Checkbox = ({
               ? colors.surfaceTertiary
               : '#F4F5F6',
             borderWidth: value ? 0 : borderWidth,
-            borderColor: isDark ? '#E9EBEC' : '#E9EBEC',
+            borderColor: colors.surfaceBorderSecondary,
           },
         ]}
       >
         {value && (
-          <Icon name="check" size={checkSize} color={colors.textInverse} />
+          <Icon name="check" size={checkSize} color={lightColors.textInverse} />
         )}
       </View>
     </Pressable>

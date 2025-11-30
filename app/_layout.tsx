@@ -18,7 +18,7 @@ SplashScreen.preventAutoHideAsync();
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
 
 export const unstable_settings = {
-  initialRouteName: StorybookEnabled ? '(storybook)/index' : '(pages)/index',
+  initialRouteName: StorybookEnabled ? 'storybook/index' : '(pages)/index',
 };
 
 export default function RootLayout() {
@@ -94,7 +94,7 @@ export default function RootLayout() {
       />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={StorybookEnabled}>
-          <Stack.Screen name="(storybook)/index" />
+          <Stack.Screen name="storybook/index" />
         </Stack.Protected>
 
         <Stack.Screen name="(pages)/index" />

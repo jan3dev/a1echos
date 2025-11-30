@@ -1,31 +1,33 @@
-import { Audio } from 'expo-av';
+import {
+  AudioModule,
+  AudioRecorder,
+  getRecordingPermissionsAsync,
+  PermissionStatus,
+  RecordingOptions,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { NativeEventEmitter } from 'react-native';
 import { AppConstants } from '../constants/AppConstants';
 import { backgroundRecordingService } from './BackgroundRecordingService';
 
-interface AmplitudeData {
-  current: number;
-}
-
-const RECORDING_OPTIONS: Audio.RecordingOptions = {
-  ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+const RECORDING_OPTIONS: RecordingOptions = {
+  extension: '.wav',
+  sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
+  numberOfChannels: AppConstants.AUDIO_NUM_CHANNELS,
+  bitRate: AppConstants.AUDIO_BIT_RATE,
+  isMeteringEnabled: true,
   android: {
-    extension: '.wav',
-    outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-    audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+    outputFormat: 'default',
+    audioEncoder: 'default',
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
-    numberOfChannels: AppConstants.AUDIO_NUM_CHANNELS,
-    bitRate: AppConstants.AUDIO_BIT_RATE,
   },
   ios: {
-    extension: '.wav',
-    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-    audioQuality: Audio.IOSAudioQuality.HIGH,
+    outputFormat: 'linearpcm',
+    audioQuality: 127, // AudioQuality.MAX
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
-    numberOfChannels: AppConstants.AUDIO_NUM_CHANNELS,
-    bitRate: AppConstants.AUDIO_BIT_RATE,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
@@ -37,7 +39,7 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
 };
 
 const createAudioService = () => {
-  let recording: Audio.Recording | null = null;
+  let recorder: AudioRecorder | null = null;
   let currentAudioFile: string | null = null;
   let isMonitoring: boolean = false;
   let monitorTempPath: string | null = null;
@@ -53,14 +55,14 @@ const createAudioService = () => {
 
   const hasPermission = async (): Promise<boolean> => {
     try {
-      const { status: existingStatus } = await Audio.getPermissionsAsync();
+      const { status } = await getRecordingPermissionsAsync();
 
-      if (existingStatus === 'granted') {
+      if (status === PermissionStatus.GRANTED) {
         return true;
       }
 
-      const { status } = await Audio.requestPermissionsAsync();
-      return status === 'granted';
+      const { granted } = await requestRecordingPermissionsAsync();
+      return granted;
     } catch (error) {
       console.error('Error checking microphone permission:', error);
       return false;
@@ -69,8 +71,8 @@ const createAudioService = () => {
 
   const isPermanentlyDenied = async (): Promise<boolean> => {
     try {
-      const { status, canAskAgain } = await Audio.getPermissionsAsync();
-      return status === 'denied' && !canAskAgain;
+      const { status, canAskAgain } = await getRecordingPermissionsAsync();
+      return status === PermissionStatus.DENIED && !canAskAgain;
     } catch (error) {
       console.error('Error checking permission denial status:', error);
       return false;
@@ -94,11 +96,11 @@ const createAudioService = () => {
     audioLevelEmitter.emit('audioLevel', level);
   };
 
-  const handleAmplitudeEvent = (amplitude: AmplitudeData): void => {
+  const handleAmplitudeEvent = (metering: number | undefined): void => {
     let level = 0.02;
 
-    if (isFinite(amplitude.current) && amplitude.current > -160) {
-      const db = Math.max(-60.0, Math.min(-10.0, amplitude.current));
+    if (metering !== undefined && isFinite(metering) && metering > -160) {
+      const db = Math.max(-60.0, Math.min(-10.0, metering));
       level = (db - -60.0) / (-10.0 - -60.0);
       level = Math.max(0.0, Math.min(1.0, level));
 
@@ -131,15 +133,12 @@ const createAudioService = () => {
       clearInterval(amplitudeIntervalId);
     }
 
-    amplitudeIntervalId = setInterval(async () => {
-      if (recording) {
+    amplitudeIntervalId = setInterval(() => {
+      if (recorder) {
         try {
-          const status = await recording.getStatusAsync();
+          const status = recorder.getStatus();
           if (status.isRecording && status.metering !== undefined) {
-            const amplitude: AmplitudeData = {
-              current: status.metering,
-            };
-            handleAmplitudeEvent(amplitude);
+            handleAmplitudeEvent(status.metering);
           }
         } catch (error) {
           console.error('Error getting amplitude:', error);
@@ -149,13 +148,14 @@ const createAudioService = () => {
   };
 
   const cleanup = async (): Promise<void> => {
-    if (recording) {
+    if (recorder) {
       try {
-        await recording.stopAndUnloadAsync();
+        await recorder.stop();
+        recorder.release();
       } catch (error) {
         console.error('Error during cleanup:', error);
       }
-      recording = null;
+      recorder = null;
     }
 
     if (amplitudeIntervalId) {
@@ -165,6 +165,18 @@ const createAudioService = () => {
 
     currentAudioFile = null;
     resetLevelState();
+  };
+
+  // Note: expo-audio's public API only provides useAudioRecorder hook for creating recorders.
+  // Since this is a service (not a React component), we access AudioModule.AudioRecorder directly.
+  // This mirrors the internal implementation of useAudioRecorder in expo-audio.
+  // If expo-audio adds a createAudioRecorder factory function in the future, prefer that.
+  const createRecorder = (): AudioRecorder => {
+    return new (
+      AudioModule as {
+        AudioRecorder: new (options: RecordingOptions) => AudioRecorder;
+      }
+    ).AudioRecorder(RECORDING_OPTIONS);
   };
 
   const startRecording = async (): Promise<boolean> => {
@@ -198,18 +210,16 @@ const createAudioService = () => {
     await cleanup();
 
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
       });
 
-      const newRecording = new Audio.Recording();
+      recorder = createRecorder();
 
-      await newRecording.prepareToRecordAsync(RECORDING_OPTIONS);
-
-      await newRecording.startAsync();
-      recording = newRecording;
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       recordStart = new Date();
 
       try {
@@ -224,8 +234,9 @@ const createAudioService = () => {
     } catch (error) {
       console.error('Error starting recording:', error);
       try {
-        if (recording) {
-          await recording.stopAndUnloadAsync();
+        if (recorder) {
+          await recorder.stop();
+          recorder.release();
         }
       } catch {}
       return false;
@@ -237,24 +248,22 @@ const createAudioService = () => {
       return false;
     }
 
-    if (recording) {
+    if (recorder) {
       return true;
     }
 
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
       monitorTempPath = await generateRecordingPath();
 
-      const newRecording = new Audio.Recording();
+      recorder = createRecorder();
 
-      await newRecording.prepareToRecordAsync(RECORDING_OPTIONS);
-
-      await newRecording.startAsync();
-      recording = newRecording;
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       isMonitoring = true;
 
       startAmplitudeMonitoring();
@@ -270,9 +279,10 @@ const createAudioService = () => {
     if (!isMonitoring) return;
 
     try {
-      if (recording) {
-        await recording.stopAndUnloadAsync();
-        recording = null;
+      if (recorder) {
+        await recorder.stop();
+        recorder.release();
+        recorder = null;
       }
     } catch (error) {
       console.error('Error stopping monitoring:', error);
@@ -305,7 +315,7 @@ const createAudioService = () => {
       console.error('Failed to stop background service:', error);
     }
 
-    const isCurrentlyRecording = recording !== null;
+    const isCurrentlyRecording = recorder !== null;
 
     if (!isCurrentlyRecording) {
       if (amplitudeIntervalId) {
@@ -331,10 +341,10 @@ const createAudioService = () => {
     let recordedFilePath: string | null = null;
 
     try {
-      if (recording) {
-        await recording.stopAndUnloadAsync();
+      if (recorder) {
+        await recorder.stop();
 
-        const uri = recording.getURI();
+        const uri = recorder.uri;
 
         try {
           await Haptics.notificationAsync(
@@ -352,6 +362,8 @@ const createAudioService = () => {
             }
           }
         }
+
+        recorder.release();
       }
     } catch {
       recordedFilePath = null;
@@ -362,7 +374,7 @@ const createAudioService = () => {
       amplitudeIntervalId = null;
     }
 
-    recording = null;
+    recorder = null;
     recordStart = null;
     currentAudioFile = recordedFilePath;
 
@@ -370,12 +382,12 @@ const createAudioService = () => {
   };
 
   const isRecording = async (): Promise<boolean> => {
-    if (!recording) {
+    if (!recorder) {
       return false;
     }
 
     try {
-      const status = await recording.getStatusAsync();
+      const status = recorder.getStatus();
       return status.isRecording;
     } catch {
       return false;
@@ -398,9 +410,10 @@ const createAudioService = () => {
         amplitudeIntervalId = null;
       }
 
-      if (recording) {
-        await recording.stopAndUnloadAsync();
-        recording = null;
+      if (recorder) {
+        await recorder.stop();
+        recorder.release();
+        recorder = null;
       }
     } catch {}
 

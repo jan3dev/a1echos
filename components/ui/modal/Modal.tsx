@@ -178,7 +178,7 @@ export const Modal = ({
               <View style={styles.messageSpacing} />
               <Text
                 variant="body1"
-                weight="medium"
+                weight="regular"
                 color={colors.textSecondary}
                 numberOfLines={messageMaxLines}
                 align="center"

@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -223,21 +224,48 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
 export const useIsTranscriptionSelectionMode = () =>
   useUIStore((s) => s.isTranscriptionSelectionMode);
+// Returns Set directly for O(1) membership checks
+export const useSelectedTranscriptionIdsSet = () =>
+  useUIStore((s) => s.selectedTranscriptionIds);
 export const useSelectedTranscriptionIds = () =>
-  useUIStore((s) => Array.from(s.selectedTranscriptionIds));
+  useUIStore(useShallow((s) => Array.from(s.selectedTranscriptionIds)));
 export const useSelectedTranscriptionCount = () =>
   useUIStore((s) => s.getSelectedTranscriptionCount());
 
 export const useIsSessionSelectionMode = () =>
   useUIStore((s) => s.isSessionSelectionMode);
+// Returns Set directly for O(1) membership checks
+export const useSelectedSessionIdsSet = () =>
+  useUIStore((s) => s.selectedSessionIds);
 export const useSelectedSessionIds = () =>
-  useUIStore((s) => Array.from(s.selectedSessionIds));
+  useUIStore(useShallow((s) => Array.from(s.selectedSessionIds)));
 export const useSelectedSessionCount = () =>
   useUIStore((s) => s.getSelectedSessionCount());
 
 export const useVisibleModals = () =>
-  useUIStore((s) => Array.from(s.visibleModals));
+  useUIStore(useShallow((s) => Array.from(s.visibleModals)));
 export const useToasts = () => useUIStore((s) => s.toasts);
 export const useHasAnyLoading = () => useUIStore((s) => s.hasAnyLoading());
+
+export const useToggleSessionSelection = () =>
+  useUIStore((s) => s.toggleSessionSelection);
+export const useExitSessionSelection = () =>
+  useUIStore((s) => s.exitSessionSelection);
+
+export const useToggleTranscriptionSelection = () =>
+  useUIStore((s) => s.toggleTranscriptionSelection);
+export const useSelectAllTranscriptions = () =>
+  useUIStore((s) => s.selectAllTranscriptions);
+export const useExitTranscriptionSelection = () =>
+  useUIStore((s) => s.exitTranscriptionSelection);
+
+export const useShowModal = () => useUIStore((s) => s.showModal);
+export const useHideModal = () => useUIStore((s) => s.hideModal);
+
+export const useShowToast = () => useUIStore((s) => s.showToast);
+export const useHideToast = () => useUIStore((s) => s.hideToast);
+
+export const useSetLoading = () => useUIStore((s) => s.setLoading);
+export const useClearLoading = () => useUIStore((s) => s.clearLoading);
 
 export default useUIStore;

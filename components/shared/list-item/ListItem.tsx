@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   subtitle: {
-    marginTop: 0,
+    marginTop: 4,
   },
   trailingTextContainer: {
     alignItems: 'flex-end',

@@ -1,79 +1,103 @@
-import { Audio } from 'expo-av';
-import * as Notifications from 'expo-notifications';
-import * as TaskManager from 'expo-task-manager';
+import { setAudioModeAsync } from 'expo-audio';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
-const BACKGROUND_RECORDING_TASK = 'background-recording-task';
+const isExpoGo =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 interface BackgroundRecordingCallbacks {
   onStopRecording?: () => void;
 }
+
+type NotificationsModule = typeof import('expo-notifications');
+type EventSubscription = import('expo-notifications').EventSubscription;
 
 const createBackgroundRecordingService = () => {
   let isServiceRunning: boolean = false;
   let isActuallyRecording: boolean = false;
   const callbacks: BackgroundRecordingCallbacks = {};
   let notificationId: string | null = null;
-  let notificationResponseSub: Notifications.EventSubscription | null = null;
+  let notificationResponseSub: EventSubscription | null = null;
+  let Notifications: NotificationsModule | null = null;
+  let notificationsAvailable = false;
 
-  const setupTaskHandler = (): void => {
-    TaskManager.defineTask(BACKGROUND_RECORDING_TASK, async () => {
-      return;
-    });
+  const loadNotifications = async (): Promise<NotificationsModule | null> => {
+    if (Notifications) return Notifications;
+    if (isExpoGo && Platform.OS === 'android') {
+      return null;
+    }
+
+    try {
+      Notifications = await import('expo-notifications');
+      notificationsAvailable = true;
+      return Notifications;
+    } catch (error) {
+      console.warn('expo-notifications not available:', error);
+      return null;
+    }
   };
-
-  setupTaskHandler();
 
   const initialize = async (): Promise<void> => {
     if (Platform.OS === 'android') {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
+      const notif = await loadNotifications();
 
-      if (existingStatus !== 'granted') {
-        const { status: newStatus } =
-          await Notifications.requestPermissionsAsync();
-        if (newStatus !== 'granted') {
-          console.warn('Notification permission denied');
+      if (notif && notificationsAvailable) {
+        try {
+          const { status: existingStatus } = await notif.getPermissionsAsync();
+
+          if (existingStatus !== 'granted') {
+            const { status: newStatus } = await notif.requestPermissionsAsync();
+            if (newStatus !== 'granted') {
+              console.warn(
+                'Notification permission denied - recording will work without status bar indicator'
+              );
+            }
+          }
+
+          await notif.setNotificationChannelAsync('echos_recording', {
+            name: 'Echos Recording',
+            description: 'Background recording service for Echos',
+            importance: notif.AndroidImportance.LOW,
+            sound: null,
+            vibrationPattern: null,
+            enableLights: false,
+            enableVibrate: false,
+            showBadge: false,
+          });
+
+          notif.setNotificationHandler({
+            handleNotification: async () => ({
+              shouldShowAlert: false,
+              shouldPlaySound: false,
+              shouldSetBadge: false,
+              shouldShowBanner: false,
+              shouldShowList: false,
+            }),
+          });
+
+          if (notificationResponseSub) {
+            notificationResponseSub.remove();
+            notificationResponseSub = null;
+          }
+
+          notificationResponseSub =
+            notif.addNotificationResponseReceivedListener((response) => {
+              if (response.actionIdentifier === 'stop_recording') {
+                callbacks.onStopRecording?.();
+              }
+            });
+        } catch (error) {
+          console.warn(
+            'Failed to initialize notifications - recording will work without status bar indicator:',
+            error
+          );
         }
       }
-
-      await Notifications.setNotificationChannelAsync('echos_recording', {
-        name: 'Echos Recording',
-        description: 'Background recording service for Echos',
-        importance: Notifications.AndroidImportance.LOW,
-        sound: null,
-        vibrationPattern: null,
-        enableLights: false,
-        enableVibrate: false,
-        showBadge: false,
-      });
-
-      Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-          shouldShowAlert: false,
-          shouldPlaySound: false,
-          shouldSetBadge: false,
-          shouldShowBanner: false,
-          shouldShowList: false,
-        }),
-      });
-
-      if (notificationResponseSub) {
-        notificationResponseSub.remove();
-        notificationResponseSub = null;
-      }
-
-      notificationResponseSub =
-        Notifications.addNotificationResponseReceivedListener((response) => {
-          if (response.actionIdentifier === 'stop_recording') {
-            callbacks.onStopRecording?.();
-          }
-        });
     } else if (Platform.OS === 'ios') {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
       });
     }
   };
@@ -85,30 +109,40 @@ const createBackgroundRecordingService = () => {
   const updateRecordingState = (isRecording: boolean): void => {
     isActuallyRecording = isRecording;
 
-    if (isServiceRunning && Platform.OS === 'android' && notificationId) {
+    if (
+      isServiceRunning &&
+      Platform.OS === 'android' &&
+      notificationId &&
+      notificationsAvailable
+    ) {
       updateNotification(isRecording);
     }
   };
 
   const updateNotification = async (isRecording: boolean): Promise<void> => {
-    if (Platform.OS !== 'android') return;
+    if (!notificationsAvailable || !Notifications) return;
 
-    try {
-      if (notificationId) {
+    if (notificationId) {
+      try {
         await Notifications.dismissNotificationAsync(notificationId);
+      } catch (error) {
+        console.warn('Error dismissing notification:', error);
       }
-      notificationId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Echos',
-          body: isRecording ? 'Recording in background' : 'Ready to record',
-          sticky: true,
-          priority: Notifications.AndroidNotificationPriority.LOW,
-          categoryIdentifier: 'recording',
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error('Error updating notification:', error);
+
+      try {
+        notificationId = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'Echos',
+            body: isRecording ? 'Recording in background' : 'Ready to record',
+            sticky: true,
+            priority: Notifications.AndroidNotificationPriority.LOW,
+            categoryIdentifier: 'recording',
+          },
+          trigger: null,
+        });
+      } catch (error) {
+        console.warn('Error scheduling notification:', error);
+      }
     }
   };
 
@@ -117,26 +151,21 @@ const createBackgroundRecordingService = () => {
       return true;
     }
 
-    try {
-      if (Platform.OS === 'android') {
+    if (Platform.OS === 'android' && notificationsAvailable && Notifications) {
+      try {
         const { status } = await Notifications.getPermissionsAsync();
-        if (status !== 'granted') {
-          console.error('Missing notification permission');
-          return false;
-        }
-
-        await Notifications.setNotificationCategoryAsync('recording', [
-          {
-            identifier: 'stop_recording',
-            buttonTitle: 'Stop Recording',
-            options: {
-              opensAppToForeground: false,
+        if (status === 'granted') {
+          await Notifications.setNotificationCategoryAsync('recording', [
+            {
+              identifier: 'stop_recording',
+              buttonTitle: 'Stop Recording',
+              options: {
+                opensAppToForeground: false,
+              },
             },
-          },
-        ]);
+          ]);
 
-        const notificationResult =
-          await Notifications.scheduleNotificationAsync({
+          notificationId = await Notifications.scheduleNotificationAsync({
             content: {
               title: 'Echos - Recording',
               body: 'Tap to return to the app',
@@ -146,17 +175,14 @@ const createBackgroundRecordingService = () => {
             },
             trigger: null,
           });
-
-        notificationId = notificationResult;
+        }
+      } catch (error) {
+        console.warn('Could not show recording notification:', error);
       }
-
-      isServiceRunning = true;
-      return true;
-    } catch (error) {
-      console.error('Failed to start background service:', error);
-      isServiceRunning = false;
-      return false;
     }
+
+    isServiceRunning = true;
+    return true;
   };
 
   const stopBackgroundService = async (): Promise<boolean> => {
@@ -164,19 +190,17 @@ const createBackgroundRecordingService = () => {
       return true;
     }
 
-    try {
-      if (Platform.OS === 'android' && notificationId) {
+    if (notificationId && notificationsAvailable && Notifications) {
+      try {
         await Notifications.dismissNotificationAsync(notificationId);
-        notificationId = null;
+      } catch (error) {
+        console.warn('Could not dismiss recording notification:', error);
       }
-
-      isServiceRunning = false;
-      return true;
-    } catch (error) {
-      console.error('Failed to stop background service:', error);
-      isServiceRunning = false;
-      return false;
+      notificationId = null;
     }
+
+    isServiceRunning = false;
+    return true;
   };
 
   const getServiceRunning = (): boolean => {
@@ -187,7 +211,8 @@ const createBackgroundRecordingService = () => {
     return isActuallyRecording;
   };
 
-  const dispose = (): void => {
+  const dispose = async (): Promise<void> => {
+    await stopBackgroundService();
     if (notificationResponseSub) {
       notificationResponseSub.remove();
       notificationResponseSub = null;

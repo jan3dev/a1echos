@@ -15,9 +15,7 @@ export const useSessionOperations = () => {
 
   // Store state
   const sessions = useSessionStore(useShallow((state) => state.getSessions()));
-  const activeSession = useSessionStore(
-    useShallow((state) => state.getActiveSession())
-  );
+  const activeSession = useSessionStore((state) => state.getActiveSession());
   const isIncognito = useSessionStore((state) =>
     state.isActiveSessionIncognito()
   );

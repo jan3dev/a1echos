@@ -72,7 +72,7 @@ export const Tooltip = ({
       case 'error':
         return colors.accentDangerTransparent;
       default:
-        return `${colors.glassInverse}CC`;
+        return colors.glassInverse;
     }
   };
 

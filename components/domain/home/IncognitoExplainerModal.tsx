@@ -1,19 +1,20 @@
 import React from 'react';
 import { useLocalization } from '../../../hooks/useLocalization';
-import { useTheme } from '../../../theme';
+import { lightColors } from '../../../theme/themeColors';
 import { Icon } from '../../ui/icon';
 import { Modal } from '../../ui/modal';
 
 interface IncognitoExplainerModalProps {
   visible: boolean;
-  onDismiss: () => void;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export const IncognitoExplainerModal = ({
   visible,
-  onDismiss,
+  onConfirm,
+  onCancel,
 }: IncognitoExplainerModalProps) => {
-  const { theme } = useTheme();
   const { loc } = useLocalization();
 
   return (
@@ -23,11 +24,11 @@ export const IncognitoExplainerModal = ({
       message={loc.incognitoExplainerBody}
       primaryButton={{
         text: loc.incognitoExplainerCta,
-        onTap: onDismiss,
+        onTap: onConfirm,
       }}
-      icon={<Icon name="ghost" size={24} color={theme.colors.textInverse} />}
+      icon={<Icon name="ghost" size={24} color={lightColors.textInverse} />}
       iconVariant="info"
-      onDismiss={onDismiss}
+      onDismiss={onCancel}
     />
   );
 };

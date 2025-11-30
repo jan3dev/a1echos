@@ -29,7 +29,7 @@ export const RecordingControlsView = ({
 }: RecordingControlsViewProps) => {
   const controlsHeight = 96.0;
   const { currentTheme } = useThemeStore();
-  const blurTint = currentTheme === AppTheme.DARK ? 'light' : 'dark';
+  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
 
   return (
     <View style={[styles.container, { height: controlsHeight }]}>

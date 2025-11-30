@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
+import { useShallow } from 'zustand/shallow';
 import { AppConstants } from '../constants/AppConstants';
 import { Session, createSession } from '../models/Session';
 import { storageService } from '../services/StorageService';
@@ -28,7 +29,7 @@ interface SessionStore {
   isActiveSessionIncognito: () => boolean;
   getNewSessionName: (recordingPrefix: string) => string;
   getSessions: () => Session[];
-  getActiveSession: () => Session;
+  getActiveSession: () => Session | null;
   notifySessionCreated: () => void;
 }
 
@@ -103,7 +104,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         return sessions[0];
       }
 
-      throw new Error('No sessions available to be active.');
+      return null;
     },
 
     getNewSessionName: (recordingPrefix: string) => {
@@ -350,5 +351,18 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 export const initializeSessionStore = async (): Promise<void> => {
   await useSessionStore.getState().loadSessions();
 };
+
+export const useSessions = () => useSessionStore(useShallow((s) => s.sessions));
+export const useActiveSessionId = () =>
+  useSessionStore((s) => s.activeSessionId);
+export const useIncognitoSession = () =>
+  useSessionStore((s) => s.incognitoSession);
+export const useIsSessionsLoaded = () => useSessionStore((s) => s.isLoaded);
+export const useCreateSession = () => useSessionStore((s) => s.createSession);
+export const useDeleteSession = () => useSessionStore((s) => s.deleteSession);
+export const useRenameSession = () => useSessionStore((s) => s.renameSession);
+export const useSwitchSession = () => useSessionStore((s) => s.switchSession);
+export const useFindSessionById = () =>
+  useSessionStore((s) => s.findSessionById);
 
 export default useSessionStore;

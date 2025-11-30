@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { lightColors } from '../../../theme/themeColors';
 import { AquaTypography } from '../../../theme/typography';
 import { useTheme } from '../../../theme/useTheme';
 import { ProgressIndicator } from '../progress';
@@ -124,7 +125,7 @@ const ButtonBase = ({
 
   const getTextColor = () => {
     if (type === 'primary') {
-      return colors.textInverse;
+      return lightColors.textInverse;
     }
     if (type === 'secondary') {
       return {
@@ -139,7 +140,7 @@ const ButtonBase = ({
 
   const getSpinnerColor = () => {
     if (type === 'primary') {
-      return colors.textInverse;
+      return lightColors.textInverse;
     }
     if (type === 'secondary') {
       return colors.accentBrand;

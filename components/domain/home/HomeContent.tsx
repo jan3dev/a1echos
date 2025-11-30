@@ -10,7 +10,7 @@ interface HomeContentProps {
   onSessionLongPress: (session: Session) => void;
   onSessionTap: (sessionId: string) => void;
   onSelectionToggle: (sessionId: string) => void;
-  scrollRef?: React.RefObject<ScrollView>;
+  scrollRef?: React.RefObject<ScrollView | null>;
 }
 
 const RECORDING_CONTROLS_HEIGHT = 96;

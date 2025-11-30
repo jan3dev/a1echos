@@ -1,12 +1,15 @@
-import { Audio } from 'expo-av';
+import {
+  getRecordingPermissionsAsync,
+  PermissionStatus,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import * as Linking from 'expo-linking';
-import { PermissionStatus } from 'expo-modules-core';
 
 const createPermissionService = () => {
   const requestRecordPermission = async (): Promise<boolean> => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      return status === PermissionStatus.GRANTED;
+      const { granted } = await requestRecordingPermissionsAsync();
+      return granted;
     } catch (error) {
       console.error('Error requesting microphone permission:', error);
       return false;
@@ -15,15 +18,8 @@ const createPermissionService = () => {
 
   const getRecordPermissionStatus = async (): Promise<PermissionStatus> => {
     try {
-      const { status } = await Audio.getPermissionsAsync();
-
-      if (status === PermissionStatus.GRANTED) {
-        return PermissionStatus.GRANTED;
-      } else if (status === PermissionStatus.DENIED) {
-        return PermissionStatus.DENIED;
-      } else {
-        return PermissionStatus.UNDETERMINED;
-      }
+      const { status } = await getRecordingPermissionsAsync();
+      return status;
     } catch (error) {
       console.error('Error getting permission status:', error);
       return PermissionStatus.UNDETERMINED;
@@ -50,7 +46,7 @@ const createPermissionService = () => {
 
   const isPermanentlyDenied = async (): Promise<boolean> => {
     try {
-      const { status, canAskAgain } = await Audio.getPermissionsAsync();
+      const { status, canAskAgain } = await getRecordingPermissionsAsync();
       return status === PermissionStatus.DENIED && !canAskAgain;
     } catch (error) {
       console.error('Error checking permission denial status:', error);
