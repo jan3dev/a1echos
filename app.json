@@ -22,6 +22,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "minSdkVersion": 26,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -30,7 +31,8 @@
         "WRITE_EXTERNAL_STORAGE",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE"
-      ]
+      ],
+      "package": "com.a1echos.app"
     },
     "web": {
       "output": "static",
@@ -38,6 +40,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {

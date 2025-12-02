@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import { AquaPrimitiveColors } from '@/theme';
+import { useRef, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -84,7 +85,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   const openMenu = () => {
     iconRef.current?.measureInWindow((x, y, width, height) => {
       const right = 16;
-      setMenuPosition({ top: y + height, right });
+      setMenuPosition({ top: y + height + 32, right });
       setMenuVisible(true);
     });
   };
@@ -213,9 +214,9 @@ const styles = StyleSheet.create({
     width: 240,
     borderRadius: 12,
     paddingVertical: 8,
-    shadowColor: '#000',
+    shadowColor: AquaPrimitiveColors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.16,
     shadowRadius: 12,
     elevation: 8,
   },

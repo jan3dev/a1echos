@@ -1,3 +1,4 @@
+import { AquaPrimitiveColors } from '@/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Session } from '../../../models/Session';
@@ -30,7 +31,7 @@ export const SessionList = ({
         styles.container,
         {
           backgroundColor: theme.colors.surfacePrimary,
-          shadowColor: theme.colors.surfaceInverse,
+          shadowColor: AquaPrimitiveColors.shadow,
         },
       ]}
     >

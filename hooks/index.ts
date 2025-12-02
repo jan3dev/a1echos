@@ -5,4 +5,5 @@ export { useLocalization } from './useLocalization';
 export { usePermissions } from './usePermissions';
 export { useRecording } from './useRecording';
 export { useSessionOperations } from './useSessionOperations';
+export { useTranscriptionSelection } from './useTranscriptionSelection';
 
