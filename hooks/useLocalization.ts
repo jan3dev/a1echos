@@ -64,6 +64,11 @@ export const useLocalization = () => {
       dark: 'Dark',
       whisperModelRealtimeTitle: 'Whisper (Real-time)',
       whisperModelFileTitle: 'Whisper',
+      whisperModelSubtitle: 'High accuracy',
+      modelDescription:
+        'Select which model to use. All processing happens on your device.',
+      spokenLanguageDescription:
+        'Choose which language the model should detect. For best results, select the language you mainly speak.',
     },
   };
 };

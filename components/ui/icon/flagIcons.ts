@@ -167,6 +167,7 @@ import Nigeria from '../../../assets/icons/flags/nigeria.svg';
 import Niue from '../../../assets/icons/flags/niue.svg';
 import NorfolkIsland from '../../../assets/icons/flags/norfolk_island.svg';
 import NorthKorea from '../../../assets/icons/flags/north_korea.svg';
+import NorthMacedonia from '../../../assets/icons/flags/north_macedonia.svg';
 import NorthernCyprus from '../../../assets/icons/flags/northern_cyprus.svg';
 import NorthernMarianasIslands from '../../../assets/icons/flags/northern_marianas_islands.svg';
 import Norway from '../../../assets/icons/flags/norway.svg';
@@ -186,7 +187,6 @@ import Portugal from '../../../assets/icons/flags/portugal.svg';
 import PuertoRico from '../../../assets/icons/flags/puerto_rico.svg';
 import Qatar from '../../../assets/icons/flags/qatar.svg';
 import RapaNui from '../../../assets/icons/flags/rapa_nui.svg';
-import RepublicOfMacedonia from '../../../assets/icons/flags/republic_of_macedonia.svg';
 import RepublicOfTheCongo from '../../../assets/icons/flags/republic_of_the_congo.svg';
 import Romania from '../../../assets/icons/flags/romania.svg';
 import Russia from '../../../assets/icons/flags/russia.svg';
@@ -447,7 +447,7 @@ export const flagIcons: Record<string, React.FC<SvgProps>> = {
   puerto_rico: PuertoRico,
   qatar: Qatar,
   rapa_nui: RapaNui,
-  republic_of_macedonia: RepublicOfMacedonia,
+  north_macedonia: NorthMacedonia,
   republic_of_the_congo: RepublicOfTheCongo,
   romania: Romania,
   russia: Russia,
