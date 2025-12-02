@@ -54,6 +54,16 @@ export const useLocalization = () => {
       shareFailed: (error: string) => `Failed to share: ${error}`,
       noTranscriptionsSelectedToShare: 'No transcriptions selected to share',
       sessionNotFound: 'Session not found',
+      // Settings Screen
+      settingsTitle: 'Settings',
+      modelTitle: 'Model',
+      themeTitle: 'Theme',
+      spokenLanguageTitle: 'Spoken Language',
+      auto: 'Auto',
+      light: 'Light',
+      dark: 'Dark',
+      whisperModelRealtimeTitle: 'Whisper (Real-time)',
+      whisperModelFileTitle: 'Whisper',
     },
   };
 };
