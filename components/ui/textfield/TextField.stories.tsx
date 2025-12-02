@@ -2,17 +2,32 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AquaTypography } from '../../../theme/typography';
+import { useTheme } from '../../../theme/useTheme';
 import { Icon } from '../icon';
 import { TextField } from './TextField';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/TextField',
   component: TextField,
   decorators: [
     (Story) => (
-      <View style={styles.container}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof TextField>;
@@ -77,26 +92,40 @@ export const WithClearIcon: Story = {
   ),
 };
 
-export const WithTrailingIcon: Story = {
-  render: () => (
+const WithTrailingIconContent = () => {
+  const { theme } = useTheme();
+  return (
     <TextFieldWithState
       label="Settings"
-      trailingIcon={<Icon name="settings" size={20} color="#929BA0" />}
+      trailingIcon={
+        <Icon name="settings" size={20} color={theme.colors.textSecondary} />
+      }
       onTrailingPress={() => console.log('Settings clicked')}
     />
-  ),
+  );
 };
 
-export const WithBothIcons: Story = {
-  render: () => (
+export const WithTrailingIcon: Story = {
+  render: () => <WithTrailingIconContent />,
+};
+
+const WithBothIconsContent = () => {
+  const { theme } = useTheme();
+  return (
     <TextFieldWithState
       label="Password"
       value="password123"
       showClearIcon={true}
-      trailingIcon={<Icon name="settings" size={20} color="#929BA0" />}
+      trailingIcon={
+        <Icon name="settings" size={20} color={theme.colors.textSecondary} />
+      }
       secureTextEntry
     />
-  ),
+  );
+};
+
+export const WithBothIcons: Story = {
+  render: () => <WithBothIconsContent />,
 };
 
 export const Multiline: Story = {
@@ -126,21 +155,28 @@ export const Disabled: Story = {
   ),
 };
 
-export const AllVariants: Story = {
-  render: () => (
+const AllVariantsContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <View style={styles.section}>
-        <Text style={styles.heading}>Basic</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Basic
+        </Text>
         <TextFieldWithState label="Email" />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>With Value</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          With Value
+        </Text>
         <TextFieldWithState label="Name" value="John Doe" />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>With Assistive Text</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          With Assistive Text
+        </Text>
         <TextFieldWithState
           label="Password"
           assistiveText="Must be at least 8 characters"
@@ -149,7 +185,9 @@ export const AllVariants: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Error State</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Error State
+        </Text>
         <TextFieldWithState
           label="Email"
           value="invalid"
@@ -159,22 +197,30 @@ export const AllVariants: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>With Counter</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          With Counter
+        </Text>
         <TextFieldWithState label="Bio" maxLength={100} showCounter={true} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>With Clear Icon</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          With Clear Icon
+        </Text>
         <TextFieldWithState label="Search" value="Query" showClearIcon={true} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>With Transparent Border</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          With Transparent Border
+        </Text>
         <TextFieldWithState label="Description" transparentBorder={true} />
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Multiline</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Multiline
+        </Text>
         <TextFieldWithState
           label="Notes"
           multiline={true}
@@ -184,7 +230,9 @@ export const AllVariants: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Disabled</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Disabled
+        </Text>
         <TextFieldWithState
           label="Disabled"
           value="Cannot edit"
@@ -192,14 +240,17 @@ export const AllVariants: Story = {
         />
       </View>
     </View>
-  ),
+  );
+};
+
+export const AllVariants: Story = {
+  render: () => <AllVariantsContent />,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#F4F5F6',
   },
   column: {
     gap: 24,
@@ -209,6 +260,5 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...AquaTypography.h5SemiBold,
-    color: '#090A0B',
   },
 });

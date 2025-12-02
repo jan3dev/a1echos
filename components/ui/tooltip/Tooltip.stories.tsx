@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Tooltip, TooltipPointerPosition, TooltipVariant } from './Tooltip';
 import { useTooltip } from './useTooltip';
 
@@ -20,6 +21,7 @@ const TooltipDemo = ({
   isInfo?: boolean;
 }) => {
   const { show, tooltipState } = useTooltip();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -32,7 +34,12 @@ const TooltipDemo = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Tooltip" onPress={handleShow} />
       <View style={styles.tooltipContainer}>
         <Tooltip {...tooltipState} />
@@ -67,6 +74,7 @@ export const InfoMode = () => (
 
 export const InfoModeWithVariants = () => {
   const { show, tooltipState } = useTooltip();
+  const { theme } = useTheme();
 
   const variants: TooltipVariant[] = ['success', 'warning', 'error'];
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -83,7 +91,12 @@ export const InfoModeWithVariants = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton
         title="Show Info Tooltip (Cycle Variants)"
         onPress={handleShow}
@@ -97,6 +110,7 @@ export const InfoModeWithVariants = () => {
 
 export const LongMessage = () => {
   const { show, tooltipState } = useTooltip();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -108,7 +122,12 @@ export const LongMessage = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Long Tooltip" onPress={handleShow} />
       <View style={styles.tooltipContainer}>
         <Tooltip {...tooltipState} />
@@ -119,6 +138,7 @@ export const LongMessage = () => {
 
 export const AutoDismiss = () => {
   const { show, tooltipState } = useTooltip();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -129,7 +149,12 @@ export const AutoDismiss = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Auto-Dismiss Tooltip" onPress={handleShow} />
       <View style={styles.tooltipContainer}>
         <Tooltip {...tooltipState} />

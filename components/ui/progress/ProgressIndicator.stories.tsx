@@ -1,17 +1,34 @@
+import { lightColors } from '@/theme';
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { View } from 'react-native';
-import { useTheme } from '../../../theme';
+import { useTheme } from '../../../theme/useTheme';
 import { ProgressIndicator } from './ProgressIndicator';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        padding: 20,
+        alignItems: 'center',
+        flex: 1,
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/ProgressIndicator',
   component: ProgressIndicator,
   decorators: [
     (Story) => (
-      <View style={{ padding: 20, alignItems: 'center' }}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof ProgressIndicator>;
@@ -61,7 +78,7 @@ const InverseColorStory = () => {
         borderRadius: 8,
       }}
     >
-      <ProgressIndicator color={theme.colors.textInverse} />
+      <ProgressIndicator color={lightColors.textInverse} />
     </View>
   );
 };

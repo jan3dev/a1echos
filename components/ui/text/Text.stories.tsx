@@ -1,7 +1,23 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from './Text';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        padding: 16,
+        backgroundColor: theme.colors.surfaceBackground,
+        flex: 1,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const TextMeta: Meta<typeof Text> = {
   title: 'UI Components/Text',
@@ -39,9 +55,9 @@ const TextMeta: Meta<typeof Text> = {
   },
   decorators: [
     (Story) => (
-      <View style={{ padding: 16 }}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };

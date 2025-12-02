@@ -1,17 +1,32 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Icon } from '../icon/Icon';
 import { TopAppBar } from './TopAppBar';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/TopAppBar',
   component: TopAppBar,
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, backgroundColor: '#F4F5F6' }}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof TopAppBar>;
@@ -34,44 +49,42 @@ export const WithoutBackButton: Story = {
   },
 };
 
+const WithActionsContent = () => {
+  const { theme } = useTheme();
+  return (
+    <TopAppBar
+      title="Details"
+      showBackButton={true}
+      actions={[
+        <Icon
+          key="1"
+          name="search"
+          size={24}
+          color={theme.colors.textPrimary}
+        />,
+        <Icon key="2" name="more" size={24} color={theme.colors.textPrimary} />,
+      ]}
+    />
+  );
+};
+
 export const WithActions: Story = {
-  args: {
-    title: 'Details',
-    showBackButton: true,
-    // actions: [
-    //   <Icon key="1" name="search" size={24} />,
-    //   <Icon key="2" name="more" size={24} />,
-    // ],
-  },
-  argTypes: {
-    actions: {
-      options: ['default_actions', 'none'],
-      mapping: {
-        default_actions: [
-          <Icon key="1" name="search" size={24} />,
-          <Icon key="2" name="more" size={24} />,
-        ],
-        none: [],
-      },
-    },
-  },
+  render: () => <WithActionsContent />,
+};
+
+const WithCustomLeadingContent = () => {
+  const { theme } = useTheme();
+  return (
+    <TopAppBar
+      title="Custom Leading"
+      showBackButton={false}
+      leading={<Icon name="close" size={24} color={theme.colors.textPrimary} />}
+    />
+  );
 };
 
 export const WithCustomLeading: Story = {
-  args: {
-    title: 'Custom Leading',
-    showBackButton: false,
-    leading: 'close',
-  },
-  argTypes: {
-    leading: {
-      options: ['close', 'none'],
-      mapping: {
-        close: <Icon name="close" size={24} />,
-        none: null,
-      },
-    },
-  },
+  render: () => <WithCustomLeadingContent />,
 };
 
 export const Transparent: Story = {
@@ -92,19 +105,19 @@ export const Transparent: Story = {
   ],
 };
 
+const LongTitleContent = () => {
+  const { theme } = useTheme();
+  return (
+    <TopAppBar
+      title="Very Long Page Title That Should Truncate Or Handle Gracefully"
+      showBackButton={true}
+      actions={[
+        <Icon key="1" name="more" size={24} color={theme.colors.textPrimary} />,
+      ]}
+    />
+  );
+};
+
 export const LongTitle: Story = {
-  args: {
-    title: 'Very Long Page Title That Should Truncate Or Handle Gracefully',
-    showBackButton: true,
-    // actions: [<Icon key="1" name="more" size={24} />],
-  },
-  argTypes: {
-    actions: {
-      options: ['more', 'none'],
-      mapping: {
-        more: [<Icon key="1" name="more" size={24} />],
-        none: [],
-      },
-    },
-  },
+  render: () => <LongTitleContent />,
 };

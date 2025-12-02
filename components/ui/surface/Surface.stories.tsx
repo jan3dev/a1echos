@@ -1,8 +1,25 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { ImageBackground, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from '../text/Text';
 import { Surface } from './Surface';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        padding: 32,
+        justifyContent: 'center',
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const SurfaceMeta: Meta<typeof Surface> = {
   title: 'UI Components/Surface',
@@ -22,16 +39,9 @@ const SurfaceMeta: Meta<typeof Surface> = {
   },
   decorators: [
     (Story) => (
-      <View
-        style={{
-          flex: 1,
-          padding: 32,
-          justifyContent: 'center',
-          backgroundColor: '#E9EBEC',
-        }}
-      >
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };

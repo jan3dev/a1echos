@@ -8,6 +8,7 @@ import { useSessionStore } from '../../../stores/sessionStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useTranscriptionStore } from '../../../stores/transcriptionStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { useTheme } from '../../../theme/useTheme';
 import { Toast, ToastVariant } from '../../ui/toast/Toast';
 import { TranscriptionItem } from './TranscriptionItem';
 import { TranscriptionList } from './TranscriptionList';
@@ -83,6 +84,15 @@ const ToastDecorator = (Story: React.ComponentType) => {
   );
 };
 
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}>
+      {children}
+    </View>
+  );
+};
+
 // Store Decorator with default state
 const StoreDecorator = (Story: React.ComponentType) => {
   useEffect(() => {
@@ -102,9 +112,9 @@ const StoreDecorator = (Story: React.ComponentType) => {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F4F5F6' }}>
+    <StoryContainer>
       <Story />
-    </View>
+    </StoryContainer>
   );
 };
 
@@ -136,9 +146,13 @@ export const SelectionMode: Story = {
   },
 };
 
-export const LivePreviewSingleItem: Story = {
-  render: () => (
-    <View style={{ padding: 16, backgroundColor: '#F4F5F6', flex: 1 }}>
+const LivePreviewSingleItemContent = () => {
+  return (
+    <View
+      style={{
+        padding: 16,
+      }}
+    >
       <TranscriptionItem
         transcription={livePreviewTranscription}
         isLivePreviewItem={true}
@@ -146,12 +160,20 @@ export const LivePreviewSingleItem: Story = {
         onLongPress={() => console.log('Long Press')}
       />
     </View>
-  ),
+  );
 };
 
-export const WithSkeletonLoading: Story = {
-  render: () => (
-    <View style={{ padding: 16, backgroundColor: '#F4F5F6', flex: 1 }}>
+export const LivePreviewSingleItem: Story = {
+  render: () => <LivePreviewSingleItemContent />,
+};
+
+const WithSkeletonLoadingContent = () => {
+  return (
+    <View
+      style={{
+        padding: 16,
+      }}
+    >
       <TranscriptionItem
         transcription={skeletonTranscription}
         isLoadingWhisperResult={true}
@@ -159,5 +181,9 @@ export const WithSkeletonLoading: Story = {
         onLongPress={() => console.log('Long Press')}
       />
     </View>
-  ),
+  );
+};
+
+export const WithSkeletonLoading: Story = {
+  render: () => <WithSkeletonLoadingContent />,
 };

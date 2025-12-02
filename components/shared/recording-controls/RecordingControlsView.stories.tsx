@@ -2,8 +2,23 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { TranscriptionState } from '../../../models/TranscriptionState';
-import { darkColors, lightColors } from '../../../theme/themeColors';
+import { useTheme } from '../../../theme/useTheme';
 import { RecordingControlsView } from './RecordingControlsView';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const RecordingControlsViewMeta: Meta<typeof RecordingControlsView> = {
   title: 'Shared Components/RecordingControlsView',
@@ -27,15 +42,9 @@ const RecordingControlsViewMeta: Meta<typeof RecordingControlsView> = {
   },
   decorators: [
     (Story) => (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'flex-end',
-          backgroundColor: '#F4F5F6',
-        }}
-      >
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };
@@ -44,78 +53,69 @@ export default RecordingControlsViewMeta;
 
 type Story = StoryObj<typeof RecordingControlsView>;
 
+const DynamicRecordingControlsView = (
+  props: Omit<React.ComponentProps<typeof RecordingControlsView>, 'colors'>
+) => {
+  const { theme } = useTheme();
+  return <RecordingControlsView {...props} colors={theme.colors} />;
+};
+
 export const Ready: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    audioLevel: 0,
-    enabled: true,
-    colors: lightColors,
-    onRecordingStart: () => console.log('Recording started'),
-  },
+  render: () => (
+    <DynamicRecordingControlsView
+      state={TranscriptionState.READY}
+      audioLevel={0}
+      enabled={true}
+      onRecordingStart={() => console.log('Recording started')}
+    />
+  ),
 };
 
 export const Recording: Story = {
-  args: {
-    state: TranscriptionState.RECORDING,
-    audioLevel: 0.5,
-    enabled: true,
-    colors: lightColors,
-    onRecordingStop: () => console.log('Recording stopped'),
-  },
+  render: () => (
+    <DynamicRecordingControlsView
+      state={TranscriptionState.RECORDING}
+      audioLevel={0.5}
+      enabled={true}
+      onRecordingStop={() => console.log('Recording stopped')}
+    />
+  ),
 };
 
 export const RecordingLowAudio: Story = {
-  args: {
-    state: TranscriptionState.RECORDING,
-    audioLevel: 0.2,
-    enabled: true,
-    colors: lightColors,
-  },
+  render: () => (
+    <DynamicRecordingControlsView
+      state={TranscriptionState.RECORDING}
+      audioLevel={0.2}
+      enabled={true}
+    />
+  ),
 };
 
 export const RecordingHighAudio: Story = {
-  args: {
-    state: TranscriptionState.RECORDING,
-    audioLevel: 0.9,
-    enabled: true,
-    colors: lightColors,
-  },
+  render: () => (
+    <DynamicRecordingControlsView
+      state={TranscriptionState.RECORDING}
+      audioLevel={0.9}
+      enabled={true}
+    />
+  ),
 };
 
 export const Transcribing: Story = {
-  args: {
-    state: TranscriptionState.TRANSCRIBING,
-    audioLevel: 0,
-    enabled: false,
-    colors: lightColors,
-  },
-};
-
-export const DarkTheme: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    audioLevel: 0,
-    enabled: true,
-    colors: darkColors,
-  },
-  decorators: [
-    (Story) => (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'flex-end',
-          backgroundColor: '#090A0B',
-        }}
-      >
-        <Story />
-      </View>
-    ),
-  ],
+  render: () => (
+    <DynamicRecordingControlsView
+      state={TranscriptionState.TRANSCRIBING}
+      audioLevel={0}
+      enabled={false}
+    />
+  ),
 };
 
 export const Interactive = () => {
   const [audioLevel, setAudioLevel] = useState(0);
   const [state, setState] = useState(TranscriptionState.READY);
+  const { theme } = useTheme();
 
   const handleStart = () => {
     setState(TranscriptionState.RECORDING);
@@ -136,22 +136,18 @@ export const Interactive = () => {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: '#F4F5F6',
-      }}
-    >
+    <StoryContainer>
       <RecordingControlsView
         state={state}
         audioLevel={audioLevel}
-        enabled={state === TranscriptionState.READY || state === TranscriptionState.RECORDING}
-        colors={lightColors}
+        enabled={
+          state === TranscriptionState.READY ||
+          state === TranscriptionState.RECORDING
+        }
+        colors={theme.colors}
         onRecordingStart={handleStart}
         onRecordingStop={() => {}}
       />
-    </View>
+    </StoryContainer>
   );
 };
-

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { Session } from '../../../models/Session';
 import { useSessionStore } from '../../../stores/sessionStore';
 import { useTranscriptionStore } from '../../../stores/transcriptionStore';
+import { useTheme } from '../../../theme/useTheme';
 import { SessionAppBar } from './SessionAppBar';
 import { SessionList } from './SessionList';
 import { SessionListItem } from './SessionListItem';
@@ -42,6 +43,21 @@ const dummyTranscriptions = [
   },
 ];
 
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        padding: 16,
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
+
 // Decorator to seed store
 const StoreDecorator = (Story: React.ComponentType) => {
   useEffect(() => {
@@ -55,9 +71,9 @@ const StoreDecorator = (Story: React.ComponentType) => {
   }, []);
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: '#F4F5F6' }}>
+    <StoryContainer>
       <Story />
-    </View>
+    </StoryContainer>
   );
 };
 

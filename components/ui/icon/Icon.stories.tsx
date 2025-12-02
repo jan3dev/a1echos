@@ -1,9 +1,27 @@
 import type { Meta } from '@storybook/react-native';
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from '../text/Text';
 import { Icon } from './Icon';
 import { iconMap, IconName } from './iconMap';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.surfaceBackground,
+        padding: 16,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const IconMeta: Meta<typeof Icon> = {
   title: 'UI Components/Icon',
@@ -27,17 +45,9 @@ const IconMeta: Meta<typeof Icon> = {
   },
   decorators: [
     (Story) => (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#F4F5F6',
-          padding: 16,
-        }}
-      >
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };
@@ -45,13 +55,18 @@ const IconMeta: Meta<typeof Icon> = {
 export default IconMeta;
 
 export const AllIcons = () => {
+  const { theme } = useTheme();
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {Object.keys(iconMap)
         .sort()
         .map((name) => (
           <View key={name} style={styles.iconItem}>
-            <Icon name={name as IconName} size={32} color="#090A0B" />
+            <Icon
+              name={name as IconName}
+              size={32}
+              color={theme.colors.textPrimary}
+            />
             <Text variant="caption2" style={styles.iconLabel}>
               {name}
             </Text>
@@ -62,13 +77,14 @@ export const AllIcons = () => {
 };
 
 export const Sizes = () => {
+  const { theme } = useTheme();
   const sizes = [16, 24, 32, 48, 64];
 
   return (
     <View style={styles.container}>
       {sizes.map((size) => (
         <View key={size} style={styles.iconItem}>
-          <Icon name="mic" size={size} color="#090A0B" />
+          <Icon name="mic" size={size} color={theme.colors.textPrimary} />
           <Text variant="caption2" style={styles.iconLabel}>
             {size}px
           </Text>
@@ -79,6 +95,7 @@ export const Sizes = () => {
 };
 
 export const Colors = () => {
+  const { theme } = useTheme();
   const colors = [
     { name: 'Black', value: '#090A0B' },
     { name: 'Brand', value: '#4361EE' },
@@ -94,7 +111,9 @@ export const Colors = () => {
           <View
             style={[
               styles.colorBackground,
-              { backgroundColor: value === '#FFFFFF' ? '#27292C' : '#E9EBEC' },
+              {
+                backgroundColor: theme.colors.surfaceTertiary,
+              },
             ]}
           >
             <Icon name="mic" size={32} color={value} />

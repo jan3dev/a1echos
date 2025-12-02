@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from '../text/Text';
 import { Dimmer } from './Dimmer';
 
@@ -10,9 +11,15 @@ export default {
 
 export const Basic = () => {
   const [visible, setVisible] = useState(false);
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Dimmer" onPress={() => setVisible(true)} />
       <Dimmer visible={visible} onDismiss={() => setVisible(false)} />
     </View>
@@ -21,16 +28,27 @@ export const Basic = () => {
 
 export const WithContent = () => {
   const [visible, setVisible] = useState(false);
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton
         title="Show Dimmer with Content"
         onPress={() => setVisible(true)}
       />
       <Dimmer visible={visible} onDismiss={() => setVisible(false)}>
         <View style={styles.contentContainer}>
-          <View style={styles.contentBox}>
+          <View
+            style={[
+              styles.contentBox,
+              { backgroundColor: theme.colors.surfacePrimary },
+            ]}
+          >
             <Text variant="h4" weight="semibold" align="center">
               Custom Content
             </Text>
@@ -49,9 +67,15 @@ export const WithContent = () => {
 
 export const AsOverlay = () => {
   const [visible, setVisible] = useState(false);
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <Text variant="h4" weight="semibold" align="center">
         Background Content
       </Text>
@@ -80,7 +104,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   contentBox: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 24,
     minWidth: 280,

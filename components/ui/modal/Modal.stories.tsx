@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Icon } from '../icon';
 import { Modal, ModalVariant } from './Modal';
 import { useModal } from './useModal';
@@ -21,6 +22,7 @@ const ModalDemo = ({
   withTertiaryMessage?: boolean;
 }) => {
   const { show, modalState } = useModal();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -42,14 +44,19 @@ const ModalDemo = ({
           }
         : undefined,
       icon: withIcon ? (
-        <Icon name="warning" size={24} color="#FFFFFF" />
+        <Icon name="warning" size={24} color={theme.colors.textPrimary} />
       ) : undefined,
       iconVariant,
     });
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Modal" onPress={handleShow} />
       <Modal {...modalState} />
     </View>
@@ -76,6 +83,7 @@ export const WithTertiaryMessage = () => (
 
 export const WithIllustration = () => {
   const { show, modalState } = useModal();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -92,19 +100,24 @@ export const WithIllustration = () => {
             width: 88,
             height: 88,
             borderRadius: 44,
-            backgroundColor: '#E3F2FD',
+            backgroundColor: theme.colors.surfaceTertiary,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Icon name="warning" size={48} color="#2196F3" />
+          <Icon name="warning" size={48} color={theme.colors.accentBrand} />
         </View>
       ),
     });
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Modal with Illustration" onPress={handleShow} />
       <Modal {...modalState} />
     </View>
@@ -113,6 +126,7 @@ export const WithIllustration = () => {
 
 export const LongText = () => {
   const { show, modalState } = useModal();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -129,7 +143,7 @@ export const LongText = () => {
         onTap: () => console.log('Cancel'),
         variant: 'normal',
       },
-      icon: <Icon name="warning" size={24} color="#FFFFFF" />,
+      icon: <Icon name="warning" size={24} color={theme.colors.textPrimary} />,
       iconVariant: 'warning',
       titleMaxLines: 5,
       messageMaxLines: 10,
@@ -137,7 +151,12 @@ export const LongText = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Modal with Long Text" onPress={handleShow} />
       <Modal {...modalState} />
     </View>
@@ -146,6 +165,7 @@ export const LongText = () => {
 
 export const DangerWithButtons = () => {
   const { show, modalState } = useModal();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -162,13 +182,18 @@ export const DangerWithButtons = () => {
         onTap: () => console.log('Cancel'),
         variant: 'normal',
       },
-      icon: <Icon name="danger" size={24} color="#FFFFFF" />,
+      icon: <Icon name="danger" size={24} color={theme.colors.textPrimary} />,
       iconVariant: 'danger',
     });
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Danger Modal" onPress={handleShow} />
       <Modal {...modalState} />
     </View>

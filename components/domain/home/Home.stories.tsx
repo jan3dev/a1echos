@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Session } from '../../../models/Session';
 import { useSessionStore } from '../../../stores/sessionStore';
 import { useSettingsStore } from '../../../stores/settingsStore';
+import { useTheme } from '../../../theme/useTheme';
 import { EmptyStateView } from './EmptyStateView';
 import { HomeAppBar } from './HomeAppBar';
 import { HomeContent } from './HomeContent';
@@ -26,6 +27,20 @@ const dummySessions: Session[] = [
   },
 ];
 
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
+
 // Decorator
 const StoreDecorator = (Story: React.ComponentType) => {
   useEffect(() => {
@@ -39,9 +54,9 @@ const StoreDecorator = (Story: React.ComponentType) => {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <StoryContainer>
       <Story />
-    </View>
+    </StoryContainer>
   );
 };
 
@@ -128,7 +143,6 @@ export const EmptyStateDisappearing: Story = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F5F6',
   },
   centerContainer: {
     position: 'absolute',

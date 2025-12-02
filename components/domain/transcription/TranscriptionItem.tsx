@@ -2,12 +2,12 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Platform,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
-    ViewStyle,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ViewStyle,
 } from 'react-native';
 
 import { Transcription } from '../../../models/Transcription';
@@ -213,7 +213,7 @@ export const TranscriptionItem = ({
             style={[
               styles.input,
               {
-                color: theme.colors.textSecondary,
+                color: theme.colors.textPrimary,
                 ...theme.typography.body1,
               },
             ]}
@@ -229,7 +229,7 @@ export const TranscriptionItem = ({
             <Skeleton borderRadius={16} width="50%" height={20} />
           </View>
         ) : (
-          <Text variant="body1" color="textSecondary">
+          <Text variant="body1" color={theme.colors.textSecondary}>
             {transcription.text}
           </Text>
         )}

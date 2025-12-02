@@ -1,12 +1,12 @@
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../../theme';
+import { lightColors, useTheme } from '../../../theme';
 import { AquaTypography } from '../../../theme/typography';
 import { Icon } from '../icon';
 import { ProgressIndicator } from '../progress';
@@ -151,17 +151,19 @@ export const Slider = ({
   const renderThumb = () => {
     switch (sliderState) {
       case 'initial':
-        return <Icon name="arrow_right" size={24} color={colors.textInverse} />;
+        return (
+          <Icon name="arrow_right" size={24} color={lightColors.textInverse} />
+        );
       case 'inProgress':
         return (
           <View style={styles.thumbCenter}>
-            <ProgressIndicator size={24} color={colors.textInverse} />
+            <ProgressIndicator size={24} color={lightColors.textInverse} />
           </View>
         );
       case 'completed':
-        return <Icon name="check" size={24} color={colors.textInverse} />;
+        return <Icon name="check" size={24} color={lightColors.textInverse} />;
       case 'error':
-        return <Icon name="close" size={24} color={colors.textInverse} />;
+        return <Icon name="close" size={24} color={lightColors.textInverse} />;
     }
   };
 

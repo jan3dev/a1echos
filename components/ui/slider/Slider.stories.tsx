@@ -2,16 +2,31 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { AquaTypography } from '../../../theme/typography';
+import { useTheme } from '../../../theme/useTheme';
 import { Slider, SliderState } from './Slider';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/Slider',
   component: Slider,
   decorators: [
     (Story) => (
-      <View style={styles.container}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof Slider>;
@@ -108,6 +123,7 @@ export const Disabled: Story = {
 
 const SliderWithStateChange = () => {
   const [state, setState] = useState<SliderState>('initial');
+  const { theme } = useTheme();
 
   const handleConfirm = () => {
     setState('inProgress');
@@ -121,7 +137,7 @@ const SliderWithStateChange = () => {
 
   return (
     <View style={styles.column}>
-      <Text style={styles.description}>
+      <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
         Try sliding past 75% to see the state change
       </Text>
       <Slider
@@ -144,17 +160,14 @@ export const WithStateChange: Story = {
   render: () => <SliderWithStateChange />,
 };
 
-export const AllStates: Story = {
-  args: {
-    width: 300,
-    text: 'Slide to confirm',
-    onConfirm: () => Alert.alert('Confirmed!'),
-    sliderState: 'initial',
-  },
-  render: () => (
+const AllStatesContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <View style={styles.section}>
-        <Text style={styles.heading}>Initial</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Initial
+        </Text>
         <Slider
           width={280}
           text="Slide to confirm"
@@ -164,7 +177,9 @@ export const AllStates: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>In Progress</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          In Progress
+        </Text>
         <Slider
           width={280}
           text="Processing..."
@@ -174,7 +189,9 @@ export const AllStates: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Completed</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Completed
+        </Text>
         <Slider
           width={280}
           text="Success!"
@@ -184,7 +201,9 @@ export const AllStates: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Error</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Error
+        </Text>
         <Slider
           width={280}
           text="Failed"
@@ -194,7 +213,9 @@ export const AllStates: Story = {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.heading}>Disabled</Text>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Disabled
+        </Text>
         <Slider
           width={280}
           text="Disabled"
@@ -204,14 +225,23 @@ export const AllStates: Story = {
         />
       </View>
     </View>
-  ),
+  );
+};
+
+export const AllStates: Story = {
+  args: {
+    width: 300,
+    text: 'Slide to confirm',
+    onConfirm: () => Alert.alert('Confirmed!'),
+    sliderState: 'initial',
+  },
+  render: () => <AllStatesContent />,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#F4F5F6',
   },
   column: {
     gap: 24,
@@ -221,10 +251,8 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...AquaTypography.h5SemiBold,
-    color: '#090A0B',
   },
   description: {
     ...AquaTypography.body1,
-    color: '#4C5357',
   },
 });

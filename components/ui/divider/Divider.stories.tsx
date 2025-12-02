@@ -1,8 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from '../text/Text';
 import { Divider } from './Divider';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        padding: 16,
+        width: '100%',
+        backgroundColor: theme.colors.surfaceBackground,
+        flex: 1,
+      }}
+    >
+      <Text style={{ marginBottom: 8 }}>Content Above</Text>
+      {children}
+      <Text style={{ marginTop: 8 }}>Content Below</Text>
+    </View>
+  );
+};
 
 const DividerMeta: Meta<typeof Divider> = {
   title: 'UI Components/Divider',
@@ -12,11 +31,9 @@ const DividerMeta: Meta<typeof Divider> = {
   },
   decorators: [
     (Story) => (
-      <View style={{ padding: 16, width: '100%' }}>
-        <Text style={{ marginBottom: 8 }}>Content Above</Text>
+      <StoryContainer>
         <Story />
-        <Text style={{ marginTop: 8 }}>Content Below</Text>
-      </View>
+      </StoryContainer>
     ),
   ],
 };

@@ -116,12 +116,7 @@ export const Tooltip = ({
     const isTop = pointerPosition === 'top';
 
     return (
-      <View
-        style={[
-          styles.pointerContainer,
-          isTop ? styles.pointerTop : styles.pointerBottom,
-        ]}
-      >
+      <View style={[styles.pointerContainer]}>
         <Svg
           width={pointerSize * 2}
           height={pointerSize}
@@ -264,11 +259,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
-  },
-  pointerTop: {
-    marginBottom: -1,
-  },
-  pointerBottom: {
-    marginTop: -1,
   },
 });

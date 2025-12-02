@@ -2,17 +2,50 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AquaTypography } from '../../../theme/typography';
+import { useTheme } from '../../../theme/useTheme';
 import { Icon } from '../icon';
 import { Button } from './Button';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
+
+const StorySection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/Button',
   component: Button.primary,
   decorators: [
     (Story) => (
-      <View style={styles.container}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof Button.primary>;
@@ -20,12 +53,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Primary: Story = {
-  args: {
-    text: 'Primary Button',
-    onPress: () => console.log('Pressed'),
-  },
-  render: () => (
+const PrimaryContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <Button.primary
         text="Primary Button"
@@ -33,21 +63,25 @@ export const Primary: Story = {
       />
       <Button.primary
         text="With Icon"
-        icon={<Icon name="check" size={20} color="#FFFFFF" />}
+        icon={<Icon name="check" size={20} color={theme.colors.textInverse} />}
         onPress={() => console.log('Pressed')}
       />
       <Button.primary text="Loading" isLoading={true} />
       <Button.primary text="Disabled" enabled={false} />
     </View>
-  ),
+  );
 };
 
-export const PrimarySmall: Story = {
+export const Primary: Story = {
   args: {
-    text: 'Small Primary',
-    onPress: () => console.log('Pressed'),
+    text: 'Primary Button',
   },
-  render: () => (
+  render: () => <PrimaryContent />,
+};
+
+const PrimarySmallContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <Button.primary
         text="Small Primary"
@@ -57,50 +91,55 @@ export const PrimarySmall: Story = {
       <Button.primary
         text="Small with Icon"
         size="small"
-        icon={<Icon name="check" size={16} color="#FFFFFF" />}
+        icon={<Icon name="check" size={16} color={theme.colors.textInverse} />}
         onPress={() => console.log('Pressed')}
       />
     </View>
-  ),
+  );
 };
+
+export const PrimarySmall: Story = {
+  args: {
+    text: 'Small Primary',
+  },
+  render: () => <PrimarySmallContent />,
+};
+
+const PrimaryVariantsContent = () => (
+  <View style={styles.column}>
+    <Button.primary
+      text="Normal"
+      variant="normal"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.primary
+      text="Error"
+      variant="error"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.primary
+      text="Success"
+      variant="success"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.primary
+      text="Warning"
+      variant="warning"
+      onPress={() => console.log('Pressed')}
+    />
+  </View>
+);
 
 export const PrimaryVariants: Story = {
   args: {
     text: 'Normal',
-    onPress: () => console.log('Pressed'),
   },
-  render: () => (
-    <View style={styles.column}>
-      <Button.primary
-        text="Normal"
-        variant="normal"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.primary
-        text="Error"
-        variant="error"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.primary
-        text="Success"
-        variant="success"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.primary
-        text="Warning"
-        variant="warning"
-        onPress={() => console.log('Pressed')}
-      />
-    </View>
-  ),
+  render: () => <PrimaryVariantsContent />,
 };
 
-export const Secondary: Story = {
-  args: {
-    text: 'Secondary Button',
-    onPress: () => console.log('Pressed'),
-  },
-  render: () => (
+const SecondaryContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <Button.secondary
         text="Secondary Button"
@@ -108,52 +147,59 @@ export const Secondary: Story = {
       />
       <Button.secondary
         text="With Icon"
-        icon={<Icon name="settings" size={20} color="#4361EE" />}
+        icon={
+          <Icon name="settings" size={20} color={theme.colors.accentBrand} />
+        }
         onPress={() => console.log('Pressed')}
       />
       <Button.secondary text="Loading" isLoading={true} />
       <Button.secondary text="Disabled" enabled={false} />
     </View>
-  ),
+  );
 };
+
+export const Secondary: Story = {
+  args: {
+    text: 'Secondary Button',
+  },
+  render: () => <SecondaryContent />,
+};
+
+const SecondaryVariantsContent = () => (
+  <View style={styles.column}>
+    <Button.secondary
+      text="Normal"
+      variant="normal"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.secondary
+      text="Error"
+      variant="error"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.secondary
+      text="Success"
+      variant="success"
+      onPress={() => console.log('Pressed')}
+    />
+    <Button.secondary
+      text="Warning"
+      variant="warning"
+      onPress={() => console.log('Pressed')}
+    />
+  </View>
+);
 
 export const SecondaryVariants: Story = {
   args: {
     text: 'Normal',
-    onPress: () => console.log('Pressed'),
   },
-  render: () => (
-    <View style={styles.column}>
-      <Button.secondary
-        text="Normal"
-        variant="normal"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.secondary
-        text="Error"
-        variant="error"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.secondary
-        text="Success"
-        variant="success"
-        onPress={() => console.log('Pressed')}
-      />
-      <Button.secondary
-        text="Warning"
-        variant="warning"
-        onPress={() => console.log('Pressed')}
-      />
-    </View>
-  ),
+  render: () => <SecondaryVariantsContent />,
 };
 
-export const Tertiary: Story = {
-  args: {
-    text: 'Tertiary Button',
-    onPress: () => console.log('Pressed'),
-  },
-  render: () => (
+const TertiaryContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
       <Button.tertiary
         text="Tertiary Button"
@@ -161,40 +207,52 @@ export const Tertiary: Story = {
       />
       <Button.tertiary
         text="With Icon"
-        icon={<Icon name="settings" size={20} color="#090A0B" />}
+        icon={
+          <Icon name="settings" size={20} color={theme.colors.textPrimary} />
+        }
         onPress={() => console.log('Pressed')}
       />
       <Button.tertiary text="Loading" isLoading={true} />
       <Button.tertiary text="Disabled" enabled={false} />
     </View>
-  ),
+  );
 };
 
-export const Utility: Story = {
+export const Tertiary: Story = {
   args: {
-    text: 'Utility',
-    onPress: () => console.log('Pressed'),
+    text: 'Tertiary Button',
   },
-  render: () => (
+  render: () => <TertiaryContent />,
+};
+
+const UtilityContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.row}>
       <Button.utility text="Utility" onPress={() => console.log('Pressed')} />
       <Button.utility
         text="With Icon"
-        icon={<Icon name="settings" size={16} color="#090A0B" />}
+        icon={
+          <Icon name="settings" size={16} color={theme.colors.textPrimary} />
+        }
         onPress={() => console.log('Pressed')}
       />
       <Button.utility text="Loading" isLoading={true} />
       <Button.utility text="Disabled" enabled={false} />
     </View>
-  ),
+  );
 };
 
-export const UtilitySecondary: Story = {
+export const Utility: Story = {
   args: {
-    text: 'Utility 2',
-    onPress: () => console.log('Pressed'),
+    text: 'Utility',
   },
-  render: () => (
+  render: () => <UtilityContent />,
+};
+
+const UtilitySecondaryContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.row}>
       <Button.utilitySecondary
         text="Utility 2"
@@ -202,34 +260,38 @@ export const UtilitySecondary: Story = {
       />
       <Button.utilitySecondary
         text="With Icon"
-        icon={<Icon name="settings" size={16} color="#090A0B" />}
+        icon={
+          <Icon name="settings" size={16} color={theme.colors.textPrimary} />
+        }
         onPress={() => console.log('Pressed')}
       />
       <Button.utilitySecondary text="Loading" isLoading={true} />
       <Button.utilitySecondary text="Disabled" enabled={false} />
     </View>
-  ),
+  );
 };
 
-export const AllVariants: Story = {
+export const UtilitySecondary: Story = {
   args: {
-    text: 'Primary',
-    onPress: () => console.log('Pressed'),
+    text: 'Utility 2',
   },
-  render: () => (
+  render: () => <UtilitySecondaryContent />,
+};
+
+const AllVariantsContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.column}>
-      <View style={styles.section}>
-        <Text style={styles.heading}>Primary</Text>
+      <StorySection title="Primary">
         <Button.primary text="Primary" onPress={() => console.log('Pressed')} />
         <Button.primary
           text="Primary Error"
           variant="error"
           onPress={() => console.log('Pressed')}
         />
-      </View>
+      </StorySection>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>Secondary</Text>
+      <StorySection title="Secondary">
         <Button.secondary
           text="Secondary"
           onPress={() => console.log('Pressed')}
@@ -239,18 +301,16 @@ export const AllVariants: Story = {
           variant="success"
           onPress={() => console.log('Pressed')}
         />
-      </View>
+      </StorySection>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>Tertiary</Text>
+      <StorySection title="Tertiary">
         <Button.tertiary
           text="Tertiary"
           onPress={() => console.log('Pressed')}
         />
-      </View>
+      </StorySection>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>Utility</Text>
+      <StorySection title="Utility">
         <View style={styles.row}>
           <Button.utility
             text="Utility"
@@ -272,31 +332,48 @@ export const AllVariants: Story = {
           />
           <Button.utility
             text="Utility"
-            icon={<Icon name="settings" size={16} color="#090A0B" />}
+            icon={
+              <Icon
+                name="settings"
+                size={16}
+                color={theme.colors.textPrimary}
+              />
+            }
             onPress={() => console.log('Pressed')}
           />
           <Button.utilitySecondary
             text="Utility 2"
-            icon={<Icon name="settings" size={16} color="#090A0B" />}
+            icon={
+              <Icon
+                name="settings"
+                size={16}
+                color={theme.colors.textPrimary}
+              />
+            }
             onPress={() => console.log('Pressed')}
           />
         </View>
-      </View>
+      </StorySection>
 
-      <View style={styles.section}>
-        <Text style={styles.heading}>States</Text>
+      <StorySection title="States">
         <Button.primary text="Loading" isLoading={true} />
         <Button.primary text="Disabled" enabled={false} />
-      </View>
+      </StorySection>
     </View>
-  ),
+  );
+};
+
+export const AllVariants: Story = {
+  args: {
+    text: 'Primary',
+  },
+  render: () => <AllVariantsContent />,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#F4F5F6',
   },
   column: {
     gap: 16,
@@ -306,7 +383,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...AquaTypography.h5SemiBold,
-    color: '#090A0B',
     marginTop: 8,
   },
   row: {

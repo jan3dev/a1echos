@@ -1,9 +1,27 @@
 import type { Meta } from '@storybook/react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Text } from '../text/Text';
 import { FlagIcon } from './FlagIcon';
 import { flagIcons } from './flagIcons';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const FlagIconMeta: Meta<typeof FlagIcon> = {
   title: 'UI Components/FlagIcon',
@@ -23,16 +41,9 @@ const FlagIconMeta: Meta<typeof FlagIcon> = {
   },
   decorators: [
     (Story) => (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 16,
-        }}
-      >
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };

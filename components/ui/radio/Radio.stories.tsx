@@ -2,16 +2,31 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AquaTypography } from '../../../theme/typography';
+import { useTheme } from '../../../theme/useTheme';
 import { Radio } from './Radio';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/Radio',
   component: Radio,
   decorators: [
     (Story) => (
-      <View style={styles.container}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof Radio>;
@@ -21,6 +36,8 @@ type Story = StoryObj<typeof meta>;
 
 const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
   const [selected, setSelected] = useState('option1');
+  const { theme } = useTheme();
+
   return (
     <View style={styles.radioGroup}>
       <View style={styles.radioItem}>
@@ -30,7 +47,9 @@ const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
           onValueChange={setSelected}
           size={size}
         />
-        <Text style={styles.label}>Option 1</Text>
+        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>
+          Option 1
+        </Text>
       </View>
       <View style={styles.radioItem}>
         <Radio
@@ -39,7 +58,9 @@ const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
           onValueChange={setSelected}
           size={size}
         />
-        <Text style={styles.label}>Option 2</Text>
+        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>
+          Option 2
+        </Text>
       </View>
       <View style={styles.radioItem}>
         <Radio
@@ -48,7 +69,9 @@ const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
           onValueChange={setSelected}
           size={size}
         />
-        <Text style={styles.label}>Option 3</Text>
+        <Text style={[styles.label, { color: theme.colors.textPrimary }]}>
+          Option 3
+        </Text>
       </View>
     </View>
   );
@@ -76,15 +99,9 @@ export const Small: Story = {
   render: () => <RadioGroup size="small" />,
 };
 
-export const Disabled: Story = {
-  args: {
-    value: 'option1',
-    groupValue: 'option1',
-    onValueChange: () => {},
-    enabled: false,
-    size: 'large',
-  },
-  render: () => (
+const DisabledContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.radioGroup}>
       <View style={styles.radioItem}>
         <Radio
@@ -93,7 +110,9 @@ export const Disabled: Story = {
           enabled={false}
           size="large"
         />
-        <Text style={styles.label}>Selected Disabled</Text>
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Selected Disabled
+        </Text>
       </View>
       <View style={styles.radioItem}>
         <Radio
@@ -102,10 +121,74 @@ export const Disabled: Story = {
           enabled={false}
           size="large"
         />
-        <Text style={styles.label}>Unselected Disabled</Text>
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Unselected Disabled
+        </Text>
       </View>
     </View>
-  ),
+  );
+};
+
+export const Disabled: Story = {
+  args: {
+    value: 'option1',
+    groupValue: 'option1',
+    onValueChange: () => {},
+    enabled: false,
+    size: 'large',
+  },
+  render: () => <DisabledContent />,
+};
+
+const AllVariantsContent = () => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.column}>
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Large
+        </Text>
+        <RadioGroup size="large" />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Small
+        </Text>
+        <RadioGroup size="small" />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Disabled
+        </Text>
+        <View style={styles.radioGroup}>
+          <View style={styles.radioItem}>
+            <Radio
+              value="option1"
+              groupValue="option1"
+              enabled={false}
+              size="large"
+            />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Selected
+            </Text>
+          </View>
+          <View style={styles.radioItem}>
+            <Radio
+              value="option2"
+              groupValue="option1"
+              enabled={false}
+              size="large"
+            />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Unselected
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 };
 
 export const AllVariants: Story = {
@@ -116,50 +199,13 @@ export const AllVariants: Story = {
     enabled: true,
     size: 'large',
   },
-  render: () => (
-    <View style={styles.column}>
-      <View style={styles.section}>
-        <Text style={styles.heading}>Large</Text>
-        <RadioGroup size="large" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Small</Text>
-        <RadioGroup size="small" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Disabled</Text>
-        <View style={styles.radioGroup}>
-          <View style={styles.radioItem}>
-            <Radio
-              value="option1"
-              groupValue="option1"
-              enabled={false}
-              size="large"
-            />
-            <Text style={styles.label}>Selected</Text>
-          </View>
-          <View style={styles.radioItem}>
-            <Radio
-              value="option2"
-              groupValue="option1"
-              enabled={false}
-              size="large"
-            />
-            <Text style={styles.label}>Unselected</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  ),
+  render: () => <AllVariantsContent />,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#F4F5F6',
   },
   column: {
     gap: 32,
@@ -169,7 +215,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...AquaTypography.h5SemiBold,
-    color: '#090A0B',
   },
   radioGroup: {
     gap: 16,
@@ -181,6 +226,5 @@ const styles = StyleSheet.create({
   },
   label: {
     ...AquaTypography.body1,
-    color: '#090A0B',
   },
 });

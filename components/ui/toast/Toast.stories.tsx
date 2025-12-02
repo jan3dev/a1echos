@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../../theme/useTheme';
 import { Toast, ToastVariant } from './Toast';
 import { useToast } from './useToast';
 
@@ -18,6 +19,7 @@ const ToastDemo = ({
   withSecondaryButton?: boolean;
 }) => {
   const { show, toastState } = useToast();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -36,7 +38,12 @@ const ToastDemo = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Toast" onPress={handleShow} />
       <Toast {...toastState} />
     </View>
@@ -59,6 +66,7 @@ export const WithBothButtons = () => (
 
 export const LongText = () => {
   const { show, toastState } = useToast();
+  const { theme } = useTheme();
 
   const handleShow = () => {
     show({
@@ -73,7 +81,12 @@ export const LongText = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
       <RNButton title="Show Toast with Long Text" onPress={handleShow} />
       <Toast {...toastState} />
     </View>

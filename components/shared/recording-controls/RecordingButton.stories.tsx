@@ -2,8 +2,24 @@ import type { Meta, StoryObj } from '@storybook/react-native';
 import React from 'react';
 import { View } from 'react-native';
 import { TranscriptionState } from '../../../models/TranscriptionState';
-import { darkColors, lightColors } from '../../../theme/themeColors';
+import { useTheme } from '../../../theme/useTheme';
 import { RecordingButton } from './RecordingButton';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.surfaceBackground,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const RecordingButtonMeta: Meta<typeof RecordingButton> = {
   title: 'Shared Components/RecordingButton',
@@ -27,16 +43,9 @@ const RecordingButtonMeta: Meta<typeof RecordingButton> = {
   },
   decorators: [
     (Story) => (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#F4F5F6',
-        }}
-      >
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 };
@@ -45,76 +54,67 @@ export default RecordingButtonMeta;
 
 type Story = StoryObj<typeof RecordingButton>;
 
+const DynamicRecordingButton = (
+  props: Omit<React.ComponentProps<typeof RecordingButton>, 'colors'>
+) => {
+  const { theme } = useTheme();
+  return <RecordingButton {...props} colors={theme.colors} />;
+};
+
 export const Ready: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    enabled: true,
-    colors: lightColors,
-    onRecordingStart: () => console.log('Recording started'),
-  },
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.READY}
+      enabled={true}
+      onRecordingStart={() => console.log('Recording started')}
+    />
+  ),
 };
 
 export const Recording: Story = {
-  args: {
-    state: TranscriptionState.RECORDING,
-    enabled: true,
-    colors: lightColors,
-    onRecordingStop: () => console.log('Recording stopped'),
-  },
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.RECORDING}
+      enabled={true}
+      onRecordingStop={() => console.log('Recording stopped')}
+    />
+  ),
 };
 
 export const Transcribing: Story = {
-  args: {
-    state: TranscriptionState.TRANSCRIBING,
-    enabled: false,
-    colors: lightColors,
-  },
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.TRANSCRIBING}
+      enabled={false}
+    />
+  ),
 };
 
 export const Loading: Story = {
-  args: {
-    state: TranscriptionState.LOADING,
-    enabled: false,
-    colors: lightColors,
-  },
-};
-
-export const DarkThemeReady: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    enabled: true,
-    colors: darkColors,
-  },
-  decorators: [
-    (Story) => (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#090A0B',
-        }}
-      >
-        <Story />
-      </View>
-    ),
-  ],
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.LOADING}
+      enabled={false}
+    />
+  ),
 };
 
 export const LargeSize: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    enabled: true,
-    size: 96,
-    colors: lightColors,
-  },
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.READY}
+      enabled={true}
+      size={96}
+    />
+  ),
 };
 
 export const SmallSize: Story = {
-  args: {
-    state: TranscriptionState.READY,
-    enabled: true,
-    size: 48,
-    colors: lightColors,
-  },
+  render: () => (
+    <DynamicRecordingButton
+      state={TranscriptionState.READY}
+      enabled={true}
+      size={48}
+    />
+  ),
 };

@@ -2,16 +2,31 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AquaTypography } from '../../../theme/typography';
+import { useTheme } from '../../../theme/useTheme';
 import { Toggle } from './Toggle';
+
+const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surfaceBackground },
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
 
 const meta = {
   title: 'UI Components/Toggle',
   component: Toggle,
   decorators: [
     (Story) => (
-      <View style={styles.container}>
+      <StoryContainer>
         <Story />
-      </View>
+      </StoryContainer>
     ),
   ],
 } satisfies Meta<typeof Toggle>;
@@ -42,24 +57,59 @@ export const On: Story = {
   render: () => <ToggleWithState value={true} />,
 };
 
+const DisabledContent = () => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.row}>
+      <View style={styles.item}>
+        <Toggle value={false} enabled={false} />
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Off Disabled
+        </Text>
+      </View>
+      <View style={styles.item}>
+        <Toggle value={true} enabled={false} />
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          On Disabled
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 export const Disabled: Story = {
   args: {
     value: false,
     onValueChange: () => {},
     enabled: false,
   },
-  render: () => (
+  render: () => <DisabledContent />,
+};
+
+const CustomColorsContent = () => {
+  const { theme } = useTheme();
+  return (
     <View style={styles.row}>
       <View style={styles.item}>
-        <Toggle value={false} enabled={false} />
-        <Text style={styles.label}>Off Disabled</Text>
+        <ToggleWithState value={false} activeColor="#18A23B" />
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Custom Green
+        </Text>
       </View>
       <View style={styles.item}>
-        <Toggle value={true} enabled={false} />
-        <Text style={styles.label}>On Disabled</Text>
+        <ToggleWithState value={false} activeColor="#FF3B13" />
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Custom Red
+        </Text>
+      </View>
+      <View style={styles.item}>
+        <ToggleWithState value={false} activeColor="#FFAB1B" />
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Custom Amber
+        </Text>
       </View>
     </View>
-  ),
+  );
 };
 
 export const CustomColors: Story = {
@@ -71,22 +121,74 @@ export const CustomColors: Story = {
     trackColor: '#18A23B',
     thumbColor: '#18A23B',
   },
-  render: () => (
-    <View style={styles.row}>
-      <View style={styles.item}>
-        <ToggleWithState value={false} activeColor="#18A23B" />
-        <Text style={styles.label}>Custom Green</Text>
+  render: () => <CustomColorsContent />,
+};
+
+const AllVariantsContent = () => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.column}>
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Basic
+        </Text>
+        <View style={styles.row}>
+          <View style={styles.item}>
+            <ToggleWithState value={false} />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Off
+            </Text>
+          </View>
+          <View style={styles.item}>
+            <ToggleWithState value={true} />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              On
+            </Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.item}>
-        <ToggleWithState value={false} activeColor="#FF3B13" />
-        <Text style={styles.label}>Custom Red</Text>
+
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Disabled
+        </Text>
+        <View style={styles.row}>
+          <View style={styles.item}>
+            <Toggle value={false} enabled={false} />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Off
+            </Text>
+          </View>
+          <View style={styles.item}>
+            <Toggle value={true} enabled={false} />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              On
+            </Text>
+          </View>
+        </View>
       </View>
-      <View style={styles.item}>
-        <ToggleWithState value={false} activeColor="#FFAB1B" />
-        <Text style={styles.label}>Custom Amber</Text>
+
+      <View style={styles.section}>
+        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
+          Custom Colors
+        </Text>
+        <View style={styles.row}>
+          <View style={styles.item}>
+            <ToggleWithState value={true} activeColor="#18A23B" />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Green
+            </Text>
+          </View>
+          <View style={styles.item}>
+            <ToggleWithState value={true} activeColor="#FF3B13" />
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+              Red
+            </Text>
+          </View>
+        </View>
       </View>
     </View>
-  ),
+  );
 };
 
 export const AllVariants: Story = {
@@ -95,58 +197,13 @@ export const AllVariants: Story = {
     onValueChange: () => {},
     enabled: true,
   },
-  render: () => (
-    <View style={styles.column}>
-      <View style={styles.section}>
-        <Text style={styles.heading}>Basic</Text>
-        <View style={styles.row}>
-          <View style={styles.item}>
-            <ToggleWithState value={false} />
-            <Text style={styles.label}>Off</Text>
-          </View>
-          <View style={styles.item}>
-            <ToggleWithState value={true} />
-            <Text style={styles.label}>On</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Disabled</Text>
-        <View style={styles.row}>
-          <View style={styles.item}>
-            <Toggle value={false} enabled={false} />
-            <Text style={styles.label}>Off</Text>
-          </View>
-          <View style={styles.item}>
-            <Toggle value={true} enabled={false} />
-            <Text style={styles.label}>On</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.heading}>Custom Colors</Text>
-        <View style={styles.row}>
-          <View style={styles.item}>
-            <ToggleWithState value={true} activeColor="#18A23B" />
-            <Text style={styles.label}>Green</Text>
-          </View>
-          <View style={styles.item}>
-            <ToggleWithState value={true} activeColor="#FF3B13" />
-            <Text style={styles.label}>Red</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  ),
+  render: () => <AllVariantsContent />,
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#F4F5F6',
   },
   column: {
     gap: 32,
@@ -156,7 +213,6 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...AquaTypography.h5SemiBold,
-    color: '#090A0B',
   },
   row: {
     flexDirection: 'row',
@@ -169,6 +225,5 @@ const styles = StyleSheet.create({
   },
   label: {
     ...AquaTypography.body2,
-    color: '#4C5357',
   },
 });
