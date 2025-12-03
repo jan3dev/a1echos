@@ -1,0 +1,7 @@
+files:
+  - source: /localization/en/common.json
+    translation: /localization/%two_letters_code%/common.json
+  - source: /localization/en/languages.json
+    translation: /localization/%two_letters_code%/languages.json
+bundles:
+  - 1

@@ -1,74 +1,65 @@
+import { useTranslation } from 'react-i18next';
+
 export const useLocalization = () => {
+  const { t } = useTranslation();
+
   return {
+    t,
     loc: {
-      sessionRenameTitle: 'Rename',
-      delete: 'Delete',
-      modifiedPrefix: 'Modified',
-      createdPrefix: 'Created',
-      save: 'Save',
-      cancel: 'Cancel',
-      edit: 'Edit',
-      share: 'Share',
-      sessionNameLabel: 'Session Name',
-      sessionNameMaxLengthHelper: 'Max 30 characters.',
-      homeDeleteSelectedSessionsTitle: 'Delete Selected Sessions?',
+      sessionRenameTitle: t('sessionRenameTitle'),
+      delete: t('delete'),
+      modifiedPrefix: t('modifiedPrefix'),
+      createdPrefix: t('createdPrefix'),
+      save: t('save'),
+      cancel: t('cancel'),
+      edit: t('edit'),
+      share: t('share'),
+      sessionNameLabel: t('sessionNameLabel'),
+      sessionNameMaxLengthHelper: t('sessionNameMaxLengthHelper'),
+      homeDeleteSelectedSessionsTitle: t('homeDeleteSelectedSessionsTitle'),
       homeDeleteSelectedSessionsMessage: (count: number) =>
-        `Delete ${count} session${
-          count === 1 ? '' : 's'
-        }? This action cannot be undone.`,
+        t('homeDeleteSelectedSessionsMessage', { count }),
       homeSessionsDeleted: (count: number) =>
-        `${count} Session${count === 1 ? '' : 's'} deleted`,
-      transcriptionCount: (count: number) =>
-        `${count} Transcription${count === 1 ? '' : 's'}`,
-      // Settings Footer
-      followUsOnX: 'Follow us on X',
-      couldNotOpenLink: 'Could not open link',
-      // Incognito Explainer Modal
-      incognitoExplainerTitle: 'Incognito Mode',
-      incognitoExplainerBody:
-        "Transcribe without saving. This session won't be stored or synced anywhere.",
-      incognitoExplainerCta: 'Got it!',
-      // Error View
-      errorPrefix: 'Error:',
-      retry: 'Retry',
-      // Home Screen
-      emptySessionsMessage: 'Hit the record button to start transcribing',
-      homeMicrophoneDenied:
-        'Microphone access denied. Please enable it in Settings.',
-      homeMicrophonePermissionRequired:
-        'Microphone permission required to record.',
-      homeFailedStartRecording: 'Failed to start recording',
+        t('homeSessionsDeleted', { count }),
+      transcriptionCount: (count: number) => t('transcriptionCount', { count }),
+      followUsOnX: t('followUs'),
+      couldNotOpenLink: t('couldNotOpenLink'),
+      incognitoExplainerTitle: t('incognitoExplainerTitle'),
+      incognitoExplainerBody: t('incognitoExplainerBody'),
+      incognitoExplainerCta: t('incognitoExplainerCta'),
+      errorPrefix: t('errorPrefix'),
+      retry: t('retry'),
+      emptySessionsMessage: t('emptySessionsMessage'),
+      homeMicrophoneDenied: t('microphoneAccessDeniedMessage'),
+      homeMicrophonePermissionRequired: t(
+        'microphoneAccessRequiredMessageAndroid'
+      ),
+      homeFailedStartRecording: t('homeFailedStartRecording'),
       homeErrorCreatingSession: (error: string) =>
-        `Failed to create session: ${error}`,
-      // Session Detail Screen
-      sessionDeleteTranscriptionsTitle: 'Delete Transcriptions?',
+        t('homeErrorCreatingSession', { error }),
+      sessionDeleteTranscriptionsTitle: t('sessionDeleteTranscriptionsTitle'),
       sessionDeleteTranscriptionsMessage: (count: number) =>
-        `Delete ${count} transcription${
-          count === 1 ? '' : 's'
-        }? This action cannot be undone.`,
+        t('sessionDeleteTranscriptionsMessage', { count }),
       sessionTranscriptionsDeleted: (count: number) =>
-        `${count} transcription${count === 1 ? '' : 's'} deleted`,
-      allTranscriptionsCopied: 'All transcriptions copied',
-      noTranscriptionsToCopy: 'No transcriptions to copy',
-      copyFailed: (error: string) => `Failed to copy: ${error}`,
-      shareFailed: (error: string) => `Failed to share: ${error}`,
-      noTranscriptionsSelectedToShare: 'No transcriptions selected to share',
-      sessionNotFound: 'Session not found',
-      // Settings Screen
-      settingsTitle: 'Settings',
-      modelTitle: 'Model',
-      themeTitle: 'Theme',
-      spokenLanguageTitle: 'Spoken Language',
-      auto: 'Auto',
-      light: 'Light',
-      dark: 'Dark',
-      whisperModelRealtimeTitle: 'Whisper (Real-time)',
-      whisperModelFileTitle: 'Whisper',
-      whisperModelSubtitle: 'High accuracy',
-      modelDescription:
-        'Select which model to use. All processing happens on your device.',
-      spokenLanguageDescription:
-        'Choose which language the model should detect. For best results, select the language you mainly speak.',
+        t('sessionTranscriptionsDeleted', { count }),
+      allTranscriptionsCopied: t('allTranscriptionsCopied'),
+      noTranscriptionsToCopy: t('noTranscriptionsToCopy'),
+      copyFailed: (error: string) => t('copyFailed', { error }),
+      shareFailed: (error: string) => t('shareFailed', { error }),
+      noTranscriptionsSelectedToShare: t('noTranscriptionsSelectedToShare'),
+      sessionNotFound: t('sessionNotFound'),
+      settingsTitle: t('settingsTitle'),
+      modelTitle: t('modelTitle'),
+      themeTitle: t('themeTitle'),
+      spokenLanguageTitle: t('spokenLanguageTitle'),
+      auto: t('auto'),
+      light: t('light'),
+      dark: t('dark'),
+      whisperModelRealtimeTitle: t('whisperModelRealtimeTitle'),
+      whisperModelFileTitle: t('whisperModelFileTitle'),
+      whisperModelSubtitle: t('whisperModelSubtitle'),
+      modelDescription: t('modelDescription'),
+      spokenLanguageDescription: t('spokenLanguageDescription'),
     },
   };
 };
