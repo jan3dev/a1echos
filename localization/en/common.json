@@ -84,5 +84,8 @@
   "microphoneAccessDeniedTitle": "Microphone Access Denied",
   "microphoneAccessDeniedMessage": "You have permanently denied microphone access. Please enable it in Settings to use recording features.",
   "openSettings": "Open Settings",
-  "grantPermission": "Grant Permission"
+  "grantPermission": "Grant Permission",
+  "recordingTooShort": "Recording was too short",
+  "transcriptionFailed": "Transcription failed",
+  "failedToInitializeEngine": "Failed to initialize transcription engine"
 }

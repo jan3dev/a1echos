@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, {
   useCallback,
@@ -46,6 +47,7 @@ import { useTheme } from '../../../theme';
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -56,6 +58,7 @@ export default function SessionScreen() {
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isCancellingEdit, setIsCancellingEdit] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showRenameModal, setShowRenameModal] = useState(false);
 
@@ -72,7 +75,13 @@ export default function SessionScreen() {
   const transcriptions = useSessionTranscriptions(id);
   const livePreview = useTranscriptionStore((s) => s.livePreview);
 
-  const session = useMemo(() => findSessionById(id), [findSessionById, id]);
+  const sessions = useSessionStore((s) => s.sessions);
+  const incognitoSession = useSessionStore((s) => s.incognitoSession);
+  const session = useMemo(
+    () => findSessionById(id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [findSessionById, id, sessions, incognitoSession]
+  );
 
   const {
     selectionMode,
@@ -142,11 +151,28 @@ export default function SessionScreen() {
     };
   }, [exitSelectionMode]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+      if (isRecording) {
+        e.preventDefault();
+        await stopRecordingAndSave();
+        navigation.dispatch(e.data.action);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, isRecording, stopRecordingAndSave]);
+
   // Handle back button press
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       () => {
+        if (isRecording) {
+          stopRecordingAndSave();
+          router.back();
+          return true;
+        }
         if (isEditing) {
           handleCancelEdit();
           return true;
@@ -161,18 +187,29 @@ export default function SessionScreen() {
 
     return () => backHandler.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, selectionMode, exitSelectionMode]);
+  }, [
+    isRecording,
+    isEditing,
+    selectionMode,
+    exitSelectionMode,
+    stopRecordingAndSave,
+  ]);
 
   const handleBackPressed = useCallback(() => {
+    if (isRecording) {
+      stopRecordingAndSave().then(() => router.back());
+      return;
+    }
     if (isEditing) {
       handleCancelEdit();
       return;
     }
     router.back();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, router]);
+  }, [isRecording, isEditing, router, stopRecordingAndSave]);
 
   const handleCancelEdit = useCallback(() => {
+    setIsCancellingEdit(true);
     Keyboard.dismiss();
     setIsEditing(false);
   }, []);
@@ -289,6 +326,7 @@ export default function SessionScreen() {
 
   const handleEditEnd = useCallback(() => {
     setIsEditing(false);
+    setIsCancellingEdit(false);
   }, []);
 
   const handleRecordingStart = useCallback(async () => {
@@ -348,6 +386,7 @@ export default function SessionScreen() {
           onTranscriptionLongPress={handleTranscriptionLongPress}
           onEditStart={handleEditStart}
           onEditEnd={handleEditEnd}
+          isCancellingEdit={isCancellingEdit}
         />
       )}
 

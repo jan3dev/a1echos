@@ -116,7 +116,12 @@ export const Tooltip = ({
     const isTop = pointerPosition === 'top';
 
     return (
-      <View style={[styles.pointerContainer]}>
+      <View
+        style={[
+          styles.pointerContainer,
+          isTop ? { marginBottom: -1 } : { marginTop: -1 },
+        ]}
+      >
         <Svg
           width={pointerSize * 2}
           height={pointerSize}
@@ -171,6 +176,7 @@ export const Tooltip = ({
         weight="medium"
         color={getTextColor()}
         style={styles.messageText}
+        numberOfLines={0}
       >
         {message}
       </Text>
@@ -250,7 +256,7 @@ const styles = StyleSheet.create({
     width: 8,
   },
   messageText: {
-    flex: 1,
+    flexShrink: 1,
   },
   trailingSpacing: {
     width: 16,

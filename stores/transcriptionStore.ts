@@ -1,10 +1,15 @@
+import * as Crypto from 'expo-crypto';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
+import { ModelType } from '../models/ModelType';
 import { Transcription } from '../models/Transcription';
 import { TranscriptionState } from '../models/TranscriptionState';
+import { audioService } from '../services/AudioService';
 import { storageService } from '../services/StorageService';
+import { whisperService } from '../services/WhisperService';
 import { useSessionStore } from './sessionStore';
+import { useSettingsStore } from './settingsStore';
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -23,10 +28,14 @@ interface TranscriptionStore {
   isLoaded: boolean;
   isInitialized: boolean;
   initError: string | null;
+  isWhisperReady: boolean;
 
   isOperationLocked: boolean;
   activeOperations: Set<string>;
   lastOperationTime: Date | null;
+
+  audioLevelUnsubscribe: (() => void) | null;
+  partialResultUnsubscribe: (() => void) | null;
 
   isLoading: () => boolean;
   isRecording: () => boolean;
@@ -79,6 +88,7 @@ interface TranscriptionStore {
   initialize: () => Promise<void>;
   clearErrorState: () => void;
   forceSystemReset: () => Promise<void>;
+  dispose: () => Promise<void>;
 }
 
 const validateStateTransition = (
@@ -200,10 +210,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     isLoaded: false,
     isInitialized: false,
     initError: null,
+    isWhisperReady: false,
 
     isOperationLocked: false,
     activeOperations: new Set(),
     lastOperationTime: null,
+
+    audioLevelUnsubscribe: null,
+    partialResultUnsubscribe: null,
 
     isLoading: () => get().state === TranscriptionState.LOADING,
     isRecording: () => get().state === TranscriptionState.RECORDING,
@@ -590,6 +604,23 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           }
         }
 
+        // Get settings for model type and language
+        const settingsState = useSettingsStore.getState();
+        const modelType = settingsState.selectedModelType;
+        const languageCode = settingsState.selectedLanguage?.code;
+        const isRealtime = modelType === ModelType.WHISPER_REALTIME;
+
+        // Ensure Whisper is initialized
+        if (!state.isWhisperReady) {
+          const initialized = await whisperService.initialize();
+          if (!initialized) {
+            get().setError('Failed to initialize transcription engine');
+            releaseOperationLock(operationName);
+            return false;
+          }
+          set({ isWhisperReady: true });
+        }
+
         if (!get().transitionTo(TranscriptionState.RECORDING)) {
           releaseOperationLock(operationName);
           return false;
@@ -600,6 +631,40 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         get().clearLivePreview();
         get().clearLoadingPreview();
+
+        if (isRealtime) {
+          // Real-time mode: start Whisper real-time transcription
+          const realtimeStarted =
+            await whisperService.startRealtimeTranscription(languageCode);
+          if (!realtimeStarted) {
+            get().transitionTo(TranscriptionState.READY);
+            get().clearRecordingSessionId();
+            get().setError('Failed to start real-time transcription');
+            releaseOperationLock(operationName);
+            return false;
+          }
+
+          // Subscribe to partial results
+          const unsubscribe = whisperService.subscribeToPartialResults(
+            (partial) => {
+              get().onPartialTranscription(partial);
+            }
+          );
+          set({ partialResultUnsubscribe: unsubscribe });
+        } else {
+          // File-based mode: start audio recording and show loading preview
+          const recordingStarted = await audioService.startRecording();
+          if (!recordingStarted) {
+            get().transitionTo(TranscriptionState.READY);
+            get().clearRecordingSessionId();
+            get().setError('Failed to start recording');
+            releaseOperationLock(operationName);
+            return false;
+          }
+
+          // Create loading preview for file-based mode
+          get().createLoadingPreview(sessionId);
+        }
 
         return true;
       } catch (error) {
@@ -624,22 +689,114 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return;
       }
 
+      const state = get();
+      const sessionId = state.recordingSessionId;
+      const settingsState = useSettingsStore.getState();
+      const modelType = settingsState.selectedModelType;
+      const languageCode = settingsState.selectedLanguage?.code;
+      const isRealtime = modelType === ModelType.WHISPER_REALTIME;
+      const isIncognito = useSessionStore.getState().isActiveSessionIncognito();
+
       try {
         if (!get().transitionTo(TranscriptionState.TRANSCRIBING)) {
           releaseOperationLock(operationName);
           return;
         }
 
-        get().clearLivePreview();
-        get().clearLoadingPreview();
+        let transcribedText: string | null = null;
+        let audioPath: string = '';
 
-        get().transitionTo(TranscriptionState.READY);
+        if (isRealtime) {
+          // Real-time mode: stop Whisper and get final text
+          transcribedText = await whisperService.stopRealtimeTranscription();
+
+          // Clean up partial result subscription
+          if (state.partialResultUnsubscribe) {
+            state.partialResultUnsubscribe();
+            set({ partialResultUnsubscribe: null });
+          }
+        } else {
+          // File-based mode: stop recording and transcribe
+          const recordedFilePath = await audioService.stopRecording();
+
+          if (!recordedFilePath) {
+            get().setError('Recording was too short or failed');
+            get().clearLivePreview();
+            get().clearLoadingPreview();
+            get().transitionTo(TranscriptionState.READY);
+            releaseOperationLock(operationName);
+            return;
+          }
+
+          // Save audio file to app's audio directory
+          const fileName = `audio_${Date.now()}.wav`;
+          audioPath = await storageService.saveAudioFile(
+            recordedFilePath,
+            fileName
+          );
+
+          // Transcribe the audio file
+          transcribedText = await whisperService.transcribeFile(
+            audioPath,
+            languageCode
+          );
+        }
+
+        // Create and save transcription if we have text
+        if (transcribedText && transcribedText.trim() && sessionId) {
+          const transcription: Transcription = {
+            id: Crypto.randomUUID(),
+            sessionId,
+            text: transcribedText.trim(),
+            timestamp: new Date(),
+            audioPath,
+          };
+
+          // Clear previews and add transcription atomically to avoid glitch
+          const currentState = get();
+          const newTranscriptions = [
+            ...currentState.transcriptions,
+            transcription,
+          ];
+          newTranscriptions.sort(
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+          );
+          set({
+            transcriptions: newTranscriptions,
+            livePreview: null,
+            loadingPreview: null,
+            currentStreamingText: '',
+          });
+          get().transitionTo(TranscriptionState.READY);
+          // Persist to storage (skip for incognito sessions)
+          if (!isIncognito) {
+            await storageService.saveTranscription(transcription);
+            await useSessionStore
+              .getState()
+              .updateSessionModifiedTimestamp(sessionId);
+          }
+        } else {
+          // No transcription to add, just clear previews and transition
+          set({
+            livePreview: null,
+            loadingPreview: null,
+            currentStreamingText: '',
+            state: TranscriptionState.READY,
+          });
+        }
       } catch (error) {
         console.error('Error stopping recording', error);
         get().setError(`Error stopping recording: ${error}`);
 
         get().clearLivePreview();
         get().clearLoadingPreview();
+
+        // Try to recover to ready state
+        try {
+          get().transitionTo(TranscriptionState.READY);
+        } catch {
+          // Already in error state
+        }
       } finally {
         get().clearRecordingSessionId();
         releaseOperationLock(operationName);
@@ -686,6 +843,26 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         await get()._loadTranscriptionsInternal();
 
+        // Initialize Whisper service
+        const whisperInitialized = await whisperService.initialize();
+        if (!whisperInitialized) {
+          console.error(
+            'Whisper initialization failed:',
+            whisperService.initializationStatus
+          );
+          set({ isWhisperReady: false });
+        } else {
+          set({ isWhisperReady: true });
+        }
+
+        // Subscribe to audio level updates
+        const unsubscribeAudioLevel = audioService.subscribeToAudioLevel(
+          (level) => {
+            get().updateAudioLevel(level);
+          }
+        );
+        set({ audioLevelUnsubscribe: unsubscribeAudioLevel });
+
         get().transitionTo(TranscriptionState.READY);
 
         set({ isInitialized: true });
@@ -708,10 +885,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     forceSystemReset: async () => {
+      const state = get();
+
+      // Clean up subscriptions
+      if (state.partialResultUnsubscribe) {
+        state.partialResultUnsubscribe();
+      }
+
       set({
         isOperationLocked: false,
         activeOperations: new Set(),
         lastOperationTime: null,
+        partialResultUnsubscribe: null,
       });
 
       get().clearRecordingSessionId();
@@ -719,6 +904,26 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       get().clearLoadingPreview();
 
       get().transitionTo(TranscriptionState.READY);
+    },
+
+    dispose: async () => {
+      const state = get();
+
+      // Clean up audio level subscription
+      if (state.audioLevelUnsubscribe) {
+        state.audioLevelUnsubscribe();
+        set({ audioLevelUnsubscribe: null });
+      }
+
+      // Clean up partial result subscription
+      if (state.partialResultUnsubscribe) {
+        state.partialResultUnsubscribe();
+        set({ partialResultUnsubscribe: null });
+      }
+
+      // Dispose services
+      await audioService.dispose();
+      await whisperService.dispose();
     },
   };
 });

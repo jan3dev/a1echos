@@ -5,11 +5,13 @@ import { TranscriptionList } from './TranscriptionList';
 
 interface LiveTranscriptionViewProps {
   listRef?: React.RefObject<FlatList<Transcription>>;
+  topPadding?: number;
   bottomPadding?: number;
 }
 
 export const LiveTranscriptionView = ({
   listRef,
+  topPadding = 0,
   bottomPadding = 16.0,
 }: LiveTranscriptionViewProps) => {
   return (
@@ -21,6 +23,7 @@ export const LiveTranscriptionView = ({
           selectedTranscriptionIds={new Set()}
           onTranscriptionTap={() => {}}
           onTranscriptionLongPress={() => {}}
+          topPadding={topPadding}
           bottomPadding={bottomPadding}
         />
       </View>

@@ -1,11 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { FlatList } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { ModelType } from '../../../models/ModelType';
 import { Transcription } from '../../../models/Transcription';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import {
-    useSessionTranscriptions,
-    useTranscriptionStore,
+  useSessionTranscriptions,
+  useTranscriptionStore,
 } from '../../../stores/transcriptionStore';
 import { TranscriptionItem } from './TranscriptionItem';
 
@@ -16,6 +16,8 @@ interface TranscriptionListProps {
   selectedTranscriptionIds?: Set<string>;
   onEditModeStarted?: () => void;
   onEditModeEnded?: () => void;
+  isCancellingEdit?: boolean;
+  topPadding?: number;
   bottomPadding?: number;
   listRef?: React.RefObject<FlatList<Transcription>>;
 }
@@ -41,6 +43,8 @@ export const TranscriptionList = ({
   selectedTranscriptionIds = new Set(),
   onEditModeStarted,
   onEditModeEnded,
+  isCancellingEdit = false,
+  topPadding = 0,
   bottomPadding = 16,
   listRef,
 }: TranscriptionListProps) => {
@@ -103,10 +107,18 @@ export const TranscriptionList = ({
       };
     }
 
-    // Handle Loading/Transcribing
-    if (isTranscribing && loadingPreview) {
+    // Handle Loading/Transcribing (both file-based and real-time finalization)
+    if (isTranscribing) {
+      const previewItem = loadingPreview ||
+        livePreview || {
+          id: 'transcribing_preview',
+          text: '',
+          timestamp: new Date(),
+          audioPath: '',
+          sessionId: activeSessionId,
+        };
       return {
-        item: loadingPreview,
+        item: previewItem,
         isStreamingLive: false,
         isLoadingResult: true,
         isRecording: false,
@@ -157,8 +169,10 @@ export const TranscriptionList = ({
       keyExtractor={(item) => item.id}
       contentContainerStyle={{
         padding: 16,
-        paddingBottom: bottomPadding,
+        paddingTop: topPadding + 16,
+        flexGrow: 1,
       }}
+      ListFooterComponent={<View style={{ height: bottomPadding }} />}
       renderItem={({ item }) => {
         const isPreview = previewState.item?.id === item.id;
         const itemState = isPreview ? previewState : EmptyPreviewState;
@@ -181,6 +195,7 @@ export const TranscriptionList = ({
             isWhisperRecording={itemState.isRecording}
             isEditing={isEditing}
             isAnyEditing={isAnyEditing}
+            isCancelling={isCancellingEdit}
             onStartEdit={() => handleStartEdit(item.id)}
             onEndEdit={handleEndEdit}
             onTranscriptionUpdate={handleUpdateTranscription}

@@ -9,7 +9,10 @@ defaultConfig.transformer = {
 
 defaultConfig.resolver = {
   ...defaultConfig.resolver,
-  assetExts: defaultConfig.resolver.assetExts.filter((ext) => ext !== 'svg'),
+  assetExts: [
+    ...defaultConfig.resolver.assetExts.filter((ext) => ext !== 'svg'),
+    'bin',
+  ],
   sourceExts: [...defaultConfig.resolver.sourceExts, 'svg'],
 };
 

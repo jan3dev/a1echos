@@ -1,20 +1,19 @@
 import React from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { ModelType } from '../../../models/ModelType';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Transcription } from '../../../models/Transcription';
-import { useSettingsStore } from '../../../stores/settingsStore';
 import { useTranscriptionStore } from '../../../stores/transcriptionStore';
 import { useTheme } from '../../../theme/useTheme';
-import { LiveTranscriptionView } from './LiveTranscriptionView';
 import { TranscriptionList } from './TranscriptionList';
 
 const RECORDING_CONTROLS_HEIGHT = 96;
+const APP_BAR_HEIGHT = 60;
 
 interface TranscriptionContentViewProps {
   listRef?: React.RefObject<FlatList<Transcription>>;
@@ -24,6 +23,7 @@ interface TranscriptionContentViewProps {
   onTranscriptionLongPress: (id: string) => void;
   onEditStart?: () => void;
   onEditEnd?: () => void;
+  isCancellingEdit?: boolean;
 }
 
 export const TranscriptionContentView = ({
@@ -34,17 +34,17 @@ export const TranscriptionContentView = ({
   onTranscriptionLongPress,
   onEditStart,
   onEditEnd,
+  isCancellingEdit = false,
 }: TranscriptionContentViewProps) => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const transcriptionStore = useTranscriptionStore();
-  const settingsStore = useSettingsStore();
 
   const isLoading = transcriptionStore.isLoading();
   const error = transcriptionStore.getError();
-  const isRecording = transcriptionStore.isRecording();
-  const isRealtime =
-    settingsStore.selectedModelType === ModelType.WHISPER_REALTIME;
-  const hasLivePreview = !!transcriptionStore.livePreview;
+
+  const topPadding = insets.top + APP_BAR_HEIGHT;
+  const bottomPadding = insets.bottom + RECORDING_CONTROLS_HEIGHT + 24;
 
   if (isLoading) {
     return (
@@ -62,18 +62,6 @@ export const TranscriptionContentView = ({
     );
   }
 
-  const shouldShowLiveTranscription =
-    isRecording || (isRealtime && hasLivePreview);
-
-  if (shouldShowLiveTranscription) {
-    return (
-      <LiveTranscriptionView
-        listRef={listRef}
-        bottomPadding={RECORDING_CONTROLS_HEIGHT}
-      />
-    );
-  }
-
   return (
     <TranscriptionList
       listRef={listRef}
@@ -83,7 +71,9 @@ export const TranscriptionContentView = ({
       onTranscriptionLongPress={onTranscriptionLongPress}
       onEditModeStarted={onEditStart}
       onEditModeEnded={onEditEnd}
-      bottomPadding={RECORDING_CONTROLS_HEIGHT}
+      isCancellingEdit={isCancellingEdit}
+      topPadding={topPadding}
+      bottomPadding={bottomPadding}
     />
   );
 };

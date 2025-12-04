@@ -101,7 +101,7 @@ export const SessionAppBar = ({
           key="language"
           onPress={onLanguageFlagPressed}
           hitSlop={10}
-          style={[styles.actionButton, styles.languageButton]}
+          style={[styles.languageButton]}
         >
           <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
         </Pressable>,
@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   languageButton: {
-    marginRight: 12,
+    marginRight: 8,
+    marginLeft: 0,
   },
 });

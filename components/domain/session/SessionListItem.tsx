@@ -36,7 +36,7 @@ export const SessionListItem = ({
       iconTrailing={
         selectionMode ? (
           <View pointerEvents="none">
-            <Checkbox value={isSelected} size="small" enabled={true} />
+            <Checkbox value={isSelected} size="large" enabled={true} />
           </View>
         ) : (
           <SessionMoreMenu session={session} />

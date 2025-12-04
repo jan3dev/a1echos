@@ -60,6 +60,9 @@ export const useLocalization = () => {
       whisperModelSubtitle: t('whisperModelSubtitle'),
       modelDescription: t('modelDescription'),
       spokenLanguageDescription: t('spokenLanguageDescription'),
+      recordingTooShort: t('recordingTooShort'),
+      transcriptionFailed: t('transcriptionFailed'),
+      failedToInitializeEngine: t('failedToInitializeEngine'),
     },
   };
 };

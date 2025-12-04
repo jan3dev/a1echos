@@ -30,6 +30,7 @@ interface TranscriptionItemProps {
   onLongPress?: () => void;
   isEditing?: boolean;
   isAnyEditing?: boolean;
+  isCancelling?: boolean;
   onStartEdit?: () => void;
   onEndEdit?: () => void;
   onTranscriptionUpdate?: (updated: Transcription) => void;
@@ -50,6 +51,7 @@ export const TranscriptionItem = ({
   onStartEdit,
   onEndEdit,
   onTranscriptionUpdate,
+  isCancelling = false,
   style,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
@@ -64,6 +66,13 @@ export const TranscriptionItem = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
+  useEffect(() => {
+    if (isCancelling && isEditing) {
+      setEditText(transcription.text);
+      onEndEdit?.();
+    }
+  }, [isCancelling, isEditing, transcription.text, onEndEdit]);
+
   const handleSaveEdit = () => {
     const newText = editText.trim();
     if (newText) {
@@ -74,7 +83,6 @@ export const TranscriptionItem = ({
         });
       }
     } else {
-      // Revert to original text if empty
       setEditText(transcription.text);
     }
     onEndEdit?.();
@@ -169,6 +177,7 @@ export const TranscriptionItem = ({
         <View style={styles.actionsContainer}>
           {showCheckbox && (
             <Checkbox
+              size="small"
               value={isSelected}
               onValueChange={() => {}}
               enabled={true}
@@ -219,14 +228,14 @@ export const TranscriptionItem = ({
             ]}
           />
         ) : showSkeleton ? (
-          <View>
+          <View style={styles.skeletonContainer}>
+            <Skeleton borderRadius={8} width="100%" height={16} />
             <Skeleton
-              borderRadius={16}
-              width="100%"
-              height={20}
-              style={{ marginBottom: 8 }}
+              borderRadius={8}
+              width="60%"
+              height={16}
+              style={{ marginTop: 6 }}
             />
-            <Skeleton borderRadius={16} width="50%" height={20} />
           </View>
         ) : (
           <Text variant="body1" color={theme.colors.textSecondary}>
@@ -269,6 +278,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     minHeight: 24,
+  },
+  skeletonContainer: {
+    minHeight: 38,
   },
   input: {
     padding: 0,
