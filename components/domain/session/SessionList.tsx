@@ -2,7 +2,7 @@ import { AquaPrimitiveColors } from '@/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Session } from '../../../models/Session';
-import { useSessionStore } from '../../../stores/sessionStore';
+import { useSessions } from '../../../stores/sessionStore';
 import { useTheme } from '../../../theme/useTheme';
 import { Divider } from '../../ui/divider';
 import { SessionListItem } from './SessionListItem';
@@ -23,7 +23,7 @@ export const SessionList = ({
   onSelectionToggle,
 }: SessionListProps) => {
   const { theme } = useTheme();
-  const { sessions } = useSessionStore();
+  const sessions = useSessions();
 
   return (
     <View

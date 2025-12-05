@@ -352,7 +352,8 @@ export const initializeSessionStore = async (): Promise<void> => {
   await useSessionStore.getState().loadSessions();
 };
 
-export const useSessions = () => useSessionStore(useShallow((s) => s.sessions));
+export const useSessions = () =>
+  useSessionStore(useShallow((s) => s.getSessions()));
 export const useActiveSessionId = () =>
   useSessionStore((s) => s.activeSessionId);
 export const useIncognitoSession = () =>

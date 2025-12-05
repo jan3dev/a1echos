@@ -22,6 +22,7 @@ import { RecordingControlsView } from '../../../components/shared/recording-cont
 import { Button } from '../../../components/ui/button';
 import { Toast, useToast } from '../../../components/ui/toast';
 import { useLocalization } from '../../../hooks/useLocalization';
+import { useSessionOperations } from '../../../hooks/useSessionOperations';
 import { useTranscriptionSelection } from '../../../hooks/useTranscriptionSelection';
 import { ModelType } from '../../../models/ModelType';
 import { Transcription } from '../../../models/Transcription';
@@ -65,6 +66,7 @@ export default function SessionScreen() {
   const findSessionById = useFindSessionById();
   const renameSessionAction = useRenameSession();
   const switchSession = useSessionStore((s) => s.switchSession);
+  const { endIncognitoSession } = useSessionOperations();
   const selectedModelType = useSelectedModelType();
   const transcriptionState = useTranscriptionState();
   const audioLevel = useAudioLevel();
@@ -157,11 +159,28 @@ export default function SessionScreen() {
         e.preventDefault();
         await stopRecordingAndSave();
         navigation.dispatch(e.data.action);
+        return;
+      }
+      if (session?.isIncognito) {
+        e.preventDefault();
+        try {
+          await endIncognitoSession();
+          navigation.dispatch(e.data.action);
+        } catch (error) {
+          console.error('Failed to end incognito session:', error);
+          // Optionally show a toast notification
+        }
       }
     });
 
     return unsubscribe;
-  }, [navigation, isRecording, stopRecordingAndSave]);
+  }, [
+    navigation,
+    isRecording,
+    stopRecordingAndSave,
+    session?.isIncognito,
+    endIncognitoSession,
+  ]);
 
   // Handle back button press
   useEffect(() => {

@@ -134,8 +134,8 @@ export default function HomeScreen() {
       const sessionId = await createSession(
         undefined,
         isIncognitoMode,
-        'Session',
-        'Incognito'
+        loc.recordingPrefix,
+        loc.incognitoModeTitle
       );
 
       const recordingStarted = await startTranscriptionRecording();

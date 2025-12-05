@@ -8,8 +8,9 @@ import {
   View,
 } from 'react-native';
 import { useLocalization } from '../../../hooks/useLocalization';
+import { useSessionOperations } from '../../../hooks/useSessionOperations';
 import { Session } from '../../../models/Session';
-import { useSessionStore } from '../../../stores/sessionStore';
+import { useRenameSession } from '../../../stores/sessionStore';
 import { useTheme } from '../../../theme/useTheme';
 import { formatDate, formatSessionSubtitle } from '../../../utils';
 import { ListItem } from '../../shared/list-item/ListItem';
@@ -44,7 +45,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   const { show: showSuccessTooltip, tooltipState: successTooltipState } =
     useTooltip();
 
-  const { renameSession, deleteSession } = useSessionStore();
+  const renameSession = useRenameSession();
+  const { deleteSession } = useSessionOperations();
 
   const handleRename = (newName: string) => {
     renameSession(session.id, newName);
