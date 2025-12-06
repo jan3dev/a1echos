@@ -11,6 +11,7 @@ import { useLocalization } from '../../../hooks/useLocalization';
 import { useSessionOperations } from '../../../hooks/useSessionOperations';
 import { Session } from '../../../models/Session';
 import { useRenameSession } from '../../../stores/sessionStore';
+import { useShowGlobalTooltip } from '../../../stores/uiStore';
 import { useTheme } from '../../../theme/useTheme';
 import { formatDate, formatSessionSubtitle } from '../../../utils';
 import { ListItem } from '../../shared/list-item/ListItem';
@@ -18,8 +19,6 @@ import { Icon } from '../../ui/icon/Icon';
 import { Text } from '../../ui/text/Text';
 import { Toast } from '../../ui/toast/Toast';
 import { useToast } from '../../ui/toast/useToast';
-import { Tooltip } from '../../ui/tooltip/Tooltip';
-import { useTooltip } from '../../ui/tooltip/useTooltip';
 import { SessionInputModal } from './SessionInputModal';
 
 interface SessionMoreMenuProps {
@@ -42,8 +41,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
     hide: hideDeleteToast,
     toastState: deleteToastState,
   } = useToast();
-  const { show: showSuccessTooltip, tooltipState: successTooltipState } =
-    useTooltip();
+  const showGlobalTooltip = useShowGlobalTooltip();
 
   const renameSession = useRenameSession();
   const { deleteSession } = useSessionOperations();
@@ -71,15 +69,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
     try {
       await deleteSession(session.id);
-      // TODO: Move success tooltip to a global provider since this component unmounts on delete
-      showSuccessTooltip({
-        message: loc.homeSessionsDeleted(1),
-        variant: 'normal',
-        isDismissible: false,
-        duration: 3000,
-      });
+      showGlobalTooltip(loc.homeSessionsDeleted(1));
     } catch (error) {
-      // TODO: Show error feedback to user
       console.error('Failed to delete session:', error);
     }
   };
@@ -197,12 +188,6 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
       {/* Delete Confirmation Toast */}
       <Toast {...deleteToastState} />
-
-      {/* Success Tooltip */}
-      {/* Positioned absolutely at bottom or appropriate location */}
-      <View style={styles.tooltipContainer} pointerEvents="box-none">
-        <Tooltip {...successTooltipState} />
-      </View>
     </>
   );
 };
@@ -227,13 +212,5 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     opacity: 0.6,
-  },
-  tooltipContainer: {
-    position: 'absolute',
-    bottom: 48,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 9999,
   },
 });

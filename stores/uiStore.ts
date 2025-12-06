@@ -3,12 +3,20 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
+export type GlobalTooltipVariant = 'normal' | 'success' | 'warning' | 'error';
 
 export interface Toast {
   id: string;
   message: string;
   variant: ToastVariant;
   duration?: number;
+}
+
+export interface GlobalTooltip {
+  id: string;
+  message: string;
+  variant: GlobalTooltipVariant;
+  duration: number;
 }
 
 interface UIStore {
@@ -19,6 +27,7 @@ interface UIStore {
   visibleModals: Set<string>;
   toasts: Toast[];
   loadingStates: Map<string, boolean>;
+  globalTooltip: GlobalTooltip | null;
 
   toggleTranscriptionSelection: (id: string) => void;
   selectAllTranscriptions: (ids: string[]) => void;
@@ -49,6 +58,13 @@ interface UIStore {
   clearLoading: (operation: string) => void;
   isLoading: (operation: string) => boolean;
   hasAnyLoading: () => boolean;
+
+  showGlobalTooltip: (
+    message: string,
+    variant?: GlobalTooltipVariant,
+    duration?: number
+  ) => string;
+  hideGlobalTooltip: () => void;
 }
 
 const toggleIdInSet = (
@@ -69,6 +85,8 @@ const toggleIdInSet = (
   };
 };
 
+const DEFAULT_GLOBAL_TOOLTIP_DURATION = 3000;
+
 export const useUIStore = create<UIStore>((set, get) => ({
   isTranscriptionSelectionMode: false,
   selectedTranscriptionIds: new Set(),
@@ -77,6 +95,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   visibleModals: new Set(),
   toasts: [],
   loadingStates: new Map(),
+  globalTooltip: null,
 
   toggleTranscriptionSelection: (id: string) => {
     const state = get();
@@ -220,6 +239,27 @@ export const useUIStore = create<UIStore>((set, get) => ({
     }
     return false;
   },
+
+  showGlobalTooltip: (
+    message: string,
+    variant: GlobalTooltipVariant = 'normal',
+    duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION
+  ) => {
+    const tooltipId = Crypto.randomUUID();
+    set({
+      globalTooltip: {
+        id: tooltipId,
+        message,
+        variant,
+        duration,
+      },
+    });
+    return tooltipId;
+  },
+
+  hideGlobalTooltip: () => {
+    set({ globalTooltip: null });
+  },
 }));
 
 export const useIsTranscriptionSelectionMode = () =>
@@ -267,5 +307,11 @@ export const useHideToast = () => useUIStore((s) => s.hideToast);
 
 export const useSetLoading = () => useUIStore((s) => s.setLoading);
 export const useClearLoading = () => useUIStore((s) => s.clearLoading);
+
+export const useGlobalTooltip = () => useUIStore((s) => s.globalTooltip);
+export const useShowGlobalTooltip = () =>
+  useUIStore((s) => s.showGlobalTooltip);
+export const useHideGlobalTooltip = () =>
+  useUIStore((s) => s.hideGlobalTooltip);
 
 export default useUIStore;

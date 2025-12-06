@@ -25,6 +25,7 @@ import {
   useIsSessionSelectionMode,
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
+  useShowGlobalTooltip,
   useShowToast,
   useToggleSessionSelection,
 } from '../../stores/uiStore';
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   const toggleSessionSelection = useToggleSessionSelection();
   const exitSessionSelection = useExitSessionSelection();
   const showToast = useShowToast();
+  const showGlobalTooltip = useShowGlobalTooltip();
 
   const {
     show: showDeleteToast,
@@ -180,18 +182,22 @@ export default function HomeScreen() {
     const count = selectedSessionIds.length;
     hideDeleteToast();
 
-    await Promise.all(
-      selectedSessionIds.map((sessionId) => deleteSession(sessionId))
-    );
+    try {
+      await Promise.all(
+        selectedSessionIds.map((sessionId) => deleteSession(sessionId))
+      );
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+    }
 
     exitSessionSelection();
-    showToast(loc.homeSessionsDeleted(count), 'success');
+    showGlobalTooltip(loc.homeSessionsDeleted(count));
   }, [
     selectedSessionIds,
     deleteSession,
     exitSessionSelection,
     hideDeleteToast,
-    showToast,
+    showGlobalTooltip,
     loc,
   ]);
 

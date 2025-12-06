@@ -400,6 +400,10 @@ const createStorageService = () => {
     await AsyncStorage.setItem(ACTIVE_SESSION_KEY, encrypted);
   };
 
+  const clearActiveSessionId = async (): Promise<void> => {
+    await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
+  };
+
   return {
     processPendingDeletes,
     getTranscriptions,
@@ -412,6 +416,7 @@ const createStorageService = () => {
     saveSessions,
     getActiveSessionId,
     saveActiveSessionId,
+    clearActiveSessionId,
   };
 };
 

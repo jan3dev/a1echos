@@ -47,7 +47,11 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 
   const saveActiveSession = async () => {
     const { activeSessionId } = get();
-    await storageService.saveActiveSessionId(activeSessionId);
+    if (activeSessionId) {
+      await storageService.saveActiveSessionId(activeSessionId);
+    } else {
+      await storageService.clearActiveSessionId();
+    }
   };
 
   return {

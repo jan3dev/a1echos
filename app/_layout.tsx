@@ -2,8 +2,11 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Tooltip } from '../components/ui/tooltip';
 import '../localization';
 import { storageService } from '../services/StorageService';
 import {
@@ -11,6 +14,7 @@ import {
   initializeSettingsStore,
   initializeTranscriptionStore,
 } from '../stores';
+import { useGlobalTooltip, useHideGlobalTooltip } from '../stores/uiStore';
 import { useTheme, useThemeStore } from '../theme';
 
 // Prevent the splash screen from auto-hiding before initialization completes
@@ -21,6 +25,46 @@ const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
 export const unstable_settings = {
   initialRouteName: StorybookEnabled ? '(storybook)/index' : '(pages)/index',
 };
+
+function GlobalTooltipRenderer() {
+  const insets = useSafeAreaInsets();
+  const tooltip = useGlobalTooltip();
+  const hideTooltip = useHideGlobalTooltip();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (tooltip) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        hideTooltip();
+      }, tooltip.duration);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [tooltip, hideTooltip]);
+
+  return (
+    <View
+      style={[styles.globalTooltipContainer, { bottom: insets.bottom }]}
+      pointerEvents="none"
+    >
+      <Tooltip
+        visible={!!tooltip}
+        message={tooltip?.message ?? ''}
+        variant={tooltip?.variant ?? 'normal'}
+        pointerPosition="none"
+        margin={32}
+      />
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
@@ -100,6 +144,16 @@ export default function RootLayout() {
 
         <Stack.Screen name="(pages)/index" />
       </Stack>
+      <GlobalTooltipRenderer />
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  globalTooltipContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+  },
+});

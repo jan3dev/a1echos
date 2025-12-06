@@ -44,7 +44,7 @@ import {
   useTranscriptionState,
   useTranscriptionStore,
 } from '../../../stores/transcriptionStore';
-import { useShowToast } from '../../../stores/uiStore';
+import { useShowGlobalTooltip, useShowToast } from '../../../stores/uiStore';
 import { useTheme } from '../../../theme';
 
 export default function SessionScreen() {
@@ -76,6 +76,7 @@ export default function SessionScreen() {
   const startRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
   const showToast = useShowToast();
+  const showGlobalTooltip = useShowGlobalTooltip();
   const transcriptions = useSessionTranscriptions(id);
   const livePreview = useTranscriptionStore((s) => s.livePreview);
 
@@ -225,9 +226,20 @@ export default function SessionScreen() {
       handleCancelEdit();
       return;
     }
+    if (selectionMode) {
+      exitSelectionMode();
+      return;
+    }
     router.back();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecording, isEditing, router, stopRecordingAndSave]);
+  }, [
+    isRecording,
+    isEditing,
+    selectionMode,
+    exitSelectionMode,
+    router,
+    stopRecordingAndSave,
+  ]);
 
   const handleCancelEdit = useCallback(() => {
     setIsCancellingEdit(true);
@@ -307,10 +319,7 @@ export default function SessionScreen() {
         hideDeleteToast();
         const result = await deleteSelectedTranscriptions();
         if (result.deleted > 0) {
-          showToast(
-            loc.sessionTranscriptionsDeleted(result.deleted),
-            'success'
-          );
+          showGlobalTooltip(loc.sessionTranscriptionsDeleted(result.deleted));
         }
       },
       secondaryButtonText: loc.cancel,
@@ -323,7 +332,7 @@ export default function SessionScreen() {
     showDeleteToast,
     hideDeleteToast,
     deleteSelectedTranscriptions,
-    showToast,
+    showGlobalTooltip,
     loc,
   ]);
 
