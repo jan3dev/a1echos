@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, {
   useCallback,
@@ -11,6 +12,7 @@ import {
   BackHandler,
   FlatList,
   Keyboard,
+  Platform,
   StyleSheet,
   View,
 } from 'react-native';
@@ -260,17 +262,30 @@ export default function SessionScreen() {
       return;
     }
 
-    const success = await copyAllTranscriptions();
-    if (success) {
-      showToast(loc.allTranscriptionsCopied, 'success');
+    try {
+      const success = await copyAllTranscriptions();
+      if (success) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+        // Only show toast on iOS or Android < 12 (Android 12+ has native clipboard feedback)
+        if (
+          Platform.OS === 'ios' ||
+          (Platform.OS === 'android' && Number(Platform.Version) < 31)
+        ) {
+          showToast(loc.allTranscriptionsCopied, 'success');
+        }
+      } else {
+        showToast(loc.copyFailed('Unknown error'), 'error');
+      }
+    } catch (error) {
+      console.error('Failed to copy all transcriptions:', error);
+      showToast(
+        loc.copyFailed(error instanceof Error ? error.message : String(error)),
+        'error'
+      );
     }
-  }, [
-    transcriptions.length,
-    copyAllTranscriptions,
-    showToast,
-    loc.noTranscriptionsToCopy,
-    loc.allTranscriptionsCopied,
-  ]);
+  }, [transcriptions.length, copyAllTranscriptions, showToast, loc]);
 
   const handleLanguageFlagPressed = useCallback(() => {
     router.push('/settings/language');
@@ -313,15 +328,26 @@ export default function SessionScreen() {
   ]);
 
   const handleSharePressed = useCallback(async () => {
-    const success = await shareSelectedTranscriptions();
-    if (!success) {
+    if (!hasSelectedItems) {
       showToast(loc.noTranscriptionsSelectedToShare, 'warning');
+      return;
     }
-  }, [
-    shareSelectedTranscriptions,
-    showToast,
-    loc.noTranscriptionsSelectedToShare,
-  ]);
+
+    try {
+      const success = await shareSelectedTranscriptions();
+      if (success) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+      }
+    } catch (error) {
+      console.error('Failed to share transcriptions:', error);
+      showToast(
+        loc.shareFailed(error instanceof Error ? error.message : String(error)),
+        'error'
+      );
+    }
+  }, [hasSelectedItems, shareSelectedTranscriptions, showToast, loc]);
 
   const handleTranscriptionTap = useCallback(
     (transcriptionId: string) => {

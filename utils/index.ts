@@ -21,3 +21,5 @@ export const formatSessionSubtitle = ({
   // For now, just return absolute date
   return formatDate(lastModified);
 };
+
+export { formatTranscriptionText } from './TranscriptionFormatter';

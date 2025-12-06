@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import {
   AudioModule,
   AudioRecorder,
@@ -9,7 +10,6 @@ import {
 } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
-import { NativeEventEmitter } from 'react-native';
 import { AppConstants } from '../constants/AppConstants';
 import { backgroundRecordingService } from './BackgroundRecordingService';
 
@@ -45,7 +45,7 @@ const createAudioService = () => {
   let monitorTempPath: string | null = null;
   let recordStart: Date | null = null;
 
-  const audioLevelEmitter = new NativeEventEmitter();
+  const audioLevelEmitter = new EventEmitter();
   let amplitudeIntervalId: ReturnType<typeof setInterval> | null = null;
 
   let smoothedLevel: number = 0.0;
@@ -397,9 +397,9 @@ const createAudioService = () => {
   const subscribeToAudioLevel = (
     callback: (level: number) => void
   ): (() => void) => {
-    const subscription = audioLevelEmitter.addListener('audioLevel', callback);
+    audioLevelEmitter.on('audioLevel', callback);
     return () => {
-      subscription.remove();
+      audioLevelEmitter.off('audioLevel', callback);
     };
   };
 

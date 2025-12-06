@@ -8,6 +8,7 @@ import { TranscriptionState } from '../models/TranscriptionState';
 import { audioService } from '../services/AudioService';
 import { storageService } from '../services/StorageService';
 import { whisperService } from '../services/WhisperService';
+import { formatTranscriptionText } from '../utils/TranscriptionFormatter';
 import { useSessionStore } from './sessionStore';
 import { useSettingsStore } from './settingsStore';
 
@@ -744,10 +745,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         // Create and save transcription if we have text
         if (transcribedText && transcribedText.trim() && sessionId) {
+          const formattedText = formatTranscriptionText(transcribedText.trim());
           const transcription: Transcription = {
             id: Crypto.randomUUID(),
             sessionId,
-            text: transcribedText.trim(),
+            text: formattedText,
             timestamp: new Date(),
             audioPath,
           };

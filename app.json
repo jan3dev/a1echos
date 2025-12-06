@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Echos needs access to your microphone to record audio for transcription.",
         "UIBackgroundModes": ["audio"]
-      }
+      },
+      "bundleIdentifier": "com.a1echos.app"
     },
     "android": {
       "adaptiveIcon": {

@@ -1,5 +1,4 @@
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { Share } from 'react-native';
 import { Transcription } from '../models/Transcription';
 
 const createShareService = () => {
@@ -12,20 +11,9 @@ const createShareService = () => {
 
     const content = formatTranscriptions(transcriptions);
 
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (!isAvailable) {
-      throw new Error('Sharing is not available on this device');
-    }
-
-    const tempFile = new File(Paths.cache, `${Date.now()}-transcription.txt`);
-    tempFile.write(content);
-
-    await Sharing.shareAsync(tempFile.uri, {
-      mimeType: 'text/plain',
-      dialogTitle: 'Share Transcription',
+    await Share.share({
+      message: content,
     });
-
-    tempFile.delete();
   };
 
   const formatTranscriptions = (transcriptions: Transcription[]): string => {
