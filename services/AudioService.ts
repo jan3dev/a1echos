@@ -10,8 +10,12 @@ import {
 } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 import { AppConstants } from '../constants/AppConstants';
 import { backgroundRecordingService } from './BackgroundRecordingService';
+
+// @ts-ignore - module declaration exists but types are incomplete
+import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 const RECORDING_OPTIONS: RecordingOptions = {
   extension: '.wav',
@@ -20,6 +24,7 @@ const RECORDING_OPTIONS: RecordingOptions = {
   bitRate: AppConstants.AUDIO_BIT_RATE,
   isMeteringEnabled: true,
   android: {
+    extension: '.wav',
     outputFormat: 'default',
     audioEncoder: 'default',
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
@@ -52,6 +57,10 @@ const createAudioService = () => {
   let lastUpdateTime: Date | null = null;
 
   let backgroundServiceInitialized: boolean = false;
+
+  // Android native PCM recording state
+  let androidPcmRecording: boolean = false;
+  let androidWavFilePath: string | null = null;
 
   const hasPermission = async (): Promise<boolean> => {
     try {
@@ -96,15 +105,76 @@ const createAudioService = () => {
     audioLevelEmitter.emit('audioLevel', level);
   };
 
+  // Compute RMS level from base64 PCM data (Android native recording)
+  const computeRmsFromBase64Pcm = (base64Data: string): number => {
+    try {
+      // Decode base64 to get raw bytes
+      const binaryString = atob(base64Data);
+      const len = binaryString.length;
+      if (len < 2) return 0;
+
+      let sumSquares = 0;
+      const samples = Math.floor(len / 2);
+
+      for (let i = 0; i < len - 1; i += 2) {
+        // 16-bit little-endian signed PCM
+        const low = binaryString.charCodeAt(i);
+        const high = binaryString.charCodeAt(i + 1);
+        let sample = low | (high << 8);
+        // Convert from unsigned to signed (two's complement)
+        if (sample >= 32768) {
+          sample -= 65536;
+        }
+        const normalized = sample / 32768;
+        sumSquares += normalized * normalized;
+      }
+
+      const rms = Math.sqrt(sumSquares / samples);
+      // Boost and apply curve for better visual response
+      const boosted = Math.min(1.0, rms * 8);
+      return Math.pow(boosted, 0.7);
+    } catch {
+      return 0;
+    }
+  };
+
+  // Handle PCM data from Android native recording
+  const handleAndroidPcmData = (base64Data: string): void => {
+    const rawLevel = computeRmsFromBase64Pcm(base64Data);
+    const level = Math.max(0.02, Math.min(1.0, rawLevel));
+
+    const now = new Date();
+    const dtMs =
+      lastUpdateTime === null
+        ? 16
+        : Math.max(0, Math.min(150, now.getTime() - lastUpdateTime.getTime()));
+    lastUpdateTime = now;
+
+    const rising = level > smoothedLevel;
+    const baseAlpha = rising ? 0.5 : 0.15;
+    const alpha = Math.max(
+      0.15,
+      Math.min(rising ? 0.7 : 0.25, baseAlpha * (dtMs / 16.0))
+    );
+
+    smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
+    const visual = Math.max(0.02, Math.min(1.0, smoothedLevel));
+    emitVisual(visual);
+  };
+
   const handleAmplitudeEvent = (metering: number | undefined): void => {
     let level = 0.02;
 
     if (metering !== undefined && isFinite(metering) && metering > -160) {
-      const db = Math.max(-60.0, Math.min(-10.0, metering));
-      level = (db - -60.0) / (-10.0 - -60.0);
+      // Expand the dB range for better sensitivity
+      // Typical speech is around -30 to -10 dB, silence is around -60 dB or lower
+      const db = Math.max(-50.0, Math.min(0.0, metering));
+      // Map -50 dB to 0, 0 dB to 1
+      level = (db + 50.0) / 50.0;
       level = Math.max(0.0, Math.min(1.0, level));
 
-      level = level * level;
+      // Apply a curve for better visual response (make quieter sounds more visible)
+      level = Math.pow(level, 0.6);
       level = Math.max(0.02, Math.min(1.0, level));
     }
 
@@ -133,12 +203,17 @@ const createAudioService = () => {
       clearInterval(amplitudeIntervalId);
     }
 
+    resetLevelState();
+
     amplitudeIntervalId = setInterval(() => {
       if (recorder) {
         try {
           const status = recorder.getStatus();
-          if (status.isRecording && status.metering !== undefined) {
-            handleAmplitudeEvent(status.metering);
+          if (status.isRecording) {
+            // Handle metering - it may be undefined on some platforms
+            if (status.metering !== undefined && status.metering !== null) {
+              handleAmplitudeEvent(status.metering);
+            }
           }
         } catch (error) {
           console.error('Error getting amplitude:', error);
@@ -148,6 +223,20 @@ const createAudioService = () => {
   };
 
   const cleanup = async (): Promise<void> => {
+    // Cleanup Android native recording
+    if (androidPcmRecording) {
+      try {
+        await AudioRecord.stop();
+      } catch (error) {
+        console.error(
+          'Error stopping Android PCM recording during cleanup:',
+          error
+        );
+      }
+      androidPcmRecording = false;
+      androidWavFilePath = null;
+    }
+
     if (recorder) {
       try {
         await recorder.stop();
@@ -209,6 +298,49 @@ const createAudioService = () => {
 
     await cleanup();
 
+    // On Android, use native PCM recording for WAV output that Whisper can read
+    if (Platform.OS === 'android') {
+      try {
+        const timestamp = Date.now();
+        const wavPath = `${Paths.cache.uri}/rec_${timestamp}.wav`;
+        // Remove file:// prefix for native module
+        androidWavFilePath = wavPath.replace('file://', '');
+
+        resetLevelState();
+
+        AudioRecord.init({
+          sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
+          channels: AppConstants.AUDIO_NUM_CHANNELS,
+          bitsPerSample: 16,
+          audioSource: 6, // VOICE_RECOGNITION
+          wavFile: androidWavFilePath,
+          bufferSize: 4096,
+        });
+
+        // Remove any existing listener before adding new one
+        AudioRecord.removeListener('data', handleAndroidPcmData);
+        AudioRecord.on('data', handleAndroidPcmData);
+        AudioRecord.start();
+        androidPcmRecording = true;
+        recordStart = new Date();
+
+        try {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch {
+          console.warn('Haptics not supported');
+        }
+
+        return true;
+      } catch (error) {
+        console.error('Error starting Android PCM recording:', error);
+        AudioRecord.removeListener('data', handleAndroidPcmData);
+        androidPcmRecording = false;
+        androidWavFilePath = null;
+        return false;
+      }
+    }
+
+    // iOS and other platforms use expo-audio
     try {
       await setAudioModeAsync({
         allowsRecording: true,
@@ -315,6 +447,60 @@ const createAudioService = () => {
       console.error('Failed to stop background service:', error);
     }
 
+    // Handle Android native PCM recording
+    if (Platform.OS === 'android' && androidPcmRecording) {
+      try {
+        const startedAt = recordStart || new Date();
+        const elapsedMs = new Date().getTime() - startedAt.getTime();
+        const minMs = 250;
+        const waitMs = elapsedMs >= minMs ? 0 : minMs - elapsedMs;
+
+        if (waitMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+
+        const filePath = await AudioRecord.stop();
+        AudioRecord.removeListener('data', handleAndroidPcmData);
+        androidPcmRecording = false;
+
+        try {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success
+          );
+        } catch {
+          console.warn('Haptics not supported');
+        }
+
+        // The library returns the file path
+        const wavFilePath = androidWavFilePath
+          ? `file://${androidWavFilePath}`
+          : filePath
+          ? `file://${filePath}`
+          : null;
+
+        if (wavFilePath) {
+          const file = new File(wavFilePath);
+          if (file.exists && file.size > 1024) {
+            recordStart = null;
+            currentAudioFile = wavFilePath;
+            androidWavFilePath = null;
+            return wavFilePath;
+          }
+        }
+
+        recordStart = null;
+        androidWavFilePath = null;
+        return null;
+      } catch (error) {
+        console.error('Error stopping Android PCM recording:', error);
+        androidPcmRecording = false;
+        androidWavFilePath = null;
+        recordStart = null;
+        return null;
+      }
+    }
+
+    // iOS and other platforms
     const isCurrentlyRecording = recorder !== null;
 
     if (!isCurrentlyRecording) {
@@ -382,6 +568,11 @@ const createAudioService = () => {
   };
 
   const isRecording = async (): Promise<boolean> => {
+    // Check Android native recording
+    if (Platform.OS === 'android' && androidPcmRecording) {
+      return true;
+    }
+
     if (!recorder) {
       return false;
     }
@@ -408,6 +599,15 @@ const createAudioService = () => {
       if (amplitudeIntervalId) {
         clearInterval(amplitudeIntervalId);
         amplitudeIntervalId = null;
+      }
+
+      // Cleanup Android native recording
+      if (androidPcmRecording) {
+        try {
+          await AudioRecord.stop();
+        } catch {}
+        androidPcmRecording = false;
+        androidWavFilePath = null;
       }
 
       if (recorder) {

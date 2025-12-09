@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyStateView } from '../../components/domain/home/EmptyStateView';
 import { HomeAppBar } from '../../components/domain/home/HomeAppBar';
 import { HomeContent } from '../../components/domain/home/HomeContent';
-import { RecordingControlsView } from '../../components/shared/recording-controls/RecordingControlsView';
 import { Toast, useToast } from '../../components/ui/toast';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useSessionOperations } from '../../hooks/useSessionOperations';
@@ -15,16 +15,15 @@ import { audioService } from '../../services/AudioService';
 import { useCreateSession, useSessions } from '../../stores/sessionStore';
 import { useIsIncognitoMode } from '../../stores/settingsStore';
 import {
-  useAudioLevel,
   useStartRecording,
   useStopRecordingAndSave,
-  useTranscriptionState,
 } from '../../stores/transcriptionStore';
 import {
   useExitSessionSelection,
   useIsSessionSelectionMode,
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
+  useSetRecordingCallbacks,
   useShowGlobalTooltip,
   useShowToast,
   useToggleSessionSelection,
@@ -42,8 +41,6 @@ export default function HomeScreen() {
   const createSession = useCreateSession();
   const { deleteSession } = useSessionOperations();
   const isIncognitoMode = useIsIncognitoMode();
-  const transcriptionState = useTranscriptionState();
-  const audioLevel = useAudioLevel();
   const startTranscriptionRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
   const isSessionSelectionMode = useIsSessionSelectionMode();
@@ -53,6 +50,7 @@ export default function HomeScreen() {
   const exitSessionSelection = useExitSessionSelection();
   const showToast = useShowToast();
   const showGlobalTooltip = useShowGlobalTooltip();
+  const setRecordingCallbacks = useSetRecordingCallbacks();
 
   const {
     show: showDeleteToast,
@@ -178,6 +176,16 @@ export default function HomeScreen() {
     await stopRecordingAndSave();
   }, [stopRecordingAndSave]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setRecordingCallbacks(handleRecordingStart, handleRecordingStop);
+
+      return () => {
+        setRecordingCallbacks(null, null);
+      };
+    }, [setRecordingCallbacks, handleRecordingStart, handleRecordingStop])
+  );
+
   const performDelete = useCallback(async () => {
     const count = selectedSessionIds.length;
     hideDeleteToast();
@@ -242,16 +250,6 @@ export default function HomeScreen() {
         scrollRef={scrollRef}
       />
 
-      <View style={[styles.recordingControls, { bottom: insets.bottom }]}>
-        <RecordingControlsView
-          state={transcriptionState}
-          audioLevel={audioLevel}
-          onRecordingStart={handleRecordingStart}
-          onRecordingStop={handleRecordingStop}
-          colors={theme.colors}
-        />
-      </View>
-
       {effectivelyEmpty && (
         <View
           style={[styles.tooltipContainer, { bottom: insets.bottom + 112 }]}
@@ -272,11 +270,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  recordingControls: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
   },
   tooltipContainer: {
     position: 'absolute',

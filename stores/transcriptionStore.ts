@@ -37,6 +37,7 @@ interface TranscriptionStore {
 
   audioLevelUnsubscribe: (() => void) | null;
   partialResultUnsubscribe: (() => void) | null;
+  realtimeAudioLevelUnsubscribe: (() => void) | null;
 
   isLoading: () => boolean;
   isRecording: () => boolean;
@@ -219,6 +220,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
     audioLevelUnsubscribe: null,
     partialResultUnsubscribe: null,
+    realtimeAudioLevelUnsubscribe: null,
 
     isLoading: () => get().state === TranscriptionState.LOADING,
     isRecording: () => get().state === TranscriptionState.RECORDING,
@@ -634,16 +636,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         get().clearLoadingPreview();
 
         if (isRealtime) {
-          // Real-time mode: start Whisper real-time transcription
-          const realtimeStarted =
-            await whisperService.startRealtimeTranscription(languageCode);
-          if (!realtimeStarted) {
-            get().transitionTo(TranscriptionState.READY);
-            get().clearRecordingSessionId();
-            get().setError('Failed to start real-time transcription');
-            releaseOperationLock(operationName);
-            return false;
-          }
+          // Subscribe to audio levels BEFORE starting (so callback is ready when data flows)
+          const unsubscribeAudioLevel = whisperService.subscribeToAudioLevel(
+            (level) => {
+              get().updateAudioLevel(level);
+            }
+          );
+          set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
 
           // Subscribe to partial results
           const unsubscribe = whisperService.subscribeToPartialResults(
@@ -652,6 +651,24 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             }
           );
           set({ partialResultUnsubscribe: unsubscribe });
+
+          // Real-time mode: start Whisper real-time transcription
+          const realtimeStarted =
+            await whisperService.startRealtimeTranscription(languageCode);
+          if (!realtimeStarted) {
+            // Cleanup subscriptions on failure
+            unsubscribeAudioLevel();
+            unsubscribe();
+            set({
+              realtimeAudioLevelUnsubscribe: null,
+              partialResultUnsubscribe: null,
+            });
+            get().transitionTo(TranscriptionState.READY);
+            get().clearRecordingSessionId();
+            get().setError('Failed to start real-time transcription');
+            releaseOperationLock(operationName);
+            return false;
+          }
         } else {
           // File-based mode: start audio recording and show loading preview
           const recordingStarted = await audioService.startRecording();
@@ -670,6 +687,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return true;
       } catch (error) {
         console.error('Error starting recording', error);
+        // Clean up any subscriptions that may have been set before the error
+        const currentState = get();
+        if (currentState.realtimeAudioLevelUnsubscribe) {
+          currentState.realtimeAudioLevelUnsubscribe();
+          set({ realtimeAudioLevelUnsubscribe: null });
+        }
+        if (currentState.partialResultUnsubscribe) {
+          currentState.partialResultUnsubscribe();
+          set({ partialResultUnsubscribe: null });
+        }
         get().setError(`Error starting recording: ${error}`);
         get().clearRecordingSessionId();
         return false;
@@ -716,6 +743,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             state.partialResultUnsubscribe();
             set({ partialResultUnsubscribe: null });
           }
+
+          // Clean up realtime audio level subscription
+          if (state.realtimeAudioLevelUnsubscribe) {
+            state.realtimeAudioLevelUnsubscribe();
+            set({ realtimeAudioLevelUnsubscribe: null });
+          }
         } else {
           // File-based mode: stop recording and transcribe
           const recordedFilePath = await audioService.stopRecording();
@@ -729,8 +762,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             return;
           }
 
-          // Save audio file to app's audio directory
-          const fileName = `audio_${Date.now()}.wav`;
+          // Save audio file to app's audio directory (preserve original extension)
+          const lastDotIndex = recordedFilePath.lastIndexOf('.');
+          const lastSlashIndex = Math.max(
+            recordedFilePath.lastIndexOf('/'),
+            recordedFilePath.lastIndexOf('\\')
+          );
+          const hasValidExtension =
+            lastDotIndex > lastSlashIndex && lastDotIndex !== -1;
+          const originalExt = hasValidExtension
+            ? recordedFilePath.substring(lastDotIndex)
+            : '.wav';
+          const fileName = `audio_${Date.now()}${originalExt}`;
           audioPath = await storageService.saveAudioFile(
             recordedFilePath,
             fileName
@@ -893,12 +936,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       if (state.partialResultUnsubscribe) {
         state.partialResultUnsubscribe();
       }
+      if (state.realtimeAudioLevelUnsubscribe) {
+        state.realtimeAudioLevelUnsubscribe();
+      }
 
       set({
         isOperationLocked: false,
         activeOperations: new Set(),
         lastOperationTime: null,
         partialResultUnsubscribe: null,
+        realtimeAudioLevelUnsubscribe: null,
       });
 
       get().clearRecordingSessionId();
@@ -921,6 +968,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       if (state.partialResultUnsubscribe) {
         state.partialResultUnsubscribe();
         set({ partialResultUnsubscribe: null });
+      }
+
+      // Clean up realtime audio level subscription
+      if (state.realtimeAudioLevelUnsubscribe) {
+        state.realtimeAudioLevelUnsubscribe();
+        set({ realtimeAudioLevelUnsubscribe: null });
       }
 
       // Dispose services

@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, {
@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SessionAppBar } from '../../../components/domain/session/SessionAppBar';
 import { SessionInputModal } from '../../../components/domain/session/SessionInputModal';
 import { TranscriptionContentView } from '../../../components/domain/transcription/TranscriptionContentView';
-import { RecordingControlsView } from '../../../components/shared/recording-controls/RecordingControlsView';
 import { Button } from '../../../components/ui/button';
 import { Toast, useToast } from '../../../components/ui/toast';
 import { useLocalization } from '../../../hooks/useLocalization';
@@ -36,15 +35,19 @@ import {
 } from '../../../stores/sessionStore';
 import { useSelectedModelType } from '../../../stores/settingsStore';
 import {
-  useAudioLevel,
   useIsRecording,
   useSessionTranscriptions,
   useStartRecording,
   useStopRecordingAndSave,
-  useTranscriptionState,
   useTranscriptionStore,
 } from '../../../stores/transcriptionStore';
-import { useShowGlobalTooltip, useShowToast } from '../../../stores/uiStore';
+import {
+  useSetRecordingCallbacks,
+  useSetRecordingControlsEnabled,
+  useSetRecordingControlsVisible,
+  useShowGlobalTooltip,
+  useShowToast,
+} from '../../../stores/uiStore';
 import { useTheme } from '../../../theme';
 
 export default function SessionScreen() {
@@ -70,8 +73,6 @@ export default function SessionScreen() {
   const switchSession = useSessionStore((s) => s.switchSession);
   const { endIncognitoSession } = useSessionOperations();
   const selectedModelType = useSelectedModelType();
-  const transcriptionState = useTranscriptionState();
-  const audioLevel = useAudioLevel();
   const isRecording = useIsRecording();
   const startRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
@@ -79,6 +80,9 @@ export default function SessionScreen() {
   const showGlobalTooltip = useShowGlobalTooltip();
   const transcriptions = useSessionTranscriptions(id);
   const livePreview = useTranscriptionStore((s) => s.livePreview);
+  const setRecordingCallbacks = useSetRecordingCallbacks();
+  const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
+  const setRecordingControlsVisible = useSetRecordingControlsVisible();
 
   const sessions = useSessionStore((s) => s.sessions);
   const incognitoSession = useSessionStore((s) => s.incognitoSession);
@@ -161,17 +165,26 @@ export default function SessionScreen() {
       if (isRecording) {
         e.preventDefault();
         await stopRecordingAndSave();
-        navigation.dispatch(e.data.action);
+        // Use router for safe navigation
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/');
+        }
         return;
       }
       if (session?.isIncognito) {
         e.preventDefault();
         try {
           await endIncognitoSession();
-          navigation.dispatch(e.data.action);
+          // Use router for safe navigation
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
         } catch (error) {
           console.error('Failed to end incognito session:', error);
-          // Optionally show a toast notification
         }
       }
     });
@@ -179,6 +192,7 @@ export default function SessionScreen() {
     return unsubscribe;
   }, [
     navigation,
+    router,
     isRecording,
     stopRecordingAndSave,
     session?.isIncognito,
@@ -405,9 +419,32 @@ export default function SessionScreen() {
     await stopRecordingAndSave();
   }, [stopRecordingAndSave]);
 
+  const controlsEnabled = !isInitializing || isRecording;
+
+  useFocusEffect(
+    useCallback(() => {
+      setRecordingCallbacks(handleRecordingStart, handleRecordingStop);
+      setRecordingControlsEnabled(controlsEnabled);
+
+      return () => {
+        setRecordingCallbacks(null, null);
+        setRecordingControlsEnabled(false);
+      };
+    }, [
+      setRecordingCallbacks,
+      setRecordingControlsEnabled,
+      handleRecordingStart,
+      handleRecordingStop,
+      controlsEnabled,
+    ])
+  );
+
+  useEffect(() => {
+    setRecordingControlsVisible(!selectionMode);
+  }, [setRecordingControlsVisible, selectionMode]);
+
   const sessionName = session?.name ?? '';
   const isIncognito = session?.isIncognito ?? false;
-  const controlsEnabled = !isInitializing || isRecording;
 
   return (
     <View
@@ -444,7 +481,7 @@ export default function SessionScreen() {
         />
       )}
 
-      {selectionMode ? (
+      {selectionMode && (
         <View
           style={[styles.shareButtonContainer, { bottom: insets.bottom + 32 }]}
         >
@@ -452,17 +489,6 @@ export default function SessionScreen() {
             text={loc.share}
             onPress={handleSharePressed}
             enabled={hasSelectedItems}
-          />
-        </View>
-      ) : (
-        <View style={[styles.recordingControls, { bottom: insets.bottom }]}>
-          <RecordingControlsView
-            state={transcriptionState}
-            audioLevel={audioLevel}
-            onRecordingStart={handleRecordingStart}
-            onRecordingStop={handleRecordingStop}
-            enabled={controlsEnabled}
-            colors={theme.colors}
           />
         </View>
       )}
@@ -484,11 +510,6 @@ export default function SessionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  recordingControls: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
   },
   shareButtonContainer: {
     position: 'absolute',

@@ -29,6 +29,18 @@ interface UIStore {
   loadingStates: Map<string, boolean>;
   globalTooltip: GlobalTooltip | null;
 
+  recordingControlsEnabled: boolean;
+  recordingControlsVisible: boolean;
+  onRecordingStart: (() => void) | null;
+  onRecordingStop: (() => void) | null;
+
+  setRecordingControlsEnabled: (enabled: boolean) => void;
+  setRecordingControlsVisible: (visible: boolean) => void;
+  setRecordingCallbacks: (
+    onStart: (() => void) | null,
+    onStop: (() => void) | null
+  ) => void;
+
   toggleTranscriptionSelection: (id: string) => void;
   selectAllTranscriptions: (ids: string[]) => void;
   exitTranscriptionSelection: () => void;
@@ -96,6 +108,26 @@ export const useUIStore = create<UIStore>((set, get) => ({
   toasts: [],
   loadingStates: new Map(),
   globalTooltip: null,
+
+  recordingControlsEnabled: true,
+  recordingControlsVisible: true,
+  onRecordingStart: null,
+  onRecordingStop: null,
+
+  setRecordingControlsEnabled: (enabled: boolean) => {
+    set({ recordingControlsEnabled: enabled });
+  },
+
+  setRecordingControlsVisible: (visible: boolean) => {
+    set({ recordingControlsVisible: visible });
+  },
+
+  setRecordingCallbacks: (
+    onStart: (() => void) | null,
+    onStop: (() => void) | null
+  ) => {
+    set({ onRecordingStart: onStart, onRecordingStop: onStop });
+  },
 
   toggleTranscriptionSelection: (id: string) => {
     const state = get();
@@ -313,5 +345,18 @@ export const useShowGlobalTooltip = () =>
   useUIStore((s) => s.showGlobalTooltip);
 export const useHideGlobalTooltip = () =>
   useUIStore((s) => s.hideGlobalTooltip);
+
+export const useRecordingControlsEnabled = () =>
+  useUIStore((s) => s.recordingControlsEnabled);
+export const useRecordingControlsVisible = () =>
+  useUIStore((s) => s.recordingControlsVisible);
+export const useOnRecordingStart = () => useUIStore((s) => s.onRecordingStart);
+export const useOnRecordingStop = () => useUIStore((s) => s.onRecordingStop);
+export const useSetRecordingControlsEnabled = () =>
+  useUIStore((s) => s.setRecordingControlsEnabled);
+export const useSetRecordingControlsVisible = () =>
+  useUIStore((s) => s.setRecordingControlsVisible);
+export const useSetRecordingCallbacks = () =>
+  useUIStore((s) => s.setRecordingCallbacks);
 
 export default useUIStore;

@@ -34,6 +34,8 @@ interface WaveState {
 }
 
 const TOTAL_DATA_POINTS = 120;
+
+// Match Flutter's wave profiles exactly
 const WAVE_PROFILES: WaveProfile[] = [
   {
     basePhaseSpeed: 0.015,
@@ -95,12 +97,24 @@ export const ThreeWaveLines = ({
   const [containerWidth, setContainerWidth] = useState(400);
   const wavesRef = useRef<WaveState[]>([]);
   const displayLevelRef = useRef(audioLevel);
+  const targetLevelRef = useRef(audioLevel);
+  const stateRef = useRef(state);
+  const colorsRef = useRef(colors);
   const transcribingInversionTimeRef = useRef(0.0);
   const oscillationStrengthRef = useRef(0.0);
   const animationFrameRef = useRef<number | null>(null);
   const maxAmplitude = 20.0;
   const minAmplitude = 2.0;
   const minNormalizedAmplitude = minAmplitude / maxAmplitude;
+
+  // Keep refs in sync with props
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    colorsRef.current = colors;
+  }, [colors]);
 
   const initializeWaves = useCallback(() => {
     const initialValue = minNormalizedAmplitude;
@@ -112,7 +126,7 @@ export const ThreeWaveLines = ({
       phase: PHASE_OFFSETS[index % PHASE_OFFSETS.length],
     }));
 
-    generateNewTargets();
+    generateNewTargets(stateRef.current);
     wavesRef.current.forEach((wave) => {
       for (let i = 0; i < TOTAL_DATA_POINTS; i++) {
         wave.data[i] = wave.targets[i];
@@ -141,14 +155,25 @@ export const ThreeWaveLines = ({
     };
   }, [initializeWaves, startWaveAnimation]);
 
+  // Animate audio level changes with easing (like Flutter's _animateTo)
   useEffect(() => {
-    animateToLevel(audioLevel);
+    targetLevelRef.current = Math.min(1.0, Math.max(0.0, audioLevel));
   }, [audioLevel]);
 
   const updateWaveform = () => {
+    const currentState = stateRef.current;
+
+    // Smoothly animate displayLevel toward targetLevel (easeOutCubic-like)
+    const target = targetLevelRef.current;
+    const current = displayLevelRef.current;
+    const diff = target - current;
+    // Faster rise, slower fall (like Flutter)
+    const speed = diff > 0 ? 0.25 : 0.15;
+    displayLevelRef.current = current + diff * speed;
+
     if (
-      state === TranscriptionState.TRANSCRIBING ||
-      state === TranscriptionState.LOADING
+      currentState === TranscriptionState.TRANSCRIBING ||
+      currentState === TranscriptionState.LOADING
     ) {
       transcribingInversionTimeRef.current += 0.016;
       if (oscillationStrengthRef.current < 1.0) {
@@ -169,22 +194,27 @@ export const ThreeWaveLines = ({
     }
 
     wavesRef.current.forEach((wave) => {
-      const phaseStep = calculatePhaseStep(wave.profile);
+      const phaseStep = calculatePhaseStep(wave.profile, currentState);
       wave.phase = (wave.phase + phaseStep) % (Math.PI * 2);
     });
 
-    generateNewTargets();
+    generateNewTargets(currentState);
     animateTowardsTargets();
 
     forceUpdate((n) => n + 1);
   };
 
-  const calculatePhaseStep = (profile: WaveProfile): number => {
-    switch (state) {
+  const calculatePhaseStep = (
+    profile: WaveProfile,
+    currentState: TranscriptionState
+  ): number => {
+    switch (currentState) {
       case TranscriptionState.READY:
         return profile.basePhaseSpeed * 0.3;
 
-      case TranscriptionState.RECORDING: {
+      case TranscriptionState.RECORDING:
+      case TranscriptionState.STREAMING: {
+        // Match Flutter: basePhaseSpeed * 4.0, scaled by audio
         const baseSpeed = profile.basePhaseSpeed * 4.0;
         const audioSpeedMultiplier =
           1.0 + displayLevelRef.current * profile.audioSpeedReactivity;
@@ -200,16 +230,22 @@ export const ThreeWaveLines = ({
     }
   };
 
-  const generateNewTargets = () => {
+  const generateNewTargets = (currentState: TranscriptionState) => {
+    const isRecordingOrStreaming =
+      currentState === TranscriptionState.RECORDING ||
+      currentState === TranscriptionState.STREAMING;
+
     wavesRef.current.forEach((wave) => {
       const profile = wave.profile;
       for (let i = 0; i < TOTAL_DATA_POINTS; i++) {
-        const baseEnergy = getBaseEnergyForState(profile);
-        const positionWeight =
-          state === TranscriptionState.RECORDING
-            ? getPositionWeight(i / (TOTAL_DATA_POINTS - 1))
-            : 1.0;
-        const stateAmplitudeMultiplier = getStateAmplitudeMultiplier(profile);
+        const baseEnergy = getBaseEnergyForState(profile, currentState);
+        const positionWeight = isRecordingOrStreaming
+          ? getPositionWeight(i / (TOTAL_DATA_POINTS - 1))
+          : 1.0;
+        const stateAmplitudeMultiplier = getStateAmplitudeMultiplier(
+          profile,
+          currentState
+        );
 
         const target = Math.min(
           1.0,
@@ -217,26 +253,33 @@ export const ThreeWaveLines = ({
         );
 
         const previousTarget = wave.targets[i];
+        // Match Flutter: 0.85 * prev + 0.15 * target
         const smoothedTarget = previousTarget * 0.85 + target * 0.15;
 
         wave.targets[i] = Math.max(
           minNormalizedAmplitude,
-          Math.min(1.0, Math.max(0.0, smoothedTarget))
+          Math.min(1.0, smoothedTarget)
         );
       }
     });
   };
 
-  const getBaseEnergyForState = (profile: WaveProfile): number => {
-    switch (state) {
+  const getBaseEnergyForState = (
+    profile: WaveProfile,
+    currentState: TranscriptionState
+  ): number => {
+    switch (currentState) {
       case TranscriptionState.READY:
+        // Match Flutter: fixed 0.5 for ready state
         return 0.5;
 
       case TranscriptionState.TRANSCRIBING:
       case TranscriptionState.LOADING:
         return 1.0;
 
-      case TranscriptionState.RECORDING: {
+      case TranscriptionState.RECORDING:
+      case TranscriptionState.STREAMING: {
+        // Match Flutter exactly
         const audioReactiveEnergy = Math.min(
           1.0,
           Math.max(0.0, displayLevelRef.current)
@@ -252,9 +295,13 @@ export const ThreeWaveLines = ({
     }
   };
 
-  const getStateAmplitudeMultiplier = (profile: WaveProfile): number => {
-    switch (state) {
+  const getStateAmplitudeMultiplier = (
+    profile: WaveProfile,
+    currentState: TranscriptionState
+  ): number => {
+    switch (currentState) {
       case TranscriptionState.READY:
+        // Match Flutter: amplitudeMultiplier * 1.5 for ready state
         return profile.amplitudeMultiplier * 1.5;
 
       case TranscriptionState.TRANSCRIBING:
@@ -262,6 +309,8 @@ export const ThreeWaveLines = ({
         return profile.transcribingAmplitude;
 
       case TranscriptionState.RECORDING:
+      case TranscriptionState.STREAMING:
+        // Match Flutter: just amplitudeMultiplier for recording
         return profile.amplitudeMultiplier;
 
       default:
@@ -283,33 +332,45 @@ export const ThreeWaveLines = ({
   };
 
   const getPositionWeight = (position: number): number => {
+    // Match Flutter exactly
     const distanceFromCenter = Math.abs(position - 0.5) * 2.0;
     const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.5;
     return Math.min(1.0, Math.max(0.4, centerWeight));
   };
 
-  const animateToLevel = (target: number) => {
-    displayLevelRef.current = Math.min(1.0, Math.max(0.0, target));
-  };
-
-  const calculateDynamicVerticalOffset = (baseOffset: number): number => {
-    if (state !== TranscriptionState.RECORDING) {
+  const calculateDynamicVerticalOffset = (
+    baseOffset: number,
+    currentState: TranscriptionState
+  ): number => {
+    if (
+      currentState !== TranscriptionState.RECORDING &&
+      currentState !== TranscriptionState.STREAMING
+    ) {
       return baseOffset;
     }
+    // Match Flutter: convergence factor based on audio level
     const convergenceFactor = 1.0 - displayLevelRef.current * 0.7;
     return baseOffset * convergenceFactor;
   };
 
-  const resolveWaveColor = (index: number): string => {
+  const resolveWaveColor = (
+    index: number,
+    currentState: TranscriptionState
+  ): string => {
     const profile = wavesRef.current[index].profile;
+    const currentColors = colorsRef.current;
 
     let stateOpacity: number;
     if (
-      state === TranscriptionState.TRANSCRIBING ||
-      state === TranscriptionState.LOADING
+      currentState === TranscriptionState.TRANSCRIBING ||
+      currentState === TranscriptionState.LOADING
     ) {
       stateOpacity = 0.5;
-    } else if (state === TranscriptionState.RECORDING) {
+    } else if (
+      currentState === TranscriptionState.RECORDING ||
+      currentState === TranscriptionState.STREAMING
+    ) {
+      // Match Flutter exactly
       const baseOpacity = 0.75;
       const maxOpacity = 1.0;
       const audioBoost =
@@ -326,18 +387,19 @@ export const ThreeWaveLines = ({
       case 0:
         return hexToRgba(AquaPrimitiveColors.waveOrange, stateOpacity);
       case 1:
-        return hexToRgba(colors.accentBrand, stateOpacity);
+        return hexToRgba(currentColors.accentBrand, stateOpacity);
       case 2:
         return hexToRgba(AquaPrimitiveColors.waveCyan, stateOpacity);
       default:
-        return hexToRgba(colors.accentBrand, stateOpacity);
+        return hexToRgba(currentColors.accentBrand, stateOpacity);
     }
   };
 
   const generateWavePath = (
     wave: WaveState,
     width: number,
-    centerY: number
+    centerY: number,
+    currentState: TranscriptionState
   ): string => {
     if (wave.data.length === 0) return '';
 
@@ -345,6 +407,7 @@ export const ThreeWaveLines = ({
     const points = wave.data.length;
     const amplitudeRange = maxAmplitude - minAmplitude;
 
+    // Match Flutter's phase inversion calculation
     const oscillation = Math.sin(
       transcribingInversionTimeRef.current * (Math.PI / 3.0) +
         profile.transcribingPhaseOffset
@@ -353,7 +416,8 @@ export const ThreeWaveLines = ({
       1.0 + (oscillation - 1.0) * oscillationStrengthRef.current;
 
     const dynamicVerticalOffset = calculateDynamicVerticalOffset(
-      profile.verticalOffset
+      profile.verticalOffset,
+      currentState
     );
     const adjustedCenterY = centerY + dynamicVerticalOffset;
 
@@ -407,6 +471,9 @@ export const ThreeWaveLines = ({
     return path;
   };
 
+  // Use current state from ref for rendering
+  const currentState = stateRef.current;
+
   return (
     <View
       style={[styles.container, { height }]}
@@ -421,8 +488,8 @@ export const ThreeWaveLines = ({
         {wavesRef.current.map((wave, index) => (
           <Path
             key={index}
-            d={generateWavePath(wave, containerWidth, height / 2)}
-            stroke={resolveWaveColor(index)}
+            d={generateWavePath(wave, containerWidth, height / 2, currentState)}
+            stroke={resolveWaveColor(index, currentState)}
             strokeWidth={wave.profile.strokeWidth}
             fill="none"
             strokeLinecap="round"

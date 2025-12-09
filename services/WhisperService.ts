@@ -1,36 +1,93 @@
 import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
+import RNFS from 'react-native-fs';
 // @ts-ignore - whisper.rn may not have complete type declarations
-import { initWhisper, type TranscribeRealtimeEvent, type WhisperContext } from 'whisper.rn';
+import { initWhisper, initWhisperVad, type WhisperContext, type WhisperVadContext } from 'whisper.rn';
+// @ts-ignore - whisper.rn may not have complete type declarations
+import { RealtimeTranscriber } from 'whisper.rn/src/realtime-transcription';
+// @ts-ignore - whisper.rn may not have complete type declarations
+import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter';
+
+interface RealtimeTranscribeEvent {
+  type: 'error' | 'start' | 'transcribe' | 'end';
+  sliceIndex: number;
+  data?: { result: string };
+  isCapturing: boolean;
+  processTime: number;
+  recordingTime: number;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const modelAsset = require('../assets/models/whisper/ggml-tiny.bin');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const vadModelAsset = require('../assets/models/whisper/ggml-silero-v6.2.0.bin');
 
 interface WhisperServiceState {
   whisperContext: WhisperContext | null;
+  vadContext: WhisperVadContext | null;
+  realtimeTranscriber: RealtimeTranscriber | null;
+  realtimeAudioStream: AudioPcmStreamAdapter | null;
   isInitialized: boolean;
   isInitializing: boolean;
   isTranscribing: boolean;
   isRealtimeRecording: boolean;
   currentTranscription: string;
   initializationStatus: string | null;
-  realtimeStop: (() => Promise<void>) | null;
-  realtimeUnsubscribe: (() => void) | null;
   partialCallbacks: Set<(text: string) => void>;
+  audioLevelCallbacks: Set<(level: number) => void>;
+  smoothedAudioLevel: number;
 }
 
 const createWhisperService = () => {
   const state: WhisperServiceState = {
     whisperContext: null,
+    vadContext: null,
+    realtimeTranscriber: null,
+    realtimeAudioStream: null,
     isInitialized: false,
     isInitializing: false,
     isTranscribing: false,
     isRealtimeRecording: false,
     currentTranscription: '',
     initializationStatus: null,
-    realtimeStop: null,
-    realtimeUnsubscribe: null,
     partialCallbacks: new Set(),
+    audioLevelCallbacks: new Set(),
+    smoothedAudioLevel: 0,
+  };
+
+  const computeRmsLevel = (data: Uint8Array): number => {
+    if (data.length === 0) return 0;
+
+    let sumSquares = 0;
+    const samples = data.length / 2;
+
+    for (let i = 0; i < data.length - 1; i += 2) {
+      // 16-bit little-endian signed PCM
+      const sample = (data[i] | (data[i + 1] << 8)) - 32768;
+      const normalized = sample / 32768;
+      sumSquares += normalized * normalized;
+    }
+
+    const rms = Math.sqrt(sumSquares / samples);
+    // Increase sensitivity: multiply by 8 and apply curve for better visual response
+    const boosted = Math.min(1.0, rms * 8);
+    const level = Math.pow(boosted, 0.7); // Apply curve to make quieter sounds more visible
+    return level;
+  };
+
+  const emitAudioLevel = (level: number): void => {
+    const rising = level > state.smoothedAudioLevel;
+    const alpha = rising ? 0.4 : 0.15;
+    state.smoothedAudioLevel = state.smoothedAudioLevel + (level - state.smoothedAudioLevel) * alpha;
+    
+    const visual = Math.max(0.02, Math.min(1.0, state.smoothedAudioLevel));
+    state.audioLevelCallbacks.forEach((callback) => {
+      try {
+        callback(visual);
+      } catch (error) {
+        console.error('Error in audio level callback:', error);
+      }
+    });
   };
 
   const prepareModel = async (): Promise<string> => {
@@ -44,6 +101,20 @@ const createWhisperService = () => {
     }
 
     state.initializationStatus = 'Model loaded successfully';
+    return asset.localUri;
+  };
+
+  const prepareVadModel = async (): Promise<string> => {
+    state.initializationStatus = 'Loading VAD model asset...';
+
+    const asset = Asset.fromModule(vadModelAsset);
+    await asset.downloadAsync();
+
+    if (!asset.localUri) {
+      throw new Error('Failed to load VAD model asset');
+    }
+
+    state.initializationStatus = 'VAD model loaded successfully';
     return asset.localUri;
   };
 
@@ -66,6 +137,16 @@ const createWhisperService = () => {
 
       state.whisperContext = await initWhisper({
         filePath: modelPath,
+      });
+
+      const vadModelPath = await prepareVadModel();
+
+      state.initializationStatus = 'Initializing VAD context...';
+
+      state.vadContext = await initWhisperVad({
+        filePath: vadModelPath,
+        useGpu: true,
+        nThreads: 4,
       });
 
       state.isInitialized = true;
@@ -117,8 +198,8 @@ const createWhisperService = () => {
   const startRealtimeTranscription = async (
     languageCode?: string
   ): Promise<boolean> => {
-    if (!state.isInitialized || !state.whisperContext) {
-      console.error('Cannot start real-time: Whisper not initialized');
+    if (!state.isInitialized || !state.whisperContext || !state.vadContext) {
+      console.error('Cannot start real-time: Whisper or VAD not initialized');
       return false;
     }
 
@@ -134,70 +215,130 @@ const createWhisperService = () => {
 
     try {
       state.currentTranscription = '';
+      state.smoothedAudioLevel = 0;
 
-      const options = {
-        language: languageCode,
-        realtimeAudioSec: 30,
-      };
+      const audioStream = new AudioPcmStreamAdapter();
+      state.realtimeAudioStream = audioStream;
 
-      const { stop, subscribe } = await state.whisperContext.transcribeRealtime(
-        options
-      );
-
-      const unsubscribe = subscribe((event: TranscribeRealtimeEvent) => {
-        try {
-          if (event.isCapturing && event.data?.result) {
-            const text = event.data.result.trim();
-            state.currentTranscription = text;
-
-            state.partialCallbacks.forEach((callback) => {
-              try {
-                callback(text);
-              } catch (error) {
-                console.error('Error in partial callback:', error);
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error handling transcription event:', error);
+      audioStream.onData((audioData: { data: Uint8Array }) => {
+        if (audioData.data) {
+          const level = computeRmsLevel(audioData.data);
+          emitAudioLevel(level);
         }
       });
 
-      state.realtimeStop = stop;
-      state.realtimeUnsubscribe = unsubscribe;
-      state.isRealtimeRecording = true;
+      const transcribeOptions: Record<string, unknown> = {};
+      if (languageCode) {
+        transcribeOptions.language = languageCode;
+      }
+
+      const transcriber = new RealtimeTranscriber(
+        {
+          whisperContext: state.whisperContext,
+          vadContext: state.vadContext,
+          audioStream,
+          fs: RNFS,
+        },
+        {
+          audioSliceSec: 30,
+          audioMinSec: 0.5,
+          maxSlicesInMemory: 1,
+          vadPreset: 'default',
+          autoSliceOnSpeechEnd: true,
+          autoSliceThreshold: 0.5,
+          transcribeOptions,
+        },
+        {
+          onTranscribe: (event: RealtimeTranscribeEvent) => {
+            try {
+              if (event.data?.result) {
+                const allResults = state.realtimeTranscriber?.getTranscriptionResults() || [];
+                const aggregatedText = allResults
+                  .map(({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) => transcribeEvent.data?.result?.trim())
+                  .filter(Boolean)
+                  .join(' ');
+
+                const text = aggregatedText || event.data.result.trim();
+                state.currentTranscription = text;
+
+                state.partialCallbacks.forEach((callback) => {
+                  try {
+                    callback(text);
+                  } catch (error) {
+                    console.error('Error in partial callback:', error);
+                  }
+                });
+              }
+            } catch (error) {
+              console.error('Error handling transcription event:', error);
+            }
+          },
+          onError: (error: string) => {
+            console.error('RealtimeTranscriber error:', error);
+          },
+          onStatusChange: (isActive: boolean) => {
+            state.isRealtimeRecording = isActive;
+          },
+        }
+      );
+
+      state.realtimeTranscriber = transcriber;
+
+      await transcriber.start();
 
       return true;
     } catch (error) {
       console.error('Error starting real-time recording:', error);
+      cleanupRealtimeResources();
       state.isRealtimeRecording = false;
       return false;
     }
   };
 
   const stopRealtimeTranscription = async (): Promise<string> => {
-    if (!state.isRealtimeRecording) {
+    if (!state.isRealtimeRecording || !state.realtimeTranscriber) {
       console.warn('No real-time transcription in progress');
       return '';
     }
 
     try {
-      if (state.realtimeStop) {
-        await state.realtimeStop();
-      }
+      await state.realtimeTranscriber.stop();
+
+      const allResults = state.realtimeTranscriber.getTranscriptionResults() || [];
+      const finalText = allResults
+        .map(({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) => transcribeEvent.data?.result?.trim())
+        .filter(Boolean)
+        .join(' ');
+
+      state.currentTranscription = finalText || state.currentTranscription;
 
       return state.currentTranscription;
     } catch (error) {
       console.error('Failed to stop real-time recording:', error);
       return state.currentTranscription;
     } finally {
-      if (state.realtimeUnsubscribe) {
-        state.realtimeUnsubscribe();
-      }
-      state.isRealtimeRecording = false;
-      state.realtimeStop = null;
-      state.realtimeUnsubscribe = null;
+      cleanupRealtimeResources();
     }
+  };
+
+  const cleanupRealtimeResources = (): void => {
+    if (state.realtimeTranscriber) {
+      try {
+        state.realtimeTranscriber.release();
+      } catch (error) {
+        console.error('Error releasing RealtimeTranscriber:', error);
+      }
+    }
+
+    state.realtimeTranscriber = null;
+    state.realtimeAudioStream = null;
+    state.isRealtimeRecording = false;
+    state.smoothedAudioLevel = 0;
+    state.audioLevelCallbacks.forEach((callback) => {
+      try {
+        callback(0.02);
+      } catch {}
+    });
   };
 
   const subscribeToPartialResults = (
@@ -210,9 +351,29 @@ const createWhisperService = () => {
     };
   };
 
+  const subscribeToAudioLevel = (
+    callback: (level: number) => void
+  ): (() => void) => {
+    state.audioLevelCallbacks.add(callback);
+
+    return () => {
+      state.audioLevelCallbacks.delete(callback);
+    };
+  };
+
   const dispose = async (): Promise<void> => {
     if (state.isRealtimeRecording) {
       await stopRealtimeTranscription();
+    }
+
+    cleanupRealtimeResources();
+
+    if (state.vadContext) {
+      try {
+        await state.vadContext.release();
+      } catch (error) {
+        console.error('Error releasing VAD context:', error);
+      }
     }
 
     if (state.whisperContext) {
@@ -229,13 +390,14 @@ const createWhisperService = () => {
 
   const resetState = (): void => {
     state.whisperContext = null;
+    state.vadContext = null;
+    state.realtimeTranscriber = null;
+    state.realtimeAudioStream = null;
     state.isInitialized = false;
     state.isInitializing = false;
     state.isTranscribing = false;
     state.isRealtimeRecording = false;
     state.currentTranscription = '';
-    state.realtimeStop = null;
-    state.realtimeUnsubscribe = null;
   };
 
   return {
@@ -244,6 +406,7 @@ const createWhisperService = () => {
     startRealtimeTranscription,
     stopRealtimeTranscription,
     subscribeToPartialResults,
+    subscribeToAudioLevel,
     dispose,
     get isInitialized() {
       return state.isInitialized;

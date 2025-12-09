@@ -1,11 +1,6 @@
+import { ProgressIndicator } from '@/components/ui';
 import React from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Transcription } from '../../../models/Transcription';
 import { useTranscriptionStore } from '../../../stores/transcriptionStore';
@@ -49,7 +44,7 @@ export const TranscriptionContentView = ({
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.accentBrand} />
+        <ProgressIndicator color={theme.colors.accentBrand} size={32} />
       </View>
     );
   }

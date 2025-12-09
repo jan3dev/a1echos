@@ -1,11 +1,12 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RecordingControlsView } from '../components/shared/recording-controls';
 import { Tooltip } from '../components/ui/tooltip';
 import '../localization';
 import { storageService } from '../services/StorageService';
@@ -14,7 +15,18 @@ import {
   initializeSettingsStore,
   initializeTranscriptionStore,
 } from '../stores';
-import { useGlobalTooltip, useHideGlobalTooltip } from '../stores/uiStore';
+import {
+  useAudioLevel,
+  useTranscriptionState,
+} from '../stores/transcriptionStore';
+import {
+  useGlobalTooltip,
+  useHideGlobalTooltip,
+  useOnRecordingStart,
+  useOnRecordingStop,
+  useRecordingControlsEnabled,
+  useRecordingControlsVisible,
+} from '../stores/uiStore';
 import { useTheme, useThemeStore } from '../theme';
 
 // Prevent the splash screen from auto-hiding before initialization completes
@@ -61,6 +73,46 @@ function GlobalTooltipRenderer() {
         variant={tooltip?.variant ?? 'normal'}
         pointerPosition="none"
         margin={32}
+      />
+    </View>
+  );
+}
+
+function GlobalRecordingControls() {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const pathname = usePathname();
+  const transcriptionState = useTranscriptionState();
+  const audioLevel = useAudioLevel();
+  const onRecordingStart = useOnRecordingStart();
+  const onRecordingStop = useOnRecordingStop();
+  const enabled = useRecordingControlsEnabled();
+  const visible = useRecordingControlsVisible();
+
+  const handleRecordingStart = useCallback(() => {
+    onRecordingStart?.();
+  }, [onRecordingStart]);
+
+  const handleRecordingStop = useCallback(() => {
+    onRecordingStop?.();
+  }, [onRecordingStop]);
+
+  const isOnRecordingScreen =
+    pathname === '/' || pathname.startsWith('/session/');
+
+  if (!visible || !isOnRecordingScreen) {
+    return null;
+  }
+
+  return (
+    <View style={[styles.recordingControls, { bottom: insets.bottom }]}>
+      <RecordingControlsView
+        state={transcriptionState}
+        audioLevel={audioLevel}
+        onRecordingStart={handleRecordingStart}
+        onRecordingStop={handleRecordingStop}
+        enabled={enabled}
+        colors={theme.colors}
       />
     </View>
   );
@@ -137,13 +189,14 @@ export default function RootLayout() {
         backgroundColor="transparent"
         translucent
       />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Protected guard={StorybookEnabled}>
           <Stack.Screen name="(storybook)/index" />
         </Stack.Protected>
 
         <Stack.Screen name="(pages)/index" />
       </Stack>
+      <GlobalRecordingControls />
       <GlobalTooltipRenderer />
     </GestureHandlerRootView>
   );
@@ -155,5 +208,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
+  },
+  recordingControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
 });
