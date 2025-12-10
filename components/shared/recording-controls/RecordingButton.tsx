@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { TranscriptionState } from '../../../models/TranscriptionState';
-import { AquaPrimitiveColors } from '../../../theme/colors';
+import { getShadow } from '../../../theme';
 import { AquaColors } from '../../../theme/themeColors';
 import { useThemeStore } from '../../../theme/useThemeStore';
 import { Icon } from '../../ui/icon/Icon';
@@ -43,7 +43,7 @@ export const RecordingButton = ({
 }: RecordingButtonProps) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
-  
+
   const { currentTheme } = useThemeStore();
   const blurTint = currentTheme === AppTheme.DARK ? 'light' : 'dark';
 
@@ -174,7 +174,8 @@ export const RecordingButton = ({
   };
 
   const handleStopRecording = () => {
-    if (onRecordingStop) {
+    if (onRecordingStop && !isDebouncing) {
+      setIsDebouncing(true);
       isPulseAnimating.current = true;
       triggerScaleAnimation();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -185,7 +186,12 @@ export const RecordingButton = ({
       }
       pulseAnimationTimerRef.current = setTimeout(() => {
         isPulseAnimating.current = false;
-        handleRecordingAction(onRecordingStop);
+        onRecordingStop();
+
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+          setIsDebouncing(false);
+        }, debounceDuration);
       }, pulseDuration);
     }
   };
@@ -253,7 +259,6 @@ export const RecordingButton = ({
         style={[
           styles.buttonContainer,
           { width: size, height: size },
-          styles.recordingButton,
           { backgroundColor: colors.accentBrand },
           glowAnimatedStyle,
         ]}
@@ -323,19 +328,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   transcribingButton: {
-    shadowColor: AquaPrimitiveColors.shadow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 5,
+    ...getShadow('recordingButton'),
     opacity: 0.5,
   },
-  recordingButton: {},
   readyButton: {
-    shadowColor: AquaPrimitiveColors.shadow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 5,
+    ...getShadow('recordingButton'),
   },
 });

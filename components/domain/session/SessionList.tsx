@@ -1,4 +1,4 @@
-import { AquaPrimitiveColors } from '@/theme';
+import { getShadow } from '@/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Session } from '../../../models/Session';
@@ -29,10 +29,8 @@ export const SessionList = ({
     <View
       style={[
         styles.container,
-        {
-          backgroundColor: theme.colors.surfacePrimary,
-          shadowColor: AquaPrimitiveColors.shadow,
-        },
+        getShadow('card'),
+        { backgroundColor: theme.colors.surfacePrimary },
       ]}
     >
       {sessions.map((session, index) => (
@@ -58,10 +56,6 @@ export const SessionList = ({
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 4,
     overflow: 'hidden',
   },
 });

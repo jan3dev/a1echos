@@ -12,7 +12,7 @@ import {
 
 import { Transcription } from '../../../models/Transcription';
 import { useUIStore } from '../../../stores/uiStore';
-import { AquaPrimitiveColors } from '../../../theme/colors';
+import { getShadow } from '../../../theme';
 import { useTheme } from '../../../theme/useTheme';
 import { Checkbox } from '../../ui/checkbox';
 import { Icon } from '../../ui/icon';
@@ -151,11 +151,11 @@ export const TranscriptionItem = ({
       disabled={!enableInteractions && !isEditing}
       style={[
         styles.container,
+        getShadow('cardElevated'),
         {
           backgroundColor,
           borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
           borderWidth: isEditing ? 1 : 0,
-          shadowColor: AquaPrimitiveColors.shadow,
         },
         style,
       ]}
@@ -252,10 +252,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 2,
   },
   headerRow: {
     flexDirection: 'row',

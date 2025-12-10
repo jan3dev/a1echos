@@ -1,4 +1,5 @@
 import { Asset } from 'expo-asset';
+import { AudioModule, AudioRecorder, RecordingOptions, setAudioModeAsync } from 'expo-audio';
 import { File } from 'expo-file-system';
 import RNFS from 'react-native-fs';
 // @ts-ignore - whisper.rn may not have complete type declarations
@@ -38,6 +39,17 @@ interface WhisperServiceState {
   smoothedAudioLevel: number;
 }
 
+const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
+  await setAudioModeAsync({
+    allowsRecording: true,
+    playsInSilentMode: true,
+    shouldPlayInBackground: true,
+  });
+  if (delayMs > 0) {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+};
+
 const createWhisperService = () => {
   const state: WhisperServiceState = {
     whisperContext: null,
@@ -69,9 +81,8 @@ const createWhisperService = () => {
     }
 
     const rms = Math.sqrt(sumSquares / samples);
-    // Increase sensitivity: multiply by 8 and apply curve for better visual response
     const boosted = Math.min(1.0, rms * 8);
-    const level = Math.pow(boosted, 0.7); // Apply curve to make quieter sounds more visible
+    const level = Math.pow(boosted, 0.7);
     return level;
   };
 
@@ -131,6 +142,45 @@ const createWhisperService = () => {
     state.initializationStatus = 'Starting initialization...';
 
     try {
+      // Pre-configure audio session to avoid issues with real-time mode
+      await configureAudioSession();
+      
+      // Warm up the audio system by briefly preparing a recorder
+      // This ensures iOS audio infrastructure is fully initialized
+      try {
+        const warmupOptions: RecordingOptions = {
+          extension: '.wav',
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          ios: {
+            outputFormat: 'linearpcm',
+            audioQuality: 127,
+            sampleRate: 16000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+          android: {
+            extension: '.wav',
+            outputFormat: 'default',
+            audioEncoder: 'default',
+            sampleRate: 16000,
+          },
+          web: {
+            mimeType: 'audio/wav',
+            bitsPerSecond: 128000,
+          },
+        };
+        const warmupRecorder = new (AudioModule as { AudioRecorder: new (options: RecordingOptions) => AudioRecorder }).AudioRecorder(warmupOptions);
+        await warmupRecorder.prepareToRecordAsync();
+        warmupRecorder.release();
+      } catch (warmupError) {
+        console.warn('[WhisperService] Audio warmup failed (non-fatal):', warmupError);
+      }
+      
+      await configureAudioSession(50);
+
       const modelPath = await prepareModel();
 
       state.initializationStatus = 'Initializing Whisper context...';
@@ -217,6 +267,9 @@ const createWhisperService = () => {
       state.currentTranscription = '';
       state.smoothedAudioLevel = 0;
 
+      // Configure audio session for recording BEFORE creating AudioPcmStreamAdapter
+      await configureAudioSession(100);
+
       const audioStream = new AudioPcmStreamAdapter();
       state.realtimeAudioStream = audioStream;
 
@@ -285,6 +338,9 @@ const createWhisperService = () => {
       state.realtimeTranscriber = transcriber;
 
       await transcriber.start();
+      // Set isRealtimeRecording immediately after start to avoid race condition
+      // (onStatusChange callback may not have fired yet)
+      state.isRealtimeRecording = true;
 
       return true;
     } catch (error) {

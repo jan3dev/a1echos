@@ -214,8 +214,7 @@ export const ThreeWaveLines = ({
 
       case TranscriptionState.RECORDING:
       case TranscriptionState.STREAMING: {
-        // Match Flutter: basePhaseSpeed * 4.0, scaled by audio
-        const baseSpeed = profile.basePhaseSpeed * 4.0;
+        const baseSpeed = profile.basePhaseSpeed * 2.0;
         const audioSpeedMultiplier =
           1.0 + displayLevelRef.current * profile.audioSpeedReactivity;
         return baseSpeed * audioSpeedMultiplier;

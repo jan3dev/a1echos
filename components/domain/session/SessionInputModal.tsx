@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { AppConstants } from '../../../constants/AppConstants';
 import { useLocalization } from '../../../hooks/useLocalization';
+import { getShadow } from '../../../theme';
 import { useTheme } from '../../../theme/useTheme';
 import { Button } from '../../ui/button';
 import { Icon } from '../../ui/icon';
@@ -153,11 +154,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    ...getShadow('modal'),
   },
   header: {
     flexDirection: 'row',

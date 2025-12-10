@@ -56,12 +56,68 @@ export const shadows = {
     8
   ),
 
-  dark: createShadow(
-    AquaPrimitiveColors.shadowDark,
+  menu: createShadow(
+    AquaPrimitiveColors.black,
+    { width: 0, height: 4 },
+    0.16,
+    16,
+    8
+  ),
+
+  toast: createShadow(
+    AquaPrimitiveColors.black,
+    { width: 0, height: 4 },
+    0.04,
+    16,
+    4
+  ),
+
+  card: createShadow(
+    AquaPrimitiveColors.shadow,
     { width: 0, height: 0 },
-    1,
+    0.04,
     16,
     2
+  ),
+
+  cardElevated: createShadow(
+    AquaPrimitiveColors.shadow,
+    { width: 0, height: 4 },
+    0.04,
+    16,
+    4
+  ),
+
+  modal: createShadow(
+    AquaPrimitiveColors.black,
+    { width: 0, height: -2 },
+    0.1,
+    8,
+    5
+  ),
+
+  input: createShadow(
+    AquaPrimitiveColors.shadow,
+    { width: 0, height: 0 },
+    0.04,
+    20,
+    2
+  ),
+
+  button: createShadow(
+    AquaPrimitiveColors.black,
+    { width: 0, height: 8 },
+    0.26,
+    8,
+    4
+  ),
+
+  recordingButton: createShadow(
+    AquaPrimitiveColors.shadow,
+    { width: 0, height: 0 },
+    1,
+    20,
+    4
   ),
 } as const;
 

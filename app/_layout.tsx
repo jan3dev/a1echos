@@ -1,4 +1,7 @@
+import { AppTheme } from '@/models/AppTheme';
+import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -81,6 +84,7 @@ function GlobalTooltipRenderer() {
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { currentTheme } = useThemeStore();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
   const audioLevel = useAudioLevel();
@@ -104,8 +108,33 @@ function GlobalRecordingControls() {
     return null;
   }
 
+  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
+
+  const FADE_HEIGHT = 32;
+  const CONTROLS_HEIGHT = 96;
+  const fadeStop = FADE_HEIGHT / CONTROLS_HEIGHT;
+
   return (
-    <View style={[styles.recordingControls, { bottom: insets.bottom }]}>
+    <View
+      style={[styles.recordingControls, { paddingBottom: insets.bottom }]}
+      pointerEvents="box-none"
+    >
+      <BlurView
+        intensity={20}
+        tint={blurTint}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={[
+            'transparent',
+            theme.colors.glassBackground,
+            theme.colors.glassBackground,
+          ]}
+          locations={[0, fadeStop, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </BlurView>
       <RecordingControlsView
         state={transcriptionState}
         audioLevel={audioLevel}
@@ -213,5 +242,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    bottom: 0,
+    zIndex: 100,
   },
 });

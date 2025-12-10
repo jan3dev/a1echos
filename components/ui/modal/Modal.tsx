@@ -241,7 +241,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
-    width: '100%',
     marginBottom: 20,
     marginHorizontal: 16,
   },
@@ -300,6 +299,6 @@ const styles = StyleSheet.create({
     height: 16,
   },
   bottomSpacing: {
-    height: 24,
+    height: 32,
   },
 });

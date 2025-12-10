@@ -24,6 +24,7 @@ import {
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
   useSetRecordingCallbacks,
+  useSetRecordingControlsEnabled,
   useShowGlobalTooltip,
   useShowToast,
   useToggleSessionSelection,
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   const showToast = useShowToast();
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
+  const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
 
   const {
     show: showDeleteToast,
@@ -112,7 +114,10 @@ export default function HomeScreen() {
     [isSessionSelectionMode, toggleSessionSelection, router]
   );
 
-  const handleRecordingStart = useCallback(async () => {
+  const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
+  const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
+
+  handleRecordingStartRef.current = async () => {
     const hasPermission = await audioService.hasPermission();
     if (!hasPermission) {
       const isPermanentlyDenied = await audioService.isPermanentlyDenied();
@@ -161,29 +166,20 @@ export default function HomeScreen() {
     } finally {
       setTooltipShouldDisappear(false);
     }
-  }, [
-    effectivelyEmpty,
-    createSession,
-    isIncognitoMode,
-    startTranscriptionRecording,
-    router,
-    scrollToTop,
-    showToast,
-    loc,
-  ]);
+  };
 
-  const handleRecordingStop = useCallback(async () => {
+  handleRecordingStopRef.current = async () => {
     await stopRecordingAndSave();
-  }, [stopRecordingAndSave]);
+  };
 
   useFocusEffect(
     useCallback(() => {
-      setRecordingCallbacks(handleRecordingStart, handleRecordingStop);
-
-      return () => {
-        setRecordingCallbacks(null, null);
-      };
-    }, [setRecordingCallbacks, handleRecordingStart, handleRecordingStop])
+      const onStart = () => handleRecordingStartRef.current?.();
+      const onStop = () => handleRecordingStopRef.current?.();
+      setRecordingCallbacks(onStart, onStop);
+      setRecordingControlsEnabled(true);
+      // No cleanup - next screen will set its own callbacks
+    }, [setRecordingCallbacks, setRecordingControlsEnabled])
   );
 
   const performDelete = useCallback(async () => {

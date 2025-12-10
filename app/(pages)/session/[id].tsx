@@ -397,7 +397,10 @@ export default function SessionScreen() {
     setIsCancellingEdit(false);
   }, []);
 
-  const handleRecordingStart = useCallback(async () => {
+  const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
+  const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
+
+  handleRecordingStartRef.current = async () => {
     const hasPermission = await audioService.hasPermission();
     if (!hasPermission) {
       const isPermanentlyDenied = await audioService.isPermanentlyDenied();
@@ -413,31 +416,26 @@ export default function SessionScreen() {
     if (!success) {
       showToast(loc.homeFailedStartRecording, 'error');
     }
-  }, [startRecording, showToast, loc]);
+  };
 
-  const handleRecordingStop = useCallback(async () => {
+  handleRecordingStopRef.current = async () => {
     await stopRecordingAndSave();
-  }, [stopRecordingAndSave]);
+  };
 
   const controlsEnabled = !isInitializing || isRecording;
 
   useFocusEffect(
     useCallback(() => {
-      setRecordingCallbacks(handleRecordingStart, handleRecordingStop);
-      setRecordingControlsEnabled(controlsEnabled);
-
-      return () => {
-        setRecordingCallbacks(null, null);
-        setRecordingControlsEnabled(false);
-      };
-    }, [
-      setRecordingCallbacks,
-      setRecordingControlsEnabled,
-      handleRecordingStart,
-      handleRecordingStop,
-      controlsEnabled,
-    ])
+      const onStart = () => handleRecordingStartRef.current?.();
+      const onStop = () => handleRecordingStopRef.current?.();
+      setRecordingCallbacks(onStart, onStop);
+      // No cleanup - next screen will set its own callbacks
+    }, [setRecordingCallbacks])
   );
+
+  useEffect(() => {
+    setRecordingControlsEnabled(controlsEnabled);
+  }, [setRecordingControlsEnabled, controlsEnabled]);
 
   useEffect(() => {
     setRecordingControlsVisible(!selectionMode);

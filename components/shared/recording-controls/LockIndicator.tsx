@@ -5,7 +5,7 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { AquaPrimitiveColors } from '../../../theme/colors';
+import { getShadow } from '../../../theme';
 import { AquaColors } from '../../../theme/themeColors';
 import { useThemeStore } from '../../../theme/useThemeStore';
 import { Icon } from '../../ui/icon/Icon';
@@ -99,11 +99,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   background: {
-    shadowColor: AquaPrimitiveColors.shadow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
+    ...getShadow('default'),
     overflow: 'hidden',
   },
   blurContainer: {

@@ -18,7 +18,7 @@ import {
   useSelectedLanguage,
   useSettingsStore,
 } from '../../../stores/settingsStore';
-import { AquaPrimitiveColors, useTheme } from '../../../theme';
+import { getShadow, useTheme } from '../../../theme';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -72,10 +72,8 @@ export default function LanguageSettingsScreen() {
         <View
           style={[
             styles.card,
-            {
-              backgroundColor: theme.colors.surfacePrimary,
-              shadowColor: AquaPrimitiveColors.shadow,
-            },
+            getShadow('card'),
+            { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
           {languages.map((language, index) => (
@@ -119,9 +117,5 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 8,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 4,
   },
 });

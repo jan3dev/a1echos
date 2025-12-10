@@ -9,7 +9,7 @@ import {
   TextInputContentSizeChangeEvent,
   View,
 } from 'react-native';
-import { useTheme } from '../../../theme';
+import { getShadow, useTheme } from '../../../theme';
 import { AquaTypography } from '../../../theme/typography';
 import { Icon } from '../icon';
 
@@ -212,16 +212,12 @@ export const TextField = ({
         <Animated.View
           style={[
             styles.container,
+            getShadow('input'),
             {
               height: containerHeight,
               backgroundColor: colors.surfacePrimary,
               borderColor,
               borderWidth: 1,
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.04,
-              shadowRadius: 10,
-              elevation: 2,
             },
           ]}
         >

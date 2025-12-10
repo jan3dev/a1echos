@@ -9,7 +9,7 @@ import { TopAppBar } from '../../../components/ui/top-app-bar';
 import { useLocalization } from '../../../hooks/useLocalization';
 import { AppTheme } from '../../../models/AppTheme';
 import { useSettingsStore } from '../../../stores/settingsStore';
-import { AquaPrimitiveColors, useTheme } from '../../../theme';
+import { getShadow, useTheme } from '../../../theme';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -53,10 +53,8 @@ export default function ThemeSettingsScreen() {
         <View
           style={[
             styles.card,
-            {
-              backgroundColor: theme.colors.surfacePrimary,
-              shadowColor: AquaPrimitiveColors.shadow,
-            },
+            getShadow('card'),
+            { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
           <ListItem
@@ -114,9 +112,5 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 8,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 4,
   },
 });

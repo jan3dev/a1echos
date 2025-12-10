@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -7,7 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useTheme } from '../../../theme';
+import { getShadow, useTheme } from '../../../theme';
 import { Icon } from '../icon';
 import { Text } from '../text';
 
@@ -41,7 +42,7 @@ export const Toast = ({
   onDismiss,
 }: ToastProps) => {
   const { width } = useWindowDimensions();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -109,6 +110,7 @@ export const Toast = ({
         <Animated.View
           style={[
             styles.container,
+            getShadow('toast'),
             {
               transform: [{ translateY }],
               opacity,
@@ -117,7 +119,9 @@ export const Toast = ({
           ]}
         >
           <Pressable>
-            <View
+            <BlurView
+              intensity={32}
+              tint={isDark ? 'dark' : 'light'}
               style={[styles.card, { backgroundColor: colors.glassSurface }]}
             >
               {/* Main content */}
@@ -227,7 +231,7 @@ export const Toast = ({
                   ) : null}
                 </View>
               )}
-            </View>
+            </BlurView>
           </Pressable>
         </Animated.View>
       </Pressable>

@@ -1,6 +1,3 @@
-import { AppTheme } from '@/models/AppTheme';
-import { useThemeStore } from '@/theme/useThemeStore';
-import { BlurView } from 'expo-blur';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { TranscriptionState } from '../../../models/TranscriptionState';
@@ -28,23 +25,11 @@ export const RecordingControlsView = ({
   colors,
 }: RecordingControlsViewProps) => {
   const controlsHeight = 96.0;
-  const { currentTheme } = useThemeStore();
-  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
 
   return (
     <View style={[styles.container, { height: controlsHeight }]}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <BlurView
-          intensity={20}
-          tint={blurTint}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.glassBackground },
-          ]}
-        />
-      </View>
       <View style={[styles.contentContainer, { paddingVertical: spacing }]}>
-        <View style={styles.waveContainer}>
+        <View style={styles.waveContainer} pointerEvents="none">
           <ThreeWaveLines
             audioLevel={audioLevel}
             colors={colors}

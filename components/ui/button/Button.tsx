@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { getShadow } from '../../../theme';
 import { lightColors } from '../../../theme/themeColors';
 import { AquaTypography } from '../../../theme/typography';
 import { useTheme } from '../../../theme/useTheme';
@@ -169,13 +170,7 @@ const ButtonBase = ({
           opacity: enabled ? (pressed ? 0.9 : 1) : 0.5,
           paddingHorizontal: isSmall ? horizontalPadding : 0,
           borderRadius: BUTTON_BORDER_RADIUS,
-          ...(type === 'utility' && {
-            shadowColor: '#00000042',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 1,
-            shadowRadius: 8,
-            elevation: 8,
-          }),
+          ...(type === 'utility' && getShadow('button')),
         },
       ]}
     >

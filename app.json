@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Echos",
-    "slug": "a1-echos",
+    "slug": "echos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "a1echos",
+    "scheme": "echos",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,15 +14,9 @@
         "NSMicrophoneUsageDescription": "Echos needs access to your microphone to record audio for transcription.",
         "UIBackgroundModes": ["audio"]
       },
-      "bundleIdentifier": "com.a1echos.app"
+      "bundleIdentifier": "com.a1lab.echos"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
       "minSdkVersion": 26,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -33,11 +27,10 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE"
       ],
-      "package": "com.a1echos.app"
+      "package": "com.a1lab.echos"
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "static"
     },
     "plugins": [
       "expo-router",
@@ -45,7 +38,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",

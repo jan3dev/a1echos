@@ -1,14 +1,14 @@
 import * as Linking from 'expo-linking';
 import React from 'react';
 import {
-    Image,
-    Platform,
-    Pressable,
-    StyleSheet,
-    useWindowDimensions,
-    View,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
 } from 'react-native';
-import { useTheme } from '../../../theme';
+import { getShadow } from '../../../theme';
 
 const AQUA_APP_URLS = {
   android:
@@ -21,7 +21,6 @@ const BANNER_ASPECT_RATIO = 1029 / 633;
 const MAX_BANNER_WIDTH = 633;
 
 export const InAppBanner = () => {
-  const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
 
   const handlePress = async () => {
@@ -51,10 +50,10 @@ export const InAppBanner = () => {
         onPress={handlePress}
         style={({ pressed }) => [
           styles.container,
+          getShadow('card'),
           {
             width: bannerWidth,
             height: bannerHeight,
-            shadowColor: theme.colors.surfaceInverse,
             opacity: pressed ? 0.9 : 1,
           },
         ]}
@@ -81,10 +80,6 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 4,
   },
   imageContainer: {
     flex: 1,
