@@ -1,10 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AquaTypography } from '../../../theme/typography';
-import { useTheme } from '../../../theme/useTheme';
-import { Icon } from '../icon';
-import { Button } from './Button';
+
+import { Button, Icon } from '@/components';
+import { AquaTypography, useTheme } from '@/theme';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme();

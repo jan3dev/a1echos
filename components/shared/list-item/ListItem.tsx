@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -6,8 +5,9 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Text } from '../../ui/text/Text';
+
+import { Text } from '@/components';
+import { useTheme } from '@/theme';
 
 export interface ListItemProps {
   title: string;

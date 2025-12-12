@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { TranscriptionState } from '../../../models/TranscriptionState';
-import { AquaPrimitiveColors } from '../../../theme/colors';
-import { AquaColors } from '../../../theme/themeColors';
+
+import { TranscriptionState } from '@/models';
+import { AquaColors, AquaPrimitiveColors } from '@/theme';
 
 interface ThreeWaveLinesProps {
   audioLevel?: number;

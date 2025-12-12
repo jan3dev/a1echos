@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Text } from '../text/Text';
-import { Dimmer } from './Dimmer';
+
+import { Dimmer, Text } from '@/components';
+import { useTheme } from '@/theme';
 
 export default {
   title: 'UI Components/Dimmer',

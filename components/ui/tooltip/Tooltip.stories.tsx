@@ -1,8 +1,13 @@
-import React from 'react';
+import { useState } from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Tooltip, TooltipPointerPosition, TooltipVariant } from './Tooltip';
-import { useTooltip } from './useTooltip';
+
+import {
+  Tooltip,
+  TooltipPointerPosition,
+  TooltipVariant,
+  useTooltip,
+} from '@/components';
+import { useTheme } from '@/theme';
 
 export default {
   title: 'UI Components/Tooltip',
@@ -77,7 +82,7 @@ export const InfoModeWithVariants = () => {
   const { theme } = useTheme();
 
   const variants: TooltipVariant[] = ['success', 'warning', 'error'];
-  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleShow = () => {
     const variant = variants[currentIndex];

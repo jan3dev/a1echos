@@ -1,19 +1,12 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ListItem } from '../../../components/shared/list-item';
-import { Divider } from '../../../components/ui/divider';
-import { Radio } from '../../../components/ui/radio';
-import { Text } from '../../../components/ui/text';
-import { TopAppBar } from '../../../components/ui/top-app-bar';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { ModelType } from '../../../models/ModelType';
-import {
-  useSelectedModelType,
-  useSettingsStore,
-} from '../../../stores/settingsStore';
-import { getShadow, useTheme } from '../../../theme';
+
+import { Divider, ListItem, Radio, Text, TopAppBar } from '@/components';
+import { useLocalization } from '@/hooks';
+import { ModelType } from '@/models';
+import { useSelectedModelType, useSetModelType } from '@/stores';
+import { getShadow, useTheme } from '@/theme';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -24,7 +17,7 @@ export default function ModelSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const selectedModelType = useSelectedModelType();
-  const setModelType = useSettingsStore((s) => s.setModelType);
+  const setModelType = useSetModelType();
 
   const handleSelect = async (modelType: ModelType) => {
     try {

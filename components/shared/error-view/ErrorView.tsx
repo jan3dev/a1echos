@@ -1,10 +1,8 @@
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { useTheme } from '../../../theme';
-import { Button } from '../../ui/button';
-import { Icon } from '../../ui/icon';
-import { Text } from '../../ui/text';
+
+import { Button, Icon, Text } from '@/components';
+import { useLocalization } from '@/hooks';
+import { useTheme } from '@/theme';
 
 interface ErrorViewProps {
   errorMessage: string;

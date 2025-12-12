@@ -1,10 +1,10 @@
-import React from 'react';
 import {
   Text as RNText,
   TextProps as RNTextProps,
   TextStyle,
 } from 'react-native';
-import { TypographyKey, useTheme } from '../../../theme';
+
+import { TypographyKey, useTheme } from '@/theme';
 
 export type TextVariant =
   | 'h1'

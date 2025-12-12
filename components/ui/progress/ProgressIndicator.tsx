@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
-import { Icon } from '../icon';
+
+import { Icon } from '@/components';
 
 interface ProgressIndicatorProps {
   color?: string;
@@ -30,7 +31,7 @@ export const ProgressIndicator = ({
     };
   }, [rotateAnim]);
 
-  const rotate = React.useMemo(
+  const rotate = useMemo(
     () =>
       rotateAnim.interpolate({
         inputRange: [0, 1],

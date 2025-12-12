@@ -1,13 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Session } from '../../../models/Session';
-import { useSessionStore } from '../../../stores/sessionStore';
-import { useSettingsStore } from '../../../stores/settingsStore';
-import { useTheme } from '../../../theme/useTheme';
-import { EmptyStateView } from './EmptyStateView';
-import { HomeAppBar } from './HomeAppBar';
-import { HomeContent } from './HomeContent';
+
+import { EmptyStateView, HomeAppBar, HomeContent } from '@/components';
+import { Session } from '@/models';
+import { useSessionStore, useSettingsStore } from '@/stores';
+import { useTheme } from '@/theme';
 
 // Mock Data
 const dummySessions: Session[] = [

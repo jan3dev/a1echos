@@ -14,7 +14,6 @@ type EventSubscription = import('expo-notifications').EventSubscription;
 
 const createBackgroundRecordingService = () => {
   let isServiceRunning: boolean = false;
-  let isActuallyRecording: boolean = false;
   const callbacks: BackgroundRecordingCallbacks = {};
   let notificationId: string | null = null;
   let notificationResponseSub: EventSubscription | null = null;
@@ -107,8 +106,6 @@ const createBackgroundRecordingService = () => {
   };
 
   const updateRecordingState = (isRecording: boolean): void => {
-    isActuallyRecording = isRecording;
-
     if (
       isServiceRunning &&
       Platform.OS === 'android' &&
@@ -203,36 +200,12 @@ const createBackgroundRecordingService = () => {
     return true;
   };
 
-  const getServiceRunning = (): boolean => {
-    return isServiceRunning;
-  };
-
-  const getActuallyRecording = (): boolean => {
-    return isActuallyRecording;
-  };
-
-  const dispose = async (): Promise<void> => {
-    await stopBackgroundService();
-    if (notificationResponseSub) {
-      notificationResponseSub.remove();
-      notificationResponseSub = null;
-    }
-    callbacks.onStopRecording = undefined;
-  };
-
   return {
     initialize,
     setOnStopRecordingCallback,
     updateRecordingState,
     startBackgroundService,
     stopBackgroundService,
-    get serviceRunning() {
-      return getServiceRunning();
-    },
-    get actuallyRecording() {
-      return getActuallyRecording();
-    },
-    dispose,
   };
 };
 

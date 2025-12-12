@@ -1,9 +1,9 @@
+import { AppConstants } from '@/constants';
+import { Session, createSession } from '@/models';
+import { storageService } from '@/services';
 import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { AppConstants } from '../constants/AppConstants';
-import { Session, createSession } from '../models/Session';
-import { storageService } from '../services/StorageService';
 
 interface SessionStore {
   sessions: Session[];
@@ -355,19 +355,14 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 export const initializeSessionStore = async (): Promise<void> => {
   await useSessionStore.getState().loadSessions();
 };
-
 export const useSessions = () =>
   useSessionStore(useShallow((s) => s.getSessions()));
-export const useActiveSessionId = () =>
-  useSessionStore((s) => s.activeSessionId);
-export const useIncognitoSession = () =>
-  useSessionStore((s) => s.incognitoSession);
-export const useIsSessionsLoaded = () => useSessionStore((s) => s.isLoaded);
 export const useCreateSession = () => useSessionStore((s) => s.createSession);
-export const useDeleteSession = () => useSessionStore((s) => s.deleteSession);
 export const useRenameSession = () => useSessionStore((s) => s.renameSession);
-export const useSwitchSession = () => useSessionStore((s) => s.switchSession);
 export const useFindSessionById = () =>
   useSessionStore((s) => s.findSessionById);
+export const useSwitchSession = () => useSessionStore((s) => s.switchSession);
+export const useIncognitoSession = () =>
+  useSessionStore((s) => s.incognitoSession);
 
 export default useSessionStore;

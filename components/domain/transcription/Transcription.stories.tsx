@@ -1,17 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
-import { ModelType } from '../../../models/ModelType';
-import { Transcription } from '../../../models/Transcription';
-import { TranscriptionState } from '../../../models/TranscriptionState';
-import { useSessionStore } from '../../../stores/sessionStore';
-import { useSettingsStore } from '../../../stores/settingsStore';
-import { useTranscriptionStore } from '../../../stores/transcriptionStore';
-import { useUIStore } from '../../../stores/uiStore';
-import { useTheme } from '../../../theme/useTheme';
-import { Toast, ToastVariant } from '../../ui/toast/Toast';
-import { TranscriptionItem } from './TranscriptionItem';
-import { TranscriptionList } from './TranscriptionList';
+
+import {
+  Toast,
+  ToastVariant,
+  TranscriptionItem,
+  TranscriptionList,
+} from '@/components';
+import { ModelType, Transcription, TranscriptionState } from '@/models';
+import {
+  useSessionStore,
+  useSettingsStore,
+  useTranscriptionStore,
+  useUIStore,
+} from '@/stores';
+import { useTheme } from '@/theme';
 
 const dummyTranscriptions: Transcription[] = [
   {

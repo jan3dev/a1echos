@@ -1,16 +1,17 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withSequence,
-    withSpring,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Tooltip } from '../../ui/tooltip/Tooltip';
+
+import { Tooltip } from '@/components';
 
 interface EmptyStateViewProps {
   message: string;

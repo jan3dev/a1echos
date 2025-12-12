@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
-import React from 'react';
 import { Modal, Pressable, StyleSheet } from 'react-native';
-import { useTheme } from '../../../theme';
+
+import { useTheme } from '@/theme';
 
 export interface DimmerProps {
   visible: boolean;

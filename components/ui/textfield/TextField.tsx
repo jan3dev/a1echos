@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -9,9 +9,9 @@ import {
   TextInputContentSizeChangeEvent,
   View,
 } from 'react-native';
-import { getShadow, useTheme } from '../../../theme';
-import { AquaTypography } from '../../../theme/typography';
-import { Icon } from '../icon';
+
+import { Icon } from '@/components';
+import { AquaTypography, getShadow, useTheme } from '@/theme';
 
 interface TextFieldProps {
   label?: string;

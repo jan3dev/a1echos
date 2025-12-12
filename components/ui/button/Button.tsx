@@ -1,10 +1,7 @@
-import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { getShadow } from '../../../theme';
-import { lightColors } from '../../../theme/themeColors';
-import { AquaTypography } from '../../../theme/typography';
-import { useTheme } from '../../../theme/useTheme';
-import { ProgressIndicator } from '../progress';
+
+import { ProgressIndicator } from '@/components';
+import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
 
 export type ButtonSize = 'large' | 'small';
 export type ButtonVariant = 'normal' | 'error' | 'success' | 'warning';

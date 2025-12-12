@@ -1,24 +1,23 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
+  Divider,
+  Icon,
   InAppBanner,
+  ListItem,
   SettingsFooter,
-} from '../../../components/domain/settings';
-import { ListItem } from '../../../components/shared/list-item';
-import { Divider } from '../../../components/ui/divider';
-import { Icon } from '../../../components/ui/icon';
-import { TopAppBar } from '../../../components/ui/top-app-bar';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { AppTheme } from '../../../models/AppTheme';
-import { ModelType } from '../../../models/ModelType';
+  TopAppBar,
+} from '@/components';
+import { useLocalization } from '@/hooks';
+import { AppTheme, ModelType } from '@/models';
 import {
   useSelectedLanguage,
   useSelectedModelType,
   useSelectedTheme,
-} from '../../../stores/settingsStore';
-import { getShadow, useTheme } from '../../../theme';
+} from '@/stores';
+import { getShadow, useTheme } from '@/theme';
 
 const APP_BAR_HEIGHT = 60;
 

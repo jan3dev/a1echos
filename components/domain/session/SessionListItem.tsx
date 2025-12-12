@@ -1,12 +1,10 @@
-import React from 'react';
 import { View } from 'react-native';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { Session } from '../../../models/Session';
-import { useSessionTranscriptions } from '../../../stores/transcriptionStore';
-import { useTheme } from '../../../theme/useTheme';
-import { ListItem } from '../../shared/list-item/ListItem';
-import { Checkbox } from '../../ui/checkbox';
-import { SessionMoreMenu } from './SessionMoreMenu';
+
+import { Checkbox, ListItem, SessionMoreMenu } from '@/components';
+import { useLocalization } from '@/hooks';
+import { Session } from '@/models';
+import { useSessionTranscriptions } from '@/stores';
+import { useTheme } from '@/theme';
 
 interface SessionListItemProps {
   session: Session;

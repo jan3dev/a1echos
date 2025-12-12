@@ -1,17 +1,17 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import { Fragment } from 'react';
 import {
-    StyleProp,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ViewStyle,
+  StyleProp,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../../theme/useTheme';
-import { Icon } from '../icon/Icon';
-import { Text } from '../text/Text';
+
+import { Icon, Text } from '@/components';
+import { useTheme } from '@/theme';
 
 export interface TopAppBarProps {
   title?: string;
@@ -119,10 +119,10 @@ export const TopAppBar = ({
         ) : (
           <View style={styles.actionsContainer}>
             {actions.map((action, index) => (
-              <React.Fragment key={index}>
+              <Fragment key={index}>
                 {action}
                 {index < actions.length - 1 && <View style={{ width: 8 }} />}
-              </React.Fragment>
+              </Fragment>
             ))}
           </View>
         )}

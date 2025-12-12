@@ -1,9 +1,8 @@
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { TranscriptionState } from '../../../models/TranscriptionState';
-import { AquaColors } from '../../../theme/themeColors';
-import { RecordingButton } from './RecordingButton';
-import { ThreeWaveLines } from './ThreeWaveLines';
+
+import { RecordingButton, ThreeWaveLines } from '@/components';
+import { TranscriptionState } from '@/models';
+import { AquaColors } from '@/theme';
 
 interface RecordingControlsViewProps {
   state?: TranscriptionState;

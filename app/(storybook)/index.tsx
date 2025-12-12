@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, View } from 'react-native';
 
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
@@ -9,7 +8,7 @@ if (StorybookEnabled) {
   // Only import storybook when enabled to avoid loading it unnecessarily
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    StorybookUI = require('../../.rnstorybook').default;
+    StorybookUI = require('@/.rnstorybook').default;
   } catch (error) {
     console.error('Failed to load Storybook:', error);
     // StorybookUI remains null, fallback UI will be shown

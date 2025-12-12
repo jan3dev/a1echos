@@ -1,5 +1,5 @@
-import React from 'react';
 import { View } from 'react-native';
+
 import { flagIcons } from './flagIcons';
 
 interface FlagIconProps {

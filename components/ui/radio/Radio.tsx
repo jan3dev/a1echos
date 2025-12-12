@@ -1,6 +1,6 @@
-import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme';
+
+import { useTheme } from '@/theme';
 
 export type RadioSize = 'large' | 'small';
 

@@ -1,9 +1,8 @@
-import { lightColors } from '@/theme';
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
 import { View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { ProgressIndicator } from './ProgressIndicator';
+
+import { ProgressIndicator } from '@/components';
+import { lightColors, useTheme } from '@/theme';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme();

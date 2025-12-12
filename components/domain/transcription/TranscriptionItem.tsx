@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -10,14 +10,10 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { Transcription } from '../../../models/Transcription';
-import { useUIStore } from '../../../stores/uiStore';
-import { getShadow } from '../../../theme';
-import { useTheme } from '../../../theme/useTheme';
-import { Checkbox } from '../../ui/checkbox';
-import { Icon } from '../../ui/icon';
-import { Skeleton } from '../../ui/skeleton';
-import { Text } from '../../ui/text';
+import { Checkbox, Icon, Skeleton, Text } from '@/components';
+import { Transcription } from '@/models';
+import { useUIStore } from '@/stores';
+import { getShadow, useTheme } from '@/theme';
 
 interface TranscriptionItemProps {
   transcription: Transcription;

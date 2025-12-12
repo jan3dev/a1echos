@@ -1,13 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
-import { Session } from '../../../models/Session';
-import { useSessionStore } from '../../../stores/sessionStore';
-import { useTranscriptionStore } from '../../../stores/transcriptionStore';
-import { useTheme } from '../../../theme/useTheme';
-import { SessionAppBar } from './SessionAppBar';
-import { SessionList } from './SessionList';
-import { SessionListItem } from './SessionListItem';
+
+import { SessionAppBar, SessionList, SessionListItem } from '@/components';
+import { Session } from '@/models';
+import { useSessionStore, useTranscriptionStore } from '@/stores';
+import { useTheme } from '@/theme';
 
 // Mock data
 const dummySession: Session = {

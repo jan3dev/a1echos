@@ -1,24 +1,20 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import { Fragment } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ListItem } from '../../../components/shared/list-item';
-import { Divider } from '../../../components/ui/divider';
-import { FlagIcon } from '../../../components/ui/icon';
-import { Radio } from '../../../components/ui/radio';
-import { Text } from '../../../components/ui/text';
-import { TopAppBar } from '../../../components/ui/top-app-bar';
-import { useLocalization } from '../../../hooks/useLocalization';
+
 import {
-  getCountryCode,
-  SpokenLanguage,
-  SupportedLanguages,
-} from '../../../models/SpokenLanguage';
-import {
-  useSelectedLanguage,
-  useSettingsStore,
-} from '../../../stores/settingsStore';
-import { getShadow, useTheme } from '../../../theme';
+  Divider,
+  FlagIcon,
+  ListItem,
+  Radio,
+  Text,
+  TopAppBar,
+} from '@/components';
+import { useLocalization } from '@/hooks';
+import { getCountryCode, SpokenLanguage, SupportedLanguages } from '@/models';
+import { useSelectedLanguage, useSetLanguage } from '@/stores';
+import { getShadow, useTheme } from '@/theme';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -29,7 +25,7 @@ export default function LanguageSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const selectedLanguage = useSelectedLanguage();
-  const setLanguage = useSettingsStore((s) => s.setLanguage);
+  const setLanguage = useSetLanguage();
 
   const handleSelect = async (language: SpokenLanguage) => {
     try {
@@ -77,7 +73,7 @@ export default function LanguageSettingsScreen() {
           ]}
         >
           {languages.map((language, index) => (
-            <React.Fragment key={language.code}>
+            <Fragment key={language.code}>
               {index > 0 && (
                 <Divider color={theme.colors.surfaceBorderPrimary} />
               )}
@@ -96,7 +92,7 @@ export default function LanguageSettingsScreen() {
                 onPress={() => handleSelect(language)}
                 backgroundColor={theme.colors.surfacePrimary}
               />
-            </React.Fragment>
+            </Fragment>
           ))}
         </View>
       </ScrollView>

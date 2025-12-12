@@ -1,8 +1,8 @@
 import type { Decorator } from '@storybook/react';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { ErrorView } from './ErrorView';
+
+import { ErrorView } from '@/components';
+import { useTheme } from '@/theme';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme();

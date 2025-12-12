@@ -1,13 +1,16 @@
+import {
+  AppTheme,
+  getThemeByName,
+  ModelType,
+  SpokenLanguage,
+  SupportedLanguages,
+} from '@/models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { AppTheme, getThemeByName } from '../models/AppTheme';
-import { ModelType } from '../models/ModelType';
-import { SpokenLanguage, SupportedLanguages } from '../models/SpokenLanguage';
 
 const STORAGE_KEYS = {
   THEME: 'selectedTheme',
   MODEL_TYPE: 'selected_model_type',
-  WHISPER_REALTIME: 'whisper_realtime',
   LANGUAGE: 'spoken_language',
   INCOGNITO_MODE: 'incognito_mode',
   INCOGNITO_EXPLAINER_SEEN: 'incognito_explainer_seen',
@@ -17,16 +20,13 @@ interface SettingsStore {
   selectedTheme: AppTheme;
   selectedModelType: ModelType;
   selectedLanguage: SpokenLanguage;
-  whisperRealtime: boolean;
   isIncognitoMode: boolean;
   hasSeenIncognitoExplainer: boolean;
-  isLoaded: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
   setModelType: (modelType: ModelType) => Promise<void>;
   setLanguage: (language: SpokenLanguage) => Promise<void>;
-  setWhisperRealtime: (enabled: boolean) => Promise<void>;
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   markIncognitoExplainerSeen: () => Promise<void>;
 }
@@ -39,10 +39,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedTheme: AppTheme.AUTO,
   selectedModelType: getDefaultModelType(),
   selectedLanguage: SupportedLanguages.defaultLanguage,
-  whisperRealtime: false,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
-  isLoaded: false,
 
   initialize: async () => {
     try {
@@ -50,14 +48,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         themeValue,
         modelTypeValue,
         languageValue,
-        whisperRealtimeValue,
         incognitoModeValue,
         incognitoExplainerValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
-        AsyncStorage.getItem(STORAGE_KEYS.WHISPER_REALTIME),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN),
       ]);
@@ -74,7 +70,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ? SupportedLanguages.findByCode(languageValue) ??
           SupportedLanguages.defaultLanguage
         : SupportedLanguages.defaultLanguage;
-      const whisperRealtime = whisperRealtimeValue === 'true';
       const isIncognitoMode = incognitoModeValue === 'true';
       const hasSeenIncognitoExplainer = incognitoExplainerValue === 'true';
 
@@ -82,10 +77,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedTheme,
         selectedModelType,
         selectedLanguage,
-        whisperRealtime,
         isIncognitoMode,
         hasSeenIncognitoExplainer,
-        isLoaded: true,
       });
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -93,10 +86,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedTheme: AppTheme.AUTO,
         selectedModelType: getDefaultModelType(),
         selectedLanguage: SupportedLanguages.defaultLanguage,
-        whisperRealtime: false,
         isIncognitoMode: false,
         hasSeenIncognitoExplainer: false,
-        isLoaded: true,
       });
     }
   },
@@ -137,21 +128,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
-  setWhisperRealtime: async (enabled: boolean) => {
-    const previousValue = get().whisperRealtime;
-    set({ whisperRealtime: enabled });
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.WHISPER_REALTIME,
-        enabled.toString()
-      );
-    } catch (error) {
-      console.error('Failed to save whisper realtime:', error);
-      set({ whisperRealtime: previousValue });
-      throw error;
-    }
-  },
-
   setIncognitoMode: async (enabled: boolean) => {
     const previousValue = get().isIncognitoMode;
     set({ isIncognitoMode: enabled });
@@ -182,14 +158,11 @@ export const useSelectedModelType = () =>
   useSettingsStore((s) => s.selectedModelType);
 export const useSelectedLanguage = () =>
   useSettingsStore((s) => s.selectedLanguage);
-export const useWhisperRealtime = () =>
-  useSettingsStore((s) => s.whisperRealtime);
 export const useIsIncognitoMode = () =>
   useSettingsStore((s) => s.isIncognitoMode);
-export const useHasSeenIncognitoExplainer = () =>
-  useSettingsStore((s) => s.hasSeenIncognitoExplainer);
-export const useIsSettingsLoaded = () => useSettingsStore((s) => s.isLoaded);
-
+export const useSetLanguage = () => useSettingsStore((s) => s.setLanguage);
+export const useSetModelType = () => useSettingsStore((s) => s.setModelType);
+export const useSetTheme = () => useSettingsStore((s) => s.setTheme);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

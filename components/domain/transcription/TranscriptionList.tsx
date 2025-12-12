@@ -1,13 +1,13 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
-import { ModelType } from '../../../models/ModelType';
-import { Transcription } from '../../../models/Transcription';
-import { useSettingsStore } from '../../../stores/settingsStore';
+
+import { TranscriptionItem } from '@/components';
+import { ModelType, Transcription } from '@/models';
 import {
   useSessionTranscriptions,
+  useSettingsStore,
   useTranscriptionStore,
-} from '../../../stores/transcriptionStore';
-import { TranscriptionItem } from './TranscriptionItem';
+} from '@/stores';
 
 interface TranscriptionListProps {
   onTranscriptionTap: (id: string) => void;

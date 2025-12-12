@@ -1,14 +1,12 @@
 import { BlurView } from 'expo-blur';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   SharedValue,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { getShadow } from '../../../theme';
-import { AquaColors } from '../../../theme/themeColors';
-import { useThemeStore } from '../../../theme/useThemeStore';
-import { Icon } from '../../ui/icon/Icon';
+
+import { Icon } from '@/components';
+import { AquaColors, getShadow, useThemeStore } from '@/theme';
 
 interface LockIndicatorProps {
   progress: SharedValue<number>;

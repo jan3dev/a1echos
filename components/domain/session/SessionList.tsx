@@ -1,11 +1,10 @@
-import { getShadow } from '@/theme';
-import React from 'react';
+import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Session } from '../../../models/Session';
-import { useSessions } from '../../../stores/sessionStore';
-import { useTheme } from '../../../theme/useTheme';
-import { Divider } from '../../ui/divider';
-import { SessionListItem } from './SessionListItem';
+
+import { Divider, SessionListItem } from '@/components';
+import { Session } from '@/models';
+import { useSessions } from '@/stores';
+import { getShadow, useTheme } from '@/theme';
 
 interface SessionListProps {
   selectionMode: boolean;
@@ -34,7 +33,7 @@ export const SessionList = ({
       ]}
     >
       {sessions.map((session, index) => (
-        <React.Fragment key={session.id}>
+        <Fragment key={session.id}>
           <SessionListItem
             session={session}
             selectionMode={selectionMode}
@@ -47,7 +46,7 @@ export const SessionList = ({
             onLongPress={() => onSessionLongPress(session)}
           />
           {index < sessions.length - 1 && <Divider />}
-        </React.Fragment>
+        </Fragment>
       ))}
     </View>
   );

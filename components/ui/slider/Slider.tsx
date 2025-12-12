@@ -1,15 +1,8 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
-import { lightColors, useTheme } from '../../../theme';
-import { AquaTypography } from '../../../theme/typography';
-import { Icon } from '../icon';
-import { ProgressIndicator } from '../progress';
+
+import { Icon, ProgressIndicator } from '@/components';
+import { AquaTypography, lightColors, useTheme } from '@/theme';
 
 export type SliderState = 'initial' | 'inProgress' | 'completed' | 'error';
 

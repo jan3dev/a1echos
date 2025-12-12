@@ -1,4 +1,4 @@
-import { AppConstants } from '../constants/AppConstants';
+import { AppConstants } from '@/constants';
 
 export const formatTranscriptionText = (text: string): string => {
   if (!text || text.length === 0) return text;

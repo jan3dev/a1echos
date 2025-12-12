@@ -1,16 +1,11 @@
+import { ModelType, Transcription, TranscriptionState } from '@/models';
+import { audioService, storageService, whisperService } from '@/services';
+import { useSessionStore, useSettingsStore } from '@/stores';
+import { formatTranscriptionText } from '@/utils';
 import * as Crypto from 'expo-crypto';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
-import { ModelType } from '../models/ModelType';
-import { Transcription } from '../models/Transcription';
-import { TranscriptionState } from '../models/TranscriptionState';
-import { audioService } from '../services/AudioService';
-import { storageService } from '../services/StorageService';
-import { whisperService } from '../services/WhisperService';
-import { formatTranscriptionText } from '../utils/TranscriptionFormatter';
-import { useSessionStore } from './sessionStore';
-import { useSettingsStore } from './settingsStore';
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -932,7 +927,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     forceSystemReset: async () => {
       const state = get();
 
-      // Clean up subscriptions
       if (state.partialResultUnsubscribe) {
         state.partialResultUnsubscribe();
       }
@@ -958,25 +952,21 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     dispose: async () => {
       const state = get();
 
-      // Clean up audio level subscription
       if (state.audioLevelUnsubscribe) {
         state.audioLevelUnsubscribe();
         set({ audioLevelUnsubscribe: null });
       }
 
-      // Clean up partial result subscription
       if (state.partialResultUnsubscribe) {
         state.partialResultUnsubscribe();
         set({ partialResultUnsubscribe: null });
       }
 
-      // Clean up realtime audio level subscription
       if (state.realtimeAudioLevelUnsubscribe) {
         state.realtimeAudioLevelUnsubscribe();
         set({ realtimeAudioLevelUnsubscribe: null });
       }
 
-      // Dispose services
       await audioService.dispose();
       await whisperService.dispose();
     },
@@ -986,13 +976,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 export const useTranscriptionState = () =>
   useTranscriptionStore((s) => s.state);
 
-export const useTranscriptions = () =>
-  useTranscriptionStore(useShallow((s) => s.transcriptions));
-
 export const useSessionTranscriptions = (sessionId?: string) => {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const finalSessionId = sessionId ?? activeSessionId;
-  const transcriptions = useTranscriptions();
+  const transcriptions = useTranscriptionStore(
+    useShallow((s) => s.transcriptions)
+  );
 
   return useMemo(
     () => transcriptions.filter((t) => t.sessionId === finalSessionId),
@@ -1002,28 +991,14 @@ export const useSessionTranscriptions = (sessionId?: string) => {
 
 export const useIsRecording = () =>
   useTranscriptionStore((s) => s.isRecording());
-export const useIsTranscribing = () =>
-  useTranscriptionStore((s) => s.isTranscribing());
-export const useCurrentStreamingText = () =>
-  useTranscriptionStore((s) => s.currentStreamingText);
 export const useAudioLevel = () => useTranscriptionStore((s) => s.audioLevel);
-export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
-export const useLoadingPreview = () =>
-  useTranscriptionStore((s) => s.loadingPreview);
-export const useRecordingSessionId = () =>
-  useTranscriptionStore((s) => s.recordingSessionId);
 export const useStartRecording = () =>
   useTranscriptionStore((s) => s.startRecording);
 export const useStopRecordingAndSave = () =>
   useTranscriptionStore((s) => s.stopRecordingAndSave);
-export const useAddTranscription = () =>
-  useTranscriptionStore((s) => s.addTranscription);
-export const useUpdateTranscription = () =>
-  useTranscriptionStore((s) => s.updateTranscription);
-export const useDeleteTranscription = () =>
-  useTranscriptionStore((s) => s.deleteTranscription);
 export const useDeleteTranscriptions = () =>
   useTranscriptionStore((s) => s.deleteTranscriptions);
+export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
 
 export const initializeTranscriptionStore = async () => {
   return useTranscriptionStore.getState().initialize();

@@ -1,18 +1,16 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File, Paths } from 'expo-file-system';
 import {
   Session,
   SessionJSON,
-  sessionFromJSON,
-  sessionToJSON,
-} from '../models/Session';
-import {
   Transcription,
   TranscriptionJSON,
+  sessionFromJSON,
+  sessionToJSON,
   transcriptionFromJSON,
   transcriptionToJSON,
-} from '../models/Transcription';
-import { encryptionService } from './EncryptionService';
+} from '@/models';
+import { encryptionService } from '@/services';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Directory, File, Paths } from 'expo-file-system';
 
 const TRANSCRIPTIONS_FILE = 'transcriptions.json';
 const PENDING_DELETES_FILE = 'pending_deletes.json';

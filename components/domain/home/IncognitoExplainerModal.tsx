@@ -1,8 +1,6 @@
-import React from 'react';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { lightColors } from '../../../theme/themeColors';
-import { Icon } from '../../ui/icon';
-import { Modal } from '../../ui/modal';
+import { Icon, Modal } from '@/components';
+import { useLocalization } from '@/hooks';
+import { lightColors } from '@/theme';
 
 interface IncognitoExplainerModalProps {
   visible: boolean;

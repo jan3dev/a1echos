@@ -1,10 +1,10 @@
 import { BlurView } from 'expo-blur';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useTheme } from '../../../theme';
-import { Icon } from '../icon';
-import { Text } from '../text';
+
+import { Icon, Text } from '@/components';
+import { useTheme } from '@/theme';
 
 export type TooltipVariant = 'normal' | 'success' | 'warning' | 'error';
 export type TooltipPointerPosition = 'none' | 'top' | 'bottom';

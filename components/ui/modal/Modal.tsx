@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Animated,
   Pressable,
@@ -6,10 +6,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useTheme } from '../../../theme';
-import { Button, ButtonVariant } from '../button';
-import { Text } from '../text';
-import { Dimmer } from './Dimmer';
+
+import { Button, ButtonVariant, Dimmer, Text } from '@/components';
+import { getShadow, useTheme } from '@/theme';
 
 export type ModalVariant = 'normal' | 'success' | 'danger' | 'warning' | 'info';
 
@@ -243,6 +242,7 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
     marginHorizontal: 16,
+    ...getShadow('modal'),
   },
   card: {
     borderRadius: 24,

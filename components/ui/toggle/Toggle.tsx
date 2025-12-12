@@ -1,11 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   AccessibilityProps,
   Animated,
   Pressable,
   StyleSheet,
 } from 'react-native';
-import { AquaPrimitiveColors, useTheme } from '../../../theme';
+
+import { AquaPrimitiveColors, useTheme } from '@/theme';
 
 interface ToggleProps {
   value: boolean;

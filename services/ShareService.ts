@@ -1,5 +1,5 @@
+import { Transcription } from '@/models';
 import { Share } from 'react-native';
-import { Transcription } from '../models/Transcription';
 
 const createShareService = () => {
   const shareTranscriptions = async (

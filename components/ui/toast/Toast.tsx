@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Animated,
   Modal,
@@ -8,9 +8,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { getShadow, useTheme } from '../../../theme';
-import { Icon } from '../icon';
-import { Text } from '../text';
+
+import { Icon, Text } from '@/components';
+import { getShadow, useTheme } from '@/theme';
 
 export type ToastVariant = 'informative' | 'warning' | 'danger';
 

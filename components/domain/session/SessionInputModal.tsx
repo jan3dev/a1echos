@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   KeyboardAvoidingView,
@@ -8,15 +8,11 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { AppConstants } from '../../../constants/AppConstants';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { getShadow } from '../../../theme';
-import { useTheme } from '../../../theme/useTheme';
-import { Button } from '../../ui/button';
-import { Icon } from '../../ui/icon';
-import { Dimmer } from '../../ui/modal/Dimmer';
-import { Text } from '../../ui/text/Text';
-import { TextField } from '../../ui/textfield/TextField';
+
+import { Button, Dimmer, Icon, Text, TextField } from '@/components';
+import { AppConstants } from '@/constants';
+import { useLocalization } from '@/hooks';
+import { getShadow, useTheme } from '@/theme';
 
 interface SessionInputModalProps {
   visible: boolean;

@@ -1,12 +1,10 @@
-import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { getCountryCode } from '../../../models/SpokenLanguage';
-import { useSelectedLanguage } from '../../../stores/settingsStore';
-import { useTheme } from '../../../theme/useTheme';
-import { FlagIcon } from '../../ui/icon/FlagIcon';
-import { Icon } from '../../ui/icon/Icon';
-import { TopAppBar } from '../../ui/top-app-bar/TopAppBar';
+
+import { FlagIcon, Icon, TopAppBar } from '@/components';
+import { useLocalization } from '@/hooks';
+import { getCountryCode } from '@/models';
+import { useSelectedLanguage } from '@/stores';
+import { useTheme } from '@/theme';
 
 interface SessionAppBarProps {
   sessionName: string;

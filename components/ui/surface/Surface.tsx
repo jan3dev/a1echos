@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
-import React from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
-import { shadows, useTheme } from '../../../theme';
+
+import { shadows, useTheme } from '@/theme';
 
 export interface SurfaceProps {
   children?: React.ReactNode;

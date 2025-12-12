@@ -1,11 +1,10 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Pressable } from 'react-native';
-import { useSettingsStore } from '../../../stores/settingsStore';
-import { useTheme } from '../../../theme';
-import { Icon } from '../../ui/icon';
-import { TopAppBar } from '../../ui/top-app-bar';
-import { IncognitoExplainerModal } from './IncognitoExplainerModal';
+
+import { Icon, IncognitoExplainerModal, TopAppBar } from '@/components';
+import { useSettingsStore } from '@/stores';
+import { useTheme } from '@/theme';
 
 interface HomeAppBarProps {
   selectionMode: boolean;

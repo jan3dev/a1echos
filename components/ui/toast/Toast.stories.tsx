@@ -1,8 +1,7 @@
-import React from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Toast, ToastVariant } from './Toast';
-import { useToast } from './useToast';
+
+import { Toast, ToastVariant, useToast } from '@/components';
+import { useTheme } from '@/theme';
 
 export default {
   title: 'UI Components/Toast',

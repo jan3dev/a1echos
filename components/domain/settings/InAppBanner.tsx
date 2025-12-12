@@ -1,5 +1,4 @@
 import * as Linking from 'expo-linking';
-import React from 'react';
 import {
   Image,
   Platform,
@@ -8,7 +7,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { getShadow } from '../../../theme';
+
+import { getShadow } from '@/theme';
 
 const AQUA_APP_URLS = {
   android:
@@ -62,7 +62,7 @@ export const InAppBanner = () => {
       >
         <View style={styles.imageContainer}>
           <Image
-            source={require('../../../assets/images/in-app-banner.png')}
+            source={require('@/assets/images/in-app-banner.png')}
             style={styles.image}
             resizeMode="contain"
           />

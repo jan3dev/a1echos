@@ -1,4 +1,4 @@
-import { AquaPrimitiveColors } from './colors';
+import { AquaPrimitiveColors } from '@/theme';
 
 export interface AquaColors {
   textPrimary: string;

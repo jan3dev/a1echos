@@ -1,5 +1,5 @@
+import { AquaPrimitiveColors } from '@/theme';
 import { Platform, ViewStyle } from 'react-native';
-import { AquaPrimitiveColors } from './colors';
 
 export interface ShadowStyle {
   shadowColor: string;

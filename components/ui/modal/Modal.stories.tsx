@@ -1,9 +1,7 @@
-import React from 'react';
 import { Button as RNButton, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Icon } from '../icon';
-import { Modal, ModalVariant } from './Modal';
-import { useModal } from './useModal';
+
+import { Icon, Modal, ModalVariant, useModal } from '@/components';
+import { useTheme } from '@/theme';
 
 export default {
   title: 'UI Components/Modal',

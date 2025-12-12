@@ -1,9 +1,9 @@
 import type { Meta } from '@storybook/react-native';
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Text } from '../text/Text';
-import { Icon } from './Icon';
+
+import { Icon, Text } from '@/components';
+import { useTheme } from '@/theme';
+
 import { iconMap, IconName } from './iconMap';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {

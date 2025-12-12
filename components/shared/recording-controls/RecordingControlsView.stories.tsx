@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
-import { TranscriptionState } from '../../../models/TranscriptionState';
-import { useTheme } from '../../../theme/useTheme';
-import { RecordingControlsView } from './RecordingControlsView';
+
+import { RecordingControlsView } from '@/components';
+import { TranscriptionState } from '@/models';
+import { useTheme } from '@/theme';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {
   const { theme } = useTheme();

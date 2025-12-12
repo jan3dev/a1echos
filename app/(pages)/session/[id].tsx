@@ -1,13 +1,8 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -17,38 +12,43 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SessionAppBar } from '../../../components/domain/session/SessionAppBar';
-import { SessionInputModal } from '../../../components/domain/session/SessionInputModal';
-import { TranscriptionContentView } from '../../../components/domain/transcription/TranscriptionContentView';
-import { Button } from '../../../components/ui/button';
-import { Toast, useToast } from '../../../components/ui/toast';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { useSessionOperations } from '../../../hooks/useSessionOperations';
-import { useTranscriptionSelection } from '../../../hooks/useTranscriptionSelection';
-import { ModelType } from '../../../models/ModelType';
-import { Transcription } from '../../../models/Transcription';
-import { audioService } from '../../../services/AudioService';
+
 import {
+  Button,
+  SessionAppBar,
+  SessionInputModal,
+  Toast,
+  TranscriptionContentView,
+  useToast,
+} from '@/components';
+import { useLocalization, usePermissions, useSessionOperations } from '@/hooks';
+import { ModelType, Transcription } from '@/models';
+import { shareService } from '@/services';
+import {
+  useDeleteTranscriptions,
+  useExitTranscriptionSelection,
   useFindSessionById,
-  useRenameSession,
-  useSessionStore,
-} from '../../../stores/sessionStore';
-import { useSelectedModelType } from '../../../stores/settingsStore';
-import {
+  useIncognitoSession,
   useIsRecording,
+  useIsTranscriptionSelectionMode,
+  useLivePreview,
+  useRenameSession,
+  useSelectAllTranscriptions,
+  useSelectedModelType,
+  useSelectedTranscriptionIdsSet,
+  useSessionStore,
   useSessionTranscriptions,
-  useStartRecording,
-  useStopRecordingAndSave,
-  useTranscriptionStore,
-} from '../../../stores/transcriptionStore';
-import {
   useSetRecordingCallbacks,
   useSetRecordingControlsEnabled,
   useSetRecordingControlsVisible,
   useShowGlobalTooltip,
   useShowToast,
-} from '../../../stores/uiStore';
-import { useTheme } from '../../../theme';
+  useStartRecording,
+  useStopRecordingAndSave,
+  useSwitchSession,
+  useToggleTranscriptionSelection,
+} from '@/stores';
+import { useTheme } from '@/theme';
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -70,7 +70,7 @@ export default function SessionScreen() {
 
   const findSessionById = useFindSessionById();
   const renameSessionAction = useRenameSession();
-  const switchSession = useSessionStore((s) => s.switchSession);
+  const switchSession = useSwitchSession();
   const { endIncognitoSession } = useSessionOperations();
   const selectedModelType = useSelectedModelType();
   const isRecording = useIsRecording();
@@ -79,37 +79,113 @@ export default function SessionScreen() {
   const showToast = useShowToast();
   const showGlobalTooltip = useShowGlobalTooltip();
   const transcriptions = useSessionTranscriptions(id);
-  const livePreview = useTranscriptionStore((s) => s.livePreview);
+  const livePreview = useLivePreview();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
   const setRecordingControlsVisible = useSetRecordingControlsVisible();
 
   const sessions = useSessionStore((s) => s.sessions);
-  const incognitoSession = useSessionStore((s) => s.incognitoSession);
+  const incognitoSession = useIncognitoSession();
   const session = useMemo(
     () => findSessionById(id),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [findSessionById, id, sessions, incognitoSession]
   );
 
-  const {
-    selectionMode,
-    selectedTranscriptionIds,
-    hasSelectedItems,
-    toggleTranscriptionSelection,
-    handleLongPress,
-    selectAllTranscriptions,
-    exitSelectionMode,
-    deleteSelectedTranscriptions,
-    copyAllTranscriptions,
-    shareSelectedTranscriptions,
-  } = useTranscriptionSelection(id);
+  const selectionMode = useIsTranscriptionSelectionMode();
+  const selectedIds = useSelectedTranscriptionIdsSet();
+  const hasSelectedItems = selectedIds.size > 0;
+
+  const toggleTranscriptionSelection = useToggleTranscriptionSelection();
+  const selectAllTranscriptionsAction = useSelectAllTranscriptions();
+  const exitSelectionMode = useExitTranscriptionSelection();
+  const deleteTranscriptions = useDeleteTranscriptions();
+
+  const handleLongPress = useCallback(
+    async (transcriptionId: string) => {
+      if (!selectionMode) {
+        toggleTranscriptionSelection(transcriptionId);
+        try {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        } catch {
+          // Haptics not supported
+        }
+      } else {
+        toggleTranscriptionSelection(transcriptionId);
+      }
+    },
+    [selectionMode, toggleTranscriptionSelection]
+  );
+
+  const selectAllTranscriptions = useCallback(() => {
+    const ids = transcriptions.map((t) => t.id);
+    selectAllTranscriptionsAction(ids);
+  }, [transcriptions, selectAllTranscriptionsAction]);
+
+  const deleteSelectedTranscriptions = useCallback(async () => {
+    if (selectedIds.size === 0) {
+      return { deleted: 0 };
+    }
+
+    const count = selectedIds.size;
+    try {
+      await deleteTranscriptions(selectedIds);
+      return { deleted: count };
+    } catch (error) {
+      console.error('Failed to delete transcriptions:', error);
+      throw error;
+    } finally {
+      exitSelectionMode();
+    }
+  }, [selectedIds, deleteTranscriptions, exitSelectionMode]);
+
+  const copyAllTranscriptions = useCallback(async () => {
+    if (transcriptions.length === 0) {
+      return false;
+    }
+
+    const text = transcriptions.map((t) => t.text).join('\n\n');
+
+    try {
+      await Clipboard.setStringAsync(text);
+      return true;
+    } catch (error) {
+      console.error('Failed to copy transcriptions:', error);
+      return false;
+    }
+  }, [transcriptions]);
+
+  const shareSelectedTranscriptions = useCallback(async () => {
+    if (selectedIds.size === 0) {
+      return false;
+    }
+
+    const selectedTranscriptions = transcriptions.filter((t) =>
+      selectedIds.has(t.id)
+    );
+
+    if (selectedTranscriptions.length === 0) {
+      return false;
+    }
+
+    try {
+      await shareService.shareTranscriptions(selectedTranscriptions);
+      exitSelectionMode();
+      return true;
+    } catch (error) {
+      console.error('Failed to share transcriptions:', error);
+      return false;
+    }
+  }, [selectedIds, transcriptions, exitSelectionMode]);
 
   const {
     show: showDeleteToast,
     hide: hideDeleteToast,
     toastState: deleteToastState,
   } = useToast();
+
+  const { hasPermission, requestPermission, canAskAgain, openSettings } =
+    usePermissions();
 
   // Initialize session
   useEffect(() => {
@@ -324,7 +400,7 @@ export default function SessionScreen() {
   const handleDeleteSelectedPressed = useCallback(() => {
     if (!hasSelectedItems) return;
 
-    const count = selectedTranscriptionIds.size;
+    const count = selectedIds.size;
     showDeleteToast({
       title: loc.sessionDeleteTranscriptionsTitle,
       message: loc.sessionDeleteTranscriptionsMessage(count),
@@ -342,7 +418,7 @@ export default function SessionScreen() {
     });
   }, [
     hasSelectedItems,
-    selectedTranscriptionIds.size,
+    selectedIds.size,
     showDeleteToast,
     hideDeleteToast,
     deleteSelectedTranscriptions,
@@ -401,15 +477,18 @@ export default function SessionScreen() {
   const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
 
   handleRecordingStartRef.current = async () => {
-    const hasPermission = await audioService.hasPermission();
     if (!hasPermission) {
-      const isPermanentlyDenied = await audioService.isPermanentlyDenied();
-      if (isPermanentlyDenied) {
-        showToast(loc.homeMicrophoneDenied, 'error');
+      if (canAskAgain) {
+        const granted = await requestPermission();
+        if (!granted) {
+          showToast(loc.homeMicrophoneDenied, 'error');
+          return;
+        }
       } else {
         showToast(loc.homeMicrophonePermissionRequired, 'warning');
+        openSettings();
+        return;
       }
-      return;
     }
 
     const success = await startRecording();
@@ -470,7 +549,7 @@ export default function SessionScreen() {
         <TranscriptionContentView
           listRef={listRef}
           selectionMode={selectionMode}
-          selectedTranscriptionIds={selectedTranscriptionIds}
+          selectedTranscriptionIds={selectedIds}
           onTranscriptionTap={handleTranscriptionTap}
           onTranscriptionLongPress={handleTranscriptionLongPress}
           onEditStart={handleEditStart}

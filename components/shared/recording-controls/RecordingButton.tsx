@@ -1,7 +1,6 @@
-import { AppTheme } from '@/models/AppTheme';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, {
   Easing,
@@ -12,11 +11,10 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { TranscriptionState } from '../../../models/TranscriptionState';
-import { getShadow } from '../../../theme';
-import { AquaColors } from '../../../theme/themeColors';
-import { useThemeStore } from '../../../theme/useThemeStore';
-import { Icon } from '../../ui/icon/Icon';
+
+import { Icon } from '@/components';
+import { AppTheme, TranscriptionState } from '@/models';
+import { AquaColors, getShadow, useThemeStore } from '@/theme';
 
 interface RecordingButtonProps {
   state?: TranscriptionState;

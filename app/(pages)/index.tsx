@@ -1,35 +1,36 @@
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyStateView } from '../../components/domain/home/EmptyStateView';
-import { HomeAppBar } from '../../components/domain/home/HomeAppBar';
-import { HomeContent } from '../../components/domain/home/HomeContent';
-import { Toast, useToast } from '../../components/ui/toast';
-import { useLocalization } from '../../hooks/useLocalization';
-import { useSessionOperations } from '../../hooks/useSessionOperations';
-import { Session } from '../../models/Session';
-import { audioService } from '../../services/AudioService';
-import { useCreateSession, useSessions } from '../../stores/sessionStore';
-import { useIsIncognitoMode } from '../../stores/settingsStore';
+
 import {
-  useStartRecording,
-  useStopRecordingAndSave,
-} from '../../stores/transcriptionStore';
+  EmptyStateView,
+  HomeAppBar,
+  HomeContent,
+  Toast,
+  useToast,
+} from '@/components';
+import { useLocalization, usePermissions, useSessionOperations } from '@/hooks';
+import { Session } from '@/models';
 import {
+  useCreateSession,
   useExitSessionSelection,
+  useIsIncognitoMode,
   useIsSessionSelectionMode,
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
+  useSessions,
   useSetRecordingCallbacks,
   useSetRecordingControlsEnabled,
   useShowGlobalTooltip,
   useShowToast,
+  useStartRecording,
+  useStopRecordingAndSave,
   useToggleSessionSelection,
-} from '../../stores/uiStore';
-import { useTheme } from '../../theme';
+} from '@/stores';
+import { useTheme } from '@/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -53,6 +54,8 @@ export default function HomeScreen() {
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
+  const { hasPermission, requestPermission, canAskAgain, openSettings } =
+    usePermissions();
 
   const {
     show: showDeleteToast,
@@ -118,15 +121,18 @@ export default function HomeScreen() {
   const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
 
   handleRecordingStartRef.current = async () => {
-    const hasPermission = await audioService.hasPermission();
     if (!hasPermission) {
-      const isPermanentlyDenied = await audioService.isPermanentlyDenied();
-      if (isPermanentlyDenied) {
-        showToast(loc.homeMicrophoneDenied, 'error');
+      if (canAskAgain) {
+        const granted = await requestPermission();
+        if (!granted) {
+          showToast(loc.homeMicrophoneDenied, 'error');
+          return;
+        }
       } else {
         showToast(loc.homeMicrophonePermissionRequired, 'warning');
+        openSettings();
+        return;
       }
-      return;
     }
 
     if (effectivelyEmpty) {

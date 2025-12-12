@@ -1,4 +1,4 @@
-import { AppTheme } from '@/models/AppTheme';
+import '@/localization';
 import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,28 +9,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RecordingControlsView } from '../components/shared/recording-controls';
-import { Tooltip } from '../components/ui/tooltip';
-import '../localization';
-import { storageService } from '../services/StorageService';
+
+import { RecordingControlsView, Tooltip } from '@/components';
+import { AppTheme } from '@/models';
+import { storageService } from '@/services';
 import {
   initializeSessionStore,
   initializeSettingsStore,
   initializeTranscriptionStore,
-} from '../stores';
-import {
   useAudioLevel,
-  useTranscriptionState,
-} from '../stores/transcriptionStore';
-import {
   useGlobalTooltip,
   useHideGlobalTooltip,
   useOnRecordingStart,
   useOnRecordingStop,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
-} from '../stores/uiStore';
-import { useTheme, useThemeStore } from '../theme';
+  useTranscriptionState,
+} from '@/stores';
+import { useTheme, useThemeStore } from '@/theme';
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
@@ -150,12 +146,12 @@ function GlobalRecordingControls() {
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
-    Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
-    'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),
-    'Manrope-SemiBold': require('../assets/fonts/Manrope-SemiBold.ttf'),
-    PublicSans: require('../assets/fonts/PublicSans-Regular.ttf'),
-    'PublicSans-Medium': require('../assets/fonts/PublicSans-Medium.ttf'),
-    'PublicSans-SemiBold': require('../assets/fonts/PublicSans-SemiBold.ttf'),
+    Manrope: require('@/assets/fonts/Manrope-Regular.ttf'),
+    'Manrope-Medium': require('@/assets/fonts/Manrope-Medium.ttf'),
+    'Manrope-SemiBold': require('@/assets/fonts/Manrope-SemiBold.ttf'),
+    PublicSans: require('@/assets/fonts/PublicSans-Regular.ttf'),
+    'PublicSans-Medium': require('@/assets/fonts/PublicSans-Medium.ttf'),
+    'PublicSans-SemiBold': require('@/assets/fonts/PublicSans-SemiBold.ttf'),
   });
 
   const initTheme = useThemeStore((state) => state.initTheme);
@@ -199,7 +195,6 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, appReady]);
 
-  // Log font errors
   useEffect(() => {
     if (fontError) {
       console.error('Error loading fonts:', fontError);

@@ -1,7 +1,7 @@
+import { permissionService } from '@/services';
 import { PermissionStatus } from 'expo-modules-core';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { permissionService } from '../services/PermissionService';
 
 export const usePermissions = () => {
   const [status, setStatus] = useState<PermissionStatus>(

@@ -1,13 +1,11 @@
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { useTheme } from '../../../theme';
-import { Divider } from '../../ui/divider';
-import { Icon } from '../../ui/icon';
-import { Text } from '../../ui/text';
-import { Tooltip, useTooltip } from '../../ui/tooltip';
+
+import { Divider, Icon, Text, Tooltip, useTooltip } from '@/components';
+import { useLocalization } from '@/hooks';
+import { useTheme } from '@/theme';
 
 interface SocialTag {
   tag: string;

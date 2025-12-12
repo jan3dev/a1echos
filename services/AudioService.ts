@@ -1,18 +1,15 @@
+import { AppConstants } from '@/constants';
+import { backgroundRecordingService, permissionService } from '@/services';
 import { EventEmitter } from 'events';
 import {
   AudioModule,
   AudioRecorder,
-  getRecordingPermissionsAsync,
-  PermissionStatus,
   RecordingOptions,
-  requestRecordingPermissionsAsync,
   setAudioModeAsync,
 } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-import { AppConstants } from '../constants/AppConstants';
-import { backgroundRecordingService } from './BackgroundRecordingService';
 
 // @ts-ignore - module declaration exists but types are incomplete
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
@@ -46,8 +43,6 @@ const RECORDING_OPTIONS: RecordingOptions = {
 const createAudioService = () => {
   let recorder: AudioRecorder | null = null;
   let currentAudioFile: string | null = null;
-  let isMonitoring: boolean = false;
-  let monitorTempPath: string | null = null;
   let recordStart: Date | null = null;
 
   const audioLevelEmitter = new EventEmitter();
@@ -61,40 +56,6 @@ const createAudioService = () => {
   // Android native PCM recording state
   let androidPcmRecording: boolean = false;
   let androidWavFilePath: string | null = null;
-
-  const hasPermission = async (): Promise<boolean> => {
-    try {
-      const { status } = await getRecordingPermissionsAsync();
-
-      if (status === PermissionStatus.GRANTED) {
-        return true;
-      }
-
-      const { granted } = await requestRecordingPermissionsAsync();
-      return granted;
-    } catch (error) {
-      console.error('Error checking microphone permission:', error);
-      return false;
-    }
-  };
-
-  const isPermanentlyDenied = async (): Promise<boolean> => {
-    try {
-      const { status, canAskAgain } = await getRecordingPermissionsAsync();
-      return status === PermissionStatus.DENIED && !canAskAgain;
-    } catch (error) {
-      console.error('Error checking permission denial status:', error);
-      return false;
-    }
-  };
-
-  const generateRecordingPath = async (
-    extension: string = 'wav'
-  ): Promise<string> => {
-    const timestamp = Date.now();
-    const filename = `rec_${timestamp}.${extension}`;
-    return new File(Paths.cache, filename).uri;
-  };
 
   const resetLevelState = (): void => {
     smoothedLevel = 0.0;
@@ -269,7 +230,7 @@ const createAudioService = () => {
   };
 
   const startRecording = async (): Promise<boolean> => {
-    if (!(await hasPermission())) {
+    if (!(await permissionService.ensureRecordPermission())) {
       return false;
     }
 
@@ -372,69 +333,6 @@ const createAudioService = () => {
         }
       } catch {}
       return false;
-    }
-  };
-
-  const startMonitoring = async (): Promise<boolean> => {
-    if (!(await hasPermission())) {
-      return false;
-    }
-
-    if (recorder) {
-      return true;
-    }
-
-    try {
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-
-      monitorTempPath = await generateRecordingPath();
-
-      recorder = createRecorder();
-
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      isMonitoring = true;
-
-      startAmplitudeMonitoring();
-
-      return true;
-    } catch (error) {
-      console.error('Error starting monitoring:', error);
-      return false;
-    }
-  };
-
-  const stopMonitoring = async (): Promise<void> => {
-    if (!isMonitoring) return;
-
-    try {
-      if (recorder) {
-        await recorder.stop();
-        recorder.release();
-        recorder = null;
-      }
-    } catch (error) {
-      console.error('Error stopping monitoring:', error);
-    }
-
-    if (amplitudeIntervalId) {
-      clearInterval(amplitudeIntervalId);
-      amplitudeIntervalId = null;
-    }
-
-    isMonitoring = false;
-
-    if (monitorTempPath) {
-      try {
-        const file = new File(monitorTempPath);
-        if (file.exists) {
-          file.delete();
-        }
-      } catch {}
-      monitorTempPath = null;
     }
   };
 
@@ -567,24 +465,6 @@ const createAudioService = () => {
     return recordedFilePath;
   };
 
-  const isRecording = async (): Promise<boolean> => {
-    // Check Android native recording
-    if (Platform.OS === 'android' && androidPcmRecording) {
-      return true;
-    }
-
-    if (!recorder) {
-      return false;
-    }
-
-    try {
-      const status = recorder.getStatus();
-      return status.isRecording;
-    } catch {
-      return false;
-    }
-  };
-
   const subscribeToAudioLevel = (
     callback: (level: number) => void
   ): (() => void) => {
@@ -623,13 +503,8 @@ const createAudioService = () => {
   };
 
   return {
-    hasPermission,
-    isPermanentlyDenied,
     startRecording,
-    startMonitoring,
-    stopMonitoring,
     stopRecording,
-    isRecording,
     subscribeToAudioLevel,
     dispose,
   };

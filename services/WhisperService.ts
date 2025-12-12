@@ -19,9 +19,9 @@ interface RealtimeTranscribeEvent {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const modelAsset = require('../assets/models/whisper/ggml-tiny.bin');
+const modelAsset = require('@/assets/models/whisper/ggml-tiny.bin');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const vadModelAsset = require('../assets/models/whisper/ggml-silero-v6.2.0.bin');
+const vadModelAsset = require('@/assets/models/whisper/ggml-silero-v6.2.0.bin');
 
 interface WhisperServiceState {
   whisperContext: WhisperContext | null;
@@ -464,12 +464,6 @@ const createWhisperService = () => {
     subscribeToPartialResults,
     subscribeToAudioLevel,
     dispose,
-    get isInitialized() {
-      return state.isInitialized;
-    },
-    get isTranscribing() {
-      return state.isTranscribing;
-    },
     get initializationStatus() {
       return state.initializationStatus;
     },

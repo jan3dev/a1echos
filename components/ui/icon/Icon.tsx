@@ -1,5 +1,5 @@
-import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
+
 import { iconMap, IconName } from './iconMap';
 
 export type { IconName };

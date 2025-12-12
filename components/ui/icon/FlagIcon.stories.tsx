@@ -1,9 +1,9 @@
 import type { Meta } from '@storybook/react-native';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useTheme } from '../../../theme/useTheme';
-import { Text } from '../text/Text';
-import { FlagIcon } from './FlagIcon';
+
+import { FlagIcon, Text } from '@/components';
+import { useTheme } from '@/theme';
+
 import { flagIcons } from './flagIcons';
 
 const StoryContainer = ({ children }: { children: React.ReactNode }) => {

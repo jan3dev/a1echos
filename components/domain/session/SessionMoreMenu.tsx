@@ -1,4 +1,3 @@
-import { getShadow } from '@/theme';
 import { useRef, useState } from 'react';
 import {
   Dimensions,
@@ -8,19 +7,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useLocalization } from '../../../hooks/useLocalization';
-import { useSessionOperations } from '../../../hooks/useSessionOperations';
-import { Session } from '../../../models/Session';
-import { useRenameSession } from '../../../stores/sessionStore';
-import { useShowGlobalTooltip } from '../../../stores/uiStore';
-import { useTheme } from '../../../theme/useTheme';
-import { formatDate, formatSessionSubtitle } from '../../../utils';
-import { ListItem } from '../../shared/list-item/ListItem';
-import { Icon } from '../../ui/icon/Icon';
-import { Text } from '../../ui/text/Text';
-import { Toast } from '../../ui/toast/Toast';
-import { useToast } from '../../ui/toast/useToast';
-import { SessionInputModal } from './SessionInputModal';
+
+import {
+  Icon,
+  ListItem,
+  SessionInputModal,
+  Text,
+  Toast,
+  useToast,
+} from '@/components';
+import { useLocalization, useSessionOperations } from '@/hooks';
+import { Session } from '@/models';
+import { useRenameSession, useShowGlobalTooltip } from '@/stores';
+import { getShadow, useTheme } from '@/theme';
+import { formatDate, formatSessionSubtitle } from '@/utils';
 
 const MENU_HEIGHT_FALLBACK = 200;
 // Buffer to keep menu above tab bar and safe area insets

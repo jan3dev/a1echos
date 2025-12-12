@@ -1,9 +1,13 @@
+import {
+  AquaColors,
+  AquaTypography,
+  darkColors,
+  lightColors,
+  shadows,
+  spacing,
+  useThemeStore,
+} from '@/theme';
 import { useMemo } from 'react';
-import { shadows } from './shadows';
-import { spacing } from './spacing';
-import { AquaColors, darkColors, lightColors } from './themeColors';
-import { AquaTypography } from './typography';
-import { useThemeStore } from './useThemeStore';
 
 export interface Theme {
   colors: AquaColors;

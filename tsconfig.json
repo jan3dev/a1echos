@@ -8,6 +8,7 @@
       "@/services/*": ["./services/*"],
       "@/stores/*": ["./stores/*"],
       "@/models/*": ["./models/*"],
+      "@/assets/*": ["./assets/*"],
       "@/utils/*": ["./utils/*"],
       "@/constants/*": ["./constants/*"],
       "@/theme/*": ["./theme/*"],
