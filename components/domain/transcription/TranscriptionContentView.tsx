@@ -1,3 +1,4 @@
+import { RefObject } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +11,7 @@ const RECORDING_CONTROLS_HEIGHT = 96;
 const APP_BAR_HEIGHT = 60;
 
 interface TranscriptionContentViewProps {
-  listRef?: React.RefObject<FlatList<Transcription>>;
+  listRef?: RefObject<FlatList<Transcription>>;
   selectionMode: boolean;
   selectedTranscriptionIds: Set<string>;
   onTranscriptionTap: (id: string) => void;

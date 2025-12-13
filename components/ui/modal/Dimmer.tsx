@@ -1,11 +1,12 @@
 import { BlurView } from 'expo-blur';
+import { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet } from 'react-native';
 
 import { useTheme } from '@/theme';
 
 export interface DimmerProps {
   visible: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
   onDismiss: () => void;
 }
 

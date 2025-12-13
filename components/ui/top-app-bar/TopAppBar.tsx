@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { Fragment } from 'react';
+import { Fragment, ReactNode } from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -16,12 +16,12 @@ import { useTheme } from '@/theme';
 export interface TopAppBarProps {
   title?: string;
   showBackButton?: boolean;
-  leading?: React.ReactNode;
+  leading?: ReactNode;
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
   onTitleLongPressed?: () => void;
-  titleWidget?: React.ReactNode;
-  actions?: React.ReactNode[];
+  titleWidget?: ReactNode;
+  actions?: ReactNode[];
   transparent?: boolean;
   style?: StyleProp<ViewStyle>;
 }

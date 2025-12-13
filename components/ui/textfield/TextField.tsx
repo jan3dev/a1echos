@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -17,7 +17,7 @@ interface TextFieldProps {
   label?: string;
   value?: string;
   onChangeText?: (text: string) => void;
-  trailingIcon?: React.ReactNode;
+  trailingIcon?: ReactNode;
   onTrailingPress?: () => void;
   secureTextEntry?: boolean;
   keyboardType?: RNTextInputProps['keyboardType'];

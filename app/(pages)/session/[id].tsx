@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -58,7 +58,7 @@ export default function SessionScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
-  const listRef = useRef<FlatList<Transcription>>(null) as React.RefObject<
+  const listRef = useRef<FlatList<Transcription>>(null) as RefObject<
     FlatList<Transcription>
   >;
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -476,30 +476,42 @@ export default function SessionScreen() {
   const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
   const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
 
-  handleRecordingStartRef.current = async () => {
-    if (!hasPermission) {
-      if (canAskAgain) {
-        const granted = await requestPermission();
-        if (!granted) {
-          showToast(loc.homeMicrophoneDenied, 'error');
+  useEffect(() => {
+    handleRecordingStartRef.current = async () => {
+      if (!hasPermission) {
+        if (canAskAgain) {
+          const granted = await requestPermission();
+          if (!granted) {
+            showToast(loc.homeMicrophoneDenied, 'error');
+            return;
+          }
+        } else {
+          showToast(loc.homeMicrophonePermissionRequired, 'warning');
+          openSettings();
           return;
         }
-      } else {
-        showToast(loc.homeMicrophonePermissionRequired, 'warning');
-        openSettings();
-        return;
       }
-    }
 
-    const success = await startRecording();
-    if (!success) {
-      showToast(loc.homeFailedStartRecording, 'error');
-    }
-  };
+      const success = await startRecording();
+      if (!success) {
+        showToast(loc.homeFailedStartRecording, 'error');
+      }
+    };
+  }, [
+    canAskAgain,
+    hasPermission,
+    loc,
+    openSettings,
+    requestPermission,
+    showToast,
+    startRecording,
+  ]);
 
-  handleRecordingStopRef.current = async () => {
-    await stopRecordingAndSave();
-  };
+  useEffect(() => {
+    handleRecordingStopRef.current = async () => {
+      await stopRecordingAndSave();
+    };
+  }, [stopRecordingAndSave]);
 
   const controlsEnabled = !isInitializing || isRecording;
 

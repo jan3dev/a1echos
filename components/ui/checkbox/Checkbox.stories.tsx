@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { ComponentProps, ReactNode, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Checkbox } from '@/components';
 import { AquaTypography, useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -34,7 +34,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const CheckboxWithState = (props: React.ComponentProps<typeof Checkbox>) => {
+const CheckboxWithState = (props: ComponentProps<typeof Checkbox>) => {
   const [checked, setChecked] = useState(props.value ?? false);
   return <Checkbox {...props} value={checked} onValueChange={setChecked} />;
 };

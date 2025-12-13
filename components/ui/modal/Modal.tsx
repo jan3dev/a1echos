@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import {
   Animated,
   Pressable,
@@ -27,8 +27,8 @@ export interface ModalProps {
     onTap: () => void;
     variant?: ButtonVariant;
   };
-  icon?: React.ReactNode;
-  illustration?: React.ReactNode;
+  icon?: ReactNode;
+  illustration?: ReactNode;
   iconVariant?: ModalVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;

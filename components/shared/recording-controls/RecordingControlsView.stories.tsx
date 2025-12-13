@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import { useState } from 'react';
+import { ComponentProps, ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
 import { RecordingControlsView } from '@/components';
 import { TranscriptionState } from '@/models';
 import { useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -55,7 +55,7 @@ export default RecordingControlsViewMeta;
 type Story = StoryObj<typeof RecordingControlsView>;
 
 const DynamicRecordingControlsView = (
-  props: Omit<React.ComponentProps<typeof RecordingControlsView>, 'colors'>
+  props: Omit<ComponentProps<typeof RecordingControlsView>, 'colors'>
 ) => {
   const { theme } = useTheme();
   return <RecordingControlsView {...props} colors={theme.colors} />;

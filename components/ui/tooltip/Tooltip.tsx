@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -12,8 +12,8 @@ export type TooltipPointerPosition = 'none' | 'top' | 'bottom';
 export interface TooltipProps {
   visible: boolean;
   message: string;
-  leadingIcon?: React.ReactNode;
-  trailingIcon?: React.ReactNode;
+  leadingIcon?: ReactNode;
+  trailingIcon?: ReactNode;
   onLeadingIconTap?: () => void;
   onTrailingIconTap?: () => void;
   isDismissible?: boolean;

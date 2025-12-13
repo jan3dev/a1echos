@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useEffect } from 'react';
+import { ComponentType, ReactNode, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { EmptyStateView, HomeAppBar, HomeContent } from '@/components';
@@ -25,7 +25,7 @@ const dummySessions: Session[] = [
   },
 ];
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -40,7 +40,7 @@ const StoryContainer = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Decorator
-const StoreDecorator = (Story: React.ComponentType) => {
+const StoreDecorator = (Story: ComponentType) => {
   useEffect(() => {
     useSessionStore.setState({
       sessions: dummySessions,

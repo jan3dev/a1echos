@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Icon, TopAppBar } from '@/components';
 import { useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View

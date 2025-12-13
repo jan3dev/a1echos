@@ -1,3 +1,4 @@
+import { RefObject } from 'react';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +11,7 @@ interface HomeContentProps {
   onSessionLongPress: (session: Session) => void;
   onSessionTap: (sessionId: string) => void;
   onSelectionToggle: (sessionId: string) => void;
-  scrollRef?: React.RefObject<ScrollView | null>;
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
 const RECORDING_CONTROLS_HEIGHT = 96;

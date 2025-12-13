@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -12,7 +13,7 @@ import { useTheme } from '@/theme';
 export interface ListItemProps {
   title: string;
   subtitle?: string;
-  contentWidget?: React.ReactNode;
+  contentWidget?: ReactNode;
   titleTrailing?: string;
   subtitleTrailing?: string;
   titleColor?: string;
@@ -20,8 +21,8 @@ export interface ListItemProps {
   titleTrailingColor?: string;
   subtitleTrailingColor?: string;
   backgroundColor?: string;
-  iconLeading?: React.ReactNode;
-  iconTrailing?: React.ReactNode;
+  iconLeading?: ReactNode;
+  iconTrailing?: ReactNode;
   selected?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;

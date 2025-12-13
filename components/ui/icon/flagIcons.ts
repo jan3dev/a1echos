@@ -1,3 +1,4 @@
+import { FC } from 'react';
 import { SvgProps } from 'react-native-svg';
 
 import Abkhazia from '@/assets/icons/flags/abkhazia.svg';
@@ -260,7 +261,7 @@ import Yemen from '@/assets/icons/flags/yemen.svg';
 import Zambia from '@/assets/icons/flags/zambia.svg';
 import Zimbabwe from '@/assets/icons/flags/zimbabwe.svg';
 
-export const flagIcons: Record<string, React.FC<SvgProps>> = {
+export const flagIcons: Record<string, FC<SvgProps>> = {
   abkhazia: Abkhazia,
   afghanistan: Afghanistan,
   aland_islands: AlandIslands,

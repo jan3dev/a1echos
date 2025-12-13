@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { RefObject, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 
 import { TranscriptionItem } from '@/components';
@@ -19,7 +19,7 @@ interface TranscriptionListProps {
   isCancellingEdit?: boolean;
   topPadding?: number;
   bottomPadding?: number;
-  listRef?: React.RefObject<FlatList<Transcription>>;
+  listRef?: RefObject<FlatList<Transcription>>;
 }
 
 interface ActivePreviewState {

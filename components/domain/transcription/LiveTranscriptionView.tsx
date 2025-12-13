@@ -1,10 +1,11 @@
+import { RefObject } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { TranscriptionList } from '@/components';
 import { Transcription } from '@/models';
 
 interface LiveTranscriptionViewProps {
-  listRef?: React.RefObject<FlatList<Transcription>>;
+  listRef?: RefObject<FlatList<Transcription>>;
   topPadding?: number;
   bottomPadding?: number;
 }

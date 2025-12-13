@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Radio } from '@/components';
 import { AquaTypography, useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View

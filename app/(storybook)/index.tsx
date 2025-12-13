@@ -1,8 +1,9 @@
+import { ComponentType } from 'react';
 import { Text, View } from 'react-native';
 
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
 
-let StorybookUI: React.ComponentType | null = null;
+let StorybookUI: ComponentType | null = null;
 
 if (StorybookEnabled) {
   // Only import storybook when enabled to avoid loading it unnecessarily

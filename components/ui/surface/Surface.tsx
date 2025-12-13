@@ -1,10 +1,11 @@
 import { BlurView } from 'expo-blur';
+import { ReactNode } from 'react';
 import { Pressable, View, ViewStyle } from 'react-native';
 
 import { shadows, useTheme } from '@/theme';
 
 export interface SurfaceProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   style?: ViewStyle;
   variant?: 'filled' | 'glass';
   elevation?: number;

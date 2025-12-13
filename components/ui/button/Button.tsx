@@ -1,7 +1,9 @@
+import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ProgressIndicator } from '@/components';
 import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
+
 
 export type ButtonSize = 'large' | 'small';
 export type ButtonVariant = 'normal' | 'error' | 'success' | 'warning';
@@ -16,7 +18,7 @@ type ButtonType =
 interface BaseButtonProps {
   text: string;
   onPress?: () => void;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   isLoading?: boolean;
   enabled?: boolean;
 }

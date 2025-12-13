@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { TooltipPointerPosition, TooltipVariant } from '@/components';
 
@@ -6,8 +6,8 @@ const DEFAULT_TOOLTIP_DURATION = 4000; // 4 seconds
 
 export interface TooltipOptions {
   message: string;
-  leadingIcon?: React.ReactNode;
-  trailingIcon?: React.ReactNode;
+  leadingIcon?: ReactNode;
+  trailingIcon?: ReactNode;
   onLeadingIconTap?: () => void;
   onTrailingIconTap?: () => void;
   isDismissible?: boolean;

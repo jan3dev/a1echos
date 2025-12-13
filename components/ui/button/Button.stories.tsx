@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, Icon } from '@/components';
 import { AquaTypography, useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -23,7 +24,7 @@ const StorySection = ({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => {
   const { theme } = useTheme();
   return (

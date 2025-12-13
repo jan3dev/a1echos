@@ -1,3 +1,4 @@
+import { FC } from 'react';
 import { SvgProps } from 'react-native-svg';
 
 import Account from '@/assets/icons/account.svg';
@@ -132,7 +133,7 @@ import Web from '@/assets/icons/web.svg';
 import XLogo from '@/assets/icons/x_logo.svg';
 import Zendesk from '@/assets/icons/zendesk.svg';
 
-export const iconMap: Record<string, React.FC<SvgProps>> = {
+export const iconMap: Record<string, FC<SvgProps>> = {
   account: Account,
   add_alert: AddAlert,
   aqua_icon: AquaIcon,

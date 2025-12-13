@@ -1,4 +1,5 @@
 import type { Meta } from '@storybook/react-native';
+import { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon, Text } from '@/components';
@@ -6,7 +7,8 @@ import { useTheme } from '@/theme';
 
 import { iconMap, IconName } from './iconMap';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View

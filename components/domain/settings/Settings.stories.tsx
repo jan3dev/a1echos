@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { ComponentType } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { InAppBanner, SettingsFooter } from '@/components';
 import { useTheme } from '@/theme';
 
 // Decorator to provide theme background
-const ThemeDecorator = (Story: React.ComponentType) => {
+const ThemeDecorator = (Story: ComponentType) => {
   const { theme } = useTheme();
 
   return (

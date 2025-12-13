@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 
 import { ButtonVariant, ModalVariant } from '@/components';
 
@@ -16,8 +16,8 @@ export interface ModalOptions {
     onTap: () => void;
     variant?: ButtonVariant;
   };
-  icon?: React.ReactNode;
-  illustration?: React.ReactNode;
+  icon?: ReactNode;
+  illustration?: ReactNode;
   iconVariant?: ModalVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;

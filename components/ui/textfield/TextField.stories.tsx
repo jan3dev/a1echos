@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import { ComponentProps, ReactNode, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon, TextField } from '@/components';
 import { AquaTypography, useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -35,7 +35,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const TextFieldWithState = (
-  props: Omit<React.ComponentProps<typeof TextField>, 'onChangeText'>
+  props: Omit<ComponentProps<typeof TextField>, 'onChangeText'>
 ) => {
   const [value, setValue] = useState(props.value || '');
   return <TextField {...props} value={value} onChangeText={setValue} />;

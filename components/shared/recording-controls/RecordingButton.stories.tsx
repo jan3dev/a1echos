@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
+import { ComponentProps, ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { RecordingButton } from '@/components';
 import { TranscriptionState } from '@/models';
 import { useTheme } from '@/theme';
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View
@@ -55,7 +56,7 @@ export default RecordingButtonMeta;
 type Story = StoryObj<typeof RecordingButton>;
 
 const DynamicRecordingButton = (
-  props: Omit<React.ComponentProps<typeof RecordingButton>, 'colors'>
+  props: Omit<ComponentProps<typeof RecordingButton>, 'colors'>
 ) => {
   const { theme } = useTheme();
   return <RecordingButton {...props} colors={theme.colors} />;

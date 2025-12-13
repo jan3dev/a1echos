@@ -120,63 +120,80 @@ export default function HomeScreen() {
   const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
   const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
 
-  handleRecordingStartRef.current = async () => {
-    if (!hasPermission) {
-      if (canAskAgain) {
-        const granted = await requestPermission();
-        if (!granted) {
-          showToast(loc.homeMicrophoneDenied, 'error');
+  useEffect(() => {
+    handleRecordingStartRef.current = async () => {
+      if (!hasPermission) {
+        if (canAskAgain) {
+          const granted = await requestPermission();
+          if (!granted) {
+            showToast(loc.homeMicrophoneDenied, 'error');
+            return;
+          }
+        } else {
+          showToast(loc.homeMicrophonePermissionRequired, 'warning');
+          openSettings();
           return;
         }
-      } else {
-        showToast(loc.homeMicrophonePermissionRequired, 'warning');
-        openSettings();
-        return;
-      }
-    }
-
-    if (effectivelyEmpty) {
-      setTooltipShouldDisappear(true);
-      // wait for tooltip animation to finish (270ms)
-      await new Promise((resolve) => setTimeout(resolve, 270));
-    }
-
-    try {
-      const sessionId = await createSession(
-        undefined,
-        isIncognitoMode,
-        loc.recordingPrefix,
-        loc.incognitoModeTitle
-      );
-
-      const recordingStarted = await startTranscriptionRecording();
-      if (!recordingStarted) {
-        showToast(loc.homeFailedStartRecording, 'error');
-        return;
       }
 
-      // brief pause to ensure recording has started before navigation (50ms)
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (effectivelyEmpty) {
+        setTooltipShouldDisappear(true);
+        // wait for tooltip animation to finish (270ms)
+        await new Promise((resolve) => setTimeout(resolve, 270));
+      }
 
-      router.push({ pathname: '/session/[id]', params: { id: sessionId } });
+      try {
+        const sessionId = await createSession(
+          undefined,
+          isIncognitoMode,
+          loc.recordingPrefix,
+          loc.incognitoModeTitle
+        );
 
-      scrollToTop();
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      showToast(
-        loc.homeErrorCreatingSession(
-          error instanceof Error ? error.message : String(error)
-        ),
-        'error'
-      );
-    } finally {
-      setTooltipShouldDisappear(false);
-    }
-  };
+        const recordingStarted = await startTranscriptionRecording();
+        if (!recordingStarted) {
+          showToast(loc.homeFailedStartRecording, 'error');
+          return;
+        }
 
-  handleRecordingStopRef.current = async () => {
-    await stopRecordingAndSave();
-  };
+        // brief pause to ensure recording has started before navigation (50ms)
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        router.push({ pathname: '/session/[id]', params: { id: sessionId } });
+
+        scrollToTop();
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        showToast(
+          loc.homeErrorCreatingSession(
+            error instanceof Error ? error.message : String(error)
+          ),
+          'error'
+        );
+      } finally {
+        setTooltipShouldDisappear(false);
+      }
+    };
+  }, [
+    hasPermission,
+    canAskAgain,
+    effectivelyEmpty,
+    isIncognitoMode,
+    loc,
+    router,
+    requestPermission,
+    showToast,
+    openSettings,
+    createSession,
+    startTranscriptionRecording,
+    scrollToTop,
+  ]);
+
+  useEffect(() => {
+    handleRecordingStopRef.current = async () => {
+      await stopRecordingAndSave();
+    };
+  }, [stopRecordingAndSave]);
 
   useFocusEffect(
     useCallback(() => {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useEffect } from 'react';
+import { ComponentType, ReactNode, useEffect } from 'react';
 import { View } from 'react-native';
 
 import {
@@ -57,7 +57,7 @@ const skeletonTranscription: Transcription = {
   audioPath: '',
 };
 
-const ToastDecorator = (Story: React.ComponentType) => {
+const ToastDecorator = (Story: ComponentType) => {
   const toasts = useUIStore((s) => s.toasts);
   const hideToast = useUIStore((s) => s.hideToast);
 
@@ -88,7 +88,7 @@ const ToastDecorator = (Story: React.ComponentType) => {
   );
 };
 
-const StoryContainer = ({ children }: { children: React.ReactNode }) => {
+const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}>
@@ -98,7 +98,7 @@ const StoryContainer = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Store Decorator with default state
-const StoreDecorator = (Story: React.ComponentType) => {
+const StoreDecorator = (Story: ComponentType) => {
   useEffect(() => {
     // Setup initial store state
     useSessionStore.setState({
