@@ -2,6 +2,8 @@ import { setAudioModeAsync } from 'expo-audio';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
+import { FeatureFlag, logWarn } from '@/utils';
+
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
@@ -31,7 +33,9 @@ const createBackgroundRecordingService = () => {
       notificationsAvailable = true;
       return Notifications;
     } catch (error) {
-      console.warn('expo-notifications not available:', error);
+      logWarn(`expo-notifications not available: ${error}`, {
+        flag: FeatureFlag.service,
+      });
       return null;
     }
   };
@@ -47,8 +51,9 @@ const createBackgroundRecordingService = () => {
           if (existingStatus !== 'granted') {
             const { status: newStatus } = await notif.requestPermissionsAsync();
             if (newStatus !== 'granted') {
-              console.warn(
-                'Notification permission denied - recording will work without status bar indicator'
+              logWarn(
+                'Notification permission denied - recording will work without status bar indicator',
+                { flag: FeatureFlag.service }
               );
             }
           }
@@ -86,9 +91,9 @@ const createBackgroundRecordingService = () => {
               }
             });
         } catch (error) {
-          console.warn(
-            'Failed to initialize notifications - recording will work without status bar indicator:',
-            error
+          logWarn(
+            `Failed to initialize notifications - recording will work without status bar indicator: ${error}`,
+            { flag: FeatureFlag.service }
           );
         }
       }
@@ -123,7 +128,9 @@ const createBackgroundRecordingService = () => {
       try {
         await Notifications.dismissNotificationAsync(notificationId);
       } catch (error) {
-        console.warn('Error dismissing notification:', error);
+        logWarn(`Error dismissing notification: ${error}`, {
+          flag: FeatureFlag.service,
+        });
       }
 
       try {
@@ -138,7 +145,9 @@ const createBackgroundRecordingService = () => {
           trigger: null,
         });
       } catch (error) {
-        console.warn('Error scheduling notification:', error);
+        logWarn(`Error scheduling notification: ${error}`, {
+          flag: FeatureFlag.service,
+        });
       }
     }
   };
@@ -174,7 +183,9 @@ const createBackgroundRecordingService = () => {
           });
         }
       } catch (error) {
-        console.warn('Could not show recording notification:', error);
+        logWarn(`Could not show recording notification: ${error}`, {
+          flag: FeatureFlag.service,
+        });
       }
     }
 
@@ -191,7 +202,9 @@ const createBackgroundRecordingService = () => {
       try {
         await Notifications.dismissNotificationAsync(notificationId);
       } catch (error) {
-        console.warn('Could not dismiss recording notification:', error);
+        logWarn(`Could not dismiss recording notification: ${error}`, {
+          flag: FeatureFlag.service,
+        });
       }
       notificationId = null;
     }

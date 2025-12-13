@@ -1,7 +1,9 @@
-import { permissionService } from '@/services';
 import { PermissionStatus } from 'expo-modules-core';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+
+import { permissionService } from '@/services';
+import { FeatureFlag, logError } from '@/utils';
 
 export const usePermissions = () => {
   const [status, setStatus] = useState<PermissionStatus>(
@@ -19,8 +21,10 @@ export const usePermissions = () => {
       const isDenied = await permissionService.isPermanentlyDenied();
       if (isMounted) setCanAskAgain(!isDenied);
     } catch (error) {
-      console.error('Failed to check permission:', error);
-      // Optionally set a default state or expose error to consumers
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Failed to check permission',
+      });
     }
     return () => {
       isMounted = false;
@@ -54,8 +58,11 @@ export const usePermissions = () => {
       await checkPermission(); // Update state after request
       return granted;
     } catch (error) {
-      console.error('Failed to request permission:', error);
-      throw error; // Re-throw so caller can handle
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Failed to request permission',
+      });
+      throw error;
     }
   }, [checkPermission]);
 

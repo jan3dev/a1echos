@@ -1,11 +1,17 @@
-import { ModelType, Transcription, TranscriptionState } from '@/models';
-import { audioService, storageService, whisperService } from '@/services';
-import { useSessionStore, useSettingsStore } from '@/stores';
-import { formatTranscriptionText } from '@/utils';
 import * as Crypto from 'expo-crypto';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
+
+import { ModelType, Transcription, TranscriptionState } from '@/models';
+import { audioService, storageService, whisperService } from '@/services';
+import { useSessionStore, useSettingsStore } from '@/stores';
+import {
+  FeatureFlag,
+  formatTranscriptionText,
+  logError,
+  logWarn,
+} from '@/utils';
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -252,9 +258,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const currentState = get().state;
 
       if (!validateStateTransition(currentState, newState)) {
-        console.warn(
-          `Invalid state transition: ${currentState} -> ${newState}`
-        );
+        logWarn(`Invalid state transition: ${currentState} -> ${newState}`, {
+          flag: FeatureFlag.store,
+        });
         return false;
       }
 
@@ -379,7 +385,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       try {
         await get()._loadTranscriptionsInternal();
       } catch (error) {
-        console.error('Failed to load transcriptions', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to load transcriptions',
+        });
         throw error;
       } finally {
         releaseOperationLock(operationName);
@@ -417,7 +426,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         set({ transcriptions: newTranscriptions });
       } catch (error) {
-        console.error('Failed to update transcription', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to update transcription',
+        });
         throw new Error(`Failed to update transcription: ${error}`);
       }
     },
@@ -444,7 +456,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           .getState()
           .updateSessionModifiedTimestamp(sessionId);
       } catch (error) {
-        console.error('Failed to delete transcription', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to delete transcription',
+        });
         throw new Error(`Failed to delete transcription: ${error}`);
       }
     },
@@ -473,7 +488,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             .updateSessionModifiedTimestamp(sessionId);
         }
       } catch (error) {
-        console.error('Failed to delete transcriptions', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to delete transcriptions',
+        });
         throw new Error(`Failed to delete transcriptions: ${error}`);
       }
     },
@@ -483,7 +501,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         await storageService.clearTranscriptions();
         set({ transcriptions: [], isLoaded: true });
       } catch (error) {
-        console.error('Failed to clear transcriptions', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to clear transcriptions',
+        });
         throw new Error(`Failed to clear transcriptions: ${error}`);
       }
     },
@@ -524,7 +545,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           .getState()
           .updateSessionModifiedTimestamp(transcription.sessionId);
       } catch (error) {
-        console.error('Failed to delete paragraph from transcription', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to delete paragraph from transcription',
+        });
         throw new Error(`Failed to delete paragraph: ${error}`);
       }
     },
@@ -544,7 +568,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           .getState()
           .updateSessionModifiedTimestamp(sessionId);
       } catch (error) {
-        console.error('Failed to delete all transcriptions for session', error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to delete all transcriptions for session',
+        });
         throw new Error(
           `Failed to delete transcriptions for session: ${error}`
         );
@@ -681,7 +708,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         return true;
       } catch (error) {
-        console.error('Error starting recording', error);
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error starting recording',
+        });
         // Clean up any subscriptions that may have been set before the error
         const currentState = get();
         if (currentState.realtimeAudioLevelUnsubscribe) {
@@ -825,7 +855,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           });
         }
       } catch (error) {
-        console.error('Error stopping recording', error);
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error stopping recording',
+        });
         get().setError(`Error stopping recording: ${error}`);
 
         get().clearLivePreview();
@@ -862,7 +895,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const state = get();
 
       if (state.isInitialized) {
-        console.warn('Transcription store already initialized');
+        logWarn('Transcription store already initialized', {
+          flag: FeatureFlag.store,
+        });
         return;
       }
 
@@ -886,9 +921,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         // Initialize Whisper service
         const whisperInitialized = await whisperService.initialize();
         if (!whisperInitialized) {
-          console.error(
-            'Whisper initialization failed:',
-            whisperService.initializationStatus
+          logError(
+            `Whisper initialization failed: ${whisperService.initializationStatus}`,
+            { flag: FeatureFlag.model }
           );
           set({ isWhisperReady: false });
         } else {
@@ -908,7 +943,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         set({ isInitialized: true });
       } catch (error) {
         const errorMessage = `Failed to initialize transcription system: ${error}`;
-        console.error(errorMessage, error);
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: 'Failed to initialize transcription system',
+        });
 
         set({ initError: errorMessage });
         get().setError(errorMessage);

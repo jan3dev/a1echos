@@ -14,6 +14,7 @@ import { Checkbox, Icon, Skeleton, Text } from '@/components';
 import { Transcription } from '@/models';
 import { useUIStore } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 interface TranscriptionItemProps {
   transcription: Transcription;
@@ -97,8 +98,11 @@ export const TranscriptionItem = ({
         showToast('Copied to clipboard', 'success');
       }
     } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to copy to clipboard',
+      });
       showToast('Failed to copy to clipboard', 'error');
-      console.error(error);
     }
   };
 

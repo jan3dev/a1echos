@@ -7,6 +7,7 @@ import { useLocalization } from '@/hooks';
 import { ModelType } from '@/models';
 import { useSelectedModelType, useSetModelType } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -24,7 +25,10 @@ export default function ModelSettingsScreen() {
       await setModelType(modelType);
       router.back();
     } catch (error) {
-      console.error('Failed to set model type:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to set model type',
+      });
     }
   };
 

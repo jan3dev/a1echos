@@ -20,7 +20,7 @@ import { useLocalization, useSessionOperations } from '@/hooks';
 import { Session } from '@/models';
 import { useRenameSession, useShowGlobalTooltip } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { formatDate, formatSessionSubtitle } from '@/utils';
+import { FeatureFlag, formatDate, formatSessionSubtitle, logError } from '@/utils';
 
 const MENU_HEIGHT_FALLBACK = 200;
 // Buffer to keep menu above tab bar and safe area insets
@@ -79,7 +79,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
       await deleteSession(session.id);
       showGlobalTooltip(loc.homeSessionsDeleted(1));
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      logError(error, { flag: FeatureFlag.session, message: 'Failed to delete session' });
     }
   };
 

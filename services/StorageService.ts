@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Directory, File, Paths } from 'expo-file-system';
+
 import {
   Session,
   SessionJSON,
@@ -9,8 +12,7 @@ import {
   transcriptionToJSON,
 } from '@/models';
 import { encryptionService } from '@/services';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File, Paths } from 'expo-file-system';
+import { FeatureFlag, logError, logInfo, logWarn } from '@/utils';
 
 const TRANSCRIPTIONS_FILE = 'transcriptions.json';
 const PENDING_DELETES_FILE = 'pending_deletes.json';
@@ -48,10 +50,10 @@ const createStorageService = () => {
       const jsonList = JSON.parse(contents);
       return jsonList as string[];
     } catch (error) {
-      console.error(
-        'Failed to read pending deletes file. It may be corrupt.',
-        error
-      );
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: 'Failed to read pending deletes file. It may be corrupt',
+      });
 
       const timestamp = Date.now();
       const file = getPendingDeletesFile();
@@ -63,12 +65,14 @@ const createStorageService = () => {
             `${PENDING_DELETES_FILE}.corrupted.${timestamp}`
           )
         );
-        console.info(`Corrupted pending deletes file backed up`);
+        logInfo('Corrupted pending deletes file backed up', {
+          flag: FeatureFlag.storage,
+        });
       } catch (renameError) {
-        console.error(
-          'Failed to rename corrupted pending deletes file',
-          renameError
-        );
+        logError(renameError, {
+          flag: FeatureFlag.storage,
+          message: 'Failed to rename corrupted pending deletes file',
+        });
       }
 
       return [];
@@ -89,7 +93,10 @@ const createStorageService = () => {
       const rawJson = JSON.stringify(list);
       file.write(rawJson);
     } catch (error) {
-      console.error('Failed to save pending deletes', error);
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: 'Failed to save pending deletes',
+      });
       throw error;
     }
   };
@@ -112,10 +119,10 @@ const createStorageService = () => {
         }
         success = true;
       } catch (error) {
-        console.error(
-          `Error deleting file ${path}, attempting overwrite`,
-          error
-        );
+        logError(error, {
+          flag: FeatureFlag.storage,
+          message: `Error deleting file ${path}, attempting overwrite`,
+        });
 
         try {
           const file = new File(path);
@@ -125,7 +132,10 @@ const createStorageService = () => {
           }
           success = true;
         } catch (error2) {
-          console.error(`Second attempt failed deleting file ${path}`, error2);
+          logError(error2, {
+            flag: FeatureFlag.storage,
+            message: `Second attempt failed deleting file ${path}`,
+          });
         }
       }
 
@@ -156,7 +166,10 @@ const createStorageService = () => {
 
       return jsonList.map((json) => transcriptionFromJSON(json));
     } catch (error) {
-      console.error('Error decrypting or parsing transcriptions', error);
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: 'Error decrypting or parsing transcriptions',
+      });
 
       try {
         const file = getTranscriptionsFile();
@@ -164,10 +177,10 @@ const createStorageService = () => {
           file.delete();
         }
       } catch (deleteError) {
-        console.error(
-          'Failed to delete corrupt transcriptions file',
-          deleteError
-        );
+        logError(deleteError, {
+          flag: FeatureFlag.storage,
+          message: 'Failed to delete corrupt transcriptions file',
+        });
       }
 
       return [];
@@ -241,7 +254,10 @@ const createStorageService = () => {
 
       return targetFile.uri;
     } catch (error) {
-      console.error(`Error saving audio file ${audioFilePath}`, error);
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: `Error saving audio file ${audioFilePath}`,
+      });
       throw error;
     }
   };
@@ -253,7 +269,10 @@ const createStorageService = () => {
         file.delete();
       }
     } catch (error) {
-      console.error(`Error deleting audio file ${path}`, error);
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: `Error deleting audio file ${path}`,
+      });
 
       let deletionStillPending = false;
 
@@ -264,7 +283,10 @@ const createStorageService = () => {
           file.delete();
         }
       } catch (error2) {
-        console.error(`Second deletion attempt failed for ${path}`, error2);
+        logError(error2, {
+          flag: FeatureFlag.storage,
+          message: `Second deletion attempt failed for ${path}`,
+        });
         deletionStillPending = true;
       }
 
@@ -316,9 +338,9 @@ const createStorageService = () => {
         plainSessions = await encryptionService.decrypt(storedSessions);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.warn(
-          'Failed to decrypt sessions, attempting to read as plain text.',
-          message
+        logWarn(
+          `Failed to decrypt sessions, attempting to read as plain text: ${message}`,
+          { flag: FeatureFlag.storage }
         );
         plainSessions = storedSessions;
         wasPlainText = true;
@@ -330,14 +352,19 @@ const createStorageService = () => {
       // Re-encrypt legacy plain-text data
       if (wasPlainText) {
         await saveSessions(sessions).catch((error) => {
-          console.warn('Failed to re-encrypt legacy sessions', error);
+          logWarn(`Failed to re-encrypt legacy sessions: ${error}`, {
+            flag: FeatureFlag.storage,
+          });
         });
       }
 
       return sessions;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Failed to decode sessions JSON', message);
+      logError(message, {
+        flag: FeatureFlag.storage,
+        message: 'Failed to decode sessions JSON',
+      });
       return [];
     }
   };
@@ -368,24 +395,26 @@ const createStorageService = () => {
         return decryptedActive;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.warn(
-          'Failed to decrypt active session ID, assuming legacy plain text.',
-          message
+        logWarn(
+          `Failed to decrypt active session ID, assuming legacy plain text: ${message}`,
+          { flag: FeatureFlag.storage }
         );
-        // Re-encrypt legacy plain-text data
         try {
           await saveActiveSessionId(storedActive);
         } catch (encryptError) {
-          console.warn(
-            'Failed to re-encrypt legacy active session ID',
-            encryptError
+          logWarn(
+            `Failed to re-encrypt legacy active session ID: ${encryptError}`,
+            { flag: FeatureFlag.storage }
           );
         }
         return storedActive;
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error('Failed to load active session ID', message);
+      logError(message, {
+        flag: FeatureFlag.storage,
+        message: 'Failed to load active session ID',
+      });
       return null;
     }
   };

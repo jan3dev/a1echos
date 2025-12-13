@@ -2,7 +2,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   BackHandler,
   FlatList,
@@ -49,6 +56,7 @@ import {
   useToggleTranscriptionSelection,
 } from '@/stores';
 import { useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -132,7 +140,10 @@ export default function SessionScreen() {
       await deleteTranscriptions(selectedIds);
       return { deleted: count };
     } catch (error) {
-      console.error('Failed to delete transcriptions:', error);
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to delete transcriptions',
+      });
       throw error;
     } finally {
       exitSelectionMode();
@@ -150,7 +161,10 @@ export default function SessionScreen() {
       await Clipboard.setStringAsync(text);
       return true;
     } catch (error) {
-      console.error('Failed to copy transcriptions:', error);
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to copy transcriptions',
+      });
       return false;
     }
   }, [transcriptions]);
@@ -173,7 +187,10 @@ export default function SessionScreen() {
       exitSelectionMode();
       return true;
     } catch (error) {
-      console.error('Failed to share transcriptions:', error);
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to share transcriptions',
+      });
       return false;
     }
   }, [selectedIds, transcriptions, exitSelectionMode]);
@@ -260,7 +277,10 @@ export default function SessionScreen() {
             router.replace('/');
           }
         } catch (error) {
-          console.error('Failed to end incognito session:', error);
+          logError(error, {
+            flag: FeatureFlag.session,
+            message: 'Failed to end incognito session',
+          });
         }
       }
     });
@@ -381,7 +401,10 @@ export default function SessionScreen() {
         showToast(loc.copyFailed('Unknown error'), 'error');
       }
     } catch (error) {
-      console.error('Failed to copy all transcriptions:', error);
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to copy all transcriptions',
+      });
       showToast(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
         'error'
@@ -440,7 +463,10 @@ export default function SessionScreen() {
         );
       }
     } catch (error) {
-      console.error('Failed to share transcriptions:', error);
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to share transcriptions',
+      });
       showToast(
         loc.shareFailed(error instanceof Error ? error.message : String(error)),
         'error'

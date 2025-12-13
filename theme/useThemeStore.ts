@@ -1,7 +1,9 @@
-import { AppTheme } from '@/models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Appearance } from 'react-native';
 import { create } from 'zustand';
+
+import { AppTheme } from '@/models';
+import { FeatureFlag, logError } from '@/utils';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -36,7 +38,10 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       const currentTheme = resolveCurrentTheme(theme);
       set({ selectedTheme: theme, currentTheme });
     } catch (error) {
-      console.error('Failed to save theme preference:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save theme preference',
+      });
     }
   },
 
@@ -64,7 +69,10 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
         }
       );
     } catch (error) {
-      console.error('Failed to initialize theme:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to initialize theme',
+      });
     }
   },
 }));

@@ -1,6 +1,8 @@
 import { ComponentType } from 'react';
 import { Text, View } from 'react-native';
 
+import { FeatureFlag, logError } from '@/utils';
+
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
 
 let StorybookUI: ComponentType | null = null;
@@ -11,8 +13,10 @@ if (StorybookEnabled) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     StorybookUI = require('@/.rnstorybook').default;
   } catch (error) {
-    console.error('Failed to load Storybook:', error);
-    // StorybookUI remains null, fallback UI will be shown
+    logError(error, {
+      flag: FeatureFlag.ui,
+      message: 'Failed to load Storybook',
+    });
   }
 }
 

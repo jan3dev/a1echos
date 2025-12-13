@@ -15,6 +15,7 @@ import { useLocalization } from '@/hooks';
 import { getCountryCode, SpokenLanguage, SupportedLanguages } from '@/models';
 import { useSelectedLanguage, useSetLanguage } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -32,7 +33,10 @@ export default function LanguageSettingsScreen() {
       await setLanguage(language);
       router.back();
     } catch (error) {
-      console.error('Failed to set language:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to set language',
+      });
     }
   };
 

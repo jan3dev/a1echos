@@ -1,5 +1,7 @@
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
+import { logWarn } from '@/utils';
+
 import { iconMap, IconName } from './iconMap';
 
 export type { IconName };
@@ -20,7 +22,7 @@ export const Icon = ({
   const IconComponent = iconMap[name];
 
   if (!IconComponent) {
-    console.warn(`Icon not found: ${name}`);
+    logWarn(`Icon not found: ${name}`);
     return null;
   }
 

@@ -62,4 +62,14 @@ export const formatSessionSubtitle = ({
   return isModified ? `${modifiedPrefix} ${dateStr}` : dateStr;
 };
 
+export {
+  FeatureFlag,
+  LOG,
+  logDebug,
+  logError,
+  logFor,
+  logInfo,
+  logWarn
+} from './log';
 export { formatTranscriptionText } from './TranscriptionFormatter';
+

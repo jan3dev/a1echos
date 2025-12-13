@@ -1,5 +1,7 @@
 import { View } from 'react-native';
 
+import { logWarn } from '@/utils';
+
 import { flagIcons } from './flagIcons';
 
 interface FlagIconProps {
@@ -11,7 +13,7 @@ export const FlagIcon = ({ name, size = 24 }: FlagIconProps) => {
   const Flag = flagIcons[name];
 
   if (!Flag) {
-    console.warn(`Flag icon not found for: ${name}`);
+    logWarn(`Flag icon not found for: ${name}`);
     return <View style={{ width: size, height: size }} />;
   }
 

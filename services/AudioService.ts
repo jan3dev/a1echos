@@ -1,6 +1,5 @@
-import { AppConstants } from '@/constants';
-import { backgroundRecordingService, permissionService } from '@/services';
 import { EventEmitter } from 'events';
+
 import {
   AudioModule,
   AudioRecorder,
@@ -10,9 +9,12 @@ import {
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-
 // @ts-ignore - module declaration exists but types are incomplete
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
+
+import { AppConstants } from '@/constants';
+import { backgroundRecordingService, permissionService } from '@/services';
+import { FeatureFlag, logError, logWarn } from '@/utils';
 
 const RECORDING_OPTIONS: RecordingOptions = {
   extension: '.wav',
@@ -177,7 +179,10 @@ const createAudioService = () => {
             }
           }
         } catch (error) {
-          console.error('Error getting amplitude:', error);
+          logError(error, {
+            flag: FeatureFlag.recording,
+            message: 'Error getting amplitude',
+          });
         }
       }
     }, 16);
@@ -189,10 +194,10 @@ const createAudioService = () => {
       try {
         await AudioRecord.stop();
       } catch (error) {
-        console.error(
-          'Error stopping Android PCM recording during cleanup:',
-          error
-        );
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error stopping Android PCM recording during cleanup',
+        });
       }
       androidPcmRecording = false;
       androidWavFilePath = null;
@@ -203,7 +208,10 @@ const createAudioService = () => {
         await recorder.stop();
         recorder.release();
       } catch (error) {
-        console.error('Error during cleanup:', error);
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error during cleanup',
+        });
       }
       recorder = null;
     }
@@ -244,17 +252,25 @@ const createAudioService = () => {
 
         backgroundServiceInitialized = true;
       } catch (error) {
-        console.error('Background service initialization failed:', error);
+        logError(error, {
+          flag: FeatureFlag.service,
+          message: 'Background service initialization failed',
+        });
       }
     }
 
     try {
       const success = await backgroundRecordingService.startBackgroundService();
       if (!success) {
-        console.error('Background service failed to start');
+        logError('Background service failed to start', {
+          flag: FeatureFlag.service,
+        });
       }
     } catch (error) {
-      console.error('Failed to start background service:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Failed to start background service',
+      });
     }
 
     await cleanup();
@@ -288,12 +304,15 @@ const createAudioService = () => {
         try {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         } catch {
-          console.warn('Haptics not supported');
+          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
         }
 
         return true;
       } catch (error) {
-        console.error('Error starting Android PCM recording:', error);
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error starting Android PCM recording',
+        });
         AudioRecord.removeListener('data', handleAndroidPcmData);
         androidPcmRecording = false;
         androidWavFilePath = null;
@@ -318,14 +337,17 @@ const createAudioService = () => {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch {
-        console.warn('Haptics not supported');
+        logWarn('Haptics not supported', { flag: FeatureFlag.recording });
       }
 
       startAmplitudeMonitoring();
 
       return true;
     } catch (error) {
-      console.error('Error starting recording:', error);
+      logError(error, {
+        flag: FeatureFlag.recording,
+        message: 'Error starting recording',
+      });
       try {
         if (recorder) {
           await recorder.stop();
@@ -342,7 +364,10 @@ const createAudioService = () => {
     try {
       await backgroundRecordingService.stopBackgroundService();
     } catch (error) {
-      console.error('Failed to stop background service:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Failed to stop background service',
+      });
     }
 
     // Handle Android native PCM recording
@@ -366,7 +391,7 @@ const createAudioService = () => {
             Haptics.NotificationFeedbackType.Success
           );
         } catch {
-          console.warn('Haptics not supported');
+          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
         }
 
         // The library returns the file path
@@ -390,7 +415,10 @@ const createAudioService = () => {
         androidWavFilePath = null;
         return null;
       } catch (error) {
-        console.error('Error stopping Android PCM recording:', error);
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Error stopping Android PCM recording',
+        });
         androidPcmRecording = false;
         androidWavFilePath = null;
         recordStart = null;
@@ -419,7 +447,10 @@ const createAudioService = () => {
         await new Promise((resolve) => setTimeout(resolve, waitMs));
       }
     } catch (error) {
-      console.error('Error calculating recording duration:', error);
+      logError(error, {
+        flag: FeatureFlag.recording,
+        message: 'Error calculating recording duration',
+      });
     }
 
     let recordedFilePath: string | null = null;
@@ -435,7 +466,7 @@ const createAudioService = () => {
             Haptics.NotificationFeedbackType.Success
           );
         } catch {
-          console.warn('Haptics not supported');
+          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
         }
         if (uri) {
           const file = new File(uri);

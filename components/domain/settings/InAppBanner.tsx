@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { getShadow } from '@/theme';
+import { FeatureFlag, logWarn } from '@/utils';
 
 const AQUA_APP_URLS = {
   android:
@@ -36,7 +37,9 @@ export const InAppBanner = () => {
         await Linking.openURL(url);
       }
     } catch (error) {
-      console.warn('Error launching AQUA app URL:', error);
+      logWarn(`Error launching AQUA app URL: ${error}`, {
+        flag: FeatureFlag.ui,
+      });
     }
   };
 

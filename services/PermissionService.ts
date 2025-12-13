@@ -5,13 +5,18 @@ import {
 } from 'expo-audio';
 import * as Linking from 'expo-linking';
 
+import { FeatureFlag, logError } from '@/utils';
+
 const createPermissionService = () => {
   const requestRecordPermission = async (): Promise<boolean> => {
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       return granted;
     } catch (error) {
-      console.error('Error requesting microphone permission:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Error requesting microphone permission',
+      });
       return false;
     }
   };
@@ -21,7 +26,10 @@ const createPermissionService = () => {
       const { status } = await getRecordingPermissionsAsync();
       return status;
     } catch (error) {
-      console.error('Error getting permission status:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Error getting permission status',
+      });
       return PermissionStatus.UNDETERMINED;
     }
   };
@@ -49,7 +57,10 @@ const createPermissionService = () => {
       const { status, canAskAgain } = await getRecordingPermissionsAsync();
       return status === PermissionStatus.DENIED && !canAskAgain;
     } catch (error) {
-      console.error('Error checking permission denial status:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Error checking permission denial status',
+      });
       return false;
     }
   };
@@ -59,7 +70,10 @@ const createPermissionService = () => {
       await Linking.openSettings();
       return true;
     } catch (error) {
-      console.error('Error opening app settings:', error);
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Error opening app settings',
+      });
       return false;
     }
   };

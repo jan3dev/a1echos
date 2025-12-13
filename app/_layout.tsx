@@ -10,7 +10,7 @@ import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RecordingControlsView, Tooltip } from '@/components';
+import { AppErrorBoundary, RecordingControlsView, Tooltip } from '@/components';
 import { AppTheme } from '@/models';
 import { storageService } from '@/services';
 import {
@@ -27,9 +27,35 @@ import {
   useTranscriptionState,
 } from '@/stores';
 import { useTheme, useThemeStore } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
+
+declare const global: {
+  ErrorUtils?: {
+    getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
+    setGlobalHandler: (
+      handler: (error: Error, isFatal?: boolean) => void
+    ) => void;
+  };
+};
+
+let globalHandlerInstalled = false;
+
+function installGlobalErrorHandler() {
+  if (globalHandlerInstalled || !global.ErrorUtils) return;
+  globalHandlerInstalled = true;
+
+  const previousHandler = global.ErrorUtils.getGlobalHandler();
+  global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+    logError(error, {
+      flag: FeatureFlag.general,
+      message: 'Unhandled JS error',
+    });
+    previousHandler?.(error, isFatal);
+  });
+}
 
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
 
@@ -157,6 +183,11 @@ export default function RootLayout() {
   const initTheme = useThemeStore((state) => state.initTheme);
   const { isDark } = useTheme();
 
+  // Install global error handler once
+  useEffect(() => {
+    installGlobalErrorHandler();
+  }, []);
+
   // Initialize stores and services
   useEffect(() => {
     async function initializeApp() {
@@ -174,11 +205,10 @@ export default function RootLayout() {
 
         setAppReady(true);
       } catch (error) {
-        console.error('Failed to initialize app:', error);
-        if (error instanceof Error) {
-          console.error('Error name:', error.name);
-          console.error('Error stack:', error.stack);
-        }
+        logError(error, {
+          flag: FeatureFlag.general,
+          message: 'Failed to initialize app',
+        });
         // Still mark as ready to allow the app to render
         // Individual stores handle their own error states
         setAppReady(true);
@@ -197,7 +227,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontError) {
-      console.error('Error loading fonts:', fontError);
+      logError(fontError, {
+        flag: FeatureFlag.ui,
+        message: 'Error loading fonts',
+      });
     }
   }, [fontError]);
 
@@ -207,22 +240,24 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <StatusBar
-        style={isDark ? 'light' : 'dark'}
-        backgroundColor="transparent"
-        translucent
-      />
-      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-        <Stack.Protected guard={StorybookEnabled}>
-          <Stack.Screen name="(storybook)/index" />
-        </Stack.Protected>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        <StatusBar
+          style={isDark ? 'light' : 'dark'}
+          backgroundColor="transparent"
+          translucent
+        />
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Protected guard={StorybookEnabled}>
+            <Stack.Screen name="(storybook)/index" />
+          </Stack.Protected>
 
-        <Stack.Screen name="(pages)/index" />
-      </Stack>
-      <GlobalRecordingControls />
-      <GlobalTooltipRenderer />
-    </GestureHandlerRootView>
+          <Stack.Screen name="(pages)/index" />
+        </Stack>
+        <GlobalRecordingControls />
+        <GlobalTooltipRenderer />
+      </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }
 

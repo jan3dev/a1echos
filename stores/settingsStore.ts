@@ -1,3 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+
 import {
   AppTheme,
   getThemeByName,
@@ -5,8 +8,7 @@ import {
   SpokenLanguage,
   SupportedLanguages,
 } from '@/models';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
+import { FeatureFlag, logError } from '@/utils';
 
 const STORAGE_KEYS = {
   THEME: 'selectedTheme',
@@ -81,7 +83,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         hasSeenIncognitoExplainer,
       });
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to load settings',
+      });
       set({
         selectedTheme: AppTheme.AUTO,
         selectedModelType: getDefaultModelType(),
@@ -98,7 +103,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.THEME, theme);
     } catch (error) {
-      console.error('Failed to save theme:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save theme',
+      });
       set({ selectedTheme: previousTheme });
       throw error;
     }
@@ -110,7 +118,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.MODEL_TYPE, modelType);
     } catch (error) {
-      console.error('Failed to save model type:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save model type',
+      });
       set({ selectedModelType: previousModelType });
       throw error;
     }
@@ -122,7 +133,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, language.code);
     } catch (error) {
-      console.error('Failed to save language:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save language',
+      });
       set({ selectedLanguage: previousLanguage });
       throw error;
     }
@@ -137,7 +151,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         enabled.toString()
       );
     } catch (error) {
-      console.error('Failed to save incognito mode:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save incognito mode',
+      });
       set({ isIncognitoMode: previousValue });
       throw error;
     }
@@ -148,7 +165,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN, 'true');
     } catch (error) {
-      console.error('Failed to save incognito explainer flag:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to save incognito explainer flag',
+      });
     }
   },
 }));

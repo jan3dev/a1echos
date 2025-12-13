@@ -31,6 +31,7 @@ import {
   useToggleSessionSelection,
 } from '@/stores';
 import { useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -163,7 +164,7 @@ export default function HomeScreen() {
 
         scrollToTop();
       } catch (error) {
-        console.error('Failed to start recording:', error);
+        logError(error, { flag: FeatureFlag.recording, message: 'Failed to start recording' });
         showToast(
           loc.homeErrorCreatingSession(
             error instanceof Error ? error.message : String(error)
@@ -214,7 +215,7 @@ export default function HomeScreen() {
         selectedSessionIds.map((sessionId) => deleteSession(sessionId))
       );
     } catch (error) {
-      console.error('Error during bulk delete:', error);
+      logError(error, { flag: FeatureFlag.session, message: 'Error during bulk delete' });
     }
 
     exitSessionSelection();

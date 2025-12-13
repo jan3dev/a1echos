@@ -7,6 +7,7 @@ import { useLocalization } from '@/hooks';
 import { AppTheme } from '@/models';
 import { useSetTheme } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
+import { FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -24,7 +25,10 @@ export default function ThemeSettingsScreen() {
       await setSettingsTheme(appTheme);
       router.back();
     } catch (error) {
-      console.error('Failed to set theme:', error);
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: 'Failed to set theme',
+      });
     }
   };
 

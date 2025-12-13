@@ -1,9 +1,11 @@
-import { AppConstants } from '@/constants';
-import { Session, createSession } from '@/models';
-import { storageService } from '@/services';
 import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
+
+import { AppConstants } from '@/constants';
+import { Session, createSession } from '@/models';
+import { storageService } from '@/services';
+import { logWarn } from '@/utils';
 
 interface SessionStore {
   sessions: Session[];
@@ -119,7 +121,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         .map((s) => {
           const parsed = parseInt(s.name.substring(baseName.length), 10);
           if (isNaN(parsed)) {
-            console.warn(`Could not parse session number from name: ${s.name}`);
+            logWarn(`Could not parse session number from name: ${s.name}`);
           }
           return parsed;
         })
