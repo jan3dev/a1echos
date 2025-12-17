@@ -10,11 +10,15 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { Checkbox, Icon, Skeleton, Text } from '@/components';
 import { Transcription } from '@/models';
 import { useUIStore } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
 import { FeatureFlag, logError } from '@/utils';
+
+import { Checkbox } from '../../ui/checkbox/Checkbox';
+import { Icon } from '../../ui/icon/Icon';
+import { Skeleton } from '../../ui/skeleton/Skeleton';
+import { Text } from '../../ui/text/Text';
 
 interface TranscriptionItemProps {
   transcription: Transcription;

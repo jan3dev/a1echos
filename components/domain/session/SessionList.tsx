@@ -1,10 +1,13 @@
 import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Divider, SessionListItem } from '@/components';
 import { Session } from '@/models';
 import { useSessions } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
+
+import { Divider } from '../../ui/divider/Divider';
+
+import { SessionListItem } from './SessionListItem';
 
 interface SessionListProps {
   selectionMode: boolean;

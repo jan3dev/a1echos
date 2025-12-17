@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ProgressIndicator } from '@/components';
 import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
+
+import { ProgressIndicator } from '../progress/ProgressIndicator';
 
 
 export type ButtonSize = 'large' | 'small';

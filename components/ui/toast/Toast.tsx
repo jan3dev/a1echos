@@ -9,8 +9,10 @@ import {
   View,
 } from 'react-native';
 
-import { Icon, Text } from '@/components';
 import { getShadow, useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
+import { Text } from '../text/Text';
 
 export type ToastVariant = 'informative' | 'warning' | 'danger';
 

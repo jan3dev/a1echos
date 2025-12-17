@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
-import { TooltipPointerPosition, TooltipVariant } from '@/components';
+import { TooltipPointerPosition, TooltipVariant } from './Tooltip';
 
 const DEFAULT_TOOLTIP_DURATION = 4000; // 4 seconds
 

@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, Text } from '@/components';
 import { useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
+import { Text } from '../text/Text';
 
 export interface TopAppBarProps {
   title?: string;

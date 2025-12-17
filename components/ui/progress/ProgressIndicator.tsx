@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 
-import { Icon } from '@/components';
+import { Icon } from '../icon/Icon';
 
 interface ProgressIndicatorProps {
   color?: string;

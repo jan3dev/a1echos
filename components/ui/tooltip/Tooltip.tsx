@@ -3,8 +3,10 @@ import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { Icon, Text } from '@/components';
 import { useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
+import { Text } from '../text/Text';
 
 export type TooltipVariant = 'normal' | 'success' | 'warning' | 'error';
 export type TooltipPointerPosition = 'none' | 'top' | 'bottom';

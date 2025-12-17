@@ -2,8 +2,9 @@ import { RefObject } from 'react';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SessionList } from '@/components';
 import { Session } from '@/models';
+
+import { SessionList } from '../session/SessionList';
 
 interface HomeContentProps {
   selectionMode: boolean;

@@ -3,9 +3,14 @@ import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Divider, Icon, Text, Tooltip, useTooltip } from '@/components';
 import { useLocalization } from '@/hooks';
 import { useTheme } from '@/theme';
+
+import { Divider } from '../../ui/divider/Divider';
+import { Icon } from '../../ui/icon/Icon';
+import { Text } from '../../ui/text/Text';
+import { Tooltip } from '../../ui/tooltip/Tooltip';
+import { useTooltip } from '../../ui/tooltip/useTooltip';
 
 interface SocialTag {
   tag: string;

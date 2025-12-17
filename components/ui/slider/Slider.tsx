@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, ProgressIndicator } from '@/components';
 import { AquaTypography, lightColors, useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
+import { ProgressIndicator } from '../progress/ProgressIndicator';
 
 export type SliderState = 'initial' | 'inProgress' | 'completed' | 'error';
 

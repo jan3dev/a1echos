@@ -1,6 +1,8 @@
-import { Icon, Modal } from '@/components';
 import { useLocalization } from '@/hooks';
 import { lightColors } from '@/theme';
+
+import { Icon } from '../../ui/icon/Icon';
+import { Modal } from '../../ui/modal/Modal';
 
 interface IncognitoExplainerModalProps {
   visible: boolean;

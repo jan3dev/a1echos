@@ -1,6 +1,8 @@
 import { ReactNode, useCallback, useState } from 'react';
 
-import { ButtonVariant, ModalVariant } from '@/components';
+import { ButtonVariant } from '../button/Button';
+
+import { ModalVariant } from './Modal';
 
 export interface ModalOptions {
   title: string;

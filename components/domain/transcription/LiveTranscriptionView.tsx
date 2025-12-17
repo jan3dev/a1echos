@@ -1,8 +1,9 @@
 import { RefObject } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
-import { TranscriptionList } from '@/components';
 import { Transcription } from '@/models';
+
+import { TranscriptionList } from './TranscriptionList';
 
 interface LiveTranscriptionViewProps {
   listRef?: RefObject<FlatList<Transcription>>;

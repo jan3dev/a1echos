@@ -5,8 +5,9 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 
-import { Icon } from '@/components';
 import { AquaColors, getShadow, useThemeStore } from '@/theme';
+
+import { Icon } from '../../ui/icon/Icon';
 
 interface LockIndicatorProps {
   progress: SharedValue<number>;

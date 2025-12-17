@@ -5,13 +5,15 @@ import { useShallow } from 'zustand/shallow';
 
 import { ModelType, Transcription, TranscriptionState } from '@/models';
 import { audioService, storageService, whisperService } from '@/services';
-import { useSessionStore, useSettingsStore } from '@/stores';
 import {
   FeatureFlag,
   formatTranscriptionText,
   logError,
   logWarn,
 } from '@/utils';
+
+import { useSessionStore } from './sessionStore';
+import { useSettingsStore } from './settingsStore';
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -658,7 +660,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         get().clearLoadingPreview();
 
         if (isRealtime) {
-          // Subscribe to audio levels BEFORE starting (so callback is ready when data flows)
           const unsubscribeAudioLevel = whisperService.subscribeToAudioLevel(
             (level) => {
               get().updateAudioLevel(level);

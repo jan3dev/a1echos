@@ -12,9 +12,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Icon } from '@/components';
 import { AppTheme, TranscriptionState } from '@/models';
 import { AquaColors, getShadow, useThemeStore } from '@/theme';
+
+import { Icon } from '../../ui/icon/Icon';
 
 interface RecordingButtonProps {
   state?: TranscriptionState;

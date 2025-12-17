@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { AudioModule, AudioRecorder, RecordingOptions, setAudioModeAsync } from 'expo-audio';
+import { setAudioModeAsync } from 'expo-audio';
 import { File } from 'expo-file-system';
 import RNFS from 'react-native-fs';
 // @ts-ignore - whisper.rn may not have complete type declarations
@@ -147,40 +147,6 @@ const createWhisperService = () => {
       // Pre-configure audio session to avoid issues with real-time mode
       await configureAudioSession();
       
-      // Warm up the audio system by briefly preparing a recorder
-      // This ensures iOS audio infrastructure is fully initialized
-      try {
-        const warmupOptions: RecordingOptions = {
-          extension: '.wav',
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 128000,
-          ios: {
-            outputFormat: 'linearpcm',
-            audioQuality: 127,
-            sampleRate: 16000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-          android: {
-            extension: '.wav',
-            outputFormat: 'default',
-            audioEncoder: 'default',
-            sampleRate: 16000,
-          },
-          web: {
-            mimeType: 'audio/wav',
-            bitsPerSecond: 128000,
-          },
-        };
-        const warmupRecorder = new (AudioModule as { AudioRecorder: new (options: RecordingOptions) => AudioRecorder }).AudioRecorder(warmupOptions);
-        await warmupRecorder.prepareToRecordAsync();
-        warmupRecorder.release();
-      } catch (warmupError) {
-        logWarn(`Audio warmup failed (non-fatal): ${warmupError}`, { flag: FeatureFlag.model });
-      }
-      
       await configureAudioSession(50);
 
       const modelPath = await prepareModel();
@@ -275,12 +241,23 @@ const createWhisperService = () => {
       const audioStream = new AudioPcmStreamAdapter();
       state.realtimeAudioStream = audioStream;
 
-      audioStream.onData((audioData: { data: Uint8Array }) => {
-        if (audioData.data) {
-          const level = computeRmsLevel(audioData.data);
-          emitAudioLevel(level);
-        }
-      });
+      // Wrap the audioStream to intercept audio data for level metering
+      // RealtimeTranscriber will overwrite onData, so we need to intercept at a lower level
+      const originalOnData = audioStream.onData.bind(audioStream);
+      let transcriberDataCallback: ((data: { data: Uint8Array }) => void) | undefined;
+      
+      audioStream.onData = (callback: (data: { data: Uint8Array }) => void) => {
+        transcriberDataCallback = callback;
+        originalOnData((audioData: { data: Uint8Array }) => {
+          if (audioData.data) {
+            const level = computeRmsLevel(audioData.data);
+            emitAudioLevel(level);
+          }
+          if (transcriberDataCallback) {
+            transcriberDataCallback(audioData);
+          }
+        });
+      };
 
       const transcribeOptions: Record<string, unknown> = {};
       if (languageCode) {

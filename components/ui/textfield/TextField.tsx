@@ -10,8 +10,9 @@ import {
   View,
 } from 'react-native';
 
-import { Icon } from '@/components';
 import { AquaTypography, getShadow, useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
 
 interface TextFieldProps {
   label?: string;

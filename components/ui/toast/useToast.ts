@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { ToastVariant } from '@/components';
+import { ToastVariant } from './Toast';
 
 export interface ToastOptions {
   title: string;

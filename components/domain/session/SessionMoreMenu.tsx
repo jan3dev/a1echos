@@ -8,19 +8,19 @@ import {
   View,
 } from 'react-native';
 
-import {
-  Icon,
-  ListItem,
-  SessionInputModal,
-  Text,
-  Toast,
-  useToast,
-} from '@/components';
 import { useLocalization, useSessionOperations } from '@/hooks';
 import { Session } from '@/models';
 import { useRenameSession, useShowGlobalTooltip } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
 import { FeatureFlag, formatDate, formatSessionSubtitle, logError } from '@/utils';
+
+import { ListItem } from '../../shared/list-item/ListItem';
+import { Icon } from '../../ui/icon/Icon';
+import { Text } from '../../ui/text/Text';
+import { Toast } from '../../ui/toast/Toast';
+import { useToast } from '../../ui/toast/useToast';
+
+import { SessionInputModal } from './SessionInputModal';
 
 const MENU_HEIGHT_FALLBACK = 200;
 // Buffer to keep menu above tab bar and safe area insets

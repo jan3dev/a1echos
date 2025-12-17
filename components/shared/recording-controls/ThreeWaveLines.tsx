@@ -35,7 +35,6 @@ interface WaveState {
 
 const TOTAL_DATA_POINTS = 120;
 
-// Match Flutter's wave profiles exactly
 const WAVE_PROFILES: WaveProfile[] = [
   {
     basePhaseSpeed: 0.015,
@@ -107,7 +106,6 @@ export const ThreeWaveLines = ({
   const minAmplitude = 2.0;
   const minNormalizedAmplitude = minAmplitude / maxAmplitude;
 
-  // Keep refs in sync with props
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -155,7 +153,6 @@ export const ThreeWaveLines = ({
     };
   }, [initializeWaves, startWaveAnimation]);
 
-  // Animate audio level changes with easing (like Flutter's _animateTo)
   useEffect(() => {
     targetLevelRef.current = Math.min(1.0, Math.max(0.0, audioLevel));
   }, [audioLevel]);
@@ -163,11 +160,9 @@ export const ThreeWaveLines = ({
   const updateWaveform = () => {
     const currentState = stateRef.current;
 
-    // Smoothly animate displayLevel toward targetLevel (easeOutCubic-like)
     const target = targetLevelRef.current;
     const current = displayLevelRef.current;
     const diff = target - current;
-    // Faster rise, slower fall (like Flutter)
     const speed = diff > 0 ? 0.25 : 0.15;
     displayLevelRef.current = current + diff * speed;
 
@@ -252,7 +247,6 @@ export const ThreeWaveLines = ({
         );
 
         const previousTarget = wave.targets[i];
-        // Match Flutter: 0.85 * prev + 0.15 * target
         const smoothedTarget = previousTarget * 0.85 + target * 0.15;
 
         wave.targets[i] = Math.max(
@@ -269,7 +263,6 @@ export const ThreeWaveLines = ({
   ): number => {
     switch (currentState) {
       case TranscriptionState.READY:
-        // Match Flutter: fixed 0.5 for ready state
         return 0.5;
 
       case TranscriptionState.TRANSCRIBING:
@@ -278,7 +271,6 @@ export const ThreeWaveLines = ({
 
       case TranscriptionState.RECORDING:
       case TranscriptionState.STREAMING: {
-        // Match Flutter exactly
         const audioReactiveEnergy = Math.min(
           1.0,
           Math.max(0.0, displayLevelRef.current)
@@ -300,7 +292,6 @@ export const ThreeWaveLines = ({
   ): number => {
     switch (currentState) {
       case TranscriptionState.READY:
-        // Match Flutter: amplitudeMultiplier * 1.5 for ready state
         return profile.amplitudeMultiplier * 1.5;
 
       case TranscriptionState.TRANSCRIBING:
@@ -309,7 +300,6 @@ export const ThreeWaveLines = ({
 
       case TranscriptionState.RECORDING:
       case TranscriptionState.STREAMING:
-        // Match Flutter: just amplitudeMultiplier for recording
         return profile.amplitudeMultiplier;
 
       default:
@@ -331,7 +321,6 @@ export const ThreeWaveLines = ({
   };
 
   const getPositionWeight = (position: number): number => {
-    // Match Flutter exactly
     const distanceFromCenter = Math.abs(position - 0.5) * 2.0;
     const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.5;
     return Math.min(1.0, Math.max(0.4, centerWeight));
@@ -347,7 +336,6 @@ export const ThreeWaveLines = ({
     ) {
       return baseOffset;
     }
-    // Match Flutter: convergence factor based on audio level
     const convergenceFactor = 1.0 - displayLevelRef.current * 0.7;
     return baseOffset * convergenceFactor;
   };
@@ -369,7 +357,6 @@ export const ThreeWaveLines = ({
       currentState === TranscriptionState.RECORDING ||
       currentState === TranscriptionState.STREAMING
     ) {
-      // Match Flutter exactly
       const baseOpacity = 0.75;
       const maxOpacity = 1.0;
       const audioBoost =
@@ -406,7 +393,6 @@ export const ThreeWaveLines = ({
     const points = wave.data.length;
     const amplitudeRange = maxAmplitude - minAmplitude;
 
-    // Match Flutter's phase inversion calculation
     const oscillation = Math.sin(
       transcribingInversionTimeRef.current * (Math.PI / 3.0) +
         profile.transcribingPhaseOffset
@@ -470,7 +456,6 @@ export const ThreeWaveLines = ({
     return path;
   };
 
-  // Use current state from ref for rendering
   const currentState = stateRef.current;
 
   return (

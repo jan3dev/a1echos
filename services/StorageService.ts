@@ -11,8 +11,9 @@ import {
   transcriptionFromJSON,
   transcriptionToJSON,
 } from '@/models';
-import { encryptionService } from '@/services';
 import { FeatureFlag, logError, logInfo, logWarn } from '@/utils';
+
+import { encryptionService } from './EncryptionService';
 
 const TRANSCRIPTIONS_FILE = 'transcriptions.json';
 const PENDING_DELETES_FILE = 'pending_deletes.json';

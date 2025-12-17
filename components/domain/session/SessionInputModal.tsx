@@ -9,10 +9,15 @@ import {
   useWindowDimensions,
 } from 'react-native';
 
-import { Button, Dimmer, Icon, Text, TextField } from '@/components';
 import { AppConstants } from '@/constants';
 import { useLocalization } from '@/hooks';
 import { getShadow, useTheme } from '@/theme';
+
+import { Button } from '../../ui/button/Button';
+import { Icon } from '../../ui/icon/Icon';
+import { Dimmer } from '../../ui/modal/Dimmer';
+import { Text } from '../../ui/text/Text';
+import { TextField } from '../../ui/textfield/TextField';
 
 interface SessionInputModalProps {
   visible: boolean;

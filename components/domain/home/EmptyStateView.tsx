@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { Tooltip } from '@/components';
+import { Tooltip } from '../../ui/tooltip/Tooltip';
 
 interface EmptyStateViewProps {
   message: string;

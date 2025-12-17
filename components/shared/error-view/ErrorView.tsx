@@ -1,8 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Icon, Text } from '@/components';
 import { useLocalization } from '@/hooks';
 import { useTheme } from '@/theme';
+
+import { Button } from '../../ui/button/Button';
+import { Icon } from '../../ui/icon/Icon';
+import { Text } from '../../ui/text/Text';
 
 interface ErrorViewProps {
   errorMessage: string;

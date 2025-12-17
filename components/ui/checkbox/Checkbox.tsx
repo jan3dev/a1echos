@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Icon } from '@/components';
 import { lightColors, useTheme } from '@/theme';
+
+import { Icon } from '../icon/Icon';
 
 export type CheckboxSize = 'large' | 'small';
 

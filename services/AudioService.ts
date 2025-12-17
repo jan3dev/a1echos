@@ -13,8 +13,10 @@ import { Platform } from 'react-native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import { AppConstants } from '@/constants';
-import { backgroundRecordingService, permissionService } from '@/services';
 import { FeatureFlag, logError, logWarn } from '@/utils';
+
+import { backgroundRecordingService } from './BackgroundRecordingService';
+import { permissionService } from './PermissionService';
 
 const RECORDING_OPTIONS: RecordingOptions = {
   extension: '.wav',
@@ -294,8 +296,6 @@ const createAudioService = () => {
           bufferSize: 4096,
         });
 
-        // Remove any existing listener before adding new one
-        AudioRecord.removeListener('data', handleAndroidPcmData);
         AudioRecord.on('data', handleAndroidPcmData);
         AudioRecord.start();
         androidPcmRecording = true;
@@ -313,7 +313,6 @@ const createAudioService = () => {
           flag: FeatureFlag.recording,
           message: 'Error starting Android PCM recording',
         });
-        AudioRecord.removeListener('data', handleAndroidPcmData);
         androidPcmRecording = false;
         androidWavFilePath = null;
         return false;
@@ -383,7 +382,6 @@ const createAudioService = () => {
         }
 
         const filePath = await AudioRecord.stop();
-        AudioRecord.removeListener('data', handleAndroidPcmData);
         androidPcmRecording = false;
 
         try {

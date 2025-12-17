@@ -7,8 +7,9 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { Text } from '@/components';
 import { useTheme } from '@/theme';
+
+import { Text } from '../../ui/text/Text';
 
 export interface ListItemProps {
   title: string;

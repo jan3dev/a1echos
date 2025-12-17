@@ -2,10 +2,13 @@ import { RefObject } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ProgressIndicator, TranscriptionList } from '@/components';
 import { Transcription } from '@/models';
 import { useTranscriptionStore } from '@/stores';
 import { useTheme } from '@/theme';
+
+import { ProgressIndicator } from '../../ui/progress/ProgressIndicator';
+
+import { TranscriptionList } from './TranscriptionList';
 
 const RECORDING_CONTROLS_HEIGHT = 96;
 const APP_BAR_HEIGHT = 60;

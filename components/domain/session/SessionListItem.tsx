@@ -1,10 +1,14 @@
 import { View } from 'react-native';
 
-import { Checkbox, ListItem, SessionMoreMenu } from '@/components';
 import { useLocalization } from '@/hooks';
 import { Session } from '@/models';
 import { useSessionTranscriptions } from '@/stores';
 import { useTheme } from '@/theme';
+
+import { ListItem } from '../../shared/list-item/ListItem';
+import { Checkbox } from '../../ui/checkbox/Checkbox';
+
+import { SessionMoreMenu } from './SessionMoreMenu';
 
 interface SessionListItemProps {
   session: Session;

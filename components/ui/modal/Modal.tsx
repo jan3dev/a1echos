@@ -7,8 +7,12 @@ import {
   View,
 } from 'react-native';
 
-import { Button, ButtonVariant, Dimmer, Text } from '@/components';
 import { getShadow, useTheme } from '@/theme';
+
+import { Button, ButtonVariant } from '../button/Button';
+import { Text } from '../text/Text';
+
+import { Dimmer } from './Dimmer';
 
 export type ModalVariant = 'normal' | 'success' | 'danger' | 'warning' | 'info';
 
