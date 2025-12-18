@@ -1,4 +1,5 @@
 import '@/localization';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
 import { useFonts } from 'expo-font';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -133,48 +134,42 @@ function GlobalRecordingControls() {
 
   const FADE_HEIGHT = 32;
   const CONTROLS_HEIGHT = 96;
-  const fadeStop = FADE_HEIGHT / CONTROLS_HEIGHT;
+  const totalHeight = CONTROLS_HEIGHT + insets.bottom;
+  const fadeStop = FADE_HEIGHT / totalHeight;
 
   return (
     <View
       style={[styles.recordingControls, { paddingBottom: insets.bottom }]}
       pointerEvents="box-none"
     >
-      {Platform.OS === 'ios' ? (
-        <BlurView
-          intensity={20}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        >
+      <MaskedView
+        style={StyleSheet.absoluteFill}
+        maskElement={
           <LinearGradient
-            colors={[
-              'transparent',
-              theme.colors.glassBackground,
-              theme.colors.glassBackground,
-            ]}
+            colors={['transparent', 'black', 'black']}
             locations={[0, fadeStop, 1]}
             style={StyleSheet.absoluteFill}
           />
-        </BlurView>
-      ) : (
-        <BlurView
-          experimentalBlurMethod="dimezisBlurView"
-          intensity={10}
-          tint={blurTint}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        >
-          <LinearGradient
-            colors={[
-              'transparent',
-              theme.colors.glassBackground,
-              theme.colors.glassBackground,
-            ]}
-            locations={[0, fadeStop, 1]}
+        }
+        pointerEvents="none"
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        ) : (
+          <BlurView
+            experimentalBlurMethod="dimezisBlurView"
+            intensity={10}
+            tint={blurTint}
             style={StyleSheet.absoluteFill}
           />
-        </BlurView>
-      )}
+        )}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.colors.glassBackground },
+          ]}
+        />
+      </MaskedView>
       <RecordingControlsView
         state={transcriptionState}
         audioLevel={audioLevel}
