@@ -1,10 +1,9 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
 
 import { ProgressIndicator } from '../progress/ProgressIndicator';
-
 
 export type ButtonSize = 'large' | 'small';
 export type ButtonVariant = 'normal' | 'error' | 'success' | 'warning';
@@ -155,7 +154,10 @@ const ButtonBase = ({
 
   const horizontalPadding = isUtility ? 14 : 24;
 
-  return (
+  const shadowStyle: ViewStyle | undefined =
+    type === 'utility' ? getShadow('button') : undefined;
+
+  const buttonContent = (
     <Pressable
       onPress={enabled ? onPress : undefined}
       disabled={!enabled}
@@ -170,7 +172,6 @@ const ButtonBase = ({
           opacity: enabled ? (pressed ? 0.9 : 1) : 0.5,
           paddingHorizontal: isSmall ? horizontalPadding : 0,
           borderRadius: BUTTON_BORDER_RADIUS,
-          ...(type === 'utility' && getShadow('button')),
         },
       ]}
     >
@@ -207,6 +208,24 @@ const ButtonBase = ({
       </View>
     </Pressable>
   );
+
+  if (shadowStyle) {
+    return (
+      <View
+        style={[
+          shadowStyle,
+          {
+            borderRadius: BUTTON_BORDER_RADIUS,
+            alignSelf: 'stretch',
+          },
+        ]}
+      >
+        {buttonContent}
+      </View>
+    );
+  }
+
+  return buttonContent;
 };
 
 export const Button = {

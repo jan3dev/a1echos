@@ -96,7 +96,6 @@ const styles = StyleSheet.create({
   },
   background: {
     ...getShadow('default'),
-    overflow: 'hidden',
   },
   blurContainer: {
     alignItems: 'center',

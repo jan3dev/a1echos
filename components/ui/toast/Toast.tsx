@@ -117,6 +117,8 @@ export const Toast = ({
               transform: [{ translateY }],
               opacity,
               maxWidth,
+              backgroundColor: colors.surfacePrimary,
+              borderRadius: 8,
             },
           ]}
         >

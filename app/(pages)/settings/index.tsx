@@ -72,72 +72,78 @@ export default function SettingsScreen() {
       >
         <View
           style={[
-            styles.card,
+            styles.shadowContainer,
             getShadow('card'),
             { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
-          <ListItem
-            title={loc.modelTitle}
-            titleTrailing={modelDisplay}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconLeading={
-              <Icon name="mic" size={24} color={theme.colors.textSecondary} />
-            }
-            iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            }
-            onPress={() => router.push('/settings/model')}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+          <View style={styles.clipContainer}>
+            <ListItem
+              title={loc.modelTitle}
+              titleTrailing={modelDisplay}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconLeading={
+                <Icon name="mic" size={24} color={theme.colors.textSecondary} />
+              }
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() => router.push('/settings/model')}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
+            <Divider color={theme.colors.surfaceBorderPrimary} />
 
-          <ListItem
-            title={loc.themeTitle}
-            titleTrailing={themeDisplay}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconLeading={
-              <Icon name="theme" size={24} color={theme.colors.textSecondary} />
-            }
-            iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            }
-            onPress={() => router.push('/settings/theme')}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+            <ListItem
+              title={loc.themeTitle}
+              titleTrailing={themeDisplay}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconLeading={
+                <Icon
+                  name="theme"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() => router.push('/settings/theme')}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
+            <Divider color={theme.colors.surfaceBorderPrimary} />
 
-          <ListItem
-            title={loc.spokenLanguageTitle}
-            titleTrailing={languageDisplay}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconLeading={
-              <Icon
-                name="language"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            }
-            iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            }
-            onPress={() => router.push('/settings/language')}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+            <ListItem
+              title={loc.spokenLanguageTitle}
+              titleTrailing={languageDisplay}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconLeading={
+                <Icon
+                  name="language"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() => router.push('/settings/language')}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
+          </View>
         </View>
 
         <View style={styles.bannerContainer}>
@@ -157,7 +163,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  card: {
+  shadowContainer: {
+    borderRadius: 8,
+  },
+  clipContainer: {
     borderRadius: 8,
     overflow: 'hidden',
   },

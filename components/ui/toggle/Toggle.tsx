@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   AccessibilityProps,
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
 } from 'react-native';
@@ -86,7 +87,7 @@ export const Toggle = ({
               shadowColor: AquaPrimitiveColors.shadow,
               shadowOffset: {
                 width: 0,
-                height: shadowOffsetY,
+                height: Platform.OS === 'android' ? 2 : shadowOffsetY,
               },
               shadowOpacity: 1,
               shadowRadius: 4,

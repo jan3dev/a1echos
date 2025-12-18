@@ -53,50 +53,52 @@ export default function ThemeSettingsScreen() {
       >
         <View
           style={[
-            styles.card,
+            styles.shadowContainer,
             getShadow('card'),
             { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
-          <ListItem
-            title={loc.auto}
-            iconTrailing={
-              <Radio<AppTheme>
-                value={AppTheme.AUTO}
-                groupValue={selectedTheme}
-              />
-            }
-            onPress={() => handleSelect(AppTheme.AUTO)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+          <View style={styles.clipContainer}>
+            <ListItem
+              title={loc.auto}
+              iconTrailing={
+                <Radio<AppTheme>
+                  value={AppTheme.AUTO}
+                  groupValue={selectedTheme}
+                />
+              }
+              onPress={() => handleSelect(AppTheme.AUTO)}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
+            <Divider color={theme.colors.surfaceBorderPrimary} />
 
-          <ListItem
-            title={loc.light}
-            iconTrailing={
-              <Radio<AppTheme>
-                value={AppTheme.LIGHT}
-                groupValue={selectedTheme}
-              />
-            }
-            onPress={() => handleSelect(AppTheme.LIGHT)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+            <ListItem
+              title={loc.light}
+              iconTrailing={
+                <Radio<AppTheme>
+                  value={AppTheme.LIGHT}
+                  groupValue={selectedTheme}
+                />
+              }
+              onPress={() => handleSelect(AppTheme.LIGHT)}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
+            <Divider color={theme.colors.surfaceBorderPrimary} />
 
-          <ListItem
-            title={loc.dark}
-            iconTrailing={
-              <Radio<AppTheme>
-                value={AppTheme.DARK}
-                groupValue={selectedTheme}
-              />
-            }
-            onPress={() => handleSelect(AppTheme.DARK)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+            <ListItem
+              title={loc.dark}
+              iconTrailing={
+                <Radio<AppTheme>
+                  value={AppTheme.DARK}
+                  groupValue={selectedTheme}
+                />
+              }
+              onPress={() => handleSelect(AppTheme.DARK)}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -110,7 +112,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  card: {
+  shadowContainer: {
+    borderRadius: 8,
+  },
+  clipContainer: {
     borderRadius: 8,
     overflow: 'hidden',
   },

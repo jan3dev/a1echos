@@ -81,6 +81,7 @@ export const SessionInputModal = ({
           <Animated.View
             style={[
               styles.container,
+              getShadow('modal'),
               {
                 backgroundColor: theme.colors.surfacePrimary,
                 width: containerWidth,
@@ -155,7 +156,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 32,
-    ...getShadow('modal'),
   },
   header: {
     flexDirection: 'row',

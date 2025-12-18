@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { getShadow } from '@/theme';
+import { getShadow, useTheme } from '@/theme';
 import { FeatureFlag, logWarn } from '@/utils';
 
 const AQUA_APP_URLS = {
@@ -23,6 +23,7 @@ const MAX_BANNER_WIDTH = 633;
 
 export const InAppBanner = () => {
   const { width: screenWidth } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const handlePress = async () => {
     try {
@@ -58,6 +59,7 @@ export const InAppBanner = () => {
             width: bannerWidth,
             height: bannerHeight,
             opacity: pressed ? 0.9 : 1,
+            backgroundColor: theme.colors.surfacePrimary,
           },
         ]}
         accessibilityLabel="Download AQUA Wallet"
@@ -82,7 +84,6 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: 8,
-    overflow: 'hidden',
   },
   imageContainer: {
     flex: 1,

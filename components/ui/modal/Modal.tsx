@@ -127,6 +127,8 @@ export const Modal = ({
               transform: [{ translateY }],
               opacity,
               maxWidth,
+              backgroundColor: colors.surfacePrimary,
+              borderRadius: 24,
             },
           ]}
         >

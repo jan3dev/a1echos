@@ -209,110 +209,128 @@ export const TextField = ({
 
   return (
     <View style={[styles.wrapper, { opacity: enabled ? 1 : 0.5 }]}>
-      <Pressable onPress={() => enabled && inputRef.current?.focus()}>
-        <Animated.View
+      <View
+        style={[
+          styles.shadowContainer,
+          getShadow('input'),
+          {
+            backgroundColor: colors.surfacePrimary,
+            height: containerHeight,
+          },
+        ]}
+      >
+        <View
           style={[
             styles.container,
-            getShadow('input'),
             {
-              height: containerHeight,
-              backgroundColor: colors.surfacePrimary,
               borderColor,
               borderWidth: 1,
             },
           ]}
         >
-          {label && (
-            <Animated.Text
+          <Pressable
+            onPress={() => enabled && inputRef.current?.focus()}
+            style={styles.pressableContainer}
+          >
+            {label && (
+              <Animated.Text
+                style={[
+                  styles.label,
+                  {
+                    left: LABEL_LEFT_POSITION,
+                    top: labelTop,
+                    fontSize: labelFontSize,
+                    color: labelColor,
+                    fontFamily: isLabelActive
+                      ? AquaTypography.caption2SemiBold.fontFamily
+                      : AquaTypography.body1.fontFamily,
+                  },
+                ]}
+              >
+                {label}
+              </Animated.Text>
+            )}
+
+            <View
               style={[
-                styles.label,
+                styles.inputWrapper,
                 {
-                  left: LABEL_LEFT_POSITION,
-                  top: labelTop,
-                  fontSize: labelFontSize,
-                  color: labelColor,
-                  fontFamily: isLabelActive
-                    ? AquaTypography.caption2SemiBold.fontFamily
-                    : AquaTypography.body1.fontFamily,
+                  marginTop: label ? LABEL_OFFSET_ACTIVE : 0,
+                  paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+                  paddingVertical: CONTENT_VERTICAL_PADDING,
+                  paddingRight: calculateTrailingPadding(),
                 },
               ]}
             >
-              {label}
-            </Animated.Text>
-          )}
+              <TextInput
+                ref={inputRef}
+                accessibilityLabel={accessibilityLabel || label}
+                accessibilityHint={accessibilityHint || assistiveText}
+                style={[
+                  styles.input,
+                  AquaTypography.body1,
+                  { color: textColor, height: '100%' },
+                ]}
+                value={text}
+                onChangeText={handleChangeText}
+                onFocus={() => setInternalFocus(true)}
+                onBlur={() => setInternalFocus(false)}
+                secureTextEntry={secureTextEntry}
+                keyboardType={keyboardType}
+                editable={enabled}
+                multiline={isMultiline}
+                maxLength={maxLength}
+                onContentSizeChange={handleContentSizeChange}
+                cursorColor={colors.accentBrand}
+                underlineColorAndroid="transparent"
+                textAlignVertical="top"
+              />
+            </View>
 
-          <View
-            style={[
-              styles.inputWrapper,
-              {
-                marginTop: label ? LABEL_OFFSET_ACTIVE : 0,
-                paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
-                paddingVertical: CONTENT_VERTICAL_PADDING,
-                paddingRight: calculateTrailingPadding(),
-              },
-            ]}
-          >
-            <TextInput
-              ref={inputRef}
-              accessibilityLabel={accessibilityLabel || label}
-              accessibilityHint={accessibilityHint || assistiveText}
-              style={[
-                styles.input,
-                AquaTypography.body1,
-                { color: textColor, height: '100%' },
-              ]}
-              value={text}
-              onChangeText={handleChangeText}
-              onFocus={() => setInternalFocus(true)}
-              onBlur={() => setInternalFocus(false)}
-              secureTextEntry={secureTextEntry}
-              keyboardType={keyboardType}
-              editable={enabled}
-              multiline={isMultiline}
-              maxLength={maxLength}
-              onContentSizeChange={handleContentSizeChange}
-              cursorColor={colors.accentBrand}
-              underlineColorAndroid="transparent"
-              textAlignVertical="top"
-            />
-          </View>
-
-          {((showClearIcon && hasText) || trailingIcon) && (
-            <View style={styles.trailingContainer}>
-              {showClearIcon && hasText && (
-                <Pressable
-                  onPress={enabled ? handleClear : undefined}
-                  style={[
-                    styles.clearIcon,
-                    {
-                      right: trailingIcon
-                        ? TRAILING_ICON_RIGHT + CLEAR_ICON_SPACING + 18
-                        : TRAILING_ICON_RIGHT,
-                    },
-                  ]}
-                >
-                  <View
+            {((showClearIcon && hasText) || trailingIcon) && (
+              <View style={styles.trailingContainer}>
+                {showClearIcon && hasText && (
+                  <Pressable
+                    onPress={enabled ? handleClear : undefined}
                     style={[
-                      styles.clearIconBackground,
-                      { backgroundColor: colors.surfaceTertiary },
+                      styles.clearIcon,
+                      {
+                        right: trailingIcon
+                          ? TRAILING_ICON_RIGHT + CLEAR_ICON_SPACING + 18
+                          : TRAILING_ICON_RIGHT,
+                      },
                     ]}
                   >
-                    <Icon name="close" size={14} color={colors.textSecondary} />
-                  </View>
-                </Pressable>
-              )}
-              {trailingIcon && (
-                <Pressable
-                  onPress={enabled ? onTrailingPress : undefined}
-                  style={[styles.trailingIcon, { right: TRAILING_ICON_RIGHT }]}
-                >
-                  {trailingIcon}
-                </Pressable>
-              )}
-            </View>
-          )}
-        </Animated.View>
-      </Pressable>
+                    <View
+                      style={[
+                        styles.clearIconBackground,
+                        { backgroundColor: colors.surfaceTertiary },
+                      ]}
+                    >
+                      <Icon
+                        name="close"
+                        size={14}
+                        color={colors.textSecondary}
+                      />
+                    </View>
+                  </Pressable>
+                )}
+                {trailingIcon && (
+                  <Pressable
+                    onPress={enabled ? onTrailingPress : undefined}
+                    style={[
+                      styles.trailingIcon,
+                      { right: TRAILING_ICON_RIGHT },
+                    ]}
+                  >
+                    {trailingIcon}
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </Pressable>
+        </View>
+      </View>
 
       {(assistiveText || showCounter) && (
         <View
@@ -354,8 +372,15 @@ const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
   },
-  container: {
+  shadowContainer: {
     borderRadius: BORDER_RADIUS,
+  },
+  container: {
+    flex: 1,
+    borderRadius: BORDER_RADIUS,
+  },
+  pressableContainer: {
+    flex: 1,
     position: 'relative',
   },
   label: {

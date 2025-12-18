@@ -30,33 +30,38 @@ export const SessionList = ({
   return (
     <View
       style={[
-        styles.container,
+        styles.shadowContainer,
         getShadow('card'),
         { backgroundColor: theme.colors.surfacePrimary },
       ]}
     >
-      {sessions.map((session, index) => (
-        <Fragment key={session.id}>
-          <SessionListItem
-            session={session}
-            selectionMode={selectionMode}
-            isSelected={selectedSessionIds.has(session.id)}
-            onTap={() =>
-              selectionMode
-                ? onSelectionToggle(session.id)
-                : onSessionTap(session.id)
-            }
-            onLongPress={() => onSessionLongPress(session)}
-          />
-          {index < sessions.length - 1 && <Divider />}
-        </Fragment>
-      ))}
+      <View style={styles.clipContainer}>
+        {sessions.map((session, index) => (
+          <Fragment key={session.id}>
+            <SessionListItem
+              session={session}
+              selectionMode={selectionMode}
+              isSelected={selectedSessionIds.has(session.id)}
+              onTap={() =>
+                selectionMode
+                  ? onSelectionToggle(session.id)
+                  : onSessionTap(session.id)
+              }
+              onLongPress={() => onSessionLongPress(session)}
+            />
+            {index < sessions.length - 1 && <Divider />}
+          </Fragment>
+        ))}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  shadowContainer: {
+    borderRadius: 8,
+  },
+  clipContainer: {
     borderRadius: 8,
     overflow: 'hidden',
   },

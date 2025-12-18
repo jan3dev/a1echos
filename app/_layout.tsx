@@ -271,9 +271,9 @@ export default function RootLayout() {
           </Stack.Protected>
 
           <Stack.Screen name="(pages)/index" />
+          <GlobalRecordingControls />
+          <GlobalTooltipRenderer />
         </Stack>
-        <GlobalRecordingControls />
-        <GlobalTooltipRenderer />
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

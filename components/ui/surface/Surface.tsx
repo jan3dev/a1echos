@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
-import { Pressable, View, ViewStyle } from 'react-native';
+import { Platform, Pressable, View, ViewStyle } from 'react-native';
 
 import { shadows, useTheme } from '@/theme';
 
@@ -35,8 +35,6 @@ export const Surface = ({
 
   const getShadowStyle = (elev: number): ViewStyle => {
     if (elev === 0) return {};
-    // Map elevation to nearest shadow preset or custom
-    // Simple mapping for now
     if (elev <= 2) return shadows.small;
     if (elev <= 4) return shadows.medium;
     return shadows.large;
@@ -46,22 +44,25 @@ export const Surface = ({
     color ?? (variant === 'glass' ? undefined : theme.colors.surfacePrimary);
   const shadowStyle = getShadowStyle(elevation);
 
-  const containerStyle: ViewStyle = {
+  const shadowContainerStyle: ViewStyle = {
     borderRadius,
     margin,
     width: width as any,
     height: height as any,
-    overflow: borderRadius > 0 ? 'hidden' : undefined,
+    backgroundColor:
+      Platform.OS === 'android' ? backgroundColor : 'transparent',
     ...shadowStyle,
   };
 
-  // For glass, we use BlurView
-  // For filled, just backgroundColor
+  const clipContainerStyle: ViewStyle = {
+    flex: 1,
+    borderRadius,
+    overflow: 'hidden',
+  };
 
   const contentStyle: ViewStyle = {
     padding,
     backgroundColor: variant === 'filled' ? backgroundColor : undefined,
-    borderRadius: variant === 'filled' ? borderRadius : 0, // Inner radius if needed
     flex: 1,
   };
 
@@ -90,15 +91,19 @@ export const Surface = ({
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
-          containerStyle,
+          shadowContainerStyle,
           style,
           { opacity: pressed ? 0.8 : 1 },
         ]}
       >
-        {Inner}
+        <View style={clipContainerStyle}>{Inner}</View>
       </Pressable>
     );
   }
 
-  return <View style={[containerStyle, style]}>{Inner}</View>;
+  return (
+    <View style={[shadowContainerStyle, style]}>
+      <View style={clipContainerStyle}>{Inner}</View>
+    </View>
+  );
 };

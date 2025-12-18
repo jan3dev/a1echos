@@ -126,6 +126,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
               {
                 top: menuPosition.top,
                 right: menuPosition.right,
+                backgroundColor: theme.colors.surfacePrimary,
+                borderRadius: 12,
               },
             ]}
             onLayout={(e) => setMeasuredMenuHeight(e.nativeEvent.layout.height)}

@@ -61,40 +61,42 @@ export default function ModelSettingsScreen() {
 
         <View
           style={[
-            styles.card,
+            styles.shadowContainer,
             getShadow('card'),
             { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
-          <ListItem
-            title={loc.whisperModelFileTitle}
-            titleTrailing={loc.whisperModelSubtitle}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconTrailing={
-              <Radio<ModelType>
-                value={ModelType.WHISPER_FILE}
-                groupValue={selectedModelType}
-              />
-            }
-            onPress={() => handleSelect(ModelType.WHISPER_FILE)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+          <View style={styles.clipContainer}>
+            <ListItem
+              title={loc.whisperModelFileTitle}
+              titleTrailing={loc.whisperModelSubtitle}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconTrailing={
+                <Radio<ModelType>
+                  value={ModelType.WHISPER_FILE}
+                  groupValue={selectedModelType}
+                />
+              }
+              onPress={() => handleSelect(ModelType.WHISPER_FILE)}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
+            <Divider color={theme.colors.surfaceBorderPrimary} />
 
-          <ListItem
-            title={loc.whisperModelRealtimeTitle}
-            titleTrailing={loc.whisperModelSubtitle}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconTrailing={
-              <Radio<ModelType>
-                value={ModelType.WHISPER_REALTIME}
-                groupValue={selectedModelType}
-              />
-            }
-            onPress={() => handleSelect(ModelType.WHISPER_REALTIME)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+            <ListItem
+              title={loc.whisperModelRealtimeTitle}
+              titleTrailing={loc.whisperModelSubtitle}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconTrailing={
+                <Radio<ModelType>
+                  value={ModelType.WHISPER_REALTIME}
+                  groupValue={selectedModelType}
+                />
+              }
+              onPress={() => handleSelect(ModelType.WHISPER_REALTIME)}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -111,7 +113,10 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 16,
   },
-  card: {
+  shadowContainer: {
+    borderRadius: 8,
+  },
+  clipContainer: {
     borderRadius: 8,
     overflow: 'hidden',
   },

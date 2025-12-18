@@ -71,33 +71,35 @@ export default function LanguageSettingsScreen() {
 
         <View
           style={[
-            styles.card,
+            styles.shadowContainer,
             getShadow('card'),
             { backgroundColor: theme.colors.surfacePrimary },
           ]}
         >
-          {languages.map((language, index) => (
-            <Fragment key={language.code}>
-              {index > 0 && (
-                <Divider color={theme.colors.surfaceBorderPrimary} />
-              )}
-              <ListItem
-                title={language.name}
-                iconLeading={
-                  <FlagIcon name={getCountryCode(language)} size={24} />
-                }
-                iconTrailing={
-                  <Radio<string>
-                    value={language.code}
-                    groupValue={selectedLanguage.code}
-                    onValueChange={() => handleSelect(language)}
-                  />
-                }
-                onPress={() => handleSelect(language)}
-                backgroundColor={theme.colors.surfacePrimary}
-              />
-            </Fragment>
-          ))}
+          <View style={styles.clipContainer}>
+            {languages.map((language, index) => (
+              <Fragment key={language.code}>
+                {index > 0 && (
+                  <Divider color={theme.colors.surfaceBorderPrimary} />
+                )}
+                <ListItem
+                  title={language.name}
+                  iconLeading={
+                    <FlagIcon name={getCountryCode(language)} size={24} />
+                  }
+                  iconTrailing={
+                    <Radio<string>
+                      value={language.code}
+                      groupValue={selectedLanguage.code}
+                      onValueChange={() => handleSelect(language)}
+                    />
+                  }
+                  onPress={() => handleSelect(language)}
+                  backgroundColor={theme.colors.surfacePrimary}
+                />
+              </Fragment>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -114,7 +116,10 @@ const styles = StyleSheet.create({
   description: {
     marginBottom: 16,
   },
-  card: {
+  shadowContainer: {
+    borderRadius: 8,
+  },
+  clipContainer: {
     borderRadius: 8,
     overflow: 'hidden',
   },

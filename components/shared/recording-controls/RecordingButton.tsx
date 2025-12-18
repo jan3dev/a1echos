@@ -314,7 +314,6 @@ export const RecordingButton = ({
 const styles = StyleSheet.create({
   buttonContainer: {
     borderRadius: 1000,
-    overflow: 'hidden',
   },
   blurContainer: {
     borderRadius: 1000,

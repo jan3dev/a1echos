@@ -102,7 +102,7 @@ export const shadows = {
     { width: 0, height: 0 },
     0.04,
     20,
-    2
+    4
   ),
 
   button: createShadow(
@@ -124,4 +124,7 @@ export const shadows = {
 
 export type ShadowKey = keyof typeof shadows;
 
-export const getShadow = (key: ShadowKey): ViewStyle => shadows[key];
+export const getShadow = (key: ShadowKey): ViewStyle =>
+  Platform.OS === 'android'
+    ? { ...shadows[key], overflow: 'visible' }
+    : shadows[key];

@@ -140,122 +140,140 @@ export const TranscriptionItem = ({
       : theme.colors.surfacePrimary;
 
   return (
-    <TouchableOpacity
-      onPress={() => {
-        if (!isEditing && enableInteractions) {
-          onTap?.();
-        }
-      }}
-      onLongPress={() => {
-        if (enableInteractions) {
-          onLongPress?.();
-        }
-      }}
-      activeOpacity={enableInteractions ? 0.7 : 1}
-      disabled={!enableInteractions && !isEditing}
+    <View
       style={[
-        styles.container,
+        styles.shadowContainer,
         getShadow('cardElevated'),
-        {
-          backgroundColor,
-          borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
-          borderWidth: isEditing ? 1 : 0,
-        },
+        { backgroundColor },
         style,
       ]}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.timestampContainer}>
-          {(showSkeleton ||
-            !(isLivePreviewItem && transcription.text === '')) && (
-            <Text variant="caption1" color={theme.colors.textSecondary}>
-              {dateFormat.format(transcription.timestamp)}
-              {'  '}
-              <Text variant="caption1" color={theme.colors.textTertiary}>
-                {timeFormat.format(transcription.timestamp)}
+      <TouchableOpacity
+        onPress={() => {
+          if (!isEditing && enableInteractions) {
+            onTap?.();
+          }
+        }}
+        onLongPress={() => {
+          if (enableInteractions) {
+            onLongPress?.();
+          }
+        }}
+        activeOpacity={enableInteractions ? 0.7 : 1}
+        disabled={!enableInteractions && !isEditing}
+        style={[
+          styles.container,
+          {
+            backgroundColor,
+            borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
+            borderWidth: isEditing ? 1 : 0,
+          },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.timestampContainer}>
+            {(showSkeleton ||
+              !(isLivePreviewItem && transcription.text === '')) && (
+              <Text variant="caption1" color={theme.colors.textSecondary}>
+                {dateFormat.format(transcription.timestamp)}
+                {'  '}
+                <Text variant="caption1" color={theme.colors.textTertiary}>
+                  {timeFormat.format(transcription.timestamp)}
+                </Text>
               </Text>
+            )}
+          </View>
+
+          <View style={styles.actionsContainer}>
+            {showCheckbox && (
+              <Checkbox
+                size="small"
+                value={isSelected}
+                onValueChange={() => {}}
+                enabled={true}
+              />
+            )}
+
+            {showEditIcon && (
+              <TouchableOpacity
+                onPress={onStartEdit}
+                disabled={disableIcons}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
+              >
+                <Icon
+                  name="edit"
+                  size={18}
+                  color={theme.colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+
+            {showEditIcon && showCopyIcon && <View style={{ width: 16 }} />}
+
+            {showCopyIcon && (
+              <TouchableOpacity
+                onPress={handleCopyToClipboard}
+                disabled={disableIcons}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
+              >
+                <Icon
+                  name="copy"
+                  size={18}
+                  color={theme.colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.contentContainer}>
+          {isEditing ? (
+            <TextInput
+              ref={inputRef}
+              value={editText}
+              onChangeText={setEditText}
+              onBlur={handleSaveEdit}
+              multiline
+              autoFocus
+              style={[
+                styles.input,
+                {
+                  color: theme.colors.textPrimary,
+                  ...theme.typography.body1,
+                },
+              ]}
+            />
+          ) : showSkeleton ? (
+            <View style={styles.skeletonContainer}>
+              <Skeleton borderRadius={8} width="100%" height={16} />
+              <Skeleton
+                borderRadius={8}
+                width="60%"
+                height={16}
+                style={{ marginTop: 6 }}
+              />
+            </View>
+          ) : (
+            <Text variant="body1" color={theme.colors.textSecondary}>
+              {transcription.text}
             </Text>
           )}
         </View>
-
-        <View style={styles.actionsContainer}>
-          {showCheckbox && (
-            <Checkbox
-              size="small"
-              value={isSelected}
-              onValueChange={() => {}}
-              enabled={true}
-            />
-          )}
-
-          {showEditIcon && (
-            <TouchableOpacity
-              onPress={onStartEdit}
-              disabled={disableIcons}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
-            >
-              <Icon name="edit" size={18} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-
-          {showEditIcon && showCopyIcon && <View style={{ width: 16 }} />}
-
-          {showCopyIcon && (
-            <TouchableOpacity
-              onPress={handleCopyToClipboard}
-              disabled={disableIcons}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
-            >
-              <Icon name="copy" size={18} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.contentContainer}>
-        {isEditing ? (
-          <TextInput
-            ref={inputRef}
-            value={editText}
-            onChangeText={setEditText}
-            onBlur={handleSaveEdit}
-            multiline
-            autoFocus
-            style={[
-              styles.input,
-              {
-                color: theme.colors.textPrimary,
-                ...theme.typography.body1,
-              },
-            ]}
-          />
-        ) : showSkeleton ? (
-          <View style={styles.skeletonContainer}>
-            <Skeleton borderRadius={8} width="100%" height={16} />
-            <Skeleton
-              borderRadius={8}
-              width="60%"
-              height={16}
-              style={{ marginTop: 6 }}
-            />
-          </View>
-        ) : (
-          <Text variant="body1" color={theme.colors.textSecondary}>
-            {transcription.text}
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  shadowContainer: {
+    borderRadius: 8,
+    marginBottom: 16,
+  },
   container: {
     borderRadius: 8,
     padding: 16,
-    marginBottom: 16,
   },
   headerRow: {
     flexDirection: 'row',
