@@ -74,8 +74,9 @@ export const SessionInputModal = ({
   return (
     <Dimmer visible={visible} onDismiss={onCancel || (() => {})}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -46}
       >
         <View style={styles.overlay}>
           <Animated.View
@@ -141,7 +142,6 @@ export const SessionInputModal = ({
 const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   overlay: {
     flex: 1,
