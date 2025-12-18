@@ -13,7 +13,13 @@ import { Platform } from 'react-native';
 import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import { AppConstants } from '@/constants';
-import { FeatureFlag, logError, logWarn } from '@/utils';
+import {
+  createPcmStreamWriter,
+  FeatureFlag,
+  logError,
+  logWarn,
+  PcmStreamWriter,
+} from '@/utils';
 
 import { backgroundRecordingService } from './BackgroundRecordingService';
 import { permissionService } from './PermissionService';
@@ -60,6 +66,7 @@ const createAudioService = () => {
   // Android native PCM recording state
   let androidPcmRecording: boolean = false;
   let androidWavFilePath: string | null = null;
+  let pcmStreamWriter: PcmStreamWriter | null = null;
 
   const resetLevelState = (): void => {
     smoothedLevel = 0.0;
@@ -105,6 +112,9 @@ const createAudioService = () => {
 
   // Handle PCM data from Android native recording
   const handleAndroidPcmData = (base64Data: string): void => {
+    // Stream PCM data directly to disk
+    pcmStreamWriter?.write(base64Data);
+
     const rawLevel = computeRmsFromBase64Pcm(base64Data);
     const level = Math.max(0.02, Math.min(1.0, rawLevel));
 
@@ -201,6 +211,10 @@ const createAudioService = () => {
           message: 'Error stopping Android PCM recording during cleanup',
         });
       }
+      if (pcmStreamWriter) {
+        await pcmStreamWriter.abort();
+        pcmStreamWriter = null;
+      }
       androidPcmRecording = false;
       androidWavFilePath = null;
     }
@@ -277,22 +291,27 @@ const createAudioService = () => {
 
     await cleanup();
 
-    // On Android, use native PCM recording for WAV output that Whisper can read
+    // On Android, use native PCM streaming and write WAV file manually
     if (Platform.OS === 'android') {
       try {
         const timestamp = Date.now();
         const wavPath = `${Paths.cache.uri}/rec_${timestamp}.wav`;
-        // Remove file:// prefix for native module
+        // Remove file:// prefix for file path
         androidWavFilePath = wavPath.replace('file://', '');
 
         resetLevelState();
+        pcmStreamWriter = createPcmStreamWriter(
+          androidWavFilePath,
+          AppConstants.AUDIO_SAMPLE_RATE,
+          AppConstants.AUDIO_NUM_CHANNELS,
+          16
+        );
 
         AudioRecord.init({
           sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
           channels: AppConstants.AUDIO_NUM_CHANNELS,
           bitsPerSample: 16,
           audioSource: 6, // VOICE_RECOGNITION
-          wavFile: androidWavFilePath,
           bufferSize: 4096,
         });
 
@@ -313,6 +332,10 @@ const createAudioService = () => {
           flag: FeatureFlag.recording,
           message: 'Error starting Android PCM recording',
         });
+        if (pcmStreamWriter) {
+          await pcmStreamWriter.abort();
+          pcmStreamWriter = null;
+        }
         androidPcmRecording = false;
         androidWavFilePath = null;
         return false;
@@ -381,7 +404,7 @@ const createAudioService = () => {
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
 
-        const filePath = await AudioRecord.stop();
+        AudioRecord.stop();
         androidPcmRecording = false;
 
         try {
@@ -392,31 +415,47 @@ const createAudioService = () => {
           logWarn('Haptics not supported', { flag: FeatureFlag.recording });
         }
 
-        // The library returns the file path
-        const wavFilePath = androidWavFilePath
-          ? `file://${androidWavFilePath}`
-          : filePath
-          ? `file://${filePath}`
-          : null;
+        // Finalize WAV file from streamed PCM data
+        if (androidWavFilePath && pcmStreamWriter) {
+          const byteCount = pcmStreamWriter.getByteCount();
+          const success = await pcmStreamWriter.finalize();
+          pcmStreamWriter = null;
 
-        if (wavFilePath) {
-          const file = new File(wavFilePath);
-          if (file.exists && file.size > 1024) {
-            recordStart = null;
-            currentAudioFile = wavFilePath;
-            androidWavFilePath = null;
-            return wavFilePath;
+          if (success) {
+            const wavFilePath = `file://${androidWavFilePath}`;
+            const file = new File(wavFilePath);
+            if (file.exists && file.size > 1024) {
+              recordStart = null;
+              currentAudioFile = wavFilePath;
+              androidWavFilePath = null;
+              return wavFilePath;
+            } else {
+              logError('WAV file validation failed after write', {
+                flag: FeatureFlag.recording,
+                message: `File exists: ${file.exists}, size: ${file.size}`,
+              });
+            }
+          } else {
+            logError('Failed to finalize WAV file from PCM stream', {
+              flag: FeatureFlag.recording,
+              message: `Bytes: ${byteCount}, path: ${androidWavFilePath}`,
+            });
           }
         }
 
         recordStart = null;
         androidWavFilePath = null;
+        pcmStreamWriter = null;
         return null;
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
           message: 'Error stopping Android PCM recording',
         });
+        if (pcmStreamWriter) {
+          await pcmStreamWriter.abort();
+          pcmStreamWriter = null;
+        }
         androidPcmRecording = false;
         androidWavFilePath = null;
         recordStart = null;
@@ -515,6 +554,10 @@ const createAudioService = () => {
         try {
           await AudioRecord.stop();
         } catch {}
+        if (pcmStreamWriter) {
+          await pcmStreamWriter.abort();
+          pcmStreamWriter = null;
+        }
         androidPcmRecording = false;
         androidWavFilePath = null;
       }
