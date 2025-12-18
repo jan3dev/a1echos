@@ -1,5 +1,5 @@
-import { RefObject, useMemo, useRef, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Keyboard, Platform, View } from 'react-native';
 
 import { ModelType, Transcription } from '@/models';
 import {
@@ -147,14 +147,56 @@ export const TranscriptionList = ({
     return items;
   }, [transcriptions, previewState.item]);
 
+  const editingIdRef = useRef<string | null>(null);
+
+  const scrollToEditingItem = () => {
+    const currentEditingId = editingIdRef.current;
+    if (!currentEditingId || !listRef?.current) return;
+
+    const index = data.findIndex((item) => item.id === currentEditingId);
+    if (index === -1) return;
+
+    listRef.current.scrollToIndex({
+      index,
+      viewPosition: 0.2,
+      animated: true,
+    });
+  };
+
+  useEffect(() => {
+    const keyboardEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const subscription = Keyboard.addListener(keyboardEvent, () => {
+      if (editingIdRef.current) {
+        setTimeout(scrollToEditingItem, 50);
+      }
+    });
+    return () => subscription.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
   const handleStartEdit = (id: string) => {
     setEditingId(id);
+    editingIdRef.current = id;
     onEditModeStarted?.();
+    setTimeout(scrollToEditingItem, 100);
   };
 
   const handleEndEdit = () => {
     setEditingId(null);
+    editingIdRef.current = null;
     onEditModeEnded?.();
+  };
+
+  const handleScrollToIndexFailed = (info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    listRef?.current?.scrollToOffset({
+      offset: info.averageItemLength * info.index,
+      animated: true,
+    });
   };
 
   const handleUpdateTranscription = (updated: Transcription) => {
@@ -168,6 +210,9 @@ export const TranscriptionList = ({
       ref={listRef}
       data={data}
       keyExtractor={(item) => item.id}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      onScrollToIndexFailed={handleScrollToIndexFailed}
       contentContainerStyle={{
         padding: 16,
         paddingTop: topPadding + 16,

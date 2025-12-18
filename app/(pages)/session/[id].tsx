@@ -14,6 +14,7 @@ import {
   BackHandler,
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   View,
@@ -555,8 +556,8 @@ export default function SessionScreen() {
   }, [setRecordingControlsEnabled, controlsEnabled]);
 
   useEffect(() => {
-    setRecordingControlsVisible(!selectionMode);
-  }, [setRecordingControlsVisible, selectionMode]);
+    setRecordingControlsVisible(!selectionMode && !isEditing);
+  }, [setRecordingControlsVisible, selectionMode, isEditing]);
 
   const sessionName = session?.name ?? '';
   const isIncognito = session?.isIncognito ?? false;
@@ -583,18 +584,24 @@ export default function SessionScreen() {
         onSaveEditPressed={handleSaveEdit}
       />
 
-      {!isInitializing && (
-        <TranscriptionContentView
-          listRef={listRef}
-          selectionMode={selectionMode}
-          selectedTranscriptionIds={selectedIds}
-          onTranscriptionTap={handleTranscriptionTap}
-          onTranscriptionLongPress={handleTranscriptionLongPress}
-          onEditStart={handleEditStart}
-          onEditEnd={handleEditEnd}
-          isCancellingEdit={isCancellingEdit}
-        />
-      )}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        {!isInitializing && (
+          <TranscriptionContentView
+            listRef={listRef}
+            selectionMode={selectionMode}
+            selectedTranscriptionIds={selectedIds}
+            onTranscriptionTap={handleTranscriptionTap}
+            onTranscriptionLongPress={handleTranscriptionLongPress}
+            onEditStart={handleEditStart}
+            onEditEnd={handleEditEnd}
+            isCancellingEdit={isCancellingEdit}
+          />
+        )}
+      </KeyboardAvoidingView>
 
       {selectionMode && (
         <View
@@ -624,6 +631,9 @@ export default function SessionScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  keyboardAvoidingView: {
     flex: 1,
   },
   shareButtonContainer: {
