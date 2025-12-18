@@ -44,7 +44,7 @@ export const Toast = ({
   onDismiss,
 }: ToastProps) => {
   const { width } = useWindowDimensions();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -122,8 +122,8 @@ export const Toast = ({
         >
           <Pressable>
             <BlurView
+              experimentalBlurMethod="dimezisBlurView"
               intensity={32}
-              tint={isDark ? 'dark' : 'light'}
               style={[styles.card, { backgroundColor: colors.glassSurface }]}
             >
               {/* Main content */}

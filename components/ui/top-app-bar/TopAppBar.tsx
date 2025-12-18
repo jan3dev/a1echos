@@ -2,6 +2,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Fragment, ReactNode } from 'react';
 import {
+  Platform,
   StyleProp,
   StyleSheet,
   TouchableOpacity,
@@ -10,7 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/theme';
+import { AppTheme } from '@/models';
+import { useTheme, useThemeStore } from '@/theme';
 
 import { Icon } from '../icon/Icon';
 import { Text } from '../text/Text';
@@ -40,9 +42,11 @@ export const TopAppBar = ({
   transparent = false,
   style,
 }: TopAppBarProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
+  const { currentTheme } = useThemeStore();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
 
   const handleBack = () => {
     if (onBackPressed) {
@@ -148,11 +152,19 @@ export const TopAppBar = ({
 
   return (
     <View style={containerStyles}>
-      <BlurView
-        intensity={20}
-        tint={isDark ? 'dark' : 'light'}
-        style={[StyleSheet.absoluteFill, { backgroundColor }]}
-      />
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          intensity={20}
+          style={[StyleSheet.absoluteFill, { backgroundColor }]}
+        />
+      ) : (
+        <BlurView
+          experimentalBlurMethod="dimezisBlurView"
+          intensity={50}
+          tint={blurTint}
+          style={[StyleSheet.absoluteFill, { backgroundColor }]}
+        />
+      )}
       {renderContent()}
     </View>
   );

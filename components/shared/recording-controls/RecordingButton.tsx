@@ -222,6 +222,7 @@ export const RecordingButton = ({
       ]}
     >
       <BlurView
+        experimentalBlurMethod="dimezisBlurView"
         intensity={80}
         tint={blurTint}
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
@@ -286,6 +287,7 @@ export const RecordingButton = ({
       ]}
     >
       <BlurView
+        experimentalBlurMethod="dimezisBlurView"
         intensity={80}
         tint={blurTint}
         style={[StyleSheet.absoluteFill, styles.blurContainer]}

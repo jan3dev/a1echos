@@ -31,7 +31,7 @@ export const Surface = ({
   width,
   height,
 }: SurfaceProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   const getShadowStyle = (elev: number): ViewStyle => {
     if (elev === 0) return {};
@@ -69,8 +69,8 @@ export const Surface = ({
 
   const GlassContent = (
     <BlurView
+      experimentalBlurMethod="dimezisBlurView"
       intensity={20}
-      tint={isDark ? 'dark' : 'light'}
       style={[
         {
           flex: 1,

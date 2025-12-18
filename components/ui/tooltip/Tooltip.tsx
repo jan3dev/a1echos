@@ -45,7 +45,7 @@ export const Tooltip = ({
   margin = 16,
   onDismiss,
 }: TooltipProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const colors = theme.colors;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -204,8 +204,8 @@ export const Tooltip = ({
   const bubble =
     variant === 'normal' ? (
       <BlurView
+        experimentalBlurMethod="dimezisBlurView"
         intensity={20}
-        tint={isDark ? 'light' : 'dark'}
         style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: 'hidden' }}
       >
         {renderContent()}

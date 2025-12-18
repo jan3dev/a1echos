@@ -6,7 +6,7 @@ import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -114,6 +114,7 @@ function GlobalRecordingControls() {
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
   const visible = useRecordingControlsVisible();
+  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
 
   const handleRecordingStart = useCallback(() => {
     onRecordingStart?.();
@@ -130,8 +131,6 @@ function GlobalRecordingControls() {
     return null;
   }
 
-  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
-
   const FADE_HEIGHT = 32;
   const CONTROLS_HEIGHT = 96;
   const fadeStop = FADE_HEIGHT / CONTROLS_HEIGHT;
@@ -141,22 +140,41 @@ function GlobalRecordingControls() {
       style={[styles.recordingControls, { paddingBottom: insets.bottom }]}
       pointerEvents="box-none"
     >
-      <BlurView
-        intensity={20}
-        tint={blurTint}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      >
-        <LinearGradient
-          colors={[
-            'transparent',
-            theme.colors.glassBackground,
-            theme.colors.glassBackground,
-          ]}
-          locations={[0, fadeStop, 1]}
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          intensity={20}
           style={StyleSheet.absoluteFill}
-        />
-      </BlurView>
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={[
+              'transparent',
+              theme.colors.glassBackground,
+              theme.colors.glassBackground,
+            ]}
+            locations={[0, fadeStop, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </BlurView>
+      ) : (
+        <BlurView
+          experimentalBlurMethod="dimezisBlurView"
+          intensity={10}
+          tint={blurTint}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={[
+              'transparent',
+              theme.colors.glassBackground,
+              theme.colors.glassBackground,
+            ]}
+            locations={[0, fadeStop, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </BlurView>
+      )}
       <RecordingControlsView
         state={transcriptionState}
         audioLevel={audioLevel}

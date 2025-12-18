@@ -5,7 +5,7 @@ import Animated, {
   useAnimatedStyle,
 } from 'react-native-reanimated';
 
-import { AquaColors, getShadow, useThemeStore } from '@/theme';
+import { AquaColors, getShadow } from '@/theme';
 
 import { Icon } from '../../ui/icon/Icon';
 
@@ -32,9 +32,6 @@ export const LockIndicator = ({
     };
   });
 
-  const { currentTheme } = useThemeStore();
-  const blurTint = currentTheme === 'dark' ? 'light' : 'dark';
-
   return (
     <Animated.View style={[styles.container, { width, height }, animatedStyle]}>
       <View
@@ -49,8 +46,8 @@ export const LockIndicator = ({
         ]}
       >
         <BlurView
+          experimentalBlurMethod="dimezisBlurView"
           intensity={80}
-          tint={blurTint}
           style={[
             StyleSheet.absoluteFill,
             styles.blurContainer,

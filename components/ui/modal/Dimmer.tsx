@@ -27,8 +27,9 @@ export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
     >
       <Pressable style={styles.container} onPress={onDismiss}>
         <BlurView
+          experimentalBlurMethod="dimezisBlurView"
           intensity={24}
-          tint={isDark ? 'dark' : 'light'}
+          tint={isDark ? 'light' : 'dark'}
           style={styles.blurContainer}
         >
           <Pressable
