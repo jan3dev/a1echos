@@ -144,6 +144,7 @@ function GlobalRecordingControls() {
     >
       <MaskedView
         style={StyleSheet.absoluteFill}
+        androidRenderingMode="software"
         maskElement={
           <LinearGradient
             colors={['transparent', 'black', 'black']}

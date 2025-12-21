@@ -125,11 +125,12 @@ const createAudioService = () => {
         : Math.max(0, Math.min(150, now.getTime() - lastUpdateTime.getTime()));
     lastUpdateTime = now;
 
+    // Light smoothing to reduce jitter; main smoothing happens in wave component
     const rising = level > smoothedLevel;
-    const baseAlpha = rising ? 0.5 : 0.15;
+    const baseAlpha = rising ? 0.8 : 0.5;
     const alpha = Math.max(
-      0.15,
-      Math.min(rising ? 0.7 : 0.25, baseAlpha * (dtMs / 16.0))
+      0.4,
+      Math.min(rising ? 0.9 : 0.6, baseAlpha * (dtMs / 16.0))
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
@@ -160,11 +161,12 @@ const createAudioService = () => {
         : Math.max(0, Math.min(150, now.getTime() - lastUpdateTime.getTime()));
     lastUpdateTime = now;
 
+    // Light smoothing to reduce jitter; main smoothing happens in wave component
     const rising = level > smoothedLevel;
-    const baseAlpha = rising ? 0.6 : 0.2;
+    const baseAlpha = rising ? 0.8 : 0.5;
     const alpha = Math.max(
-      0.2,
-      Math.min(rising ? 0.8 : 0.3, baseAlpha * (dtMs / 16.0))
+      0.4,
+      Math.min(rising ? 0.9 : 0.6, baseAlpha * (dtMs / 16.0))
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;

@@ -38,7 +38,6 @@ interface WhisperServiceState {
   initializationStatus: string | null;
   partialCallbacks: Set<(text: string) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
-  smoothedAudioLevel: number;
 }
 
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
@@ -66,7 +65,6 @@ const createWhisperService = () => {
     initializationStatus: null,
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
-    smoothedAudioLevel: 0,
   };
 
   const computeRmsLevel = (data: Uint8Array): number => {
@@ -76,8 +74,13 @@ const createWhisperService = () => {
     const samples = data.length / 2;
 
     for (let i = 0; i < data.length - 1; i += 2) {
-      // 16-bit little-endian signed PCM
-      const sample = (data[i] | (data[i + 1] << 8)) - 32768;
+      // 16-bit little-endian signed PCM: combine bytes to unsigned, then convert to signed
+      const low = data[i];
+      const high = data[i + 1];
+      let sample = low | (high << 8);
+      if (sample >= 32768) {
+        sample -= 65536;
+      }
       const normalized = sample / 32768;
       sumSquares += normalized * normalized;
     }
@@ -89,11 +92,7 @@ const createWhisperService = () => {
   };
 
   const emitAudioLevel = (level: number): void => {
-    const rising = level > state.smoothedAudioLevel;
-    const alpha = rising ? 0.4 : 0.15;
-    state.smoothedAudioLevel = state.smoothedAudioLevel + (level - state.smoothedAudioLevel) * alpha;
-    
-    const visual = Math.max(0.02, Math.min(1.0, state.smoothedAudioLevel));
+    const visual = Math.max(0.02, Math.min(1.0, level));
     state.audioLevelCallbacks.forEach((callback) => {
       try {
         callback(visual);
@@ -144,10 +143,7 @@ const createWhisperService = () => {
     state.initializationStatus = 'Starting initialization...';
 
     try {
-      // Pre-configure audio session to avoid issues with real-time mode
-      await configureAudioSession();
-      
-      await configureAudioSession(50);
+      await configureAudioSession(100);
 
       const modelPath = await prepareModel();
 
@@ -233,9 +229,7 @@ const createWhisperService = () => {
 
     try {
       state.currentTranscription = '';
-      state.smoothedAudioLevel = 0;
 
-      // Configure audio session for recording BEFORE creating AudioPcmStreamAdapter
       await configureAudioSession(100);
 
       const audioStream = new AudioPcmStreamAdapter();
@@ -368,7 +362,6 @@ const createWhisperService = () => {
     state.realtimeTranscriber = null;
     state.realtimeAudioStream = null;
     state.isRealtimeRecording = false;
-    state.smoothedAudioLevel = 0;
     state.audioLevelCallbacks.forEach((callback) => {
       try {
         callback(0.02);

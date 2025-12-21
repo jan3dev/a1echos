@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, {
+  type SharedValue,
+  useAnimatedProps,
+  useFrameCallback,
+  useSharedValue,
+} from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { TranscriptionState } from '@/models';
@@ -25,15 +31,6 @@ interface WaveProfile {
   transcribingPhaseOffset: number;
   audioOpacityReactivity: number;
 }
-
-interface WaveState {
-  profile: WaveProfile;
-  data: number[];
-  targets: number[];
-  phase: number;
-}
-
-const TOTAL_DATA_POINTS = 120;
 
 const WAVE_PROFILES: WaveProfile[] = [
   {
@@ -78,12 +75,285 @@ const WAVE_PROFILES: WaveProfile[] = [
 ];
 
 const PHASE_OFFSETS = [0.0, Math.PI, Math.PI * 2];
+const POINTS = 60;
+const MAX_AMPLITUDE = 20.0;
+const MIN_AMPLITUDE = 2.0;
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const hexToRgba = (hex: string, opacity: number): string => {
+  'worklet';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const generateWavePath = (
+  width: number,
+  centerY: number,
+  phase: number,
+  displayLevel: number,
+  oscillationStrength: number,
+  transcribingTime: number,
+  profile: WaveProfile,
+  baseEnergy: number,
+  amplitudeMultiplier: number,
+  positionWeightEnabled: number
+): string => {
+  'worklet';
+  const amplitudeRange = MAX_AMPLITUDE - MIN_AMPLITUDE;
+  const pointsMinusOne = POINTS - 1;
+  const freqTwoPi = profile.frequency * 2 * Math.PI;
+
+  const oscillation = Math.sin(
+    transcribingTime * (Math.PI / 3.0) + profile.transcribingPhaseOffset
+  );
+  const phaseInversion = 1.0 + (oscillation - 1.0) * oscillationStrength;
+
+  const convergenceFactor = 1.0 - displayLevel * 0.7;
+  const dynamicVerticalOffset =
+    profile.verticalOffset *
+    (1.0 - positionWeightEnabled * (1.0 - convergenceFactor));
+  const adjustedCenterY = centerY + dynamicVerticalOffset;
+
+  const parts: string[] = new Array(POINTS);
+
+  for (let i = 0; i < POINTS; i++) {
+    const normalizedX = i / pointsMinusOne;
+    const x = normalizedX * width;
+
+    const distanceFromCenter = Math.abs(normalizedX - 0.5) * 2.0;
+    const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.5;
+    const clampedCenterWeight =
+      centerWeight < 0.4 ? 0.4 : centerWeight > 1.0 ? 1.0 : centerWeight;
+    const positionWeight =
+      1.0 - positionWeightEnabled * (1.0 - clampedCenterWeight);
+
+    const rawAmplitude = baseEnergy * amplitudeMultiplier * positionWeight;
+    const normalizedAmplitude =
+      rawAmplitude < 0 ? 0 : rawAmplitude > 1 ? 1 : rawAmplitude;
+    const amplitude = MIN_AMPLITUDE + normalizedAmplitude * amplitudeRange;
+    const sine = Math.sin(freqTwoPi * normalizedX + phase);
+    const energyFactor = 0.65 + normalizedAmplitude * 0.35;
+    const y =
+      adjustedCenterY + amplitude * energyFactor * sine * phaseInversion;
+
+    const xRounded = Math.round(x * 10) / 10;
+    const yRounded = Math.round(y * 10) / 10;
+
+    if (i === 0) {
+      parts[i] = `M${xRounded},${yRounded}`;
+    } else {
+      parts[i] = `L${xRounded},${yRounded}`;
+    }
+  }
+
+  return parts.join(' ');
+};
+
+const stateToNum = (state: TranscriptionState): number => {
+  'worklet';
+  switch (state) {
+    case TranscriptionState.LOADING:
+      return 0;
+    case TranscriptionState.READY:
+      return 1;
+    case TranscriptionState.RECORDING:
+      return 2;
+    case TranscriptionState.TRANSCRIBING:
+      return 3;
+    case TranscriptionState.STREAMING:
+      return 4;
+    case TranscriptionState.ERROR:
+      return 5;
+    default:
+      return 1;
+  }
+};
+
+interface AnimatedWaveProps {
+  profile: WaveProfile;
+  initialPhase: number;
+  width: number;
+  height: number;
+  audioLevelSV: SharedValue<number>;
+  stateSV: SharedValue<number>;
+  accentColor: string;
+  waveIndex: number;
+}
+
+const AnimatedWave = ({
+  profile,
+  initialPhase,
+  width,
+  height,
+  audioLevelSV,
+  stateSV,
+  accentColor,
+  waveIndex,
+}: AnimatedWaveProps) => {
+  const phase = useSharedValue(initialPhase);
+  const displayLevel = useSharedValue(0);
+  const oscillationStrength = useSharedValue(0);
+  const transcribingTime = useSharedValue(0);
+  const smoothedBaseEnergy = useSharedValue(0.5);
+  const smoothedAmplitudeMultiplier = useSharedValue(
+    profile.amplitudeMultiplier * 1.5
+  );
+  const smoothedOpacity = useSharedValue(0.75);
+  const smoothedPositionWeight = useSharedValue(0);
+  const frameCount = useSharedValue(0);
+
+  useFrameCallback(() => {
+    // Skip every other frame for ~30fps
+    frameCount.value = (frameCount.value + 1) % 2;
+    if (frameCount.value !== 0) return;
+    const currentState = stateSV.value;
+    const targetLevel = audioLevelSV.value;
+    const isRecordingOrStreaming = currentState === 2 || currentState === 4;
+    const isTranscribingOrLoading = currentState === 3 || currentState === 0;
+
+    // Faster attack, moderate release for responsiveness (doubled for 30fps)
+    const diff = targetLevel - displayLevel.value;
+    const alpha = diff > 0 ? 0.55 : 0.22;
+    displayLevel.value = displayLevel.value + diff * alpha;
+
+    // Calculate target values based on state
+    let targetBaseEnergy: number;
+    let targetAmplitudeMultiplier: number;
+    let targetOpacity: number;
+
+    let targetPositionWeight: number;
+
+    if (currentState === 1) {
+      // READY
+      targetBaseEnergy = 0.5;
+      targetAmplitudeMultiplier = profile.amplitudeMultiplier * 1.5;
+      targetOpacity = 0.75;
+      targetPositionWeight = 0;
+    } else if (isTranscribingOrLoading) {
+      targetBaseEnergy = 1.0;
+      targetAmplitudeMultiplier = profile.transcribingAmplitude;
+      targetOpacity = 0.5;
+      targetPositionWeight = 0;
+    } else {
+      // RECORDING or STREAMING
+      const audioReactiveEnergy = Math.min(
+        1.0,
+        Math.max(0.0, displayLevel.value)
+      );
+      targetBaseEnergy = Math.min(
+        1.0,
+        Math.max(
+          profile.energyFloor,
+          profile.energyFloor +
+            audioReactiveEnergy * profile.audioAmplitudeReactivity
+        )
+      );
+      targetAmplitudeMultiplier = profile.amplitudeMultiplier;
+      const baseOpacity = 0.75;
+      const audioBoost = displayLevel.value * profile.audioOpacityReactivity;
+      targetOpacity = Math.min(
+        1.0,
+        Math.max(baseOpacity, baseOpacity + audioBoost)
+      );
+      targetPositionWeight = 1;
+    }
+
+    // Smooth transitions between states (doubled for 30fps)
+    const transitionSpeed = 0.15;
+    smoothedBaseEnergy.value +=
+      (targetBaseEnergy - smoothedBaseEnergy.value) * transitionSpeed;
+    smoothedAmplitudeMultiplier.value +=
+      (targetAmplitudeMultiplier - smoothedAmplitudeMultiplier.value) *
+      transitionSpeed;
+    smoothedOpacity.value +=
+      (targetOpacity - smoothedOpacity.value) * transitionSpeed;
+    smoothedPositionWeight.value +=
+      (targetPositionWeight - smoothedPositionWeight.value) * transitionSpeed;
+
+    // Oscillation for transcribing state (doubled for 30fps)
+    if (isTranscribingOrLoading) {
+      transcribingTime.value += 0.033;
+      if (oscillationStrength.value < 1.0) {
+        oscillationStrength.value = Math.min(
+          1.0,
+          oscillationStrength.value + 0.1
+        );
+      }
+    } else {
+      if (oscillationStrength.value > 0.0) {
+        oscillationStrength.value = Math.max(
+          0.0,
+          oscillationStrength.value - 0.1
+        );
+        if (oscillationStrength.value <= 0) {
+          transcribingTime.value = 0;
+        }
+      }
+    }
+
+    // Phase animation (doubled for 30fps)
+    let phaseStep: number;
+    if (currentState === 1) {
+      // READY
+      phaseStep = profile.basePhaseSpeed * 0.6;
+    } else if (isRecordingOrStreaming) {
+      const baseSpeed = profile.basePhaseSpeed * 4.0;
+      const audioSpeedMultiplier =
+        1.0 + displayLevel.value * profile.audioSpeedReactivity;
+      phaseStep = baseSpeed * audioSpeedMultiplier;
+    } else {
+      phaseStep = profile.basePhaseSpeed * 0.6;
+    }
+    phase.value = (phase.value + phaseStep) % (Math.PI * 2);
+  });
+
+  const animatedProps = useAnimatedProps(() => {
+    let strokeColor: string;
+    if (waveIndex === 0) {
+      strokeColor = hexToRgba(
+        AquaPrimitiveColors.waveOrange,
+        smoothedOpacity.value
+      );
+    } else if (waveIndex === 1) {
+      strokeColor = hexToRgba(accentColor, smoothedOpacity.value);
+    } else {
+      strokeColor = hexToRgba(
+        AquaPrimitiveColors.waveCyan,
+        smoothedOpacity.value
+      );
+    }
+
+    const d = generateWavePath(
+      width,
+      height / 2,
+      phase.value,
+      displayLevel.value,
+      oscillationStrength.value,
+      transcribingTime.value,
+      profile,
+      smoothedBaseEnergy.value,
+      smoothedAmplitudeMultiplier.value,
+      smoothedPositionWeight.value
+    );
+
+    return {
+      d,
+      stroke: strokeColor,
+    };
+  });
+
+  return (
+    <AnimatedPath
+      animatedProps={animatedProps}
+      strokeWidth={profile.strokeWidth}
+      fill="none"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  );
 };
 
 export const ThreeWaveLines = ({
@@ -92,371 +362,17 @@ export const ThreeWaveLines = ({
   colors,
   state = TranscriptionState.RECORDING,
 }: ThreeWaveLinesProps) => {
-  const [, forceUpdate] = useState(0);
   const [containerWidth, setContainerWidth] = useState(400);
-  const wavesRef = useRef<WaveState[]>([]);
-  const displayLevelRef = useRef(audioLevel);
-  const targetLevelRef = useRef(audioLevel);
-  const stateRef = useRef(state);
-  const colorsRef = useRef(colors);
-  const transcribingInversionTimeRef = useRef(0.0);
-  const oscillationStrengthRef = useRef(0.0);
-  const animationFrameRef = useRef<number | null>(null);
-  const maxAmplitude = 20.0;
-  const minAmplitude = 2.0;
-  const minNormalizedAmplitude = minAmplitude / maxAmplitude;
+  const audioLevelSV = useSharedValue(audioLevel);
+  const stateSV = useSharedValue(stateToNum(state));
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+    audioLevelSV.value = Math.min(1.0, Math.max(0.0, audioLevel));
+  }, [audioLevel, audioLevelSV]);
 
   useEffect(() => {
-    colorsRef.current = colors;
-  }, [colors]);
-
-  const initializeWaves = useCallback(() => {
-    const initialValue = minNormalizedAmplitude;
-
-    wavesRef.current = WAVE_PROFILES.map((profile, index) => ({
-      profile,
-      data: Array(TOTAL_DATA_POINTS).fill(initialValue),
-      targets: Array(TOTAL_DATA_POINTS).fill(initialValue),
-      phase: PHASE_OFFSETS[index % PHASE_OFFSETS.length],
-    }));
-
-    generateNewTargets(stateRef.current);
-    wavesRef.current.forEach((wave) => {
-      for (let i = 0; i < TOTAL_DATA_POINTS; i++) {
-        wave.data[i] = wave.targets[i];
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startWaveAnimation = useCallback(() => {
-    const animate = () => {
-      updateWaveform();
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-    animationFrameRef.current = requestAnimationFrame(animate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    initializeWaves();
-    startWaveAnimation();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [initializeWaves, startWaveAnimation]);
-
-  useEffect(() => {
-    targetLevelRef.current = Math.min(1.0, Math.max(0.0, audioLevel));
-  }, [audioLevel]);
-
-  const updateWaveform = () => {
-    const currentState = stateRef.current;
-
-    const target = targetLevelRef.current;
-    const current = displayLevelRef.current;
-    const diff = target - current;
-    const speed = diff > 0 ? 0.25 : 0.15;
-    displayLevelRef.current = current + diff * speed;
-
-    if (
-      currentState === TranscriptionState.TRANSCRIBING ||
-      currentState === TranscriptionState.LOADING
-    ) {
-      transcribingInversionTimeRef.current += 0.016;
-      if (oscillationStrengthRef.current < 1.0) {
-        oscillationStrengthRef.current += 0.05;
-        if (oscillationStrengthRef.current > 1.0)
-          oscillationStrengthRef.current = 1.0;
-      }
-    } else {
-      if (oscillationStrengthRef.current > 0.0) {
-        oscillationStrengthRef.current -= 0.05;
-        if (oscillationStrengthRef.current < 0.0) {
-          oscillationStrengthRef.current = 0.0;
-          transcribingInversionTimeRef.current = 0.0;
-        }
-      } else {
-        transcribingInversionTimeRef.current = 0.0;
-      }
-    }
-
-    wavesRef.current.forEach((wave) => {
-      const phaseStep = calculatePhaseStep(wave.profile, currentState);
-      wave.phase = (wave.phase + phaseStep) % (Math.PI * 2);
-    });
-
-    generateNewTargets(currentState);
-    animateTowardsTargets();
-
-    forceUpdate((n) => n + 1);
-  };
-
-  const calculatePhaseStep = (
-    profile: WaveProfile,
-    currentState: TranscriptionState
-  ): number => {
-    switch (currentState) {
-      case TranscriptionState.READY:
-        return profile.basePhaseSpeed * 0.3;
-
-      case TranscriptionState.RECORDING:
-      case TranscriptionState.STREAMING: {
-        const baseSpeed = profile.basePhaseSpeed * 2.0;
-        const audioSpeedMultiplier =
-          1.0 + displayLevelRef.current * profile.audioSpeedReactivity;
-        return baseSpeed * audioSpeedMultiplier;
-      }
-
-      case TranscriptionState.TRANSCRIBING:
-      case TranscriptionState.LOADING:
-        return profile.basePhaseSpeed * 0.3;
-
-      default:
-        return profile.basePhaseSpeed * 0.3;
-    }
-  };
-
-  const generateNewTargets = (currentState: TranscriptionState) => {
-    const isRecordingOrStreaming =
-      currentState === TranscriptionState.RECORDING ||
-      currentState === TranscriptionState.STREAMING;
-
-    wavesRef.current.forEach((wave) => {
-      const profile = wave.profile;
-      for (let i = 0; i < TOTAL_DATA_POINTS; i++) {
-        const baseEnergy = getBaseEnergyForState(profile, currentState);
-        const positionWeight = isRecordingOrStreaming
-          ? getPositionWeight(i / (TOTAL_DATA_POINTS - 1))
-          : 1.0;
-        const stateAmplitudeMultiplier = getStateAmplitudeMultiplier(
-          profile,
-          currentState
-        );
-
-        const target = Math.min(
-          1.0,
-          Math.max(0.0, baseEnergy * stateAmplitudeMultiplier * positionWeight)
-        );
-
-        const previousTarget = wave.targets[i];
-        const smoothedTarget = previousTarget * 0.85 + target * 0.15;
-
-        wave.targets[i] = Math.max(
-          minNormalizedAmplitude,
-          Math.min(1.0, smoothedTarget)
-        );
-      }
-    });
-  };
-
-  const getBaseEnergyForState = (
-    profile: WaveProfile,
-    currentState: TranscriptionState
-  ): number => {
-    switch (currentState) {
-      case TranscriptionState.READY:
-        return 0.5;
-
-      case TranscriptionState.TRANSCRIBING:
-      case TranscriptionState.LOADING:
-        return 1.0;
-
-      case TranscriptionState.RECORDING:
-      case TranscriptionState.STREAMING: {
-        const audioReactiveEnergy = Math.min(
-          1.0,
-          Math.max(0.0, displayLevelRef.current)
-        );
-        const blendedEnergy =
-          profile.energyFloor +
-          audioReactiveEnergy * profile.audioAmplitudeReactivity;
-        return Math.min(1.0, Math.max(profile.energyFloor, blendedEnergy));
-      }
-
-      default:
-        return 0.5;
-    }
-  };
-
-  const getStateAmplitudeMultiplier = (
-    profile: WaveProfile,
-    currentState: TranscriptionState
-  ): number => {
-    switch (currentState) {
-      case TranscriptionState.READY:
-        return profile.amplitudeMultiplier * 1.5;
-
-      case TranscriptionState.TRANSCRIBING:
-      case TranscriptionState.LOADING:
-        return profile.transcribingAmplitude;
-
-      case TranscriptionState.RECORDING:
-      case TranscriptionState.STREAMING:
-        return profile.amplitudeMultiplier;
-
-      default:
-        return profile.amplitudeMultiplier;
-    }
-  };
-
-  const animateTowardsTargets = () => {
-    wavesRef.current.forEach((wave) => {
-      for (let i = 0; i < TOTAL_DATA_POINTS; i++) {
-        const diff = wave.targets[i] - wave.data[i];
-        const speed = 0.2;
-        wave.data[i] = Math.min(
-          1.0,
-          Math.max(minNormalizedAmplitude, wave.data[i] + diff * speed)
-        );
-      }
-    });
-  };
-
-  const getPositionWeight = (position: number): number => {
-    const distanceFromCenter = Math.abs(position - 0.5) * 2.0;
-    const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.5;
-    return Math.min(1.0, Math.max(0.4, centerWeight));
-  };
-
-  const calculateDynamicVerticalOffset = (
-    baseOffset: number,
-    currentState: TranscriptionState
-  ): number => {
-    if (
-      currentState !== TranscriptionState.RECORDING &&
-      currentState !== TranscriptionState.STREAMING
-    ) {
-      return baseOffset;
-    }
-    const convergenceFactor = 1.0 - displayLevelRef.current * 0.7;
-    return baseOffset * convergenceFactor;
-  };
-
-  const resolveWaveColor = (
-    index: number,
-    currentState: TranscriptionState
-  ): string => {
-    const profile = wavesRef.current[index].profile;
-    const currentColors = colorsRef.current;
-
-    let stateOpacity: number;
-    if (
-      currentState === TranscriptionState.TRANSCRIBING ||
-      currentState === TranscriptionState.LOADING
-    ) {
-      stateOpacity = 0.5;
-    } else if (
-      currentState === TranscriptionState.RECORDING ||
-      currentState === TranscriptionState.STREAMING
-    ) {
-      const baseOpacity = 0.75;
-      const maxOpacity = 1.0;
-      const audioBoost =
-        displayLevelRef.current * profile.audioOpacityReactivity;
-      stateOpacity = Math.min(
-        maxOpacity,
-        Math.max(baseOpacity, baseOpacity + audioBoost)
-      );
-    } else {
-      stateOpacity = 0.75;
-    }
-
-    switch (index) {
-      case 0:
-        return hexToRgba(AquaPrimitiveColors.waveOrange, stateOpacity);
-      case 1:
-        return hexToRgba(currentColors.accentBrand, stateOpacity);
-      case 2:
-        return hexToRgba(AquaPrimitiveColors.waveCyan, stateOpacity);
-      default:
-        return hexToRgba(currentColors.accentBrand, stateOpacity);
-    }
-  };
-
-  const generateWavePath = (
-    wave: WaveState,
-    width: number,
-    centerY: number,
-    currentState: TranscriptionState
-  ): string => {
-    if (wave.data.length === 0) return '';
-
-    const profile = wave.profile;
-    const points = wave.data.length;
-    const amplitudeRange = maxAmplitude - minAmplitude;
-
-    const oscillation = Math.sin(
-      transcribingInversionTimeRef.current * (Math.PI / 3.0) +
-        profile.transcribingPhaseOffset
-    );
-    const individualPhaseInversion =
-      1.0 + (oscillation - 1.0) * oscillationStrengthRef.current;
-
-    const dynamicVerticalOffset = calculateDynamicVerticalOffset(
-      profile.verticalOffset,
-      currentState
-    );
-    const adjustedCenterY = centerY + dynamicVerticalOffset;
-
-    let path = '';
-
-    for (let i = 0; i < points; i++) {
-      const normalizedX = i / (points - 1);
-      const x = normalizedX * width;
-
-      const normalizedAmplitude = Math.min(1.0, Math.max(0.0, wave.data[i]));
-      const amplitude = minAmplitude + normalizedAmplitude * amplitudeRange;
-      const sine = Math.sin(
-        profile.frequency * 2 * Math.PI * normalizedX + wave.phase
-      );
-      const energyFactor = 0.65 + normalizedAmplitude * 0.35;
-      const y =
-        adjustedCenterY +
-        amplitude * energyFactor * sine * individualPhaseInversion;
-
-      if (i === 0) {
-        path += `M${x},${y}`;
-      } else {
-        const prevNormalizedX = (i - 1) / (points - 1);
-        const prevX = prevNormalizedX * width;
-        const prevNormalizedAmplitude = Math.min(
-          1.0,
-          Math.max(0.0, wave.data[i - 1])
-        );
-        const prevAmplitude =
-          minAmplitude + prevNormalizedAmplitude * amplitudeRange;
-        const prevSine = Math.sin(
-          profile.frequency * 2 * Math.PI * prevNormalizedX + wave.phase
-        );
-        const prevEnergyFactor = 0.65 + prevNormalizedAmplitude * 0.35;
-        const prevY =
-          adjustedCenterY +
-          prevAmplitude *
-            prevEnergyFactor *
-            prevSine *
-            individualPhaseInversion;
-
-        const controlX1 = prevX + (x - prevX) * 0.33;
-        const controlX2 = prevX + (x - prevX) * 0.66;
-        const controlY1 = prevY + (y - prevY) * 0.33;
-        const controlY2 = prevY + (y - prevY) * 0.66;
-
-        path += ` C${controlX1},${controlY1} ${controlX2},${controlY2} ${x},${y}`;
-      }
-    }
-
-    return path;
-  };
-
-  const currentState = stateRef.current;
+    stateSV.value = stateToNum(state);
+  }, [state, stateSV]);
 
   return (
     <View
@@ -469,15 +385,17 @@ export const ThreeWaveLines = ({
       }}
     >
       <Svg width="100%" height={height} style={styles.svg}>
-        {wavesRef.current.map((wave, index) => (
-          <Path
+        {WAVE_PROFILES.map((profile, index) => (
+          <AnimatedWave
             key={index}
-            d={generateWavePath(wave, containerWidth, height / 2, currentState)}
-            stroke={resolveWaveColor(index, currentState)}
-            strokeWidth={wave.profile.strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            profile={profile}
+            initialPhase={PHASE_OFFSETS[index]}
+            width={containerWidth}
+            height={height}
+            audioLevelSV={audioLevelSV}
+            stateSV={stateSV}
+            accentColor={colors.accentBrand}
+            waveIndex={index}
           />
         ))}
       </Svg>
