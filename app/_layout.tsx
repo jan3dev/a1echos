@@ -253,6 +253,21 @@ export default function RootLayout() {
     return null;
   }
 
+  if (StorybookEnabled) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        <StatusBar
+          style={isDark ? 'light' : 'dark'}
+          backgroundColor="transparent"
+          translucent
+        />
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="(storybook)/index" />
+        </Stack>
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
@@ -262,10 +277,6 @@ export default function RootLayout() {
           translucent
         />
         <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-          <Stack.Protected guard={StorybookEnabled}>
-            <Stack.Screen name="(storybook)/index" />
-          </Stack.Protected>
-
           <Stack.Screen name="(pages)/index" />
         </Stack>
         <GlobalRecordingControls />
