@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-native';
-import { ComponentProps, ReactNode, useState } from 'react';
+import { ComponentProps, ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { RecordingControlsView } from '@/components';
 import { TranscriptionState } from '@/models';
+import { useTranscriptionStore } from '@/stores';
 import { useTheme } from '@/theme';
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
@@ -34,9 +35,6 @@ const RecordingControlsViewMeta: Meta<typeof RecordingControlsView> = {
         TranscriptionState.LOADING,
       ],
     },
-    audioLevel: {
-      control: { type: 'range', min: 0, max: 1, step: 0.1 },
-    },
     enabled: {
       control: 'boolean',
     },
@@ -65,7 +63,6 @@ export const Ready: Story = {
   render: () => (
     <DynamicRecordingControlsView
       state={TranscriptionState.READY}
-      audioLevel={0}
       enabled={true}
       onRecordingStart={() => console.log('Recording started')}
     />
@@ -76,7 +73,6 @@ export const Recording: Story = {
   render: () => (
     <DynamicRecordingControlsView
       state={TranscriptionState.RECORDING}
-      audioLevel={0.5}
       enabled={true}
       onRecordingStop={() => console.log('Recording stopped')}
     />
@@ -87,7 +83,6 @@ export const RecordingLowAudio: Story = {
   render: () => (
     <DynamicRecordingControlsView
       state={TranscriptionState.RECORDING}
-      audioLevel={0.2}
       enabled={true}
     />
   ),
@@ -97,7 +92,6 @@ export const RecordingHighAudio: Story = {
   render: () => (
     <DynamicRecordingControlsView
       state={TranscriptionState.RECORDING}
-      audioLevel={0.9}
       enabled={true}
     />
   ),
@@ -107,29 +101,34 @@ export const Transcribing: Story = {
   render: () => (
     <DynamicRecordingControlsView
       state={TranscriptionState.TRANSCRIBING}
-      audioLevel={0}
       enabled={false}
     />
   ),
 };
 
 export const Interactive = () => {
-  const [audioLevel, setAudioLevel] = useState(0);
   const [state, setState] = useState(TranscriptionState.READY);
   const { theme } = useTheme();
+  const updateAudioLevel = useTranscriptionStore((s) => s.updateAudioLevel);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (state === TranscriptionState.RECORDING) {
+      interval = setInterval(() => {
+        updateAudioLevel(Math.random());
+      }, 100);
+    } else {
+      updateAudioLevel(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [state, updateAudioLevel]);
 
   const handleStart = () => {
     setState(TranscriptionState.RECORDING);
-    let level = 0;
-    const interval = setInterval(() => {
-      level = Math.random();
-      setAudioLevel(level);
-    }, 100);
-
     setTimeout(() => {
-      clearInterval(interval);
       setState(TranscriptionState.TRANSCRIBING);
-      setAudioLevel(0);
       setTimeout(() => {
         setState(TranscriptionState.READY);
       }, 2000);
@@ -140,7 +139,6 @@ export const Interactive = () => {
     <StoryContainer>
       <RecordingControlsView
         state={state}
-        audioLevel={audioLevel}
         enabled={
           state === TranscriptionState.READY ||
           state === TranscriptionState.RECORDING

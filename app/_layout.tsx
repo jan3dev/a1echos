@@ -18,7 +18,6 @@ import {
   initializeSessionStore,
   initializeSettingsStore,
   initializeTranscriptionStore,
-  useAudioLevel,
   useGlobalTooltip,
   useHideGlobalTooltip,
   useOnRecordingStart,
@@ -110,7 +109,6 @@ function GlobalRecordingControls() {
   const { currentTheme } = useThemeStore();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
-  const audioLevel = useAudioLevel();
   const onRecordingStart = useOnRecordingStart();
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
@@ -173,7 +171,6 @@ function GlobalRecordingControls() {
       </MaskedView>
       <RecordingControlsView
         state={transcriptionState}
-        audioLevel={audioLevel}
         onRecordingStart={handleRecordingStart}
         onRecordingStop={handleRecordingStop}
         enabled={enabled}

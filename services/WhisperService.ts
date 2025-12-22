@@ -11,6 +11,9 @@ import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/ada
 
 import { FeatureFlag, logError, logWarn } from '@/utils';
 
+const AUDIO_LEVEL_THROTTLE_MS = 33;
+const RMS_SAMPLE_STEP = 4;
+
 interface RealtimeTranscribeEvent {
   type: 'error' | 'start' | 'transcribe' | 'end';
   sliceIndex: number;
@@ -38,6 +41,7 @@ interface WhisperServiceState {
   initializationStatus: string | null;
   partialCallbacks: Set<(text: string) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
+  lastAudioLevelEmitTime: number;
 }
 
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
@@ -65,16 +69,17 @@ const createWhisperService = () => {
     initializationStatus: null,
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
+    lastAudioLevelEmitTime: 0,
   };
 
   const computeRmsLevel = (data: Uint8Array): number => {
     if (data.length === 0) return 0;
 
     let sumSquares = 0;
-    const samples = data.length / 2;
+    let sampleCount = 0;
+    const step = RMS_SAMPLE_STEP * 2;
 
-    for (let i = 0; i < data.length - 1; i += 2) {
-      // 16-bit little-endian signed PCM: combine bytes to unsigned, then convert to signed
+    for (let i = 0; i < data.length - 1; i += step) {
       const low = data[i];
       const high = data[i + 1];
       let sample = low | (high << 8);
@@ -83,15 +88,23 @@ const createWhisperService = () => {
       }
       const normalized = sample / 32768;
       sumSquares += normalized * normalized;
+      sampleCount++;
     }
 
-    const rms = Math.sqrt(sumSquares / samples);
+    if (sampleCount === 0) return 0;
+    const rms = Math.sqrt(sumSquares / sampleCount);
     const boosted = Math.min(1.0, rms * 8);
     const level = Math.pow(boosted, 0.7);
     return level;
   };
 
   const emitAudioLevel = (level: number): void => {
+    const now = Date.now();
+    if (now - state.lastAudioLevelEmitTime < AUDIO_LEVEL_THROTTLE_MS) {
+      return;
+    }
+    state.lastAudioLevelEmitTime = now;
+
     const visual = Math.max(0.02, Math.min(1.0, level));
     state.audioLevelCallbacks.forEach((callback) => {
       try {
@@ -159,8 +172,6 @@ const createWhisperService = () => {
 
       state.vadContext = await initWhisperVad({
         filePath: vadModelPath,
-        useGpu: true,
-        nThreads: 4,
       });
 
       state.isInitialized = true;
@@ -426,6 +437,7 @@ const createWhisperService = () => {
     state.isTranscribing = false;
     state.isRealtimeRecording = false;
     state.currentTranscription = '';
+    state.lastAudioLevelEmitTime = 0;
   };
 
   return {

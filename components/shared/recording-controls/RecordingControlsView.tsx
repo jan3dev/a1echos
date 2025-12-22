@@ -10,7 +10,6 @@ interface RecordingControlsViewProps {
   state?: TranscriptionState;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
-  audioLevel?: number;
   enabled?: boolean;
   spacing?: number;
   colors: AquaColors;
@@ -20,7 +19,6 @@ export const RecordingControlsView = ({
   state = TranscriptionState.READY,
   onRecordingStart,
   onRecordingStop,
-  audioLevel = 0.0,
   enabled = true,
   spacing = 16.0,
   colors,
@@ -31,11 +29,7 @@ export const RecordingControlsView = ({
     <View style={[styles.container, { height: controlsHeight }]}>
       <View style={[styles.contentContainer, { paddingVertical: spacing }]}>
         <View style={styles.waveContainer} pointerEvents="none">
-          <ThreeWaveLines
-            audioLevel={audioLevel}
-            colors={colors}
-            state={state}
-          />
+          <ThreeWaveLines colors={colors} state={state} />
         </View>
         <View style={styles.buttonContainer}>
           <RecordingButton
