@@ -1,8 +1,6 @@
 export const AquaPrimitiveColors = {
   white: '#FFFFFF',
   black: '#000000',
-  shadow: 'rgba(0, 0, 0, 0.04)',
-  shadowDark: 'rgba(0, 0, 0, 0.2)',
 
   gray50: '#F4F5F6',
   gray100: '#E9EBEC',

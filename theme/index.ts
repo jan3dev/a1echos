@@ -1,7 +1,7 @@
 export { AquaPrimitiveColors } from './colors';
 export type { AquaPrimitiveColor } from './colors';
 
-export { darkColors, gradient, lightColors } from './themeColors';
+export { darkColors, lightColors } from './themeColors';
 export type { AquaColors } from './themeColors';
 
 export { AquaTypography } from './typography';
@@ -17,3 +17,4 @@ export { useThemeStore } from './useThemeStore';
 
 export { useTheme } from './useTheme';
 export type { Theme } from './useTheme';
+

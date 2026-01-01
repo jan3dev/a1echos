@@ -84,7 +84,7 @@ export const Toggle = ({
             {
               left: thumbPosition,
               backgroundColor: thumbColorValue,
-              shadowColor: AquaPrimitiveColors.shadow,
+              shadowColor: AquaPrimitiveColors.black,
               shadowOffset: {
                 width: 0,
                 height: Platform.OS === 'android' ? 2 : shadowOffsetY,

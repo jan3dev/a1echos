@@ -26,7 +26,7 @@ const createShadow = (
 
 export const shadows = {
   default: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 0 },
     1,
     16,
@@ -34,7 +34,7 @@ export const shadows = {
   ),
 
   small: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 2 },
     0.5,
     4,
@@ -42,7 +42,7 @@ export const shadows = {
   ),
 
   medium: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 4 },
     0.8,
     8,
@@ -50,7 +50,7 @@ export const shadows = {
   ),
 
   large: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 8 },
     1,
     16,
@@ -74,19 +74,19 @@ export const shadows = {
   ),
 
   card: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 0 },
     0.04,
     16,
-    2
+    1
   ),
 
   cardElevated: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 4 },
     0.04,
     16,
-    4
+    2
   ),
 
   modal: createShadow(
@@ -98,11 +98,11 @@ export const shadows = {
   ),
 
   input: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 0 },
     0.04,
     20,
-    4
+    1
   ),
 
   button: createShadow(
@@ -114,11 +114,11 @@ export const shadows = {
   ),
 
   recordingButton: createShadow(
-    AquaPrimitiveColors.shadow,
+    AquaPrimitiveColors.black,
     { width: 0, height: 0 },
-    1,
-    20,
-    4
+    0.04,
+    24,
+    1
   ),
 } as const;
 

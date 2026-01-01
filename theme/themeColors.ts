@@ -110,9 +110,3 @@ export const darkColors: AquaColors = {
 
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };
-
-export const gradient = {
-  colors: [AquaPrimitiveColors.neonBlue500, AquaPrimitiveColors.neonBlue400],
-  start: { x: 1, y: 0 },
-  end: { x: 0, y: 1 },
-};
