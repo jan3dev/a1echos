@@ -10,6 +10,7 @@ import {
   ViewStyle,
 } from 'react-native';
 
+import { useLocalization } from '@/hooks';
 import { Transcription } from '@/models';
 import { useUIStore } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
@@ -56,7 +57,8 @@ export const TranscriptionItem = ({
   style,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
-  const showToast = useUIStore((state) => state.showToast);
+  const { loc } = useLocalization();
+  const showGlobalTooltip = useUIStore((state) => state.showGlobalTooltip);
   const [editText, setEditText] = useState(transcription.text);
   const inputRef = useRef<TextInput>(null);
 
@@ -94,19 +96,24 @@ export const TranscriptionItem = ({
       await Clipboard.setStringAsync(transcription.text);
       await Haptics.selectionAsync();
 
-      // Show toast on iOS or Android < 12 (API 31 has native clipboard feedback)
+      // Show tooltip on iOS or Android < 12 (API 31 has native clipboard feedback)
       if (
         Platform.OS === 'ios' ||
         (Platform.OS === 'android' && Number(Platform.Version) < 31)
       ) {
-        showToast('Copied to clipboard', 'success');
+        showGlobalTooltip(loc.copiedToClipboard, 'success', undefined, true);
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: 'Failed to copy to clipboard',
       });
-      showToast('Failed to copy to clipboard', 'error');
+      showGlobalTooltip(
+        loc.copyFailed(error instanceof Error ? error.message : String(error)),
+        'error',
+        undefined,
+        true
+      );
     }
   };
 

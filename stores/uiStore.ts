@@ -17,6 +17,7 @@ export interface GlobalTooltip {
   message: string;
   variant: GlobalTooltipVariant;
   duration: number;
+  isInfo?: boolean;
 }
 
 interface UIStore {
@@ -56,7 +57,8 @@ interface UIStore {
   showGlobalTooltip: (
     message: string,
     variant?: GlobalTooltipVariant,
-    duration?: number
+    duration?: number,
+    isInfo?: boolean
   ) => string;
   hideGlobalTooltip: () => void;
 }
@@ -183,7 +185,8 @@ export const useUIStore = create<UIStore>((set, get) => ({
   showGlobalTooltip: (
     message: string,
     variant: GlobalTooltipVariant = 'normal',
-    duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION
+    duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION,
+    isInfo: boolean = false
   ) => {
     const tooltipId = Crypto.randomUUID();
     set({
@@ -192,6 +195,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
         message,
         variant,
         duration,
+        isInfo,
       },
     });
     return tooltipId;

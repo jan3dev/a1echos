@@ -97,6 +97,7 @@ function GlobalTooltipRenderer() {
         message={tooltip?.message ?? ''}
         variant={tooltip?.variant ?? 'normal'}
         pointerPosition="none"
+        isInfo={tooltip?.isInfo ?? false}
         margin={32}
       />
     </View>

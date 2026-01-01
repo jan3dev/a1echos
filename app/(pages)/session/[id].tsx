@@ -379,9 +379,11 @@ export default function SessionScreen() {
     [id, renameSessionAction]
   );
 
+  const copyAllEnabled = transcriptions.length > 0;
+
   const handleCopyAllPressed = useCallback(async () => {
     if (transcriptions.length === 0) {
-      showToast(loc.noTranscriptionsToCopy, 'warning');
+      showGlobalTooltip(loc.noTranscriptionsToCopy, 'warning', undefined, true);
       return;
     }
 
@@ -391,27 +393,29 @@ export default function SessionScreen() {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success
         );
-        // Only show toast on iOS or Android < 12 (Android 12+ has native clipboard feedback)
+        // Only show tooltip on iOS or Android < 12 (Android 12+ has native clipboard feedback)
         if (
           Platform.OS === 'ios' ||
           (Platform.OS === 'android' && Number(Platform.Version) < 31)
         ) {
-          showToast(loc.allTranscriptionsCopied, 'success');
+          showGlobalTooltip(loc.allTranscriptionsCopied, 'success', undefined, true);
         }
       } else {
-        showToast(loc.copyFailed('Unknown error'), 'error');
+        showGlobalTooltip(loc.copyFailed('Unknown error'), 'error', undefined, true);
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: 'Failed to copy all transcriptions',
       });
-      showToast(
+      showGlobalTooltip(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        'error'
+        'error',
+        undefined,
+        true
       );
     }
-  }, [transcriptions.length, copyAllTranscriptions, showToast, loc]);
+  }, [transcriptions.length, copyAllTranscriptions, showGlobalTooltip, loc]);
 
   const handleLanguageFlagPressed = useCallback(() => {
     router.push('/settings/language');
@@ -574,6 +578,7 @@ export default function SessionScreen() {
         selectionMode={selectionMode}
         editMode={isEditing}
         isIncognitoSession={isIncognito}
+        copyAllEnabled={copyAllEnabled}
         onBackPressed={handleBackPressed}
         onTitlePressed={handleTitlePressed}
         onCopyAllPressed={handleCopyAllPressed}

@@ -14,6 +14,7 @@ interface SessionAppBarProps {
   selectionMode: boolean;
   editMode?: boolean;
   isIncognitoSession: boolean;
+  copyAllEnabled?: boolean;
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
   onCopyAllPressed?: () => void;
@@ -29,6 +30,7 @@ export const SessionAppBar = ({
   selectionMode,
   editMode = false,
   isIncognitoSession,
+  copyAllEnabled = true,
   onBackPressed,
   onTitlePressed,
   onCopyAllPressed,
@@ -110,7 +112,7 @@ export const SessionAppBar = ({
           key="copy"
           onPress={onCopyAllPressed}
           hitSlop={10}
-          style={styles.actionButton}
+          style={[styles.actionButton, { opacity: copyAllEnabled ? 1 : 0.5 }]}
         >
           <Icon
             name="copy_multiple"
