@@ -18,6 +18,7 @@ export interface GlobalTooltip {
   variant: GlobalTooltipVariant;
   duration: number;
   isInfo?: boolean;
+  isDismissible?: boolean;
 }
 
 interface UIStore {
@@ -58,7 +59,8 @@ interface UIStore {
     message: string,
     variant?: GlobalTooltipVariant,
     duration?: number,
-    isInfo?: boolean
+    isInfo?: boolean,
+    isDismissible?: boolean
   ) => string;
   hideGlobalTooltip: () => void;
 }
@@ -186,7 +188,8 @@ export const useUIStore = create<UIStore>((set, get) => ({
     message: string,
     variant: GlobalTooltipVariant = 'normal',
     duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION,
-    isInfo: boolean = false
+    isInfo: boolean = false,
+    isDismissible: boolean = false
   ) => {
     const tooltipId = Crypto.randomUUID();
     set({
@@ -196,6 +199,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
         variant,
         duration,
         isInfo,
+        isDismissible,
       },
     });
     return tooltipId;

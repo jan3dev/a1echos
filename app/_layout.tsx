@@ -70,7 +70,7 @@ function GlobalTooltipRenderer() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (tooltip) {
+    if (tooltip && !tooltip.isDismissible) {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
@@ -87,10 +87,12 @@ function GlobalTooltipRenderer() {
     };
   }, [tooltip, hideTooltip]);
 
+  const isDismissible = tooltip?.isDismissible ?? false;
+
   return (
     <View
       style={[styles.globalTooltipContainer, { bottom: insets.bottom }]}
-      pointerEvents="none"
+      pointerEvents={isDismissible ? 'auto' : 'none'}
     >
       <Tooltip
         visible={!!tooltip}
@@ -98,6 +100,8 @@ function GlobalTooltipRenderer() {
         variant={tooltip?.variant ?? 'normal'}
         pointerPosition="none"
         isInfo={tooltip?.isInfo ?? false}
+        isDismissible={isDismissible}
+        onDismiss={hideTooltip}
         margin={32}
       />
     </View>
@@ -287,8 +291,8 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   globalTooltipContainer: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 16,
+    right: 16,
     zIndex: 9999,
   },
   recordingControls: {

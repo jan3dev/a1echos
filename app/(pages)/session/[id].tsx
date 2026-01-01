@@ -513,11 +513,11 @@ export default function SessionScreen() {
         if (canAskAgain) {
           const granted = await requestPermission();
           if (!granted) {
-            showToast(loc.homeMicrophoneDenied, 'error');
+            showGlobalTooltip(loc.homeMicrophoneDenied, 'error', undefined, true, true);
             return;
           }
         } else {
-          showToast(loc.homeMicrophonePermissionRequired, 'warning');
+          showGlobalTooltip(loc.homeMicrophonePermissionRequired, 'warning', undefined, true, true);
           openSettings();
           return;
         }
@@ -525,7 +525,7 @@ export default function SessionScreen() {
 
       const success = await startRecording();
       if (!success) {
-        showToast(loc.homeFailedStartRecording, 'error');
+        showGlobalTooltip(loc.homeFailedStartRecording, 'error', undefined, true);
       }
     };
   }, [
@@ -534,7 +534,7 @@ export default function SessionScreen() {
     loc,
     openSettings,
     requestPermission,
-    showToast,
+    showGlobalTooltip,
     startRecording,
   ]);
 

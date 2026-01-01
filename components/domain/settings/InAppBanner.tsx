@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { getShadow, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { FeatureFlag, logWarn } from '@/utils';
 
 const AQUA_APP_URLS = {
@@ -54,7 +54,6 @@ export const InAppBanner = () => {
         onPress={handlePress}
         style={({ pressed }) => [
           styles.container,
-          getShadow('card'),
           {
             width: bannerWidth,
             height: bannerHeight,

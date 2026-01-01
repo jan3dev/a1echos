@@ -25,7 +25,6 @@ import {
   useSetRecordingCallbacks,
   useSetRecordingControlsEnabled,
   useShowGlobalTooltip,
-  useShowToast,
   useStartRecording,
   useStopRecordingAndSave,
   useToggleSessionSelection,
@@ -51,7 +50,6 @@ export default function HomeScreen() {
   const selectedSessionIds = useSelectedSessionIds();
   const toggleSessionSelection = useToggleSessionSelection();
   const exitSessionSelection = useExitSessionSelection();
-  const showToast = useShowToast();
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
@@ -127,11 +125,11 @@ export default function HomeScreen() {
         if (canAskAgain) {
           const granted = await requestPermission();
           if (!granted) {
-            showToast(loc.homeMicrophoneDenied, 'error');
+            showGlobalTooltip(loc.homeMicrophoneDenied, 'error', undefined, true, true);
             return;
           }
         } else {
-          showToast(loc.homeMicrophonePermissionRequired, 'warning');
+          showGlobalTooltip(loc.homeMicrophonePermissionRequired, 'warning', undefined, true, true);
           openSettings();
           return;
         }
@@ -153,7 +151,7 @@ export default function HomeScreen() {
 
         const recordingStarted = await startTranscriptionRecording();
         if (!recordingStarted) {
-          showToast(loc.homeFailedStartRecording, 'error');
+          showGlobalTooltip(loc.homeFailedStartRecording, 'error', undefined, true);
           return;
         }
 
@@ -165,11 +163,13 @@ export default function HomeScreen() {
         scrollToTop();
       } catch (error) {
         logError(error, { flag: FeatureFlag.recording, message: 'Failed to start recording' });
-        showToast(
+        showGlobalTooltip(
           loc.homeErrorCreatingSession(
             error instanceof Error ? error.message : String(error)
           ),
-          'error'
+          'error',
+          undefined,
+          true
         );
       } finally {
         setTooltipShouldDisappear(false);
@@ -183,7 +183,7 @@ export default function HomeScreen() {
     loc,
     router,
     requestPermission,
-    showToast,
+    showGlobalTooltip,
     openSettings,
     createSession,
     startTranscriptionRecording,
