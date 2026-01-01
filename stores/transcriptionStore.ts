@@ -408,26 +408,31 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     updateTranscription: async (updated: Transcription) => {
+      const state = get();
+      const index = state.transcriptions.findIndex((t) => t.id === updated.id);
+
+      if (index === -1) {
+        throw new Error('Transcription not found');
+      }
+
+      const previous = state.transcriptions[index];
+      const newTranscriptions = [...state.transcriptions];
+      newTranscriptions[index] = updated;
+
+      set({ transcriptions: newTranscriptions });
+
       try {
-        const state = get();
-        const index = state.transcriptions.findIndex(
-          (t) => t.id === updated.id
-        );
-
-        if (index === -1) {
-          throw new Error('Transcription not found');
-        }
-
-        const newTranscriptions = [...state.transcriptions];
-        newTranscriptions[index] = updated;
-
         await storageService.saveTranscription(updated);
         await useSessionStore
           .getState()
           .updateSessionModifiedTimestamp(updated.sessionId);
-
-        set({ transcriptions: newTranscriptions });
       } catch (error) {
+        const current = get().transcriptions;
+        if (current[index] === updated) {
+          const rollback = [...current];
+          rollback[index] = previous;
+          set({ transcriptions: rollback });
+        }
         logError(error, {
           flag: FeatureFlag.store,
           message: 'Failed to update transcription',
