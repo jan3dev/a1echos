@@ -383,8 +383,6 @@ const createAudioService = () => {
   };
 
   const stopRecording = async (): Promise<string | null> => {
-    backgroundRecordingService.updateRecordingState(false);
-
     try {
       await backgroundRecordingService.stopBackgroundService();
     } catch (error) {
