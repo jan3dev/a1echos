@@ -66,6 +66,7 @@ export default function SettingsScreen() {
           {
             paddingTop: insets.top + APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
+            flexGrow: 1,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -149,9 +150,9 @@ export default function SettingsScreen() {
         <View style={styles.bannerContainer}>
           <InAppBanner />
         </View>
+        <View style={styles.spacer} />
+        <SettingsFooter />
       </ScrollView>
-
-      <SettingsFooter />
     </View>
   );
 }
@@ -172,6 +173,8 @@ const styles = StyleSheet.create({
   },
   bannerContainer: {
     paddingTop: 24,
-    paddingBottom: 24,
+  },
+  spacer: {
+    flexGrow: 1,
   },
 });
