@@ -1,5 +1,6 @@
 import {
   getRecordingPermissionsAsync,
+  PermissionResponse,
   PermissionStatus,
   requestRecordingPermissionsAsync,
 } from 'expo-audio';
@@ -7,62 +8,63 @@ import * as Linking from 'expo-linking';
 
 import { FeatureFlag, logError } from '@/utils';
 
-const createPermissionService = () => {
-  const requestRecordPermission = async (): Promise<boolean> => {
-    try {
-      const { granted } = await requestRecordingPermissionsAsync();
-      return granted;
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: 'Error requesting microphone permission',
-      });
-      return false;
-    }
-  };
+export interface RecordPermissionResult {
+  granted: boolean;
+  status: PermissionStatus;
+  canAskAgain: boolean;
+}
 
-  const getRecordPermissionStatus = async (): Promise<PermissionStatus> => {
+const createPermissionService = () => {
+  const getRecordPermission = async (): Promise<RecordPermissionResult> => {
     try {
-      const { status } = await getRecordingPermissionsAsync();
-      return status;
+      const response: PermissionResponse = await getRecordingPermissionsAsync();
+      return {
+        granted: response.granted,
+        status: response.status,
+        canAskAgain: response.canAskAgain ?? true,
+      };
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
         message: 'Error getting permission status',
       });
-      return PermissionStatus.UNDETERMINED;
+      return {
+        granted: false,
+        status: PermissionStatus.UNDETERMINED,
+        canAskAgain: true,
+      };
+    }
+  };
+
+  const requestRecordPermission = async (): Promise<RecordPermissionResult> => {
+    try {
+      const response: PermissionResponse =
+        await requestRecordingPermissionsAsync();
+      return {
+        granted: response.granted,
+        status: response.status,
+        canAskAgain: response.canAskAgain ?? true,
+      };
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.service,
+        message: 'Error requesting microphone permission',
+      });
+      return {
+        granted: false,
+        status: PermissionStatus.UNDETERMINED,
+        canAskAgain: true,
+      };
     }
   };
 
   const ensureRecordPermission = async (): Promise<boolean> => {
-    const status = await getRecordPermissionStatus();
-
-    if (status === PermissionStatus.GRANTED) {
+    const { granted } = await getRecordPermission();
+    if (granted) {
       return true;
     }
-
-    if (status === PermissionStatus.DENIED) {
-      return false;
-    }
-
-    if (status === PermissionStatus.UNDETERMINED) {
-      return await requestRecordPermission();
-    }
-
-    return false;
-  };
-
-  const isPermanentlyDenied = async (): Promise<boolean> => {
-    try {
-      const { status, canAskAgain } = await getRecordingPermissionsAsync();
-      return status === PermissionStatus.DENIED && !canAskAgain;
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: 'Error checking permission denial status',
-      });
-      return false;
-    }
+    const result = await requestRecordPermission();
+    return result.granted;
   };
 
   const openAppSettings = async (): Promise<boolean> => {
@@ -79,10 +81,9 @@ const createPermissionService = () => {
   };
 
   return {
+    getRecordPermission,
     requestRecordPermission,
-    getRecordPermissionStatus,
     ensureRecordPermission,
-    isPermanentlyDenied,
     openAppSettings,
   };
 };

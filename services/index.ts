@@ -26,4 +26,5 @@ export {
     permissionService,
     default as permissionServiceDefault
 } from './PermissionService';
+export type { RecordPermissionResult } from './PermissionService';
 

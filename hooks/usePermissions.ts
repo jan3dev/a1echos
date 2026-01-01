@@ -2,7 +2,7 @@ import { PermissionStatus } from 'expo-modules-core';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
-import { permissionService } from '@/services';
+import { permissionService, RecordPermissionResult } from '@/services';
 import { FeatureFlag, logError } from '@/utils';
 
 export const usePermissions = () => {
@@ -14,12 +14,11 @@ export const usePermissions = () => {
   const checkPermission = useCallback(async () => {
     let isMounted = true;
     try {
-      const currentStatus = await permissionService.getRecordPermissionStatus();
-      if (isMounted) setStatus(currentStatus);
-
-      // Check if permanently denied
-      const isDenied = await permissionService.isPermanentlyDenied();
-      if (isMounted) setCanAskAgain(!isDenied);
+      const result = await permissionService.getRecordPermission();
+      if (isMounted) {
+        setStatus(result.status);
+        setCanAskAgain(result.canAskAgain);
+      }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
@@ -31,12 +30,10 @@ export const usePermissions = () => {
     };
   }, []);
 
-  // Check on mount
   useEffect(() => {
     checkPermission();
   }, [checkPermission]);
 
-  // Re-check when app comes to foreground
   useEffect(() => {
     const subscription = AppState.addEventListener(
       'change',
@@ -52,19 +49,25 @@ export const usePermissions = () => {
     };
   }, [checkPermission]);
 
-  const requestPermission = useCallback(async () => {
-    try {
-      const granted = await permissionService.requestRecordPermission();
-      await checkPermission(); // Update state after request
-      return granted;
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: 'Failed to request permission',
-      });
-      throw error;
-    }
-  }, [checkPermission]);
+  const requestPermission =
+    useCallback(async (): Promise<RecordPermissionResult> => {
+      try {
+        const result = await permissionService.requestRecordPermission();
+        setStatus(result.status);
+        setCanAskAgain(result.canAskAgain);
+        return result;
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.service,
+          message: 'Failed to request permission',
+        });
+        return {
+          granted: false,
+          status: PermissionStatus.UNDETERMINED,
+          canAskAgain: true,
+        };
+      }
+    }, []);
 
   const openSettings = useCallback(async () => {
     await permissionService.openAppSettings();

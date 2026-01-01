@@ -53,8 +53,7 @@ export default function HomeScreen() {
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
-  const { hasPermission, requestPermission, canAskAgain, openSettings } =
-    usePermissions();
+  const { hasPermission, requestPermission, openSettings } = usePermissions();
 
   const {
     show: showDeleteToast,
@@ -122,15 +121,26 @@ export default function HomeScreen() {
   useEffect(() => {
     handleRecordingStartRef.current = async () => {
       if (!hasPermission) {
-        if (canAskAgain) {
-          const granted = await requestPermission();
-          if (!granted) {
-            showGlobalTooltip(loc.homeMicrophoneDenied, 'error', undefined, true, true);
-            return;
+        const result = await requestPermission();
+        if (!result.granted) {
+          if (!result.canAskAgain) {
+            showGlobalTooltip(
+              loc.homeMicrophonePermissionRequired,
+              'warning',
+              undefined,
+              true,
+              true
+            );
+            openSettings();
+          } else {
+            showGlobalTooltip(
+              loc.homeMicrophoneDenied,
+              'error',
+              undefined,
+              true,
+              true
+            );
           }
-        } else {
-          showGlobalTooltip(loc.homeMicrophonePermissionRequired, 'warning', undefined, true, true);
-          openSettings();
           return;
         }
       }
@@ -151,7 +161,12 @@ export default function HomeScreen() {
 
         const recordingStarted = await startTranscriptionRecording();
         if (!recordingStarted) {
-          showGlobalTooltip(loc.homeFailedStartRecording, 'error', undefined, true);
+          showGlobalTooltip(
+            loc.homeFailedStartRecording,
+            'error',
+            undefined,
+            true
+          );
           return;
         }
 
@@ -162,7 +177,10 @@ export default function HomeScreen() {
 
         scrollToTop();
       } catch (error) {
-        logError(error, { flag: FeatureFlag.recording, message: 'Failed to start recording' });
+        logError(error, {
+          flag: FeatureFlag.recording,
+          message: 'Failed to start recording',
+        });
         showGlobalTooltip(
           loc.homeErrorCreatingSession(
             error instanceof Error ? error.message : String(error)
@@ -177,7 +195,6 @@ export default function HomeScreen() {
     };
   }, [
     hasPermission,
-    canAskAgain,
     effectivelyEmpty,
     isIncognitoMode,
     loc,
@@ -215,7 +232,10 @@ export default function HomeScreen() {
         selectedSessionIds.map((sessionId) => deleteSession(sessionId))
       );
     } catch (error) {
-      logError(error, { flag: FeatureFlag.session, message: 'Error during bulk delete' });
+      logError(error, {
+        flag: FeatureFlag.session,
+        message: 'Error during bulk delete',
+      });
     }
 
     exitSessionSelection();

@@ -202,8 +202,7 @@ export default function SessionScreen() {
     toastState: deleteToastState,
   } = useToast();
 
-  const { hasPermission, requestPermission, canAskAgain, openSettings } =
-    usePermissions();
+  const { hasPermission, requestPermission, openSettings } = usePermissions();
 
   // Initialize session
   useEffect(() => {
@@ -398,10 +397,20 @@ export default function SessionScreen() {
           Platform.OS === 'ios' ||
           (Platform.OS === 'android' && Number(Platform.Version) < 31)
         ) {
-          showGlobalTooltip(loc.allTranscriptionsCopied, 'success', undefined, true);
+          showGlobalTooltip(
+            loc.allTranscriptionsCopied,
+            'success',
+            undefined,
+            true
+          );
         }
       } else {
-        showGlobalTooltip(loc.copyFailed('Unknown error'), 'error', undefined, true);
+        showGlobalTooltip(
+          loc.copyFailed('Unknown error'),
+          'error',
+          undefined,
+          true
+        );
       }
     } catch (error) {
       logError(error, {
@@ -510,26 +519,41 @@ export default function SessionScreen() {
   useEffect(() => {
     handleRecordingStartRef.current = async () => {
       if (!hasPermission) {
-        if (canAskAgain) {
-          const granted = await requestPermission();
-          if (!granted) {
-            showGlobalTooltip(loc.homeMicrophoneDenied, 'error', undefined, true, true);
-            return;
+        const result = await requestPermission();
+        if (!result.granted) {
+          if (!result.canAskAgain) {
+            showGlobalTooltip(
+              loc.homeMicrophonePermissionRequired,
+              'warning',
+              undefined,
+              true,
+              true
+            );
+            openSettings();
+          } else {
+            showGlobalTooltip(
+              loc.homeMicrophoneDenied,
+              'error',
+              undefined,
+              true,
+              true
+            );
           }
-        } else {
-          showGlobalTooltip(loc.homeMicrophonePermissionRequired, 'warning', undefined, true, true);
-          openSettings();
           return;
         }
       }
 
       const success = await startRecording();
       if (!success) {
-        showGlobalTooltip(loc.homeFailedStartRecording, 'error', undefined, true);
+        showGlobalTooltip(
+          loc.homeFailedStartRecording,
+          'error',
+          undefined,
+          true
+        );
       }
     };
   }, [
-    canAskAgain,
     hasPermission,
     loc,
     openSettings,
