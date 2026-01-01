@@ -4,12 +4,13 @@
     "slug": "echos",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-dark.png",
     "scheme": "echos",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "deploymentTarget": "16.0",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Echos needs access to your microphone to record audio for transcription.",
         "UIBackgroundModes": ["audio"]
@@ -38,11 +39,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/images/icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
+            "image": "./assets/images/icon-dark.png",
+            "imageWidth": 200,
+            "resizeMode": "contain",
             "backgroundColor": "#000000"
           }
         }
