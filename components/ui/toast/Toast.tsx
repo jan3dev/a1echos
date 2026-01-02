@@ -246,14 +246,13 @@ export const Toast = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.16)',
+    padding: 16,
   },
   container: {
     width: '100%',
-    marginBottom: 32,
-    marginHorizontal: 16,
   },
   card: {
     borderRadius: 8,
