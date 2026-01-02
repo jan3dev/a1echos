@@ -34,7 +34,7 @@ interface SettingsStore {
 }
 
 const getDefaultModelType = (): ModelType => {
-  return ModelType.WHISPER_REALTIME;
+  return ModelType.WHISPER_FILE;
 };
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({

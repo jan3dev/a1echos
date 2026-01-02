@@ -12,7 +12,8 @@ export { audioService, default as audioServiceDefault } from './AudioService';
 
 export {
     backgroundRecordingService,
-    default as backgroundRecordingServiceDefault
+    default as backgroundRecordingServiceDefault,
+    registerForegroundService
 } from './BackgroundRecordingService';
 
 export {
@@ -27,4 +28,9 @@ export {
     default as permissionServiceDefault
 } from './PermissionService';
 export type { RecordPermissionResult } from './PermissionService';
+
+export {
+    audioSessionService,
+    default as audioSessionServiceDefault
+} from './AudioSessionService';
 

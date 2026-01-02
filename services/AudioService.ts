@@ -21,7 +21,6 @@ import {
   PcmStreamWriter,
 } from '@/utils';
 
-import { backgroundRecordingService } from './BackgroundRecordingService';
 import { permissionService } from './PermissionService';
 
 const RECORDING_OPTIONS: RecordingOptions = {
@@ -37,7 +36,7 @@ const RECORDING_OPTIONS: RecordingOptions = {
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
   },
   ios: {
-    outputFormat: 'linearpcm',
+    outputFormat: 'lpcm',
     audioQuality: 127, // AudioQuality.MAX
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
     linearPCMBitDepth: 16,
@@ -61,8 +60,6 @@ const createAudioService = () => {
   let smoothedLevel: number = 0.0;
   let lastUpdateTime: Date | null = null;
 
-  let backgroundServiceInitialized: boolean = false;
-
   // Android native PCM recording state
   let androidPcmRecording: boolean = false;
   let androidWavFilePath: string | null = null;
@@ -77,10 +74,8 @@ const createAudioService = () => {
     audioLevelEmitter.emit('audioLevel', level);
   };
 
-  // Compute RMS level from base64 PCM data (Android native recording)
   const computeRmsFromBase64Pcm = (base64Data: string): number => {
     try {
-      // Decode base64 to get raw bytes
       const binaryString = atob(base64Data);
       const len = binaryString.length;
       if (len < 2) return 0;
@@ -89,11 +84,9 @@ const createAudioService = () => {
       const samples = Math.floor(len / 2);
 
       for (let i = 0; i < len - 1; i += 2) {
-        // 16-bit little-endian signed PCM
         const low = binaryString.charCodeAt(i);
         const high = binaryString.charCodeAt(i + 1);
         let sample = low | (high << 8);
-        // Convert from unsigned to signed (two's complement)
         if (sample >= 32768) {
           sample -= 65536;
         }
@@ -102,7 +95,6 @@ const createAudioService = () => {
       }
 
       const rms = Math.sqrt(sumSquares / samples);
-      // Boost and apply curve for better visual response
       const boosted = Math.min(1.0, rms * 8);
       return Math.pow(boosted, 0.7);
     } catch {
@@ -110,9 +102,7 @@ const createAudioService = () => {
     }
   };
 
-  // Handle PCM data from Android native recording
   const handleAndroidPcmData = (base64Data: string): void => {
-    // Stream PCM data directly to disk
     pcmStreamWriter?.write(base64Data);
 
     const rawLevel = computeRmsFromBase64Pcm(base64Data);
@@ -125,7 +115,6 @@ const createAudioService = () => {
         : Math.max(0, Math.min(150, now.getTime() - lastUpdateTime.getTime()));
     lastUpdateTime = now;
 
-    // Light smoothing to reduce jitter; main smoothing happens in wave component
     const rising = level > smoothedLevel;
     const baseAlpha = rising ? 0.8 : 0.5;
     const alpha = Math.max(
@@ -142,14 +131,9 @@ const createAudioService = () => {
     let level = 0.02;
 
     if (metering !== undefined && isFinite(metering) && metering > -160) {
-      // Expand the dB range for better sensitivity
-      // Typical speech is around -30 to -10 dB, silence is around -60 dB or lower
       const db = Math.max(-50.0, Math.min(0.0, metering));
-      // Map -50 dB to 0, 0 dB to 1
       level = (db + 50.0) / 50.0;
       level = Math.max(0.0, Math.min(1.0, level));
-
-      // Apply a curve for better visual response (make quieter sounds more visible)
       level = Math.pow(level, 0.6);
       level = Math.max(0.02, Math.min(1.0, level));
     }
@@ -161,7 +145,6 @@ const createAudioService = () => {
         : Math.max(0, Math.min(150, now.getTime() - lastUpdateTime.getTime()));
     lastUpdateTime = now;
 
-    // Light smoothing to reduce jitter; main smoothing happens in wave component
     const rising = level > smoothedLevel;
     const baseAlpha = rising ? 0.8 : 0.5;
     const alpha = Math.max(
@@ -170,7 +153,6 @@ const createAudioService = () => {
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
-
     const visual = Math.max(0.02, Math.min(1.0, smoothedLevel));
     emitVisual(visual);
   };
@@ -187,7 +169,6 @@ const createAudioService = () => {
         try {
           const status = recorder.getStatus();
           if (status.isRecording) {
-            // Handle metering - it may be undefined on some platforms
             if (status.metering !== undefined && status.metering !== null) {
               handleAmplitudeEvent(status.metering);
             }
@@ -203,7 +184,6 @@ const createAudioService = () => {
   };
 
   const cleanup = async (): Promise<void> => {
-    // Cleanup Android native recording
     if (androidPcmRecording) {
       try {
         await AudioRecord.stop();
@@ -243,10 +223,6 @@ const createAudioService = () => {
     resetLevelState();
   };
 
-  // Note: expo-audio's public API only provides useAudioRecorder hook for creating recorders.
-  // Since this is a service (not a React component), we access AudioModule.AudioRecorder directly.
-  // This mirrors the internal implementation of useAudioRecorder in expo-audio.
-  // If expo-audio adds a createAudioRecorder factory function in the future, prefer that.
   const createRecorder = (): AudioRecorder => {
     return new (
       AudioModule as {
@@ -260,45 +236,13 @@ const createAudioService = () => {
       return false;
     }
 
-    if (!backgroundServiceInitialized) {
-      try {
-        await backgroundRecordingService.initialize();
-
-        backgroundRecordingService.setOnStopRecordingCallback(async () => {
-          await stopRecording();
-        });
-
-        backgroundServiceInitialized = true;
-      } catch (error) {
-        logError(error, {
-          flag: FeatureFlag.service,
-          message: 'Background service initialization failed',
-        });
-      }
-    }
-
-    try {
-      const success = await backgroundRecordingService.startBackgroundService();
-      if (!success) {
-        logError('Background service failed to start', {
-          flag: FeatureFlag.service,
-        });
-      }
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: 'Failed to start background service',
-      });
-    }
-
     await cleanup();
 
-    // On Android, use native PCM streaming and write WAV file manually
+    // On Android, use native PCM streaming
     if (Platform.OS === 'android') {
       try {
         const timestamp = Date.now();
         const wavPath = `${Paths.cache.uri}/rec_${timestamp}.wav`;
-        // Remove file:// prefix for file path
         androidWavFilePath = wavPath.replace('file://', '');
 
         resetLevelState();
@@ -344,12 +288,13 @@ const createAudioService = () => {
       }
     }
 
-    // iOS and other platforms use expo-audio
+    // iOS uses expo-audio
     try {
       await setAudioModeAsync({
         allowsRecording: true,
         playsInSilentMode: true,
         shouldPlayInBackground: true,
+        allowsBackgroundRecording: true,
       });
 
       recorder = createRecorder();
@@ -383,15 +328,6 @@ const createAudioService = () => {
   };
 
   const stopRecording = async (): Promise<string | null> => {
-    try {
-      await backgroundRecordingService.stopBackgroundService();
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: 'Failed to stop background service',
-      });
-    }
-
     // Handle Android native PCM recording
     if (Platform.OS === 'android' && androidPcmRecording) {
       try {
@@ -415,7 +351,6 @@ const createAudioService = () => {
           logWarn('Haptics not supported', { flag: FeatureFlag.recording });
         }
 
-        // Finalize WAV file from streamed PCM data
         if (androidWavFilePath && pcmStreamWriter) {
           const byteCount = pcmStreamWriter.getByteCount();
           const success = await pcmStreamWriter.finalize();
@@ -463,7 +398,7 @@ const createAudioService = () => {
       }
     }
 
-    // iOS and other platforms
+    // iOS
     const isCurrentlyRecording = recorder !== null;
 
     if (!isCurrentlyRecording) {
@@ -549,7 +484,6 @@ const createAudioService = () => {
         amplitudeIntervalId = null;
       }
 
-      // Cleanup Android native recording
       if (androidPcmRecording) {
         try {
           await AudioRecord.stop();

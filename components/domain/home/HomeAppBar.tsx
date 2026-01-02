@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { useSettingsStore } from '@/stores';
 import { useTheme } from '@/theme';
@@ -80,7 +80,12 @@ export const HomeAppBar = ({
     }
 
     return [
-      <Pressable key="ghost" onPress={handleIncognitoToggle} hitSlop={8}>
+      <Pressable
+        key="ghost"
+        onPress={handleIncognitoToggle}
+        hitSlop={8}
+        style={styles.ghostButton}
+      >
         <Icon
           name="ghost"
           size={24}
@@ -117,3 +122,9 @@ export const HomeAppBar = ({
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  ghostButton: {
+    marginRight: 8,
+  },
+});

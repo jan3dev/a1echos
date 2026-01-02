@@ -1,5 +1,4 @@
 import { Asset } from 'expo-asset';
-import { setAudioModeAsync } from 'expo-audio';
 import { File } from 'expo-file-system';
 import RNFS from 'react-native-fs';
 // @ts-ignore - whisper.rn may not have complete type declarations
@@ -10,6 +9,8 @@ import { RealtimeTranscriber } from 'whisper.rn/src/realtime-transcription';
 import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter';
 
 import { FeatureFlag, logError, logWarn } from '@/utils';
+
+import { audioSessionService } from './AudioSessionService';
 
 const AUDIO_LEVEL_THROTTLE_MS = 33;
 const RMS_SAMPLE_STEP = 4;
@@ -45,11 +46,7 @@ interface WhisperServiceState {
 }
 
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
-  await setAudioModeAsync({
-    allowsRecording: true,
-    playsInSilentMode: true,
-    shouldPlayInBackground: true,
-  });
+  await audioSessionService.ensureRecordingMode();
   if (delayMs > 0) {
     await new Promise(resolve => setTimeout(resolve, delayMs));
   }

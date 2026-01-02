@@ -12,8 +12,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppErrorBoundary, RecordingControlsView, Tooltip } from '@/components';
+import { useBackgroundRecording } from '@/hooks';
 import { AppTheme } from '@/models';
-import { storageService } from '@/services';
+import { registerForegroundService, storageService } from '@/services';
 import {
   initializeSessionStore,
   initializeSettingsStore,
@@ -31,6 +32,11 @@ import { FeatureFlag, logError } from '@/utils';
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
+
+// Register Android foreground service early (async, fire-and-forget)
+if (Platform.OS === 'android') {
+  registerForegroundService();
+}
 
 declare const global: {
   ErrorUtils?: {
@@ -106,6 +112,11 @@ function GlobalTooltipRenderer() {
       />
     </View>
   );
+}
+
+function BackgroundRecordingHandler() {
+  useBackgroundRecording();
+  return null;
 }
 
 function GlobalRecordingControls() {
@@ -273,6 +284,7 @@ export default function RootLayout() {
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        <BackgroundRecordingHandler />
         <StatusBar
           style={isDark ? 'light' : 'dark'}
           backgroundColor="transparent"

@@ -4,7 +4,12 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 
 import { ModelType, Transcription, TranscriptionState } from '@/models';
-import { audioService, storageService, whisperService } from '@/services';
+import {
+  audioService,
+  backgroundRecordingService,
+  storageService,
+  whisperService,
+} from '@/services';
 import {
   FeatureFlag,
   formatTranscriptionText,
@@ -664,6 +669,20 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         get().clearLivePreview();
         get().clearLoadingPreview();
 
+        let bgServiceStarted = false;
+        const bgStarted =
+          await backgroundRecordingService.startBackgroundService();
+        if (!bgStarted) {
+          logWarn(
+            'Background service failed to start, recording may stop in background',
+            {
+              flag: FeatureFlag.service,
+            }
+          );
+        } else {
+          bgServiceStarted = true;
+        }
+
         if (isRealtime) {
           const unsubscribeAudioLevel = whisperService.subscribeToAudioLevel(
             (level) => {
@@ -691,6 +710,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
               realtimeAudioLevelUnsubscribe: null,
               partialResultUnsubscribe: null,
             });
+            // Stop background service if it was started
+            if (bgServiceStarted) {
+              try {
+                await backgroundRecordingService.stopBackgroundService();
+              } catch (bgError) {
+                logError(bgError, {
+                  flag: FeatureFlag.service,
+                  message:
+                    'Failed to stop background service after realtime start failure',
+                });
+              }
+            }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
             get().setError('Failed to start real-time transcription');
@@ -701,6 +732,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           // File-based mode: start audio recording and show loading preview
           const recordingStarted = await audioService.startRecording();
           if (!recordingStarted) {
+            // Stop background service if it was started
+            if (bgServiceStarted) {
+              try {
+                await backgroundRecordingService.stopBackgroundService();
+              } catch (bgError) {
+                logError(bgError, {
+                  flag: FeatureFlag.service,
+                  message:
+                    'Failed to stop background service after recording start failure',
+                });
+              }
+            }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
             get().setError('Failed to start recording');
@@ -727,6 +770,15 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         if (currentState.partialResultUnsubscribe) {
           currentState.partialResultUnsubscribe();
           set({ partialResultUnsubscribe: null });
+        }
+        // Stop background service if needed
+        try {
+          await backgroundRecordingService.stopBackgroundService();
+        } catch (bgError) {
+          logError(bgError, {
+            flag: FeatureFlag.service,
+            message: 'Failed to stop background service during error cleanup',
+          });
         }
         get().setError(`Error starting recording: ${error}`);
         get().clearRecordingSessionId();
@@ -877,6 +929,15 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           // Already in error state
         }
       } finally {
+        try {
+          await backgroundRecordingService.stopBackgroundService();
+        } catch (bgError) {
+          logError(bgError, {
+            flag: FeatureFlag.service,
+            message: 'Failed to stop background service',
+          });
+        }
+
         get().clearRecordingSessionId();
         releaseOperationLock(operationName);
       }
@@ -978,6 +1039,15 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         state.realtimeAudioLevelUnsubscribe();
       }
 
+      try {
+        await backgroundRecordingService.stopBackgroundService();
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.service,
+          message: 'Failed to stop background service during reset',
+        });
+      }
+
       set({
         isOperationLocked: false,
         activeOperations: new Set(),
@@ -1009,6 +1079,15 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       if (state.realtimeAudioLevelUnsubscribe) {
         state.realtimeAudioLevelUnsubscribe();
         set({ realtimeAudioLevelUnsubscribe: null });
+      }
+
+      try {
+        await backgroundRecordingService.stopBackgroundService();
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.service,
+          message: 'Failed to stop background service during dispose',
+        });
       }
 
       await audioService.dispose();
