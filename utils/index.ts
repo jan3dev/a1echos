@@ -62,6 +62,7 @@ export const formatSessionSubtitle = ({
   return isModified ? `${modifiedPrefix} ${dateStr}` : dateStr;
 };
 
+export { delay } from './delay';
 export {
   FeatureFlag,
   LOG,

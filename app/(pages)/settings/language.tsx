@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,7 +15,7 @@ import { useLocalization } from '@/hooks';
 import { getCountryCode, SpokenLanguage, SupportedLanguages } from '@/models';
 import { useSelectedLanguage, useSetLanguage } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -28,11 +28,30 @@ export default function LanguageSettingsScreen() {
   const selectedLanguage = useSelectedLanguage();
   const setLanguage = useSetLanguage();
 
+  const [pendingLanguageCode, setPendingLanguageCode] = useState<string | null>(
+    null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const effectiveLanguageCode = pendingLanguageCode ?? selectedLanguage.code;
+
   const handleSelect = async (language: SpokenLanguage) => {
+    if (language.code === selectedLanguage.code) {
+      router.back();
+      return;
+    }
+    if (isSaving) return;
+
+    setPendingLanguageCode(language.code);
+    setIsSaving(true);
+
+    const feedback = delay(400);
     try {
       await setLanguage(language);
+      await feedback;
       router.back();
     } catch (error) {
+      setPendingLanguageCode(null);
+      setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
         message: 'Failed to set language',
@@ -90,11 +109,15 @@ export default function LanguageSettingsScreen() {
                   iconTrailing={
                     <Radio<string>
                       value={language.code}
-                      groupValue={selectedLanguage.code}
-                      onValueChange={() => handleSelect(language)}
+                      groupValue={effectiveLanguageCode}
+                      onValueChange={
+                        isSaving ? undefined : () => handleSelect(language)
+                      }
+                      enabled={!isSaving}
                     />
                   }
-                  onPress={() => handleSelect(language)}
+                  selected={effectiveLanguageCode === language.code}
+                  onPress={isSaving ? undefined : () => handleSelect(language)}
                   backgroundColor={theme.colors.surfacePrimary}
                 />
               </Fragment>

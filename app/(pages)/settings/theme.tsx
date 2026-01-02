@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,7 +8,7 @@ import { useLocalization } from '@/hooks';
 import { AppTheme } from '@/models';
 import { useSetTheme } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -19,12 +20,29 @@ export default function ThemeSettingsScreen() {
 
   const setSettingsTheme = useSetTheme();
 
+  const [pendingTheme, setPendingTheme] = useState<AppTheme | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const effectiveTheme = pendingTheme ?? selectedTheme;
+
   const handleSelect = async (appTheme: AppTheme) => {
+    if (appTheme === selectedTheme) {
+      router.back();
+      return;
+    }
+    if (isSaving) return;
+
+    setPendingTheme(appTheme);
+    setIsSaving(true);
+
+    const feedback = delay(400);
     try {
       await setTheme(appTheme);
       await setSettingsTheme(appTheme);
+      await feedback;
       router.back();
     } catch (error) {
+      setPendingTheme(null);
+      setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
         message: 'Failed to set theme',
@@ -64,10 +82,11 @@ export default function ThemeSettingsScreen() {
               iconTrailing={
                 <Radio<AppTheme>
                   value={AppTheme.AUTO}
-                  groupValue={selectedTheme}
+                  groupValue={effectiveTheme}
                 />
               }
-              onPress={() => handleSelect(AppTheme.AUTO)}
+              selected={effectiveTheme === AppTheme.AUTO}
+              onPress={isSaving ? undefined : () => handleSelect(AppTheme.AUTO)}
               backgroundColor={theme.colors.surfacePrimary}
             />
 
@@ -78,10 +97,13 @@ export default function ThemeSettingsScreen() {
               iconTrailing={
                 <Radio<AppTheme>
                   value={AppTheme.LIGHT}
-                  groupValue={selectedTheme}
+                  groupValue={effectiveTheme}
                 />
               }
-              onPress={() => handleSelect(AppTheme.LIGHT)}
+              selected={effectiveTheme === AppTheme.LIGHT}
+              onPress={
+                isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
+              }
               backgroundColor={theme.colors.surfacePrimary}
             />
 
@@ -92,10 +114,11 @@ export default function ThemeSettingsScreen() {
               iconTrailing={
                 <Radio<AppTheme>
                   value={AppTheme.DARK}
-                  groupValue={selectedTheme}
+                  groupValue={effectiveTheme}
                 />
               }
-              onPress={() => handleSelect(AppTheme.DARK)}
+              selected={effectiveTheme === AppTheme.DARK}
+              onPress={isSaving ? undefined : () => handleSelect(AppTheme.DARK)}
               backgroundColor={theme.colors.surfacePrimary}
             />
           </View>

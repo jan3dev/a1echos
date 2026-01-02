@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,7 +8,7 @@ import { useLocalization } from '@/hooks';
 import { ModelType } from '@/models';
 import { useSelectedModelType, useSetModelType } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -20,11 +21,30 @@ export default function ModelSettingsScreen() {
   const selectedModelType = useSelectedModelType();
   const setModelType = useSetModelType();
 
+  const [pendingModelType, setPendingModelType] = useState<ModelType | null>(
+    null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const effectiveModelType = pendingModelType ?? selectedModelType;
+
   const handleSelect = async (modelType: ModelType) => {
+    if (modelType === selectedModelType) {
+      router.back();
+      return;
+    }
+    if (isSaving) return;
+
+    setPendingModelType(modelType);
+    setIsSaving(true);
+
+    const feedback = delay(400);
     try {
       await setModelType(modelType);
+      await feedback;
       router.back();
     } catch (error) {
+      setPendingModelType(null);
+      setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
         message: 'Failed to set model type',
@@ -74,10 +94,15 @@ export default function ModelSettingsScreen() {
               iconTrailing={
                 <Radio<ModelType>
                   value={ModelType.WHISPER_FILE}
-                  groupValue={selectedModelType}
+                  groupValue={effectiveModelType}
                 />
               }
-              onPress={() => handleSelect(ModelType.WHISPER_FILE)}
+              selected={effectiveModelType === ModelType.WHISPER_FILE}
+              onPress={
+                isSaving
+                  ? undefined
+                  : () => handleSelect(ModelType.WHISPER_FILE)
+              }
               backgroundColor={theme.colors.surfacePrimary}
             />
 
@@ -90,10 +115,15 @@ export default function ModelSettingsScreen() {
               iconTrailing={
                 <Radio<ModelType>
                   value={ModelType.WHISPER_REALTIME}
-                  groupValue={selectedModelType}
+                  groupValue={effectiveModelType}
                 />
               }
-              onPress={() => handleSelect(ModelType.WHISPER_REALTIME)}
+              selected={effectiveModelType === ModelType.WHISPER_REALTIME}
+              onPress={
+                isSaving
+                  ? undefined
+                  : () => handleSelect(ModelType.WHISPER_REALTIME)
+              }
               backgroundColor={theme.colors.surfacePrimary}
             />
           </View>
