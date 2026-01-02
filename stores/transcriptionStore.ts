@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { useMemo } from 'react';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 
@@ -7,6 +8,7 @@ import { ModelType, Transcription, TranscriptionState } from '@/models';
 import {
   audioService,
   backgroundRecordingService,
+  permissionService,
   storageService,
   whisperService,
 } from '@/services';
@@ -995,6 +997,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           set({ isWhisperReady: false });
         } else {
           set({ isWhisperReady: true });
+        }
+
+        // Warm up iOS audio input if mic permission already granted
+        if (Platform.OS === 'ios') {
+          const { granted } = await permissionService.getRecordPermission();
+          if (granted) {
+            await audioService.warmUpIosAudioInput();
+          }
         }
 
         // Subscribe to audio level updates

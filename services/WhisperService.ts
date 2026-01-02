@@ -10,6 +10,7 @@ import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/ada
 
 import { FeatureFlag, logError, logWarn } from '@/utils';
 
+import { audioService } from './AudioService';
 import { audioSessionService } from './AudioSessionService';
 
 const AUDIO_LEVEL_THROTTLE_MS = 33;
@@ -237,6 +238,12 @@ const createWhisperService = () => {
 
     try {
       state.currentTranscription = '';
+
+      const warmUpSuccess = await audioService.warmUpIosAudioInput();
+      if (!warmUpSuccess) {
+        logError('iOS audio warm-up failed, cannot start real-time transcription', { flag: FeatureFlag.transcription });
+        return false;
+      }
 
       await configureAudioSession(100);
 

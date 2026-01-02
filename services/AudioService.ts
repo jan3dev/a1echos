@@ -65,6 +65,9 @@ const createAudioService = () => {
   let androidWavFilePath: string | null = null;
   let pcmStreamWriter: PcmStreamWriter | null = null;
 
+  // iOS audio warm-up state (once per app launch)
+  let iosAudioWarmedUp: boolean = false;
+
   const resetLevelState = (): void => {
     smoothedLevel = 0.0;
     lastUpdateTime = null;
@@ -508,11 +511,73 @@ const createAudioService = () => {
     } catch {}
   };
 
+  const warmUpIosAudioInput = async (): Promise<boolean> => {
+    if (Platform.OS !== 'ios') {
+      return true;
+    }
+
+    if (iosAudioWarmedUp) {
+      return true;
+    }
+
+    if (recorder) {
+      iosAudioWarmedUp = true;
+      return true;
+    }
+
+    let warmupRecorder: AudioRecorder | null = null;
+
+    try {
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+      });
+
+      warmupRecorder = createRecorder();
+      await warmupRecorder.prepareToRecordAsync();
+
+      warmupRecorder.record();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await warmupRecorder.stop();
+
+      const uri = warmupRecorder.uri;
+      warmupRecorder.release();
+      warmupRecorder = null;
+
+      if (uri) {
+        try {
+          const file = new File(uri);
+          if (file.exists) {
+            file.delete();
+          }
+        } catch {}
+      }
+
+      iosAudioWarmedUp = true;
+      return true;
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.recording,
+        message: 'iOS audio warm-up failed',
+      });
+
+      if (warmupRecorder) {
+        try {
+          warmupRecorder.release();
+        } catch {}
+      }
+
+      return false;
+    }
+  };
+
   return {
     startRecording,
     stopRecording,
     subscribeToAudioLevel,
     dispose,
+    warmUpIosAudioInput,
   };
 };
 
