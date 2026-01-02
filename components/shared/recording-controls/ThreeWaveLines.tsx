@@ -51,7 +51,7 @@ const WAVE_PROFILES: WaveProfile[] = [
     basePhaseSpeed: 0.04,
     frequency: 3.1,
     verticalOffset: 0.0,
-    amplitudeMultiplier: 0.75,
+    amplitudeMultiplier: 0.53,
     strokeWidth: 2.8,
     energyFloor: 0.07,
     audioAmplitudeReactivity: 1.0,
@@ -274,7 +274,7 @@ export const ThreeWaveLines = ({
         if (currentState === 1) {
           phaseStep = profile.basePhaseSpeed * 0.6;
         } else if (isRecordingOrStreaming) {
-          const baseSpeed = profile.basePhaseSpeed * 4.0;
+          const baseSpeed = profile.basePhaseSpeed * 4.8;
           const audioSpeedMultiplier =
             1.0 + ws.displayLevel * profile.audioSpeedReactivity;
           phaseStep = baseSpeed * audioSpeedMultiplier;
