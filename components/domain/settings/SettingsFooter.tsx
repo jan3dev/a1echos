@@ -30,7 +30,7 @@ export const SettingsFooter = () => {
   const [version, setVersion] = useState('');
 
   useEffect(() => {
-    const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+    const appVersion = Constants.expoConfig?.version ?? '0.1.0';
     const buildNumber =
       Constants.expoConfig?.ios?.buildNumber ??
       Constants.expoConfig?.android?.versionCode?.toString() ??
