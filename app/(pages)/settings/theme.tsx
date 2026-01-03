@@ -83,6 +83,10 @@ export default function ThemeSettingsScreen() {
                 <Radio<AppTheme>
                   value={AppTheme.AUTO}
                   groupValue={effectiveTheme}
+                  onValueChange={
+                    isSaving ? undefined : () => handleSelect(AppTheme.AUTO)
+                  }
+                  enabled={!isSaving}
                 />
               }
               selected={effectiveTheme === AppTheme.AUTO}
@@ -98,6 +102,10 @@ export default function ThemeSettingsScreen() {
                 <Radio<AppTheme>
                   value={AppTheme.LIGHT}
                   groupValue={effectiveTheme}
+                  onValueChange={
+                    isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
+                  }
+                  enabled={!isSaving}
                 />
               }
               selected={effectiveTheme === AppTheme.LIGHT}
@@ -115,6 +123,10 @@ export default function ThemeSettingsScreen() {
                 <Radio<AppTheme>
                   value={AppTheme.DARK}
                   groupValue={effectiveTheme}
+                  onValueChange={
+                    isSaving ? undefined : () => handleSelect(AppTheme.DARK)
+                  }
+                  enabled={!isSaving}
                 />
               }
               selected={effectiveTheme === AppTheme.DARK}

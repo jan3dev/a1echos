@@ -89,12 +89,18 @@ export default function ModelSettingsScreen() {
           <View style={styles.clipContainer}>
             <ListItem
               title={loc.whisperModelFileTitle}
-              titleTrailing={loc.whisperModelSubtitle}
+              titleTrailing={loc.whisperModelFileSubtitle}
               titleTrailingColor={theme.colors.textSecondary}
               iconTrailing={
                 <Radio<ModelType>
                   value={ModelType.WHISPER_FILE}
                   groupValue={effectiveModelType}
+                  onValueChange={
+                    isSaving
+                      ? undefined
+                      : () => handleSelect(ModelType.WHISPER_FILE)
+                  }
+                  enabled={!isSaving}
                 />
               }
               selected={effectiveModelType === ModelType.WHISPER_FILE}
@@ -110,12 +116,18 @@ export default function ModelSettingsScreen() {
 
             <ListItem
               title={loc.whisperModelRealtimeTitle}
-              titleTrailing={loc.whisperModelSubtitle}
+              titleTrailing={loc.whisperModelRealtimeSubtitle}
               titleTrailingColor={theme.colors.textSecondary}
               iconTrailing={
                 <Radio<ModelType>
                   value={ModelType.WHISPER_REALTIME}
                   groupValue={effectiveModelType}
+                  onValueChange={
+                    isSaving
+                      ? undefined
+                      : () => handleSelect(ModelType.WHISPER_REALTIME)
+                  }
+                  enabled={!isSaving}
                 />
               }
               selected={effectiveModelType === ModelType.WHISPER_REALTIME}
