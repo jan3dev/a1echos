@@ -31,7 +31,7 @@
   "whisperModelRealtimeTitle": "Whisper (Real-time)",
   "whisperModelFileTitle": "Whisper",
   "whisperModelFileSubtitle": "High accuracy",
-  "whisperModelRealtimeSubtitle": "Fast",
+  "whisperModelRealtimeSubtitle": "Real-time",
   "followUs": "Follow us on X",
   "recordingPrefix": "Session",
   "emptySessionsMessage": "Hit the record button to start transcribing",

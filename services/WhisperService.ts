@@ -288,6 +288,9 @@ const createWhisperService = () => {
           autoSliceOnSpeechEnd: true,
           autoSliceThreshold: 0.5,
           transcribeOptions,
+          audioStreamConfig: {
+            audioSource: 1, // MIC - more reliable when screen is locked
+          },
         },
         {
           onTranscribe: (event: RealtimeTranscribeEvent) => {

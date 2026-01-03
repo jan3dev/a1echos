@@ -260,7 +260,7 @@ const createAudioService = () => {
           sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
           channels: AppConstants.AUDIO_NUM_CHANNELS,
           bitsPerSample: 16,
-          audioSource: 6, // VOICE_RECOGNITION
+          audioSource: 1, // MIC - more reliable when screen is locked
           bufferSize: 4096,
         });
 

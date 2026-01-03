@@ -208,7 +208,7 @@ export default function RootLayout() {
   });
 
   const initTheme = useThemeStore((state) => state.initTheme);
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
 
   // Install global error handler once
   useEffect(() => {
@@ -268,7 +268,10 @@ export default function RootLayout() {
 
   if (StorybookEnabled) {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
+        onLayout={onLayoutRootView}
+      >
         <StatusBar
           style={isDark ? 'light' : 'dark'}
           backgroundColor="transparent"
@@ -283,7 +286,10 @@ export default function RootLayout() {
 
   return (
     <AppErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
+        onLayout={onLayoutRootView}
+      >
         <BackgroundRecordingHandler />
         <StatusBar
           style={isDark ? 'light' : 'dark'}
