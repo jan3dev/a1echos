@@ -126,7 +126,7 @@ export default function HomeScreen() {
           if (!result.canAskAgain) {
             showGlobalTooltip(
               loc.homeMicrophonePermissionRequired,
-              'warning',
+              'normal',
               undefined,
               true,
               true
@@ -135,7 +135,7 @@ export default function HomeScreen() {
           } else {
             showGlobalTooltip(
               loc.homeMicrophoneDenied,
-              'error',
+              'normal',
               undefined,
               true,
               true
@@ -163,7 +163,7 @@ export default function HomeScreen() {
         if (!recordingStarted) {
           showGlobalTooltip(
             loc.homeFailedStartRecording,
-            'error',
+            'normal',
             undefined,
             true
           );
@@ -185,7 +185,7 @@ export default function HomeScreen() {
           loc.homeErrorCreatingSession(
             error instanceof Error ? error.message : String(error)
           ),
-          'error',
+          'normal',
           undefined,
           true
         );

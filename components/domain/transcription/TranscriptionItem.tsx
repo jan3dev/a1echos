@@ -101,7 +101,7 @@ export const TranscriptionItem = ({
         Platform.OS === 'ios' ||
         (Platform.OS === 'android' && Number(Platform.Version) < 31)
       ) {
-        showGlobalTooltip(loc.copiedToClipboard, 'success', undefined, true);
+        showGlobalTooltip(loc.copiedToClipboard);
       }
     } catch (error) {
       logError(error, {
@@ -110,7 +110,7 @@ export const TranscriptionItem = ({
       });
       showGlobalTooltip(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        'error',
+        'normal',
         undefined,
         true
       );

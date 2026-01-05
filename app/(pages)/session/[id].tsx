@@ -382,7 +382,7 @@ export default function SessionScreen() {
 
   const handleCopyAllPressed = useCallback(async () => {
     if (transcriptions.length === 0) {
-      showGlobalTooltip(loc.noTranscriptionsToCopy, 'warning', undefined, true);
+      showGlobalTooltip(loc.noTranscriptionsToCopy, 'normal', undefined, true);
       return;
     }
 
@@ -397,17 +397,12 @@ export default function SessionScreen() {
           Platform.OS === 'ios' ||
           (Platform.OS === 'android' && Number(Platform.Version) < 31)
         ) {
-          showGlobalTooltip(
-            loc.allTranscriptionsCopied,
-            'success',
-            undefined,
-            true
-          );
+          showGlobalTooltip(loc.allTranscriptionsCopied);
         }
       } else {
         showGlobalTooltip(
           loc.copyFailed('Unknown error'),
-          'error',
+          'normal',
           undefined,
           true
         );
@@ -419,7 +414,7 @@ export default function SessionScreen() {
       });
       showGlobalTooltip(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        'error',
+        'normal',
         undefined,
         true
       );
@@ -524,7 +519,7 @@ export default function SessionScreen() {
           if (!result.canAskAgain) {
             showGlobalTooltip(
               loc.homeMicrophonePermissionRequired,
-              'warning',
+              'normal',
               undefined,
               true,
               true
@@ -533,7 +528,7 @@ export default function SessionScreen() {
           } else {
             showGlobalTooltip(
               loc.homeMicrophoneDenied,
-              'error',
+              'normal',
               undefined,
               true,
               true
@@ -547,7 +542,7 @@ export default function SessionScreen() {
       if (!success) {
         showGlobalTooltip(
           loc.homeFailedStartRecording,
-          'error',
+          'normal',
           undefined,
           true
         );
