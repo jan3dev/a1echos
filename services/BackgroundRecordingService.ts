@@ -97,7 +97,14 @@ const createBackgroundRecordingService = () => {
           return true;
         }
 
-        await requestNotificationPermission();
+        const hasNotificationPermission = await requestNotificationPermission();
+        if (!hasNotificationPermission) {
+          logError('Background recording requires notification permission', {
+            flag: FeatureFlag.service,
+          });
+          return false;
+        }
+
         await registerForegroundService();
 
         service.add_task(() => Promise.resolve(), {
@@ -112,23 +119,16 @@ const createBackgroundRecordingService = () => {
           },
         });
 
-        try {
-          await service.start({
-            id: NOTIFICATION_ID,
-            title: 'Echos',
-            message: 'Recording in progress...',
-            icon: 'ic_launcher',
-            setOnlyAlertOnce: true,
-            serviceType: 'microphone',
-          });
-        } catch {
-          // Service may still work despite this error (common in debug builds)
-          if (__DEV__) {
-            logWarn('Foreground service start warning (debug only)', {
-              flag: FeatureFlag.service,
-            });
-          }
-        }
+        await service.start({
+          id: NOTIFICATION_ID,
+          title: 'Echos',
+          message: 'Recording in progress...',
+          icon: 'ic_launcher',
+          largeIcon: 'ic_launcher',
+          importance: 'high',
+          setOnlyAlertOnce: true,
+          ServiceType: 'microphone',
+        });
 
         isServiceRunning = true;
         return true;

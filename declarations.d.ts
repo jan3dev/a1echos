@@ -18,10 +18,26 @@ declare module '@supersami/rn-foreground-service' {
     };
   }
 
+  type ForegroundServiceType =
+    | 'camera'
+    | 'connectedDevice'
+    | 'dataSync'
+    | 'health'
+    | 'location'
+    | 'mediaPlayback'
+    | 'mediaProjection'
+    | 'microphone'
+    | 'phoneCall'
+    | 'remoteMessaging'
+    | 'shortService'
+    | 'specialUse'
+    | 'systemExempted';
+
   interface StartConfig {
     id: number;
     title: string;
     message: string;
+    ServiceType: ForegroundServiceType;
     icon?: string;
     largeIcon?: string;
     visibility?: string;
@@ -41,20 +57,6 @@ declare module '@supersami/rn-foreground-service' {
       max: number;
       curr: number;
     };
-    serviceType?:
-      | 'camera'
-      | 'connectedDevice'
-      | 'dataSync'
-      | 'health'
-      | 'location'
-      | 'mediaPlayback'
-      | 'mediaProjection'
-      | 'microphone'
-      | 'phoneCall'
-      | 'remoteMessaging'
-      | 'shortService'
-      | 'specialUse'
-      | 'systemExempted';
   }
 
   interface TaskOptions {

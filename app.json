@@ -27,7 +27,8 @@
         "WRITE_EXTERNAL_STORAGE",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_MICROPHONE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK"
       ],
       "package": "com.a1lab.echos"
     },
@@ -49,7 +50,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "./plugins/withRnForegroundService",
+      "./plugins/withMinSdk26"
     ],
     "experiments": {
       "typedRoutes": true,
