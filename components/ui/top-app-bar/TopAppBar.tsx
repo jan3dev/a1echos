@@ -155,6 +155,7 @@ export const TopAppBar = ({
       {Platform.OS === 'ios' ? (
         <BlurView
           intensity={20}
+          tint={blurTint}
           style={[StyleSheet.absoluteFill, { backgroundColor }]}
         />
       ) : (

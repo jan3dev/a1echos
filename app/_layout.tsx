@@ -169,7 +169,11 @@ function GlobalRecordingControls() {
         pointerEvents="none"
       >
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+          <BlurView
+            intensity={20}
+            tint={blurTint}
+            style={StyleSheet.absoluteFill}
+          />
         ) : (
           <BlurView
             experimentalBlurMethod="dimezisBlurView"
