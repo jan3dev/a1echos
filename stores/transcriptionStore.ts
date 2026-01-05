@@ -4,7 +4,12 @@ import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 
-import { ModelType, Transcription, TranscriptionState } from '@/models';
+import {
+  ModelType,
+  SupportedLanguages,
+  Transcription,
+  TranscriptionState,
+} from '@/models';
 import {
   audioService,
   backgroundRecordingService,
@@ -646,7 +651,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         // Get settings for model type and language
         const settingsState = useSettingsStore.getState();
         const modelType = settingsState.selectedModelType;
-        const languageCode = settingsState.selectedLanguage?.code;
+        const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
+          settingsState.selectedLanguage?.code ?? 'en'
+        );
         const isRealtime = modelType === ModelType.WHISPER_REALTIME;
 
         // Ensure Whisper is initialized
@@ -703,7 +710,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
           // Real-time mode: start Whisper real-time transcription
           const realtimeStarted =
-            await whisperService.startRealtimeTranscription(languageCode);
+            await whisperService.startRealtimeTranscription(language, prompt);
           if (!realtimeStarted) {
             // Cleanup subscriptions on failure
             unsubscribeAudioLevel();
@@ -806,7 +813,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const sessionId = state.recordingSessionId;
       const settingsState = useSettingsStore.getState();
       const modelType = settingsState.selectedModelType;
-      const languageCode = settingsState.selectedLanguage?.code;
+      const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
+        settingsState.selectedLanguage?.code ?? 'en'
+      );
       const isRealtime = modelType === ModelType.WHISPER_REALTIME;
       const isIncognito = useSessionStore.getState().isActiveSessionIncognito();
 
@@ -867,7 +876,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           // Transcribe the audio file
           transcribedText = await whisperService.transcribeFile(
             audioPath,
-            languageCode
+            language,
+            prompt
           );
         }
 

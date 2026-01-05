@@ -187,7 +187,8 @@ const createWhisperService = () => {
 
   const transcribeFile = async (
     audioPath: string,
-    languageCode?: string
+    languageCode?: string,
+    prompt?: string
   ): Promise<string | null> => {
     if (!state.isInitialized || !state.whisperContext) {
       throw new Error('Whisper service not initialized');
@@ -205,7 +206,9 @@ const createWhisperService = () => {
     try {
       state.isTranscribing = true;
 
-      const options = languageCode ? { language: languageCode } : {};
+      const options: Record<string, unknown> = {};
+      if (languageCode) options.language = languageCode;
+      if (prompt) options.prompt = prompt;
       const { promise } = state.whisperContext.transcribe(audioPath, options);
 
       const result = await promise;
@@ -219,7 +222,8 @@ const createWhisperService = () => {
   };
 
   const startRealtimeTranscription = async (
-    languageCode?: string
+    languageCode?: string,
+    prompt?: string
   ): Promise<boolean> => {
     if (!state.isInitialized || !state.whisperContext || !state.vadContext) {
       logError('Cannot start real-time: Whisper or VAD not initialized', { flag: FeatureFlag.transcription });
@@ -269,9 +273,8 @@ const createWhisperService = () => {
       };
 
       const transcribeOptions: Record<string, unknown> = {};
-      if (languageCode) {
-        transcribeOptions.language = languageCode;
-      }
+      if (languageCode) transcribeOptions.language = languageCode;
+      if (prompt) transcribeOptions.prompt = prompt;
 
       const transcriber = new RealtimeTranscriber(
         {

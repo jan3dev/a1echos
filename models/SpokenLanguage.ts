@@ -3,14 +3,31 @@ export interface SpokenLanguage {
   name: string;
 }
 
+export interface TranscribeOptions {
+  language?: string;
+  prompt?: string;
+}
+
 interface LanguageInfo {
   countryCode: string;
   name: string;
+  whisperLanguage?: string;
+  prompt?: string;
 }
 
 const languageData: Record<string, LanguageInfo> = {
   en: { countryCode: 'united_states', name: 'English' },
-  zh: { countryCode: 'china', name: 'Chinese' },
+  zh: {
+    countryCode: 'china',
+    name: 'Chinese (简体)',
+    prompt: '以下是普通话的句子。',
+  },
+  'zh-hant': {
+    countryCode: 'taiwan',
+    name: 'Chinese (繁體)',
+    whisperLanguage: 'zh',
+    prompt: '以下是普通話的句子。',
+  },
   de: { countryCode: 'germany', name: 'German' },
   es: { countryCode: 'spain', name: 'Spanish' },
   ru: { countryCode: 'russia', name: 'Russian' },
@@ -99,6 +116,17 @@ export const SupportedLanguages = {
 
   countryCodeFor(code: string): string {
     return languageData[code]?.countryCode ?? 'united_states';
+  },
+
+  transcribeOptionsFor(code: string): TranscribeOptions {
+    const info = languageData[code];
+    if (!info) {
+      return { language: code };
+    }
+    return {
+      language: info.whisperLanguage ?? code,
+      prompt: info.prompt,
+    };
   },
 };
 
