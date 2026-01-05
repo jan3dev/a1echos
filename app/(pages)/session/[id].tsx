@@ -128,8 +128,10 @@ export default function SessionScreen() {
 
   const selectAllTranscriptions = useCallback(() => {
     const ids = transcriptions.map((t) => t.id);
-    selectAllTranscriptionsAction(ids);
-  }, [transcriptions, selectAllTranscriptionsAction]);
+    const allSelected =
+      ids.length > 0 && ids.every((id) => selectedIds.has(id));
+    selectAllTranscriptionsAction(allSelected ? [] : ids);
+  }, [transcriptions, selectAllTranscriptionsAction, selectedIds]);
 
   const deleteSelectedTranscriptions = useCallback(async () => {
     if (selectedIds.size === 0) {
