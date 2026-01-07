@@ -51,7 +51,7 @@ const WAVE_PROFILES: WaveProfile[] = [
     basePhaseSpeed: 0.04,
     frequency: 3.1,
     verticalOffset: 0.0,
-    amplitudeMultiplier: 0.53,
+    amplitudeMultiplier: 0.42,
     strokeWidth: 2.8,
     energyFloor: 0.07,
     audioAmplitudeReactivity: 1.0,
