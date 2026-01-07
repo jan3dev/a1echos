@@ -829,8 +829,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         let audioPath: string = '';
 
         if (isRealtime) {
-          // Real-time mode: stop Whisper and get final text
-          transcribedText = await whisperService.stopRealtimeTranscription();
+          // Real-time mode: stop Whisper and get recorded audio
+          const realtimeResult =
+            await whisperService.stopRealtimeTranscription();
 
           // Clean up partial result subscription
           if (state.partialResultUnsubscribe) {
@@ -842,6 +843,27 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           if (state.realtimeAudioLevelUnsubscribe) {
             state.realtimeAudioLevelUnsubscribe();
             set({ realtimeAudioLevelUnsubscribe: null });
+          }
+
+          // On iOS: save and transcribe the recorded WAV file for complete results
+          // (includes audio captured while app was backgrounded)
+          // On Android: use realtime partial results directly (no background crash issue)
+          if (Platform.OS === 'ios' && realtimeResult.audioPath) {
+            const fileName = `audio_${Date.now()}.wav`;
+            audioPath = await storageService.saveAudioFile(
+              realtimeResult.audioPath,
+              fileName
+            );
+
+            // Transcribe the full recording for final text
+            transcribedText = await whisperService.transcribeFile(
+              audioPath,
+              language,
+              prompt
+            );
+          } else {
+            // Android or no audio file: use realtime partial results
+            transcribedText = realtimeResult.text || null;
           }
         } else {
           // File-based mode: stop recording and transcribe
