@@ -75,15 +75,26 @@ export const createPcmStreamWriter = (
   let hasError = false;
   let isFinalized = false;
 
+  const base64ByteLength = (b64: string): number => {
+    const len = b64.length;
+    if (len === 0) return 0;
+    let padding = 0;
+    if (b64[len - 1] === '=') padding++;
+    if (len > 1 && b64[len - 2] === '=') padding++;
+    return Math.floor((len * 3) / 4) - padding;
+  };
+
   const write = (base64Chunk: string): void => {
     if (isFinalized || hasError) return;
+
+    const chunkBytes = base64ByteLength(base64Chunk);
+    const isFirst = totalBytes === 0;
+    totalBytes += chunkBytes;
 
     writeQueue = writeQueue.then(async () => {
       if (isFinalized || hasError) return;
       try {
-        const decoded = atob(base64Chunk);
-        totalBytes += decoded.length;
-        if (totalBytes === decoded.length) {
+        if (isFirst) {
           await RNFS.writeFile(tempPath, base64Chunk, 'base64');
         } else {
           await RNFS.appendFile(tempPath, base64Chunk, 'base64');

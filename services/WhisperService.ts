@@ -281,6 +281,7 @@ const createWhisperService = () => {
       const transcribeOptions: Record<string, unknown> = {};
       if (languageCode) transcribeOptions.language = languageCode;
       if (prompt) transcribeOptions.prompt = prompt;
+      if (Platform.OS === 'android') transcribeOptions.maxThreads = 2;
 
       // iOS only: generate a WAV output path for background audio capture
       // On Android, we don't need this since there's no background crash issue
