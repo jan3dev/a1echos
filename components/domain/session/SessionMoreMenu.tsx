@@ -12,7 +12,12 @@ import { useLocalization, useSessionOperations } from '@/hooks';
 import { Session } from '@/models';
 import { useRenameSession, useShowGlobalTooltip } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, formatDate, formatSessionSubtitle, logError } from '@/utils';
+import {
+  FeatureFlag,
+  formatDate,
+  formatSessionSubtitle,
+  logError,
+} from '@/utils';
 
 import { ListItem } from '../../shared/list-item/ListItem';
 import { Icon } from '../../ui/icon/Icon';
@@ -54,8 +59,15 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   const renameSession = useRenameSession();
   const { deleteSession } = useSessionOperations();
 
-  const handleRename = (newName: string) => {
-    renameSession(session.id, newName);
+  const handleRename = async (newName: string) => {
+    try {
+      await renameSession(session.id, newName);
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.session,
+        message: 'Failed to rename session',
+      });
+    }
     setRenameVisible(false);
   };
 
@@ -79,7 +91,10 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
       await deleteSession(session.id);
       showGlobalTooltip(loc.homeSessionsDeleted(1));
     } catch (error) {
-      logError(error, { flag: FeatureFlag.session, message: 'Failed to delete session' });
+      logError(error, {
+        flag: FeatureFlag.session,
+        message: 'Failed to delete session',
+      });
     }
   };
 

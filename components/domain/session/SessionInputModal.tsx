@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -42,8 +43,22 @@ export const SessionInputModal = ({
   const { loc } = useLocalization();
   const { height: screenHeight } = useWindowDimensions();
   const [text, setText] = useState(initialValue);
+  const keyboardVisibleRef = useRef(false);
 
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      keyboardVisibleRef.current = true;
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardVisibleRef.current = false;
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -59,6 +74,14 @@ export const SessionInputModal = ({
     }
   }, [visible, initialValue, screenHeight, slideAnim]);
 
+  const handleDismiss = useCallback(() => {
+    if (keyboardVisibleRef.current) {
+      Keyboard.dismiss();
+      return;
+    }
+    onCancel?.();
+  }, [onCancel]);
+
   const handleSubmit = () => {
     const trimmed = text.trim();
     if (
@@ -72,7 +95,7 @@ export const SessionInputModal = ({
   const containerWidth = '100%';
 
   return (
-    <Dimmer visible={visible} onDismiss={onCancel || (() => {})}>
+    <Dimmer visible={visible} onDismiss={handleDismiss}>
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.keyboardView}
@@ -125,6 +148,7 @@ export const SessionInputModal = ({
                   onClear={() => setText('')}
                   transparentBorder={true}
                   forceFocus={visible}
+                  debounceTime={0}
                 />
 
                 <View style={styles.spacer} />
