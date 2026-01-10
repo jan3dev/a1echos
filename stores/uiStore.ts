@@ -12,6 +12,11 @@ export interface Toast {
   duration?: number;
 }
 
+export interface GlobalTooltipAction {
+  iconName: string;
+  onPress: () => void;
+}
+
 export interface GlobalTooltip {
   id: string;
   message: string;
@@ -19,6 +24,7 @@ export interface GlobalTooltip {
   duration: number;
   isInfo?: boolean;
   isDismissible?: boolean;
+  action?: GlobalTooltipAction;
 }
 
 interface UIStore {
@@ -60,7 +66,8 @@ interface UIStore {
     variant?: GlobalTooltipVariant,
     duration?: number,
     isInfo?: boolean,
-    isDismissible?: boolean
+    isDismissible?: boolean,
+    action?: GlobalTooltipAction
   ) => string;
   hideGlobalTooltip: () => void;
 }
@@ -189,7 +196,8 @@ export const useUIStore = create<UIStore>((set, get) => ({
     variant: GlobalTooltipVariant = 'normal',
     duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION,
     isInfo: boolean = false,
-    isDismissible: boolean = false
+    isDismissible: boolean = false,
+    action?: GlobalTooltipAction
   ) => {
     const tooltipId = Crypto.randomUUID();
     set({
@@ -200,6 +208,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
         duration,
         isInfo,
         isDismissible,
+        action,
       },
     });
     return tooltipId;

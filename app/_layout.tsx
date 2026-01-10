@@ -11,7 +11,12 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppErrorBoundary, RecordingControlsView, Tooltip } from '@/components';
+import {
+  AppErrorBoundary,
+  Icon,
+  RecordingControlsView,
+  Tooltip,
+} from '@/components';
 import { useBackgroundRecording } from '@/hooks';
 import { AppTheme } from '@/models';
 import { registerForegroundService, storageService } from '@/services';
@@ -71,6 +76,7 @@ export const unstable_settings = {
 
 function GlobalTooltipRenderer() {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   const tooltip = useGlobalTooltip();
   const hideTooltip = useHideGlobalTooltip();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,11 +100,19 @@ function GlobalTooltipRenderer() {
   }, [tooltip, hideTooltip]);
 
   const isDismissible = tooltip?.isDismissible ?? false;
+  const hasAction = !!tooltip?.action;
+
+  const handleActionPress = useCallback(() => {
+    if (tooltip?.action) {
+      hideTooltip();
+      tooltip.action.onPress();
+    }
+  }, [tooltip, hideTooltip]);
 
   return (
     <View
       style={[styles.globalTooltipContainer, { bottom: insets.bottom }]}
-      pointerEvents={isDismissible ? 'auto' : 'none'}
+      pointerEvents={isDismissible || hasAction ? 'auto' : 'none'}
     >
       <Tooltip
         visible={!!tooltip}
@@ -109,6 +123,16 @@ function GlobalTooltipRenderer() {
         isDismissible={isDismissible}
         onDismiss={hideTooltip}
         margin={32}
+        leadingIcon={
+          hasAction ? (
+            <Icon
+              name={tooltip?.action?.iconName ?? 'settings'}
+              size={18}
+              color={theme.colors.textInverse}
+            />
+          ) : undefined
+        }
+        onLeadingIconTap={hasAction ? handleActionPress : undefined}
       />
     </View>
   );

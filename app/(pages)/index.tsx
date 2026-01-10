@@ -129,9 +129,9 @@ export default function HomeScreen() {
               'normal',
               undefined,
               true,
-              true
+              true,
+              { iconName: 'settings', onPress: openSettings }
             );
-            openSettings();
           } else {
             showGlobalTooltip(
               loc.homeMicrophoneDenied,

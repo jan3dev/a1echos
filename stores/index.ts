@@ -55,5 +55,5 @@ export {
     useToggleTranscriptionSelection,
     useUIStore
 } from './uiStore';
-export type { Toast, ToastVariant } from './uiStore';
+export type { GlobalTooltipAction, Toast, ToastVariant } from './uiStore';
 
