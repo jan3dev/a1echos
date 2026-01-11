@@ -532,7 +532,6 @@ const createAudioService = () => {
         allowsRecording: true,
         playsInSilentMode: true,
         shouldPlayInBackground: true,
-        allowsBackgroundRecording: true,
       });
 
       warmupRecorder = createRecorder();

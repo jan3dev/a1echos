@@ -1,6 +1,5 @@
 import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
-import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 // @ts-ignore - whisper.rn may not have complete type declarations
 import { initWhisper, initWhisperVad, type WhisperContext, type WhisperVadContext } from 'whisper.rn';
@@ -45,8 +44,6 @@ interface WhisperServiceState {
   partialCallbacks: Set<(text: string) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
   lastAudioLevelEmitTime: number;
-  realtimeAudioOutputPath: string | null;
-  realtimeProcessingSuspended: boolean;
 }
 
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
@@ -71,8 +68,6 @@ const createWhisperService = () => {
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
     lastAudioLevelEmitTime: 0,
-    realtimeAudioOutputPath: null,
-    realtimeProcessingSuspended: false,
   };
 
   const computeRmsLevel = (data: Uint8Array): number => {
@@ -247,7 +242,6 @@ const createWhisperService = () => {
 
     try {
       state.currentTranscription = '';
-      state.realtimeProcessingSuspended = false;
 
       const warmUpSuccess = await audioService.warmUpIosAudioInput();
       if (!warmUpSuccess) {
@@ -283,13 +277,6 @@ const createWhisperService = () => {
       if (prompt) transcribeOptions.prompt = prompt;
       if (Platform.OS === 'android') transcribeOptions.maxThreads = 2;
 
-      // iOS only: generate a WAV output path for background audio capture
-      // On Android, we don't need this since there's no background crash issue
-      const audioOutputPath = Platform.OS === 'ios'
-        ? `${RNFS.CachesDirectoryPath}/realtime_${Date.now()}.wav`
-        : undefined;
-      state.realtimeAudioOutputPath = audioOutputPath ?? null;
-
       const transcriber = new RealtimeTranscriber(
         {
           whisperContext: state.whisperContext,
@@ -305,26 +292,11 @@ const createWhisperService = () => {
           autoSliceOnSpeechEnd: true,
           autoSliceThreshold: 0.5,
           transcribeOptions,
-          audioOutputPath,
           audioStreamConfig: {
             audioSource: 1, // MIC - more reliable when screen is locked
           },
         },
         {
-          onBeginTranscribe: async () => {
-            // iOS only: skip transcription when suspended (backgrounded) to avoid native crash
-            if (Platform.OS === 'ios') {
-              return !state.realtimeProcessingSuspended;
-            }
-            return true;
-          },
-          onBeginVad: async () => {
-            // iOS only: skip VAD when suspended (backgrounded) to avoid native crash
-            if (Platform.OS === 'ios') {
-              return !state.realtimeProcessingSuspended;
-            }
-            return true;
-          },
           onTranscribe: (event: RealtimeTranscribeEvent) => {
             try {
               if (event.data?.result) {
@@ -374,14 +346,11 @@ const createWhisperService = () => {
     }
   };
 
-  const stopRealtimeTranscription = async (): Promise<{ text: string; audioPath: string | null }> => {
+  const stopRealtimeTranscription = async (): Promise<string> => {
     if (!state.isRealtimeRecording || !state.realtimeTranscriber) {
       logWarn('No real-time transcription in progress', { flag: FeatureFlag.transcription });
-      return { text: '', audioPath: null };
+      return '';
     }
-
-    // Capture audio path before cleanup
-    const audioPath = state.realtimeAudioOutputPath;
 
     try {
       await state.realtimeTranscriber.stop();
@@ -394,10 +363,10 @@ const createWhisperService = () => {
 
       state.currentTranscription = finalText || state.currentTranscription;
 
-      return { text: state.currentTranscription, audioPath };
+      return state.currentTranscription;
     } catch (error) {
       logError(error, { flag: FeatureFlag.transcription, message: 'Failed to stop real-time recording' });
-      return { text: state.currentTranscription, audioPath };
+      return state.currentTranscription;
     } finally {
       cleanupRealtimeResources();
     }
@@ -415,21 +384,11 @@ const createWhisperService = () => {
     state.realtimeTranscriber = null;
     state.realtimeAudioStream = null;
     state.isRealtimeRecording = false;
-    state.realtimeAudioOutputPath = null;
-    state.realtimeProcessingSuspended = false;
     state.audioLevelCallbacks.forEach((callback) => {
       try {
         callback(0.02);
       } catch {}
     });
-  };
-
-  const setRealtimeProcessingSuspended = (suspended: boolean): void => {
-    state.realtimeProcessingSuspended = suspended;
-  };
-
-  const isRealtimeRecording = (): boolean => {
-    return state.isRealtimeRecording;
   };
 
   const subscribeToPartialResults = (
@@ -490,8 +449,6 @@ const createWhisperService = () => {
     state.isRealtimeRecording = false;
     state.currentTranscription = '';
     state.lastAudioLevelEmitTime = 0;
-    state.realtimeAudioOutputPath = null;
-    state.realtimeProcessingSuspended = false;
   };
 
   return {
@@ -501,8 +458,6 @@ const createWhisperService = () => {
     stopRealtimeTranscription,
     subscribeToPartialResults,
     subscribeToAudioLevel,
-    setRealtimeProcessingSuspended,
-    isRealtimeRecording,
     dispose,
     get initializationStatus() {
       return state.initializationStatus;
