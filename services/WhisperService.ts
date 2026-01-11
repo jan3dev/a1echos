@@ -275,7 +275,7 @@ const createWhisperService = () => {
       const transcribeOptions: Record<string, unknown> = {};
       if (languageCode) transcribeOptions.language = languageCode;
       if (prompt) transcribeOptions.prompt = prompt;
-      if (Platform.OS === 'android') transcribeOptions.maxThreads = 2;
+      transcribeOptions.maxThreads = 2;
 
       const transcriber = new RealtimeTranscriber(
         {
