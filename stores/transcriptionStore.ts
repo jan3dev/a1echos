@@ -1000,7 +1000,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         // Initialize Whisper service
         const whisperInitialized = await whisperService.initialize();
         if (!whisperInitialized) {
-          logError(
+          logWarn(
             `Whisper initialization failed: ${whisperService.initializationStatus}`,
             { flag: FeatureFlag.model }
           );

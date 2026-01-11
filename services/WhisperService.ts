@@ -1,5 +1,6 @@
 import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import {
   initWhisper,
@@ -20,6 +21,8 @@ import { audioSessionService } from './AudioSessionService';
 
 const AUDIO_LEVEL_THROTTLE_MS = 33;
 const RMS_SAMPLE_STEP = 4;
+const IOS_INIT_THREADS = 2;
+const IOS_VAD_THREADS = 1;
 
 interface RealtimeTranscribeEvent {
   type: 'error' | 'start' | 'transcribe' | 'end';
@@ -49,6 +52,7 @@ interface WhisperServiceState {
   partialCallbacks: Set<(text: string) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
   lastAudioLevelEmitTime: number;
+  initializePromise: Promise<boolean> | null;
 }
 
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
@@ -73,6 +77,7 @@ const createWhisperService = () => {
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
     lastAudioLevelEmitTime: 0,
+    initializePromise: null,
   };
 
   const computeRmsLevel = (data: Uint8Array): number => {
@@ -123,41 +128,25 @@ const createWhisperService = () => {
 
   const prepareModel = async (): Promise<string> => {
     state.initializationStatus = 'Loading model asset...';
-
     const asset = Asset.fromModule(modelAsset);
     await asset.downloadAsync();
-
     if (!asset.localUri) {
       throw new Error('Failed to load model asset');
     }
-
-    state.initializationStatus = 'Model loaded successfully';
     return asset.localUri;
   };
 
   const prepareVadModel = async (): Promise<string> => {
     state.initializationStatus = 'Loading VAD model asset...';
-
     const asset = Asset.fromModule(vadModelAsset);
     await asset.downloadAsync();
-
     if (!asset.localUri) {
       throw new Error('Failed to load VAD model asset');
     }
-
-    state.initializationStatus = 'VAD model loaded successfully';
     return asset.localUri;
   };
 
-  const initialize = async (): Promise<boolean> => {
-    if (state.isInitialized) {
-      return true;
-    }
-
-    if (state.isInitializing) {
-      return false;
-    }
-
+  const doInitialize = async (): Promise<boolean> => {
     state.isInitializing = true;
     state.initializationStatus = 'Starting initialization...';
 
@@ -168,8 +157,16 @@ const createWhisperService = () => {
 
       state.initializationStatus = 'Initializing Whisper context...';
 
+      const isIos = Platform.OS === 'ios';
+
       state.whisperContext = await initWhisper({
         filePath: modelPath,
+        ...(isIos && {
+          useGpu: false,
+          useCoreMLIos: false,
+          useFlashAttn: false,
+          nThreads: IOS_INIT_THREADS,
+        }),
       });
 
       const vadModelPath = await prepareVadModel();
@@ -178,6 +175,10 @@ const createWhisperService = () => {
 
       state.vadContext = await initWhisperVad({
         filePath: vadModelPath,
+        ...(isIos && {
+          useGpu: false,
+          nThreads: IOS_VAD_THREADS,
+        }),
       });
 
       state.isInitialized = true;
@@ -193,7 +194,21 @@ const createWhisperService = () => {
       return false;
     } finally {
       state.isInitializing = false;
+      state.initializePromise = null;
     }
+  };
+
+  const initialize = async (): Promise<boolean> => {
+    if (state.isInitialized) {
+      return true;
+    }
+
+    if (state.initializePromise) {
+      return state.initializePromise;
+    }
+
+    state.initializePromise = doInitialize();
+    return state.initializePromise;
   };
 
   const transcribeFile = async (
@@ -374,8 +389,6 @@ const createWhisperService = () => {
       state.realtimeTranscriber = transcriber;
 
       await transcriber.start();
-      // Set isRealtimeRecording immediately after start to avoid race condition
-      // (onStatusChange callback may not have fired yet)
       state.isRealtimeRecording = true;
 
       return true;
@@ -384,7 +397,7 @@ const createWhisperService = () => {
         flag: FeatureFlag.transcription,
         message: 'Error starting real-time recording',
       });
-      cleanupRealtimeResources();
+      await cleanupRealtimeResources();
       state.isRealtimeRecording = false;
       return false;
     }
@@ -421,14 +434,14 @@ const createWhisperService = () => {
       });
       return state.currentTranscription;
     } finally {
-      cleanupRealtimeResources();
+      await cleanupRealtimeResources();
     }
   };
 
-  const cleanupRealtimeResources = (): void => {
+  const cleanupRealtimeResources = async (): Promise<void> => {
     if (state.realtimeTranscriber) {
       try {
-        state.realtimeTranscriber.release();
+        await state.realtimeTranscriber.release();
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.transcription,
@@ -472,7 +485,7 @@ const createWhisperService = () => {
       await stopRealtimeTranscription();
     }
 
-    cleanupRealtimeResources();
+    await cleanupRealtimeResources();
 
     if (state.vadContext) {
       try {

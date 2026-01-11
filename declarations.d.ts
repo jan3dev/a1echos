@@ -69,6 +69,7 @@ declare module 'whisper.rn' {
     useCoreMLIos?: boolean;
     useGpu?: boolean;
     useFlashAttn?: boolean;
+    nThreads?: number;
   }
 
   export interface VadContextOptions {
