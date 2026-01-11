@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 
+import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 import {
   AudioModule,
   AudioRecorder,
@@ -9,8 +10,6 @@ import {
 import { File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-// @ts-ignore - module declaration exists but types are incomplete
-import AudioRecord from '@fugood/react-native-audio-pcm-stream';
 
 import { AppConstants } from '@/constants';
 import {
@@ -532,6 +531,7 @@ const createAudioService = () => {
         allowsRecording: true,
         playsInSilentMode: true,
         shouldPlayInBackground: true,
+        allowsBackgroundRecording: true,
       });
 
       warmupRecorder = createRecorder();

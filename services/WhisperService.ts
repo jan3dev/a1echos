@@ -1,11 +1,16 @@
 import { Asset } from 'expo-asset';
 import { File } from 'expo-file-system';
 import RNFS from 'react-native-fs';
-// @ts-ignore - whisper.rn may not have complete type declarations
-import { initWhisper, initWhisperVad, type WhisperContext, type WhisperVadContext } from 'whisper.rn';
-// @ts-ignore - whisper.rn may not have complete type declarations
-import { RealtimeTranscriber } from 'whisper.rn/src/realtime-transcription';
-// @ts-ignore - whisper.rn may not have complete type declarations
+import {
+  initWhisper,
+  initWhisperVad,
+  type WhisperContext,
+  type WhisperVadContext,
+} from 'whisper.rn';
+import {
+  RealtimeTranscriber,
+  type AudioStreamData,
+} from 'whisper.rn/src/realtime-transcription';
 import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter';
 
 import { FeatureFlag, logError, logWarn } from '@/utils';
@@ -49,7 +54,7 @@ interface WhisperServiceState {
 const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
   await audioSessionService.ensureRecordingMode();
   if (delayMs > 0) {
-    await new Promise(resolve => setTimeout(resolve, delayMs));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 };
 
@@ -108,7 +113,10 @@ const createWhisperService = () => {
       try {
         callback(visual);
       } catch (error) {
-        logError(error, { flag: FeatureFlag.transcription, message: 'Error in audio level callback' });
+        logError(error, {
+          flag: FeatureFlag.transcription,
+          message: 'Error in audio level callback',
+        });
       }
     });
   };
@@ -177,7 +185,10 @@ const createWhisperService = () => {
       return true;
     } catch (error) {
       state.initializationStatus = `Initialization failed: ${error}`;
-      logError(error, { flag: FeatureFlag.model, message: 'Whisper initialization failed' });
+      logError(error, {
+        flag: FeatureFlag.model,
+        message: 'Whisper initialization failed',
+      });
       resetState();
       return false;
     } finally {
@@ -214,7 +225,10 @@ const createWhisperService = () => {
       const result = await promise;
       return result?.result?.trim() || null;
     } catch (error) {
-      logError(error, { flag: FeatureFlag.transcription, message: 'Whisper file transcription failed' });
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Whisper file transcription failed',
+      });
       throw error;
     } finally {
       state.isTranscribing = false;
@@ -226,17 +240,23 @@ const createWhisperService = () => {
     prompt?: string
   ): Promise<boolean> => {
     if (!state.isInitialized || !state.whisperContext || !state.vadContext) {
-      logError('Cannot start real-time: Whisper or VAD not initialized', { flag: FeatureFlag.transcription });
+      logError('Cannot start real-time: Whisper or VAD not initialized', {
+        flag: FeatureFlag.transcription,
+      });
       return false;
     }
 
     if (state.isRealtimeRecording) {
-      logError('Real-time transcription already in progress', { flag: FeatureFlag.transcription });
+      logError('Real-time transcription already in progress', {
+        flag: FeatureFlag.transcription,
+      });
       return false;
     }
 
     if (state.isTranscribing) {
-      logError('Cannot start real-time: file transcription in progress', { flag: FeatureFlag.transcription });
+      logError('Cannot start real-time: file transcription in progress', {
+        flag: FeatureFlag.transcription,
+      });
       return false;
     }
 
@@ -245,7 +265,10 @@ const createWhisperService = () => {
 
       const warmUpSuccess = await audioService.warmUpIosAudioInput();
       if (!warmUpSuccess) {
-        logError('iOS audio warm-up failed, cannot start real-time transcription', { flag: FeatureFlag.transcription });
+        logError(
+          'iOS audio warm-up failed, cannot start real-time transcription',
+          { flag: FeatureFlag.transcription }
+        );
         return false;
       }
 
@@ -257,11 +280,13 @@ const createWhisperService = () => {
       // Wrap the audioStream to intercept audio data for level metering
       // RealtimeTranscriber will overwrite onData, so we need to intercept at a lower level
       const originalOnData = audioStream.onData.bind(audioStream);
-      let transcriberDataCallback: ((data: { data: Uint8Array }) => void) | undefined;
-      
-      audioStream.onData = (callback: (data: { data: Uint8Array }) => void) => {
+      let transcriberDataCallback:
+        | ((data: AudioStreamData) => void)
+        | undefined;
+
+      audioStream.onData = (callback: (data: AudioStreamData) => void) => {
         transcriberDataCallback = callback;
-        originalOnData((audioData: { data: Uint8Array }) => {
+        originalOnData((audioData: AudioStreamData) => {
           if (audioData.data) {
             const level = computeRmsLevel(audioData.data);
             emitAudioLevel(level);
@@ -300,9 +325,16 @@ const createWhisperService = () => {
           onTranscribe: (event: RealtimeTranscribeEvent) => {
             try {
               if (event.data?.result) {
-                const allResults = state.realtimeTranscriber?.getTranscriptionResults() || [];
+                const allResults =
+                  state.realtimeTranscriber?.getTranscriptionResults() || [];
                 const aggregatedText = allResults
-                  .map(({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) => transcribeEvent.data?.result?.trim())
+                  .map(
+                    ({
+                      transcribeEvent,
+                    }: {
+                      transcribeEvent: RealtimeTranscribeEvent;
+                    }) => transcribeEvent.data?.result?.trim()
+                  )
                   .filter(Boolean)
                   .join(' ');
 
@@ -313,16 +345,25 @@ const createWhisperService = () => {
                   try {
                     callback(text);
                   } catch (error) {
-                    logError(error, { flag: FeatureFlag.transcription, message: 'Error in partial callback' });
+                    logError(error, {
+                      flag: FeatureFlag.transcription,
+                      message: 'Error in partial callback',
+                    });
                   }
                 });
               }
             } catch (error) {
-              logError(error, { flag: FeatureFlag.transcription, message: 'Error handling transcription event' });
+              logError(error, {
+                flag: FeatureFlag.transcription,
+                message: 'Error handling transcription event',
+              });
             }
           },
           onError: (error: string) => {
-            logError(error, { flag: FeatureFlag.transcription, message: 'RealtimeTranscriber error' });
+            logError(error, {
+              flag: FeatureFlag.transcription,
+              message: 'RealtimeTranscriber error',
+            });
           },
           onStatusChange: (isActive: boolean) => {
             state.isRealtimeRecording = isActive;
@@ -339,7 +380,10 @@ const createWhisperService = () => {
 
       return true;
     } catch (error) {
-      logError(error, { flag: FeatureFlag.transcription, message: 'Error starting real-time recording' });
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Error starting real-time recording',
+      });
       cleanupRealtimeResources();
       state.isRealtimeRecording = false;
       return false;
@@ -348,16 +392,22 @@ const createWhisperService = () => {
 
   const stopRealtimeTranscription = async (): Promise<string> => {
     if (!state.isRealtimeRecording || !state.realtimeTranscriber) {
-      logWarn('No real-time transcription in progress', { flag: FeatureFlag.transcription });
+      logWarn('No real-time transcription in progress', {
+        flag: FeatureFlag.transcription,
+      });
       return '';
     }
 
     try {
       await state.realtimeTranscriber.stop();
 
-      const allResults = state.realtimeTranscriber.getTranscriptionResults() || [];
+      const allResults =
+        state.realtimeTranscriber.getTranscriptionResults() || [];
       const finalText = allResults
-        .map(({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) => transcribeEvent.data?.result?.trim())
+        .map(
+          ({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) =>
+            transcribeEvent.data?.result?.trim()
+        )
         .filter(Boolean)
         .join(' ');
 
@@ -365,7 +415,10 @@ const createWhisperService = () => {
 
       return state.currentTranscription;
     } catch (error) {
-      logError(error, { flag: FeatureFlag.transcription, message: 'Failed to stop real-time recording' });
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: 'Failed to stop real-time recording',
+      });
       return state.currentTranscription;
     } finally {
       cleanupRealtimeResources();
@@ -377,7 +430,10 @@ const createWhisperService = () => {
       try {
         state.realtimeTranscriber.release();
       } catch (error) {
-        logError(error, { flag: FeatureFlag.transcription, message: 'Error releasing RealtimeTranscriber' });
+        logError(error, {
+          flag: FeatureFlag.transcription,
+          message: 'Error releasing RealtimeTranscriber',
+        });
       }
     }
 
@@ -422,7 +478,10 @@ const createWhisperService = () => {
       try {
         await state.vadContext.release();
       } catch (error) {
-        logError(error, { flag: FeatureFlag.model, message: 'Error releasing VAD context' });
+        logError(error, {
+          flag: FeatureFlag.model,
+          message: 'Error releasing VAD context',
+        });
       }
     }
 
@@ -430,7 +489,10 @@ const createWhisperService = () => {
       try {
         await state.whisperContext.release();
       } catch (error) {
-        logError(error, { flag: FeatureFlag.model, message: 'Error releasing Whisper context' });
+        logError(error, {
+          flag: FeatureFlag.model,
+          message: 'Error releasing Whisper context',
+        });
       }
     }
 
