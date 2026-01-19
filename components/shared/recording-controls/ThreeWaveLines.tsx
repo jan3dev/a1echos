@@ -1,6 +1,6 @@
 import { Canvas, Path, usePathValue } from '@shopify/react-native-skia';
-import { useEffect, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { AppState, AppStateStatus, StyleSheet, View } from 'react-native';
 import {
   useDerivedValue,
   useFrameCallback,
@@ -129,7 +129,8 @@ const useAnimatedWave = (
   stateNum: { value: number },
   width: { value: number },
   centerY: number,
-  colorRgb: { r: number; g: number; b: number }
+  colorRgb: { r: number; g: number; b: number },
+  isActive: { value: boolean }
 ) => {
   const profile = WAVE_PROFILES[waveIndex];
   const freqTwoPi = profile.frequency * 2 * Math.PI;
@@ -147,6 +148,8 @@ const useAnimatedWave = (
 
   useFrameCallback((frameInfo) => {
     'worklet';
+    if (!isActive.value) return;
+
     const dt = frameInfo.timeSincePreviousFrame ?? 33;
     const dtFactor = dt / 33;
 
@@ -311,10 +314,22 @@ export const ThreeWaveLines = ({
   const containerWidth = useSharedValue(400);
   const audioLevel = useSharedValue(0);
   const stateNum = useSharedValue(stateToNum(state));
+  const isActive = useSharedValue(true);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     stateNum.value = stateToNum(state);
   }, [state, stateNum]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      appStateRef.current = nextAppState;
+      isActive.value = nextAppState === 'active';
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [isActive]);
 
   useEffect(() => {
     let prevLevel = useTranscriptionStore.getState().audioLevel;
@@ -348,7 +363,8 @@ export const ThreeWaveLines = ({
     stateNum,
     containerWidth,
     centerY,
-    color0Rgb
+    color0Rgb,
+    isActive
   );
   const wave1 = useAnimatedWave(
     1,
@@ -356,7 +372,8 @@ export const ThreeWaveLines = ({
     stateNum,
     containerWidth,
     centerY,
-    color1Rgb
+    color1Rgb,
+    isActive
   );
   const wave2 = useAnimatedWave(
     2,
@@ -364,7 +381,8 @@ export const ThreeWaveLines = ({
     stateNum,
     containerWidth,
     centerY,
-    color2Rgb
+    color2Rgb,
+    isActive
   );
 
   return (

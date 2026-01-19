@@ -67,6 +67,9 @@ const createAudioService = () => {
   // iOS audio warm-up state (once per app launch)
   let iosAudioWarmedUp: boolean = false;
 
+  // Amplitude monitoring pause state for background transitions
+  let amplitudeMonitoringPaused: boolean = false;
+
   const resetLevelState = (): void => {
     smoothedLevel = 0.0;
     lastUpdateTime = null;
@@ -165,8 +168,10 @@ const createAudioService = () => {
     }
 
     resetLevelState();
+    amplitudeMonitoringPaused = false;
 
     amplitudeIntervalId = setInterval(() => {
+      if (amplitudeMonitoringPaused) return;
       if (recorder) {
         try {
           const status = recorder.getStatus();
@@ -183,6 +188,14 @@ const createAudioService = () => {
         }
       }
     }, 16);
+  };
+
+  const pauseAmplitudeMonitoring = (): void => {
+    amplitudeMonitoringPaused = true;
+  };
+
+  const resumeAmplitudeMonitoring = (): void => {
+    amplitudeMonitoringPaused = false;
   };
 
   const cleanup = async (): Promise<void> => {
@@ -578,6 +591,8 @@ const createAudioService = () => {
     subscribeToAudioLevel,
     dispose,
     warmUpIosAudioInput,
+    pauseAmplitudeMonitoring,
+    resumeAmplitudeMonitoring,
   };
 };
 

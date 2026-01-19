@@ -1,47 +1,39 @@
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 
-import { audioSessionService } from '@/services';
+import { audioService } from '@/services';
 import { useTranscriptionStore } from '@/stores';
-import { FeatureFlag, logError, logWarn } from '@/utils';
 
 export const useBackgroundRecording = () => {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
       const previousState = appStateRef.current;
       appStateRef.current = nextAppState;
 
-      // Only handle iOS foreground transitions
-      if (Platform.OS !== 'ios') {
-        return;
+      const transcriptionState = useTranscriptionStore.getState();
+      const isRecording = transcriptionState.isRecording();
+
+      // App going to background - pause amplitude monitoring to save resources
+      if (
+        previousState === 'active' &&
+        (nextAppState === 'background' || nextAppState === 'inactive')
+      ) {
+        if (isRecording) {
+          audioService.pauseAmplitudeMonitoring();
+        }
       }
 
-      // App came to foreground
+      // App came to foreground - resume amplitude monitoring after brief delay
       if (
         (previousState === 'background' || previousState === 'inactive') &&
         nextAppState === 'active'
       ) {
-        const transcriptionState = useTranscriptionStore.getState();
-        const isRecording = transcriptionState.isRecording();
-        const isStreaming = transcriptionState.isStreaming();
-
-        // If we were recording/streaming, reassert audio session
-        if (isRecording || isStreaming) {
-          try {
-            const success = await audioSessionService.ensureRecordingMode();
-            if (!success) {
-              logWarn('Failed to reassert audio session on foreground', {
-                flag: FeatureFlag.service,
-              });
-            }
-          } catch (error) {
-            logError(error, {
-              flag: FeatureFlag.service,
-              message: 'Error reasserting audio session on foreground',
-            });
-          }
+        if (isRecording) {
+          setTimeout(() => {
+            audioService.resumeAmplitudeMonitoring();
+          }, 150);
         }
       }
     };
