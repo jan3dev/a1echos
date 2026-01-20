@@ -83,7 +83,7 @@ export const HomeAppBar = ({
       <Pressable
         key="ghost"
         onPress={handleIncognitoToggle}
-        hitSlop={8}
+        hitSlop={10}
         style={styles.ghostButton}
       >
         <Icon
@@ -99,7 +99,7 @@ export const HomeAppBar = ({
       <Pressable
         key="settings"
         onPress={() => router.push('/settings' as any)}
-        hitSlop={8}
+        hitSlop={10}
       >
         <Icon name="hamburger" size={24} color={theme.colors.textPrimary} />
       </Pressable>,
@@ -125,6 +125,6 @@ export const HomeAppBar = ({
 
 const styles = StyleSheet.create({
   ghostButton: {
-    marginRight: 8,
+    marginRight: 16,
   },
 });
