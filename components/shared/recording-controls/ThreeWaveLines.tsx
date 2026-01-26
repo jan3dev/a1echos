@@ -5,6 +5,7 @@ import {
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { scheduleOnUI } from 'react-native-worklets';
 
@@ -16,6 +17,12 @@ interface ThreeWaveLinesProps {
   height?: number;
   colors: AquaColors;
   state?: TranscriptionState;
+}
+
+interface SpringConfig {
+  damping: number;
+  stiffness: number;
+  mass: number;
 }
 
 interface WaveProfile {
@@ -30,6 +37,7 @@ interface WaveProfile {
   transcribingAmplitude: number;
   transcribingPhaseOffset: number;
   audioOpacityReactivity: number;
+  springConfig: SpringConfig;
 }
 
 const WAVE_PROFILES: WaveProfile[] = [
@@ -39,12 +47,13 @@ const WAVE_PROFILES: WaveProfile[] = [
     verticalOffset: -3.2,
     amplitudeMultiplier: 0.5,
     strokeWidth: 3.0,
-    energyFloor: 0.09,
-    audioAmplitudeReactivity: 0.8,
+    energyFloor: 0.03,
+    audioAmplitudeReactivity: 0.7,
     audioSpeedReactivity: 1.0,
     transcribingAmplitude: 0.6,
     transcribingPhaseOffset: 0.0,
     audioOpacityReactivity: 0.1,
+    springConfig: { damping: 8, stiffness: 280, mass: 0.25 },
   },
   {
     basePhaseSpeed: 0.04,
@@ -52,12 +61,13 @@ const WAVE_PROFILES: WaveProfile[] = [
     verticalOffset: 0.0,
     amplitudeMultiplier: 0.42,
     strokeWidth: 2.8,
-    energyFloor: 0.07,
+    energyFloor: 0.02,
     audioAmplitudeReactivity: 1.0,
     audioSpeedReactivity: 1.2,
     transcribingAmplitude: 0.7,
     transcribingPhaseOffset: Math.PI,
     audioOpacityReactivity: 0.05,
+    springConfig: { damping: 10, stiffness: 240, mass: 0.3 },
   },
   {
     basePhaseSpeed: 0.06,
@@ -65,12 +75,13 @@ const WAVE_PROFILES: WaveProfile[] = [
     verticalOffset: 3.6,
     amplitudeMultiplier: 0.85,
     strokeWidth: 2.5,
-    energyFloor: 0.06,
-    audioAmplitudeReactivity: 0.5,
+    energyFloor: 0.02,
+    audioAmplitudeReactivity: 0.6,
     audioSpeedReactivity: 1.5,
     transcribingAmplitude: 0.8,
     transcribingPhaseOffset: (2 * Math.PI) / 3,
     audioOpacityReactivity: 0,
+    springConfig: { damping: 12, stiffness: 200, mass: 0.35 },
   },
 ];
 
@@ -85,10 +96,14 @@ const STATE_NUM = {
 
 const PHASE_OFFSETS = [0.0, Math.PI, Math.PI * 2];
 const POINTS = 60;
-const MAX_AMPLITUDE = 20.0;
+const BASE_MAX_AMPLITUDE = 20.0;
+const RECORDING_MAX_AMPLITUDE = 32.0;
 const MIN_AMPLITUDE = 2.0;
-const AMPLITUDE_RANGE = MAX_AMPLITUDE - MIN_AMPLITUDE;
+const BASE_AMPLITUDE_RANGE = BASE_MAX_AMPLITUDE - MIN_AMPLITUDE;
+const RECORDING_AMPLITUDE_RANGE = RECORDING_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const POINTS_MINUS_ONE = POINTS - 1;
+const VOICE_THRESHOLD = 0.25;
+const BURST_THRESHOLD = 0.12;
 
 const WAVE_COLORS = [
   AquaPrimitiveColors.waveOrange,
@@ -128,20 +143,31 @@ const useAnimatedWave = (
   audioLevel: { value: number },
   stateNum: { value: number },
   width: { value: number },
+  height: number,
   centerY: number,
   colorRgb: { r: number; g: number; b: number },
-  isActive: { value: boolean }
+  isActive: { value: boolean },
+  spikeTarget: { value: number },
 ) => {
   const profile = WAVE_PROFILES[waveIndex];
   const freqTwoPi = profile.frequency * 2 * Math.PI;
+  const { springConfig } = profile;
 
   const phase = useSharedValue(PHASE_OFFSETS[waveIndex]);
   const displayLevel = useSharedValue(0);
+  const springLevel = useSharedValue(0);
+  const prevAudioLevel = useSharedValue(0);
+  const burstMultiplier = useSharedValue(1.0);
+  const spikeMultiplier = useSharedValue(1.0);
+  const isRecording = useSharedValue(0);
+  const smoothedFreqLevel = useSharedValue(0);
+  const distortionCenter = useSharedValue(0.5);
+  const lineBoost = useSharedValue(1.0);
   const oscillationStrength = useSharedValue(0);
   const transcribingTime = useSharedValue(0);
   const smoothedBaseEnergy = useSharedValue(0.5);
   const smoothedAmplitudeMultiplier = useSharedValue(
-    profile.amplitudeMultiplier * 1.5
+    profile.amplitudeMultiplier * 1.5,
   );
   const smoothedOpacity = useSharedValue(0.75);
   const smoothedPositionWeight = useSharedValue(0);
@@ -162,8 +188,71 @@ const useAnimatedWave = (
       currentState === STATE_NUM.TRANSCRIBING ||
       currentState === STATE_NUM.LOADING;
 
-    const diff = targetLevel - displayLevel.value;
-    displayLevel.value += diff * (diff > 0 ? 0.55 : 0.22) * dtFactor;
+    if (isRecordingOrStreaming) {
+      isRecording.value = 1;
+      const levelJump = targetLevel - prevAudioLevel.value;
+      const isSpikeWave =
+        spikeTarget.value === waveIndex && targetLevel > VOICE_THRESHOLD;
+
+      if (isSpikeWave && levelJump > BURST_THRESHOLD) {
+        burstMultiplier.value = 1.0 + levelJump * 4.5;
+        distortionCenter.value = 0.2 + Math.random() * 0.6;
+        lineBoost.value = 0.8 + Math.random() * 0.6;
+      }
+      burstMultiplier.value = withSpring(1.0, {
+        damping: 6,
+        stiffness: 200,
+        mass: 0.2,
+      });
+
+      if (isSpikeWave) {
+        spikeMultiplier.value = 1.9 + Math.random() * 0.7;
+        spikeTarget.value = -1;
+      }
+      spikeMultiplier.value = withSpring(1.0, {
+        damping: 6,
+        stiffness: 180,
+        mass: 0.25,
+      });
+
+      lineBoost.value = withSpring(1.0, {
+        damping: 10,
+        stiffness: 120,
+        mass: 0.3,
+      });
+
+      distortionCenter.value = withSpring(0.5, {
+        damping: 12,
+        stiffness: 80,
+        mass: 0.4,
+      });
+
+      springLevel.value = withSpring(targetLevel, springConfig);
+      displayLevel.value =
+        springLevel.value *
+        burstMultiplier.value *
+        spikeMultiplier.value *
+        lineBoost.value;
+      const spikeCap = 1.4 + Math.max(0, spikeMultiplier.value - 1) * 0.6;
+      const maxDisplayLevel = spikeCap > 1.9 ? 1.9 : spikeCap;
+      if (displayLevel.value > maxDisplayLevel) {
+        displayLevel.value = maxDisplayLevel;
+      }
+    } else {
+      isRecording.value = 0;
+      const diff = targetLevel - displayLevel.value;
+      displayLevel.value += diff * (diff > 0 ? 0.55 : 0.22) * dtFactor;
+      burstMultiplier.value = 1.0;
+      spikeMultiplier.value = 1.0;
+      lineBoost.value = 1.0;
+      distortionCenter.value = 0.5;
+    }
+
+    prevAudioLevel.value = targetLevel;
+
+    const freqTarget = isRecordingOrStreaming ? displayLevel.value : 0;
+    smoothedFreqLevel.value +=
+      (freqTarget - smoothedFreqLevel.value) * 0.08 * dtFactor;
 
     let targetBaseEnergy: number;
     let targetAmplitudeMultiplier: number;
@@ -182,18 +271,23 @@ const useAnimatedWave = (
       targetPositionWeight = 0;
     } else {
       const dl = displayLevel.value;
+      const voiceBoost =
+        dl > VOICE_THRESHOLD
+          ? (dl - VOICE_THRESHOLD) * 0.8 * profile.audioAmplitudeReactivity
+          : 0;
       const audioReactiveEnergy = dl < 0 ? 0 : dl > 1 ? 1 : dl;
       targetBaseEnergy =
         profile.energyFloor +
-        audioReactiveEnergy * profile.audioAmplitudeReactivity;
-      if (targetBaseEnergy > 1) targetBaseEnergy = 1;
+        audioReactiveEnergy * profile.audioAmplitudeReactivity +
+        voiceBoost;
+      if (targetBaseEnergy > 1.5) targetBaseEnergy = 1.5;
       targetAmplitudeMultiplier = profile.amplitudeMultiplier;
       targetOpacity = 0.75 + dl * profile.audioOpacityReactivity;
       if (targetOpacity > 1) targetOpacity = 1;
       targetPositionWeight = 1;
     }
 
-    const transitionSpeed = 0.15 * dtFactor;
+    const transitionSpeed = 0.25 * dtFactor;
     smoothedBaseEnergy.value +=
       (targetBaseEnergy - smoothedBaseEnergy.value) * transitionSpeed;
     smoothedAmplitudeMultiplier.value +=
@@ -222,11 +316,10 @@ const useAnimatedWave = (
     if (currentState === STATE_NUM.READY) {
       phaseStep = profile.basePhaseSpeed * 0.6 * dtFactor;
     } else if (isRecordingOrStreaming) {
-      phaseStep =
-        profile.basePhaseSpeed *
-        4.8 *
-        (1.0 + displayLevel.value * profile.audioSpeedReactivity) *
-        dtFactor;
+      const dl = displayLevel.value;
+      const baseSpeed = profile.basePhaseSpeed * 0.8;
+      const audioBoost = dl * 0.8 * profile.audioSpeedReactivity;
+      phaseStep = (baseSpeed + audioBoost) * dtFactor;
     } else {
       phaseStep = profile.basePhaseSpeed * 0.6 * dtFactor;
     }
@@ -241,7 +334,8 @@ const useAnimatedWave = (
     if (w <= 0) return;
 
     const oscillation = Math.sin(
-      transcribingTime.value * (Math.PI / 3.0) + profile.transcribingPhaseOffset
+      transcribingTime.value * (Math.PI / 3.0) +
+        profile.transcribingPhaseOffset,
     );
     const phaseInversion =
       1.0 + (oscillation - 1.0) * oscillationStrength.value;
@@ -256,6 +350,16 @@ const useAnimatedWave = (
     const ampMult = smoothedAmplitudeMultiplier.value;
     const posWeight = smoothedPositionWeight.value;
     const currentPhase = phase.value;
+    const dl = displayLevel.value;
+    const frequencySqueeze = 1.0 + smoothedFreqLevel.value * 0.5;
+    const distCenter = distortionCenter.value;
+    const spikeShape = 1 + (spikeMultiplier.value - 1) * 1.1;
+    const edgePadding = Math.max(2, profile.strokeWidth);
+    const maxAmplitude = Math.min(
+      adjustedCenterY - edgePadding,
+      height - adjustedCenterY - edgePadding,
+    );
+    const safeMaxAmplitude = maxAmplitude > 0 ? maxAmplitude : 0;
 
     let prevX = 0;
     let prevY = adjustedCenterY;
@@ -264,17 +368,30 @@ const useAnimatedWave = (
       const normalizedX = i / POINTS_MINUS_ONE;
       const x = normalizedX * w;
 
-      const distanceFromCenter = Math.abs(normalizedX - 0.5) * 2.0;
-      const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.5;
+      const distanceFromCenter =
+        Math.abs(normalizedX - distCenter) * 2.0 * spikeShape;
+      const centerWeight = 1.0 - distanceFromCenter * distanceFromCenter * 0.6;
       const clampedCenterWeight =
-        centerWeight < 0.4 ? 0.4 : centerWeight > 1.0 ? 1.0 : centerWeight;
+        centerWeight < 0.3 ? 0.3 : centerWeight > 1.0 ? 1.0 : centerWeight;
       const positionWeight = 1.0 - posWeight * (1.0 - clampedCenterWeight);
 
       const rawAmplitude = baseEnergy * ampMult * positionWeight;
       const normalizedAmplitude =
         rawAmplitude < 0 ? 0 : rawAmplitude > 1 ? 1 : rawAmplitude;
-      const amplitude = MIN_AMPLITUDE + normalizedAmplitude * AMPLITUDE_RANGE;
-      const sine = Math.sin(freqTwoPi * normalizedX + currentPhase);
+      const recordingBoost =
+        isRecording.value *
+        dl *
+        (RECORDING_AMPLITUDE_RANGE - BASE_AMPLITUDE_RANGE);
+      const amplitudeRange = BASE_AMPLITUDE_RANGE + recordingBoost;
+      const spikeHump = 1 + (spikeMultiplier.value - 1) * clampedCenterWeight;
+      let amplitude =
+        MIN_AMPLITUDE + normalizedAmplitude * amplitudeRange * spikeHump;
+      if (amplitude > safeMaxAmplitude) {
+        amplitude = safeMaxAmplitude;
+      }
+      const sine = Math.sin(
+        freqTwoPi * normalizedX * frequencySqueeze + currentPhase,
+      );
       const energyFactor = 0.65 + normalizedAmplitude * 0.35;
       const y =
         adjustedCenterY + amplitude * energyFactor * sine * phaseInversion;
@@ -290,7 +407,7 @@ const useAnimatedWave = (
           prevX + dx * 0.66,
           prevY + dy * 0.66,
           x,
-          y
+          y,
         );
       }
       prevX = x;
@@ -315,6 +432,8 @@ export const ThreeWaveLines = ({
   const audioLevel = useSharedValue(0);
   const stateNum = useSharedValue(stateToNum(state));
   const isActive = useSharedValue(true);
+  const spikeTarget = useSharedValue(-1);
+  const prevSpikeLevel = useSharedValue(0);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
@@ -327,7 +446,10 @@ export const ThreeWaveLines = ({
       isActive.value = nextAppState === 'active';
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
     return () => subscription.remove();
   }, [isActive]);
 
@@ -336,6 +458,16 @@ export const ThreeWaveLines = ({
     const updateAudioLevel = (level: number) => {
       'worklet';
       audioLevel.value = level < 0 ? 0 : level > 1 ? 1 : level;
+
+      const levelJump = level - prevSpikeLevel.value;
+      if (
+        levelJump > 0.06 &&
+        level > VOICE_THRESHOLD &&
+        spikeTarget.value < 0
+      ) {
+        spikeTarget.value = Math.floor(Math.random() * 3);
+      }
+      prevSpikeLevel.value = level;
     };
 
     const unsubscribe = useTranscriptionStore.subscribe((zustandState) => {
@@ -346,14 +478,14 @@ export const ThreeWaveLines = ({
       }
     });
     return unsubscribe;
-  }, [audioLevel]);
+  }, [audioLevel, spikeTarget, prevSpikeLevel]);
 
   const centerY = height / 2;
 
   const color0Rgb = useMemo(() => hexToRgb(WAVE_COLORS[0]), []);
   const color1Rgb = useMemo(
     () => hexToRgb(colors.accentBrand),
-    [colors.accentBrand]
+    [colors.accentBrand],
   );
   const color2Rgb = useMemo(() => hexToRgb(WAVE_COLORS[2]), []);
 
@@ -362,27 +494,33 @@ export const ThreeWaveLines = ({
     audioLevel,
     stateNum,
     containerWidth,
+    height,
     centerY,
     color0Rgb,
-    isActive
+    isActive,
+    spikeTarget,
   );
   const wave1 = useAnimatedWave(
     1,
     audioLevel,
     stateNum,
     containerWidth,
+    height,
     centerY,
     color1Rgb,
-    isActive
+    isActive,
+    spikeTarget,
   );
   const wave2 = useAnimatedWave(
     2,
     audioLevel,
     stateNum,
     containerWidth,
+    height,
     centerY,
     color2Rgb,
-    isActive
+    isActive,
+    spikeTarget,
   );
 
   return (
