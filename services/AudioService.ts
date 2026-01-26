@@ -100,8 +100,8 @@ const createAudioService = () => {
       }
 
       const rms = Math.sqrt(sumSquares / samples);
-      const boosted = Math.min(1.0, rms * 8);
-      return Math.pow(boosted, 0.7);
+      const boosted = Math.min(1.0, rms * 14);
+      return Math.pow(boosted, 0.5);
     } catch {
       return 0;
     }
@@ -121,10 +121,10 @@ const createAudioService = () => {
     lastUpdateTime = now;
 
     const rising = level > smoothedLevel;
-    const baseAlpha = rising ? 0.8 : 0.5;
+    const baseAlpha = rising ? 0.92 : 0.7;
     const alpha = Math.max(
-      0.4,
-      Math.min(rising ? 0.9 : 0.6, baseAlpha * (dtMs / 16.0))
+      0.6,
+      Math.min(rising ? 0.95 : 0.8, baseAlpha * (dtMs / 16.0)),
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
@@ -139,7 +139,7 @@ const createAudioService = () => {
       const db = Math.max(-50.0, Math.min(0.0, metering));
       level = (db + 50.0) / 50.0;
       level = Math.max(0.0, Math.min(1.0, level));
-      level = Math.pow(level, 0.6);
+      level = Math.pow(level, 0.5);
       level = Math.max(0.02, Math.min(1.0, level));
     }
 
@@ -151,10 +151,10 @@ const createAudioService = () => {
     lastUpdateTime = now;
 
     const rising = level > smoothedLevel;
-    const baseAlpha = rising ? 0.8 : 0.5;
+    const baseAlpha = rising ? 0.92 : 0.7;
     const alpha = Math.max(
-      0.4,
-      Math.min(rising ? 0.9 : 0.6, baseAlpha * (dtMs / 16.0))
+      0.6,
+      Math.min(rising ? 0.95 : 0.8, baseAlpha * (dtMs / 16.0)),
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
@@ -265,7 +265,7 @@ const createAudioService = () => {
           androidWavFilePath,
           AppConstants.AUDIO_SAMPLE_RATE,
           AppConstants.AUDIO_NUM_CHANNELS,
-          16
+          16,
         );
 
         AudioRecord.init({
@@ -360,7 +360,7 @@ const createAudioService = () => {
 
         try {
           await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
+            Haptics.NotificationFeedbackType.Success,
           );
         } catch {
           logWarn('Haptics not supported', { flag: FeatureFlag.recording });
@@ -450,7 +450,7 @@ const createAudioService = () => {
 
         try {
           await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success
+            Haptics.NotificationFeedbackType.Success,
           );
         } catch {
           logWarn('Haptics not supported', { flag: FeatureFlag.recording });
@@ -484,7 +484,7 @@ const createAudioService = () => {
   };
 
   const subscribeToAudioLevel = (
-    callback: (level: number) => void
+    callback: (level: number) => void,
   ): (() => void) => {
     audioLevelEmitter.on('audioLevel', callback);
     return () => {
