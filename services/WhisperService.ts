@@ -19,8 +19,6 @@ import { FeatureFlag, logError, logWarn } from '@/utils';
 import { audioService } from './AudioService';
 import { audioSessionService } from './AudioSessionService';
 
-const AUDIO_LEVEL_THROTTLE_MS = 33;
-const RMS_SAMPLE_STEP = 4;
 const IOS_INIT_THREADS = 2;
 const IOS_VAD_THREADS = 1;
 
@@ -51,7 +49,6 @@ interface WhisperServiceState {
   initializationStatus: string | null;
   partialCallbacks: Set<(text: string) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
-  lastAudioLevelEmitTime: number;
   initializePromise: Promise<boolean> | null;
 }
 
@@ -76,18 +73,19 @@ const createWhisperService = () => {
     initializationStatus: null,
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
-    lastAudioLevelEmitTime: 0,
     initializePromise: null,
   };
 
-  const computeRmsLevel = (data: Uint8Array): number => {
-    if (data.length === 0) return 0;
+  let smoothedLevel = 0.0;
+  let lastLevelTime: number | null = null;
+
+  const computeRmsFromPcm = (data: Uint8Array): number => {
+    if (data.length < 2) return 0;
 
     let sumSquares = 0;
-    let sampleCount = 0;
-    const step = RMS_SAMPLE_STEP * 2;
+    const samples = Math.floor(data.length / 2);
 
-    for (let i = 0; i < data.length - 1; i += step) {
+    for (let i = 0; i < data.length - 1; i += 2) {
       const low = data[i];
       const high = data[i + 1];
       let sample = low | (high << 8);
@@ -96,24 +94,34 @@ const createWhisperService = () => {
       }
       const normalized = sample / 32768;
       sumSquares += normalized * normalized;
-      sampleCount++;
     }
 
-    if (sampleCount === 0) return 0;
-    const rms = Math.sqrt(sumSquares / sampleCount);
-    const boosted = Math.min(1.0, rms * 8);
-    const level = Math.pow(boosted, 0.7);
-    return level;
+    const rms = Math.sqrt(sumSquares / samples);
+    const boosted = Math.min(1.0, rms * 14);
+    return Math.pow(boosted, 0.5);
   };
 
-  const emitAudioLevel = (level: number): void => {
-    const now = Date.now();
-    if (now - state.lastAudioLevelEmitTime < AUDIO_LEVEL_THROTTLE_MS) {
-      return;
-    }
-    state.lastAudioLevelEmitTime = now;
+  const processAudioLevel = (data: Uint8Array): void => {
+    const rawLevel = computeRmsFromPcm(data);
+    const level = Math.max(0.02, Math.min(1.0, rawLevel));
 
-    const visual = Math.max(0.02, Math.min(1.0, level));
+    const now = Date.now();
+    const dtMs =
+      lastLevelTime === null
+        ? 16
+        : Math.max(0, Math.min(150, now - lastLevelTime));
+    lastLevelTime = now;
+
+    const rising = level > smoothedLevel;
+    const baseAlpha = rising ? 0.92 : 0.7;
+    const alpha = Math.max(
+      0.6,
+      Math.min(rising ? 0.95 : 0.8, baseAlpha * (dtMs / 16.0))
+    );
+
+    smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
+    const visual = Math.max(0.02, Math.min(1.0, smoothedLevel));
+
     state.audioLevelCallbacks.forEach((callback) => {
       try {
         callback(visual);
@@ -277,6 +285,8 @@ const createWhisperService = () => {
 
     try {
       state.currentTranscription = '';
+      smoothedLevel = 0.0;
+      lastLevelTime = null;
 
       const warmUpSuccess = await audioService.warmUpIosAudioInput();
       if (!warmUpSuccess) {
@@ -303,8 +313,7 @@ const createWhisperService = () => {
         transcriberDataCallback = callback;
         originalOnData((audioData: AudioStreamData) => {
           if (audioData.data) {
-            const level = computeRmsLevel(audioData.data);
-            emitAudioLevel(level);
+            processAudioLevel(audioData.data);
           }
           if (transcriberDataCallback) {
             transcriberDataCallback(audioData);
@@ -453,6 +462,8 @@ const createWhisperService = () => {
     state.realtimeTranscriber = null;
     state.realtimeAudioStream = null;
     state.isRealtimeRecording = false;
+    smoothedLevel = 0.0;
+    lastLevelTime = null;
     state.audioLevelCallbacks.forEach((callback) => {
       try {
         callback(0.02);
@@ -523,7 +534,6 @@ const createWhisperService = () => {
     state.isTranscribing = false;
     state.isRealtimeRecording = false;
     state.currentTranscription = '';
-    state.lastAudioLevelEmitTime = 0;
   };
 
   return {
