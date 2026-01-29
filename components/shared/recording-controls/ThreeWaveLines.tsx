@@ -153,8 +153,6 @@ const useAnimatedWave = (
   const smoothedOpacity = useSharedValue(0.75);
   const smoothedPositionWeight = useSharedValue(0);
   const phaseSpeedMultiplier = useSharedValue(0.6);
-  const speechWobble = useSharedValue(0);
-  const levelVelocity = useSharedValue(0);
 
   useFrameCallback((frameInfo) => {
     'worklet';
@@ -181,55 +179,35 @@ const useAnimatedWave = (
         targetLevel > VOICE_THRESHOLD &&
         initialBlipTarget.value === waveIndex
       ) {
-        initialBlipAmount.value = 1.8;
+        initialBlipAmount.value = 5.0;
         hasTriggeredInitialBlip.value = true;
       }
 
-      // Decay the initial blip smoothly
+      // Decay the initial blip (slower decay to stay longer)
       if (initialBlipAmount.value > 0) {
-        initialBlipAmount.value *= 0.9;
-        if (initialBlipAmount.value < 0.01) {
+        initialBlipAmount.value *= 0.94;
+        if (initialBlipAmount.value < 0.02) {
           initialBlipAmount.value = 0;
         }
       }
 
-      // Track rate of change (velocity) for detecting syllables/words
-      const rawVelocity = targetLevel - prevAudioLevel.value;
-      levelVelocity.value += (rawVelocity - levelVelocity.value) * 0.3;
-
-      // Sharp attack and release for immediate feedback
+      // Smooth envelope following - slow attack, slower release
+      // This creates a stable amplitude that represents overall volume
       const diff = targetLevel - displayLevel.value;
-      const lerpSpeed = diff > 0 ? 0.5 : 0.42;
+      const lerpSpeed = diff > 0 ? 0.08 : 0.04;
       displayLevel.value += diff * lerpSpeed * dtFactor;
+      if (displayLevel.value > 1.4) displayLevel.value = 1.4;
+      if (displayLevel.value < 0) displayLevel.value = 0;
 
-      // Add speech wobble when voice is active - natural micro-variations
-      if (targetLevel > 0.15) {
-        const wobbleIntensity = targetLevel * 0.12 * (1 + waveIndex * 0.15);
-        const velocityBoost = Math.abs(levelVelocity.value) * 2.0;
-        speechWobble.value =
-          (Math.random() - 0.5) * wobbleIntensity * (1 + velocityBoost);
-      } else {
-        speechWobble.value *= 0.85;
-      }
-
-      // Apply initial blip boost and speech wobble
-      const blipBoost = 1.0 + initialBlipAmount.value;
-      let boostedLevel = displayLevel.value * blipBoost + speechWobble.value;
-      boostedLevel = boostedLevel > 1.6 ? 1.6 : boostedLevel < 0 ? 0 : boostedLevel;
-      displayLevel.value = boostedLevel;
-
-      // Accelerate phase speed based on audio level + velocity
-      const velocitySpeedBoost = Math.abs(levelVelocity.value) * 0.8;
-      const targetSpeedMult = 1.0 + displayLevel.value * 1.8 + velocitySpeedBoost;
+      // Smoothly adjust phase speed based on display level
+      const targetSpeedMult = 1.0 + displayLevel.value * 4.5;
       phaseSpeedMultiplier.value +=
-        (targetSpeedMult - phaseSpeedMultiplier.value) * 0.25 * dtFactor;
+        (targetSpeedMult - phaseSpeedMultiplier.value) * 0.08 * dtFactor;
     } else {
       isRecording.value = 0;
       const diff = targetLevel - displayLevel.value;
-      displayLevel.value += diff * (diff > 0 ? 0.15 : 0.1) * dtFactor;
+      displayLevel.value += diff * (diff > 0 ? 0.1 : 0.06) * dtFactor;
       initialBlipAmount.value = 0;
-      speechWobble.value *= 0.9;
-      levelVelocity.value *= 0.9;
 
       // Gradually slow down phase speed when not recording
       phaseSpeedMultiplier.value +=
@@ -240,7 +218,7 @@ const useAnimatedWave = (
 
     const freqTarget = isRecordingOrStreaming ? displayLevel.value : 0;
     smoothedFreqLevel.value +=
-      (freqTarget - smoothedFreqLevel.value) * 0.2 * dtFactor;
+      (freqTarget - smoothedFreqLevel.value) * 0.05 * dtFactor;
 
     let targetBaseEnergy: number;
     let targetAmplitudeMultiplier: number;
@@ -275,8 +253,8 @@ const useAnimatedWave = (
       targetPositionWeight = 1;
     }
 
-    // Fast transitions during recording for immediate feedback
-    const transitionSpeed = isRecordingOrStreaming ? 0.4 : 0.15;
+    // Smooth transitions for stable wave behavior
+    const transitionSpeed = isRecordingOrStreaming ? 0.08 : 0.1;
     const adjustedSpeed = transitionSpeed * dtFactor;
     smoothedBaseEnergy.value +=
       (targetBaseEnergy - smoothedBaseEnergy.value) * adjustedSpeed;
@@ -288,17 +266,16 @@ const useAnimatedWave = (
     smoothedPositionWeight.value +=
       (targetPositionWeight - smoothedPositionWeight.value) * adjustedSpeed;
 
-    // Move distortion center dynamically during speech
+    // Smoothly drift distortion center during recording
     if (isRecordingOrStreaming && displayLevel.value > 0.2) {
-      const velocityShift = levelVelocity.value * 1.5;
-      const targetCenter = 0.5 + velocityShift + (Math.random() - 0.5) * 0.08;
+      const targetCenter = 0.5 + (Math.random() - 0.5) * 0.04;
       const clampedTarget =
-        targetCenter < 0.25 ? 0.25 : targetCenter > 0.75 ? 0.75 : targetCenter;
+        targetCenter < 0.35 ? 0.35 : targetCenter > 0.65 ? 0.65 : targetCenter;
       distortionCenter.value +=
-        (clampedTarget - distortionCenter.value) * 0.15 * dtFactor;
+        (clampedTarget - distortionCenter.value) * 0.02 * dtFactor;
     } else {
       distortionCenter.value +=
-        (0.5 - distortionCenter.value) * 0.05 * dtFactor;
+        (0.5 - distortionCenter.value) * 0.03 * dtFactor;
     }
 
     if (isTranscribingOrLoading) {
@@ -347,7 +324,7 @@ const useAnimatedWave = (
     const dl = displayLevel.value;
     const frequencySqueeze = 1.0 + smoothedFreqLevel.value * 0.5;
     const distCenter = distortionCenter.value;
-    const blipBoost = 1.0 + initialBlipAmount.value * 0.8;
+    const blipAmount = initialBlipAmount.value;
     const edgePadding = Math.max(2, profile.strokeWidth);
     const maxAmplitude = Math.min(
       adjustedCenterY - edgePadding,
@@ -376,8 +353,21 @@ const useAnimatedWave = (
         dl *
         (RECORDING_AMPLITUDE_RANGE - BASE_AMPLITUDE_RANGE);
       const amplitudeRange = BASE_AMPLITUDE_RANGE + recordingBoost;
+
+      // Apply blip centered around 45% of the wave, fading out to edges
+      // Blip adds amplitude directly so it's visible even when displayLevel is low
+      const blipCenter = 0.8;
+      const blipWidth = 0.35;
+      const distFromBlipCenter = Math.abs(normalizedX - blipCenter);
+      const blipFalloff =
+        distFromBlipCenter < blipWidth
+          ? 1.0 - distFromBlipCenter / blipWidth
+          : 0;
+      const blipAddition =
+        blipAmount * RECORDING_MAX_AMPLITUDE * 1.2 * blipFalloff;
+
       let amplitude =
-        MIN_AMPLITUDE + normalizedAmplitude * amplitudeRange * blipBoost;
+        MIN_AMPLITUDE + normalizedAmplitude * amplitudeRange + blipAddition;
       if (amplitude > safeMaxAmplitude) {
         amplitude = safeMaxAmplitude;
       }
