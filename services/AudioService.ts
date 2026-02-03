@@ -136,10 +136,10 @@ const createAudioService = () => {
     let level = 0.02;
 
     if (metering !== undefined && isFinite(metering) && metering > -160) {
-      const db = Math.max(-50.0, Math.min(0.0, metering));
-      level = (db + 50.0) / 50.0;
+      const db = Math.max(-70.0, Math.min(0.0, metering));
+      level = (db + 70.0) / 70.0;
       level = Math.max(0.0, Math.min(1.0, level));
-      level = Math.pow(level, 0.5);
+      level = Math.pow(level, 1.5);
       level = Math.max(0.02, Math.min(1.0, level));
     }
 
