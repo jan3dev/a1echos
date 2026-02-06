@@ -103,11 +103,7 @@ export const SessionAppBar = ({
           hitSlop={10}
           style={{ opacity: copyAllEnabled ? 1 : 0.5 }}
         >
-          <Icon
-            name="copy_multiple"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
+          <Icon name="copy" size={24} color={theme.colors.textPrimary} />
         </Pressable>,
       ]}
     />

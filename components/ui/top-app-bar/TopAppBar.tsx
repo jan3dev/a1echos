@@ -110,6 +110,7 @@ export const TopAppBar = ({
                 variant="subtitle"
                 weight="semibold"
                 align="center"
+                numberOfLines={1}
                 color={
                   transparent
                     ? theme.colors.textInverse
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   actionsContainer: {
     width: SIDE_WIDTH,
