@@ -6,6 +6,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getShadow, useTheme } from '@/theme';
 
@@ -54,6 +55,7 @@ export const Modal = ({
   onDismiss,
 }: ModalProps) => {
   const { width } = useWindowDimensions();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -127,6 +129,7 @@ export const Modal = ({
               transform: [{ translateY }],
               opacity,
               maxWidth,
+              marginBottom: bottomInset + 32,
               backgroundColor: colors.surfacePrimary,
               borderRadius: 24,
             },
@@ -246,7 +249,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   container: {
-    marginBottom: 20,
     marginHorizontal: 16,
     ...getShadow('modal'),
   },

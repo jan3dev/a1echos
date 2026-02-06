@@ -9,6 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppConstants } from '@/constants';
 import { useLocalization } from '@/hooks';
@@ -42,6 +43,7 @@ export const SessionInputModal = ({
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const { height: screenHeight } = useWindowDimensions();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const [text, setText] = useState(initialValue);
   const keyboardVisibleRef = useRef(false);
 
@@ -109,6 +111,7 @@ export const SessionInputModal = ({
               {
                 backgroundColor: theme.colors.surfacePrimary,
                 width: containerWidth,
+                paddingBottom: bottomInset + 32,
                 transform: [{ translateY: slideAnim }],
               },
             ]}
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     paddingHorizontal: 16,
     paddingTop: 24,
-    paddingBottom: 32,
+    paddingBottom: 0,
   },
   header: {
     flexDirection: 'row',
