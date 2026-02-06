@@ -30,6 +30,8 @@ export interface TopAppBarProps {
   style?: StyleProp<ViewStyle>;
 }
 
+const SIDE_WIDTH = 64; // 2 × 24px icon + 16px gap
+
 export const TopAppBar = ({
   title = '',
   showBackButton = true,
@@ -76,26 +78,26 @@ export const TopAppBar = ({
       ]}
     >
       <View style={styles.row}>
-        {showBackButton ? (
-          <TouchableOpacity
-            onPress={handleBack}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Icon
-              name="chevron_left"
-              size={24}
-              color={
-                transparent
-                  ? theme.colors.textInverse
-                  : theme.colors.textPrimary
-              }
-            />
-          </TouchableOpacity>
-        ) : leading ? (
-          leading
-        ) : (
-          <View style={{ width: 24 }} />
-        )}
+        <View style={styles.leadingContainer}>
+          {showBackButton ? (
+            <TouchableOpacity
+              onPress={handleBack}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon
+                name="chevron_left"
+                size={24}
+                color={
+                  transparent
+                    ? theme.colors.textInverse
+                    : theme.colors.textPrimary
+                }
+              />
+            </TouchableOpacity>
+          ) : leading ? (
+            leading
+          ) : null}
+        </View>
 
         <View style={styles.titleContainer}>
           <TouchableOpacity
@@ -120,18 +122,14 @@ export const TopAppBar = ({
           </TouchableOpacity>
         </View>
 
-        {actions.length === 0 ? (
-          <View style={{ width: 24 }} />
-        ) : (
-          <View style={styles.actionsContainer}>
-            {actions.map((action, index) => (
-              <Fragment key={index}>
-                {action}
-                {index < actions.length - 1 && <View style={{ width: 8 }} />}
-              </Fragment>
-            ))}
-          </View>
-        )}
+        <View style={styles.actionsContainer}>
+          {actions.map((action, index) => (
+            <Fragment key={index}>
+              {action}
+              {index < actions.length - 1 && <View style={{ width: 16 }} />}
+            </Fragment>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -188,13 +186,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  leadingContainer: {
+    width: SIDE_WIDTH,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    overflow: 'visible',
+  },
   titleContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionsContainer: {
+    width: SIDE_WIDTH,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
 });

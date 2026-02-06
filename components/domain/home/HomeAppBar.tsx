@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 
 import { useSettingsStore } from '@/stores';
 import { useTheme } from '@/theme';
@@ -51,7 +51,7 @@ export const HomeAppBar = ({
   const renderLeading = () => {
     if (selectionMode) {
       return (
-        <Pressable onPress={() => onExitSelectionMode?.()} hitSlop={8}>
+        <Pressable onPress={() => onExitSelectionMode?.()} hitSlop={10}>
           <Icon
             name="chevron_left"
             size={24}
@@ -73,19 +73,18 @@ export const HomeAppBar = ({
   const renderActions = () => {
     if (selectionMode) {
       return [
-        <Pressable key="trash" onPress={() => onDeleteSelected?.()} hitSlop={8}>
+        <Pressable
+          key="trash"
+          onPress={() => onDeleteSelected?.()}
+          hitSlop={10}
+        >
           <Icon name="trash" size={24} color={theme.colors.textPrimary} />
         </Pressable>,
       ];
     }
 
     return [
-      <Pressable
-        key="ghost"
-        onPress={handleIncognitoToggle}
-        hitSlop={10}
-        style={styles.ghostButton}
-      >
+      <Pressable key="ghost" onPress={handleIncognitoToggle} hitSlop={10}>
         <Icon
           name="ghost"
           size={24}
@@ -122,9 +121,3 @@ export const HomeAppBar = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  ghostButton: {
-    marginRight: 16,
-  },
-});

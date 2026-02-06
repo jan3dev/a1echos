@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable } from 'react-native';
 
 import { useLocalization } from '@/hooks';
 import { getCountryCode } from '@/models';
@@ -69,12 +69,7 @@ export const SessionAppBar = ({
         title={sessionName}
         onBackPressed={onBackPressed}
         actions={[
-          <Pressable
-            key="select_all"
-            onPress={onSelectAllPressed}
-            hitSlop={10}
-            style={styles.actionButton}
-          >
+          <Pressable key="select_all" onPress={onSelectAllPressed} hitSlop={10}>
             <Icon
               name="select_all"
               size={24}
@@ -85,7 +80,6 @@ export const SessionAppBar = ({
             key="delete"
             onPress={onDeleteSelectedPressed}
             hitSlop={10}
-            style={styles.actionButton}
           >
             <Icon name="trash" size={24} color={theme.colors.textPrimary} />
           </Pressable>,
@@ -100,19 +94,14 @@ export const SessionAppBar = ({
       onBackPressed={onBackPressed}
       onTitlePressed={!isIncognitoSession ? onTitlePressed : undefined}
       actions={[
-        <Pressable
-          key="language"
-          onPress={onLanguageFlagPressed}
-          hitSlop={10}
-          style={styles.actionButton}
-        >
+        <Pressable key="language" onPress={onLanguageFlagPressed} hitSlop={10}>
           <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
         </Pressable>,
         <Pressable
           key="copy"
           onPress={onCopyAllPressed}
           hitSlop={10}
-          style={[styles.actionButton, { opacity: copyAllEnabled ? 1 : 0.5 }]}
+          style={{ opacity: copyAllEnabled ? 1 : 0.5 }}
         >
           <Icon
             name="copy_multiple"
@@ -124,9 +113,3 @@ export const SessionAppBar = ({
     />
   );
 };
-
-const styles = StyleSheet.create({
-  actionButton: {
-    marginLeft: 16,
-  },
-});
