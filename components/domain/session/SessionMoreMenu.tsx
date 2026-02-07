@@ -1,12 +1,5 @@
 import { useRef, useState } from 'react';
-import {
-  Dimensions,
-  Modal,
-  Pressable,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { useLocalization, useSessionOperations } from '@/hooks';
 import { Session } from '@/models';
@@ -21,6 +14,7 @@ import {
 
 import { ListItem } from '../../shared/list-item/ListItem';
 import { Icon } from '../../ui/icon/Icon';
+import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
 import { Text } from '../../ui/text/Text';
 import { Toast } from '../../ui/toast/Toast';
 import { useToast } from '../../ui/toast/useToast';
@@ -45,7 +39,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
     right: number;
   }>({ top: 0, right: 16 });
   const [measuredMenuHeight, setMeasuredMenuHeight] = useState<number | null>(
-    null
+    null,
   );
   const iconRef = useRef<View>(null);
 
@@ -99,7 +93,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   };
 
   const openMenu = () => {
-    iconRef.current?.measureInWindow((x, y, width, height) => {
+    iconRef.current?.measureInWindow((_x, y, _width, height) => {
       const screenHeight = Dimensions.get('window').height;
       const right = 16;
       const menuGap = 8;
@@ -117,14 +111,16 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
   return (
     <>
-      <TouchableOpacity
+      <RipplePressable
         onPress={openMenu}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        hitSlop={10}
+        rippleColor={theme.colors.ripple}
+        borderless
       >
         <View ref={iconRef} collapsable={false}>
           <Icon name="more" size={24} color={theme.colors.textPrimary} />
         </View>
-      </TouchableOpacity>
+      </RipplePressable>
 
       {/* Popover Menu */}
       <Modal

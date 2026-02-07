@@ -34,6 +34,9 @@ export interface AquaColors {
   chipSuccessForegroundColor: string;
   chipErrorForegroundColor: string;
 
+  ripple: string;
+  rippleOnPrimary: string;
+
   systemBackgroundColor: string;
 }
 
@@ -71,6 +74,9 @@ export const lightColors: AquaColors = {
   chipSuccessForegroundColor: AquaPrimitiveColors.green500,
   chipErrorForegroundColor: AquaPrimitiveColors.scarlet500,
 
+  ripple: AquaPrimitiveColors.rippleLight,
+  rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
+
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };
 
@@ -107,6 +113,9 @@ export const darkColors: AquaColors = {
   chipErrorBackgroundColor: AquaPrimitiveColors.scarlet16,
   chipSuccessForegroundColor: AquaPrimitiveColors.green500,
   chipErrorForegroundColor: AquaPrimitiveColors.scarlet500,
+
+  ripple: AquaPrimitiveColors.rippleDark,
+  rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
 
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };

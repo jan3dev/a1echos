@@ -1,6 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme';
+import { iosPressed } from '@/utils';
+
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 
 export type RadioSize = 'large' | 'small';
 
@@ -33,14 +36,16 @@ export const Radio = <T,>({
   };
 
   return (
-    <Pressable
+    <RipplePressable
       onPress={handlePress}
       disabled={!enabled}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected, disabled: !enabled }}
+      rippleColor={colors.ripple}
+      borderless
       style={({ pressed }) => [
         styles.pressable,
-        { opacity: enabled ? (pressed ? 0.8 : 1) : 0.5 },
+        { opacity: enabled ? iosPressed(pressed, 0.8) : 0.5 },
       ]}
     >
       <View
@@ -70,7 +75,7 @@ export const Radio = <T,>({
           />
         )}
       </View>
-    </Pressable>
+    </RipplePressable>
   );
 };
 

@@ -2,13 +2,14 @@ import { ReactNode } from 'react';
 import {
   StyleProp,
   StyleSheet,
-  TouchableOpacity,
   View,
   ViewStyle,
 } from 'react-native';
 
 import { useTheme } from '@/theme';
+import { iosPressed } from '@/utils';
 
+import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
 import { Text } from '../../ui/text/Text';
 
 export interface ListItemProps {
@@ -71,14 +72,17 @@ export const ListItem = ({
 
   return (
     <View style={[styles.card, containerStyle, style]}>
-      <TouchableOpacity
+      <RipplePressable
         onPress={onPress}
         onLongPress={onLongPress}
         disabled={!onPress && !onLongPress}
-        activeOpacity={selected ? 1 : 0.7}
+        rippleColor={theme.colors.ripple}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ selected: !!selected, disabled: !onPress }}
+        style={({ pressed }) => ({
+          opacity: !selected ? iosPressed(pressed) : 1,
+        })}
       >
         <View style={styles.paddingWrapper}>
           <View style={innerStyle}>
@@ -140,7 +144,7 @@ export const ListItem = ({
             )}
           </View>
         </View>
-      </TouchableOpacity>
+      </RipplePressable>
     </View>
   );
 };

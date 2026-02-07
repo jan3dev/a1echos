@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
 
 import { useSettingsStore } from '@/stores';
 import { useTheme } from '@/theme';
 
 import { Icon } from '../../ui/icon/Icon';
+import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
 import { TopAppBar } from '../../ui/top-app-bar/TopAppBar';
 
 import { IncognitoExplainerModal } from './IncognitoExplainerModal';
@@ -51,13 +51,18 @@ export const HomeAppBar = ({
   const renderLeading = () => {
     if (selectionMode) {
       return (
-        <Pressable onPress={() => onExitSelectionMode?.()} hitSlop={10}>
+        <RipplePressable
+          onPress={() => onExitSelectionMode?.()}
+          hitSlop={10}
+          rippleColor={theme.colors.ripple}
+          borderless
+        >
           <Icon
             name="chevron_left"
             size={24}
             color={theme.colors.textPrimary}
           />
-        </Pressable>
+        </RipplePressable>
       );
     }
     return (
@@ -73,18 +78,26 @@ export const HomeAppBar = ({
   const renderActions = () => {
     if (selectionMode) {
       return [
-        <Pressable
+        <RipplePressable
           key="trash"
           onPress={() => onDeleteSelected?.()}
           hitSlop={10}
+          rippleColor={theme.colors.ripple}
+          borderless
         >
           <Icon name="trash" size={24} color={theme.colors.textPrimary} />
-        </Pressable>,
+        </RipplePressable>,
       ];
     }
 
     return [
-      <Pressable key="ghost" onPress={handleIncognitoToggle} hitSlop={10}>
+      <RipplePressable
+        key="ghost"
+        onPress={handleIncognitoToggle}
+        hitSlop={10}
+        rippleColor={theme.colors.ripple}
+        borderless
+      >
         <Icon
           name="ghost"
           size={24}
@@ -94,14 +107,16 @@ export const HomeAppBar = ({
               : theme.colors.textPrimary
           }
         />
-      </Pressable>,
-      <Pressable
+      </RipplePressable>,
+      <RipplePressable
         key="settings"
         onPress={() => router.push('/settings' as any)}
         hitSlop={10}
+        rippleColor={theme.colors.ripple}
+        borderless
       >
         <Icon name="hamburger" size={24} color={theme.colors.textPrimary} />
-      </Pressable>,
+      </RipplePressable>,
     ];
   };
 

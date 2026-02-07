@@ -1,20 +1,15 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Fragment, ReactNode } from 'react';
-import {
-  Platform,
-  StyleProp,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppTheme } from '@/models';
 import { useTheme, useThemeStore } from '@/theme';
+import { iosPressed } from '@/utils';
 
 import { Icon } from '../icon/Icon';
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 import { Text } from '../text/Text';
 
 export interface TopAppBarProps {
@@ -80,9 +75,12 @@ export const TopAppBar = ({
       <View style={styles.row}>
         <View style={styles.leadingContainer}>
           {showBackButton ? (
-            <TouchableOpacity
+            <RipplePressable
               onPress={handleBack}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={10}
+              rippleColor={theme.colors.ripple}
+              borderless
+              style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
             >
               <Icon
                 name="chevron_left"
@@ -93,17 +91,26 @@ export const TopAppBar = ({
                     : theme.colors.textPrimary
                 }
               />
-            </TouchableOpacity>
+            </RipplePressable>
           ) : leading ? (
             leading
           ) : null}
         </View>
 
         <View style={styles.titleContainer}>
-          <TouchableOpacity
+          <RipplePressable
             onPress={onTitlePressed}
             onLongPress={onTitleLongPressed}
             disabled={!onTitlePressed && !onTitleLongPressed}
+            rippleColor={
+              onTitlePressed || onTitleLongPressed
+                ? theme.colors.ripple
+                : undefined
+            }
+            borderless
+            style={({ pressed }) => ({
+              opacity: iosPressed(pressed),
+            })}
           >
             {titleWidget ?? (
               <Text
@@ -120,7 +127,7 @@ export const TopAppBar = ({
                 {title}
               </Text>
             )}
-          </TouchableOpacity>
+          </RipplePressable>
         </View>
 
         <View style={styles.actionsContainer}>

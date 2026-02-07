@@ -1,11 +1,12 @@
 import { BlurView } from 'expo-blur';
 import { ReactNode, useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { useTheme } from '@/theme';
 
 import { Icon } from '../icon/Icon';
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 import { Text } from '../text/Text';
 
 export type TooltipVariant = 'normal' | 'success' | 'warning' | 'error';
@@ -160,11 +161,16 @@ export const Tooltip = ({
       {isInfo && (
         <>
           {onLeadingIconTap ? (
-            <Pressable onPress={onLeadingIconTap} hitSlop={8}>
+            <RipplePressable
+              onPress={onLeadingIconTap}
+              hitSlop={10}
+              rippleColor={colors.ripple}
+              borderless
+            >
               {leadingIcon || (
                 <Icon name="warning" size={18} color={getIconColor()} />
               )}
-            </Pressable>
+            </RipplePressable>
           ) : (
             leadingIcon || (
               <Icon name="warning" size={18} color={getIconColor()} />
@@ -185,7 +191,12 @@ export const Tooltip = ({
       {isDismissible && (
         <>
           <View style={styles.trailingSpacing} />
-          <Pressable onPress={onTrailingIconTap || onDismiss} hitSlop={8}>
+          <RipplePressable
+            onPress={onTrailingIconTap || onDismiss}
+            hitSlop={10}
+            rippleColor={colors.ripple}
+            borderless
+          >
             {trailingIcon || (
               <Icon
                 name="close"
@@ -195,7 +206,7 @@ export const Tooltip = ({
                 }
               />
             )}
-          </Pressable>
+          </RipplePressable>
         </>
       )}
     </View>

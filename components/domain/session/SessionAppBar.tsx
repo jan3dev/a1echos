@@ -1,5 +1,3 @@
-import { Pressable } from 'react-native';
-
 import { useLocalization } from '@/hooks';
 import { getCountryCode } from '@/models';
 import { useSelectedLanguage } from '@/stores';
@@ -7,6 +5,7 @@ import { useTheme } from '@/theme';
 
 import { FlagIcon } from '../../ui/icon/FlagIcon';
 import { Icon } from '../../ui/icon/Icon';
+import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
 import { TopAppBar } from '../../ui/top-app-bar/TopAppBar';
 
 interface SessionAppBarProps {
@@ -50,14 +49,23 @@ export const SessionAppBar = ({
         title={loc.edit}
         showBackButton={false}
         leading={
-          <Pressable onPress={onCancelEditPressed} hitSlop={10}>
+          <RipplePressable
+            onPress={onCancelEditPressed}
+            hitSlop={10}
+            rippleColor={theme.colors.ripple} borderless
+          >
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
-          </Pressable>
+          </RipplePressable>
         }
         actions={[
-          <Pressable key="save" onPress={onSaveEditPressed} hitSlop={10}>
+          <RipplePressable
+            key="save"
+            onPress={onSaveEditPressed}
+            hitSlop={10}
+            rippleColor={theme.colors.ripple} borderless
+          >
             <Icon name="check" size={24} color={theme.colors.textPrimary} />
-          </Pressable>,
+          </RipplePressable>,
         ]}
       />
     );
@@ -69,20 +77,26 @@ export const SessionAppBar = ({
         title={sessionName}
         onBackPressed={onBackPressed}
         actions={[
-          <Pressable key="select_all" onPress={onSelectAllPressed} hitSlop={10}>
+          <RipplePressable
+            key="select_all"
+            onPress={onSelectAllPressed}
+            hitSlop={10}
+            rippleColor={theme.colors.ripple} borderless
+          >
             <Icon
               name="select_all"
               size={24}
               color={theme.colors.textPrimary}
             />
-          </Pressable>,
-          <Pressable
+          </RipplePressable>,
+          <RipplePressable
             key="delete"
             onPress={onDeleteSelectedPressed}
             hitSlop={10}
+            rippleColor={theme.colors.ripple} borderless
           >
             <Icon name="trash" size={24} color={theme.colors.textPrimary} />
-          </Pressable>,
+          </RipplePressable>,
         ]}
       />
     );
@@ -94,17 +108,23 @@ export const SessionAppBar = ({
       onBackPressed={onBackPressed}
       onTitlePressed={!isIncognitoSession ? onTitlePressed : undefined}
       actions={[
-        <Pressable key="language" onPress={onLanguageFlagPressed} hitSlop={10}>
+        <RipplePressable
+          key="language"
+          onPress={onLanguageFlagPressed}
+          hitSlop={10}
+          rippleColor={theme.colors.ripple} borderless
+        >
           <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
-        </Pressable>,
-        <Pressable
+        </RipplePressable>,
+        <RipplePressable
           key="copy"
           onPress={onCopyAllPressed}
           hitSlop={10}
+          rippleColor={theme.colors.ripple} borderless
           style={{ opacity: copyAllEnabled ? 1 : 0.5 }}
         >
           <Icon name="copy" size={24} color={theme.colors.textPrimary} />
-        </Pressable>,
+        </RipplePressable>,
       ]}
     />
   );

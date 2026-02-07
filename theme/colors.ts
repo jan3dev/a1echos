@@ -39,6 +39,10 @@ export const AquaPrimitiveColors = {
   glassInverseDark: 'rgba(255, 255, 255, 0.85)',
   glassBackgroundDark: 'rgba(19, 21, 22, 0.4)',
 
+  rippleLight: 'rgba(9, 10, 11, 0.10)',
+  rippleDark: 'rgba(244, 245, 246, 0.10)',
+  rippleOnPrimary: 'rgba(255, 255, 255, 0.20)',
+
   waveOrange: '#F7931A',
   waveCyan: '#16BAC5',
 

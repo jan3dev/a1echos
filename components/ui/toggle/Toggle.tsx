@@ -3,11 +3,12 @@ import {
   AccessibilityProps,
   Animated,
   Platform,
-  Pressable,
   StyleSheet,
 } from 'react-native';
 
 import { AquaPrimitiveColors, useTheme } from '@/theme';
+
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 
 interface ToggleProps {
   value: boolean;
@@ -68,10 +69,12 @@ export const Toggle = ({
   });
 
   return (
-    <Pressable
+    <RipplePressable
       onPress={handlePress}
       disabled={!enabled}
       style={{ opacity: enabled ? 1 : 0.5 }}
+      rippleColor={colors.ripple}
+      borderless
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled: !enabled }}
       accessibilityLabel={accessibilityLabel}
@@ -96,7 +99,7 @@ export const Toggle = ({
           ]}
         />
       </Animated.View>
-    </Pressable>
+    </RipplePressable>
   );
 };
 

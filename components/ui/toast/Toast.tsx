@@ -12,6 +12,7 @@ import {
 import { getShadow, useTheme } from '@/theme';
 
 import { Icon } from '../icon/Icon';
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 import { Text } from '../text/Text';
 
 export type ToastVariant = 'informative' | 'warning' | 'danger';
@@ -162,13 +163,18 @@ export const Toast = ({
                       {message}
                     </Text>
                   </View>
-                  <Pressable onPress={onDismiss} hitSlop={8}>
+                  <RipplePressable
+                    onPress={onDismiss}
+                    hitSlop={10}
+                    rippleColor={colors.ripple}
+                    borderless
+                  >
                     <Icon
                       name="close"
                       size={18}
                       color={`${colors.textPrimary}80`}
                     />
-                  </Pressable>
+                  </RipplePressable>
                 </View>
               </View>
 
@@ -182,13 +188,14 @@ export const Toast = ({
                 >
                   {secondaryButtonText && primaryButtonText ? (
                     <View style={styles.twoButtonRow}>
-                      <Pressable
+                      <RipplePressable
                         style={[
                           styles.button,
                           styles.leftButton,
                           { backgroundColor: colors.surfacePrimary },
                         ]}
                         onPress={onSecondaryButtonTap}
+                        rippleColor={colors.ripple}
                       >
                         <Text
                           variant="body2"
@@ -197,14 +204,15 @@ export const Toast = ({
                         >
                           {secondaryButtonText}
                         </Text>
-                      </Pressable>
-                      <Pressable
+                      </RipplePressable>
+                      <RipplePressable
                         style={[
                           styles.button,
                           styles.rightButton,
                           { backgroundColor: colors.surfacePrimary },
                         ]}
                         onPress={onPrimaryButtonTap}
+                        rippleColor={colors.ripple}
                       >
                         <Text
                           variant="body2"
@@ -213,16 +221,17 @@ export const Toast = ({
                         >
                           {primaryButtonText}
                         </Text>
-                      </Pressable>
+                      </RipplePressable>
                     </View>
                   ) : primaryButtonText ? (
-                    <Pressable
+                    <RipplePressable
                       style={[
                         styles.button,
                         styles.singleButton,
                         { backgroundColor: colors.surfacePrimary },
                       ]}
                       onPress={onPrimaryButtonTap}
+                      rippleColor={colors.ripple}
                     >
                       <Text
                         variant="body2"
@@ -231,7 +240,7 @@ export const Toast = ({
                       >
                         {primaryButtonText}
                       </Text>
-                    </Pressable>
+                    </RipplePressable>
                   ) : null}
                 </View>
               )}

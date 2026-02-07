@@ -1,23 +1,17 @@
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
-import {
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { Platform, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
 
 import { useLocalization } from '@/hooks';
 import { Transcription } from '@/models';
 import { useUIStore } from '@/stores';
 import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+import { FeatureFlag, iosPressed, logError } from '@/utils';
 
 import { Checkbox } from '../../ui/checkbox/Checkbox';
 import { Icon } from '../../ui/icon/Icon';
+import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
 import { Skeleton } from '../../ui/skeleton/Skeleton';
 import { Text } from '../../ui/text/Text';
 
@@ -112,7 +106,7 @@ export const TranscriptionItem = ({
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
         'normal',
         undefined,
-        true
+        true,
       );
     }
   };
@@ -155,7 +149,7 @@ export const TranscriptionItem = ({
         style,
       ]}
     >
-      <TouchableOpacity
+      <RipplePressable
         onPress={() => {
           if (!isEditing && enableInteractions) {
             onTap?.();
@@ -166,14 +160,15 @@ export const TranscriptionItem = ({
             onLongPress?.();
           }
         }}
-        activeOpacity={enableInteractions ? 0.7 : 1}
+        rippleColor={theme.colors.ripple}
         disabled={!enableInteractions && !isEditing}
-        style={[
+        style={({ pressed }) => [
           styles.container,
           {
             backgroundColor,
             borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
             borderWidth: isEditing ? 1 : 0,
+            opacity: enableInteractions ? iosPressed(pressed) : 1,
           },
         ]}
       >
@@ -202,10 +197,12 @@ export const TranscriptionItem = ({
             )}
 
             {showEditIcon && (
-              <TouchableOpacity
+              <RipplePressable
                 onPress={onStartEdit}
                 disabled={disableIcons}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                hitSlop={10}
+                rippleColor={theme.colors.ripple}
+                borderless
                 style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
               >
                 <Icon
@@ -213,16 +210,18 @@ export const TranscriptionItem = ({
                   size={18}
                   color={theme.colors.textSecondary}
                 />
-              </TouchableOpacity>
+              </RipplePressable>
             )}
 
             {showEditIcon && showCopyIcon && <View style={{ width: 16 }} />}
 
             {showCopyIcon && (
-              <TouchableOpacity
+              <RipplePressable
                 onPress={handleCopyToClipboard}
                 disabled={disableIcons}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                hitSlop={10}
+                rippleColor={theme.colors.ripple}
+                borderless
                 style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
               >
                 <Icon
@@ -230,7 +229,7 @@ export const TranscriptionItem = ({
                   size={18}
                   color={theme.colors.textSecondary}
                 />
-              </TouchableOpacity>
+              </RipplePressable>
             )}
           </View>
         </View>
@@ -268,7 +267,7 @@ export const TranscriptionItem = ({
             </Text>
           )}
         </View>
-      </TouchableOpacity>
+      </RipplePressable>
     </View>
   );
 };

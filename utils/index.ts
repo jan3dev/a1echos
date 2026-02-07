@@ -75,4 +75,5 @@ export {
 export { formatTranscriptionText } from './TranscriptionFormatter';
 export { createPcmStreamWriter } from './WavWriter';
 export type { PcmStreamWriter } from './WavWriter';
+export { iosPressed } from './ripple';
 

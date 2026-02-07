@@ -1,9 +1,11 @@
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
+import { iosPressed } from '@/utils';
 
 import { ProgressIndicator } from '../progress/ProgressIndicator';
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 
 export type ButtonSize = 'large' | 'small';
 export type ButtonVariant = 'normal' | 'error' | 'success' | 'warning';
@@ -75,10 +77,10 @@ const ButtonBase = ({
         return variant === 'normal'
           ? `${colors.accentBrand}14`
           : variant === 'error'
-          ? `${colors.accentDanger}14`
-          : variant === 'success'
-          ? `${colors.accentSuccess}14`
-          : `${colors.accentWarning}14`;
+            ? `${colors.accentDanger}14`
+            : variant === 'success'
+              ? `${colors.accentSuccess}14`
+              : `${colors.accentWarning}14`;
       }
       if (type === 'utility') {
         return `${colors.surfacePrimary}80`;
@@ -102,10 +104,10 @@ const ButtonBase = ({
       return variant === 'normal'
         ? colors.accentBrandTransparent
         : variant === 'error'
-        ? colors.accentDangerTransparent
-        : variant === 'success'
-        ? colors.accentSuccessTransparent
-        : colors.accentWarningTransparent;
+          ? colors.accentDangerTransparent
+          : variant === 'success'
+            ? colors.accentSuccessTransparent
+            : colors.accentWarningTransparent;
     }
 
     if (type === 'tertiary') {
@@ -158,18 +160,19 @@ const ButtonBase = ({
     type === 'utility' ? getShadow('button') : undefined;
 
   const buttonContent = (
-    <Pressable
+    <RipplePressable
       onPress={enabled ? onPress : undefined}
       disabled={!enabled}
       accessibilityRole="button"
       accessibilityLabel={text}
       accessibilityState={{ disabled: !enabled }}
+      rippleColor={type === 'primary' ? colors.rippleOnPrimary : colors.ripple}
       style={({ pressed }) => [
         styles.button,
         {
           height,
           backgroundColor: getBackgroundColor(pressed),
-          opacity: enabled ? (pressed ? 0.9 : 1) : 0.5,
+          opacity: enabled ? iosPressed(pressed, 0.9) : 0.5,
           paddingHorizontal: isSmall ? horizontalPadding : 0,
           borderRadius: BUTTON_BORDER_RADIUS,
         },
@@ -206,7 +209,7 @@ const ButtonBase = ({
           </>
         )}
       </View>
-    </Pressable>
+    </RipplePressable>
   );
 
   if (shadowStyle) {

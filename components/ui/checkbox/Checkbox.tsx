@@ -1,8 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { lightColors, useTheme } from '@/theme';
+import { iosPressed } from '@/utils';
 
 import { Icon } from '../icon/Icon';
+import { RipplePressable } from '../ripple-pressable/RipplePressable';
 
 export type CheckboxSize = 'large' | 'small';
 
@@ -34,14 +36,16 @@ export const Checkbox = ({
   };
 
   return (
-    <Pressable
+    <RipplePressable
       onPress={handlePress}
       disabled={!enabled}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: value, disabled: !enabled }}
+      rippleColor={colors.ripple}
+      borderless
       style={({ pressed }) => [
         styles.pressable,
-        { opacity: enabled ? (pressed ? 0.8 : 1) : 0.5 },
+        { opacity: enabled ? iosPressed(pressed, 0.8) : 0.5 },
       ]}
     >
       <View
@@ -65,7 +69,7 @@ export const Checkbox = ({
           <Icon name="check" size={checkSize} color={lightColors.textInverse} />
         )}
       </View>
-    </Pressable>
+    </RipplePressable>
   );
 };
 
