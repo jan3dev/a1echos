@@ -116,7 +116,6 @@ export default function LanguageSettingsScreen() {
                       enabled={!isSaving}
                     />
                   }
-                  selected={effectiveLanguageCode === language.code}
                   onPress={isSaving ? undefined : () => handleSelect(language)}
                   backgroundColor={theme.colors.surfacePrimary}
                 />
