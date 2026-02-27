@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -142,6 +143,40 @@ export default function SettingsScreen() {
                 />
               }
               onPress={() => router.push('/settings/language')}
+              backgroundColor={theme.colors.surfacePrimary}
+            />
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.shadowContainer,
+            getShadow('card'),
+            { backgroundColor: theme.colors.surfacePrimary, marginTop: 16 },
+          ]}
+        >
+          <View style={styles.clipContainer}>
+            <ListItem
+              title={loc.contactSupport}
+              iconLeading={
+                <Icon
+                  name="help_support"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() =>
+                Linking.openURL(
+                  'https://a1lab.zendesk.com/hc/en-us/requests/new'
+                )
+              }
               backgroundColor={theme.colors.surfacePrimary}
             />
           </View>

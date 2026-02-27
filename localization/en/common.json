@@ -55,5 +55,6 @@
   "recordingTooShort": "Recording was too short",
   "transcriptionFailed": "Transcription failed",
   "failedToInitializeEngine": "Failed to initialize transcription engine",
-  "copiedToClipboard": "Copied to clipboard"
+  "copiedToClipboard": "Copied to clipboard",
+  "contactSupport": "Contact Support"
 }
