@@ -103,7 +103,6 @@ export default function ModelSettingsScreen() {
                   enabled={!isSaving}
                 />
               }
-              selected={effectiveModelType === ModelType.WHISPER_FILE}
               onPress={
                 isSaving
                   ? undefined
@@ -130,7 +129,6 @@ export default function ModelSettingsScreen() {
                   enabled={!isSaving}
                 />
               }
-              selected={effectiveModelType === ModelType.WHISPER_REALTIME}
               onPress={
                 isSaving
                   ? undefined

@@ -89,7 +89,6 @@ export default function ThemeSettingsScreen() {
                   enabled={!isSaving}
                 />
               }
-              selected={effectiveTheme === AppTheme.AUTO}
               onPress={isSaving ? undefined : () => handleSelect(AppTheme.AUTO)}
               backgroundColor={theme.colors.surfacePrimary}
             />
@@ -108,7 +107,6 @@ export default function ThemeSettingsScreen() {
                   enabled={!isSaving}
                 />
               }
-              selected={effectiveTheme === AppTheme.LIGHT}
               onPress={
                 isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
               }
@@ -129,7 +127,6 @@ export default function ThemeSettingsScreen() {
                   enabled={!isSaving}
                 />
               }
-              selected={effectiveTheme === AppTheme.DARK}
               onPress={isSaving ? undefined : () => handleSelect(AppTheme.DARK)}
               backgroundColor={theme.colors.surfacePrimary}
             />

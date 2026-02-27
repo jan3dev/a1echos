@@ -50,3 +50,10 @@ temp/
 
 # YoYo AI version control directory
 .yoyo/
+
+# Android Studio
+.idea/
+
+# tldr
+.tldr/
+.tldrignore
