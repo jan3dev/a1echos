@@ -1,10 +1,9 @@
 import { Fragment } from 'react';
-import { StyleSheet, View } from 'react-native';
 
 import { Session } from '@/models';
 import { useSessions } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
 
+import { Card } from '../../ui/card/Card';
 import { Divider } from '../../ui/divider/Divider';
 
 import { SessionListItem } from './SessionListItem';
@@ -24,45 +23,26 @@ export const SessionList = ({
   onSessionTap,
   onSelectionToggle,
 }: SessionListProps) => {
-  const { theme } = useTheme();
   const sessions = useSessions();
 
   return (
-    <View
-      style={[
-        styles.shadowContainer,
-        getShadow('card'),
-        { backgroundColor: theme.colors.surfacePrimary },
-      ]}
-    >
-      <View style={styles.clipContainer}>
-        {sessions.map((session, index) => (
-          <Fragment key={session.id}>
-            <SessionListItem
-              session={session}
-              selectionMode={selectionMode}
-              isSelected={selectedSessionIds.has(session.id)}
-              onTap={() =>
-                selectionMode
-                  ? onSelectionToggle(session.id)
-                  : onSessionTap(session.id)
-              }
-              onLongPress={() => onSessionLongPress(session)}
-            />
-            {index < sessions.length - 1 && <Divider />}
-          </Fragment>
-        ))}
-      </View>
-    </View>
+    <Card>
+      {sessions.map((session, index) => (
+        <Fragment key={session.id}>
+          <SessionListItem
+            session={session}
+            selectionMode={selectionMode}
+            isSelected={selectedSessionIds.has(session.id)}
+            onTap={() =>
+              selectionMode
+                ? onSelectionToggle(session.id)
+                : onSessionTap(session.id)
+            }
+            onLongPress={() => onSessionLongPress(session)}
+          />
+          {index < sessions.length - 1 && <Divider />}
+        </Fragment>
+      ))}
+    </Card>
   );
 };
-
-const styles = StyleSheet.create({
-  shadowContainer: {
-    borderRadius: 8,
-  },
-  clipContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-});
