@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Divider, ListItem, Radio, TopAppBar } from '@/components';
+import { Card, Divider, ListItem, Radio, TopAppBar } from '@/components';
 import { useLocalization } from '@/hooks';
 import { AppTheme } from '@/models';
 import { useSetTheme } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
@@ -69,69 +69,59 @@ export default function ThemeSettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.shadowContainer,
-            getShadow('card'),
-            { backgroundColor: theme.colors.surfacePrimary },
-          ]}
-        >
-          <View style={styles.clipContainer}>
-            <ListItem
-              title={loc.auto}
-              iconTrailing={
-                <Radio<AppTheme>
-                  value={AppTheme.AUTO}
-                  groupValue={effectiveTheme}
-                  onValueChange={
-                    isSaving ? undefined : () => handleSelect(AppTheme.AUTO)
-                  }
-                  enabled={!isSaving}
-                />
-              }
-              onPress={isSaving ? undefined : () => handleSelect(AppTheme.AUTO)}
-              backgroundColor={theme.colors.surfacePrimary}
-            />
+        <Card>
+          <ListItem
+            title={loc.auto}
+            iconTrailing={
+              <Radio<AppTheme>
+                value={AppTheme.AUTO}
+                groupValue={effectiveTheme}
+                onValueChange={
+                  isSaving ? undefined : () => handleSelect(AppTheme.AUTO)
+                }
+                enabled={!isSaving}
+              />
+            }
+            onPress={isSaving ? undefined : () => handleSelect(AppTheme.AUTO)}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
 
-            <Divider color={theme.colors.surfaceBorderPrimary} />
+          <Divider color={theme.colors.surfaceBorderPrimary} />
 
-            <ListItem
-              title={loc.light}
-              iconTrailing={
-                <Radio<AppTheme>
-                  value={AppTheme.LIGHT}
-                  groupValue={effectiveTheme}
-                  onValueChange={
-                    isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
-                  }
-                  enabled={!isSaving}
-                />
-              }
-              onPress={
-                isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
-              }
-              backgroundColor={theme.colors.surfacePrimary}
-            />
+          <ListItem
+            title={loc.light}
+            iconTrailing={
+              <Radio<AppTheme>
+                value={AppTheme.LIGHT}
+                groupValue={effectiveTheme}
+                onValueChange={
+                  isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
+                }
+                enabled={!isSaving}
+              />
+            }
+            onPress={isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
 
-            <Divider color={theme.colors.surfaceBorderPrimary} />
+          <Divider color={theme.colors.surfaceBorderPrimary} />
 
-            <ListItem
-              title={loc.dark}
-              iconTrailing={
-                <Radio<AppTheme>
-                  value={AppTheme.DARK}
-                  groupValue={effectiveTheme}
-                  onValueChange={
-                    isSaving ? undefined : () => handleSelect(AppTheme.DARK)
-                  }
-                  enabled={!isSaving}
-                />
-              }
-              onPress={isSaving ? undefined : () => handleSelect(AppTheme.DARK)}
-              backgroundColor={theme.colors.surfacePrimary}
-            />
-          </View>
-        </View>
+          <ListItem
+            title={loc.dark}
+            iconTrailing={
+              <Radio<AppTheme>
+                value={AppTheme.DARK}
+                groupValue={effectiveTheme}
+                onValueChange={
+                  isSaving ? undefined : () => handleSelect(AppTheme.DARK)
+                }
+                enabled={!isSaving}
+              />
+            }
+            onPress={isSaving ? undefined : () => handleSelect(AppTheme.DARK)}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
       </ScrollView>
     </View>
   );
@@ -143,12 +133,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-  },
-  shadowContainer: {
-    borderRadius: 8,
-  },
-  clipContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
   },
 });

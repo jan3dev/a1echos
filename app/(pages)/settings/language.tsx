@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  Card,
   Divider,
   FlagIcon,
   ListItem,
@@ -14,7 +15,7 @@ import {
 import { useLocalization } from '@/hooks';
 import { getCountryCode, SpokenLanguage, SupportedLanguages } from '@/models';
 import { useSelectedLanguage, useSetLanguage } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
@@ -29,7 +30,7 @@ export default function LanguageSettingsScreen() {
   const setLanguage = useSetLanguage();
 
   const [pendingLanguageCode, setPendingLanguageCode] = useState<string | null>(
-    null
+    null,
   );
   const [isSaving, setIsSaving] = useState(false);
   const effectiveLanguageCode = pendingLanguageCode ?? selectedLanguage.code;
@@ -88,41 +89,33 @@ export default function LanguageSettingsScreen() {
           {loc.spokenLanguageDescription}
         </Text>
 
-        <View
-          style={[
-            styles.shadowContainer,
-            getShadow('card'),
-            { backgroundColor: theme.colors.surfacePrimary },
-          ]}
-        >
-          <View style={styles.clipContainer}>
-            {languages.map((language, index) => (
-              <Fragment key={language.code}>
-                {index > 0 && (
-                  <Divider color={theme.colors.surfaceBorderPrimary} />
-                )}
-                <ListItem
-                  title={language.name}
-                  iconLeading={
-                    <FlagIcon name={getCountryCode(language)} size={24} />
-                  }
-                  iconTrailing={
-                    <Radio<string>
-                      value={language.code}
-                      groupValue={effectiveLanguageCode}
-                      onValueChange={
-                        isSaving ? undefined : () => handleSelect(language)
-                      }
-                      enabled={!isSaving}
-                    />
-                  }
-                  onPress={isSaving ? undefined : () => handleSelect(language)}
-                  backgroundColor={theme.colors.surfacePrimary}
-                />
-              </Fragment>
-            ))}
-          </View>
-        </View>
+        <Card>
+          {languages.map((language, index) => (
+            <Fragment key={language.code}>
+              {index > 0 && (
+                <Divider color={theme.colors.surfaceBorderPrimary} />
+              )}
+              <ListItem
+                title={language.name}
+                iconLeading={
+                  <FlagIcon name={getCountryCode(language)} size={24} />
+                }
+                iconTrailing={
+                  <Radio<string>
+                    value={language.code}
+                    groupValue={effectiveLanguageCode}
+                    onValueChange={
+                      isSaving ? undefined : () => handleSelect(language)
+                    }
+                    enabled={!isSaving}
+                  />
+                }
+                onPress={isSaving ? undefined : () => handleSelect(language)}
+                backgroundColor={theme.colors.surfacePrimary}
+              />
+            </Fragment>
+          ))}
+        </Card>
       </ScrollView>
     </View>
   );
@@ -137,12 +130,5 @@ const styles = StyleSheet.create({
   },
   description: {
     marginBottom: 16,
-  },
-  shadowContainer: {
-    borderRadius: 8,
-  },
-  clipContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
   },
 });

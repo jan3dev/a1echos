@@ -65,6 +65,7 @@ export const useLocalization = () => {
       transcriptionFailed: t('transcriptionFailed'),
       failedToInitializeEngine: t('failedToInitializeEngine'),
       copiedToClipboard: t('copiedToClipboard'),
+      contactSupport: t('contactSupport'),
     },
   };
 };

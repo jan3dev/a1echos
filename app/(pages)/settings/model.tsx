@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Divider, ListItem, Radio, Text, TopAppBar } from '@/components';
+import { Card, Divider, ListItem, Radio, Text, TopAppBar } from '@/components';
 import { useLocalization } from '@/hooks';
 import { ModelType } from '@/models';
 import { useSelectedModelType, useSetModelType } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { delay, FeatureFlag, logError } from '@/utils';
 
 const APP_BAR_HEIGHT = 60;
@@ -22,7 +22,7 @@ export default function ModelSettingsScreen() {
   const setModelType = useSetModelType();
 
   const [pendingModelType, setPendingModelType] = useState<ModelType | null>(
-    null
+    null,
   );
   const [isSaving, setIsSaving] = useState(false);
   const effectiveModelType = pendingModelType ?? selectedModelType;
@@ -79,65 +79,55 @@ export default function ModelSettingsScreen() {
           {loc.modelDescription}
         </Text>
 
-        <View
-          style={[
-            styles.shadowContainer,
-            getShadow('card'),
-            { backgroundColor: theme.colors.surfacePrimary },
-          ]}
-        >
-          <View style={styles.clipContainer}>
-            <ListItem
-              title={loc.whisperModelFileTitle}
-              titleTrailing={loc.whisperModelFileSubtitle}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconTrailing={
-                <Radio<ModelType>
-                  value={ModelType.WHISPER_FILE}
-                  groupValue={effectiveModelType}
-                  onValueChange={
-                    isSaving
-                      ? undefined
-                      : () => handleSelect(ModelType.WHISPER_FILE)
-                  }
-                  enabled={!isSaving}
-                />
-              }
-              onPress={
-                isSaving
-                  ? undefined
-                  : () => handleSelect(ModelType.WHISPER_FILE)
-              }
-              backgroundColor={theme.colors.surfacePrimary}
-            />
+        <Card>
+          <ListItem
+            title={loc.whisperModelFileTitle}
+            titleTrailing={loc.whisperModelFileSubtitle}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconTrailing={
+              <Radio<ModelType>
+                value={ModelType.WHISPER_FILE}
+                groupValue={effectiveModelType}
+                onValueChange={
+                  isSaving
+                    ? undefined
+                    : () => handleSelect(ModelType.WHISPER_FILE)
+                }
+                enabled={!isSaving}
+              />
+            }
+            onPress={
+              isSaving ? undefined : () => handleSelect(ModelType.WHISPER_FILE)
+            }
+            backgroundColor={theme.colors.surfacePrimary}
+          />
 
-            <Divider color={theme.colors.surfaceBorderPrimary} />
+          <Divider color={theme.colors.surfaceBorderPrimary} />
 
-            <ListItem
-              title={loc.whisperModelRealtimeTitle}
-              titleTrailing={loc.whisperModelRealtimeSubtitle}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconTrailing={
-                <Radio<ModelType>
-                  value={ModelType.WHISPER_REALTIME}
-                  groupValue={effectiveModelType}
-                  onValueChange={
-                    isSaving
-                      ? undefined
-                      : () => handleSelect(ModelType.WHISPER_REALTIME)
-                  }
-                  enabled={!isSaving}
-                />
-              }
-              onPress={
-                isSaving
-                  ? undefined
-                  : () => handleSelect(ModelType.WHISPER_REALTIME)
-              }
-              backgroundColor={theme.colors.surfacePrimary}
-            />
-          </View>
-        </View>
+          <ListItem
+            title={loc.whisperModelRealtimeTitle}
+            titleTrailing={loc.whisperModelRealtimeSubtitle}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconTrailing={
+              <Radio<ModelType>
+                value={ModelType.WHISPER_REALTIME}
+                groupValue={effectiveModelType}
+                onValueChange={
+                  isSaving
+                    ? undefined
+                    : () => handleSelect(ModelType.WHISPER_REALTIME)
+                }
+                enabled={!isSaving}
+              />
+            }
+            onPress={
+              isSaving
+                ? undefined
+                : () => handleSelect(ModelType.WHISPER_REALTIME)
+            }
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
       </ScrollView>
     </View>
   );
@@ -152,12 +142,5 @@ const styles = StyleSheet.create({
   },
   description: {
     marginBottom: 16,
-  },
-  shadowContainer: {
-    borderRadius: 8,
-  },
-  clipContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
   },
 });

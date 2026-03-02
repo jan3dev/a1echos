@@ -1,8 +1,10 @@
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  Card,
   Divider,
   Icon,
   InAppBanner,
@@ -17,7 +19,7 @@ import {
   useSelectedModelType,
   useSelectedTheme,
 } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 const APP_BAR_HEIGHT = 60;
 
@@ -71,81 +73,93 @@ export default function SettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.shadowContainer,
-            getShadow('card'),
-            { backgroundColor: theme.colors.surfacePrimary },
-          ]}
-        >
-          <View style={styles.clipContainer}>
-            <ListItem
-              title={loc.modelTitle}
-              titleTrailing={modelDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon name="mic" size={24} color={theme.colors.textSecondary} />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push('/settings/model')}
-              backgroundColor={theme.colors.surfacePrimary}
-            />
+        <Card>
+          <ListItem
+            title={loc.modelTitle}
+            titleTrailing={modelDisplay}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconLeading={
+              <Icon name="mic" size={24} color={theme.colors.textSecondary} />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push('/settings/model')}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
 
-            <Divider color={theme.colors.surfaceBorderPrimary} />
+          <Divider color={theme.colors.surfaceBorderPrimary} />
 
-            <ListItem
-              title={loc.themeTitle}
-              titleTrailing={themeDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon
-                  name="theme"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push('/settings/theme')}
-              backgroundColor={theme.colors.surfacePrimary}
-            />
+          <ListItem
+            title={loc.themeTitle}
+            titleTrailing={themeDisplay}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconLeading={
+              <Icon name="theme" size={24} color={theme.colors.textSecondary} />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push('/settings/theme')}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
 
-            <Divider color={theme.colors.surfaceBorderPrimary} />
+          <Divider color={theme.colors.surfaceBorderPrimary} />
 
-            <ListItem
-              title={loc.spokenLanguageTitle}
-              titleTrailing={languageDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon
-                  name="language"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push('/settings/language')}
-              backgroundColor={theme.colors.surfacePrimary}
-            />
-          </View>
-        </View>
+          <ListItem
+            title={loc.spokenLanguageTitle}
+            titleTrailing={languageDisplay}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconLeading={
+              <Icon
+                name="language"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push('/settings/language')}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
+
+        <Card style={{ marginTop: 16 }}>
+          <ListItem
+            title={loc.contactSupport}
+            iconLeading={
+              <Icon
+                name="help_support"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() =>
+              Linking.openURL('https://a1lab.zendesk.com/hc/en-us/requests/new')
+            }
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
 
         <View style={styles.bannerContainer}>
           <InAppBanner />
@@ -163,13 +177,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-  },
-  shadowContainer: {
-    borderRadius: 8,
-  },
-  clipContainer: {
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   bannerContainer: {
     paddingTop: 24,
