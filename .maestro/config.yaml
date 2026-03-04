@@ -1,0 +1,19 @@
+# Maestro E2E Test Configuration for Echos
+# https://maestro.mobile.dev/
+
+appId: com.echos.app
+name: Echos E2E Tests
+
+# Tags for organizing test flows
+tags:
+  smoke: "Critical path tests"
+  recording: "Audio recording flows"
+  session: "Session management flows"
+  settings: "Settings and preferences"
+  transcription: "Transcription operations"
+  onboarding: "First-launch and permissions"
+  integration: "Full end-to-end journeys"
+
+# Global configuration
+onFlowStart:
+  - clearState
