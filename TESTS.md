@@ -173,7 +173,7 @@ End-to-end flows on a running development build using Maestro.
 | 1. Models            | 7      | ~55          | Done        |
 | 2. Utils             | 6      | ~55          | Done        |
 | 3. Theme             | 7      | ~40          | Done        |
-| 4. Services          | 8      | ~130         | Not started |
+| 4. Services          | 8      | ~130         | Done        |
 | 5. Stores            | 4      | ~120         | Not started |
 | 6. Hooks             | 4      | ~30          | Not started |
 | 7. UI Components     | 23     | ~120         | Not started |
