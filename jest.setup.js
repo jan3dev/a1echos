@@ -15,13 +15,13 @@ let mockSecureStoreStore = {};
 // ---------------------------------------------------------------------------
 // Expo modules
 // ---------------------------------------------------------------------------
-jest.mock('expo-crypto', () => ({
+jest.mock("expo-crypto", () => ({
   getRandomBytesAsync: jest.fn(async (size) => new Uint8Array(size)),
-  digestStringAsync: jest.fn(async () => 'mock-digest'),
-  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  digestStringAsync: jest.fn(async () => "mock-digest"),
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
 }));
 
-jest.mock('expo-audio', () => ({
+jest.mock("expo-audio", () => ({
   AudioRecorder: jest.fn().mockImplementation(() => ({
     prepareToRecordAsync: jest.fn(),
     record: jest.fn(),
@@ -35,26 +35,26 @@ jest.mock('expo-audio', () => ({
   setAudioModeAsync: jest.fn(),
   getRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
-    status: 'granted',
+    status: "granted",
     canAskAgain: true,
   })),
   requestRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
-    status: 'granted',
+    status: "granted",
     canAskAgain: true,
   })),
   PermissionStatus: {
-    GRANTED: 'granted',
-    DENIED: 'denied',
-    UNDETERMINED: 'undetermined',
+    GRANTED: "granted",
+    DENIED: "denied",
+    UNDETERMINED: "undetermined",
   },
 }));
 
-jest.mock('expo-file-system', () => {
+jest.mock("expo-file-system", () => {
   const mockFile = jest.fn().mockImplementation((...args) => ({
-    uri: args.join('/'),
+    uri: args.join("/"),
     exists: true,
-    text: jest.fn().mockResolvedValue(''),
+    text: jest.fn().mockResolvedValue(""),
     write: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockResolvedValue(undefined),
@@ -62,11 +62,11 @@ jest.mock('expo-file-system', () => {
     move: jest.fn().mockResolvedValue(undefined),
     downloadAsync: jest.fn().mockResolvedValue(undefined),
     size: 0,
-    md5: 'mock-md5',
-    base64: jest.fn().mockResolvedValue(''),
+    md5: "mock-md5",
+    base64: jest.fn().mockResolvedValue(""),
   }));
   const mockDirectory = jest.fn().mockImplementation((...args) => ({
-    uri: args.join('/'),
+    uri: args.join("/"),
     exists: true,
     create: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
@@ -76,14 +76,14 @@ jest.mock('expo-file-system', () => {
     File: mockFile,
     Directory: mockDirectory,
     Paths: {
-      document: '/mock/document',
-      cache: '/mock/cache',
+      document: "/mock/document",
+      cache: "/mock/cache",
       appleSharedContainers: {},
     },
   };
 });
 
-jest.mock('expo-secure-store', () => ({
+jest.mock("expo-secure-store", () => ({
   getItemAsync: jest.fn(async (key) => mockSecureStoreStore[key] ?? null),
   setItemAsync: jest.fn(async (key, value) => {
     mockSecureStoreStore[key] = value;
@@ -93,41 +93,41 @@ jest.mock('expo-secure-store', () => ({
   }),
 }));
 
-jest.mock('expo-haptics', () => ({
+jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
   selectionAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
   NotificationFeedbackType: {
-    Success: 'success',
-    Warning: 'warning',
-    Error: 'error',
+    Success: "success",
+    Warning: "warning",
+    Error: "error",
   },
 }));
 
-jest.mock('expo-linking', () => ({
+jest.mock("expo-linking", () => ({
   openSettings: jest.fn(),
   openURL: jest.fn(),
   createURL: jest.fn((path) => `echos://${path}`),
 }));
 
-jest.mock('expo-asset', () => ({
+jest.mock("expo-asset", () => ({
   Asset: {
     fromModule: jest.fn(() => ({
-      localUri: '/mock/asset/path',
+      localUri: "/mock/asset/path",
       downloadAsync: jest.fn(),
-      uri: '/mock/asset/uri',
+      uri: "/mock/asset/uri",
     })),
   },
 }));
 
-jest.mock('expo-font', () => ({
+jest.mock("expo-font", () => ({
   useFonts: jest.fn(() => [true, null]),
   loadAsync: jest.fn(),
   isLoaded: jest.fn(() => true),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock("expo-router", () => ({
   useRouter: jest.fn(() => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -136,57 +136,65 @@ jest.mock('expo-router', () => ({
   })),
   useLocalSearchParams: jest.fn(() => ({})),
   useSegments: jest.fn(() => []),
-  usePathname: jest.fn(() => '/'),
-  Link: 'Link',
+  usePathname: jest.fn(() => "/"),
+  Link: "Link",
   Stack: {
-    Screen: 'Screen',
+    Screen: "Screen",
   },
-  Slot: 'Slot',
+  Slot: "Slot",
 }));
 
-jest.mock('expo-splash-screen', () => ({
+jest.mock("expo-splash-screen", () => ({
   preventAutoHideAsync: jest.fn(),
   hideAsync: jest.fn(),
 }));
 
-jest.mock('expo-localization', () => ({
-  getLocales: jest.fn(() => [{ languageCode: 'en', regionCode: 'US' }]),
-  locale: 'en-US',
+jest.mock("expo-localization", () => ({
+  getLocales: jest.fn(() => [{ languageCode: "en", regionCode: "US" }]),
+  locale: "en-US",
 }));
 
-jest.mock('expo-blur', () => ({
-  BlurView: 'BlurView',
+jest.mock("expo-blur", () => ({
+  BlurView: "BlurView",
 }));
 
-jest.mock('expo-linear-gradient', () => ({
-  LinearGradient: 'LinearGradient',
+jest.mock("expo-linear-gradient", () => ({
+  LinearGradient: "LinearGradient",
 }));
 
-jest.mock('expo-clipboard', () => ({
+jest.mock("expo-clipboard", () => ({
   setStringAsync: jest.fn(),
-  getStringAsync: jest.fn(async () => ''),
+  getStringAsync: jest.fn(async () => ""),
 }));
 
-jest.mock('expo-status-bar', () => ({
-  StatusBar: 'StatusBar',
+jest.mock("expo-status-bar", () => ({
+  StatusBar: "StatusBar",
 }));
 
 // ---------------------------------------------------------------------------
 // Whisper
 // ---------------------------------------------------------------------------
-jest.mock('whisper.rn', () => ({
+jest.mock("whisper.rn", () => ({
   initWhisper: jest.fn(async () => ({
     ptr: 1,
     id: 1,
     gpu: false,
-    reasonNoGPU: 'mock',
+    reasonNoGPU: "mock",
     transcribe: jest.fn(() => ({
       stop: jest.fn(),
-      promise: Promise.resolve({ result: 'mock transcription', segments: [], isAborted: false }),
+      promise: Promise.resolve({
+        result: "mock transcription",
+        segments: [],
+        isAborted: false,
+      }),
     })),
     transcribeData: jest.fn(() => ({
       stop: jest.fn(),
-      promise: Promise.resolve({ result: 'mock transcription', segments: [], isAborted: false }),
+      promise: Promise.resolve({
+        result: "mock transcription",
+        segments: [],
+        isAborted: false,
+      }),
     })),
     bench: jest.fn(),
     release: jest.fn(),
@@ -194,7 +202,7 @@ jest.mock('whisper.rn', () => ({
   initWhisperVad: jest.fn(async () => ({
     id: 1,
     gpu: false,
-    reasonNoGPU: 'mock',
+    reasonNoGPU: "mock",
     detectSpeech: jest.fn(async () => []),
     detectSpeechData: jest.fn(async () => []),
     release: jest.fn(),
@@ -203,12 +211,12 @@ jest.mock('whisper.rn', () => ({
   releaseAllWhisperVad: jest.fn(),
   toggleNativeLog: jest.fn(),
   addNativeLogListener: jest.fn(() => ({ remove: jest.fn() })),
-  libVersion: '0.0.0-mock',
+  libVersion: "0.0.0-mock",
   isUseCoreML: false,
   isCoreMLAllowFallback: false,
 }));
 
-jest.mock('whisper.rn/src/realtime-transcription', () => ({
+jest.mock("whisper.rn/src/realtime-transcription", () => ({
   RealtimeTranscriber: jest.fn().mockImplementation(() => ({
     start: jest.fn(),
     stop: jest.fn(),
@@ -239,15 +247,19 @@ jest.mock('whisper.rn/src/realtime-transcription', () => ({
       currentSliceIndex: 0,
       memoryUsage: { slicesInMemory: 0, totalSamples: 0, estimatedMB: 0 },
     })),
-    getMemoryUsage: jest.fn(() => ({ slicesInMemory: 0, totalSamples: 0, estimatedMB: 0 })),
+    getMemoryUsage: jest.fn(() => ({
+      slicesInMemory: 0,
+      totalSamples: 0,
+      estimatedMB: 0,
+    })),
     reset: jest.fn(),
   })),
   VAD_PRESETS: {
     default: {},
     sensitive: {},
-    'very-sensitive': {},
+    "very-sensitive": {},
     conservative: {},
-    'very-conservative': {},
+    "very-conservative": {},
     continuous: {},
     meeting: {},
     noisy: {},
@@ -255,7 +267,7 @@ jest.mock('whisper.rn/src/realtime-transcription', () => ({
 }));
 
 jest.mock(
-  'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter',
+  "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter",
   () => ({
     AudioPcmStreamAdapter: jest.fn().mockImplementation(() => ({
       initialize: jest.fn(),
@@ -267,13 +279,13 @@ jest.mock(
       onStatusChange: jest.fn(),
       release: jest.fn(),
     })),
-  })
+  }),
 );
 
 // ---------------------------------------------------------------------------
 // AsyncStorage (in-memory)
 // ---------------------------------------------------------------------------
-jest.mock('@react-native-async-storage/async-storage', () => ({
+jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
     getItem: jest.fn(async (key) => mockAsyncStorageStore[key] ?? null),
@@ -284,17 +296,17 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
       delete mockAsyncStorageStore[key];
     }),
     multiGet: jest.fn(async (keys) =>
-      keys.map((k) => [k, mockAsyncStorageStore[k] ?? null])
+      keys.map((k) => [k, mockAsyncStorageStore[k] ?? null]),
     ),
     multiSet: jest.fn(async (pairs) =>
       pairs.forEach(([k, v]) => {
         mockAsyncStorageStore[k] = v;
-      })
+      }),
     ),
     multiRemove: jest.fn(async (keys) =>
       keys.forEach((k) => {
         delete mockAsyncStorageStore[k];
-      })
+      }),
     ),
     getAllKeys: jest.fn(async () => Object.keys(mockAsyncStorageStore)),
     clear: jest.fn(async () => {
@@ -306,36 +318,41 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 // ---------------------------------------------------------------------------
 // React Native third-party native modules
 // ---------------------------------------------------------------------------
-jest.mock('react-native-aes-gcm-crypto', () => ({
+jest.mock("react-native-aes-gcm-crypto", () => ({
   __esModule: true,
   default: {
     encrypt: jest.fn(async (plainText, _isBase64, _key) => ({
-      iv: 'mock-iv-0123456789ab',
-      content: 'encrypted-' + plainText,
-      tag: '-mock-tag',
+      iv: "mock-iv-0123456789ab",
+      content: "encrypted-" + plainText,
+      tag: "-mock-tag",
     })),
-    decrypt: jest.fn(async () => 'decrypted-content'),
+    decrypt: jest.fn(async () => "decrypted-content"),
   },
 }));
 
-jest.mock('react-native-fs', () => ({
+jest.mock("react-native-fs", () => ({
   __esModule: true,
   default: {
-    DocumentDirectoryPath: '/mock/document',
-    CachesDirectoryPath: '/mock/cache',
+    DocumentDirectoryPath: "/mock/document",
+    CachesDirectoryPath: "/mock/cache",
     exists: jest.fn(async () => true),
-    readFile: jest.fn(async () => ''),
+    readFile: jest.fn(async () => ""),
     writeFile: jest.fn(),
+    appendFile: jest.fn(),
     unlink: jest.fn(),
     mkdir: jest.fn(),
-    stat: jest.fn(async () => ({ size: 0, isFile: () => true, isDirectory: () => false })),
+    stat: jest.fn(async () => ({
+      size: 0,
+      isFile: () => true,
+      isDirectory: () => false,
+    })),
     copyFile: jest.fn(),
     moveFile: jest.fn(),
     readDir: jest.fn(async () => []),
   },
 }));
 
-jest.mock('react-native-reanimated', () => ({
+jest.mock("react-native-reanimated", () => ({
   __esModule: true,
   default: {
     call: jest.fn(),
@@ -347,7 +364,7 @@ jest.mock('react-native-reanimated', () => ({
     set: jest.fn(),
     cond: jest.fn(),
     interpolate: jest.fn(),
-    Extrapolate: { CLAMP: 'clamp' },
+    Extrapolate: { CLAMP: "clamp" },
     useAnimatedGestureHandler: jest.fn(),
     useAnimatedScrollHandler: jest.fn(),
     useSharedValue: jest.fn((v) => ({ value: v })),
@@ -401,55 +418,62 @@ jest.mock('react-native-reanimated', () => ({
   Layout: { duration: jest.fn().mockReturnThis() },
 }));
 
-jest.mock('react-native-svg', () => ({
+jest.mock("react-native-svg", () => ({
   __esModule: true,
-  default: 'Svg',
-  Svg: 'Svg',
-  Circle: 'Circle',
-  Ellipse: 'Ellipse',
-  G: 'G',
-  Text: 'SvgText',
-  TSpan: 'TSpan',
-  TextPath: 'TextPath',
-  Path: 'Path',
-  Polygon: 'Polygon',
-  Polyline: 'Polyline',
-  Line: 'Line',
-  Rect: 'Rect',
-  Use: 'Use',
-  Image: 'SvgImage',
-  Symbol: 'SvgSymbol',
-  Defs: 'Defs',
-  LinearGradient: 'SvgLinearGradient',
-  RadialGradient: 'RadialGradient',
-  Stop: 'Stop',
-  ClipPath: 'ClipPath',
-  Pattern: 'Pattern',
-  Mask: 'Mask',
+  default: "Svg",
+  Svg: "Svg",
+  Circle: "Circle",
+  Ellipse: "Ellipse",
+  G: "G",
+  Text: "SvgText",
+  TSpan: "TSpan",
+  TextPath: "TextPath",
+  Path: "Path",
+  Polygon: "Polygon",
+  Polyline: "Polyline",
+  Line: "Line",
+  Rect: "Rect",
+  Use: "Use",
+  Image: "SvgImage",
+  Symbol: "SvgSymbol",
+  Defs: "Defs",
+  LinearGradient: "SvgLinearGradient",
+  RadialGradient: "RadialGradient",
+  Stop: "Stop",
+  ClipPath: "ClipPath",
+  Pattern: "Pattern",
+  Mask: "Mask",
   SvgProps: {},
 }));
 
-jest.mock('react-native-logs', () => ({
+jest.mock("react-native-logs", () => ({
   logger: {
     createLogger: jest.fn(() => ({
       debug: jest.fn(),
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
+      extend: jest.fn(() => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+      })),
       getExtensions: jest.fn(() => ({})),
       setSeverity: jest.fn(),
-      getSeverity: jest.fn(() => 'debug'),
+      getSeverity: jest.fn(() => "debug"),
       enable: jest.fn(),
       disable: jest.fn(),
     })),
   },
+  mapConsoleTransport: jest.fn(),
   transportFunctions: {
     consoleSync: jest.fn(),
   },
 }));
 
-jest.mock('react-native-gesture-handler', () => {
-  const View = require('react-native').View;
+jest.mock("react-native-gesture-handler", () => {
+  const View = require("react-native").View;
   return {
     GestureHandlerRootView: View,
     Swipeable: View,
@@ -496,12 +520,12 @@ jest.mock('react-native-gesture-handler', () => {
 // ---------------------------------------------------------------------------
 // Audio PCM stream (Android)
 // ---------------------------------------------------------------------------
-jest.mock('@fugood/react-native-audio-pcm-stream', () => ({
+jest.mock("@fugood/react-native-audio-pcm-stream", () => ({
   __esModule: true,
   default: {
     init: jest.fn(),
     start: jest.fn(),
-    stop: jest.fn(async () => '/mock/audio/path.wav'),
+    stop: jest.fn(async () => "/mock/audio/path.wav"),
     on: jest.fn(),
   },
 }));
@@ -509,7 +533,7 @@ jest.mock('@fugood/react-native-audio-pcm-stream', () => ({
 // ---------------------------------------------------------------------------
 // Android foreground service
 // ---------------------------------------------------------------------------
-jest.mock('@supersami/rn-foreground-service', () => ({
+jest.mock("@supersami/rn-foreground-service", () => ({
   __esModule: true,
   default: {
     register: jest.fn(),
@@ -518,8 +542,8 @@ jest.mock('@supersami/rn-foreground-service', () => ({
     stop: jest.fn(),
     stopAll: jest.fn(),
     eventListener: jest.fn(() => jest.fn()),
-    add_task: jest.fn(() => 'mock-task-id'),
-    update_task: jest.fn(() => 'mock-task-id'),
+    add_task: jest.fn(() => "mock-task-id"),
+    update_task: jest.fn(() => "mock-task-id"),
     remove_task: jest.fn(),
     is_task_running: jest.fn(() => false),
     remove_all_tasks: jest.fn(),
@@ -531,9 +555,9 @@ jest.mock('@supersami/rn-foreground-service', () => ({
 // ---------------------------------------------------------------------------
 // Shopify Skia
 // ---------------------------------------------------------------------------
-jest.mock('@shopify/react-native-skia', () => ({
-  Canvas: 'Canvas',
-  Path: 'SkiaPath',
+jest.mock("@shopify/react-native-skia", () => ({
+  Canvas: "Canvas",
+  Path: "SkiaPath",
   Skia: {
     Path: { Make: jest.fn() },
     Color: jest.fn(),
@@ -548,16 +572,16 @@ jest.mock('@shopify/react-native-skia', () => ({
 // ---------------------------------------------------------------------------
 // i18next
 // ---------------------------------------------------------------------------
-jest.mock('react-i18next', () => ({
+jest.mock("react-i18next", () => ({
   useTranslation: jest.fn(() => ({
     t: jest.fn((key) => key),
     i18n: {
-      language: 'en',
+      language: "en",
       changeLanguage: jest.fn(),
     },
   })),
   initReactI18next: {
-    type: '3rdParty',
+    type: "3rdParty",
     init: jest.fn(),
   },
   Trans: ({ children }) => children,
@@ -566,9 +590,9 @@ jest.mock('react-i18next', () => ({
 // ---------------------------------------------------------------------------
 // base64-js
 // ---------------------------------------------------------------------------
-jest.mock('base64-js', () => ({
-  fromByteArray: jest.fn((bytes) => Buffer.from(bytes).toString('base64')),
-  toByteArray: jest.fn((str) => new Uint8Array(Buffer.from(str, 'base64'))),
+jest.mock("base64-js", () => ({
+  fromByteArray: jest.fn((bytes) => Buffer.from(bytes).toString("base64")),
+  toByteArray: jest.fn((str) => new Uint8Array(Buffer.from(str, "base64"))),
   byteLength: jest.fn((str) => Math.ceil((str.length * 3) / 4)),
 }));
 
