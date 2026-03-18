@@ -167,6 +167,7 @@ End-to-end flows on a running development build using Maestro.
 
 ## Progress Tracking
 
+
 | Phase                | Tasks  | Tests (est.) | Status      |
 | -------------------- | ------ | ------------ | ----------- |
 | 1. Models            | 7      | ~55          | Done        |
@@ -174,10 +175,12 @@ End-to-end flows on a running development build using Maestro.
 | 3. Theme             | 7      | ~40          | Done        |
 | 4. Services          | 8      | ~130         | Done        |
 | 5. Stores            | 4      | ~120         | Done        |
-| 6. Hooks             | 4      | ~30          | Not started |
+| 6. Hooks             | 4      | ~30          | Done        |
 | 7. UI Components     | 23     | ~120         | Not started |
 | 8. Shared Components | 7      | ~35          | Not started |
 | 9. Domain Components | 15     | ~75          | Not started |
 | 10. App Screens      | 7      | ~40          | Not started |
 | 11. Maestro E2E      | 7      | —            | Not started |
 | **Total**            | **95** | **~700**     |             |
+
+
