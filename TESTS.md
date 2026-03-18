@@ -79,33 +79,33 @@ React hooks — test with `renderHook` from `@testing-library/react-native`.
 - **35. `hooks/useLocalization.test.ts`** — Returns `t` function that translates keys, returns `loc` object with i18n instance, language switching works
 - **36. `hooks/useSessionOperations.test.ts`** — `deleteSession()` deletes session and all associated transcriptions, `endIncognitoSession()` clears incognito session data, error handling and toast notifications
 
-## Phase 7: UI Components (23 tasks, ~120 tests)
+## Phase 7: UI Components (23 tasks, 125 tests) ✅ Done
 
 Primitive UI components. Test rendering, props, and user interactions.
 
-- **37. `components/ui/text/Text.test.tsx`** — Renders children text, applies variant styles (body, headline, etc.), applies custom style prop, handles numberOfLines
-- **38. `components/ui/button/Button.test.tsx`** — Renders label text, onPress fires callback, disabled state prevents onPress and applies styles, loading state shows indicator, variant styles (primary, secondary, text)
-- **39. `components/ui/checkbox/Checkbox.test.tsx`** — Renders unchecked by default, toggles on press, controlled mode with `checked` and `onChange`, disabled state, accessibility label
-- **40. `components/ui/radio/Radio.test.tsx`** — Renders unselected by default, selects on press, controlled mode, disabled state, group behavior (only one selected), accessibility
-- **41. `components/ui/toggle/Toggle.test.tsx`** — Renders off by default, toggles on press, controlled mode with `value` and `onValueChange`, disabled state, accessibility
-- **42. `components/ui/textfield/TextField.test.tsx`** — Renders with placeholder, text input fires onChangeText, error state styling, label rendering, multiline support, max length
-- **43. `components/ui/slider/Slider.test.tsx`** — Renders with default value, value change callback, min/max bounds, step increments, disabled state
-- **44. `components/ui/icon/Icon.test.tsx`** — Renders with icon name, applies size prop, applies color prop, handles missing icon gracefully
-- **45. `components/ui/icon/FlagIcon.test.tsx`** — Renders flag for country code, handles unknown country code, applies size prop
-- **46. `components/ui/divider/Divider.test.tsx`** — Renders horizontal line, applies custom style, vertical orientation if supported
-- **47. `components/ui/skeleton/Skeleton.test.tsx`** — Renders placeholder shape, applies width/height, animation runs
-- **48. `components/ui/surface/Surface.test.tsx`** — Renders children, applies elevation/shadow, applies background color from theme
-- **49. `components/ui/card/Card.test.tsx`** — Renders children, applies elevation, onPress makes it pressable, applies custom style
-- **50. `components/ui/modal/Modal.test.tsx`** — Renders when visible=true, hidden when visible=false, renders children content, close button/backdrop press calls onClose
-- **51. `components/ui/modal/useModal.test.ts`** — `open()` sets visible=true, `close()` sets visible=false, `toggle()` flips state, initial state is closed
-- **52. `components/ui/modal/Dimmer.test.tsx`** — Renders semi-transparent overlay, onPress calls onDismiss, applies custom opacity
-- **53. `components/ui/toast/Toast.test.tsx`** — Renders message text, applies variant styling (success, error, info), action button fires callback, auto-dismiss after timeout
-- **54. `components/ui/toast/useToast.test.ts`** — `show()` adds toast, `dismiss()` removes toast, auto-dismiss timer, multiple toasts queue
-- **55. `components/ui/tooltip/Tooltip.test.tsx`** — Renders tooltip content, positions relative to anchor, dismiss on backdrop press
-- **56. `components/ui/tooltip/useTooltip.test.ts`** — `show()` makes tooltip visible, `hide()` hides tooltip, position tracking
-- **57. `components/ui/top-app-bar/TopAppBar.test.tsx`** — Renders title, renders back button when navigable, back button fires navigation, renders action buttons, applies theme styling
-- **58. `components/ui/progress/ProgressIndicator.test.tsx`** — Renders with progress value (0-1), indeterminate mode animation, applies color prop, accessibility value
-- **59. `components/ui/ripple-pressable/RipplePressable.test.tsx`** — Renders children, onPress fires callback, Android shows ripple effect, iOS shows opacity feedback, disabled state
+- **37. `components/ui/text/Text.test.tsx`** ✅ — Renders children text, applies default variant body1, applies variant style h1, applies weight suffix (medium/semibold), accepts custom color prop
+- **38. `components/ui/button/Button.test.tsx`** ✅ — All 5 namespace variants (primary/secondary/tertiary/utility/utilitySecondary) render with text, onPress fires callback, loading state shows ProgressIndicator
+- **39. `components/ui/checkbox/Checkbox.test.tsx`** ✅ — Checked/unchecked states, onValueChange toggle, disabled prevents press, accessibility role checkbox with checked state
+- **40. `components/ui/radio/Radio.test.tsx`** ✅ — Selected/unselected states via groupValue matching, onValueChange with value, disabled prevents press, small size variant
+- **41. `components/ui/toggle/Toggle.test.tsx`** ✅ — Accessibility role switch, checked state, onValueChange toggle, disabled prevents press, custom activeColor
+- **42. `components/ui/textfield/TextField.test.tsx`** ✅ — Label rendering, debounced onChangeText (fake timers 500ms), clear icon with showClearIcon, onClear callback, character counter, error border color, disabled state
+- **43. `components/ui/slider/Slider.test.tsx`** ✅ — Render states only (PanResponder not simulatable): initial/arrow_right, inProgress/spinner, completed/check, error/close, disabled opacity
+- **44. `components/ui/icon/Icon.test.tsx`** ✅ — Renders from mocked iconMap, returns null for unknown, logs warning for unknown, custom size and color
+- **45. `components/ui/icon/FlagIcon.test.tsx`** ✅ — Renders flag for known code, empty View for unknown code, custom size
+- **46. `components/ui/divider/Divider.test.tsx`** ✅ — Default height 1, default theme border color, custom height, custom color
+- **47. `components/ui/skeleton/Skeleton.test.tsx`** ✅ — Default dimensions (100%/20), custom width/height, custom borderRadius, custom style
+- **48. `components/ui/surface/Surface.test.tsx`** ✅ — Renders children, filled variant default, glass variant renders BlurView, elevation shadow, onPress callback, custom borderRadius
+- **49. `components/ui/card/Card.test.tsx`** ✅ — Renders children, default borderRadius 8, custom backgroundColor, overflow hidden
+- **50. `components/ui/modal/Modal.test.tsx`** ✅ — Renders title/message when visible, primary/secondary button rendering and callbacks, onDismiss via RN Modal onRequestClose
+- **51. `components/ui/modal/useModal.test.ts`** ✅ — Visible state management, modalProps with title/message/buttons, auto-dismiss on button tap, onDismiss hides, safe initial state
+- **52. `components/ui/modal/Dimmer.test.tsx`** ✅ — RN Modal visible prop, BlurView rendered, onDismiss on backdrop press, children passthrough
+- **53. `components/ui/toast/Toast.test.tsx`** ✅ — Title/message rendering, danger/warning variant icons, primary button, onDismiss close button, dual button layout
+- **54. `components/ui/toast/useToast.test.ts`** ✅ — Visible state management, show/hide, auto-hide wrapping for button callbacks, onDismiss hides
+- **55. `components/ui/tooltip/Tooltip.test.tsx`** ✅ — Message rendering, variant background color, SVG pointer top/bottom, dismissible pointerEvents, info mode leading icon
+- **56. `components/ui/tooltip/useTooltip.test.ts`** ✅ — Visible state, 4000ms auto-dismiss (fake timers), timer reset on re-show, dismissible skips auto-dismiss, custom duration, trailing icon tap
+- **57. `components/ui/top-app-bar/TopAppBar.test.tsx`** ✅ — Title rendering, back button default, router.back() on press, custom onBackPressed, hide back button, action buttons
+- **58. `components/ui/progress/ProgressIndicator.test.tsx`** ✅ — Accessibility role progressbar, label "Loading", custom color, custom size
+- **59. `components/ui/ripple-pressable/RipplePressable.test.tsx`** ✅ — Children on iOS/Android, onPress fires, iOS uses Pressable, Android uses TouchableNativeFeedback
 
 ## Phase 8: Shared Components (7 tasks, ~35 tests)
 
@@ -167,7 +167,6 @@ End-to-end flows on a running development build using Maestro.
 
 ## Progress Tracking
 
-
 | Phase                | Tasks  | Tests (est.) | Status      |
 | -------------------- | ------ | ------------ | ----------- |
 | 1. Models            | 7      | ~55          | Done        |
@@ -176,11 +175,9 @@ End-to-end flows on a running development build using Maestro.
 | 4. Services          | 8      | ~130         | Done        |
 | 5. Stores            | 4      | ~120         | Done        |
 | 6. Hooks             | 4      | ~30          | Done        |
-| 7. UI Components     | 23     | ~120         | Not started |
+| 7. UI Components     | 23     | 125          | Done        |
 | 8. Shared Components | 7      | ~35          | Not started |
 | 9. Domain Components | 15     | ~75          | Not started |
 | 10. App Screens      | 7      | ~40          | Not started |
 | 11. Maestro E2E      | 7      | —            | Not started |
 | **Total**            | **95** | **~700**     |             |
-
-

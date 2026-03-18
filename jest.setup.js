@@ -12,6 +12,8 @@
 let mockAsyncStorageStore = {};
 let mockSecureStoreStore = {};
 
+const { useThemeStore } = require("./theme");
+
 // ---------------------------------------------------------------------------
 // Expo modules
 // ---------------------------------------------------------------------------
@@ -353,11 +355,18 @@ jest.mock("react-native-fs", () => ({
   },
 }));
 
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  SafeAreaView: ({ children }) => children,
+  SafeAreaProvider: ({ children }) => children,
+}));
+
 jest.mock("react-native-reanimated", () => ({
   __esModule: true,
   default: {
     call: jest.fn(),
     createAnimatedComponent: jest.fn((component) => component),
+    View: require("react-native").View,
     Value: jest.fn(),
     event: jest.fn(),
     add: jest.fn(),
@@ -603,4 +612,5 @@ jest.mock("base64-js", () => ({
 beforeEach(() => {
   mockAsyncStorageStore = {};
   mockSecureStoreStore = {};
+  useThemeStore.setState({ currentTheme: "light", selectedTheme: "auto" });
 });
