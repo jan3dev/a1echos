@@ -16,6 +16,7 @@ let mockSecureStoreStore = {};
 // Expo modules
 // ---------------------------------------------------------------------------
 jest.mock("expo-crypto", () => ({
+  randomUUID: jest.fn(() => "mock-uuid"),
   getRandomBytesAsync: jest.fn(async (size) => new Uint8Array(size)),
   digestStringAsync: jest.fn(async () => "mock-digest"),
   CryptoDigestAlgorithm: { SHA256: "SHA-256" },
