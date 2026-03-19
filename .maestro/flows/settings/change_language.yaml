@@ -1,0 +1,27 @@
+tags:
+  - settings
+---
+# Task 92: Change spoken language
+- runFlow: helpers/launch_app.yaml
+- runFlow: helpers/navigate_to_settings.yaml
+
+# Tap Spoken Language setting
+- tapOn: "Spoken Language"
+
+# Select Spanish
+- tapOn: "ES"
+
+# Go back and verify
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Spoken Language"
+- assertVisible: "ES"
+
+# Switch back to English
+- tapOn: "EN"
+
+# Verify English selected
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Spoken Language"
+- assertVisible: "EN"

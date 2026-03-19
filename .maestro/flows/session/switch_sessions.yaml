@@ -1,0 +1,41 @@
+tags:
+  - session
+---
+# Task 91: Switch between sessions
+- runFlow: helpers/launch_app.yaml
+
+# Create first recording
+- runFlow: helpers/create_recording.yaml
+
+# Navigate to home
+- tapOn:
+    point: "8%,7%"
+
+# Create second recording (tap on empty area or start new)
+- runFlow: helpers/create_recording.yaml
+
+# Navigate to home
+- tapOn:
+    point: "8%,7%"
+
+# Tap first session in the list
+- tapOn:
+    point: "50%,20%"
+
+# Verify we navigated to a session detail
+- assertVisible:
+    text: "Start Recording"
+    timeout: 5000
+
+# Navigate back to home
+- tapOn:
+    point: "8%,7%"
+
+# Tap second session in the list
+- tapOn:
+    point: "50%,30%"
+
+# Verify navigation works
+- assertVisible:
+    text: "Start Recording"
+    timeout: 5000

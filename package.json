@@ -12,7 +12,15 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles"
+    "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
+    "e2e": "maestro test .maestro/flows/",
+    "e2e:recording": "maestro test .maestro/flows/recording/",
+    "e2e:session": "maestro test .maestro/flows/session/",
+    "e2e:settings": "maestro test .maestro/flows/settings/",
+    "e2e:transcription": "maestro test .maestro/flows/transcription/",
+    "e2e:onboarding": "maestro test .maestro/flows/onboarding/",
+    "e2e:integration": "maestro test .maestro/flows/integration/",
+    "e2e:smoke": "maestro test --tags smoke .maestro/flows/"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -1,0 +1,18 @@
+tags:
+  - smoke
+  - session
+---
+# Task 91: Verify auto session creation on first recording
+- runFlow: helpers/launch_app.yaml
+
+# Create a recording (this should auto-create a session)
+- runFlow: helpers/create_recording.yaml
+
+# Navigate to home by tapping back (top-left)
+- tapOn:
+    point: "8%,7%"
+
+# Verify a session appears in the list (session should have been created)
+- assertVisible:
+    text: "Session"
+    timeout: 5000

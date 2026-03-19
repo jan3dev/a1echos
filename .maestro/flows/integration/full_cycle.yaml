@@ -1,0 +1,51 @@
+tags:
+  - smoke
+  - integration
+---
+# Task 95: Full end-to-end cycle
+# Open app -> record -> transcribe -> view session -> selection mode ->
+# verify share -> exit selection -> navigate home -> delete session -> verify cleanup
+- runFlow: helpers/launch_app.yaml
+
+# === Step 1: Verify empty state ===
+- assertVisible:
+    text: "Start Recording"
+    timeout: 5000
+
+# === Step 2: Record and transcribe ===
+- runFlow: helpers/create_recording.yaml
+
+# === Step 3: Enter selection mode via long-press on transcription ===
+- longPressOn:
+    point: "50%,50%"
+
+# === Step 4: Verify share is available ===
+- assertVisible:
+    text: "Share"
+    timeout: 5000
+
+# === Step 5: Exit selection mode by tapping back/cancel ===
+- tapOn:
+    point: "8%,7%"
+
+# === Step 6: Navigate home ===
+- tapOn:
+    point: "8%,7%"
+
+# Verify session appears in the list
+- assertVisible:
+    text: "Session"
+    timeout: 5000
+
+# === Step 7: Delete session via 3-dot menu ===
+- tapOn:
+    point: "92%,20%"
+- tapOn: "Delete"
+
+# Confirm deletion
+- tapOn: "Delete"
+
+# === Step 8: Verify cleanup (empty state) ===
+- assertNotVisible:
+    text: "Session"
+    timeout: 5000

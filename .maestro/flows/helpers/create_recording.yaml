@@ -1,0 +1,25 @@
+---
+# Helper: Create a short recording
+# Assumes app is launched and on home/session screen with mic permission granted
+
+# Tap "Start Recording" button
+- tapOn: "Start Recording"
+
+# Verify recording started
+- assertVisible:
+    text: "Stop Recording"
+    timeout: 5000
+
+# Wait for a short recording (3 seconds)
+# Note: Maestro has no native sleep command; swipe with duration is a common workaround
+- swipe:
+    direction: LEFT
+    duration: 3000
+
+# Tap "Stop Recording" button
+- tapOn: "Stop Recording"
+
+# Wait for transcription to complete (Whisper inference can be slow)
+- assertVisible:
+    text: "Start Recording"
+    timeout: 20000

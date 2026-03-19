@@ -1,0 +1,27 @@
+tags:
+  - settings
+---
+# Task 92: Change theme to Dark, verify, switch back to Light
+- runFlow: helpers/launch_app.yaml
+- runFlow: helpers/navigate_to_settings.yaml
+
+# Tap Theme setting
+- tapOn: "Theme"
+
+# Select Dark theme
+- tapOn: "Dark"
+
+# Verify Dark is selected (go back and re-enter to confirm persistence)
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Theme"
+- assertVisible: "Dark"
+
+# Switch back to Light
+- tapOn: "Light"
+
+# Verify Light is selected
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Theme"
+- assertVisible: "Light"

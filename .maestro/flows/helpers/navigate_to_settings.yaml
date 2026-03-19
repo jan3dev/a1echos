@@ -1,0 +1,7 @@
+---
+# Helper: Navigate from Home to Settings screen
+# Tap the hamburger/menu icon (top-right area, no accessibility label)
+- tapOn:
+    point: "92%,7%"
+
+- assertVisible: "Settings"
