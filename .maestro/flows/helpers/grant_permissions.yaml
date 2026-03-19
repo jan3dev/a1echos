@@ -1,0 +1,6 @@
+---
+# Helper: Handle system permission dialog (microphone)
+# Taps "Allow" if the permission dialog appears, skips if not
+- tapOn:
+    text: "Allow"
+    optional: true

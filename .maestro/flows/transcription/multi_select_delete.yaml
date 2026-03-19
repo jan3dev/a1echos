@@ -1,0 +1,31 @@
+tags:
+  - transcription
+---
+# Task 93: Multi-select and delete transcriptions
+- runFlow: helpers/launch_app.yaml
+
+# Create first recording
+- runFlow: helpers/create_recording.yaml
+
+# Create second recording on same session
+- runFlow: helpers/create_recording.yaml
+
+# Long-press to enter selection mode
+- longPressOn:
+    point: "50%,50%"
+
+# Tap "Select all" (top area before trash)
+- tapOn:
+    point: "82%,7%"
+
+# Tap trash icon to delete selected
+- tapOn:
+    point: "92%,7%"
+
+# Confirm deletion
+- tapOn: "Delete"
+
+# Verify all transcriptions removed
+- assertVisible:
+    text: "Start Recording"
+    timeout: 5000

@@ -1,0 +1,17 @@
+---
+# Helper: Switch model to Realtime and navigate back to home
+- runFlow: helpers/navigate_to_settings.yaml
+
+# Tap Model setting
+- tapOn: "Model"
+
+# Select Realtime model
+- tapOn: "Whisper (Real-time)"
+
+# Navigate back to settings
+- tapOn:
+    point: "8%,7%"
+
+# Navigate back to home
+- tapOn:
+    point: "8%,7%"

@@ -1,0 +1,27 @@
+tags:
+  - settings
+---
+# Task 92: Change transcription model
+- runFlow: helpers/launch_app.yaml
+- runFlow: helpers/navigate_to_settings.yaml
+
+# Tap Model setting
+- tapOn: "Model"
+
+# Select Realtime model
+- tapOn: "Whisper (Real-time)"
+
+# Go back and verify persistence
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Model"
+- assertVisible: "Whisper (Real-time)"
+
+# Switch back to File mode
+- tapOn: "Whisper"
+
+# Verify File mode selected
+- tapOn:
+    point: "8%,7%"
+- tapOn: "Model"
+- assertVisible: "Whisper"

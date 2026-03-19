@@ -1,7 +1,7 @@
 # Maestro E2E Test Configuration for Echos
 # https://maestro.mobile.dev/
 
-appId: com.echos.app
+appId: com.a1lab.echos
 name: Echos E2E Tests
 
 # Tags for organizing test flows
@@ -13,7 +13,3 @@ tags:
   transcription: "Transcription operations"
   onboarding: "First-launch and permissions"
   integration: "Full end-to-end journeys"
-
-# Global configuration
-onFlowStart:
-  - clearState

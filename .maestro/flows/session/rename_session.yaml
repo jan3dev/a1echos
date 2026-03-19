@@ -1,0 +1,31 @@
+tags:
+  - session
+---
+# Task 91: Rename a session
+- runFlow: helpers/launch_app.yaml
+
+# Create a recording first
+- runFlow: helpers/create_recording.yaml
+
+# Navigate to home
+- tapOn:
+    point: "8%,7%"
+
+# Tap 3-dot more menu on the session (right side of first session row)
+- tapOn:
+    point: "92%,20%"
+
+# Tap "Rename"
+- tapOn: "Rename"
+
+# Clear existing name and type new name
+- eraseText: 50
+- inputText: "My Renamed Session"
+
+# Tap "Save"
+- tapOn: "Save"
+
+# Verify renamed session is visible
+- assertVisible:
+    text: "My Renamed Session"
+    timeout: 5000
