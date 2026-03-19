@@ -119,7 +119,7 @@ Cross-feature reusable components.
 - **65. `components/shared/recording-controls/LockIndicator.test.tsx`** — Renders lock icon, visual state (locked/unlocked), animation on state change
 - **66. `components/shared/recording-controls/ThreeWaveLines.test.tsx`** — Renders SVG wave lines, amplitude prop controls wave height, animation active during recording
 
-## Phase 9: Domain Components (15 tasks, ~75 tests)
+## Phase 9: Domain Components (15 tasks, ~75 tests) ✅ Done
 
 Feature-specific components. May require store pre-population.
 
@@ -167,7 +167,6 @@ End-to-end flows on a running development build using Maestro.
 
 ## Progress Tracking
 
-
 | Phase                | Tasks  | Tests (est.) | Status      |
 | -------------------- | ------ | ------------ | ----------- |
 | 1. Models            | 7      | ~55          | Done        |
@@ -178,9 +177,7 @@ End-to-end flows on a running development build using Maestro.
 | 6. Hooks             | 4      | ~30          | Done        |
 | 7. UI Components     | 23     | 125          | Done        |
 | 8. Shared Components | 7      | ~35          | Done        |
-| 9. Domain Components | 15     | ~75          | Not started |
+| 9. Domain Components | 15     | ~75          | Done        |
 | 10. App Screens      | 7      | ~40          | Not started |
 | 11. Maestro E2E      | 7      | —            | Not started |
 | **Total**            | **95** | **~700**     |             |
-
-
