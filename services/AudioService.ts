@@ -1,6 +1,5 @@
 import { EventEmitter } from "events";
 
-import AudioRecord from "@fugood/react-native-audio-pcm-stream";
 import {
   AudioModule,
   AudioRecorder,
@@ -21,6 +20,12 @@ import {
 } from "@/utils";
 
 import { permissionService } from "./PermissionService";
+
+let AudioRecord: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  AudioRecord = require("@fugood/react-native-audio-pcm-stream").default;
+} catch {}
 
 const RECORDING_OPTIONS: RecordingOptions = {
   extension: ".wav",

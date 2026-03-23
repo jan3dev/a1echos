@@ -1,23 +1,41 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
 import { Platform } from "react-native";
-import RNFS from "react-native-fs";
-import {
-  initWhisper,
-  initWhisperVad,
-  type WhisperContext,
-  type WhisperVadContext,
-} from "whisper.rn";
-import {
-  RealtimeTranscriber,
-  type AudioStreamData,
+import type { WhisperContext, WhisperVadContext } from "whisper.rn";
+import type {
+  AudioStreamData,
+  RealtimeTranscriber as RealtimeTranscriberType,
 } from "whisper.rn/src/realtime-transcription";
-import { AudioPcmStreamAdapter } from "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter";
+import type { AudioPcmStreamAdapter as AudioPcmStreamAdapterType } from "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter";
 
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
 import { audioService } from "./AudioService";
 import { audioSessionService } from "./AudioSessionService";
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+let RNFS: any;
+try {
+  RNFS = require("react-native-fs").default;
+} catch {}
+let initWhisper: any;
+try {
+  initWhisper = require("whisper.rn").initWhisper;
+} catch {}
+let initWhisperVad: any;
+try {
+  initWhisperVad = require("whisper.rn").initWhisperVad;
+} catch {}
+let RealtimeTranscriber: any;
+try {
+  RealtimeTranscriber =
+    require("whisper.rn/src/realtime-transcription").RealtimeTranscriber;
+} catch {}
+let AudioPcmStreamAdapter: any;
+try {
+  AudioPcmStreamAdapter =
+    require("whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter").AudioPcmStreamAdapter;
+} catch {}
 
 const IOS_INIT_THREADS = 2;
 const IOS_VAD_THREADS = 1;
@@ -31,16 +49,14 @@ interface RealtimeTranscribeEvent {
   recordingTime: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const modelAsset = require("@/assets/models/whisper/ggml-tiny.bin");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const vadModelAsset = require("@/assets/models/whisper/ggml-silero-v6.2.0.bin");
 
 interface WhisperServiceState {
   whisperContext: WhisperContext | null;
   vadContext: WhisperVadContext | null;
-  realtimeTranscriber: RealtimeTranscriber | null;
-  realtimeAudioStream: AudioPcmStreamAdapter | null;
+  realtimeTranscriber: RealtimeTranscriberType | null;
+  realtimeAudioStream: AudioPcmStreamAdapterType | null;
   isInitialized: boolean;
   isInitializing: boolean;
   isTranscribing: boolean;

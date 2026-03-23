@@ -35,11 +35,13 @@ import {
 import { useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
+const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
+
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
 
 // Register Android foreground service early (async, fire-and-forget)
-if (Platform.OS === "android") {
+if (Platform.OS === "android" && !StorybookEnabled) {
   registerForegroundService();
 }
 
@@ -67,8 +69,6 @@ function installGlobalErrorHandler() {
     previousHandler?.(error, isFatal);
   });
 }
-
-const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
 export const unstable_settings = {
   initialRouteName: StorybookEnabled ? "(storybook)/index" : "(pages)/index",
@@ -247,16 +247,16 @@ export default function RootLayout() {
   useEffect(() => {
     async function initializeApp() {
       try {
-        // Initialize in parallel where possible
-        await Promise.all([
-          initTheme(),
-          initializeSettingsStore(),
-          initializeSessionStore(),
-          storageService.processPendingDeletes(),
-        ]);
+        await initTheme();
 
-        // Initialize transcription store (depends on session store being ready)
-        await initializeTranscriptionStore();
+        if (!StorybookEnabled) {
+          await Promise.all([
+            initializeSettingsStore(),
+            initializeSessionStore(),
+            storageService.processPendingDeletes(),
+          ]);
+          await initializeTranscriptionStore();
+        }
 
         setAppReady(true);
       } catch (error) {
@@ -264,8 +264,6 @@ export default function RootLayout() {
           flag: FeatureFlag.general,
           message: "Failed to initialize app",
         });
-        // Still mark as ready to allow the app to render
-        // Individual stores handle their own error states
         setAppReady(true);
       }
     }

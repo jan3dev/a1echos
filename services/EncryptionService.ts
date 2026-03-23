@@ -1,7 +1,12 @@
 import { fromByteArray } from "base64-js";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
-import AesGcmCrypto from "react-native-aes-gcm-crypto";
+
+let AesGcmCrypto: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  AesGcmCrypto = require("react-native-aes-gcm-crypto").default;
+} catch {}
 
 const KEY_STORAGE_KEY = "aes_data_key";
 

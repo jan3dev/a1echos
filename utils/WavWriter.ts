@@ -1,6 +1,10 @@
-import RNFS from "react-native-fs";
-
 import { FeatureFlag, logError } from "./log";
+
+let RNFS: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  RNFS = require("react-native-fs").default;
+} catch {}
 
 const WAV_HEADER_SIZE = 44;
 
