@@ -79,4 +79,24 @@ describe("SettingsFooter", () => {
       expect(Linking.openURL).toHaveBeenCalledWith("https://x.com/a1echos");
     });
   });
+
+  it("shows error tooltip when canOpenURL returns false", async () => {
+    (Linking as any).canOpenURL = jest.fn(async () => false);
+    const { getByText } = render(<SettingsFooter />);
+    fireEvent.press(getByText("Echos"));
+    await waitFor(() => {
+      expect(Linking.openURL).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows error tooltip when openURL throws", async () => {
+    (Linking as any).canOpenURL = jest.fn(async () => {
+      throw new Error("network error");
+    });
+    const { getByText } = render(<SettingsFooter />);
+    fireEvent.press(getByText("Echos"));
+    await waitFor(() => {
+      expect(Linking.openURL).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -1,12 +1,12 @@
-import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { PermissionStatus } from 'expo-modules-core';
-import { AppState } from 'react-native';
+import { act, renderHook, waitFor } from "@testing-library/react-native";
+import { PermissionStatus } from "expo-modules-core";
+import { AppState } from "react-native";
 
-import { permissionService } from '@/services';
+import { permissionService } from "@/services";
 
-import { usePermissions } from './usePermissions';
+import { usePermissions } from "./usePermissions";
 
-jest.mock('@/services', () => ({
+jest.mock("@/services", () => ({
   permissionService: {
     getRecordPermission: jest.fn(),
     requestRecordPermission: jest.fn(),
@@ -14,13 +14,13 @@ jest.mock('@/services', () => ({
   },
 }));
 
-jest.mock('@/utils', () => ({
+jest.mock("@/utils", () => ({
   logError: jest.fn(),
-  FeatureFlag: { service: 'service' },
+  FeatureFlag: { service: "service" },
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const mockLogError = require('@/utils').logError as jest.Mock;
+const mockLogError = require("@/utils").logError as jest.Mock;
 
 const mockGetRecordPermission =
   permissionService.getRecordPermission as jest.Mock;
@@ -28,14 +28,14 @@ const mockRequestRecordPermission =
   permissionService.requestRecordPermission as jest.Mock;
 const mockOpenAppSettings = permissionService.openAppSettings as jest.Mock;
 
-describe('usePermissions', () => {
+describe("usePermissions", () => {
   let appStateCallback: ((state: string) => void) | null = null;
   const mockRemove = jest.fn();
 
   beforeEach(() => {
     appStateCallback = null;
     jest
-      .spyOn(AppState, 'addEventListener')
+      .spyOn(AppState, "addEventListener")
       .mockImplementation((_, handler) => {
         appStateCallback = handler as (state: string) => void;
         return { remove: mockRemove } as any;
@@ -47,7 +47,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('calls checkPermission on mount', async () => {
+  it("calls checkPermission on mount", async () => {
     renderHook(() => usePermissions());
 
     await waitFor(() => {
@@ -55,7 +55,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('updates status and canAskAgain from permission check result', async () => {
+  it("updates status and canAskAgain from permission check result", async () => {
     mockGetRecordPermission.mockResolvedValue({
       status: PermissionStatus.GRANTED,
       canAskAgain: false,
@@ -69,7 +69,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('hasPermission is true when status is GRANTED', async () => {
+  it("hasPermission is true when status is GRANTED", async () => {
     mockGetRecordPermission.mockResolvedValue({
       status: PermissionStatus.GRANTED,
       canAskAgain: true,
@@ -82,7 +82,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('hasPermission is false when status is DENIED or UNDETERMINED', async () => {
+  it("hasPermission is false when status is DENIED or UNDETERMINED", async () => {
     mockGetRecordPermission.mockResolvedValue({
       status: PermissionStatus.DENIED,
       canAskAgain: false,
@@ -107,7 +107,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('AppState change to active re-checks permission', async () => {
+  it("AppState change to active re-checks permission", async () => {
     const { result } = renderHook(() => usePermissions());
 
     await waitFor(() => {
@@ -120,7 +120,7 @@ describe('usePermissions', () => {
     });
 
     await act(async () => {
-      appStateCallback?.('active');
+      appStateCallback?.("active");
     });
 
     await waitFor(() => {
@@ -129,7 +129,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('requestPermission calls permissionService.requestRecordPermission and updates state', async () => {
+  it("requestPermission calls permissionService.requestRecordPermission and updates state", async () => {
     mockRequestRecordPermission.mockResolvedValue({
       granted: true,
       status: PermissionStatus.GRANTED,
@@ -155,8 +155,8 @@ describe('usePermissions', () => {
     expect(result.current.status).toBe(PermissionStatus.GRANTED);
   });
 
-  it('requestPermission returns fallback on error', async () => {
-    mockRequestRecordPermission.mockRejectedValue(new Error('fail'));
+  it("requestPermission returns fallback on error", async () => {
+    mockRequestRecordPermission.mockRejectedValue(new Error("fail"));
 
     const { result } = renderHook(() => usePermissions());
     await waitFor(() => {
@@ -175,8 +175,8 @@ describe('usePermissions', () => {
     });
   });
 
-  it('checkPermission logs error on failure without throwing', async () => {
-    mockGetRecordPermission.mockRejectedValue(new Error('check failed'));
+  it("checkPermission logs error on failure without throwing", async () => {
+    mockGetRecordPermission.mockRejectedValue(new Error("check failed"));
 
     renderHook(() => usePermissions());
 
@@ -185,7 +185,7 @@ describe('usePermissions', () => {
     });
   });
 
-  it('openSettings calls permissionService.openAppSettings', async () => {
+  it("openSettings calls permissionService.openAppSettings", async () => {
     const { result } = renderHook(() => usePermissions());
     await waitFor(() => {
       expect(mockGetRecordPermission).toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe('usePermissions', () => {
     expect(mockOpenAppSettings).toHaveBeenCalled();
   });
 
-  it('cleans up AppState subscription on unmount', async () => {
+  it("cleans up AppState subscription on unmount", async () => {
     const { unmount } = renderHook(() => usePermissions());
     await waitFor(() => {
       expect(mockGetRecordPermission).toHaveBeenCalled();
@@ -207,5 +207,20 @@ describe('usePermissions', () => {
     unmount();
 
     expect(mockRemove).toHaveBeenCalled();
+  });
+
+  it("AppState change to non-active does not re-check permission", async () => {
+    renderHook(() => usePermissions());
+
+    await waitFor(() => {
+      expect(mockGetRecordPermission).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      appStateCallback?.("background");
+    });
+
+    // Should not have been called again
+    expect(mockGetRecordPermission).toHaveBeenCalledTimes(1);
   });
 });

@@ -83,4 +83,78 @@ describe('Modal', () => {
     }
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it('renders with visible=false (Dimmer hides content)', () => {
+    const { queryByText } = render(<Modal {...defaultProps} visible={false} />);
+    // RN Modal with visible=false does not render children
+    expect(queryByText('Confirm Action')).toBeNull();
+  });
+
+  it('transitions from visible to not visible', () => {
+    const { rerender, getByText, queryByText } = render(
+      <Modal {...defaultProps} visible={true} />,
+    );
+    expect(getByText('Confirm Action')).toBeTruthy();
+
+    rerender(<Modal {...defaultProps} visible={false} />);
+    // After rerender with visible=false, content hidden by RN Modal
+    expect(queryByText('Confirm Action')).toBeNull();
+  });
+
+  it('renders icon with default iconVariant', () => {
+    const { getByText } = render(<Modal {...defaultProps} icon={<></>} />);
+    expect(getByText('Confirm Action')).toBeTruthy();
+  });
+
+  it.each(['success', 'danger', 'warning', 'info', 'normal'] as const)(
+    'renders icon with iconVariant=%s',
+    (variant) => {
+      const { getByText } = render(
+        <Modal {...defaultProps} icon={<></>} iconVariant={variant} />,
+      );
+      expect(getByText('Confirm Action')).toBeTruthy();
+    },
+  );
+
+  it('renders illustration when provided', () => {
+    const { getByText } = render(
+      <Modal {...defaultProps} illustration={<></>} />,
+    );
+    expect(getByText('Confirm Action')).toBeTruthy();
+  });
+
+  it('renders messageTertiary when provided', () => {
+    const { getByText } = render(
+      <Modal {...defaultProps} messageTertiary="Warning details" />,
+    );
+    expect(getByText('Warning details')).toBeTruthy();
+  });
+
+  it('renders without onDismiss (uses default noop)', () => {
+    const { getByText } = render(<Modal {...defaultProps} />);
+    expect(getByText('Confirm Action')).toBeTruthy();
+  });
+
+  it('renders with custom titleMaxLines and messageMaxLines', () => {
+    const { getByText } = render(
+      <Modal {...defaultProps} titleMaxLines={1} messageMaxLines={2} />,
+    );
+    expect(getByText('Confirm Action')).toBeTruthy();
+  });
+
+  it('renders with button variants', () => {
+    const { getByText } = render(
+      <Modal
+        {...defaultProps}
+        primaryButton={{ text: 'Delete', onTap: jest.fn(), variant: 'error' }}
+        secondaryButton={{
+          text: 'Cancel',
+          onTap: jest.fn(),
+          variant: 'normal',
+        }}
+      />,
+    );
+    expect(getByText('Delete')).toBeTruthy();
+    expect(getByText('Cancel')).toBeTruthy();
+  });
 });

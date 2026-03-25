@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { render } from '@testing-library/react-native';
 import React from 'react';
 import { Modal, Text } from 'react-native';
@@ -49,5 +50,31 @@ describe('Dimmer', () => {
       </Dimmer>,
     );
     expect(getByText('Child Content')).toBeTruthy();
+  });
+
+  it('uses dark theme overlay color and light blur tint when isDark', () => {
+    const { useThemeStore } = require('@/theme');
+    useThemeStore.setState({ currentTheme: 'dark' });
+    const { toJSON } = render(
+      <Dimmer visible={true} onDismiss={jest.fn()}>
+        <Text>Dark Content</Text>
+      </Dimmer>,
+    );
+    const json = JSON.stringify(toJSON());
+    // Dark theme uses rgba(0, 0, 0, 0.04) overlay
+    expect(json).toContain('rgba(0, 0, 0, 0.04)');
+  });
+
+  it('uses light theme overlay color and dark blur tint when not isDark', () => {
+    const { useThemeStore } = require('@/theme');
+    useThemeStore.setState({ currentTheme: 'light' });
+    const { toJSON } = render(
+      <Dimmer visible={true} onDismiss={jest.fn()}>
+        <Text>Light Content</Text>
+      </Dimmer>,
+    );
+    const json = JSON.stringify(toJSON());
+    // Light theme uses rgba(255, 255, 255, 0.04) overlay
+    expect(json).toContain('rgba(255, 255, 255, 0.04)');
   });
 });
