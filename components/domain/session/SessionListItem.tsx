@@ -33,6 +33,7 @@ export const SessionListItem = ({
 
   return (
     <ListItem
+      testID={`session-${session.id}`}
       title={session.name}
       subtitle={subtitle}
       iconTrailing={

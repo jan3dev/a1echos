@@ -23,6 +23,7 @@ interface BaseButtonProps {
   icon?: ReactNode;
   isLoading?: boolean;
   enabled?: boolean;
+  testID?: string;
 }
 
 interface PrimarySecondaryButtonProps extends BaseButtonProps {
@@ -46,6 +47,7 @@ const ButtonBase = ({
   icon,
   isLoading,
   enabled = true,
+  testID,
   size = "large",
   variant = "normal",
   type,
@@ -161,6 +163,7 @@ const ButtonBase = ({
 
   const buttonContent = (
     <RipplePressable
+      testID={testID}
       onPress={enabled ? onPress : undefined}
       disabled={!enabled}
       accessibilityRole="button"

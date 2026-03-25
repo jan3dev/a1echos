@@ -26,6 +26,7 @@ export interface ListItemProps {
   titleMaxLines?: number;
   subtitleMaxLines?: number;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export const ListItem = ({
@@ -47,6 +48,7 @@ export const ListItem = ({
   titleMaxLines = 2,
   subtitleMaxLines = 3,
   style,
+  testID,
 }: ListItemProps) => {
   const { theme } = useTheme();
 
@@ -66,7 +68,7 @@ export const ListItem = ({
   };
 
   return (
-    <View style={[styles.card, containerStyle, style]}>
+    <View testID={testID} style={[styles.card, containerStyle, style]}>
       <RipplePressable
         onPress={onPress}
         onLongPress={onLongPress}

@@ -19,6 +19,7 @@ export const IncognitoExplainerModal = ({
 
   return (
     <Modal
+      testID="incognito-modal"
       visible={visible}
       title={loc.incognitoExplainerTitle}
       message={loc.incognitoExplainerBody}

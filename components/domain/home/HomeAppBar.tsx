@@ -110,6 +110,7 @@ export const HomeAppBar = ({
       </RipplePressable>,
       <RipplePressable
         key="settings"
+        testID="home-settings-button"
         onPress={() => router.push("/settings" as any)}
         hitSlop={10}
         rippleColor={theme.colors.ripple}

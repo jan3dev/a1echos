@@ -71,6 +71,7 @@ export default function ThemeSettingsScreen() {
       >
         <Card>
           <ListItem
+            testID="theme-auto"
             title={loc.auto}
             iconTrailing={
               <Radio<AppTheme>
@@ -89,6 +90,7 @@ export default function ThemeSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID="theme-light"
             title={loc.light}
             iconTrailing={
               <Radio<AppTheme>
@@ -107,6 +109,7 @@ export default function ThemeSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID="theme-dark"
             title={loc.dark}
             iconTrailing={
               <Radio<AppTheme>

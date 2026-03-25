@@ -75,6 +75,7 @@ export default function SettingsScreen() {
       >
         <Card>
           <ListItem
+            testID="settings-model"
             title={loc.modelTitle}
             titleTrailing={modelDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID="settings-theme"
             title={loc.themeTitle}
             titleTrailing={themeDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -115,6 +117,7 @@ export default function SettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID="settings-language"
             title={loc.spokenLanguageTitle}
             titleTrailing={languageDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -139,6 +142,7 @@ export default function SettingsScreen() {
 
         <Card style={{ marginTop: 16 }}>
           <ListItem
+            testID="settings-contact-support"
             title={loc.contactSupport}
             iconLeading={
               <Icon

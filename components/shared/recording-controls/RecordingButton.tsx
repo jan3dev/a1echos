@@ -228,6 +228,7 @@ export const RecordingButton = ({
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
+          testID="recording-button-transcribing"
           style={styles.buttonTouchable}
           disabled={true}
           activeOpacity={0.7}
@@ -264,6 +265,7 @@ export const RecordingButton = ({
         ]}
       >
         <TouchableOpacity
+          testID="recording-button-stop"
           style={styles.buttonTouchable}
           onPress={handleStopRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}
@@ -293,6 +295,7 @@ export const RecordingButton = ({
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
+          testID="recording-button-start"
           style={styles.buttonTouchable}
           onPress={handleStartRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}

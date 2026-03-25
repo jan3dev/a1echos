@@ -96,6 +96,7 @@ export default function LanguageSettingsScreen() {
                 <Divider color={theme.colors.surfaceBorderPrimary} />
               )}
               <ListItem
+                testID={`language-${language.code}`}
                 title={language.name}
                 iconLeading={
                   <FlagIcon name={getCountryCode(language)} size={24} />

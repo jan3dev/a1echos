@@ -76,6 +76,7 @@ export const TopAppBar = ({
         <View style={styles.leadingContainer}>
           {showBackButton ? (
             <RipplePressable
+              testID="top-app-bar-back"
               onPress={handleBack}
               hitSlop={10}
               rippleColor={theme.colors.ripple}
@@ -152,12 +153,18 @@ export const TopAppBar = ({
     style,
   ];
 
+  const topAppBarTestID = "top-app-bar";
+
   if (transparent) {
-    return <View style={containerStyles}>{renderContent()}</View>;
+    return (
+      <View testID={topAppBarTestID} style={containerStyles}>
+        {renderContent()}
+      </View>
+    );
   }
 
   return (
-    <View style={containerStyles}>
+    <View testID={topAppBarTestID} style={containerStyles}>
       {Platform.OS === "ios" ? (
         <BlurView
           intensity={20}

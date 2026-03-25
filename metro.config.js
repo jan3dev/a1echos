@@ -14,6 +14,7 @@ defaultConfig.resolver = {
     "bin",
   ],
   sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
+  blockList: [/\.test\.(ts|tsx)$/],
 };
 
 const {

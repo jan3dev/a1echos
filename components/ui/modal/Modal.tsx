@@ -38,6 +38,7 @@ export interface ModalProps {
   titleMaxLines?: number;
   messageMaxLines?: number;
   onDismiss?: () => void;
+  testID?: string;
 }
 
 export const Modal = ({
@@ -53,6 +54,7 @@ export const Modal = ({
   titleMaxLines = 3,
   messageMaxLines = 5,
   onDismiss,
+  testID,
 }: ModalProps) => {
   const { width } = useWindowDimensions();
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -123,6 +125,7 @@ export const Modal = ({
     <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
       <View style={styles.contentWrapper}>
         <Animated.View
+          testID={testID ?? `modal-${title.toLowerCase().replace(/\s+/g, "-")}`}
           style={[
             styles.container,
             {

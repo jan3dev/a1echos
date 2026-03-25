@@ -24,4 +24,13 @@ module.exports = defineConfig([
       "react/react-in-jsx-scope": "off",
     },
   },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "import/no-unresolved": [
+        "error",
+        { ignore: ["@testing-library/react-native"] },
+      ],
+    },
+  },
 ]);

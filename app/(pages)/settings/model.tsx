@@ -81,6 +81,7 @@ export default function ModelSettingsScreen() {
 
         <Card>
           <ListItem
+            testID="model-whisper-file"
             title={loc.whisperModelFileTitle}
             titleTrailing={loc.whisperModelFileSubtitle}
             titleTrailingColor={theme.colors.textSecondary}
@@ -105,6 +106,7 @@ export default function ModelSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID="model-whisper-realtime"
             title={loc.whisperModelRealtimeTitle}
             titleTrailing={loc.whisperModelRealtimeSubtitle}
             titleTrailingColor={theme.colors.textSecondary}

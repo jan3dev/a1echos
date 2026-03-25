@@ -634,6 +634,7 @@ export default function SessionScreen() {
           style={[styles.shareButtonContainer, { bottom: insets.bottom + 32 }]}
         >
           <Button.primary
+            testID="session-share"
             text={loc.share}
             onPress={handleSharePressed}
             enabled={hasSelectedItems}

@@ -98,6 +98,13 @@ export const TextField = ({
   const isMultiline = multiline || minLines > 1 || maxLines > 1;
 
   useEffect(() => {
+    if (forceFocus) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [forceFocus]);
+
+  useEffect(() => {
     Animated.timing(labelAnimation, {
       toValue: isLabelActive ? 1 : 0,
       duration: LABEL_ANIMATION_DURATION,

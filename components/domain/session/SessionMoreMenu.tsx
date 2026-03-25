@@ -112,6 +112,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   return (
     <>
       <RipplePressable
+        testID="session-more-menu"
         onPress={openMenu}
         hitSlop={10}
         rippleColor={theme.colors.ripple}
@@ -151,6 +152,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
             >
               {/* Rename */}
               <ListItem
+                testID="session-rename"
                 title={loc.sessionRenameTitle}
                 iconLeading={
                   <Icon
@@ -175,6 +177,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
               {/* Delete */}
               <ListItem
+                testID="session-delete"
                 title={loc.delete}
                 iconLeading={
                   <Icon
