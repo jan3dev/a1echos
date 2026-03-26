@@ -1,31 +1,32 @@
-import * as Crypto from 'expo-crypto';
-import { useMemo } from 'react';
-import { Platform } from 'react-native';
-import { create } from 'zustand';
-import { useShallow } from 'zustand/shallow';
+import * as Crypto from "expo-crypto";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
+import { useMemo } from "react";
+import { Platform } from "react-native";
+import { create } from "zustand";
+import { useShallow } from "zustand/shallow";
 
 import {
   ModelType,
   SupportedLanguages,
   Transcription,
   TranscriptionState,
-} from '@/models';
+} from "@/models";
 import {
   audioService,
   backgroundRecordingService,
   permissionService,
   storageService,
   whisperService,
-} from '@/services';
+} from "@/services";
 import {
   FeatureFlag,
   formatTranscriptionText,
   logError,
   logWarn,
-} from '@/utils';
+} from "@/utils";
 
-import { useSessionStore } from './sessionStore';
-import { useSettingsStore } from './settingsStore';
+import { useSessionStore } from "./sessionStore";
+import { useSettingsStore } from "./settingsStore";
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -63,12 +64,12 @@ interface TranscriptionStore {
   sessionTranscriptions: (sessionId: string) => Transcription[];
   getLivePreviewForSession: (sessionId: string | null) => Transcription | null;
   getLoadingPreviewForSession: (
-    sessionId: string | null
+    sessionId: string | null,
   ) => Transcription | null;
 
   transitionTo: (
     newState: TranscriptionState,
-    errorMessage?: string
+    errorMessage?: string,
   ) => boolean;
   setError: (message: string) => void;
   clearError: () => void;
@@ -93,7 +94,7 @@ interface TranscriptionStore {
   clearTranscriptions: () => Promise<void>;
   deleteParagraphFromTranscription: (
     id: string,
-    paragraphIndex: number
+    paragraphIndex: number,
   ) => Promise<void>;
   deleteAllTranscriptionsForSession: (sessionId: string) => Promise<void>;
   cleanupDeletedSessions: (validSessionIds: Set<string>) => Promise<void>;
@@ -110,7 +111,7 @@ interface TranscriptionStore {
 
 const validateStateTransition = (
   from: TranscriptionState,
-  to: TranscriptionState
+  to: TranscriptionState,
 ): boolean => {
   const validTransitions: Record<TranscriptionState, TranscriptionState[]> = {
     [TranscriptionState.LOADING]: [
@@ -150,13 +151,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
   const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>();
 
   const acquireOperationLock = async (
-    operationName: string
+    operationName: string,
   ): Promise<boolean> => {
     const state = get();
 
     if (state.isOperationLocked) {
       if (
-        operationName === 'stopRecordingAndSave' &&
+        operationName === "stopRecordingAndSave" &&
         state.state === TranscriptionState.RECORDING
       ) {
         return true;
@@ -164,7 +165,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       return false;
     }
 
-    if (operationName !== 'stopRecordingAndSave') {
+    if (operationName !== "stopRecordingAndSave") {
       const now = new Date();
       if (state.lastOperationTime) {
         const timeSinceLastOperation =
@@ -217,7 +218,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     state: TranscriptionState.LOADING,
     errorMessage: null,
 
-    currentStreamingText: '',
+    currentStreamingText: "",
     livePreview: null,
     loadingPreview: null,
     recordingSessionId: null,
@@ -278,11 +279,23 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return false;
       }
 
+      // Keep screen awake during recording/streaming/transcribing
+      const keepAwakeStates = new Set([
+        TranscriptionState.RECORDING,
+        TranscriptionState.STREAMING,
+        TranscriptionState.TRANSCRIBING,
+      ]);
+      if (keepAwakeStates.has(newState)) {
+        activateKeepAwakeAsync("recording").catch(() => {});
+      } else if (keepAwakeStates.has(currentState)) {
+        deactivateKeepAwake("recording").catch(() => {});
+      }
+
       set({
         state: newState,
         errorMessage:
           newState === TranscriptionState.ERROR
-            ? errorMessage ?? 'Unknown error occurred'
+            ? (errorMessage ?? "Unknown error occurred")
             : null,
       });
 
@@ -306,17 +319,17 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     clearStreamingText: () => {
-      set({ currentStreamingText: '' });
+      set({ currentStreamingText: "" });
     },
 
     updateLivePreview: (text: string, sessionId: string) => {
       set({
         livePreview: {
-          id: 'live_vosk_active_preview',
+          id: "live_vosk_active_preview",
           text,
           timestamp: new Date(),
           sessionId,
-          audioPath: '',
+          audioPath: "",
         },
       });
     },
@@ -330,11 +343,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     createLoadingPreview: (sessionId: string) => {
       set({
         loadingPreview: {
-          id: 'whisper_loading_active_preview',
-          text: '',
+          id: "whisper_loading_active_preview",
+          text: "",
           timestamp: new Date(),
           sessionId,
-          audioPath: '',
+          audioPath: "",
         },
       });
     },
@@ -380,7 +393,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     _loadTranscriptionsInternal: async () => {
       const transcriptions = await storageService.getTranscriptions();
       transcriptions.sort(
-        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
       );
 
       set({
@@ -390,10 +403,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     loadTranscriptions: async () => {
-      const operationName = 'loadTranscriptions';
+      const operationName = "loadTranscriptions";
 
       if (!(await acquireOperationLock(operationName))) {
-        throw new Error('Cannot load transcriptions - system is busy');
+        throw new Error("Cannot load transcriptions - system is busy");
       }
 
       try {
@@ -401,7 +414,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to load transcriptions',
+          message: "Failed to load transcriptions",
         });
         throw error;
       } finally {
@@ -413,7 +426,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const state = get();
       const newTranscriptions = [...state.transcriptions, transcription];
       newTranscriptions.sort(
-        (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
       );
 
       set({ transcriptions: newTranscriptions });
@@ -424,7 +437,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const index = state.transcriptions.findIndex((t) => t.id === updated.id);
 
       if (index === -1) {
-        throw new Error('Transcription not found');
+        throw new Error("Transcription not found");
       }
 
       const previous = state.transcriptions[index];
@@ -447,7 +460,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         }
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to update transcription',
+          message: "Failed to update transcription",
         });
         throw new Error(`Failed to update transcription: ${error}`);
       }
@@ -459,7 +472,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const transcription = state.transcriptions.find((t) => t.id === id);
 
         if (!transcription) {
-          throw new Error('Transcription not found');
+          throw new Error("Transcription not found");
         }
 
         const sessionId = transcription.sessionId;
@@ -467,7 +480,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         await storageService.deleteTranscription(id);
 
         const newTranscriptions = state.transcriptions.filter(
-          (t) => t.id !== id
+          (t) => t.id !== id,
         );
         set({ transcriptions: newTranscriptions });
 
@@ -477,7 +490,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to delete transcription',
+          message: "Failed to delete transcription",
         });
         throw new Error(`Failed to delete transcription: ${error}`);
       }
@@ -497,7 +510,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         }
 
         const newTranscriptions = state.transcriptions.filter(
-          (t) => !ids.has(t.id)
+          (t) => !ids.has(t.id),
         );
         set({ transcriptions: newTranscriptions });
 
@@ -509,7 +522,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to delete transcriptions',
+          message: "Failed to delete transcriptions",
         });
         throw new Error(`Failed to delete transcriptions: ${error}`);
       }
@@ -522,7 +535,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to clear transcriptions',
+          message: "Failed to clear transcriptions",
         });
         throw new Error(`Failed to clear transcriptions: ${error}`);
       }
@@ -530,31 +543,31 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
     deleteParagraphFromTranscription: async (
       id: string,
-      paragraphIndex: number
+      paragraphIndex: number,
     ) => {
       try {
         const state = get();
         const transcription = state.transcriptions.find((t) => t.id === id);
 
         if (!transcription) {
-          throw new Error('Transcription not found');
+          throw new Error("Transcription not found");
         }
 
-        const paragraphs = transcription.text.split('\n\n');
+        const paragraphs = transcription.text.split("\n\n");
 
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.length) {
-          throw new Error('Invalid paragraph index');
+          throw new Error("Invalid paragraph index");
         }
 
         paragraphs.splice(paragraphIndex, 1);
-        const newText = paragraphs.join('\n\n');
+        const newText = paragraphs.join("\n\n");
 
         const updatedTranscription = {
           ...transcription,
           text: newText,
         };
 
-        if (newText.trim() === '') {
+        if (newText.trim() === "") {
           await get().deleteTranscription(id);
         } else {
           await get().updateTranscription(updatedTranscription);
@@ -566,7 +579,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to delete paragraph from transcription',
+          message: "Failed to delete paragraph from transcription",
         });
         throw new Error(`Failed to delete paragraph: ${error}`);
       }
@@ -576,7 +589,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       try {
         const state = get();
         const newTranscriptions = state.transcriptions.filter(
-          (t) => t.sessionId !== sessionId
+          (t) => t.sessionId !== sessionId,
         );
 
         await storageService.deleteTranscriptionsForSession(sessionId);
@@ -589,10 +602,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to delete all transcriptions for session',
+          message: "Failed to delete all transcriptions for session",
         });
         throw new Error(
-          `Failed to delete transcriptions for session: ${error}`
+          `Failed to delete transcriptions for session: ${error}`,
         );
       }
     },
@@ -600,10 +613,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     cleanupDeletedSessions: async (validSessionIds: Set<string>) => {
       const state = get();
       const inMemorySessionIds = new Set(
-        state.transcriptions.map((t) => t.sessionId)
+        state.transcriptions.map((t) => t.sessionId),
       );
       const sessionsToDelete = [...inMemorySessionIds].filter(
-        (id) => !validSessionIds.has(id)
+        (id) => !validSessionIds.has(id),
       );
 
       if (sessionsToDelete.length === 0) {
@@ -611,19 +624,19 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
 
       for (const sessionId of sessionsToDelete) {
-        if (sessionId.trim() === '') continue;
+        if (sessionId.trim() === "") continue;
         await storageService.deleteTranscriptionsForSession(sessionId);
       }
 
       const newTranscriptions = state.transcriptions.filter((t) =>
-        validSessionIds.has(t.sessionId)
+        validSessionIds.has(t.sessionId),
       );
 
       set({ transcriptions: newTranscriptions });
     },
 
     startRecording: async () => {
-      const operationName = 'startRecording';
+      const operationName = "startRecording";
 
       if (!(await acquireOperationLock(operationName))) {
         return false;
@@ -652,7 +665,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const settingsState = useSettingsStore.getState();
         const modelType = settingsState.selectedModelType;
         const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
-          settingsState.selectedLanguage?.code ?? 'en'
+          settingsState.selectedLanguage?.code ?? "en",
         );
         const isRealtime = modelType === ModelType.WHISPER_REALTIME;
 
@@ -660,7 +673,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         if (!state.isWhisperReady) {
           const initialized = await whisperService.initialize();
           if (!initialized) {
-            get().setError('Failed to initialize transcription engine');
+            get().setError("Failed to initialize transcription engine");
             releaseOperationLock(operationName);
             return false;
           }
@@ -683,10 +696,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           await backgroundRecordingService.startBackgroundService();
         if (!bgStarted) {
           logWarn(
-            'Background service failed to start, recording may stop in background',
+            "Background service failed to start, recording may stop in background",
             {
               flag: FeatureFlag.service,
-            }
+            },
           );
         } else {
           bgServiceStarted = true;
@@ -696,7 +709,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           const unsubscribeAudioLevel = whisperService.subscribeToAudioLevel(
             (level) => {
               get().updateAudioLevel(level);
-            }
+            },
           );
           set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
 
@@ -704,7 +717,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           const unsubscribe = whisperService.subscribeToPartialResults(
             (partial) => {
               get().onPartialTranscription(partial);
-            }
+            },
           );
           set({ partialResultUnsubscribe: unsubscribe });
 
@@ -727,13 +740,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
                 logError(bgError, {
                   flag: FeatureFlag.service,
                   message:
-                    'Failed to stop background service after realtime start failure',
+                    "Failed to stop background service after realtime start failure",
                 });
               }
             }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
-            get().setError('Failed to start real-time transcription');
+            get().setError("Failed to start real-time transcription");
             releaseOperationLock(operationName);
             return false;
           }
@@ -749,13 +762,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
                 logError(bgError, {
                   flag: FeatureFlag.service,
                   message:
-                    'Failed to stop background service after recording start failure',
+                    "Failed to stop background service after recording start failure",
                 });
               }
             }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
-            get().setError('Failed to start recording');
+            get().setError("Failed to start recording");
             releaseOperationLock(operationName);
             return false;
           }
@@ -768,7 +781,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error starting recording',
+          message: "Error starting recording",
         });
         // Clean up any subscriptions that may have been set before the error
         const currentState = get();
@@ -786,7 +799,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         } catch (bgError) {
           logError(bgError, {
             flag: FeatureFlag.service,
-            message: 'Failed to stop background service during error cleanup',
+            message: "Failed to stop background service during error cleanup",
           });
         }
         get().setError(`Error starting recording: ${error}`);
@@ -798,14 +811,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     stopRecordingAndSave: async () => {
-      const operationName = 'stopRecordingAndSave';
+      const operationName = "stopRecordingAndSave";
 
       if (!get().isRecording()) {
         return;
       }
 
       if (!(await acquireOperationLock(operationName))) {
-        get().setError('Cannot stop recording - system is busy');
+        get().setError("Cannot stop recording - system is busy");
         return;
       }
 
@@ -814,7 +827,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const settingsState = useSettingsStore.getState();
       const modelType = settingsState.selectedModelType;
       const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
-        settingsState.selectedLanguage?.code ?? 'en'
+        settingsState.selectedLanguage?.code ?? "en",
       );
       const isRealtime = modelType === ModelType.WHISPER_REALTIME;
       const isIncognito = useSessionStore.getState().isActiveSessionIncognito();
@@ -826,7 +839,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         }
 
         let transcribedText: string | null = null;
-        let audioPath: string = '';
+        let audioPath: string = "";
 
         if (isRealtime) {
           // Real-time mode: stop Whisper and get final text
@@ -848,7 +861,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           const recordedFilePath = await audioService.stopRecording();
 
           if (!recordedFilePath) {
-            get().setError('Recording was too short or failed');
+            get().setError("Recording was too short or failed");
             get().clearLivePreview();
             get().clearLoadingPreview();
             get().transitionTo(TranscriptionState.READY);
@@ -857,27 +870,27 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           }
 
           // Save audio file to app's audio directory (preserve original extension)
-          const lastDotIndex = recordedFilePath.lastIndexOf('.');
+          const lastDotIndex = recordedFilePath.lastIndexOf(".");
           const lastSlashIndex = Math.max(
-            recordedFilePath.lastIndexOf('/'),
-            recordedFilePath.lastIndexOf('\\')
+            recordedFilePath.lastIndexOf("/"),
+            recordedFilePath.lastIndexOf("\\"),
           );
           const hasValidExtension =
             lastDotIndex > lastSlashIndex && lastDotIndex !== -1;
           const originalExt = hasValidExtension
             ? recordedFilePath.substring(lastDotIndex)
-            : '.wav';
+            : ".wav";
           const fileName = `audio_${Date.now()}${originalExt}`;
           audioPath = await storageService.saveAudioFile(
             recordedFilePath,
-            fileName
+            fileName,
           );
 
           // Transcribe the audio file
           transcribedText = await whisperService.transcribeFile(
             audioPath,
             language,
-            prompt
+            prompt,
           );
         }
 
@@ -899,13 +912,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             transcription,
           ];
           newTranscriptions.sort(
-            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
           );
           set({
             transcriptions: newTranscriptions,
             livePreview: null,
             loadingPreview: null,
-            currentStreamingText: '',
+            currentStreamingText: "",
           });
           get().transitionTo(TranscriptionState.READY);
           // Persist to storage (skip for incognito sessions)
@@ -920,14 +933,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           set({
             livePreview: null,
             loadingPreview: null,
-            currentStreamingText: '',
-            state: TranscriptionState.READY,
+            currentStreamingText: "",
           });
+          get().transitionTo(TranscriptionState.READY);
         }
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error stopping recording',
+          message: "Error stopping recording",
         });
         get().setError(`Error stopping recording: ${error}`);
 
@@ -946,7 +959,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         } catch (bgError) {
           logError(bgError, {
             flag: FeatureFlag.service,
-            message: 'Failed to stop background service',
+            message: "Failed to stop background service",
           });
         }
 
@@ -974,16 +987,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const state = get();
 
       if (state.isInitialized) {
-        logWarn('Transcription store already initialized', {
+        logWarn("Transcription store already initialized", {
           flag: FeatureFlag.store,
         });
         return;
       }
 
-      const operationName = 'initialization';
+      const operationName = "initialization";
 
       if (!(await acquireOperationLock(operationName))) {
-        const error = 'System is busy. Please wait and try again.';
+        const error = "System is busy. Please wait and try again.";
         set({ initError: error });
         get().setError(error);
         return;
@@ -1002,7 +1015,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         if (!whisperInitialized) {
           logWarn(
             `Whisper initialization failed: ${whisperService.initializationStatus}`,
-            { flag: FeatureFlag.model }
+            { flag: FeatureFlag.model },
           );
           set({ isWhisperReady: false });
         } else {
@@ -1010,7 +1023,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         }
 
         // Warm up iOS audio input if mic permission already granted
-        if (Platform.OS === 'ios') {
+        if (Platform.OS === "ios") {
           const { granted } = await permissionService.getRecordPermission();
           if (granted) {
             await audioService.warmUpIosAudioInput();
@@ -1021,7 +1034,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const unsubscribeAudioLevel = audioService.subscribeToAudioLevel(
           (level) => {
             get().updateAudioLevel(level);
-          }
+          },
         );
         set({ audioLevelUnsubscribe: unsubscribeAudioLevel });
 
@@ -1032,7 +1045,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const errorMessage = `Failed to initialize transcription system: ${error}`;
         logError(error, {
           flag: FeatureFlag.store,
-          message: 'Failed to initialize transcription system',
+          message: "Failed to initialize transcription system",
         });
 
         set({ initError: errorMessage });
@@ -1064,7 +1077,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Failed to stop background service during reset',
+          message: "Failed to stop background service during reset",
         });
       }
 
@@ -1106,7 +1119,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Failed to stop background service during dispose',
+          message: "Failed to stop background service during dispose",
         });
       }
 
@@ -1123,12 +1136,12 @@ export const useSessionTranscriptions = (sessionId?: string) => {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const finalSessionId = sessionId ?? activeSessionId;
   const transcriptions = useTranscriptionStore(
-    useShallow((s) => s.transcriptions)
+    useShallow((s) => s.transcriptions),
   );
 
   return useMemo(
     () => transcriptions.filter((t) => t.sessionId === finalSessionId),
-    [transcriptions, finalSessionId]
+    [transcriptions, finalSessionId],
   );
 };
 
