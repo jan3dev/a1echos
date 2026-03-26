@@ -1,60 +1,60 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentType, ReactNode, useEffect } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentType, ReactNode, useEffect } from "react";
+import { View } from "react-native";
 
 import {
   Toast,
   ToastVariant,
   TranscriptionItem,
   TranscriptionList,
-} from '@/components';
-import { ModelType, Transcription, TranscriptionState } from '@/models';
+} from "@/components";
+import { ModelType, Transcription, TranscriptionState } from "@/models";
 import {
   useSessionStore,
   useSettingsStore,
   useTranscriptionStore,
   useUIStore,
-} from '@/stores';
-import { useTheme } from '@/theme';
+} from "@/stores";
+import { useTheme } from "@/theme";
 
 const dummyTranscriptions: Transcription[] = [
   {
-    id: 't1',
-    sessionId: 'session-1',
-    text: 'First transcription item.',
-    timestamp: new Date('2023-11-20T09:30:00'),
-    audioPath: '',
+    id: "t1",
+    sessionId: "session-1",
+    text: "First transcription item.",
+    timestamp: new Date("2023-11-20T09:30:00"),
+    audioPath: "",
   },
   {
-    id: 't2',
-    sessionId: 'session-1',
-    text: 'Second transcription item with a bit more text to show variety. It can handle multiple lines of text properly when rendered.',
-    timestamp: new Date('2023-11-20T09:30:30'),
-    audioPath: '',
+    id: "t2",
+    sessionId: "session-1",
+    text: "Second transcription item with a bit more text to show variety. It can handle multiple lines of text properly when rendered.",
+    timestamp: new Date("2023-11-20T09:30:30"),
+    audioPath: "",
   },
   {
-    id: 't3',
-    sessionId: 'session-1',
-    text: 'Third transcription item.',
-    timestamp: new Date('2023-11-20T09:31:00'),
-    audioPath: '',
+    id: "t3",
+    sessionId: "session-1",
+    text: "Third transcription item.",
+    timestamp: new Date("2023-11-20T09:31:00"),
+    audioPath: "",
   },
 ];
 
 const livePreviewTranscription: Transcription = {
-  id: 'live_preview',
-  sessionId: 'session-1',
-  text: 'This is a single live preview item...',
+  id: "live_preview",
+  sessionId: "session-1",
+  text: "This is a single live preview item...",
   timestamp: new Date(),
-  audioPath: '',
+  audioPath: "",
 };
 
 const skeletonTranscription: Transcription = {
-  id: 'loading_preview',
-  sessionId: 'session-1',
-  text: '',
+  id: "loading_preview",
+  sessionId: "session-1",
+  text: "",
   timestamp: new Date(),
-  audioPath: '',
+  audioPath: "",
 };
 
 const ToastDecorator = (Story: ComponentType) => {
@@ -66,7 +66,7 @@ const ToastDecorator = (Story: ComponentType) => {
       <Story />
       <View
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 50,
           left: 0,
           right: 0,
@@ -102,7 +102,7 @@ const StoreDecorator = (Story: ComponentType) => {
   useEffect(() => {
     // Setup initial store state
     useSessionStore.setState({
-      activeSessionId: 'session-1',
+      activeSessionId: "session-1",
     });
 
     useTranscriptionStore.setState({
@@ -123,7 +123,7 @@ const StoreDecorator = (Story: ComponentType) => {
 };
 
 const meta = {
-  title: 'Domain Components/Transcription',
+  title: "Domain Components/Transcription",
   component: TranscriptionList,
   decorators: [StoreDecorator, ToastDecorator],
 } satisfies Meta<typeof TranscriptionList>;
@@ -134,8 +134,8 @@ type Story = StoryObj<typeof TranscriptionList>;
 
 export const Default: Story = {
   args: {
-    onTranscriptionTap: (id) => console.log('Tap', id),
-    onTranscriptionLongPress: (id) => console.log('Long Press', id),
+    onTranscriptionTap: (id) => console.log("Tap", id),
+    onTranscriptionLongPress: (id) => console.log("Long Press", id),
     selectionMode: false,
     selectedTranscriptionIds: new Set(),
   },
@@ -143,10 +143,10 @@ export const Default: Story = {
 
 export const SelectionMode: Story = {
   args: {
-    onTranscriptionTap: (id) => console.log('Tap', id),
-    onTranscriptionLongPress: (id) => console.log('Long Press', id),
+    onTranscriptionTap: (id) => console.log("Tap", id),
+    onTranscriptionLongPress: (id) => console.log("Long Press", id),
     selectionMode: true,
-    selectedTranscriptionIds: new Set(['t1', 't3']),
+    selectedTranscriptionIds: new Set(["t1", "t3"]),
   },
 };
 
@@ -160,8 +160,8 @@ const LivePreviewSingleItemContent = () => {
       <TranscriptionItem
         transcription={livePreviewTranscription}
         isLivePreviewItem={true}
-        onTap={() => console.log('Tap')}
-        onLongPress={() => console.log('Long Press')}
+        onTap={() => console.log("Tap")}
+        onLongPress={() => console.log("Long Press")}
       />
     </View>
   );
@@ -181,8 +181,8 @@ const WithSkeletonLoadingContent = () => {
       <TranscriptionItem
         transcription={skeletonTranscription}
         isLoadingWhisperResult={true}
-        onTap={() => console.log('Tap')}
-        onLongPress={() => console.log('Long Press')}
+        onTap={() => console.log("Tap")}
+        onLongPress={() => console.log("Long Press")}
       />
     </View>
   );

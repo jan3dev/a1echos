@@ -1,9 +1,9 @@
-import { useFocusEffect } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   EmptyStateView,
@@ -11,9 +11,9 @@ import {
   HomeContent,
   Toast,
   useToast,
-} from '@/components';
-import { useLocalization, usePermissions, useSessionOperations } from '@/hooks';
-import { Session } from '@/models';
+} from "@/components";
+import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
+import { Session } from "@/models";
 import {
   useCreateSession,
   useExitSessionSelection,
@@ -28,9 +28,9 @@ import {
   useStartRecording,
   useStopRecordingAndSave,
   useToggleSessionSelection,
-} from '@/stores';
-import { useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+} from "@/stores";
+import { useTheme } from "@/theme";
+import { FeatureFlag, logError } from "@/utils";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -67,14 +67,14 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
+      "hardwareBackPress",
       () => {
         if (isSessionSelectionMode) {
           exitSessionSelection();
           return true;
         }
         return false;
-      }
+      },
     );
 
     return () => backHandler.remove();
@@ -101,7 +101,7 @@ export default function HomeScreen() {
         }
       }
     },
-    [isSessionSelectionMode, toggleSessionSelection]
+    [isSessionSelectionMode, toggleSessionSelection],
   );
 
   const handleSessionTap = useCallback(
@@ -109,10 +109,10 @@ export default function HomeScreen() {
       if (isSessionSelectionMode) {
         toggleSessionSelection(sessionId);
       } else {
-        router.push({ pathname: '/session/[id]', params: { id: sessionId } });
+        router.push({ pathname: "/session/[id]", params: { id: sessionId } });
       }
     },
-    [isSessionSelectionMode, toggleSessionSelection, router]
+    [isSessionSelectionMode, toggleSessionSelection, router],
   );
 
   const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
@@ -126,19 +126,19 @@ export default function HomeScreen() {
           if (!result.canAskAgain) {
             showGlobalTooltip(
               loc.homeMicrophonePermissionRequired,
-              'normal',
+              "normal",
               undefined,
               true,
               true,
-              { iconName: 'settings', onPress: openSettings }
+              { iconName: "settings", onPress: openSettings },
             );
           } else {
             showGlobalTooltip(
               loc.homeMicrophoneDenied,
-              'normal',
+              "normal",
               undefined,
               true,
-              true
+              true,
             );
           }
           return;
@@ -156,16 +156,16 @@ export default function HomeScreen() {
           undefined,
           isIncognitoMode,
           loc.recordingPrefix,
-          loc.incognitoModeTitle
+          loc.incognitoModeTitle,
         );
 
         const recordingStarted = await startTranscriptionRecording();
         if (!recordingStarted) {
           showGlobalTooltip(
             loc.homeFailedStartRecording,
-            'normal',
+            "normal",
             undefined,
-            true
+            true,
           );
           return;
         }
@@ -173,21 +173,21 @@ export default function HomeScreen() {
         // brief pause to ensure recording has started before navigation (50ms)
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        router.push({ pathname: '/session/[id]', params: { id: sessionId } });
+        router.push({ pathname: "/session/[id]", params: { id: sessionId } });
 
         scrollToTop();
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Failed to start recording',
+          message: "Failed to start recording",
         });
         showGlobalTooltip(
           loc.homeErrorCreatingSession(
-            error instanceof Error ? error.message : String(error)
+            error instanceof Error ? error.message : String(error),
           ),
-          'normal',
+          "normal",
           undefined,
-          true
+          true,
         );
       } finally {
         setTooltipShouldDisappear(false);
@@ -220,7 +220,7 @@ export default function HomeScreen() {
       setRecordingCallbacks(onStart, onStop);
       setRecordingControlsEnabled(true);
       // No cleanup - next screen will set its own callbacks
-    }, [setRecordingCallbacks, setRecordingControlsEnabled])
+    }, [setRecordingCallbacks, setRecordingControlsEnabled]),
   );
 
   const performDelete = useCallback(async () => {
@@ -229,12 +229,12 @@ export default function HomeScreen() {
 
     try {
       await Promise.all(
-        selectedSessionIds.map((sessionId) => deleteSession(sessionId))
+        selectedSessionIds.map((sessionId) => deleteSession(sessionId)),
       );
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.session,
-        message: 'Error during bulk delete',
+        message: "Error during bulk delete",
       });
     }
 
@@ -258,7 +258,7 @@ export default function HomeScreen() {
       onPrimaryButtonTap: performDelete,
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: 'informative',
+      variant: "informative",
     });
   }, [
     selectedSessionIds.length,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tooltipContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
   },

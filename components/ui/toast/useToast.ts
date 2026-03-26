@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 
-import { ToastVariant } from './Toast';
+import { ToastVariant } from "./Toast";
 
 export interface ToastOptions {
   title: string;
@@ -21,8 +21,8 @@ interface ToastState extends ToastOptions {
 export const useToast = () => {
   const [toastState, setToastState] = useState<ToastState>({
     visible: false,
-    title: '',
-    message: '',
+    title: "",
+    message: "",
   });
 
   const primaryCallbackRef = useRef<(() => void) | undefined>(undefined);

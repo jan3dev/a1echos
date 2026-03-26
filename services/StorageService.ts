@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Directory, File, Paths } from 'expo-file-system';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Directory, File, Paths } from "expo-file-system";
 
 import {
   Session,
@@ -10,16 +10,16 @@ import {
   sessionToJSON,
   transcriptionFromJSON,
   transcriptionToJSON,
-} from '@/models';
-import { FeatureFlag, logError, logInfo, logWarn } from '@/utils';
+} from "@/models";
+import { FeatureFlag, logError, logInfo, logWarn } from "@/utils";
 
-import { encryptionService } from './EncryptionService';
+import { encryptionService } from "./EncryptionService";
 
-const TRANSCRIPTIONS_FILE = 'transcriptions.json';
-const PENDING_DELETES_FILE = 'pending_deletes.json';
-const AUDIO_DIR = 'audio';
-const SESSIONS_KEY = 'sessions';
-const ACTIVE_SESSION_KEY = 'active_session';
+const TRANSCRIPTIONS_FILE = "transcriptions.json";
+const PENDING_DELETES_FILE = "pending_deletes.json";
+const AUDIO_DIR = "audio";
+const SESSIONS_KEY = "sessions";
+const ACTIVE_SESSION_KEY = "active_session";
 
 const createStorageService = () => {
   const getTranscriptionsFile = (): File => {
@@ -44,7 +44,7 @@ const createStorageService = () => {
 
       const contents = await file.text();
 
-      if (!contents || contents.trim() === '') {
+      if (!contents || contents.trim() === "") {
         return [];
       }
 
@@ -53,7 +53,7 @@ const createStorageService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.storage,
-        message: 'Failed to read pending deletes file. It may be corrupt',
+        message: "Failed to read pending deletes file. It may be corrupt",
       });
 
       const timestamp = Date.now();
@@ -63,16 +63,16 @@ const createStorageService = () => {
         file.move(
           new File(
             Paths.document,
-            `${PENDING_DELETES_FILE}.corrupted.${timestamp}`
-          )
+            `${PENDING_DELETES_FILE}.corrupted.${timestamp}`,
+          ),
         );
-        logInfo('Corrupted pending deletes file backed up', {
+        logInfo("Corrupted pending deletes file backed up", {
           flag: FeatureFlag.storage,
         });
       } catch (renameError) {
         logError(renameError, {
           flag: FeatureFlag.storage,
-          message: 'Failed to rename corrupted pending deletes file',
+          message: "Failed to rename corrupted pending deletes file",
         });
       }
 
@@ -96,7 +96,7 @@ const createStorageService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.storage,
-        message: 'Failed to save pending deletes',
+        message: "Failed to save pending deletes",
       });
       throw error;
     }
@@ -128,7 +128,7 @@ const createStorageService = () => {
         try {
           const file = new File(path);
           if (file.exists) {
-            file.write('');
+            file.write("");
             file.delete();
           }
           success = true;
@@ -158,7 +158,7 @@ const createStorageService = () => {
 
       const encrypted = await file.text();
 
-      if (!encrypted || encrypted.trim() === '') {
+      if (!encrypted || encrypted.trim() === "") {
         return [];
       }
 
@@ -169,7 +169,7 @@ const createStorageService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.storage,
-        message: 'Error decrypting or parsing transcriptions',
+        message: "Error decrypting or parsing transcriptions",
       });
 
       try {
@@ -180,7 +180,7 @@ const createStorageService = () => {
       } catch (deleteError) {
         logError(deleteError, {
           flag: FeatureFlag.storage,
-          message: 'Failed to delete corrupt transcriptions file',
+          message: "Failed to delete corrupt transcriptions file",
         });
       }
 
@@ -189,7 +189,7 @@ const createStorageService = () => {
   };
 
   const saveTranscriptions = async (
-    transcriptions: Transcription[]
+    transcriptions: Transcription[],
   ): Promise<void> => {
     const jsonList = transcriptions.map((t) => transcriptionToJSON(t));
     const rawJson = JSON.stringify(jsonList);
@@ -200,11 +200,11 @@ const createStorageService = () => {
   };
 
   const saveTranscription = async (
-    transcription: Transcription
+    transcription: Transcription,
   ): Promise<void> => {
     const transcriptions = await getTranscriptions();
     const existingIndex = transcriptions.findIndex(
-      (t) => t.id === transcription.id
+      (t) => t.id === transcription.id,
     );
     if (existingIndex >= 0) {
       transcriptions[existingIndex] = transcription;
@@ -221,7 +221,7 @@ const createStorageService = () => {
 
     await saveTranscriptions(filtered);
 
-    if (toDelete?.audioPath && toDelete.audioPath.trim() !== '') {
+    if (toDelete?.audioPath && toDelete.audioPath.trim() !== "") {
       await deleteAudioFile(toDelete.audioPath);
     }
   };
@@ -232,7 +232,7 @@ const createStorageService = () => {
     await saveTranscriptions([]);
 
     for (const transcription of transcriptions) {
-      if (transcription.audioPath && transcription.audioPath.trim() !== '') {
+      if (transcription.audioPath && transcription.audioPath.trim() !== "") {
         await deleteAudioFile(transcription.audioPath);
       }
     }
@@ -240,7 +240,7 @@ const createStorageService = () => {
 
   const saveAudioFile = async (
     audioFilePath: string,
-    fileName: string
+    fileName: string,
   ): Promise<string> => {
     try {
       const dir = getAudioDirectory();
@@ -280,7 +280,7 @@ const createStorageService = () => {
       try {
         const file = new File(path);
         if (file.exists) {
-          file.write('');
+          file.write("");
           file.delete();
         }
       } catch (error2) {
@@ -302,7 +302,7 @@ const createStorageService = () => {
   };
 
   const deleteTranscriptionsForSession = async (
-    sessionId: string
+    sessionId: string,
   ): Promise<void> => {
     const transcriptions = await getTranscriptions();
     const transcriptionsToKeep: Transcription[] = [];
@@ -310,7 +310,7 @@ const createStorageService = () => {
 
     for (const transcription of transcriptions) {
       if (transcription.sessionId === sessionId) {
-        if (transcription.audioPath && transcription.audioPath.trim() !== '') {
+        if (transcription.audioPath && transcription.audioPath.trim() !== "") {
           audioPathsToDelete.push(transcription.audioPath);
         }
       } else {
@@ -341,7 +341,7 @@ const createStorageService = () => {
         const message = error instanceof Error ? error.message : String(error);
         logWarn(
           `Failed to decrypt sessions, attempting to read as plain text: ${message}`,
-          { flag: FeatureFlag.storage }
+          { flag: FeatureFlag.storage },
         );
         plainSessions = storedSessions;
         wasPlainText = true;
@@ -364,7 +364,7 @@ const createStorageService = () => {
       const message = error instanceof Error ? error.message : String(error);
       logError(message, {
         flag: FeatureFlag.storage,
-        message: 'Failed to decode sessions JSON',
+        message: "Failed to decode sessions JSON",
       });
       return [];
     }
@@ -372,10 +372,10 @@ const createStorageService = () => {
 
   const saveSessions = async (sessions: Session[]): Promise<void> => {
     if (!sessions) {
-      throw new Error('sessions parameter is required');
+      throw new Error("sessions parameter is required");
     }
     const sorted = [...sessions].sort(
-      (a, b) => b.lastModified.getTime() - a.lastModified.getTime()
+      (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
     );
     const jsonList = sorted.map((s) => sessionToJSON(s));
     const rawJson = JSON.stringify(jsonList);
@@ -398,14 +398,14 @@ const createStorageService = () => {
         const message = error instanceof Error ? error.message : String(error);
         logWarn(
           `Failed to decrypt active session ID, assuming legacy plain text: ${message}`,
-          { flag: FeatureFlag.storage }
+          { flag: FeatureFlag.storage },
         );
         try {
           await saveActiveSessionId(storedActive);
         } catch (encryptError) {
           logWarn(
             `Failed to re-encrypt legacy active session ID: ${encryptError}`,
-            { flag: FeatureFlag.storage }
+            { flag: FeatureFlag.storage },
           );
         }
         return storedActive;
@@ -414,15 +414,15 @@ const createStorageService = () => {
       const message = error instanceof Error ? error.message : String(error);
       logError(message, {
         flag: FeatureFlag.storage,
-        message: 'Failed to load active session ID',
+        message: "Failed to load active session ID",
       });
       return null;
     }
   };
 
   const saveActiveSessionId = async (id: string): Promise<void> => {
-    if (!id || id.trim() === '') {
-      throw new Error('id parameter must be a non-empty string');
+    if (!id || id.trim() === "") {
+      throw new Error("id parameter must be a non-empty string");
     }
     const encrypted = await encryptionService.encrypt(id);
     await AsyncStorage.setItem(ACTIVE_SESSION_KEY, encrypted);

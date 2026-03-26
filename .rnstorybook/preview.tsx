@@ -1,6 +1,7 @@
 import type { Decorator, Preview } from '@storybook/react-native';
 import React from 'react';
 import { Switch, Text, View } from 'react-native';
+
 import { AppTheme } from '../models/AppTheme';
 import { useTheme } from '../theme/useTheme';
 

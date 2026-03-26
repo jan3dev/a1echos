@@ -1,12 +1,11 @@
-import type { Meta } from '@storybook/react-native';
-import { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import type { Meta } from "@storybook/react-native";
+import { ReactNode } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-import { Icon, Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Icon, Text } from "@/components";
+import { useTheme } from "@/theme";
 
-import { iconMap, IconName } from './iconMap';
-
+import { iconMap, IconName } from "./iconMap";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -14,8 +13,8 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
     <View
       style={{
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: theme.colors.surfaceBackground,
         padding: 16,
       }}
@@ -26,23 +25,23 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const IconMeta: Meta<typeof Icon> = {
-  title: 'UI Components/Icon',
+  title: "UI Components/Icon",
   component: Icon,
   args: {
     size: 24,
-    color: '#090A0B',
-    name: 'mic',
+    color: "#090A0B",
+    name: "mic",
   },
   argTypes: {
     name: {
-      control: 'select',
+      control: "select",
       options: Object.keys(iconMap).sort(),
     },
     size: {
-      control: { type: 'range', min: 16, max: 64, step: 4 },
+      control: { type: "range", min: 16, max: 64, step: 4 },
     },
     color: {
-      control: 'color',
+      control: "color",
     },
   },
   decorators: [
@@ -99,11 +98,11 @@ export const Sizes = () => {
 export const Colors = () => {
   const { theme } = useTheme();
   const colors = [
-    { name: 'Black', value: '#090A0B' },
-    { name: 'Brand', value: '#4361EE' },
-    { name: 'Orange', value: '#F7931A' },
-    { name: 'Cyan', value: '#16BAC5' },
-    { name: 'White', value: '#FFFFFF' },
+    { name: "Black", value: "#090A0B" },
+    { name: "Brand", value: "#4361EE" },
+    { name: "Orange", value: "#F7931A" },
+    { name: "Cyan", value: "#16BAC5" },
+    { name: "White", value: "#FFFFFF" },
   ];
 
   return (
@@ -131,21 +130,21 @@ export const Colors = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     padding: 16,
     gap: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconItem: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
     width: 80,
   },
   iconLabel: {
-    textAlign: 'center',
-    color: '#4C5357',
+    textAlign: "center",
+    color: "#4C5357",
   },
   colorBackground: {
     padding: 16,

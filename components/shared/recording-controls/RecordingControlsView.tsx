@@ -1,10 +1,10 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
-import { TranscriptionState } from '@/models';
-import { AquaColors } from '@/theme';
+import { TranscriptionState } from "@/models";
+import { AquaColors } from "@/theme";
 
-import { RecordingButton } from './RecordingButton';
-import { ThreeWaveLines } from './ThreeWaveLines';
+import { RecordingButton } from "./RecordingButton";
+import { ThreeWaveLines } from "./ThreeWaveLines";
 
 interface RecordingControlsViewProps {
   state?: TranscriptionState;
@@ -47,27 +47,27 @@ export const RecordingControlsView = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
   },
   contentContainer: {
     height: 64,
-    position: 'relative',
-    alignItems: 'center',
+    position: "relative",
+    alignItems: "center",
   },
   waveContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 11,
     height: 42,
   },
   buttonContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentProps, ReactNode, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentProps, ReactNode, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Icon, TextField } from '@/components';
-import { AquaTypography, useTheme } from '@/theme';
+import { Icon, TextField } from "@/components";
+import { AquaTypography, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/TextField',
+  title: "UI Components/TextField",
   component: TextField,
   decorators: [
     (Story) => (
@@ -35,9 +35,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const TextFieldWithState = (
-  props: Omit<ComponentProps<typeof TextField>, 'onChangeText'>
+  props: Omit<ComponentProps<typeof TextField>, "onChangeText">,
 ) => {
-  const [value, setValue] = useState(props.value || '');
+  const [value, setValue] = useState(props.value || "");
   return <TextField {...props} value={value} onChangeText={setValue} />;
 };
 
@@ -99,7 +99,7 @@ const WithTrailingIconContent = () => {
       trailingIcon={
         <Icon name="settings" size={20} color={theme.colors.textSecondary} />
       }
-      onTrailingPress={() => console.log('Settings clicked')}
+      onTrailingPress={() => console.log("Settings clicked")}
     />
   );
 };

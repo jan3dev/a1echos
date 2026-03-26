@@ -1,8 +1,8 @@
-import { View } from 'react-native';
+import { View } from "react-native";
 
-import { logWarn } from '@/utils';
+import { logWarn } from "@/utils";
 
-import { flagIcons } from './flagIcons';
+import { flagIcons } from "./flagIcons";
 
 interface FlagIconProps {
   name: string;

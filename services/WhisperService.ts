@@ -1,29 +1,29 @@
-import { Asset } from 'expo-asset';
-import { File } from 'expo-file-system';
-import { Platform } from 'react-native';
-import RNFS from 'react-native-fs';
+import { Asset } from "expo-asset";
+import { File } from "expo-file-system";
+import { Platform } from "react-native";
+import RNFS from "react-native-fs";
 import {
   initWhisper,
   initWhisperVad,
   type WhisperContext,
   type WhisperVadContext,
-} from 'whisper.rn';
+} from "whisper.rn";
 import {
   RealtimeTranscriber,
   type AudioStreamData,
-} from 'whisper.rn/src/realtime-transcription';
-import { AudioPcmStreamAdapter } from 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter';
+} from "whisper.rn/src/realtime-transcription";
+import { AudioPcmStreamAdapter } from "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter";
 
-import { FeatureFlag, logError, logWarn } from '@/utils';
+import { FeatureFlag, logError, logWarn } from "@/utils";
 
-import { audioService } from './AudioService';
-import { audioSessionService } from './AudioSessionService';
+import { audioService } from "./AudioService";
+import { audioSessionService } from "./AudioSessionService";
 
 const IOS_INIT_THREADS = 2;
 const IOS_VAD_THREADS = 1;
 
 interface RealtimeTranscribeEvent {
-  type: 'error' | 'start' | 'transcribe' | 'end';
+  type: "error" | "start" | "transcribe" | "end";
   sliceIndex: number;
   data?: { result: string };
   isCapturing: boolean;
@@ -32,9 +32,9 @@ interface RealtimeTranscribeEvent {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const modelAsset = require('@/assets/models/whisper/ggml-tiny.bin');
+const modelAsset = require("@/assets/models/whisper/ggml-tiny.bin");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const vadModelAsset = require('@/assets/models/whisper/ggml-silero-v6.2.0.bin');
+const vadModelAsset = require("@/assets/models/whisper/ggml-silero-v6.2.0.bin");
 
 interface WhisperServiceState {
   whisperContext: WhisperContext | null;
@@ -69,7 +69,7 @@ const createWhisperService = () => {
     isInitializing: false,
     isTranscribing: false,
     isRealtimeRecording: false,
-    currentTranscription: '',
+    currentTranscription: "",
     initializationStatus: null,
     partialCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
@@ -116,7 +116,7 @@ const createWhisperService = () => {
     const baseAlpha = rising ? 0.92 : 0.7;
     const alpha = Math.max(
       0.6,
-      Math.min(rising ? 0.95 : 0.8, baseAlpha * (dtMs / 16.0))
+      Math.min(rising ? 0.95 : 0.8, baseAlpha * (dtMs / 16.0)),
     );
 
     smoothedLevel = smoothedLevel + (level - smoothedLevel) * alpha;
@@ -128,44 +128,44 @@ const createWhisperService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.transcription,
-          message: 'Error in audio level callback',
+          message: "Error in audio level callback",
         });
       }
     });
   };
 
   const prepareModel = async (): Promise<string> => {
-    state.initializationStatus = 'Loading model asset...';
+    state.initializationStatus = "Loading model asset...";
     const asset = Asset.fromModule(modelAsset);
     await asset.downloadAsync();
     if (!asset.localUri) {
-      throw new Error('Failed to load model asset');
+      throw new Error("Failed to load model asset");
     }
     return asset.localUri;
   };
 
   const prepareVadModel = async (): Promise<string> => {
-    state.initializationStatus = 'Loading VAD model asset...';
+    state.initializationStatus = "Loading VAD model asset...";
     const asset = Asset.fromModule(vadModelAsset);
     await asset.downloadAsync();
     if (!asset.localUri) {
-      throw new Error('Failed to load VAD model asset');
+      throw new Error("Failed to load VAD model asset");
     }
     return asset.localUri;
   };
 
   const doInitialize = async (): Promise<boolean> => {
     state.isInitializing = true;
-    state.initializationStatus = 'Starting initialization...';
+    state.initializationStatus = "Starting initialization...";
 
     try {
       await configureAudioSession(100);
 
       const modelPath = await prepareModel();
 
-      state.initializationStatus = 'Initializing Whisper context...';
+      state.initializationStatus = "Initializing Whisper context...";
 
-      const isIos = Platform.OS === 'ios';
+      const isIos = Platform.OS === "ios";
 
       state.whisperContext = await initWhisper({
         filePath: modelPath,
@@ -179,7 +179,7 @@ const createWhisperService = () => {
 
       const vadModelPath = await prepareVadModel();
 
-      state.initializationStatus = 'Initializing VAD context...';
+      state.initializationStatus = "Initializing VAD context...";
 
       state.vadContext = await initWhisperVad({
         filePath: vadModelPath,
@@ -190,13 +190,13 @@ const createWhisperService = () => {
       });
 
       state.isInitialized = true;
-      state.initializationStatus = 'Whisper ready';
+      state.initializationStatus = "Whisper ready";
       return true;
     } catch (error) {
       state.initializationStatus = `Initialization failed: ${error}`;
       logError(error, {
         flag: FeatureFlag.model,
-        message: 'Whisper initialization failed',
+        message: "Whisper initialization failed",
       });
       resetState();
       return false;
@@ -222,14 +222,14 @@ const createWhisperService = () => {
   const transcribeFile = async (
     audioPath: string,
     languageCode?: string,
-    prompt?: string
+    prompt?: string,
   ): Promise<string | null> => {
     if (!state.isInitialized || !state.whisperContext) {
-      throw new Error('Whisper service not initialized');
+      throw new Error("Whisper service not initialized");
     }
 
     if (state.isTranscribing) {
-      throw new Error('Transcription already in progress');
+      throw new Error("Transcription already in progress");
     }
 
     const audioFile = new File(audioPath);
@@ -250,7 +250,7 @@ const createWhisperService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Whisper file transcription failed',
+        message: "Whisper file transcription failed",
       });
       throw error;
     } finally {
@@ -260,39 +260,39 @@ const createWhisperService = () => {
 
   const startRealtimeTranscription = async (
     languageCode?: string,
-    prompt?: string
+    prompt?: string,
   ): Promise<boolean> => {
     if (!state.isInitialized || !state.whisperContext || !state.vadContext) {
-      logError('Cannot start real-time: Whisper or VAD not initialized', {
+      logError("Cannot start real-time: Whisper or VAD not initialized", {
         flag: FeatureFlag.transcription,
       });
       return false;
     }
 
     if (state.isRealtimeRecording) {
-      logError('Real-time transcription already in progress', {
+      logError("Real-time transcription already in progress", {
         flag: FeatureFlag.transcription,
       });
       return false;
     }
 
     if (state.isTranscribing) {
-      logError('Cannot start real-time: file transcription in progress', {
+      logError("Cannot start real-time: file transcription in progress", {
         flag: FeatureFlag.transcription,
       });
       return false;
     }
 
     try {
-      state.currentTranscription = '';
+      state.currentTranscription = "";
       smoothedLevel = 0.0;
       lastLevelTime = null;
 
       const warmUpSuccess = await audioService.warmUpIosAudioInput();
       if (!warmUpSuccess) {
         logError(
-          'iOS audio warm-up failed, cannot start real-time transcription',
-          { flag: FeatureFlag.transcription }
+          "iOS audio warm-up failed, cannot start real-time transcription",
+          { flag: FeatureFlag.transcription },
         );
         return false;
       }
@@ -337,7 +337,7 @@ const createWhisperService = () => {
           audioSliceSec: 30,
           audioMinSec: 0.5,
           maxSlicesInMemory: 1,
-          vadPreset: 'default',
+          vadPreset: "default",
           autoSliceOnSpeechEnd: true,
           autoSliceThreshold: 0.5,
           transcribeOptions,
@@ -357,10 +357,10 @@ const createWhisperService = () => {
                       transcribeEvent,
                     }: {
                       transcribeEvent: RealtimeTranscribeEvent;
-                    }) => transcribeEvent.data?.result?.trim()
+                    }) => transcribeEvent.data?.result?.trim(),
                   )
                   .filter(Boolean)
-                  .join(' ');
+                  .join(" ");
 
                 const text = aggregatedText || event.data.result.trim();
                 state.currentTranscription = text;
@@ -371,7 +371,7 @@ const createWhisperService = () => {
                   } catch (error) {
                     logError(error, {
                       flag: FeatureFlag.transcription,
-                      message: 'Error in partial callback',
+                      message: "Error in partial callback",
                     });
                   }
                 });
@@ -379,20 +379,20 @@ const createWhisperService = () => {
             } catch (error) {
               logError(error, {
                 flag: FeatureFlag.transcription,
-                message: 'Error handling transcription event',
+                message: "Error handling transcription event",
               });
             }
           },
           onError: (error: string) => {
             logError(error, {
               flag: FeatureFlag.transcription,
-              message: 'RealtimeTranscriber error',
+              message: "RealtimeTranscriber error",
             });
           },
           onStatusChange: (isActive: boolean) => {
             state.isRealtimeRecording = isActive;
           },
-        }
+        },
       );
 
       state.realtimeTranscriber = transcriber;
@@ -404,7 +404,7 @@ const createWhisperService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Error starting real-time recording',
+        message: "Error starting real-time recording",
       });
       await cleanupRealtimeResources();
       state.isRealtimeRecording = false;
@@ -414,10 +414,10 @@ const createWhisperService = () => {
 
   const stopRealtimeTranscription = async (): Promise<string> => {
     if (!state.isRealtimeRecording || !state.realtimeTranscriber) {
-      logWarn('No real-time transcription in progress', {
+      logWarn("No real-time transcription in progress", {
         flag: FeatureFlag.transcription,
       });
-      return '';
+      return "";
     }
 
     try {
@@ -428,10 +428,10 @@ const createWhisperService = () => {
       const finalText = allResults
         .map(
           ({ transcribeEvent }: { transcribeEvent: RealtimeTranscribeEvent }) =>
-            transcribeEvent.data?.result?.trim()
+            transcribeEvent.data?.result?.trim(),
         )
         .filter(Boolean)
-        .join(' ');
+        .join(" ");
 
       state.currentTranscription = finalText || state.currentTranscription;
 
@@ -439,7 +439,7 @@ const createWhisperService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to stop real-time recording',
+        message: "Failed to stop real-time recording",
       });
       return state.currentTranscription;
     } finally {
@@ -454,7 +454,7 @@ const createWhisperService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.transcription,
-          message: 'Error releasing RealtimeTranscriber',
+          message: "Error releasing RealtimeTranscriber",
         });
       }
     }
@@ -472,7 +472,7 @@ const createWhisperService = () => {
   };
 
   const subscribeToPartialResults = (
-    callback: (text: string) => void
+    callback: (text: string) => void,
   ): (() => void) => {
     state.partialCallbacks.add(callback);
 
@@ -482,7 +482,7 @@ const createWhisperService = () => {
   };
 
   const subscribeToAudioLevel = (
-    callback: (level: number) => void
+    callback: (level: number) => void,
   ): (() => void) => {
     state.audioLevelCallbacks.add(callback);
 
@@ -504,7 +504,7 @@ const createWhisperService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.model,
-          message: 'Error releasing VAD context',
+          message: "Error releasing VAD context",
         });
       }
     }
@@ -515,7 +515,7 @@ const createWhisperService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.model,
-          message: 'Error releasing Whisper context',
+          message: "Error releasing Whisper context",
         });
       }
     }
@@ -533,7 +533,7 @@ const createWhisperService = () => {
     state.isInitializing = false;
     state.isTranscribing = false;
     state.isRealtimeRecording = false;
-    state.currentTranscription = '';
+    state.currentTranscription = "";
   };
 
   return {

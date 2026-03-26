@@ -1,7 +1,7 @@
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   RefObject,
   useCallback,
@@ -9,7 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react';
+} from "react";
 import {
   BackHandler,
   FlatList,
@@ -18,8 +18,8 @@ import {
   Platform,
   StyleSheet,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   Button,
@@ -28,10 +28,10 @@ import {
   Toast,
   TranscriptionContentView,
   useToast,
-} from '@/components';
-import { useLocalization, usePermissions, useSessionOperations } from '@/hooks';
-import { ModelType, Transcription } from '@/models';
-import { shareService } from '@/services';
+} from "@/components";
+import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
+import { ModelType, Transcription } from "@/models";
+import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
   useExitTranscriptionSelection,
@@ -55,9 +55,9 @@ import {
   useStopRecordingAndSave,
   useSwitchSession,
   useToggleTranscriptionSelection,
-} from '@/stores';
-import { useTheme } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+} from "@/stores";
+import { useTheme } from "@/theme";
+import { FeatureFlag, logError } from "@/utils";
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -98,7 +98,7 @@ export default function SessionScreen() {
   const session = useMemo(
     () => findSessionById(id),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [findSessionById, id, sessions, incognitoSession]
+    [findSessionById, id, sessions, incognitoSession],
   );
 
   const selectionMode = useIsTranscriptionSelectionMode();
@@ -123,7 +123,7 @@ export default function SessionScreen() {
         toggleTranscriptionSelection(transcriptionId);
       }
     },
-    [selectionMode, toggleTranscriptionSelection]
+    [selectionMode, toggleTranscriptionSelection],
   );
 
   const selectAllTranscriptions = useCallback(() => {
@@ -145,7 +145,7 @@ export default function SessionScreen() {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to delete transcriptions',
+        message: "Failed to delete transcriptions",
       });
       throw error;
     } finally {
@@ -158,7 +158,7 @@ export default function SessionScreen() {
       return false;
     }
 
-    const text = transcriptions.map((t) => t.text).join('\n\n');
+    const text = transcriptions.map((t) => t.text).join("\n\n");
 
     try {
       await Clipboard.setStringAsync(text);
@@ -166,7 +166,7 @@ export default function SessionScreen() {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to copy transcriptions',
+        message: "Failed to copy transcriptions",
       });
       return false;
     }
@@ -178,7 +178,7 @@ export default function SessionScreen() {
     }
 
     const selectedTranscriptions = transcriptions.filter((t) =>
-      selectedIds.has(t.id)
+      selectedIds.has(t.id),
     );
 
     if (selectedTranscriptions.length === 0) {
@@ -192,7 +192,7 @@ export default function SessionScreen() {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to share transcriptions',
+        message: "Failed to share transcriptions",
       });
       return false;
     }
@@ -210,7 +210,7 @@ export default function SessionScreen() {
   useEffect(() => {
     const initSession = async () => {
       if (!session) {
-        showToast(loc.sessionNotFound, 'error');
+        showToast(loc.sessionNotFound, "error");
         router.back();
         return;
       }
@@ -256,7 +256,7 @@ export default function SessionScreen() {
   }, [exitSelectionMode]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', async (e) => {
+    const unsubscribe = navigation.addListener("beforeRemove", async (e) => {
       if (isRecording) {
         e.preventDefault();
         await stopRecordingAndSave();
@@ -264,7 +264,7 @@ export default function SessionScreen() {
         if (router.canGoBack()) {
           router.back();
         } else {
-          router.replace('/');
+          router.replace("/");
         }
         return;
       }
@@ -276,12 +276,12 @@ export default function SessionScreen() {
           if (router.canGoBack()) {
             router.back();
           } else {
-            router.replace('/');
+            router.replace("/");
           }
         } catch (error) {
           logError(error, {
             flag: FeatureFlag.session,
-            message: 'Failed to end incognito session',
+            message: "Failed to end incognito session",
           });
         }
       }
@@ -300,7 +300,7 @@ export default function SessionScreen() {
   // Handle back button press
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
+      "hardwareBackPress",
       () => {
         if (isRecording) {
           stopRecordingAndSave();
@@ -316,7 +316,7 @@ export default function SessionScreen() {
           return true;
         }
         return false;
-      }
+      },
     );
 
     return () => backHandler.remove();
@@ -377,14 +377,14 @@ export default function SessionScreen() {
       }
       setShowRenameModal(false);
     },
-    [id, renameSessionAction]
+    [id, renameSessionAction],
   );
 
   const copyAllEnabled = transcriptions.length > 0;
 
   const handleCopyAllPressed = useCallback(async () => {
     if (transcriptions.length === 0) {
-      showGlobalTooltip(loc.noTranscriptionsToCopy, 'normal', undefined, true);
+      showGlobalTooltip(loc.noTranscriptionsToCopy, "normal", undefined, true);
       return;
     }
 
@@ -392,39 +392,39 @@ export default function SessionScreen() {
       const success = await copyAllTranscriptions();
       if (success) {
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
+          Haptics.NotificationFeedbackType.Success,
         );
         // Only show tooltip on iOS or Android < 12 (Android 12+ has native clipboard feedback)
         if (
-          Platform.OS === 'ios' ||
-          (Platform.OS === 'android' && Number(Platform.Version) < 31)
+          Platform.OS === "ios" ||
+          (Platform.OS === "android" && Number(Platform.Version) < 31)
         ) {
           showGlobalTooltip(loc.allTranscriptionsCopied);
         }
       } else {
         showGlobalTooltip(
-          loc.copyFailed('Unknown error'),
-          'normal',
+          loc.copyFailed("Unknown error"),
+          "normal",
           undefined,
-          true
+          true,
         );
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to copy all transcriptions',
+        message: "Failed to copy all transcriptions",
       });
       showGlobalTooltip(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        'normal',
+        "normal",
         undefined,
-        true
+        true,
       );
     }
   }, [transcriptions.length, copyAllTranscriptions, showGlobalTooltip, loc]);
 
   const handleLanguageFlagPressed = useCallback(() => {
-    router.push('/settings/language');
+    router.push("/settings/language");
   }, [router]);
 
   const handleSelectAllPressed = useCallback(() => {
@@ -448,7 +448,7 @@ export default function SessionScreen() {
       },
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: 'informative',
+      variant: "informative",
     });
   }, [
     hasSelectedItems,
@@ -462,7 +462,7 @@ export default function SessionScreen() {
 
   const handleSharePressed = useCallback(async () => {
     if (!hasSelectedItems) {
-      showToast(loc.noTranscriptionsSelectedToShare, 'warning');
+      showToast(loc.noTranscriptionsSelectedToShare, "warning");
       return;
     }
 
@@ -470,17 +470,17 @@ export default function SessionScreen() {
       const success = await shareSelectedTranscriptions();
       if (success) {
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
+          Haptics.NotificationFeedbackType.Success,
         );
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to share transcriptions',
+        message: "Failed to share transcriptions",
       });
       showToast(
         loc.shareFailed(error instanceof Error ? error.message : String(error)),
-        'error'
+        "error",
       );
     }
   }, [hasSelectedItems, shareSelectedTranscriptions, showToast, loc]);
@@ -491,14 +491,14 @@ export default function SessionScreen() {
         toggleTranscriptionSelection(transcriptionId);
       }
     },
-    [selectionMode, toggleTranscriptionSelection]
+    [selectionMode, toggleTranscriptionSelection],
   );
 
   const handleTranscriptionLongPress = useCallback(
     (transcriptionId: string) => {
       handleLongPress(transcriptionId);
     },
-    [handleLongPress]
+    [handleLongPress],
   );
 
   const handleEditStart = useCallback(() => {
@@ -521,19 +521,19 @@ export default function SessionScreen() {
           if (!result.canAskAgain) {
             showGlobalTooltip(
               loc.homeMicrophonePermissionRequired,
-              'normal',
+              "normal",
               undefined,
               true,
               true,
-              { iconName: 'settings', onPress: openSettings }
+              { iconName: "settings", onPress: openSettings },
             );
           } else {
             showGlobalTooltip(
               loc.homeMicrophoneDenied,
-              'normal',
+              "normal",
               undefined,
               true,
-              true
+              true,
             );
           }
           return;
@@ -544,9 +544,9 @@ export default function SessionScreen() {
       if (!success) {
         showGlobalTooltip(
           loc.homeFailedStartRecording,
-          'normal',
+          "normal",
           undefined,
-          true
+          true,
         );
       }
     };
@@ -573,7 +573,7 @@ export default function SessionScreen() {
       const onStop = () => handleRecordingStopRef.current?.();
       setRecordingCallbacks(onStart, onStop);
       // No cleanup - next screen will set its own callbacks
-    }, [setRecordingCallbacks])
+    }, [setRecordingCallbacks]),
   );
 
   useEffect(() => {
@@ -584,7 +584,7 @@ export default function SessionScreen() {
     setRecordingControlsVisible(!selectionMode && !isEditing);
   }, [setRecordingControlsVisible, selectionMode, isEditing]);
 
-  const sessionName = session?.name ?? '';
+  const sessionName = session?.name ?? "";
   const isIncognito = session?.isIncognito ?? false;
 
   return (
@@ -612,7 +612,7 @@ export default function SessionScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
         {!isInitializing && (
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   shareButtonContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
     right: 16,
   },

@@ -1,11 +1,11 @@
-import * as Crypto from 'expo-crypto';
-import { create } from 'zustand';
-import { useShallow } from 'zustand/shallow';
+import * as Crypto from "expo-crypto";
+import { create } from "zustand";
+import { useShallow } from "zustand/shallow";
 
-import { AppConstants } from '@/constants';
-import { Session, createSession } from '@/models';
-import { storageService } from '@/services';
-import { logWarn } from '@/utils';
+import { AppConstants } from "@/constants";
+import { Session, createSession } from "@/models";
+import { storageService } from "@/services";
+import { logWarn } from "@/utils";
 
 interface SessionStore {
   sessions: Session[];
@@ -20,7 +20,7 @@ interface SessionStore {
     isIncognito?: boolean,
     recordingPrefix?: string,
     incognitoModeTitle?: string,
-    notifyImmediately?: boolean
+    notifyImmediately?: boolean,
   ) => Promise<string>;
   renameSession: (id: string, newName: string) => Promise<void>;
   switchSession: (id: string) => Promise<void>;
@@ -38,7 +38,7 @@ interface SessionStore {
 export const useSessionStore = create<SessionStore>((set, get) => {
   const sortSessions = (sessions: Session[]): Session[] => {
     return [...sessions].sort(
-      (a, b) => b.lastModified.getTime() - a.lastModified.getTime()
+      (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
     );
   };
 
@@ -58,7 +58,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 
   return {
     sessions: [],
-    activeSessionId: '',
+    activeSessionId: "",
     incognitoSession: null,
     isLoaded: false,
     needsSort: true,
@@ -67,7 +67,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       const sessions = await storageService.getSessions();
       const storedActive = await storageService.getActiveSessionId();
 
-      let activeSessionId = '';
+      let activeSessionId = "";
 
       if (storedActive && sessions.some((s) => s.id === storedActive)) {
         activeSessionId = storedActive;
@@ -138,27 +138,27 @@ export const useSessionStore = create<SessionStore>((set, get) => {
     createSession: async (
       name?: string,
       isIncognito = false,
-      recordingPrefix = 'Session',
-      incognitoModeTitle = 'Incognito'
+      recordingPrefix = "Session",
+      incognitoModeTitle = "Incognito",
     ) => {
       const now = new Date();
       const sessionId = Crypto.randomUUID();
-      let sessionNameToUse = '';
+      let sessionNameToUse = "";
 
       if (isIncognito) {
         sessionNameToUse = incognitoModeTitle;
       } else {
-        if (!name || name.trim() === '') {
+        if (!name || name.trim() === "") {
           sessionNameToUse = get().getNewSessionName(recordingPrefix);
-          if (sessionNameToUse.trim() === '') {
-            throw new Error('Session name cannot be empty.');
+          if (sessionNameToUse.trim() === "") {
+            throw new Error("Session name cannot be empty.");
           }
         } else {
           sessionNameToUse = name.trim();
           if (sessionNameToUse.length > AppConstants.SESSION_NAME_MAX_LENGTH) {
             sessionNameToUse = sessionNameToUse.substring(
               0,
-              AppConstants.SESSION_NAME_MAX_LENGTH
+              AppConstants.SESSION_NAME_MAX_LENGTH,
             );
           }
         }
@@ -211,12 +211,12 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       const { sessions } = get();
       const index = sessions.findIndex((s) => s.id === id);
 
-      if (index >= 0 && newName.trim() !== '') {
+      if (index >= 0 && newName.trim() !== "") {
         let trimmedName = newName.trim();
         if (trimmedName.length > AppConstants.SESSION_NAME_MAX_LENGTH) {
           trimmedName = trimmedName.substring(
             0,
-            AppConstants.SESSION_NAME_MAX_LENGTH
+            AppConstants.SESSION_NAME_MAX_LENGTH,
           );
         }
 
@@ -252,7 +252,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       const { incognitoSession, sessions, activeSessionId } = get();
 
       if (incognitoSession && incognitoSession.id === id) {
-        let newActiveId = '';
+        let newActiveId = "";
         if (sessions.length > 0) {
           const sorted = sortSessions(sessions);
           newActiveId = sorted[0].id;
@@ -273,7 +273,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       let newActiveId = activeSessionId;
 
       if (updatedSessions.length === 0) {
-        newActiveId = '';
+        newActiveId = "";
       } else if (activeSessionId === id) {
         const sorted = sortSessions(updatedSessions);
         newActiveId = sorted[0].id;
@@ -325,7 +325,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       const { incognitoSession, sessions } = get();
 
       if (incognitoSession) {
-        let newActiveId = '';
+        let newActiveId = "";
         if (sessions.length > 0) {
           const sorted = sortSessions(sessions);
           newActiveId = sorted[0].id;

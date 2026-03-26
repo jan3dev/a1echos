@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { useEffect } from "react";
+import { StyleSheet } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,10 +8,10 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
-import { Tooltip } from '../../ui/tooltip/Tooltip';
+import { Tooltip } from "../../ui/tooltip/Tooltip";
 
 interface EmptyStateViewProps {
   message: string;
@@ -33,10 +33,10 @@ export const EmptyStateView = ({
     bounceY.value = withRepeat(
       withSequence(
         withTiming(-4, { duration: 1000, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.quad) })
+        withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
-      true
+      true,
     );
   }, [bounceY]);
 
@@ -76,8 +76,8 @@ export const EmptyStateView = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
 });

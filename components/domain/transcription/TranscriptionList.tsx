@@ -1,14 +1,14 @@
-import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Keyboard, Platform, View } from 'react-native';
+import { RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { FlatList, Keyboard, Platform, View } from "react-native";
 
-import { ModelType, Transcription } from '@/models';
+import { ModelType, Transcription } from "@/models";
 import {
   useSessionTranscriptions,
   useSettingsStore,
   useTranscriptionStore,
-} from '@/stores';
+} from "@/stores";
 
-import { TranscriptionItem } from './TranscriptionItem';
+import { TranscriptionItem } from "./TranscriptionItem";
 
 interface TranscriptionListProps {
   onTranscriptionTap: (id: string) => void;
@@ -57,7 +57,7 @@ export const TranscriptionList = ({
   const settingsStore = useSettingsStore();
 
   const activeSessionId = useRef(
-    transcriptions[0]?.sessionId || 'default_session'
+    transcriptions[0]?.sessionId || "default_session",
   ).current; // Just for fallback
 
   const livePreview = transcriptionStore.livePreview;
@@ -96,10 +96,10 @@ export const TranscriptionList = ({
       // Default recording preview if no loading preview yet
       return {
         item: {
-          id: 'whisper_recording_preview',
-          text: '',
+          id: "whisper_recording_preview",
+          text: "",
           timestamp: new Date(),
-          audioPath: '',
+          audioPath: "",
           sessionId: activeSessionId,
         },
         isStreamingLive: false,
@@ -112,10 +112,10 @@ export const TranscriptionList = ({
     if (isTranscribing) {
       const previewItem = loadingPreview ||
         livePreview || {
-          id: 'transcribing_preview',
-          text: '',
+          id: "transcribing_preview",
+          text: "",
           timestamp: new Date(),
-          audioPath: '',
+          audioPath: "",
           sessionId: activeSessionId,
         };
       return {
@@ -165,7 +165,7 @@ export const TranscriptionList = ({
 
   useEffect(() => {
     const keyboardEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const subscription = Keyboard.addListener(keyboardEvent, () => {
       if (editingIdRef.current) {
         setTimeout(scrollToEditingItem, 50);

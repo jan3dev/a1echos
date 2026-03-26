@@ -1,41 +1,41 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
-import AudioRecord from '@fugood/react-native-audio-pcm-stream';
+import AudioRecord from "@fugood/react-native-audio-pcm-stream";
 import {
   AudioModule,
   AudioRecorder,
   RecordingOptions,
   setAudioModeAsync,
-} from 'expo-audio';
-import { File, Paths } from 'expo-file-system';
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+} from "expo-audio";
+import { File, Paths } from "expo-file-system";
+import * as Haptics from "expo-haptics";
+import { Platform } from "react-native";
 
-import { AppConstants } from '@/constants';
+import { AppConstants } from "@/constants";
 import {
   createPcmStreamWriter,
   FeatureFlag,
   logError,
   logWarn,
   PcmStreamWriter,
-} from '@/utils';
+} from "@/utils";
 
-import { permissionService } from './PermissionService';
+import { permissionService } from "./PermissionService";
 
 const RECORDING_OPTIONS: RecordingOptions = {
-  extension: '.wav',
+  extension: ".wav",
   sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
   numberOfChannels: AppConstants.AUDIO_NUM_CHANNELS,
   bitRate: AppConstants.AUDIO_BIT_RATE,
   isMeteringEnabled: true,
   android: {
-    extension: '.wav',
-    outputFormat: 'default',
-    audioEncoder: 'default',
+    extension: ".wav",
+    outputFormat: "default",
+    audioEncoder: "default",
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
   },
   ios: {
-    outputFormat: 'lpcm',
+    outputFormat: "lpcm",
     audioQuality: 127, // AudioQuality.MAX
     sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
     linearPCMBitDepth: 16,
@@ -43,7 +43,7 @@ const RECORDING_OPTIONS: RecordingOptions = {
     linearPCMIsFloat: false,
   },
   web: {
-    mimeType: 'audio/wav',
+    mimeType: "audio/wav",
     bitsPerSecond: AppConstants.AUDIO_BIT_RATE,
   },
 };
@@ -76,7 +76,7 @@ const createAudioService = () => {
   };
 
   const emitVisual = (level: number): void => {
-    audioLevelEmitter.emit('audioLevel', level);
+    audioLevelEmitter.emit("audioLevel", level);
   };
 
   const computeRmsFromBase64Pcm = (base64Data: string): number => {
@@ -183,7 +183,7 @@ const createAudioService = () => {
         } catch (error) {
           logError(error, {
             flag: FeatureFlag.recording,
-            message: 'Error getting amplitude',
+            message: "Error getting amplitude",
           });
         }
       }
@@ -205,7 +205,7 @@ const createAudioService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error stopping Android PCM recording during cleanup',
+          message: "Error stopping Android PCM recording during cleanup",
         });
       }
       if (pcmStreamWriter) {
@@ -223,7 +223,7 @@ const createAudioService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error during cleanup',
+          message: "Error during cleanup",
         });
       }
       recorder = null;
@@ -254,11 +254,11 @@ const createAudioService = () => {
     await cleanup();
 
     // On Android, use native PCM streaming
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       try {
         const timestamp = Date.now();
         const wavPath = `${Paths.cache.uri}/rec_${timestamp}.wav`;
-        androidWavFilePath = wavPath.replace('file://', '');
+        androidWavFilePath = wavPath.replace("file://", "");
 
         resetLevelState();
         pcmStreamWriter = createPcmStreamWriter(
@@ -276,7 +276,7 @@ const createAudioService = () => {
           bufferSize: 4096,
         });
 
-        AudioRecord.on('data', handleAndroidPcmData);
+        AudioRecord.on("data", handleAndroidPcmData);
         AudioRecord.start();
         androidPcmRecording = true;
         recordStart = new Date();
@@ -284,14 +284,14 @@ const createAudioService = () => {
         try {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         } catch {
-          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
+          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
         }
 
         return true;
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error starting Android PCM recording',
+          message: "Error starting Android PCM recording",
         });
         if (pcmStreamWriter) {
           await pcmStreamWriter.abort();
@@ -321,7 +321,7 @@ const createAudioService = () => {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch {
-        logWarn('Haptics not supported', { flag: FeatureFlag.recording });
+        logWarn("Haptics not supported", { flag: FeatureFlag.recording });
       }
 
       startAmplitudeMonitoring();
@@ -330,7 +330,7 @@ const createAudioService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.recording,
-        message: 'Error starting recording',
+        message: "Error starting recording",
       });
       try {
         if (recorder) {
@@ -344,7 +344,7 @@ const createAudioService = () => {
 
   const stopRecording = async (): Promise<string | null> => {
     // Handle Android native PCM recording
-    if (Platform.OS === 'android' && androidPcmRecording) {
+    if (Platform.OS === "android" && androidPcmRecording) {
       try {
         const startedAt = recordStart || new Date();
         const elapsedMs = new Date().getTime() - startedAt.getTime();
@@ -363,7 +363,7 @@ const createAudioService = () => {
             Haptics.NotificationFeedbackType.Success,
           );
         } catch {
-          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
+          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
         }
 
         if (androidWavFilePath && pcmStreamWriter) {
@@ -380,13 +380,13 @@ const createAudioService = () => {
               androidWavFilePath = null;
               return wavFilePath;
             } else {
-              logError('WAV file validation failed after write', {
+              logError("WAV file validation failed after write", {
                 flag: FeatureFlag.recording,
                 message: `File exists: ${file.exists}, size: ${file.size}`,
               });
             }
           } else {
-            logError('Failed to finalize WAV file from PCM stream', {
+            logError("Failed to finalize WAV file from PCM stream", {
               flag: FeatureFlag.recording,
               message: `Bytes: ${byteCount}, path: ${androidWavFilePath}`,
             });
@@ -400,7 +400,7 @@ const createAudioService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error stopping Android PCM recording',
+          message: "Error stopping Android PCM recording",
         });
         if (pcmStreamWriter) {
           await pcmStreamWriter.abort();
@@ -436,7 +436,7 @@ const createAudioService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.recording,
-        message: 'Error calculating recording duration',
+        message: "Error calculating recording duration",
       });
     }
 
@@ -453,7 +453,7 @@ const createAudioService = () => {
             Haptics.NotificationFeedbackType.Success,
           );
         } catch {
-          logWarn('Haptics not supported', { flag: FeatureFlag.recording });
+          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
         }
         if (uri) {
           const file = new File(uri);
@@ -486,9 +486,9 @@ const createAudioService = () => {
   const subscribeToAudioLevel = (
     callback: (level: number) => void,
   ): (() => void) => {
-    audioLevelEmitter.on('audioLevel', callback);
+    audioLevelEmitter.on("audioLevel", callback);
     return () => {
-      audioLevelEmitter.off('audioLevel', callback);
+      audioLevelEmitter.off("audioLevel", callback);
     };
   };
 
@@ -519,12 +519,12 @@ const createAudioService = () => {
     } catch {}
 
     try {
-      audioLevelEmitter.removeAllListeners('audioLevel');
+      audioLevelEmitter.removeAllListeners("audioLevel");
     } catch {}
   };
 
   const warmUpIosAudioInput = async (): Promise<boolean> => {
-    if (Platform.OS !== 'ios') {
+    if (Platform.OS !== "ios") {
       return true;
     }
 
@@ -572,7 +572,7 @@ const createAudioService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.recording,
-        message: 'iOS audio warm-up failed',
+        message: "iOS audio warm-up failed",
       });
 
       if (warmupRecorder) {

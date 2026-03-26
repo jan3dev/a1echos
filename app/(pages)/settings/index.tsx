@@ -1,7 +1,7 @@
-import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Linking from "expo-linking";
+import { useRouter } from "expo-router";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   Card,
@@ -11,15 +11,15 @@ import {
   ListItem,
   SettingsFooter,
   TopAppBar,
-} from '@/components';
-import { useLocalization } from '@/hooks';
-import { AppTheme, ModelType } from '@/models';
+} from "@/components";
+import { useLocalization } from "@/hooks";
+import { AppTheme, ModelType } from "@/models";
 import {
   useSelectedLanguage,
   useSelectedModelType,
   useSelectedTheme,
-} from '@/stores';
-import { useTheme } from '@/theme';
+} from "@/stores";
+import { useTheme } from "@/theme";
 
 const APP_BAR_HEIGHT = 60;
 
@@ -88,7 +88,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push('/settings/model')}
+            onPress={() => router.push("/settings/model")}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -108,7 +108,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push('/settings/theme')}
+            onPress={() => router.push("/settings/theme")}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -132,7 +132,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push('/settings/language')}
+            onPress={() => router.push("/settings/language")}
             backgroundColor={theme.colors.surfacePrimary}
           />
         </Card>
@@ -155,7 +155,7 @@ export default function SettingsScreen() {
               />
             }
             onPress={() =>
-              Linking.openURL('https://a1lab.zendesk.com/hc/en-us/requests/new')
+              Linking.openURL("https://a1lab.zendesk.com/hc/en-us/requests/new")
             }
             backgroundColor={theme.colors.surfacePrimary}
           />

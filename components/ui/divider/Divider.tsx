@@ -1,6 +1,6 @@
-import { View, ViewProps } from 'react-native';
+import { View, ViewProps } from "react-native";
 
-import { useTheme } from '@/theme';
+import { useTheme } from "@/theme";
 
 export interface DividerProps extends ViewProps {
   height?: number;
@@ -22,7 +22,7 @@ export const Divider = ({
         {
           height,
           backgroundColor: color ?? theme.colors.surfaceBorderPrimary,
-          width: '100%',
+          width: "100%",
         },
         style,
       ]}

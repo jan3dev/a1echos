@@ -1,9 +1,9 @@
-import { RefObject } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { RefObject } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
 
-import { Transcription } from '@/models';
+import { Transcription } from "@/models";
 
-import { TranscriptionList } from './TranscriptionList';
+import { TranscriptionList } from "./TranscriptionList";
 
 interface LiveTranscriptionViewProps {
   listRef?: RefObject<FlatList<Transcription>>;
@@ -36,7 +36,7 @@ export const LiveTranscriptionView = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
+    flexDirection: "column",
   },
   listContainer: {
     flex: 1,

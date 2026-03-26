@@ -1,9 +1,9 @@
-import { fromByteArray } from 'base64-js';
-import * as Crypto from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
-import AesGcmCrypto from 'react-native-aes-gcm-crypto';
+import { fromByteArray } from "base64-js";
+import * as Crypto from "expo-crypto";
+import * as SecureStore from "expo-secure-store";
+import AesGcmCrypto from "react-native-aes-gcm-crypto";
 
-const KEY_STORAGE_KEY = 'aes_data_key';
+const KEY_STORAGE_KEY = "aes_data_key";
 
 const createEncryptionService = () => {
   const getKey = async (): Promise<string> => {
@@ -20,7 +20,7 @@ const createEncryptionService = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `Failed to retrieve or generate encryption key: ${message}`
+        `Failed to retrieve or generate encryption key: ${message}`,
       );
     }
   };
@@ -39,11 +39,11 @@ const createEncryptionService = () => {
 
   const decrypt = async (cipherText: string): Promise<string> => {
     try {
-      const parts = cipherText.split(':');
+      const parts = cipherText.split(":");
 
       if (parts.length !== 2) {
         throw new Error(
-          'Invalid cipher text format. Expected format: iv:contenttag'
+          "Invalid cipher text format. Expected format: iv:contenttag",
         );
       }
 
@@ -58,7 +58,7 @@ const createEncryptionService = () => {
         key,
         iv,
         tag,
-        false
+        false,
       );
 
       return decrypted;

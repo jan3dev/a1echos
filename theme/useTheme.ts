@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import { shadows } from './shadows';
-import { spacing } from './spacing';
-import { AquaColors, darkColors, lightColors } from './themeColors';
-import { AquaTypography } from './typography';
-import { useThemeStore } from './useThemeStore';
+import { shadows } from "./shadows";
+import { spacing } from "./spacing";
+import { AquaColors, darkColors, lightColors } from "./themeColors";
+import { AquaTypography } from "./typography";
+import { useThemeStore } from "./useThemeStore";
 
 export interface Theme {
   colors: AquaColors;
@@ -17,7 +17,7 @@ export const useTheme = () => {
   const { currentTheme, selectedTheme, setTheme } = useThemeStore();
 
   const theme = useMemo<Theme>(() => {
-    const colors = currentTheme === 'dark' ? darkColors : lightColors;
+    const colors = currentTheme === "dark" ? darkColors : lightColors;
 
     return {
       colors,
@@ -27,7 +27,7 @@ export const useTheme = () => {
     };
   }, [currentTheme]);
 
-  const isDark = useMemo(() => currentTheme === 'dark', [currentTheme]);
+  const isDark = useMemo(() => currentTheme === "dark", [currentTheme]);
 
   return {
     theme,

@@ -1,12 +1,13 @@
-import { Transcription } from '@/models';
-import { Share } from 'react-native';
+import { Share } from "react-native";
+
+import { Transcription } from "@/models";
 
 const createShareService = () => {
   const shareTranscriptions = async (
-    transcriptions: Transcription[]
+    transcriptions: Transcription[],
   ): Promise<void> => {
     if (transcriptions.length === 0) {
-      throw new Error('Cannot share empty transcription list');
+      throw new Error("Cannot share empty transcription list");
     }
 
     const content = formatTranscriptions(transcriptions);
@@ -17,7 +18,7 @@ const createShareService = () => {
   };
 
   const formatTranscriptions = (transcriptions: Transcription[]): string => {
-    return transcriptions.map((t) => t.text).join('\n\n');
+    return transcriptions.map((t) => t.text).join("\n\n");
   };
 
   return {

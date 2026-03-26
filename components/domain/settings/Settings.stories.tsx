@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentType } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentType } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-import { InAppBanner, SettingsFooter } from '@/components';
-import { useTheme } from '@/theme';
+import { InAppBanner, SettingsFooter } from "@/components";
+import { useTheme } from "@/theme";
 
 // Decorator to provide theme background
 const ThemeDecorator = (Story: ComponentType) => {
@@ -22,7 +22,7 @@ const ThemeDecorator = (Story: ComponentType) => {
 };
 
 const meta = {
-  title: 'Domain Components/Settings',
+  title: "Domain Components/Settings",
   decorators: [ThemeDecorator],
 } satisfies Meta;
 
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   footerContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,

@@ -1,6 +1,6 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
-import { TooltipPointerPosition, TooltipVariant } from './Tooltip';
+import { TooltipPointerPosition, TooltipVariant } from "./Tooltip";
 
 const DEFAULT_TOOLTIP_DURATION = 4000; // 4 seconds
 
@@ -25,7 +25,7 @@ interface TooltipState extends TooltipOptions {
 export const useTooltip = () => {
   const [tooltipState, setTooltipState] = useState<TooltipState>({
     visible: false,
-    message: '',
+    message: "",
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -71,7 +71,7 @@ export const useTooltip = () => {
         }, duration);
       }
     },
-    [hide]
+    [hide],
   );
 
   const handleTrailingIconTap = useCallback(() => {

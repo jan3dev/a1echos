@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
-import { ReactNode } from 'react';
-import { ImageBackground, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react-native";
+import { ReactNode } from "react";
+import { ImageBackground, View } from "react-native";
 
-import { Surface, Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Surface, Text } from "@/components";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -12,7 +12,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
       style={{
         flex: 1,
         padding: 32,
-        justifyContent: 'center',
+        justifyContent: "center",
         backgroundColor: theme.colors.surfaceBackground,
       }}
     >
@@ -22,19 +22,19 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const SurfaceMeta: Meta<typeof Surface> = {
-  title: 'UI Components/Surface',
+  title: "UI Components/Surface",
   component: Surface,
   args: {
     padding: 16,
-    children: 'Surface Content',
+    children: "Surface Content",
   },
   argTypes: {
     variant: {
-      control: 'radio',
-      options: ['filled', 'glass'],
+      control: "radio",
+      options: ["filled", "glass"],
     },
     elevation: {
-      control: { type: 'range', min: 0, max: 24, step: 1 },
+      control: { type: "range", min: 0, max: 24, step: 1 },
     },
   },
   decorators: [
@@ -78,14 +78,14 @@ export const Elevations = () => (
 export const GlassEffect: Story = {
   render: () => (
     <ImageBackground
-      source={{ uri: 'https://picsum.photos/800/600' }}
-      style={{ flex: 1, padding: 32, justifyContent: 'center', gap: 24 }}
+      source={{ uri: "https://picsum.photos/800/600" }}
+      style={{ flex: 1, padding: 32, justifyContent: "center", gap: 24 }}
     >
       <Surface variant="glass" padding={24} borderRadius={16}>
-        <Text weight="semibold" style={{ color: '#000' }}>
+        <Text weight="semibold" style={{ color: "#000" }}>
           Glass Surface
         </Text>
-        <Text variant="caption1" style={{ color: '#000', marginTop: 4 }}>
+        <Text variant="caption1" style={{ color: "#000", marginTop: 4 }}>
           Blur effect over background
         </Text>
       </Surface>
@@ -96,10 +96,10 @@ export const GlassEffect: Story = {
         borderRadius={16}
         color="rgba(0,0,0,0.4)"
       >
-        <Text weight="semibold" style={{ color: '#fff' }}>
+        <Text weight="semibold" style={{ color: "#fff" }}>
           Dark Glass
         </Text>
-        <Text variant="caption1" style={{ color: '#fff', marginTop: 4 }}>
+        <Text variant="caption1" style={{ color: "#fff", marginTop: 4 }}>
           With custom dark tint
         </Text>
       </Surface>

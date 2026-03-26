@@ -1,3 +1,2 @@
-export * from './InAppBanner';
-export * from './SettingsFooter';
-
+export * from "./InAppBanner";
+export * from "./SettingsFooter";

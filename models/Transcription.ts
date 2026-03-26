@@ -15,7 +15,7 @@ export interface TranscriptionJSON {
 }
 
 export const transcriptionToJSON = (
-  transcription: Transcription
+  transcription: Transcription,
 ): TranscriptionJSON => {
   return {
     id: transcription.id,
@@ -27,7 +27,7 @@ export const transcriptionToJSON = (
 };
 
 export const transcriptionFromJSON = (
-  json: TranscriptionJSON
+  json: TranscriptionJSON,
 ): Transcription => {
   const parsedDate = new Date(json.timestamp);
   if (isNaN(parsedDate.getTime())) {
@@ -36,7 +36,7 @@ export const transcriptionFromJSON = (
 
   return {
     id: json.id,
-    sessionId: json.sessionId ?? 'default_session',
+    sessionId: json.sessionId ?? "default_session",
     text: json.text,
     timestamp: parsedDate,
     audioPath: json.audioPath,
@@ -52,7 +52,7 @@ export const createTranscription = (params: {
 }): Transcription => {
   return {
     id: params.id,
-    sessionId: params.sessionId ?? 'default_session',
+    sessionId: params.sessionId ?? "default_session",
     text: params.text,
     timestamp: params.timestamp,
     audioPath: params.audioPath,

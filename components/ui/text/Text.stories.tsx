@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
-import { ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react-native";
+import { ReactNode } from "react";
+import { View } from "react-native";
 
-import { Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Text } from "@/components";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -21,37 +21,37 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const TextMeta: Meta<typeof Text> = {
-  title: 'UI Components/Text',
+  title: "UI Components/Text",
   component: Text,
   args: {
-    children: 'The quick brown fox jumps over the lazy dog',
+    children: "The quick brown fox jumps over the lazy dog",
   },
   argTypes: {
     variant: {
-      control: 'select',
+      control: "select",
       options: [
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'subtitle',
-        'body1',
-        'body2',
-        'caption1',
-        'caption2',
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "subtitle",
+        "body1",
+        "body2",
+        "caption1",
+        "caption2",
       ],
     },
     weight: {
-      control: 'select',
-      options: ['regular', 'medium', 'semibold'],
+      control: "select",
+      options: ["regular", "medium", "semibold"],
     },
     align: {
-      control: 'select',
-      options: ['auto', 'left', 'right', 'center', 'justify'],
+      control: "select",
+      options: ["auto", "left", "right", "center", "justify"],
     },
     color: {
-      control: 'color',
+      control: "color",
     },
   },
   decorators: [

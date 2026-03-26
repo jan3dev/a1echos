@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentProps, ReactNode, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentProps, ReactNode, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Toggle } from '@/components';
-import { AquaTypography, useTheme } from '@/theme';
+import { Toggle } from "@/components";
+import { AquaTypography, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/Toggle',
+  title: "UI Components/Toggle",
   component: Toggle,
   decorators: [
     (Story) => (
@@ -117,9 +117,9 @@ export const CustomColors: Story = {
     value: false,
     onValueChange: () => {},
     enabled: true,
-    activeColor: '#18A23B',
-    trackColor: '#18A23B',
-    thumbColor: '#18A23B',
+    activeColor: "#18A23B",
+    trackColor: "#18A23B",
+    thumbColor: "#18A23B",
   },
   render: () => <CustomColorsContent />,
 };
@@ -215,13 +215,13 @@ const styles = StyleSheet.create({
     ...AquaTypography.h5SemiBold,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 32,
-    alignItems: 'center',
+    alignItems: "center",
   },
   item: {
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   label: {
     ...AquaTypography.body2,

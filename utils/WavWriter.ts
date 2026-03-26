@@ -1,6 +1,6 @@
-import RNFS from 'react-native-fs';
+import RNFS from "react-native-fs";
 
-import { FeatureFlag, logError } from './log';
+import { FeatureFlag, logError } from "./log";
 
 const WAV_HEADER_SIZE = 44;
 
@@ -8,7 +8,7 @@ const createWavHeaderBuffer = (
   dataLength: number,
   sampleRate: number,
   numChannels: number,
-  bitsPerSample: number
+  bitsPerSample: number,
 ): string => {
   const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
   const blockAlign = (numChannels * bitsPerSample) / 8;
@@ -49,7 +49,7 @@ const createWavHeaderBuffer = (
   view.setUint32(40, dataLength, true);
 
   const bytes = new Uint8Array(buffer);
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
@@ -67,7 +67,7 @@ export const createPcmStreamWriter = (
   outputPath: string,
   sampleRate: number,
   numChannels: number,
-  bitsPerSample: number = 16
+  bitsPerSample: number = 16,
 ): PcmStreamWriter => {
   const tempPath = `${outputPath}.pcm`;
   let totalBytes = 0;
@@ -79,8 +79,8 @@ export const createPcmStreamWriter = (
     const len = b64.length;
     if (len === 0) return 0;
     let padding = 0;
-    if (b64[len - 1] === '=') padding++;
-    if (len > 1 && b64[len - 2] === '=') padding++;
+    if (b64[len - 1] === "=") padding++;
+    if (len > 1 && b64[len - 2] === "=") padding++;
     return Math.floor((len * 3) / 4) - padding;
   };
 
@@ -95,15 +95,15 @@ export const createPcmStreamWriter = (
       if (isFinalized || hasError) return;
       try {
         if (isFirst) {
-          await RNFS.writeFile(tempPath, base64Chunk, 'base64');
+          await RNFS.writeFile(tempPath, base64Chunk, "base64");
         } else {
-          await RNFS.appendFile(tempPath, base64Chunk, 'base64');
+          await RNFS.appendFile(tempPath, base64Chunk, "base64");
         }
       } catch (error) {
         hasError = true;
         logError(error, {
           flag: FeatureFlag.recording,
-          message: 'Error writing PCM chunk to disk',
+          message: "Error writing PCM chunk to disk",
         });
       }
     });
@@ -125,17 +125,17 @@ export const createPcmStreamWriter = (
         totalBytes,
         sampleRate,
         numChannels,
-        bitsPerSample
+        bitsPerSample,
       );
-      await RNFS.writeFile(outputPath, wavHeader, 'base64');
-      const pcmData = await RNFS.readFile(tempPath, 'base64');
-      await RNFS.appendFile(outputPath, pcmData, 'base64');
+      await RNFS.writeFile(outputPath, wavHeader, "base64");
+      const pcmData = await RNFS.readFile(tempPath, "base64");
+      await RNFS.appendFile(outputPath, pcmData, "base64");
       await RNFS.unlink(tempPath);
       return true;
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.recording,
-        message: 'Error finalizing WAV file',
+        message: "Error finalizing WAV file",
       });
       await cleanup();
       return false;

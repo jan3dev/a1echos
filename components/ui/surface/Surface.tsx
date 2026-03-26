@@ -1,13 +1,13 @@
-import { BlurView } from 'expo-blur';
-import { ReactNode } from 'react';
-import { Platform, Pressable, View, ViewStyle } from 'react-native';
+import { BlurView } from "expo-blur";
+import { ReactNode } from "react";
+import { Platform, Pressable, View, ViewStyle } from "react-native";
 
-import { shadows, useTheme } from '@/theme';
+import { shadows, useTheme } from "@/theme";
 
 export interface SurfaceProps {
   children?: ReactNode;
   style?: ViewStyle;
-  variant?: 'filled' | 'glass';
+  variant?: "filled" | "glass";
   elevation?: number;
   borderRadius?: number;
   padding?: number;
@@ -21,7 +21,7 @@ export interface SurfaceProps {
 export const Surface = ({
   children,
   style,
-  variant = 'filled',
+  variant = "filled",
   elevation = 0,
   borderRadius = 4,
   padding,
@@ -41,7 +41,7 @@ export const Surface = ({
   };
 
   const backgroundColor =
-    color ?? (variant === 'glass' ? undefined : theme.colors.surfacePrimary);
+    color ?? (variant === "glass" ? undefined : theme.colors.surfacePrimary);
   const shadowStyle = getShadowStyle(elevation);
 
   const shadowContainerStyle: ViewStyle = {
@@ -50,19 +50,19 @@ export const Surface = ({
     width: width as any,
     height: height as any,
     backgroundColor:
-      Platform.OS === 'android' ? backgroundColor : 'transparent',
+      Platform.OS === "android" ? backgroundColor : "transparent",
     ...shadowStyle,
   };
 
   const clipContainerStyle: ViewStyle = {
     flex: 1,
     borderRadius,
-    overflow: 'hidden',
+    overflow: "hidden",
   };
 
   const contentStyle: ViewStyle = {
     padding,
-    backgroundColor: variant === 'filled' ? backgroundColor : undefined,
+    backgroundColor: variant === "filled" ? backgroundColor : undefined,
     flex: 1,
   };
 
@@ -84,7 +84,7 @@ export const Surface = ({
     </BlurView>
   );
 
-  const Inner = variant === 'glass' ? GlassContent : Content;
+  const Inner = variant === "glass" ? GlassContent : Content;
 
   if (onPress) {
     return (

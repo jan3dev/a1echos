@@ -1,3 +1,2 @@
-export { Slider } from './Slider';
-export type { SliderState } from './Slider';
-
+export { Slider } from "./Slider";
+export type { SliderState } from "./Slider";

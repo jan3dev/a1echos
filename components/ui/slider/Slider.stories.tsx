@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNode, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ReactNode, useState } from "react";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
-import { Slider, SliderState } from '@/components';
-import { AquaTypography, useTheme } from '@/theme';
+import { Slider, SliderState } from "@/components";
+import { AquaTypography, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/Slider',
+  title: "UI Components/Slider",
   component: Slider,
   decorators: [
     (Story) => (
@@ -37,15 +37,15 @@ type Story = StoryObj<typeof meta>;
 export const Initial: Story = {
   args: {
     width: 300,
-    text: 'Slide to confirm',
-    onConfirm: () => Alert.alert('Confirmed!'),
-    sliderState: 'initial',
+    text: "Slide to confirm",
+    onConfirm: () => Alert.alert("Confirmed!"),
+    sliderState: "initial",
   },
   render: () => (
     <Slider
       width={300}
       text="Slide to confirm"
-      onConfirm={() => Alert.alert('Confirmed!')}
+      onConfirm={() => Alert.alert("Confirmed!")}
       sliderState="initial"
     />
   ),
@@ -54,9 +54,9 @@ export const Initial: Story = {
 export const InProgress: Story = {
   args: {
     width: 300,
-    text: 'Loading...',
+    text: "Loading...",
     onConfirm: () => {},
-    sliderState: 'inProgress',
+    sliderState: "inProgress",
   },
   render: () => (
     <Slider
@@ -71,9 +71,9 @@ export const InProgress: Story = {
 export const Completed: Story = {
   args: {
     width: 300,
-    text: 'Completed',
+    text: "Completed",
     onConfirm: () => {},
-    sliderState: 'completed',
+    sliderState: "completed",
   },
   render: () => (
     <Slider
@@ -88,9 +88,9 @@ export const Completed: Story = {
 export const Error: Story = {
   args: {
     width: 300,
-    text: 'Error occurred',
+    text: "Error occurred",
     onConfirm: () => {},
-    sliderState: 'error',
+    sliderState: "error",
   },
   render: () => (
     <Slider
@@ -105,10 +105,10 @@ export const Error: Story = {
 export const Disabled: Story = {
   args: {
     width: 300,
-    text: 'Disabled slider',
+    text: "Disabled slider",
     onConfirm: () => {},
     enabled: false,
-    sliderState: 'initial',
+    sliderState: "initial",
   },
   render: () => (
     <Slider
@@ -122,15 +122,15 @@ export const Disabled: Story = {
 };
 
 const SliderWithStateChange = () => {
-  const [state, setState] = useState<SliderState>('initial');
+  const [state, setState] = useState<SliderState>("initial");
   const { theme } = useTheme();
 
   const handleConfirm = () => {
-    setState('inProgress');
+    setState("inProgress");
     setTimeout(() => {
-      setState('completed');
+      setState("completed");
       setTimeout(() => {
-        setState('initial');
+        setState("initial");
       }, 2000);
     }, 1500);
   };
@@ -153,9 +153,9 @@ const SliderWithStateChange = () => {
 export const WithStateChange: Story = {
   args: {
     width: 300,
-    text: 'Slide to confirm',
-    onConfirm: () => Alert.alert('Confirmed!'),
-    sliderState: 'initial',
+    text: "Slide to confirm",
+    onConfirm: () => Alert.alert("Confirmed!"),
+    sliderState: "initial",
   },
   render: () => <SliderWithStateChange />,
 };
@@ -171,7 +171,7 @@ const AllStatesContent = () => {
         <Slider
           width={280}
           text="Slide to confirm"
-          onConfirm={() => console.log('Confirmed')}
+          onConfirm={() => console.log("Confirmed")}
           sliderState="initial"
         />
       </View>
@@ -231,9 +231,9 @@ const AllStatesContent = () => {
 export const AllStates: Story = {
   args: {
     width: 300,
-    text: 'Slide to confirm',
-    onConfirm: () => Alert.alert('Confirmed!'),
-    sliderState: 'initial',
+    text: "Slide to confirm",
+    onConfirm: () => Alert.alert("Confirmed!"),
+    sliderState: "initial",
   },
   render: () => <AllStatesContent />,
 };

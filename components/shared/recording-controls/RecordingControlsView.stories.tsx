@@ -1,11 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
-import { ComponentProps, ReactNode, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react-native";
+import { ComponentProps, ReactNode, useEffect, useState } from "react";
+import { View } from "react-native";
 
-import { RecordingControlsView } from '@/components';
-import { TranscriptionState } from '@/models';
-import { useTranscriptionStore } from '@/stores';
-import { useTheme } from '@/theme';
+import { RecordingControlsView } from "@/components";
+import { TranscriptionState } from "@/models";
+import { useTranscriptionStore } from "@/stores";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -13,7 +13,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
     <View
       style={{
         flex: 1,
-        justifyContent: 'flex-end',
+        justifyContent: "flex-end",
         backgroundColor: theme.colors.surfaceBackground,
       }}
     >
@@ -23,11 +23,11 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const RecordingControlsViewMeta: Meta<typeof RecordingControlsView> = {
-  title: 'Shared Components/RecordingControlsView',
+  title: "Shared Components/RecordingControlsView",
   component: RecordingControlsView,
   argTypes: {
     state: {
-      control: 'select',
+      control: "select",
       options: [
         TranscriptionState.READY,
         TranscriptionState.RECORDING,
@@ -36,7 +36,7 @@ const RecordingControlsViewMeta: Meta<typeof RecordingControlsView> = {
       ],
     },
     enabled: {
-      control: 'boolean',
+      control: "boolean",
     },
   },
   decorators: [
@@ -53,7 +53,7 @@ export default RecordingControlsViewMeta;
 type Story = StoryObj<typeof RecordingControlsView>;
 
 const DynamicRecordingControlsView = (
-  props: Omit<ComponentProps<typeof RecordingControlsView>, 'colors'>
+  props: Omit<ComponentProps<typeof RecordingControlsView>, "colors">,
 ) => {
   const { theme } = useTheme();
   return <RecordingControlsView {...props} colors={theme.colors} />;
@@ -64,7 +64,7 @@ export const Ready: Story = {
     <DynamicRecordingControlsView
       state={TranscriptionState.READY}
       enabled={true}
-      onRecordingStart={() => console.log('Recording started')}
+      onRecordingStart={() => console.log("Recording started")}
     />
   ),
 };
@@ -74,7 +74,7 @@ export const Recording: Story = {
     <DynamicRecordingControlsView
       state={TranscriptionState.RECORDING}
       enabled={true}
-      onRecordingStop={() => console.log('Recording stopped')}
+      onRecordingStop={() => console.log("Recording stopped")}
     />
   ),
 };

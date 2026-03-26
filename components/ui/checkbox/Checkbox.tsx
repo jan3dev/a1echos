@@ -1,12 +1,12 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
-import { lightColors, useTheme } from '@/theme';
-import { iosPressed } from '@/utils';
+import { lightColors, useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { Icon } from '../icon/Icon';
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
+import { Icon } from "../icon/Icon";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
-export type CheckboxSize = 'large' | 'small';
+export type CheckboxSize = "large" | "small";
 
 interface CheckboxProps {
   value: boolean;
@@ -19,15 +19,15 @@ export const Checkbox = ({
   value,
   onValueChange,
   enabled = true,
-  size = 'large',
+  size = "large",
 }: CheckboxProps) => {
   const { theme, isDark } = useTheme();
   const colors = theme.colors;
 
-  const boxSize = size === 'large' ? 24 : 18;
-  const checkSize = size === 'large' ? 18 : 16;
-  const borderWidth = size === 'large' ? 2 : 1.5;
-  const borderRadius = size === 'large' ? 4 : 3;
+  const boxSize = size === "large" ? 24 : 18;
+  const checkSize = size === "large" ? 18 : 16;
+  const borderWidth = size === "large" ? 2 : 1.5;
+  const borderRadius = size === "large" ? 4 : 3;
 
   const handlePress = () => {
     if (enabled && onValueChange) {
@@ -58,8 +58,8 @@ export const Checkbox = ({
             backgroundColor: value
               ? colors.accentBrand
               : isDark
-              ? colors.surfaceTertiary
-              : '#F4F5F6',
+                ? colors.surfaceTertiary
+                : "#F4F5F6",
             borderWidth: value ? 0 : borderWidth,
             borderColor: colors.surfaceBorderSecondary,
           },
@@ -75,10 +75,10 @@ export const Checkbox = ({
 
 const styles = StyleSheet.create({
   pressable: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

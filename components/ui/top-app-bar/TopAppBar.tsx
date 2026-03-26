@@ -1,16 +1,16 @@
-import { BlurView } from 'expo-blur';
-import { useRouter } from 'expo-router';
-import { Fragment, ReactNode } from 'react';
-import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from "expo-blur";
+import { useRouter } from "expo-router";
+import { Fragment, ReactNode } from "react";
+import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppTheme } from '@/models';
-import { useTheme, useThemeStore } from '@/theme';
-import { iosPressed } from '@/utils';
+import { AppTheme } from "@/models";
+import { useTheme, useThemeStore } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { Icon } from '../icon/Icon';
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
-import { Text } from '../text/Text';
+import { Icon } from "../icon/Icon";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
+import { Text } from "../text/Text";
 
 export interface TopAppBarProps {
   title?: string;
@@ -28,7 +28,7 @@ export interface TopAppBarProps {
 const SIDE_WIDTH = 64; // 2 × 24px icon + 16px gap
 
 export const TopAppBar = ({
-  title = '',
+  title = "",
   showBackButton = true,
   leading,
   onBackPressed,
@@ -43,7 +43,7 @@ export const TopAppBar = ({
   const { currentTheme } = useThemeStore();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
+  const blurTint = currentTheme === AppTheme.DARK ? "dark" : "light";
 
   const handleBack = () => {
     if (onBackPressed) {
@@ -58,7 +58,7 @@ export const TopAppBar = ({
   const totalHeight = APP_BAR_HEIGHT + topPadding;
 
   const backgroundColor = transparent
-    ? 'transparent'
+    ? "transparent"
     : theme.colors.glassBackground;
 
   const renderContent = () => (
@@ -68,7 +68,7 @@ export const TopAppBar = ({
         {
           paddingTop: topPadding + 16,
           height: totalHeight,
-          backgroundColor: transparent ? 'transparent' : undefined,
+          backgroundColor: transparent ? "transparent" : undefined,
         },
       ]}
     >
@@ -147,7 +147,7 @@ export const TopAppBar = ({
     {
       borderBottomLeftRadius: 8,
       borderBottomRightRadius: 8,
-      overflow: 'hidden' as const,
+      overflow: "hidden" as const,
     },
     style,
   ];
@@ -158,7 +158,7 @@ export const TopAppBar = ({
 
   return (
     <View style={containerStyles}>
-      {Platform.OS === 'ios' ? (
+      {Platform.OS === "ios" ? (
         <BlurView
           intensity={20}
           tint={blurTint}
@@ -179,7 +179,7 @@ export const TopAppBar = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -190,27 +190,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   leadingContainer: {
     width: SIDE_WIDTH,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    overflow: 'visible',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    overflow: "visible",
   },
   titleContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   actionsContainer: {
     width: SIDE_WIDTH,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
 });

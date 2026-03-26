@@ -1,17 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback } from "react";
 
-import { useSessionStore, useTranscriptionStore } from '@/stores';
+import { useSessionStore, useTranscriptionStore } from "@/stores";
 
 export const useSessionOperations = () => {
   const deleteSessionAction = useSessionStore((state) => state.deleteSession);
   const clearIncognitoSessionAction = useSessionStore(
-    (state) => state.clearIncognitoSession
+    (state) => state.clearIncognitoSession,
   );
 
   const incognitoSession = useSessionStore((state) => state.incognitoSession);
 
   const deleteAllTranscriptionsForSession = useTranscriptionStore(
-    (state) => state.deleteAllTranscriptionsForSession
+    (state) => state.deleteAllTranscriptionsForSession,
   );
 
   const deleteSession = useCallback(
@@ -19,7 +19,7 @@ export const useSessionOperations = () => {
       await deleteAllTranscriptionsForSession(sessionId);
       await deleteSessionAction(sessionId);
     },
-    [deleteAllTranscriptionsForSession, deleteSessionAction]
+    [deleteAllTranscriptionsForSession, deleteSessionAction],
   );
 
   const endIncognitoSession = useCallback(async () => {

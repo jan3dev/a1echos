@@ -1,16 +1,11 @@
-import { ReactNode } from 'react';
-import {
-  StyleProp,
-  StyleSheet,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { ReactNode } from "react";
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
-import { useTheme } from '@/theme';
-import { iosPressed } from '@/utils';
+import { useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
-import { Text } from '../../ui/text/Text';
+import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
+import { Text } from "../../ui/text/Text";
 
 export interface ListItemProps {
   title: string;
@@ -61,13 +56,13 @@ export const ListItem = ({
 
   const innerStyle: ViewStyle = {
     backgroundColor: selected ? theme.colors.surfaceSelected : undefined,
-    borderColor: selected ? theme.colors.surfaceBorderSelected : 'transparent',
+    borderColor: selected ? theme.colors.surfaceBorderSelected : "transparent",
     borderWidth: 1,
     borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   };
 
   return (
@@ -159,13 +154,13 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   subtitle: {
     marginTop: 4,
   },
   trailingTextContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginLeft: 8,
   },
   trailingIconContainer: {

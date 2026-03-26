@@ -1,4 +1,4 @@
-import * as Linking from 'expo-linking';
+import * as Linking from "expo-linking";
 import {
   Image,
   Platform,
@@ -6,15 +6,15 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { useTheme } from '@/theme';
-import { FeatureFlag, logWarn } from '@/utils';
+import { useTheme } from "@/theme";
+import { FeatureFlag, logWarn } from "@/utils";
 
 const AQUA_APP_URLS = {
   android:
-    'https://play.google.com/store/apps/details?id=io.aquawallet.android',
-  ios: 'https://apps.apple.com/us/app/aqua-wallet/id6468594241',
+    "https://play.google.com/store/apps/details?id=io.aquawallet.android",
+  ios: "https://apps.apple.com/us/app/aqua-wallet/id6468594241",
 };
 
 // Banner image aspect ratio (width / height)
@@ -28,7 +28,7 @@ export const InAppBanner = () => {
   const handlePress = async () => {
     try {
       const url =
-        Platform.OS === 'android' ? AQUA_APP_URLS.android : AQUA_APP_URLS.ios;
+        Platform.OS === "android" ? AQUA_APP_URLS.android : AQUA_APP_URLS.ios;
 
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
@@ -66,7 +66,7 @@ export const InAppBanner = () => {
       >
         <View style={styles.imageContainer}>
           <Image
-            source={require('@/assets/images/in-app-banner.png')}
+            source={require("@/assets/images/in-app-banner.png")}
             style={styles.image}
             resizeMode="contain"
           />
@@ -78,8 +78,8 @@ export const InAppBanner = () => {
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
   },
   container: {
     borderRadius: 8,
@@ -87,10 +87,10 @@ const styles = StyleSheet.create({
   imageContainer: {
     flex: 1,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
 });

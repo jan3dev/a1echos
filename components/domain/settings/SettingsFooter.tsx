@@ -1,16 +1,16 @@
-import Constants from 'expo-constants';
-import * as Linking from 'expo-linking';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import Constants from "expo-constants";
+import * as Linking from "expo-linking";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { useLocalization } from '@/hooks';
-import { useTheme } from '@/theme';
+import { useLocalization } from "@/hooks";
+import { useTheme } from "@/theme";
 
-import { Divider } from '../../ui/divider/Divider';
-import { Icon } from '../../ui/icon/Icon';
-import { Text } from '../../ui/text/Text';
-import { Tooltip } from '../../ui/tooltip/Tooltip';
-import { useTooltip } from '../../ui/tooltip/useTooltip';
+import { Divider } from "../../ui/divider/Divider";
+import { Icon } from "../../ui/icon/Icon";
+import { Text } from "../../ui/text/Text";
+import { Tooltip } from "../../ui/tooltip/Tooltip";
+import { useTooltip } from "../../ui/tooltip/useTooltip";
 
 interface SocialTag {
   tag: string;
@@ -18,28 +18,28 @@ interface SocialTag {
 }
 
 const SOCIAL_TAGS: SocialTag[] = [
-  { tag: 'Echos', handle: 'a1echos' },
-  { tag: 'A1 Lab', handle: 'a1laboratory' },
-  { tag: 'JAN3', handle: 'jan3com' },
+  { tag: "Echos", handle: "a1echos" },
+  { tag: "A1 Lab", handle: "a1laboratory" },
+  { tag: "JAN3", handle: "jan3com" },
 ];
 
 export const SettingsFooter = () => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const { show: showTooltip, tooltipState } = useTooltip();
-  const [version, setVersion] = useState('');
+  const [version, setVersion] = useState("");
 
   useEffect(() => {
-    const appVersion = Constants.expoConfig?.version ?? '0.1.0';
+    const appVersion = Constants.expoConfig?.version ?? "0.1.0";
     const buildNumber =
       Constants.expoConfig?.ios?.buildNumber ??
       Constants.expoConfig?.android?.versionCode?.toString() ??
-      '1';
+      "1";
     setVersion(`App Version ${appVersion} (${buildNumber})`);
   }, []);
 
   const handleLaunchX = async (handle: string) => {
-    const sanitizedHandle = handle.replace(/^@/, '');
+    const sanitizedHandle = handle.replace(/^@/, "");
     const url = `https://x.com/${sanitizedHandle}`;
 
     try {
@@ -49,13 +49,13 @@ export const SettingsFooter = () => {
       } else {
         showTooltip({
           message: loc.couldNotOpenLink,
-          variant: 'error',
+          variant: "error",
         });
       }
     } catch {
       showTooltip({
         message: loc.couldNotOpenLink,
-        variant: 'error',
+        variant: "error",
       });
     }
   };
@@ -136,20 +136,20 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingVertical: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   dividerContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 16,
   },
   socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 16,
     marginBottom: 16,
   },

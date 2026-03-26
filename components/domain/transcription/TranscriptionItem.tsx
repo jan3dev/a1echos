@@ -1,19 +1,19 @@
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, TextInput, View, ViewStyle } from 'react-native';
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import { useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
-import { useLocalization } from '@/hooks';
-import { Transcription } from '@/models';
-import { useUIStore } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
-import { FeatureFlag, iosPressed, logError } from '@/utils';
+import { useLocalization } from "@/hooks";
+import { Transcription } from "@/models";
+import { useUIStore } from "@/stores";
+import { getShadow, useTheme } from "@/theme";
+import { FeatureFlag, iosPressed, logError } from "@/utils";
 
-import { Checkbox } from '../../ui/checkbox/Checkbox';
-import { Icon } from '../../ui/icon/Icon';
-import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
-import { Skeleton } from '../../ui/skeleton/Skeleton';
-import { Text } from '../../ui/text/Text';
+import { Checkbox } from "../../ui/checkbox/Checkbox";
+import { Icon } from "../../ui/icon/Icon";
+import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
+import { Skeleton } from "../../ui/skeleton/Skeleton";
+import { Text } from "../../ui/text/Text";
 
 interface TranscriptionItemProps {
   transcription: Transcription;
@@ -92,19 +92,19 @@ export const TranscriptionItem = ({
 
       // Show tooltip on iOS or Android < 12 (API 31 has native clipboard feedback)
       if (
-        Platform.OS === 'ios' ||
-        (Platform.OS === 'android' && Number(Platform.Version) < 31)
+        Platform.OS === "ios" ||
+        (Platform.OS === "android" && Number(Platform.Version) < 31)
       ) {
         showGlobalTooltip(loc.copiedToClipboard);
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: 'Failed to copy to clipboard',
+        message: "Failed to copy to clipboard",
       });
       showGlobalTooltip(
         loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        'normal',
+        "normal",
         undefined,
         true,
       );
@@ -115,15 +115,15 @@ export const TranscriptionItem = ({
   const isOlderThanCurrentYear =
     transcription.timestamp.getFullYear() < now.getFullYear();
 
-  const dateFormat = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: isOlderThanCurrentYear ? 'numeric' : undefined,
+  const dateFormat = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: isOlderThanCurrentYear ? "numeric" : undefined,
   });
 
-  const timeFormat = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: 'numeric',
+  const timeFormat = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "numeric",
     hour12: true,
   });
 
@@ -144,7 +144,7 @@ export const TranscriptionItem = ({
     <View
       style={[
         styles.shadowContainer,
-        getShadow('cardElevated'),
+        getShadow("cardElevated"),
         { backgroundColor },
         style,
       ]}
@@ -166,7 +166,7 @@ export const TranscriptionItem = ({
           styles.container,
           {
             backgroundColor,
-            borderColor: isEditing ? theme.colors.accentBrand : 'transparent',
+            borderColor: isEditing ? theme.colors.accentBrand : "transparent",
             borderWidth: isEditing ? 1 : 0,
             opacity: enableInteractions ? iosPressed(pressed) : 1,
           },
@@ -175,10 +175,10 @@ export const TranscriptionItem = ({
         <View style={styles.headerRow}>
           <View style={styles.timestampContainer}>
             {(showSkeleton ||
-              !(isLivePreviewItem && transcription.text === '')) && (
+              !(isLivePreviewItem && transcription.text === "")) && (
               <Text variant="caption1" color={theme.colors.textSecondary}>
                 {dateFormat.format(transcription.timestamp)}
-                {'  '}
+                {"  "}
                 <Text variant="caption1" color={theme.colors.textTertiary}>
                   {timeFormat.format(transcription.timestamp)}
                 </Text>
@@ -282,23 +282,23 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   timestampContainer: {
     flex: 1,
   },
   actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   iconButton: {
     width: 18,
     height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   contentContainer: {
     minHeight: 24,
@@ -308,6 +308,6 @@ const styles = StyleSheet.create({
   },
   input: {
     padding: 0,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
 });

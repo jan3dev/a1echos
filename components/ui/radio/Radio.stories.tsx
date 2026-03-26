@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNode, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ReactNode, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Radio } from '@/components';
-import { AquaTypography, useTheme } from '@/theme';
+import { Radio } from "@/components";
+import { AquaTypography, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/Radio',
+  title: "UI Components/Radio",
   component: Radio,
   decorators: [
     (Story) => (
@@ -34,8 +34,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
-  const [selected, setSelected] = useState('option1');
+const RadioGroup = ({ size = "large" }: { size?: "large" | "small" }) => {
+  const [selected, setSelected] = useState("option1");
   const { theme } = useTheme();
 
   return (
@@ -79,22 +79,22 @@ const RadioGroup = ({ size = 'large' }: { size?: 'large' | 'small' }) => {
 
 export const Large: Story = {
   args: {
-    value: 'option1',
-    groupValue: 'option1',
+    value: "option1",
+    groupValue: "option1",
     onValueChange: () => {},
     enabled: true,
-    size: 'large',
+    size: "large",
   },
   render: () => <RadioGroup size="large" />,
 };
 
 export const Small: Story = {
   args: {
-    value: 'option1',
-    groupValue: 'option1',
+    value: "option1",
+    groupValue: "option1",
     onValueChange: () => {},
     enabled: true,
-    size: 'small',
+    size: "small",
   },
   render: () => <RadioGroup size="small" />,
 };
@@ -131,11 +131,11 @@ const DisabledContent = () => {
 
 export const Disabled: Story = {
   args: {
-    value: 'option1',
-    groupValue: 'option1',
+    value: "option1",
+    groupValue: "option1",
     onValueChange: () => {},
     enabled: false,
-    size: 'large',
+    size: "large",
   },
   render: () => <DisabledContent />,
 };
@@ -193,11 +193,11 @@ const AllVariantsContent = () => {
 
 export const AllVariants: Story = {
   args: {
-    value: 'option1',
-    groupValue: 'option1',
+    value: "option1",
+    groupValue: "option1",
     onValueChange: () => {},
     enabled: true,
-    size: 'large',
+    size: "large",
   },
   render: () => <AllVariantsContent />,
 };
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   radioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   label: {

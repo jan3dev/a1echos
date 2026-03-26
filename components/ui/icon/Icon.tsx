@@ -1,8 +1,8 @@
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from "react-native";
 
-import { logWarn } from '@/utils';
+import { logWarn } from "@/utils";
 
-import { iconMap, IconName } from './iconMap';
+import { iconMap, IconName } from "./iconMap";
 
 export type { IconName };
 
@@ -16,7 +16,7 @@ interface IconProps {
 export const Icon = ({
   name,
   size = 24,
-  color = '#090A0B',
+  color = "#090A0B",
   style,
 }: IconProps) => {
   const IconComponent = iconMap[name];
@@ -35,7 +35,7 @@ export const Icon = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

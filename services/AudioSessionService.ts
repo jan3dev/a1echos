@@ -1,13 +1,13 @@
-import { setAudioModeAsync } from 'expo-audio';
-import { Platform } from 'react-native';
+import { setAudioModeAsync } from "expo-audio";
+import { Platform } from "react-native";
 
-import { FeatureFlag, logError } from '@/utils';
+import { FeatureFlag, logError } from "@/utils";
 
 const createAudioSessionService = () => {
   let configurationPromise: Promise<void> | null = null;
 
   const ensureRecordingMode = async (): Promise<boolean> => {
-    if (Platform.OS !== 'ios') {
+    if (Platform.OS !== "ios") {
       return true;
     }
 
@@ -18,7 +18,7 @@ const createAudioSessionService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Previous audio session configuration failed, retrying',
+          message: "Previous audio session configuration failed, retrying",
         });
         configurationPromise = null;
       }
@@ -41,7 +41,7 @@ const createAudioSessionService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Failed to configure audio session for recording',
+        message: "Failed to configure audio session for recording",
       });
       return false;
     } finally {

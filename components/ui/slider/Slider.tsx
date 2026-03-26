@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, PanResponder, StyleSheet, Text, View } from "react-native";
 
-import { AquaTypography, lightColors, useTheme } from '@/theme';
+import { AquaTypography, lightColors, useTheme } from "@/theme";
 
-import { Icon } from '../icon/Icon';
-import { ProgressIndicator } from '../progress/ProgressIndicator';
+import { Icon } from "../icon/Icon";
+import { ProgressIndicator } from "../progress/ProgressIndicator";
 
-export type SliderState = 'initial' | 'inProgress' | 'completed' | 'error';
+export type SliderState = "initial" | "inProgress" | "completed" | "error";
 
 interface SliderProps {
   width: number;
@@ -26,12 +26,12 @@ const SLIDER_DEFAULT_THUMB_SIZE = 56;
 export const Slider = ({
   width,
   height = SLIDER_DEFAULT_THUMB_SIZE,
-  text = '',
+  text = "",
   onConfirm,
   enabled = true,
   thumbWidth = SLIDER_DEFAULT_THUMB_SIZE,
   thumbHeight = SLIDER_DEFAULT_THUMB_SIZE,
-  sliderState = 'initial',
+  sliderState = "initial",
 }: SliderProps) => {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -43,7 +43,7 @@ export const Slider = ({
 
   const maxSlidePosition = useMemo(
     () => Math.max(1, width - thumbWidth - SLIDER_PADDING),
-    [width, thumbWidth]
+    [width, thumbWidth],
   );
 
   const prevSliderStateRef = useRef(sliderState);
@@ -52,7 +52,7 @@ export const Slider = ({
     const prevState = prevSliderStateRef.current;
     prevSliderStateRef.current = sliderState;
 
-    if (prevState !== 'initial' && sliderState === 'initial') {
+    if (prevState !== "initial" && sliderState === "initial") {
       setPosition(0);
       positionRef.current = 0;
       Animated.timing(positionAnim, {
@@ -72,11 +72,11 @@ export const Slider = ({
   const currentPosition = useMemo(() => getPosition(), [getPosition]);
   const percent = useMemo(
     () => currentPosition / maxSlidePosition,
-    [currentPosition, maxSlidePosition]
+    [currentPosition, maxSlidePosition],
   );
   const textOpacity = useMemo(
     () => 1.0 - Math.min(Math.max(percent * 2, 0), 1.0),
-    [percent]
+    [percent],
   );
 
   const sliderReleased = useCallback(() => {
@@ -105,7 +105,7 @@ export const Slider = ({
     }
   }, [maxSlidePosition, onConfirm, positionAnim]);
 
-  const canInteract = enabled && sliderState === 'initial';
+  const canInteract = enabled && sliderState === "initial";
   const canInteractRef = useRef(canInteract);
   canInteractRef.current = canInteract;
 
@@ -126,7 +126,7 @@ export const Slider = ({
         onPanResponderRelease: sliderReleased,
         onPanResponderTerminate: sliderReleased,
       }),
-    [maxSlidePosition, sliderReleased, positionAnim]
+    [maxSlidePosition, sliderReleased, positionAnim],
   );
 
   const backgroundColor = useMemo(() => {
@@ -139,25 +139,25 @@ export const Slider = ({
     // 0.16 opacity * 255 = ~41
     const opacityHex = Math.round(41 * (1 - percent))
       .toString(16)
-      .padStart(2, '0');
+      .padStart(2, "0");
     return `${colors.accentBrand}${opacityHex}`;
   }, [percent, enabled, colors.accentBrand, colors.surfaceInverse]);
 
   const renderThumb = () => {
     switch (sliderState) {
-      case 'initial':
+      case "initial":
         return (
           <Icon name="arrow_right" size={24} color={lightColors.textInverse} />
         );
-      case 'inProgress':
+      case "inProgress":
         return (
           <View style={styles.thumbCenter}>
             <ProgressIndicator size={24} color={lightColors.textInverse} />
           </View>
         );
-      case 'completed':
+      case "completed":
         return <Icon name="check" size={24} color={lightColors.textInverse} />;
-      case 'error':
+      case "error":
         return <Icon name="close" size={24} color={lightColors.textInverse} />;
     }
   };
@@ -234,43 +234,43 @@ export const Slider = ({
 const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   labelContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1,
   },
   backgroundFill: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     borderRadius: 8,
   },
   thumb: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 2,
   },
   thumbCenter: {
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   thumbTouchArea: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     zIndex: 3,
   },
