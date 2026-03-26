@@ -1,14 +1,14 @@
-import { useEffect } from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
+import { useEffect } from "react";
+import { StyleSheet, ViewStyle } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
-import { useTheme } from '@/theme';
+import { useTheme } from "@/theme";
 
 interface SkeletonProps {
   width?: number | string;
@@ -18,7 +18,7 @@ interface SkeletonProps {
 }
 
 export const Skeleton = ({
-  width = '100%',
+  width = "100%",
   height = 20,
   borderRadius = 4,
   style,
@@ -30,10 +30,10 @@ export const Skeleton = ({
     opacity.value = withRepeat(
       withSequence(
         withTiming(0.7, { duration: 1000 }),
-        withTiming(0.3, { duration: 1000 })
+        withTiming(0.3, { duration: 1000 }),
       ),
       -1,
-      true
+      true,
     );
   }, [opacity]);
 
@@ -60,6 +60,6 @@ export const Skeleton = ({
 
 const styles = StyleSheet.create({
   skeleton: {
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 });

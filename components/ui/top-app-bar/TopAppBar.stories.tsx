@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ReactNode } from "react";
+import { View } from "react-native";
 
-import { Icon, TopAppBar } from '@/components';
-import { useTheme } from '@/theme';
+import { Icon, TopAppBar } from "@/components";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/TopAppBar',
+  title: "UI Components/TopAppBar",
   component: TopAppBar,
   decorators: [
     (Story) => (
@@ -37,14 +37,14 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'Page Title',
+    title: "Page Title",
     showBackButton: true,
   },
 };
 
 export const WithoutBackButton: Story = {
   args: {
-    title: 'Home',
+    title: "Home",
     showBackButton: false,
   },
 };
@@ -89,16 +89,16 @@ export const WithCustomLeading: Story = {
 
 export const Transparent: Story = {
   args: {
-    title: 'Transparent Bar',
+    title: "Transparent Bar",
     transparent: true,
     showBackButton: true,
   },
   parameters: {
-    backgrounds: { default: 'dark' },
+    backgrounds: { default: "dark" },
   },
   decorators: [
     (Story) => (
-      <View style={{ flex: 1, backgroundColor: '#333' }}>
+      <View style={{ flex: 1, backgroundColor: "#333" }}>
         <Story />
       </View>
     ),

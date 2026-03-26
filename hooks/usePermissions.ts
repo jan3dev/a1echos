@@ -1,13 +1,13 @@
-import { PermissionStatus } from 'expo-modules-core';
-import { useCallback, useEffect, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { PermissionStatus } from "expo-modules-core";
+import { useCallback, useEffect, useState } from "react";
+import { AppState, AppStateStatus } from "react-native";
 
-import { permissionService, RecordPermissionResult } from '@/services';
-import { FeatureFlag, logError } from '@/utils';
+import { permissionService, RecordPermissionResult } from "@/services";
+import { FeatureFlag, logError } from "@/utils";
 
 export const usePermissions = () => {
   const [status, setStatus] = useState<PermissionStatus>(
-    PermissionStatus.UNDETERMINED
+    PermissionStatus.UNDETERMINED,
   );
   const [canAskAgain, setCanAskAgain] = useState(true);
 
@@ -22,7 +22,7 @@ export const usePermissions = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Failed to check permission',
+        message: "Failed to check permission",
       });
     }
     return () => {
@@ -36,12 +36,12 @@ export const usePermissions = () => {
 
   useEffect(() => {
     const subscription = AppState.addEventListener(
-      'change',
+      "change",
       (nextAppState: AppStateStatus) => {
-        if (nextAppState === 'active') {
+        if (nextAppState === "active") {
           checkPermission();
         }
-      }
+      },
     );
 
     return () => {
@@ -59,7 +59,7 @@ export const usePermissions = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Failed to request permission',
+          message: "Failed to request permission",
         });
         return {
           granted: false,

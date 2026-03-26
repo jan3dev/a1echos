@@ -1,14 +1,14 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, Divider, ListItem, Radio, TopAppBar } from '@/components';
-import { useLocalization } from '@/hooks';
-import { AppTheme } from '@/models';
-import { useSetTheme } from '@/stores';
-import { useTheme } from '@/theme';
-import { delay, FeatureFlag, logError } from '@/utils';
+import { Card, Divider, ListItem, Radio, TopAppBar } from "@/components";
+import { useLocalization } from "@/hooks";
+import { AppTheme } from "@/models";
+import { useSetTheme } from "@/stores";
+import { useTheme } from "@/theme";
+import { delay, FeatureFlag, logError } from "@/utils";
 
 const APP_BAR_HEIGHT = 60;
 
@@ -45,7 +45,7 @@ export default function ThemeSettingsScreen() {
       setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to set theme',
+        message: "Failed to set theme",
       });
     }
   };

@@ -3,10 +3,10 @@ import {
   PermissionResponse,
   PermissionStatus,
   requestRecordingPermissionsAsync,
-} from 'expo-audio';
-import * as Linking from 'expo-linking';
+} from "expo-audio";
+import * as Linking from "expo-linking";
 
-import { FeatureFlag, logError } from '@/utils';
+import { FeatureFlag, logError } from "@/utils";
 
 export interface RecordPermissionResult {
   granted: boolean;
@@ -26,7 +26,7 @@ const createPermissionService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Error getting permission status',
+        message: "Error getting permission status",
       });
       return {
         granted: false,
@@ -48,7 +48,7 @@ const createPermissionService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Error requesting microphone permission',
+        message: "Error requesting microphone permission",
       });
       return {
         granted: false,
@@ -74,7 +74,7 @@ const createPermissionService = () => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Error opening app settings',
+        message: "Error opening app settings",
       });
       return false;
     }

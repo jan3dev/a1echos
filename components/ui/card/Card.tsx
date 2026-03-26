@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { ReactNode } from "react";
+import { StyleSheet, View, ViewStyle } from "react-native";
 
-import { getShadow, ShadowKey, useTheme } from '@/theme';
+import { getShadow, ShadowKey, useTheme } from "@/theme";
 
 interface CardProps {
   children: ReactNode;
@@ -14,7 +14,7 @@ interface CardProps {
 export const Card = ({
   children,
   style,
-  shadow = 'card',
+  shadow = "card",
   borderRadius = 8,
   backgroundColor,
 }: CardProps) => {
@@ -38,6 +38,6 @@ export const Card = ({
 
 const styles = StyleSheet.create({
   clipContainer: {
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 });

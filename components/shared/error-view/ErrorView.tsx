@@ -1,11 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
-import { useLocalization } from '@/hooks';
-import { useTheme } from '@/theme';
+import { useLocalization } from "@/hooks";
+import { useTheme } from "@/theme";
 
-import { Button } from '../../ui/button/Button';
-import { Icon } from '../../ui/icon/Icon';
-import { Text } from '../../ui/text/Text';
+import { Button } from "../../ui/button/Button";
+import { Icon } from "../../ui/icon/Icon";
+import { Text } from "../../ui/text/Text";
 
 interface ErrorViewProps {
   errorMessage: string;
@@ -42,8 +42,8 @@ export const ErrorView = ({ errorMessage, onRetry }: ErrorViewProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   messageSpacing: {

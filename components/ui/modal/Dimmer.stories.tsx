@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useState } from "react";
+import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import { Dimmer, Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Dimmer, Text } from "@/components";
+import { useTheme } from "@/theme";
 
 export default {
-  title: 'UI Components/Dimmer',
+  title: "UI Components/Dimmer",
   component: Dimmer,
 };
 
@@ -93,21 +93,21 @@ export const AsOverlay = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   contentBox: {
     borderRadius: 16,
     padding: 24,
     minWidth: 280,
-    alignItems: 'center',
+    alignItems: "center",
   },
   spacing: {
     height: 12,

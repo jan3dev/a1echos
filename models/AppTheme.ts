@@ -1,29 +1,29 @@
 export enum AppTheme {
-  AUTO = 'auto',
-  LIGHT = 'light',
-  DARK = 'dark',
+  AUTO = "auto",
+  LIGHT = "light",
+  DARK = "dark",
 }
 
 export const getThemeName = (theme: AppTheme): string => {
   switch (theme) {
     case AppTheme.AUTO:
-      return 'auto';
+      return "auto";
     case AppTheme.LIGHT:
-      return 'light';
+      return "light";
     case AppTheme.DARK:
-      return 'dark';
+      return "dark";
     default:
-      return 'light';
+      return "light";
   }
 };
 
 export const getThemeByName = (name: string): AppTheme => {
   switch (name) {
-    case 'auto':
+    case "auto":
       return AppTheme.AUTO;
-    case 'light':
+    case "light":
       return AppTheme.LIGHT;
-    case 'dark':
+    case "dark":
       return AppTheme.DARK;
     default:
       return AppTheme.LIGHT;

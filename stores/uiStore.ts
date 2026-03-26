@@ -1,9 +1,9 @@
-import * as Crypto from 'expo-crypto';
-import { create } from 'zustand';
-import { useShallow } from 'zustand/shallow';
+import * as Crypto from "expo-crypto";
+import { create } from "zustand";
+import { useShallow } from "zustand/shallow";
 
-export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
-export type GlobalTooltipVariant = 'normal' | 'success' | 'warning' | 'error';
+export type ToastVariant = "info" | "success" | "warning" | "error";
+export type GlobalTooltipVariant = "normal" | "success" | "warning" | "error";
 
 export interface Toast {
   id: string;
@@ -44,7 +44,7 @@ interface UIStore {
   setRecordingControlsVisible: (visible: boolean) => void;
   setRecordingCallbacks: (
     onStart: (() => void) | null,
-    onStop: (() => void) | null
+    onStop: (() => void) | null,
   ) => void;
 
   toggleTranscriptionSelection: (id: string) => void;
@@ -57,7 +57,7 @@ interface UIStore {
   showToast: (
     message: string,
     variant?: ToastVariant,
-    duration?: number
+    duration?: number,
   ) => string;
   hideToast: (toastId: string) => void;
 
@@ -67,14 +67,14 @@ interface UIStore {
     duration?: number,
     isInfo?: boolean,
     isDismissible?: boolean,
-    action?: GlobalTooltipAction
+    action?: GlobalTooltipAction,
   ) => string;
   hideGlobalTooltip: () => void;
 }
 
 const toggleIdInSet = (
   currentSet: Set<string>,
-  id: string
+  id: string,
 ): { newSet: Set<string>; isSelectionMode: boolean } => {
   const newSet = new Set(currentSet);
 
@@ -115,7 +115,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   setRecordingCallbacks: (
     onStart: (() => void) | null,
-    onStop: (() => void) | null
+    onStop: (() => void) | null,
   ) => {
     set({ onRecordingStart: onStart, onRecordingStop: onStop });
   },
@@ -124,7 +124,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
     const state = get();
     const { newSet, isSelectionMode } = toggleIdInSet(
       state.selectedTranscriptionIds,
-      id
+      id,
     );
 
     set({
@@ -151,7 +151,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
     const state = get();
     const { newSet, isSelectionMode } = toggleIdInSet(
       state.selectedSessionIds,
-      id
+      id,
     );
 
     set({
@@ -169,8 +169,8 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   showToast: (
     message: string,
-    variant: ToastVariant = 'info',
-    duration?: number
+    variant: ToastVariant = "info",
+    duration?: number,
   ) => {
     const toastId = Crypto.randomUUID();
     const toast: Toast = {
@@ -193,11 +193,11 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   showGlobalTooltip: (
     message: string,
-    variant: GlobalTooltipVariant = 'normal',
+    variant: GlobalTooltipVariant = "normal",
     duration: number = DEFAULT_GLOBAL_TOOLTIP_DURATION,
     isInfo: boolean = false,
     isDismissible: boolean = false,
-    action?: GlobalTooltipAction
+    action?: GlobalTooltipAction,
   ) => {
     const tooltipId = Crypto.randomUUID();
     set({

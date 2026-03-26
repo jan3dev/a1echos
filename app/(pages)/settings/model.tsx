@@ -1,14 +1,14 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, Divider, ListItem, Radio, Text, TopAppBar } from '@/components';
-import { useLocalization } from '@/hooks';
-import { ModelType } from '@/models';
-import { useSelectedModelType, useSetModelType } from '@/stores';
-import { useTheme } from '@/theme';
-import { delay, FeatureFlag, logError } from '@/utils';
+import { Card, Divider, ListItem, Radio, Text, TopAppBar } from "@/components";
+import { useLocalization } from "@/hooks";
+import { ModelType } from "@/models";
+import { useSelectedModelType, useSetModelType } from "@/stores";
+import { useTheme } from "@/theme";
+import { delay, FeatureFlag, logError } from "@/utils";
 
 const APP_BAR_HEIGHT = 60;
 
@@ -47,7 +47,7 @@ export default function ModelSettingsScreen() {
       setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to set model type',
+        message: "Failed to set model type",
       });
     }
   };

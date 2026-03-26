@@ -1,12 +1,12 @@
-import { useLocalization } from '@/hooks';
-import { getCountryCode } from '@/models';
-import { useSelectedLanguage } from '@/stores';
-import { useTheme } from '@/theme';
+import { useLocalization } from "@/hooks";
+import { getCountryCode } from "@/models";
+import { useSelectedLanguage } from "@/stores";
+import { useTheme } from "@/theme";
 
-import { FlagIcon } from '../../ui/icon/FlagIcon';
-import { Icon } from '../../ui/icon/Icon';
-import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
-import { TopAppBar } from '../../ui/top-app-bar/TopAppBar';
+import { FlagIcon } from "../../ui/icon/FlagIcon";
+import { Icon } from "../../ui/icon/Icon";
+import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
+import { TopAppBar } from "../../ui/top-app-bar/TopAppBar";
 
 interface SessionAppBarProps {
   sessionName: string;
@@ -52,7 +52,8 @@ export const SessionAppBar = ({
           <RipplePressable
             onPress={onCancelEditPressed}
             hitSlop={10}
-            rippleColor={theme.colors.ripple} borderless
+            rippleColor={theme.colors.ripple}
+            borderless
           >
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
           </RipplePressable>
@@ -62,7 +63,8 @@ export const SessionAppBar = ({
             key="save"
             onPress={onSaveEditPressed}
             hitSlop={10}
-            rippleColor={theme.colors.ripple} borderless
+            rippleColor={theme.colors.ripple}
+            borderless
           >
             <Icon name="check" size={24} color={theme.colors.textPrimary} />
           </RipplePressable>,
@@ -81,7 +83,8 @@ export const SessionAppBar = ({
             key="select_all"
             onPress={onSelectAllPressed}
             hitSlop={10}
-            rippleColor={theme.colors.ripple} borderless
+            rippleColor={theme.colors.ripple}
+            borderless
           >
             <Icon
               name="select_all"
@@ -93,7 +96,8 @@ export const SessionAppBar = ({
             key="delete"
             onPress={onDeleteSelectedPressed}
             hitSlop={10}
-            rippleColor={theme.colors.ripple} borderless
+            rippleColor={theme.colors.ripple}
+            borderless
           >
             <Icon name="trash" size={24} color={theme.colors.textPrimary} />
           </RipplePressable>,
@@ -112,7 +116,8 @@ export const SessionAppBar = ({
           key="language"
           onPress={onLanguageFlagPressed}
           hitSlop={10}
-          rippleColor={theme.colors.ripple} borderless
+          rippleColor={theme.colors.ripple}
+          borderless
         >
           <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
         </RipplePressable>,
@@ -120,7 +125,8 @@ export const SessionAppBar = ({
           key="copy"
           onPress={onCopyAllPressed}
           hitSlop={10}
-          rippleColor={theme.colors.ripple} borderless
+          rippleColor={theme.colors.ripple}
+          borderless
           style={{ opacity: copyAllEnabled ? 1 : 0.5 }}
         >
           <Icon name="copy" size={24} color={theme.colors.textPrimary} />

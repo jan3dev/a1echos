@@ -1,10 +1,10 @@
-import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import { Icon, Modal, ModalVariant, useModal } from '@/components';
-import { useTheme } from '@/theme';
+import { Icon, Modal, ModalVariant, useModal } from "@/components";
+import { useTheme } from "@/theme";
 
 export default {
-  title: 'UI Components/Modal',
+  title: "UI Components/Modal",
   component: Modal,
 };
 
@@ -24,21 +24,21 @@ const ModalDemo = ({
 
   const handleShow = () => {
     show({
-      title: 'Modal Title',
-      message: 'This is a modal message with some descriptive text.',
+      title: "Modal Title",
+      message: "This is a modal message with some descriptive text.",
       messageTertiary: withTertiaryMessage
-        ? 'This is an important tertiary message'
+        ? "This is an important tertiary message"
         : undefined,
       primaryButton: {
-        text: 'Primary Action',
-        onTap: () => console.log('Primary tapped'),
-        variant: 'normal',
+        text: "Primary Action",
+        onTap: () => console.log("Primary tapped"),
+        variant: "normal",
       },
       secondaryButton: withSecondaryButton
         ? {
-            text: 'Secondary Action',
-            onTap: () => console.log('Secondary tapped'),
-            variant: 'normal',
+            text: "Secondary Action",
+            onTap: () => console.log("Secondary tapped"),
+            variant: "normal",
           }
         : undefined,
       icon: withIcon ? (
@@ -85,12 +85,12 @@ export const WithIllustration = () => {
 
   const handleShow = () => {
     show({
-      title: 'Welcome',
-      message: 'This modal has an illustration instead of an icon.',
+      title: "Welcome",
+      message: "This modal has an illustration instead of an icon.",
       primaryButton: {
-        text: 'Get Started',
-        onTap: () => console.log('Get started'),
-        variant: 'normal',
+        text: "Get Started",
+        onTap: () => console.log("Get started"),
+        variant: "normal",
       },
       illustration: (
         <View
@@ -99,8 +99,8 @@ export const WithIllustration = () => {
             height: 88,
             borderRadius: 44,
             backgroundColor: theme.colors.surfaceTertiary,
-            alignItems: 'center',
-            justifyContent: 'center',
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           <Icon name="warning" size={48} color={theme.colors.accentBrand} />
@@ -128,21 +128,21 @@ export const LongText = () => {
 
   const handleShow = () => {
     show({
-      title: 'This is a very long title that might wrap to multiple lines',
+      title: "This is a very long title that might wrap to multiple lines",
       message:
-        'This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to demonstrate the layout behavior in the modal.',
+        "This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to demonstrate the layout behavior in the modal.",
       primaryButton: {
-        text: 'Got it',
-        onTap: () => console.log('Got it'),
-        variant: 'normal',
+        text: "Got it",
+        onTap: () => console.log("Got it"),
+        variant: "normal",
       },
       secondaryButton: {
-        text: 'Cancel',
-        onTap: () => console.log('Cancel'),
-        variant: 'normal',
+        text: "Cancel",
+        onTap: () => console.log("Cancel"),
+        variant: "normal",
       },
       icon: <Icon name="warning" size={24} color={theme.colors.textPrimary} />,
-      iconVariant: 'warning',
+      iconVariant: "warning",
       titleMaxLines: 5,
       messageMaxLines: 10,
     });
@@ -167,21 +167,21 @@ export const DangerWithButtons = () => {
 
   const handleShow = () => {
     show({
-      title: 'Delete Account',
-      message: 'Are you sure you want to delete your account?',
-      messageTertiary: 'This action cannot be undone.',
+      title: "Delete Account",
+      message: "Are you sure you want to delete your account?",
+      messageTertiary: "This action cannot be undone.",
       primaryButton: {
-        text: 'Delete',
-        onTap: () => console.log('Delete confirmed'),
-        variant: 'error',
+        text: "Delete",
+        onTap: () => console.log("Delete confirmed"),
+        variant: "error",
       },
       secondaryButton: {
-        text: 'Cancel',
-        onTap: () => console.log('Cancel'),
-        variant: 'normal',
+        text: "Cancel",
+        onTap: () => console.log("Cancel"),
+        variant: "normal",
       },
       icon: <Icon name="danger" size={24} color={theme.colors.textPrimary} />,
-      iconVariant: 'danger',
+      iconVariant: "danger",
     });
   };
 
@@ -201,8 +201,8 @@ export const DangerWithButtons = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
 });

@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
 
 import {
   AppTheme,
@@ -7,15 +7,15 @@ import {
   ModelType,
   SpokenLanguage,
   SupportedLanguages,
-} from '@/models';
-import { FeatureFlag, logError } from '@/utils';
+} from "@/models";
+import { FeatureFlag, logError } from "@/utils";
 
 const STORAGE_KEYS = {
-  THEME: 'selectedTheme',
-  MODEL_TYPE: 'selected_model_type',
-  LANGUAGE: 'spoken_language',
-  INCOGNITO_MODE: 'incognito_mode',
-  INCOGNITO_EXPLAINER_SEEN: 'incognito_explainer_seen',
+  THEME: "selectedTheme",
+  MODEL_TYPE: "selected_model_type",
+  LANGUAGE: "spoken_language",
+  INCOGNITO_MODE: "incognito_mode",
+  INCOGNITO_EXPLAINER_SEEN: "incognito_explainer_seen",
 };
 
 interface SettingsStore {
@@ -69,11 +69,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           : getDefaultModelType()
         : getDefaultModelType();
       const selectedLanguage = languageValue
-        ? SupportedLanguages.findByCode(languageValue) ??
-          SupportedLanguages.defaultLanguage
+        ? (SupportedLanguages.findByCode(languageValue) ??
+          SupportedLanguages.defaultLanguage)
         : SupportedLanguages.defaultLanguage;
-      const isIncognitoMode = incognitoModeValue === 'true';
-      const hasSeenIncognitoExplainer = incognitoExplainerValue === 'true';
+      const isIncognitoMode = incognitoModeValue === "true";
+      const hasSeenIncognitoExplainer = incognitoExplainerValue === "true";
 
       set({
         selectedTheme,
@@ -85,7 +85,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to load settings',
+        message: "Failed to load settings",
       });
       set({
         selectedTheme: AppTheme.AUTO,
@@ -105,7 +105,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save theme',
+        message: "Failed to save theme",
       });
       set({ selectedTheme: previousTheme });
       throw error;
@@ -120,7 +120,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save model type',
+        message: "Failed to save model type",
       });
       set({ selectedModelType: previousModelType });
       throw error;
@@ -135,7 +135,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save language',
+        message: "Failed to save language",
       });
       set({ selectedLanguage: previousLanguage });
       throw error;
@@ -148,12 +148,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(
         STORAGE_KEYS.INCOGNITO_MODE,
-        enabled.toString()
+        enabled.toString(),
       );
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save incognito mode',
+        message: "Failed to save incognito mode",
       });
       set({ isIncognitoMode: previousValue });
       throw error;
@@ -163,11 +163,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   markIncognitoExplainerSeen: async () => {
     set({ hasSeenIncognitoExplainer: true });
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN, 'true');
+      await AsyncStorage.setItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN, "true");
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save incognito explainer flag',
+        message: "Failed to save incognito explainer flag",
       });
     }
   },

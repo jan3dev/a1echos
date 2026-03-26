@@ -1,8 +1,8 @@
-import { ReactNode, useCallback, useState } from 'react';
+import { ReactNode, useCallback, useState } from "react";
 
-import { ButtonVariant } from '../button/Button';
+import { ButtonVariant } from "../button/Button";
 
-import { ModalVariant } from './Modal';
+import { ModalVariant } from "./Modal";
 
 export interface ModalOptions {
   title: string;
@@ -32,17 +32,17 @@ interface ModalState extends ModalOptions {
 export const useModal = () => {
   const [modalState, setModalState] = useState<ModalState>({
     visible: false,
-    title: '',
-    message: '',
+    title: "",
+    message: "",
     primaryButton: {
-      text: '',
+      text: "",
       onTap: () => {},
-      variant: 'normal',
+      variant: "normal",
     },
     secondaryButton: {
-      text: '',
+      text: "",
       onTap: () => {},
-      variant: 'normal',
+      variant: "normal",
     },
   });
 

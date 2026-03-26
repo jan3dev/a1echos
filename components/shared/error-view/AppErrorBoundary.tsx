@@ -1,8 +1,8 @@
-import { Component, ReactNode } from 'react';
+import { Component, ReactNode } from "react";
 
-import { FeatureFlag, logError } from '@/utils';
+import { FeatureFlag, logError } from "@/utils";
 
-import { ErrorView } from './ErrorView';
+import { ErrorView } from "./ErrorView";
 
 interface Props {
   children: ReactNode;
@@ -14,7 +14,7 @@ interface State {
 }
 
 export class AppErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, errorMessage: '' };
+  state: State = { hasError: false, errorMessage: "" };
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, errorMessage: error.message };
@@ -23,13 +23,13 @@ export class AppErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     logError(error, {
       flag: FeatureFlag.ui,
-      message: 'React render error',
+      message: "React render error",
       stack: info.componentStack ?? undefined,
     });
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, errorMessage: '' });
+    this.setState({ hasError: false, errorMessage: "" });
   };
 
   render() {

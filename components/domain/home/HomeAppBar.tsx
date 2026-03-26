@@ -1,14 +1,14 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from "expo-router";
+import { useState } from "react";
 
-import { useSettingsStore } from '@/stores';
-import { useTheme } from '@/theme';
+import { useSettingsStore } from "@/stores";
+import { useTheme } from "@/theme";
 
-import { Icon } from '../../ui/icon/Icon';
-import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
-import { TopAppBar } from '../../ui/top-app-bar/TopAppBar';
+import { Icon } from "../../ui/icon/Icon";
+import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
+import { TopAppBar } from "../../ui/top-app-bar/TopAppBar";
 
-import { IncognitoExplainerModal } from './IncognitoExplainerModal';
+import { IncognitoExplainerModal } from "./IncognitoExplainerModal";
 
 interface HomeAppBarProps {
   selectionMode: boolean;
@@ -110,7 +110,7 @@ export const HomeAppBar = ({
       </RipplePressable>,
       <RipplePressable
         key="settings"
-        onPress={() => router.push('/settings' as any)}
+        onPress={() => router.push("/settings" as any)}
         hitSlop={10}
         rippleColor={theme.colors.ripple}
         borderless

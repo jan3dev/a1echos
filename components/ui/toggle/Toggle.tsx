@@ -1,14 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 import {
   AccessibilityProps,
   Animated,
   Platform,
   StyleSheet,
-} from 'react-native';
+} from "react-native";
 
-import { AquaPrimitiveColors, useTheme } from '@/theme';
+import { AquaPrimitiveColors, useTheme } from "@/theme";
 
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
 interface ToggleProps {
   value: boolean;
@@ -90,7 +90,7 @@ export const Toggle = ({
               shadowColor: AquaPrimitiveColors.black,
               shadowOffset: {
                 width: 0,
-                height: Platform.OS === 'android' ? 2 : shadowOffsetY,
+                height: Platform.OS === "android" ? 2 : shadowOffsetY,
               },
               shadowOpacity: 1,
               shadowRadius: 4,
@@ -108,10 +108,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   thumb: {
-    position: 'absolute',
+    position: "absolute",
     width: 20,
     height: 20,
     borderRadius: 10,

@@ -1,16 +1,16 @@
-declare module '*.svg' {
-  import { FC } from 'react';
-  import { SvgProps } from 'react-native-svg';
+declare module "*.svg" {
+  import { FC } from "react";
+  import { SvgProps } from "react-native-svg";
   const content: FC<SvgProps>;
   export default content;
 }
 
-declare module '*.bin' {
+declare module "*.bin" {
   const content: ArrayBuffer;
   export default content;
 }
 
-declare module 'whisper.rn' {
+declare module "whisper.rn" {
   export interface TranscribeOptions {
     language?: string;
     translate?: boolean;
@@ -45,7 +45,7 @@ declare module 'whisper.rn' {
     nNew: number;
     totalNNew: number;
     result: string;
-    segments: TranscribeResult['segments'];
+    segments: TranscribeResult["segments"];
   }
 
   export interface VadOptions {
@@ -86,11 +86,11 @@ declare module 'whisper.rn' {
     reasonNoGPU: string;
     transcribe(
       filePathOrBase64: string | number,
-      options?: TranscribeFileOptions
+      options?: TranscribeFileOptions,
     ): { stop: () => Promise<void>; promise: Promise<TranscribeResult> };
     transcribeData(
       data: string | ArrayBuffer,
-      options?: TranscribeFileOptions
+      options?: TranscribeFileOptions,
     ): { stop: () => Promise<void>; promise: Promise<TranscribeResult> };
     bench(maxThreads: number): Promise<{
       config: string;
@@ -109,24 +109,24 @@ declare module 'whisper.rn' {
     reasonNoGPU: string;
     detectSpeech(
       filePathOrBase64: string | number,
-      options?: VadOptions
+      options?: VadOptions,
     ): Promise<VadSegment[]>;
     detectSpeechData(
       audioData: string | ArrayBuffer,
-      options?: VadOptions
+      options?: VadOptions,
     ): Promise<VadSegment[]>;
     release(): Promise<void>;
   }
 
   export function initWhisper(options: ContextOptions): Promise<WhisperContext>;
   export function initWhisperVad(
-    options: VadContextOptions
+    options: VadContextOptions,
   ): Promise<WhisperVadContext>;
   export function releaseAllWhisper(): Promise<void>;
   export function releaseAllWhisperVad(): Promise<void>;
   export function toggleNativeLog(enabled: boolean): Promise<void>;
   export function addNativeLogListener(
-    listener: (level: string, text: string) => void
+    listener: (level: string, text: string) => void,
   ): { remove: () => void };
 
   export const libVersion: string;
@@ -134,14 +134,14 @@ declare module 'whisper.rn' {
   export const isCoreMLAllowFallback: boolean;
 }
 
-declare module 'whisper.rn/src/realtime-transcription' {
+declare module "whisper.rn/src/realtime-transcription" {
   import type {
     TranscribeOptions,
     TranscribeResult,
     VadOptions,
     WhisperContext,
     WhisperVadContext,
-  } from 'whisper.rn';
+  } from "whisper.rn";
 
   export interface AudioStreamData {
     data: Uint8Array;
@@ -170,7 +170,7 @@ declare module 'whisper.rn/src/realtime-transcription' {
   }
 
   export interface RealtimeVadEvent {
-    type: 'speech_start' | 'speech_end' | 'speech_continue' | 'silence';
+    type: "speech_start" | "speech_end" | "speech_continue" | "silence";
     timestamp: number;
     lastSpeechDetectedTime: number;
     confidence: number;
@@ -187,7 +187,7 @@ declare module 'whisper.rn/src/realtime-transcription' {
   }
 
   export interface RealtimeTranscribeEvent {
-    type: 'start' | 'transcribe' | 'end' | 'error';
+    type: "start" | "transcribe" | "end" | "error";
     sliceIndex: number;
     data?: TranscribeResult;
     isCapturing: boolean;
@@ -203,7 +203,7 @@ declare module 'whisper.rn/src/realtime-transcription' {
 
   export interface RealtimeStatsEvent {
     timestamp: number;
-    type: 'slice_processed' | 'vad_change' | 'memory_change' | 'status_change';
+    type: "slice_processed" | "vad_change" | "memory_change" | "status_change";
     data: {
       isActive: boolean;
       isTranscribing: boolean;
@@ -220,14 +220,14 @@ declare module 'whisper.rn/src/realtime-transcription' {
     maxSlicesInMemory?: number;
     vadOptions?: VadOptions;
     vadPreset?:
-      | 'default'
-      | 'sensitive'
-      | 'very-sensitive'
-      | 'conservative'
-      | 'very-conservative'
-      | 'continuous'
-      | 'meeting'
-      | 'noisy';
+      | "default"
+      | "sensitive"
+      | "very-sensitive"
+      | "conservative"
+      | "very-conservative"
+      | "continuous"
+      | "meeting"
+      | "noisy";
     autoSliceOnSpeechEnd?: boolean;
     autoSliceThreshold?: number;
     vadThrottleMs?: number;
@@ -269,7 +269,7 @@ declare module 'whisper.rn/src/realtime-transcription' {
     isReleased: boolean;
   }
 
-  export type AudioSliceNoData = Omit<AudioSlice, 'data'>;
+  export type AudioSliceNoData = Omit<AudioSlice, "data">;
 
   export interface MemoryUsage {
     slicesInMemory: number;
@@ -281,12 +281,12 @@ declare module 'whisper.rn/src/realtime-transcription' {
     writeFile(
       filepath: string,
       contents: string,
-      encoding?: string
+      encoding?: string,
     ): Promise<void>;
     appendFile(
       filepath: string,
       contents: string,
-      encoding?: string
+      encoding?: string,
     ): Promise<void>;
     unlink(filepath: string): Promise<void>;
     exists(filepath: string): Promise<boolean>;
@@ -295,14 +295,14 @@ declare module 'whisper.rn/src/realtime-transcription' {
   type WhisperContextLike = {
     transcribeData(
       data: ArrayBuffer,
-      options: TranscribeOptions
+      options: TranscribeOptions,
     ): { stop: () => Promise<void>; promise: Promise<TranscribeResult> };
   };
 
   type WhisperVadContextLike = {
     detectSpeechData(
       data: ArrayBuffer,
-      options: VadOptions
+      options: VadOptions,
     ): Promise<{ t0: number; t1: number }[]>;
   };
 
@@ -317,7 +317,7 @@ declare module 'whisper.rn/src/realtime-transcription' {
     constructor(
       dependencies: RealtimeTranscriberDependencies,
       options?: RealtimeOptions,
-      callbacks?: RealtimeTranscriberCallbacks
+      callbacks?: RealtimeTranscriberCallbacks,
     );
     start(): Promise<void>;
     stop(): Promise<void>;
@@ -366,21 +366,21 @@ declare module 'whisper.rn/src/realtime-transcription' {
   export const VAD_PRESETS: {
     default: VadOptions;
     sensitive: VadOptions;
-    'very-sensitive': VadOptions;
+    "very-sensitive": VadOptions;
     conservative: VadOptions;
-    'very-conservative': VadOptions;
+    "very-conservative": VadOptions;
     continuous: VadOptions;
     meeting: VadOptions;
     noisy: VadOptions;
   };
 }
 
-declare module 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter' {
+declare module "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter" {
   import type {
     AudioStreamConfig,
     AudioStreamData,
     AudioStreamInterface,
-  } from 'whisper.rn/src/realtime-transcription';
+  } from "whisper.rn/src/realtime-transcription";
 
   export class AudioPcmStreamAdapter implements AudioStreamInterface {
     initialize(config: AudioStreamConfig): Promise<void>;
@@ -394,12 +394,12 @@ declare module 'whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAda
   }
 }
 
-declare module '@fugood/react-native-audio-pcm-stream' {
+declare module "@fugood/react-native-audio-pcm-stream" {
   export interface IAudioRecord {
     init: (options: Options) => void;
     start: () => void;
     stop: () => Promise<string>;
-    on: (event: 'data', callback: (data: string) => void) => void;
+    on: (event: "data", callback: (data: string) => void) => void;
   }
 
   export interface Options {
@@ -415,7 +415,7 @@ declare module '@fugood/react-native-audio-pcm-stream' {
   export default AudioRecord;
 }
 
-declare module '@supersami/rn-foreground-service' {
+declare module "@supersami/rn-foreground-service" {
   interface RegisterConfig {
     config: {
       alert: boolean;
@@ -424,19 +424,19 @@ declare module '@supersami/rn-foreground-service' {
   }
 
   type ForegroundServiceType =
-    | 'camera'
-    | 'connectedDevice'
-    | 'dataSync'
-    | 'health'
-    | 'location'
-    | 'mediaPlayback'
-    | 'mediaProjection'
-    | 'microphone'
-    | 'phoneCall'
-    | 'remoteMessaging'
-    | 'shortService'
-    | 'specialUse'
-    | 'systemExempted';
+    | "camera"
+    | "connectedDevice"
+    | "dataSync"
+    | "health"
+    | "location"
+    | "mediaPlayback"
+    | "mediaProjection"
+    | "microphone"
+    | "phoneCall"
+    | "remoteMessaging"
+    | "shortService"
+    | "specialUse"
+    | "systemExempted";
 
   interface StartConfig {
     id: number;

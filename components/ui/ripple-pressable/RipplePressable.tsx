@@ -1,15 +1,15 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 import {
   Platform,
   Pressable,
   PressableProps,
   TouchableNativeFeedback,
   View,
-} from 'react-native';
+} from "react-native";
 
 type RipplePressableProps = Omit<
   PressableProps,
-  'android_ripple' | 'children'
+  "android_ripple" | "children"
 > & {
   rippleColor?: string;
   borderless?: boolean;
@@ -23,9 +23,9 @@ export const RipplePressable = ({
   style,
   ...rest
 }: RipplePressableProps) => {
-  if (Platform.OS === 'android' && rippleColor) {
+  if (Platform.OS === "android" && rippleColor) {
     const resolvedStyle =
-      typeof style === 'function'
+      typeof style === "function"
         ? style({ pressed: false, hovered: false })
         : style;
 

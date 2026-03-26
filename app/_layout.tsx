@@ -1,25 +1,25 @@
-import '@/localization';
-import MaskedView from '@react-native-masked-view/masked-view';
-import { BlurView } from 'expo-blur';
-import { useFonts } from 'expo-font';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, usePathname } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import "@/localization";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { BlurView } from "expo-blur";
+import { useFonts } from "expo-font";
+import { LinearGradient } from "expo-linear-gradient";
+import { Stack, usePathname } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppErrorBoundary,
   Icon,
   RecordingControlsView,
   Tooltip,
-} from '@/components';
-import { useBackgroundRecording } from '@/hooks';
-import { AppTheme } from '@/models';
-import { registerForegroundService, storageService } from '@/services';
+} from "@/components";
+import { useBackgroundRecording } from "@/hooks";
+import { AppTheme } from "@/models";
+import { registerForegroundService, storageService } from "@/services";
 import {
   initializeSessionStore,
   initializeSettingsStore,
@@ -31,15 +31,15 @@ import {
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useTranscriptionState,
-} from '@/stores';
-import { useTheme, useThemeStore } from '@/theme';
-import { FeatureFlag, logError } from '@/utils';
+} from "@/stores";
+import { useTheme, useThemeStore } from "@/theme";
+import { FeatureFlag, logError } from "@/utils";
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
 
 // Register Android foreground service early (async, fire-and-forget)
-if (Platform.OS === 'android') {
+if (Platform.OS === "android") {
   registerForegroundService();
 }
 
@@ -47,7 +47,7 @@ declare const global: {
   ErrorUtils?: {
     getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
     setGlobalHandler: (
-      handler: (error: Error, isFatal?: boolean) => void
+      handler: (error: Error, isFatal?: boolean) => void,
     ) => void;
   };
 };
@@ -62,16 +62,16 @@ function installGlobalErrorHandler() {
   global.ErrorUtils.setGlobalHandler((error, isFatal) => {
     logError(error, {
       flag: FeatureFlag.general,
-      message: 'Unhandled JS error',
+      message: "Unhandled JS error",
     });
     previousHandler?.(error, isFatal);
   });
 }
 
-const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
+const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
 export const unstable_settings = {
-  initialRouteName: StorybookEnabled ? '(storybook)/index' : '(pages)/index',
+  initialRouteName: StorybookEnabled ? "(storybook)/index" : "(pages)/index",
 };
 
 function GlobalTooltipRenderer() {
@@ -112,12 +112,12 @@ function GlobalTooltipRenderer() {
   return (
     <View
       style={[styles.globalTooltipContainer, { bottom: insets.bottom }]}
-      pointerEvents={isDismissible || hasAction ? 'auto' : 'none'}
+      pointerEvents={isDismissible || hasAction ? "auto" : "none"}
     >
       <Tooltip
         visible={!!tooltip}
-        message={tooltip?.message ?? ''}
-        variant={tooltip?.variant ?? 'normal'}
+        message={tooltip?.message ?? ""}
+        variant={tooltip?.variant ?? "normal"}
         pointerPosition="none"
         isInfo={tooltip?.isInfo ?? false}
         isDismissible={isDismissible}
@@ -126,7 +126,7 @@ function GlobalTooltipRenderer() {
         leadingIcon={
           hasAction ? (
             <Icon
-              name={tooltip?.action?.iconName ?? 'settings'}
+              name={tooltip?.action?.iconName ?? "settings"}
               size={18}
               color={theme.colors.textInverse}
             />
@@ -153,7 +153,7 @@ function GlobalRecordingControls() {
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
   const visible = useRecordingControlsVisible();
-  const blurTint = currentTheme === AppTheme.DARK ? 'dark' : 'light';
+  const blurTint = currentTheme === AppTheme.DARK ? "dark" : "light";
 
   const handleRecordingStart = useCallback(() => {
     onRecordingStart?.();
@@ -164,7 +164,7 @@ function GlobalRecordingControls() {
   }, [onRecordingStop]);
 
   const isOnRecordingScreen =
-    pathname === '/' || pathname.startsWith('/session/');
+    pathname === "/" || pathname.startsWith("/session/");
 
   if (!visible || !isOnRecordingScreen) {
     return null;
@@ -185,14 +185,14 @@ function GlobalRecordingControls() {
         androidRenderingMode="software"
         maskElement={
           <LinearGradient
-            colors={['transparent', 'black', 'black']}
+            colors={["transparent", "black", "black"]}
             locations={[0, fadeStop, 1]}
             style={StyleSheet.absoluteFill}
           />
         }
         pointerEvents="none"
       >
-        {Platform.OS === 'ios' ? (
+        {Platform.OS === "ios" ? (
           <BlurView
             intensity={20}
             tint={blurTint}
@@ -227,12 +227,12 @@ function GlobalRecordingControls() {
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
-    Manrope: require('@/assets/fonts/Manrope-Regular.ttf'),
-    'Manrope-Medium': require('@/assets/fonts/Manrope-Medium.ttf'),
-    'Manrope-SemiBold': require('@/assets/fonts/Manrope-SemiBold.ttf'),
-    PublicSans: require('@/assets/fonts/PublicSans-Regular.ttf'),
-    'PublicSans-Medium': require('@/assets/fonts/PublicSans-Medium.ttf'),
-    'PublicSans-SemiBold': require('@/assets/fonts/PublicSans-SemiBold.ttf'),
+    Manrope: require("@/assets/fonts/Manrope-Regular.ttf"),
+    "Manrope-Medium": require("@/assets/fonts/Manrope-Medium.ttf"),
+    "Manrope-SemiBold": require("@/assets/fonts/Manrope-SemiBold.ttf"),
+    PublicSans: require("@/assets/fonts/PublicSans-Regular.ttf"),
+    "PublicSans-Medium": require("@/assets/fonts/PublicSans-Medium.ttf"),
+    "PublicSans-SemiBold": require("@/assets/fonts/PublicSans-SemiBold.ttf"),
   });
 
   const initTheme = useThemeStore((state) => state.initTheme);
@@ -262,7 +262,7 @@ export default function RootLayout() {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.general,
-          message: 'Failed to initialize app',
+          message: "Failed to initialize app",
         });
         // Still mark as ready to allow the app to render
         // Individual stores handle their own error states
@@ -284,7 +284,7 @@ export default function RootLayout() {
     if (fontError) {
       logError(fontError, {
         flag: FeatureFlag.ui,
-        message: 'Error loading fonts',
+        message: "Error loading fonts",
       });
     }
   }, [fontError]);
@@ -301,11 +301,11 @@ export default function RootLayout() {
         onLayout={onLayoutRootView}
       >
         <StatusBar
-          style={isDark ? 'light' : 'dark'}
+          style={isDark ? "light" : "dark"}
           backgroundColor="transparent"
           translucent
         />
-        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(storybook)/index" />
         </Stack>
       </GestureHandlerRootView>
@@ -320,11 +320,11 @@ export default function RootLayout() {
       >
         <BackgroundRecordingHandler />
         <StatusBar
-          style={isDark ? 'light' : 'dark'}
+          style={isDark ? "light" : "dark"}
           backgroundColor="transparent"
           translucent
         />
-        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(pages)/index" />
         </Stack>
         <GlobalRecordingControls />
@@ -336,13 +336,13 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   globalTooltipContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
     right: 16,
     zIndex: 9999,
   },
   recordingControls: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,

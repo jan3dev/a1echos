@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
-import { ComponentProps, ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react-native";
+import { ComponentProps, ReactNode } from "react";
+import { View } from "react-native";
 
-import { RecordingButton } from '@/components';
-import { TranscriptionState } from '@/models';
-import { useTheme } from '@/theme';
+import { RecordingButton } from "@/components";
+import { TranscriptionState } from "@/models";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -12,8 +12,8 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
     <View
       style={{
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
         backgroundColor: theme.colors.surfaceBackground,
       }}
     >
@@ -23,11 +23,11 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const RecordingButtonMeta: Meta<typeof RecordingButton> = {
-  title: 'Shared Components/RecordingButton',
+  title: "Shared Components/RecordingButton",
   component: RecordingButton,
   argTypes: {
     state: {
-      control: 'select',
+      control: "select",
       options: [
         TranscriptionState.READY,
         TranscriptionState.RECORDING,
@@ -36,10 +36,10 @@ const RecordingButtonMeta: Meta<typeof RecordingButton> = {
       ],
     },
     enabled: {
-      control: 'boolean',
+      control: "boolean",
     },
     size: {
-      control: { type: 'range', min: 48, max: 120, step: 4 },
+      control: { type: "range", min: 48, max: 120, step: 4 },
     },
   },
   decorators: [
@@ -56,7 +56,7 @@ export default RecordingButtonMeta;
 type Story = StoryObj<typeof RecordingButton>;
 
 const DynamicRecordingButton = (
-  props: Omit<ComponentProps<typeof RecordingButton>, 'colors'>
+  props: Omit<ComponentProps<typeof RecordingButton>, "colors">,
 ) => {
   const { theme } = useTheme();
   return <RecordingButton {...props} colors={theme.colors} />;
@@ -67,7 +67,7 @@ export const Ready: Story = {
     <DynamicRecordingButton
       state={TranscriptionState.READY}
       enabled={true}
-      onRecordingStart={() => console.log('Recording started')}
+      onRecordingStart={() => console.log("Recording started")}
     />
   ),
 };
@@ -77,7 +77,7 @@ export const Recording: Story = {
     <DynamicRecordingButton
       state={TranscriptionState.RECORDING}
       enabled={true}
-      onRecordingStop={() => console.log('Recording stopped')}
+      onRecordingStop={() => console.log("Recording stopped")}
     />
   ),
 };

@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ReactNode } from "react";
+import { View } from "react-native";
 
-import { Icon, ListItem, Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Icon, ListItem, Text } from "@/components";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -21,7 +21,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'Shared Components/ListItem',
+  title: "Shared Components/ListItem",
   component: ListItem,
   decorators: [
     (Story) => (
@@ -38,16 +38,16 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    title: 'List Item Title',
-    onPress: () => console.log('Pressed'),
+    title: "List Item Title",
+    onPress: () => console.log("Pressed"),
   },
 };
 
 export const WithSubtitle: Story = {
   args: {
-    title: 'Transaction Sent',
-    subtitle: 'Yesterday, 10:30 AM',
-    onPress: () => console.log('Pressed'),
+    title: "Transaction Sent",
+    subtitle: "Yesterday, 10:30 AM",
+    onPress: () => console.log("Pressed"),
   },
 };
 
@@ -60,14 +60,14 @@ const WithLeadingIconContent = () => {
       iconLeading={
         <Icon name="shield" size={24} color={theme.colors.accentBrand} />
       }
-      onPress={() => console.log('Pressed')}
+      onPress={() => console.log("Pressed")}
     />
   );
 };
 
 export const WithLeadingIcon: Story = {
   args: {
-    title: 'Security',
+    title: "Security",
   },
   render: () => <WithLeadingIconContent />,
 };
@@ -88,14 +88,14 @@ const WithTrailingIconContent = () => {
           color={theme.colors.textSecondary}
         />
       }
-      onPress={() => console.log('Pressed')}
+      onPress={() => console.log("Pressed")}
     />
   );
 };
 
 export const WithTrailingIcon: Story = {
   args: {
-    title: 'Language',
+    title: "Language",
   },
   render: () => <WithTrailingIconContent />,
 };
@@ -110,14 +110,14 @@ const WithTrailingTextContent = () => {
       subtitleTrailing="+2.5%"
       subtitleTrailingColor={theme.colors.accentSuccess}
       iconLeading={<Icon name="bitcoin_generic" size={32} color="#F7931A" />}
-      onPress={() => console.log('Pressed')}
+      onPress={() => console.log("Pressed")}
     />
   );
 };
 
 export const WithTrailingText: Story = {
   args: {
-    title: 'Bitcoin',
+    title: "Bitcoin",
   },
   render: () => <WithTrailingTextContent />,
 };
@@ -132,14 +132,14 @@ const SelectedContent = () => {
       iconLeading={
         <Icon name="check_circle" size={24} color={theme.colors.accentBrand} />
       }
-      onPress={() => console.log('Pressed')}
+      onPress={() => console.log("Pressed")}
     />
   );
 };
 
 export const Selected: Story = {
   args: {
-    title: 'Selected Item',
+    title: "Selected Item",
   },
   render: () => <SelectedContent />,
 };
@@ -152,9 +152,9 @@ const WithCustomContentContent = () => {
       iconLeading={
         <Icon name="warning" size={24} color={theme.colors.accentDanger} />
       }
-      onPress={() => console.log('Pressed')}
+      onPress={() => console.log("Pressed")}
       contentWidget={
-        <View style={{ flexDirection: 'row', marginTop: 4 }}>
+        <View style={{ flexDirection: "row", marginTop: 4 }}>
           <View
             style={{
               backgroundColor: theme.colors.chipErrorBackgroundColor,
@@ -185,7 +185,7 @@ const WithCustomContentContent = () => {
 
 export const WithCustomContent: Story = {
   args: {
-    title: 'Custom Content',
+    title: "Custom Content",
   },
   render: () => <WithCustomContentContent />,
 };

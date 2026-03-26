@@ -1,21 +1,21 @@
-import { ReactNode } from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ReactNode } from "react";
+import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
-import { AquaTypography, getShadow, lightColors, useTheme } from '@/theme';
-import { iosPressed } from '@/utils';
+import { AquaTypography, getShadow, lightColors, useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { ProgressIndicator } from '../progress/ProgressIndicator';
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
+import { ProgressIndicator } from "../progress/ProgressIndicator";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
-export type ButtonSize = 'large' | 'small';
-export type ButtonVariant = 'normal' | 'error' | 'success' | 'warning';
+export type ButtonSize = "large" | "small";
+export type ButtonVariant = "normal" | "error" | "success" | "warning";
 
 type ButtonType =
-  | 'primary'
-  | 'secondary'
-  | 'tertiary'
-  | 'utility'
-  | 'utilitySecondary';
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "utility"
+  | "utilitySecondary";
 
 interface BaseButtonProps {
   text: string;
@@ -46,8 +46,8 @@ const ButtonBase = ({
   icon,
   isLoading,
   enabled = true,
-  size = 'large',
-  variant = 'normal',
+  size = "large",
+  variant = "normal",
   type,
 }: BaseButtonProps & {
   size?: ButtonSize;
@@ -58,13 +58,13 @@ const ButtonBase = ({
   const colors = theme.colors;
 
   const isSmall =
-    size === 'small' || type === 'utility' || type === 'utilitySecondary';
+    size === "small" || type === "utility" || type === "utilitySecondary";
   const height = isSmall ? BUTTON_HEIGHT_SMALL : BUTTON_HEIGHT_LARGE;
-  const isUtility = type === 'utility' || type === 'utilitySecondary';
+  const isUtility = type === "utility" || type === "utilitySecondary";
 
   const getBackgroundColor = (pressed: boolean) => {
     if (!enabled) {
-      if (type === 'primary') {
+      if (type === "primary") {
         const variantColor = {
           error: colors.accentDanger,
           success: colors.accentSuccess,
@@ -73,25 +73,25 @@ const ButtonBase = ({
         }[variant];
         return `${variantColor}80`;
       }
-      if (type === 'secondary') {
-        return variant === 'normal'
+      if (type === "secondary") {
+        return variant === "normal"
           ? `${colors.accentBrand}14`
-          : variant === 'error'
+          : variant === "error"
             ? `${colors.accentDanger}14`
-            : variant === 'success'
+            : variant === "success"
               ? `${colors.accentSuccess}14`
               : `${colors.accentWarning}14`;
       }
-      if (type === 'utility') {
+      if (type === "utility") {
         return `${colors.surfacePrimary}80`;
       }
-      if (type === 'utilitySecondary') {
+      if (type === "utilitySecondary") {
         return `${colors.surfaceTertiary}80`;
       }
-      return 'transparent';
+      return "transparent";
     }
 
-    if (type === 'primary') {
+    if (type === "primary") {
       return {
         error: colors.accentDanger,
         success: colors.accentSuccess,
@@ -100,36 +100,36 @@ const ButtonBase = ({
       }[variant];
     }
 
-    if (type === 'secondary') {
-      return variant === 'normal'
+    if (type === "secondary") {
+      return variant === "normal"
         ? colors.accentBrandTransparent
-        : variant === 'error'
+        : variant === "error"
           ? colors.accentDangerTransparent
-          : variant === 'success'
+          : variant === "success"
             ? colors.accentSuccessTransparent
             : colors.accentWarningTransparent;
     }
 
-    if (type === 'tertiary') {
-      return pressed ? `${colors.surfaceTertiary}80` : 'transparent';
+    if (type === "tertiary") {
+      return pressed ? `${colors.surfaceTertiary}80` : "transparent";
     }
 
-    if (type === 'utility') {
+    if (type === "utility") {
       return colors.surfacePrimary;
     }
 
-    if (type === 'utilitySecondary') {
+    if (type === "utilitySecondary") {
       return colors.surfaceTertiary;
     }
 
-    return 'transparent';
+    return "transparent";
   };
 
   const getTextColor = () => {
-    if (type === 'primary') {
+    if (type === "primary") {
       return lightColors.textInverse;
     }
-    if (type === 'secondary') {
+    if (type === "secondary") {
       return {
         error: colors.accentDanger,
         success: colors.accentSuccess,
@@ -141,10 +141,10 @@ const ButtonBase = ({
   };
 
   const getSpinnerColor = () => {
-    if (type === 'primary') {
+    if (type === "primary") {
       return lightColors.textInverse;
     }
-    if (type === 'secondary') {
+    if (type === "secondary") {
       return colors.accentBrand;
     }
     return colors.textPrimary;
@@ -157,7 +157,7 @@ const ButtonBase = ({
   const horizontalPadding = isUtility ? 14 : 24;
 
   const shadowStyle: ViewStyle | undefined =
-    type === 'utility' ? getShadow('button') : undefined;
+    type === "utility" ? getShadow("button") : undefined;
 
   const buttonContent = (
     <RipplePressable
@@ -166,7 +166,7 @@ const ButtonBase = ({
       accessibilityRole="button"
       accessibilityLabel={text}
       accessibilityState={{ disabled: !enabled }}
-      rippleColor={type === 'primary' ? colors.rippleOnPrimary : colors.ripple}
+      rippleColor={type === "primary" ? colors.rippleOnPrimary : colors.ripple}
       style={({ pressed }) => [
         styles.button,
         {
@@ -219,7 +219,7 @@ const ButtonBase = ({
           shadowStyle,
           {
             borderRadius: BUTTON_BORDER_RADIUS,
-            alignSelf: 'stretch',
+            alignSelf: "stretch",
           },
         ]}
       >
@@ -256,20 +256,20 @@ export const Button = {
 
 const styles = StyleSheet.create({
   button: {
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignSelf: "stretch",
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     minWidth: 120,
   },
   loadingContainer: {
     minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   utilityPadding: {
     paddingHorizontal: 2,

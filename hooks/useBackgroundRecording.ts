@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { useEffect, useRef } from "react";
+import { AppState, AppStateStatus } from "react-native";
 
-import { audioService } from '@/services';
-import { useTranscriptionStore } from '@/stores';
+import { audioService } from "@/services";
+import { useTranscriptionStore } from "@/stores";
 
 export const useBackgroundRecording = () => {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -17,8 +17,8 @@ export const useBackgroundRecording = () => {
 
       // App going to background - pause amplitude monitoring to save resources
       if (
-        previousState === 'active' &&
-        (nextAppState === 'background' || nextAppState === 'inactive')
+        previousState === "active" &&
+        (nextAppState === "background" || nextAppState === "inactive")
       ) {
         if (isRecording) {
           audioService.pauseAmplitudeMonitoring();
@@ -27,8 +27,8 @@ export const useBackgroundRecording = () => {
 
       // App came to foreground - resume amplitude monitoring after brief delay
       if (
-        (previousState === 'background' || previousState === 'inactive') &&
-        nextAppState === 'active'
+        (previousState === "background" || previousState === "inactive") &&
+        nextAppState === "active"
       ) {
         if (isRecording) {
           setTimeout(() => {
@@ -39,8 +39,8 @@ export const useBackgroundRecording = () => {
     };
 
     const subscription = AppState.addEventListener(
-      'change',
-      handleAppStateChange
+      "change",
+      handleAppStateChange,
     );
 
     return () => {

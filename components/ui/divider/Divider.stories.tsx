@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react-native';
-import { ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react-native";
+import { ReactNode } from "react";
+import { View } from "react-native";
 
-import { Divider, Text } from '@/components';
-import { useTheme } from '@/theme';
+import { Divider, Text } from "@/components";
+import { useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -11,7 +11,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
     <View
       style={{
         padding: 16,
-        width: '100%',
+        width: "100%",
         backgroundColor: theme.colors.surfaceBackground,
         flex: 1,
       }}
@@ -24,7 +24,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const DividerMeta: Meta<typeof Divider> = {
-  title: 'UI Components/Divider',
+  title: "UI Components/Divider",
   component: Divider,
   args: {
     height: 1,
@@ -52,7 +52,7 @@ export const CustomHeight: Story = {
 
 export const CustomColor: Story = {
   args: {
-    color: '#FF3B13', // Scarlet500
+    color: "#FF3B13", // Scarlet500
     height: 2,
   },
 };

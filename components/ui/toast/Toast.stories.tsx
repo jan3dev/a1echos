@@ -1,10 +1,10 @@
-import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import { Toast, ToastVariant, useToast } from '@/components';
-import { useTheme } from '@/theme';
+import { Toast, ToastVariant, useToast } from "@/components";
+import { useTheme } from "@/theme";
 
 export default {
-  title: 'UI Components/Toast',
+  title: "UI Components/Toast",
   component: Toast,
 };
 
@@ -22,16 +22,16 @@ const ToastDemo = ({
 
   const handleShow = () => {
     show({
-      title: 'Toast Title',
-      message: 'This is a toast message with some descriptive text.',
+      title: "Toast Title",
+      message: "This is a toast message with some descriptive text.",
       variant,
-      primaryButtonText: withPrimaryButton ? 'Primary' : undefined,
+      primaryButtonText: withPrimaryButton ? "Primary" : undefined,
       onPrimaryButtonTap: withPrimaryButton
-        ? () => console.log('Primary tapped')
+        ? () => console.log("Primary tapped")
         : undefined,
-      secondaryButtonText: withSecondaryButton ? 'Secondary' : undefined,
+      secondaryButtonText: withSecondaryButton ? "Secondary" : undefined,
       onSecondaryButtonTap: withSecondaryButton
-        ? () => console.log('Secondary tapped')
+        ? () => console.log("Secondary tapped")
         : undefined,
     });
   };
@@ -69,13 +69,13 @@ export const LongText = () => {
 
   const handleShow = () => {
     show({
-      title: 'This is a very long title that might wrap to multiple lines',
+      title: "This is a very long title that might wrap to multiple lines",
       message:
-        'This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to test the layout.',
-      variant: 'danger',
+        "This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to test the layout.",
+      variant: "danger",
       titleMaxLines: 3,
       messageMaxLines: 5,
-      primaryButtonText: 'Got it',
+      primaryButtonText: "Got it",
     });
   };
 
@@ -95,8 +95,8 @@ export const LongText = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
 });

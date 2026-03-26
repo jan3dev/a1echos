@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { Button as RNButton, StyleSheet, View } from 'react-native';
+import { useState } from "react";
+import { Button as RNButton, StyleSheet, View } from "react-native";
 
 import {
   Tooltip,
   TooltipPointerPosition,
   TooltipVariant,
   useTooltip,
-} from '@/components';
-import { useTheme } from '@/theme';
+} from "@/components";
+import { useTheme } from "@/theme";
 
 export default {
-  title: 'UI Components/Tooltip',
+  title: "UI Components/Tooltip",
   component: Tooltip,
 };
 
@@ -30,7 +30,7 @@ const TooltipDemo = ({
 
   const handleShow = () => {
     show({
-      message: 'This is a tooltip message',
+      message: "This is a tooltip message",
       variant,
       pointerPosition,
       isDismissible,
@@ -81,7 +81,7 @@ export const InfoModeWithVariants = () => {
   const { show, tooltipState } = useTooltip();
   const { theme } = useTheme();
 
-  const variants: TooltipVariant[] = ['success', 'warning', 'error'];
+  const variants: TooltipVariant[] = ["success", "warning", "error"];
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handleShow = () => {
@@ -120,8 +120,8 @@ export const LongMessage = () => {
   const handleShow = () => {
     show({
       message:
-        'This is a very long tooltip message that will wrap to multiple lines to demonstrate the layout behavior.',
-      variant: 'normal',
+        "This is a very long tooltip message that will wrap to multiple lines to demonstrate the layout behavior.",
+      variant: "normal",
       isDismissible: true,
     });
   };
@@ -147,8 +147,8 @@ export const AutoDismiss = () => {
 
   const handleShow = () => {
     show({
-      message: 'This tooltip will auto-dismiss in 2 seconds',
-      variant: 'success',
+      message: "This tooltip will auto-dismiss in 2 seconds",
+      variant: "success",
       duration: 2000,
     });
   };
@@ -171,15 +171,15 @@ export const AutoDismiss = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   tooltipContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 40,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
   },
 });

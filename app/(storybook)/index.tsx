@@ -1,9 +1,9 @@
-import { ComponentType } from 'react';
-import { Text, View } from 'react-native';
+import { ComponentType } from "react";
+import { Text, View } from "react-native";
 
-import { FeatureFlag, logError } from '@/utils';
+import { FeatureFlag, logError } from "@/utils";
 
-const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === 'true';
+const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
 let StorybookUI: ComponentType | null = null;
 
@@ -11,11 +11,11 @@ if (StorybookEnabled) {
   // Only import storybook when enabled to avoid loading it unnecessarily
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    StorybookUI = require('@/.rnstorybook').default;
+    StorybookUI = require("@/.rnstorybook").default;
   } catch (error) {
     logError(error, {
       flag: FeatureFlag.ui,
-      message: 'Failed to load Storybook',
+      message: "Failed to load Storybook",
     });
   }
 }
@@ -23,7 +23,7 @@ if (StorybookEnabled) {
 export default function StorybookScreen() {
   if (!StorybookEnabled || !StorybookUI) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>Storybook is disabled</Text>
       </View>
     );

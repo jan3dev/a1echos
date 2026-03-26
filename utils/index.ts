@@ -1,8 +1,8 @@
 export const formatDate = (date: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(date);
 };
 
@@ -36,25 +36,25 @@ export const formatSessionSubtitle = ({
   let dateStr: string;
 
   if (isSameDay(now, lastModified)) {
-    dateStr = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
+    dateStr = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
       hour12: true,
     }).format(lastModified);
   } else if (isSameWeek(now, lastModified)) {
-    dateStr = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(
-      lastModified
+    dateStr = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+      lastModified,
     );
   } else if (now.getFullYear() === lastModified.getFullYear()) {
-    dateStr = new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
+    dateStr = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
     }).format(lastModified);
   } else {
-    dateStr = new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    dateStr = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     }).format(lastModified);
   }
 
@@ -62,7 +62,7 @@ export const formatSessionSubtitle = ({
   return isModified ? `${modifiedPrefix} ${dateStr}` : dateStr;
 };
 
-export { delay } from './delay';
+export { delay } from "./delay";
 export {
   FeatureFlag,
   LOG,
@@ -70,10 +70,9 @@ export {
   logError,
   logFor,
   logInfo,
-  logWarn
-} from './log';
-export { formatTranscriptionText } from './TranscriptionFormatter';
-export { createPcmStreamWriter } from './WavWriter';
-export type { PcmStreamWriter } from './WavWriter';
-export { iosPressed } from './ripple';
-
+  logWarn,
+} from "./log";
+export { formatTranscriptionText } from "./TranscriptionFormatter";
+export { createPcmStreamWriter } from "./WavWriter";
+export type { PcmStreamWriter } from "./WavWriter";
+export { iosPressed } from "./ripple";

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -8,11 +8,11 @@ import {
   TextInput,
   TextInputContentSizeChangeEvent,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { AquaTypography, getShadow, useTheme } from '@/theme';
+import { AquaTypography, getShadow, useTheme } from "@/theme";
 
-import { Icon } from '../icon/Icon';
+import { Icon } from "../icon/Icon";
 
 interface TextFieldProps {
   label?: string;
@@ -21,7 +21,7 @@ interface TextFieldProps {
   trailingIcon?: ReactNode;
   onTrailingPress?: () => void;
   secureTextEntry?: boolean;
-  keyboardType?: RNTextInputProps['keyboardType'];
+  keyboardType?: RNTextInputProps["keyboardType"];
   assistiveText?: string;
   error?: boolean;
   enabled?: boolean;
@@ -58,7 +58,7 @@ const DEFAULT_DEBOUNCE = 500;
 
 export const TextField = ({
   label,
-  value = '',
+  value = "",
   onChangeText,
   trailingIcon,
   onTrailingPress,
@@ -133,8 +133,8 @@ export const TextField = ({
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    setText('');
-    onChangeText?.('');
+    setText("");
+    onChangeText?.("");
     onClear?.();
   };
 
@@ -174,7 +174,7 @@ export const TextField = ({
   const containerHeight = isMultiline
     ? Math.max(
         minLines * LINE_HEIGHT + PADDING * 2,
-        calculatedHeight + PADDING + (isLabelActive ? LABEL_OFFSET_ACTIVE : 0)
+        calculatedHeight + PADDING + (isLabelActive ? LABEL_OFFSET_ACTIVE : 0),
       )
     : TEXTFIELD_HEIGHT;
 
@@ -193,17 +193,17 @@ export const TextField = ({
   const borderColor = error
     ? colors.accentDanger
     : isFocused
-    ? transparentBorder
-      ? 'transparent'
-      : colors.accentBrand
-    : 'transparent';
+      ? transparentBorder
+        ? "transparent"
+        : colors.accentBrand
+      : "transparent";
 
   const labelColor =
     error && !isMultiline
       ? colors.accentDanger
       : enabled
-      ? colors.textSecondary
-      : colors.textTertiary;
+        ? colors.textSecondary
+        : colors.textTertiary;
 
   const textColor = enabled ? colors.textPrimary : colors.textTertiary;
 
@@ -212,7 +212,7 @@ export const TextField = ({
       <View
         style={[
           styles.shadowContainer,
-          getShadow('input'),
+          getShadow("input"),
           {
             backgroundColor: colors.surfacePrimary,
             height: containerHeight,
@@ -269,7 +269,7 @@ export const TextField = ({
                 style={[
                   styles.input,
                   AquaTypography.body1,
-                  { color: textColor, height: '100%' },
+                  { color: textColor, height: "100%" },
                 ]}
                 value={text}
                 onChangeText={handleChangeText}
@@ -370,7 +370,7 @@ export const TextField = ({
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: '100%',
+    width: "100%",
   },
   shadowContainer: {
     borderRadius: BORDER_RADIUS,
@@ -381,10 +381,10 @@ const styles = StyleSheet.create({
   },
   pressableContainer: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   label: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 1,
   },
   inputWrapper: {
@@ -395,32 +395,32 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   trailingContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     right: 0,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   clearIcon: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
   },
   clearIconBackground: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   trailingIcon: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
   },
   assistiveRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });

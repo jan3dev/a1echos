@@ -1,11 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from "react-native";
 
-import { useTheme } from '@/theme';
-import { iosPressed } from '@/utils';
+import { useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
-export type RadioSize = 'large' | 'small';
+export type RadioSize = "large" | "small";
 
 interface RadioProps<T> {
   value: T;
@@ -20,14 +20,14 @@ export const Radio = <T,>({
   groupValue,
   onValueChange,
   enabled = true,
-  size = 'large',
+  size = "large",
 }: RadioProps<T>) => {
   const { theme } = useTheme();
   const colors = theme.colors;
 
   const isSelected = value === groupValue;
-  const boxSize = size === 'large' ? 24 : 18;
-  const dotSize = size === 'large' ? 10 : 7.5;
+  const boxSize = size === "large" ? 24 : 18;
+  const dotSize = size === "large" ? 10 : 7.5;
 
   const handlePress = () => {
     if (enabled && onValueChange) {
@@ -81,12 +81,12 @@ export const Radio = <T,>({
 
 const styles = StyleSheet.create({
   pressable: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   container: {
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
     borderRadius: 999,

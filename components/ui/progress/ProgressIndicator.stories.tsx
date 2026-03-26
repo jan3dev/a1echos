@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNode } from 'react';
-import { View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ReactNode } from "react";
+import { View } from "react-native";
 
-import { ProgressIndicator } from '@/components';
-import { lightColors, useTheme } from '@/theme';
+import { ProgressIndicator } from "@/components";
+import { lightColors, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -11,7 +11,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
     <View
       style={{
         padding: 20,
-        alignItems: 'center',
+        alignItems: "center",
         flex: 1,
         backgroundColor: theme.colors.surfaceBackground,
       }}
@@ -22,7 +22,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/ProgressIndicator',
+  title: "UI Components/ProgressIndicator",
   component: ProgressIndicator,
   decorators: [
     (Story) => (
@@ -91,16 +91,16 @@ const AllVariantsStory = () => {
   const { theme } = useTheme();
   return (
     <View style={{ gap: 20 }}>
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: "center" }}>
         <ProgressIndicator color={theme.colors.accentBrand} size={24} />
       </View>
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: "center" }}>
         <ProgressIndicator color={theme.colors.accentDanger} size={24} />
       </View>
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: "center" }}>
         <ProgressIndicator color={theme.colors.accentSuccess} size={24} />
       </View>
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: "center" }}>
         <ProgressIndicator color={theme.colors.accentWarning} size={24} />
       </View>
     </View>

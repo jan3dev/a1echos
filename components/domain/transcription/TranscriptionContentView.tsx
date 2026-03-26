@@ -1,14 +1,14 @@
-import { RefObject } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RefObject } from "react";
+import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Transcription } from '@/models';
-import { useTranscriptionStore } from '@/stores';
-import { useTheme } from '@/theme';
+import { Transcription } from "@/models";
+import { useTranscriptionStore } from "@/stores";
+import { useTheme } from "@/theme";
 
-import { ProgressIndicator } from '../../ui/progress/ProgressIndicator';
+import { ProgressIndicator } from "../../ui/progress/ProgressIndicator";
 
-import { TranscriptionList } from './TranscriptionList';
+import { TranscriptionList } from "./TranscriptionList";
 
 const RECORDING_CONTROLS_HEIGHT = 96;
 const APP_BAR_HEIGHT = 60;
@@ -79,7 +79,7 @@ export const TranscriptionContentView = ({
 const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

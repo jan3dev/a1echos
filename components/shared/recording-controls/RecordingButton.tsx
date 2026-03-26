@@ -1,7 +1,7 @@
-import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { StyleSheet, TouchableOpacity } from "react-native";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -10,12 +10,12 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
-import { AppTheme, TranscriptionState } from '@/models';
-import { AquaColors, getShadow, useThemeStore } from '@/theme';
+import { AppTheme, TranscriptionState } from "@/models";
+import { AquaColors, getShadow, useThemeStore } from "@/theme";
 
-import { Icon } from '../../ui/icon/Icon';
+import { Icon } from "../../ui/icon/Icon";
 
 interface RecordingButtonProps {
   state?: TranscriptionState;
@@ -44,17 +44,17 @@ export const RecordingButton = ({
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
 
   const { currentTheme } = useThemeStore();
-  const blurTint = currentTheme === AppTheme.DARK ? 'light' : 'dark';
+  const blurTint = currentTheme === AppTheme.DARK ? "light" : "dark";
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gestureIsolationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
   const scaleAnimationDelayTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
   const pulseAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   const scale = useSharedValue(1);
@@ -101,7 +101,7 @@ export const RecordingButton = ({
           easing: Easing.inOut(Easing.ease),
         }),
         -1,
-        true
+        true,
       );
     } else {
       if (scaleAnimationDelayTimerRef.current) {
@@ -134,7 +134,7 @@ export const RecordingButton = ({
       withTiming(1, {
         duration: scaleAnimationDuration,
         easing: Easing.out(Easing.ease),
-      })
+      }),
     );
   };
 
@@ -317,21 +317,21 @@ const styles = StyleSheet.create({
   },
   blurContainer: {
     borderRadius: 1000,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonTouchable: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   transcribingButton: {
-    ...getShadow('recordingButton'),
+    ...getShadow("recordingButton"),
     opacity: 0.5,
   },
   readyButton: {
-    ...getShadow('recordingButton'),
+    ...getShadow("recordingButton"),
   },
 });

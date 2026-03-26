@@ -1,7 +1,7 @@
-import { useRouter } from 'expo-router';
-import { Fragment, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from "expo-router";
+import { Fragment, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   Card,
@@ -11,12 +11,12 @@ import {
   Radio,
   Text,
   TopAppBar,
-} from '@/components';
-import { useLocalization } from '@/hooks';
-import { getCountryCode, SpokenLanguage, SupportedLanguages } from '@/models';
-import { useSelectedLanguage, useSetLanguage } from '@/stores';
-import { useTheme } from '@/theme';
-import { delay, FeatureFlag, logError } from '@/utils';
+} from "@/components";
+import { useLocalization } from "@/hooks";
+import { getCountryCode, SpokenLanguage, SupportedLanguages } from "@/models";
+import { useSelectedLanguage, useSetLanguage } from "@/stores";
+import { useTheme } from "@/theme";
+import { delay, FeatureFlag, logError } from "@/utils";
 
 const APP_BAR_HEIGHT = 60;
 
@@ -55,7 +55,7 @@ export default function LanguageSettingsScreen() {
       setIsSaving(false);
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to set language',
+        message: "Failed to set language",
       });
     }
   };

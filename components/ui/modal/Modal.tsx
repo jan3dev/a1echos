@@ -1,21 +1,21 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from "react";
 import {
   Animated,
   Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getShadow, useTheme } from '@/theme';
+import { getShadow, useTheme } from "@/theme";
 
-import { Button, ButtonVariant } from '../button/Button';
-import { Text } from '../text/Text';
+import { Button, ButtonVariant } from "../button/Button";
+import { Text } from "../text/Text";
 
-import { Dimmer } from './Dimmer';
+import { Dimmer } from "./Dimmer";
 
-export type ModalVariant = 'normal' | 'success' | 'danger' | 'warning' | 'info';
+export type ModalVariant = "normal" | "success" | "danger" | "warning" | "info";
 
 export interface ModalProps {
   visible: boolean;
@@ -49,7 +49,7 @@ export const Modal = ({
   secondaryButton,
   icon,
   illustration,
-  iconVariant = 'normal',
+  iconVariant = "normal",
   titleMaxLines = 3,
   messageMaxLines = 5,
   onDismiss,
@@ -79,13 +79,13 @@ export const Modal = ({
 
   const getIconBackgroundColor = () => {
     switch (iconVariant) {
-      case 'success':
+      case "success":
         return colors.accentSuccessTransparent;
-      case 'danger':
+      case "danger":
         return colors.accentDangerTransparent;
-      case 'warning':
+      case "warning":
         return colors.accentWarningTransparent;
-      case 'info':
+      case "info":
         return colors.accentBrandTransparent;
       default:
         return colors.surfaceTertiary;
@@ -94,13 +94,13 @@ export const Modal = ({
 
   const getIconInnerBackgroundColor = () => {
     switch (iconVariant) {
-      case 'success':
+      case "success":
         return colors.accentSuccess;
-      case 'danger':
+      case "danger":
         return colors.accentDanger;
-      case 'warning':
+      case "warning":
         return colors.accentWarning;
-      case 'info':
+      case "info":
         return colors.accentBrand;
       default:
         return colors.surfaceSecondary;
@@ -217,7 +217,7 @@ export const Modal = ({
               {/* Primary Button */}
               <Button.primary
                 text={primaryButton.text}
-                variant={primaryButton.variant || 'normal'}
+                variant={primaryButton.variant || "normal"}
                 onPress={primaryButton.onTap}
               />
 
@@ -227,7 +227,7 @@ export const Modal = ({
                   <View style={styles.secondaryButtonSpacing} />
                   <Button.secondary
                     text={secondaryButton.text}
-                    variant={secondaryButton.variant || 'normal'}
+                    variant={secondaryButton.variant || "normal"}
                     onPress={secondaryButton.onTap}
                   />
                 </>
@@ -245,30 +245,30 @@ export const Modal = ({
 const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    justifyContent: "flex-end",
+    alignItems: "center",
   },
   container: {
     marginHorizontal: 16,
-    ...getShadow('modal'),
+    ...getShadow("modal"),
   },
   card: {
     borderRadius: 24,
     paddingHorizontal: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   dragHandle: {
     width: 48,
     height: 5,
     borderRadius: 100,
     marginTop: 8,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   iconOuterContainer: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 32,
     marginBottom: 24,
     padding: 16,
@@ -277,16 +277,16 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 28,
     padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   illustrationContainer: {
     width: 88,
     height: 88,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   messageSpacing: {
     height: 6,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
@@ -8,18 +8,18 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppConstants } from '@/constants';
-import { useLocalization } from '@/hooks';
-import { getShadow, useTheme } from '@/theme';
+import { AppConstants } from "@/constants";
+import { useLocalization } from "@/hooks";
+import { getShadow, useTheme } from "@/theme";
 
-import { Button } from '../../ui/button/Button';
-import { Icon } from '../../ui/icon/Icon';
-import { Dimmer } from '../../ui/modal/Dimmer';
-import { Text } from '../../ui/text/Text';
-import { TextField } from '../../ui/textfield/TextField';
+import { Button } from "../../ui/button/Button";
+import { Icon } from "../../ui/icon/Icon";
+import { Dimmer } from "../../ui/modal/Dimmer";
+import { Text } from "../../ui/text/Text";
+import { TextField } from "../../ui/textfield/TextField";
 
 interface SessionInputModalProps {
   visible: boolean;
@@ -36,7 +36,7 @@ export const SessionInputModal = ({
   visible,
   title,
   buttonText,
-  initialValue = '',
+  initialValue = "",
   onSubmit,
   onCancel,
 }: SessionInputModalProps) => {
@@ -50,10 +50,10 @@ export const SessionInputModal = ({
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
 
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
       keyboardVisibleRef.current = true;
     });
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       keyboardVisibleRef.current = false;
     });
     return () => {
@@ -94,20 +94,20 @@ export const SessionInputModal = ({
     }
   };
 
-  const containerWidth = '100%';
+  const containerWidth = "100%";
 
   return (
     <Dimmer visible={visible} onDismiss={handleDismiss}>
       <KeyboardAvoidingView
         behavior="padding"
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -46}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -46}
       >
         <View style={styles.overlay}>
           <Animated.View
             style={[
               styles.container,
-              getShadow('modal'),
+              getShadow("modal"),
               {
                 backgroundColor: theme.colors.surfacePrimary,
                 width: containerWidth,
@@ -148,7 +148,7 @@ export const SessionInputModal = ({
                   maxLength={AppConstants.SESSION_NAME_MAX_LENGTH || 50}
                   assistiveText={loc.sessionNameMaxLengthHelper}
                   showClearIcon
-                  onClear={() => setText('')}
+                  onClear={() => setText("")}
                   transparentBorder={true}
                   forceFocus={visible}
                   debounceTime={0}
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'stretch',
+    justifyContent: "flex-end",
+    alignItems: "stretch",
   },
   container: {
     borderTopLeftRadius: 24,
@@ -185,23 +185,23 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 48,
-    position: 'relative',
+    position: "relative",
     minHeight: 24,
   },
   title: {
     flex: 1,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     top: 0,
   },
   content: {
-    width: '100%',
+    width: "100%",
   },
   spacer: {
     height: 48,

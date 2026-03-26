@@ -1,11 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Appearance } from 'react-native';
-import { create } from 'zustand';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Appearance } from "react-native";
+import { create } from "zustand";
 
-import { AppTheme } from '@/models';
-import { FeatureFlag, logError } from '@/utils';
+import { AppTheme } from "@/models";
+import { FeatureFlag, logError } from "@/utils";
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = "light" | "dark";
 
 interface ThemeState {
   selectedTheme: AppTheme;
@@ -14,23 +14,23 @@ interface ThemeState {
   initTheme: () => Promise<void>;
 }
 
-const SELECTED_THEME_KEY = 'selectedTheme';
+const SELECTED_THEME_KEY = "selectedTheme";
 
 let appearanceSubscription: ReturnType<
   typeof Appearance.addChangeListener
 > | null = null;
 
 const resolveCurrentTheme = (selectedTheme: AppTheme): ThemeMode => {
-  if (selectedTheme === AppTheme.LIGHT) return 'light';
-  if (selectedTheme === AppTheme.DARK) return 'dark';
+  if (selectedTheme === AppTheme.LIGHT) return "light";
+  if (selectedTheme === AppTheme.DARK) return "dark";
 
   const systemTheme = Appearance.getColorScheme();
-  return systemTheme === 'dark' ? 'dark' : 'light';
+  return systemTheme === "dark" ? "dark" : "light";
 };
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   selectedTheme: AppTheme.AUTO,
-  currentTheme: 'light',
+  currentTheme: "light",
 
   setTheme: async (theme: AppTheme) => {
     try {
@@ -40,7 +40,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to save theme preference',
+        message: "Failed to save theme preference",
       });
     }
   },
@@ -64,14 +64,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
         ({ colorScheme }) => {
           const { selectedTheme } = get();
           if (selectedTheme === AppTheme.AUTO) {
-            set({ currentTheme: colorScheme === 'dark' ? 'dark' : 'light' });
+            set({ currentTheme: colorScheme === "dark" ? "dark" : "light" });
           }
-        }
+        },
       );
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
-        message: 'Failed to initialize theme',
+        message: "Failed to initialize theme",
       });
     }
   },

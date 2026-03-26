@@ -1,13 +1,13 @@
-import { BlurView } from 'expo-blur';
-import { StyleSheet, View } from 'react-native';
+import { BlurView } from "expo-blur";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   SharedValue,
   useAnimatedStyle,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
-import { AquaColors, getShadow } from '@/theme';
+import { AquaColors, getShadow } from "@/theme";
 
-import { Icon } from '../../ui/icon/Icon';
+import { Icon } from "../../ui/icon/Icon";
 
 interface LockIndicatorProps {
   progress: SharedValue<number>;
@@ -79,7 +79,7 @@ export const LockIndicator = ({
 };
 
 export const LockIndicatorWithSettings = (
-  props: Omit<LockIndicatorProps, 'showSettingsIcon' | 'width' | 'height'>
+  props: Omit<LockIndicatorProps, "showSettingsIcon" | "width" | "height">,
 ) => (
   <LockIndicator
     {...props}
@@ -91,20 +91,20 @@ export const LockIndicatorWithSettings = (
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   background: {
-    ...getShadow('default'),
+    ...getShadow("default"),
   },
   blurContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
   },
   iconSpacer: {

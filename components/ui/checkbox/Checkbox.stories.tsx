@@ -1,9 +1,9 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ComponentProps, ReactNode, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentProps, ReactNode, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Checkbox } from '@/components';
-import { AquaTypography, useTheme } from '@/theme';
+import { Checkbox } from "@/components";
+import { AquaTypography, useTheme } from "@/theme";
 
 const StoryContainer = ({ children }: { children: ReactNode }) => {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ const StoryContainer = ({ children }: { children: ReactNode }) => {
 };
 
 const meta = {
-  title: 'UI Components/Checkbox',
+  title: "UI Components/Checkbox",
   component: Checkbox,
   decorators: [
     (Story) => (
@@ -42,7 +42,7 @@ const CheckboxWithState = (props: ComponentProps<typeof Checkbox>) => {
 export const LargeChecked: Story = {
   args: {
     value: true,
-    size: 'large',
+    size: "large",
   },
   render: () => <CheckboxWithState value={true} size="large" />,
 };
@@ -50,7 +50,7 @@ export const LargeChecked: Story = {
 export const LargeUnchecked: Story = {
   args: {
     value: false,
-    size: 'large',
+    size: "large",
   },
   render: () => <CheckboxWithState value={false} size="large" />,
 };
@@ -58,7 +58,7 @@ export const LargeUnchecked: Story = {
 export const SmallChecked: Story = {
   args: {
     value: true,
-    size: 'small',
+    size: "small",
   },
   render: () => <CheckboxWithState value={true} size="small" />,
 };
@@ -66,7 +66,7 @@ export const SmallChecked: Story = {
 export const SmallUnchecked: Story = {
   args: {
     value: false,
-    size: 'small',
+    size: "small",
   },
   render: () => <CheckboxWithState value={false} size="small" />,
 };
@@ -95,7 +95,7 @@ export const Disabled: Story = {
   args: {
     value: false,
     enabled: false,
-    size: 'large',
+    size: "large",
   },
   render: () => <DisabledContent />,
 };
@@ -171,7 +171,7 @@ export const AllVariants: Story = {
   args: {
     value: false,
     enabled: false,
-    size: 'large',
+    size: "large",
   },
   render: () => <AllVariantsContent />,
 };
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
     ...AquaTypography.h5SemiBold,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 32,
-    alignItems: 'center',
+    alignItems: "center",
   },
   item: {
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   label: {
     ...AquaTypography.body2,

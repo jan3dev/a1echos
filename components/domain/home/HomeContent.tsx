@@ -1,10 +1,10 @@
-import { RefObject } from 'react';
-import { ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RefObject } from "react";
+import { ScrollView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Session } from '@/models';
+import { Session } from "@/models";
 
-import { SessionList } from '../session/SessionList';
+import { SessionList } from "../session/SessionList";
 
 interface HomeContentProps {
   selectionMode: boolean;

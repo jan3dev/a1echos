@@ -1,5 +1,5 @@
-import { BlurView } from 'expo-blur';
-import { useEffect, useRef } from 'react';
+import { BlurView } from "expo-blur";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Modal,
@@ -7,15 +7,15 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { getShadow, useTheme } from '@/theme';
+import { getShadow, useTheme } from "@/theme";
 
-import { Icon } from '../icon/Icon';
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
-import { Text } from '../text/Text';
+import { Icon } from "../icon/Icon";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
+import { Text } from "../text/Text";
 
-export type ToastVariant = 'informative' | 'warning' | 'danger';
+export type ToastVariant = "informative" | "warning" | "danger";
 
 export interface ToastProps {
   visible: boolean;
@@ -39,7 +39,7 @@ export const Toast = ({
   onPrimaryButtonTap,
   secondaryButtonText,
   onSecondaryButtonTap,
-  variant = 'informative',
+  variant = "informative",
   titleMaxLines = 1,
   messageMaxLines = 2,
   onDismiss,
@@ -68,20 +68,20 @@ export const Toast = ({
 
   const getIconName = () => {
     switch (variant) {
-      case 'danger':
-        return 'danger' as const;
-      case 'warning':
-        return 'warning' as const;
+      case "danger":
+        return "danger" as const;
+      case "warning":
+        return "warning" as const;
       default:
-        return 'warning' as const;
+        return "warning" as const;
     }
   };
 
   const getIconColor = () => {
     switch (variant) {
-      case 'danger':
+      case "danger":
         return colors.accentDanger;
-      case 'warning':
+      case "warning":
         return colors.accentWarning;
       default:
         return colors.textPrimary;
@@ -113,7 +113,7 @@ export const Toast = ({
         <Animated.View
           style={[
             styles.container,
-            getShadow('toast'),
+            getShadow("toast"),
             {
               transform: [{ translateY }],
               opacity,
@@ -255,24 +255,24 @@ export const Toast = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.16)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.16)",
     padding: 16,
   },
   container: {
-    width: '100%',
+    width: "100%",
   },
   card: {
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   contentContainer: {
     padding: 16,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   textColumn: {
     flex: 1,
@@ -284,17 +284,17 @@ const styles = StyleSheet.create({
   buttonsContainer: {
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
     paddingTop: 1,
   },
   twoButtonRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 1,
   },
   button: {
     padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   leftButton: {
     flex: 1,

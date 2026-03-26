@@ -1,16 +1,16 @@
-import { Canvas, Path, usePathValue } from '@shopify/react-native-skia';
-import { useEffect, useMemo, useRef } from 'react';
-import { AppState, AppStateStatus, StyleSheet, View } from 'react-native';
+import { Canvas, Path, usePathValue } from "@shopify/react-native-skia";
+import { useEffect, useMemo, useRef } from "react";
+import { AppState, AppStateStatus, StyleSheet, View } from "react-native";
 import {
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
-} from 'react-native-reanimated';
-import { scheduleOnUI } from 'react-native-worklets';
+} from "react-native-reanimated";
+import { scheduleOnUI } from "react-native-worklets";
 
-import { TranscriptionState } from '@/models';
-import { useTranscriptionStore } from '@/stores';
-import { AquaColors, AquaPrimitiveColors } from '@/theme';
+import { TranscriptionState } from "@/models";
+import { useTranscriptionStore } from "@/stores";
+import { AquaColors, AquaPrimitiveColors } from "@/theme";
 
 interface ThreeWaveLinesProps {
   height?: number;
@@ -91,12 +91,12 @@ const VOICE_THRESHOLD = 0.38;
 
 const WAVE_COLORS = [
   AquaPrimitiveColors.waveOrange,
-  '', // Will use accent color
+  "", // Will use accent color
   AquaPrimitiveColors.waveCyan,
 ];
 
 const stateToNum = (state: TranscriptionState): number => {
-  'worklet';
+  "worklet";
   switch (state) {
     case TranscriptionState.LOADING:
       return STATE_NUM.LOADING;
@@ -155,7 +155,7 @@ const useAnimatedWave = (
   const phaseSpeedMultiplier = useSharedValue(0.6);
 
   useFrameCallback((frameInfo) => {
-    'worklet';
+    "worklet";
     if (!isActive.value) return;
 
     const dt = frameInfo.timeSincePreviousFrame ?? 33;
@@ -298,7 +298,7 @@ const useAnimatedWave = (
   });
 
   const path = usePathValue((p) => {
-    'worklet';
+    "worklet";
     p.reset();
 
     const w = width.value;
@@ -434,11 +434,11 @@ export const ThreeWaveLines = ({
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       appStateRef.current = nextAppState;
-      isActive.value = nextAppState === 'active';
+      isActive.value = nextAppState === "active";
     };
 
     const subscription = AppState.addEventListener(
-      'change',
+      "change",
       handleAppStateChange,
     );
     return () => subscription.remove();
@@ -447,7 +447,7 @@ export const ThreeWaveLines = ({
   useEffect(() => {
     let prevLevel = useTranscriptionStore.getState().audioLevel;
     const updateAudioLevel = (level: number) => {
-      'worklet';
+      "worklet";
       audioLevel.value = level < 0 ? 0 : level > 1 ? 1 : level;
     };
 
@@ -549,7 +549,7 @@ export const ThreeWaveLines = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
+    width: "100%",
   },
   canvas: {
     flex: 1,

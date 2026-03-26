@@ -1,12 +1,12 @@
-import { Fragment } from 'react';
+import { Fragment } from "react";
 
-import { Session } from '@/models';
-import { useSessions } from '@/stores';
+import { Session } from "@/models";
+import { useSessions } from "@/stores";
 
-import { Card } from '../../ui/card/Card';
-import { Divider } from '../../ui/divider/Divider';
+import { Card } from "../../ui/card/Card";
+import { Divider } from "../../ui/divider/Divider";
 
-import { SessionListItem } from './SessionListItem';
+import { SessionListItem } from "./SessionListItem";
 
 interface SessionListProps {
   selectionMode: boolean;

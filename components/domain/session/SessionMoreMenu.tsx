@@ -1,25 +1,25 @@
-import { useRef, useState } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useRef, useState } from "react";
+import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
 
-import { useLocalization, useSessionOperations } from '@/hooks';
-import { Session } from '@/models';
-import { useRenameSession, useShowGlobalTooltip } from '@/stores';
-import { getShadow, useTheme } from '@/theme';
+import { useLocalization, useSessionOperations } from "@/hooks";
+import { Session } from "@/models";
+import { useRenameSession, useShowGlobalTooltip } from "@/stores";
+import { getShadow, useTheme } from "@/theme";
 import {
   FeatureFlag,
   formatDate,
   formatSessionSubtitle,
   logError,
-} from '@/utils';
+} from "@/utils";
 
-import { ListItem } from '../../shared/list-item/ListItem';
-import { Icon } from '../../ui/icon/Icon';
-import { RipplePressable } from '../../ui/ripple-pressable/RipplePressable';
-import { Text } from '../../ui/text/Text';
-import { Toast } from '../../ui/toast/Toast';
-import { useToast } from '../../ui/toast/useToast';
+import { ListItem } from "../../shared/list-item/ListItem";
+import { Icon } from "../../ui/icon/Icon";
+import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
+import { Text } from "../../ui/text/Text";
+import { Toast } from "../../ui/toast/Toast";
+import { useToast } from "../../ui/toast/useToast";
 
-import { SessionInputModal } from './SessionInputModal';
+import { SessionInputModal } from "./SessionInputModal";
 
 const MENU_HEIGHT_FALLBACK = 200;
 // Buffer to keep menu above tab bar and safe area insets
@@ -59,7 +59,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.session,
-        message: 'Failed to rename session',
+        message: "Failed to rename session",
       });
     }
     setRenameVisible(false);
@@ -74,7 +74,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
       onPrimaryButtonTap: performDelete,
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: 'informative',
+      variant: "informative",
     });
   };
 
@@ -87,14 +87,14 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.session,
-        message: 'Failed to delete session',
+        message: "Failed to delete session",
       });
     }
   };
 
   const openMenu = () => {
     iconRef.current?.measureInWindow((_x, y, _width, height) => {
-      const screenHeight = Dimensions.get('window').height;
+      const screenHeight = Dimensions.get("window").height;
       const right = 16;
       const menuGap = 8;
       const proposedTop = y + height + menuGap;
@@ -133,7 +133,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
           <View
             style={[
               styles.menuContainer,
-              getShadow('menu'),
+              getShadow("menu"),
               {
                 top: menuPosition.top,
                 right: menuPosition.right,
@@ -243,13 +243,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuContainer: {
-    position: 'absolute',
+    position: "absolute",
     width: 240,
   },
   menuInner: {
     borderRadius: 12,
     paddingVertical: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   infoContainer: {
     paddingHorizontal: 16,

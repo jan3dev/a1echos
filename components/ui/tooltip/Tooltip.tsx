@@ -1,16 +1,16 @@
-import { BlurView } from 'expo-blur';
-import { ReactNode, useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { BlurView } from "expo-blur";
+import { ReactNode, useEffect, useRef } from "react";
+import { Animated, StyleSheet, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
-import { useTheme } from '@/theme';
+import { useTheme } from "@/theme";
 
-import { Icon } from '../icon/Icon';
-import { RipplePressable } from '../ripple-pressable/RipplePressable';
-import { Text } from '../text/Text';
+import { Icon } from "../icon/Icon";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
+import { Text } from "../text/Text";
 
-export type TooltipVariant = 'normal' | 'success' | 'warning' | 'error';
-export type TooltipPointerPosition = 'none' | 'top' | 'bottom';
+export type TooltipVariant = "normal" | "success" | "warning" | "error";
+export type TooltipPointerPosition = "none" | "top" | "bottom";
 
 export interface TooltipProps {
   visible: boolean;
@@ -40,8 +40,8 @@ export const Tooltip = ({
   onTrailingIconTap,
   isDismissible = false,
   isInfo = false,
-  variant = 'normal',
-  pointerPosition = 'none',
+  variant = "normal",
+  pointerPosition = "none",
   pointerSize = DEFAULT_POINTER_SIZE,
   margin = 16,
   onDismiss,
@@ -68,11 +68,11 @@ export const Tooltip = ({
 
   const getBackgroundColor = () => {
     switch (variant) {
-      case 'success':
+      case "success":
         return colors.accentSuccessTransparent;
-      case 'warning':
+      case "warning":
         return colors.accentWarningTransparent;
-      case 'error':
+      case "error":
         return colors.accentDangerTransparent;
       default:
         return colors.glassInverse;
@@ -81,11 +81,11 @@ export const Tooltip = ({
 
   const getTextColor = () => {
     switch (variant) {
-      case 'success':
+      case "success":
         return colors.accentSuccess;
-      case 'warning':
+      case "warning":
         return colors.accentWarning;
-      case 'error':
+      case "error":
         return colors.accentDanger;
       default:
         return colors.textInverse;
@@ -94,11 +94,11 @@ export const Tooltip = ({
 
   const getIconColor = () => {
     switch (variant) {
-      case 'success':
+      case "success":
         return colors.accentSuccess;
-      case 'warning':
+      case "warning":
         return colors.accentWarning;
-      case 'error':
+      case "error":
         return colors.accentDanger;
       default:
         return colors.textInverse;
@@ -113,10 +113,10 @@ export const Tooltip = ({
   };
 
   const renderPointer = () => {
-    if (pointerPosition === 'none') return null;
+    if (pointerPosition === "none") return null;
 
     const pointerColor = getBackgroundColor();
-    const isTop = pointerPosition === 'top';
+    const isTop = pointerPosition === "top";
 
     return (
       <View
@@ -154,7 +154,7 @@ export const Tooltip = ({
         contentPadding,
         {
           backgroundColor:
-            variant === 'normal' ? getBackgroundColor() : 'transparent',
+            variant === "normal" ? getBackgroundColor() : "transparent",
         },
       ]}
     >
@@ -202,7 +202,7 @@ export const Tooltip = ({
                 name="close"
                 size={18}
                 color={
-                  variant === 'normal' ? colors.textTertiary : getIconColor()
+                  variant === "normal" ? colors.textTertiary : getIconColor()
                 }
               />
             )}
@@ -213,11 +213,11 @@ export const Tooltip = ({
   );
 
   const bubble =
-    variant === 'normal' ? (
+    variant === "normal" ? (
       <BlurView
         experimentalBlurMethod="dimezisBlurView"
         intensity={20}
-        style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: 'hidden' }}
+        style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" }}
       >
         {renderContent()}
       </BlurView>
@@ -241,12 +241,12 @@ export const Tooltip = ({
           margin,
         },
       ]}
-      pointerEvents={isDismissible ? 'auto' : 'none'}
+      pointerEvents={isDismissible ? "auto" : "none"}
     >
       <View style={styles.contentWrapper}>
-        {pointerPosition === 'top' && renderPointer()}
+        {pointerPosition === "top" && renderPointer()}
         {bubble}
-        {pointerPosition === 'bottom' && renderPointer()}
+        {pointerPosition === "bottom" && renderPointer()}
       </View>
     </Animated.View>
   );
@@ -254,15 +254,15 @@ export const Tooltip = ({
 
 const styles = StyleSheet.create({
   container: {
-    alignSelf: 'center',
-    maxWidth: '90%',
+    alignSelf: "center",
+    maxWidth: "90%",
   },
   contentWrapper: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     minHeight: 34,
   },
   iconSpacing: {
@@ -275,8 +275,8 @@ const styles = StyleSheet.create({
     width: 16,
   },
   pointerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
 });

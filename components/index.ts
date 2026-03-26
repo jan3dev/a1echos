@@ -1,4 +1,3 @@
-export * from './domain';
-export * from './shared';
-export * from './ui';
-
+export * from "./domain";
+export * from "./shared";
+export * from "./ui";

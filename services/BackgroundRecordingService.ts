@@ -1,29 +1,29 @@
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from "react-native";
 
-import { FeatureFlag, logError, logWarn } from '@/utils';
+import { FeatureFlag, logError, logWarn } from "@/utils";
 
 const NOTIFICATION_ID = 1001;
-const TASK_ID = 'echos_recording_task';
+const TASK_ID = "echos_recording_task";
 
 let isRegistered = false;
 let notificationPermissionRequested = false;
 let ForegroundService:
-  | typeof import('@supersami/rn-foreground-service').default
+  | typeof import("@supersami/rn-foreground-service").default
   | null = null;
 
 const getForegroundService = async () => {
-  if (Platform.OS !== 'android') {
+  if (Platform.OS !== "android") {
     return null;
   }
   if (!ForegroundService) {
-    const module = await import('@supersami/rn-foreground-service');
+    const module = await import("@supersami/rn-foreground-service");
     ForegroundService = module.default;
   }
   return ForegroundService;
 };
 
 const requestNotificationPermission = async (): Promise<boolean> => {
-  if (Platform.OS !== 'android' || notificationPermissionRequested) {
+  if (Platform.OS !== "android" || notificationPermissionRequested) {
     return true;
   }
 
@@ -31,11 +31,11 @@ const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.Version >= 33) {
     try {
       const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       );
       notificationPermissionRequested = true;
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        logWarn('Notification permission not granted', {
+        logWarn("Notification permission not granted", {
           flag: FeatureFlag.service,
         });
         return false;
@@ -44,7 +44,7 @@ const requestNotificationPermission = async (): Promise<boolean> => {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.service,
-        message: 'Failed to request notification permission',
+        message: "Failed to request notification permission",
       });
       return false;
     }
@@ -54,7 +54,7 @@ const requestNotificationPermission = async (): Promise<boolean> => {
 };
 
 export const registerForegroundService = async (): Promise<void> => {
-  if (Platform.OS !== 'android' || isRegistered) {
+  if (Platform.OS !== "android" || isRegistered) {
     return;
   }
 
@@ -66,7 +66,7 @@ export const registerForegroundService = async (): Promise<void> => {
       config: {
         alert: true,
         onServiceErrorCallBack: () => {
-          logError('Foreground service error occurred', {
+          logError("Foreground service error occurred", {
             flag: FeatureFlag.service,
           });
         },
@@ -76,7 +76,7 @@ export const registerForegroundService = async (): Promise<void> => {
   } catch (error) {
     logError(error, {
       flag: FeatureFlag.service,
-      message: 'Failed to register foreground service',
+      message: "Failed to register foreground service",
     });
   }
 };
@@ -89,7 +89,7 @@ const createBackgroundRecordingService = () => {
       return true;
     }
 
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       try {
         const service = await getForegroundService();
         if (!service) {
@@ -99,7 +99,7 @@ const createBackgroundRecordingService = () => {
 
         const hasNotificationPermission = await requestNotificationPermission();
         if (!hasNotificationPermission) {
-          logError('Background recording requires notification permission', {
+          logError("Background recording requires notification permission", {
             flag: FeatureFlag.service,
           });
           return false;
@@ -114,20 +114,20 @@ const createBackgroundRecordingService = () => {
           onError: (e: Error) => {
             logError(e, {
               flag: FeatureFlag.service,
-              message: 'Foreground task error',
+              message: "Foreground task error",
             });
           },
         });
 
         await service.start({
           id: NOTIFICATION_ID,
-          title: 'Echos',
-          message: 'Recording in progress...',
-          icon: 'ic_launcher',
-          largeIcon: 'ic_launcher',
-          importance: 'high',
+          title: "Echos",
+          message: "Recording in progress...",
+          icon: "ic_launcher",
+          largeIcon: "ic_launcher",
+          importance: "high",
           setOnlyAlertOnce: true,
-          ServiceType: 'microphone',
+          ServiceType: "microphone",
         });
 
         isServiceRunning = true;
@@ -135,7 +135,7 @@ const createBackgroundRecordingService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Failed to start foreground service',
+          message: "Failed to start foreground service",
         });
         return false;
       }
@@ -150,7 +150,7 @@ const createBackgroundRecordingService = () => {
       return true;
     }
 
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       try {
         const service = await getForegroundService();
         if (!service) {
@@ -165,7 +165,7 @@ const createBackgroundRecordingService = () => {
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.service,
-          message: 'Failed to stop foreground service',
+          message: "Failed to stop foreground service",
         });
         isServiceRunning = false;
         return false;
