@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { act, render } from '@testing-library/react-native';
-import React from 'react';
+import { act, render } from "@testing-library/react-native";
+import React from "react";
 
-import { lightColors } from '@/theme/themeColors';
+import { lightColors } from "@/theme/themeColors";
 
-import { Tooltip } from './Tooltip';
+import { Tooltip } from "./Tooltip";
 
 const defaultProps = {
   visible: true,
-  message: 'This is a tooltip',
+  message: "This is a tooltip",
   onDismiss: jest.fn(),
 };
 
@@ -24,16 +24,16 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('Tooltip', () => {
-  it('renders message text when visible', () => {
+describe("Tooltip", () => {
+  it("renders message text when visible", () => {
     const { getByText } = render(<Tooltip {...defaultProps} />);
     act(() => {
       jest.runAllTimers();
     });
-    expect(getByText('This is a tooltip')).toBeTruthy();
+    expect(getByText("This is a tooltip")).toBeTruthy();
   });
 
-  it('applies variant background color for success variant', () => {
+  it("applies variant background color for success variant", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="success" />);
     act(() => {
       jest.runAllTimers();
@@ -43,7 +43,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentSuccessTransparent);
   });
 
-  it('renders SVG pointer when pointerPosition is top', () => {
+  it("renders SVG pointer when pointerPosition is top", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} pointerPosition="top" />,
     );
@@ -54,13 +54,13 @@ describe('Tooltip', () => {
     // The pointer renders an Svg (mocked as "Svg" string) and a Path
     // (mocked as "Path" string). The pointer container has marginBottom: -1
     // for top position.
-    expect(json).toContain('Svg');
-    expect(json).toContain('Path');
+    expect(json).toContain("Svg");
+    expect(json).toContain("Path");
     // Top pointer has marginBottom: -1
     expect(json).toContain('"marginBottom":-1');
   });
 
-  it('renders SVG pointer when pointerPosition is bottom', () => {
+  it("renders SVG pointer when pointerPosition is bottom", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} pointerPosition="bottom" />,
     );
@@ -68,13 +68,13 @@ describe('Tooltip', () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('Svg');
-    expect(json).toContain('Path');
+    expect(json).toContain("Svg");
+    expect(json).toContain("Path");
     // Bottom pointer has marginTop: -1
     expect(json).toContain('"marginTop":-1');
   });
 
-  it('dismissible tooltip has pointerEvents auto', () => {
+  it("dismissible tooltip has pointerEvents auto", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} isDismissible={true} />,
     );
@@ -86,7 +86,7 @@ describe('Tooltip', () => {
     expect(json).toContain('"pointerEvents":"auto"');
   });
 
-  it('info mode shows leading icon', () => {
+  it("info mode shows leading icon", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} isInfo={true} />);
     act(() => {
       jest.runAllTimers();
@@ -98,7 +98,7 @@ describe('Tooltip', () => {
     expect(json).toContain('"height":18');
   });
 
-  it('applies warning variant background color', () => {
+  it("applies warning variant background color", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="warning" />);
     act(() => {
       jest.runAllTimers();
@@ -107,7 +107,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentWarningTransparent);
   });
 
-  it('applies error variant background color', () => {
+  it("applies error variant background color", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
@@ -116,16 +116,16 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentDangerTransparent);
   });
 
-  it('normal variant uses BlurView wrapper', () => {
+  it("normal variant uses BlurView wrapper", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="normal" />);
     act(() => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('BlurView');
+    expect(json).toContain("BlurView");
   });
 
-  it('non-normal variant uses plain View wrapper', () => {
+  it("non-normal variant uses plain View wrapper", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
@@ -135,7 +135,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentDangerTransparent);
   });
 
-  it('dismissible tooltip renders close icon', () => {
+  it("dismissible tooltip renders close icon", () => {
     const onDismiss = jest.fn();
     const { toJSON } = render(
       <Tooltip {...defaultProps} isDismissible={true} onDismiss={onDismiss} />,
@@ -148,7 +148,7 @@ describe('Tooltip', () => {
     expect(json).toContain('"pointerEvents":"auto"');
   });
 
-  it('non-dismissible tooltip has pointerEvents none', () => {
+  it("non-dismissible tooltip has pointerEvents none", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} isDismissible={false} />,
     );
@@ -159,7 +159,7 @@ describe('Tooltip', () => {
     expect(json).toContain('"pointerEvents":"none"');
   });
 
-  it('no pointer renders when pointerPosition is none', () => {
+  it("no pointer renders when pointerPosition is none", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} pointerPosition="none" />,
     );
@@ -167,11 +167,11 @@ describe('Tooltip', () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).not.toContain('Svg');
-    expect(json).not.toContain('Path');
+    expect(json).not.toContain("Svg");
+    expect(json).not.toContain("Path");
   });
 
-  it('fade out animation when visible becomes false', () => {
+  it("fade out animation when visible becomes false", () => {
     const { rerender, toJSON } = render(<Tooltip {...defaultProps} />);
     act(() => {
       jest.runAllTimers();
@@ -184,7 +184,7 @@ describe('Tooltip', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('info mode with onLeadingIconTap renders pressable leading icon', () => {
+  it("info mode with onLeadingIconTap renders pressable leading icon", () => {
     const onLeadingTap = jest.fn();
     const { toJSON } = render(
       <Tooltip
@@ -201,8 +201,8 @@ describe('Tooltip', () => {
     expect(json).toContain('"width":18');
   });
 
-  it('info mode with custom leadingIcon renders it', () => {
-    const { View } = require('react-native');
+  it("info mode with custom leadingIcon renders it", () => {
+    const { View } = require("react-native");
     const customIcon = <View testID="custom-leading-icon" />;
     const { toJSON } = render(
       <Tooltip {...defaultProps} isInfo={true} leadingIcon={customIcon} />,
@@ -211,11 +211,11 @@ describe('Tooltip', () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('custom-leading-icon');
+    expect(json).toContain("custom-leading-icon");
   });
 
-  it('dismissible with custom trailingIcon renders it', () => {
-    const { View } = require('react-native');
+  it("dismissible with custom trailingIcon renders it", () => {
+    const { View } = require("react-native");
     const customTrailing = <View testID="custom-trailing-icon" />;
     const { toJSON } = render(
       <Tooltip
@@ -228,10 +228,10 @@ describe('Tooltip', () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('custom-trailing-icon');
+    expect(json).toContain("custom-trailing-icon");
   });
 
-  it('custom margin is applied', () => {
+  it("custom margin is applied", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} margin={32} />);
     act(() => {
       jest.runAllTimers();
@@ -240,7 +240,7 @@ describe('Tooltip', () => {
     expect(json).toContain('"margin":32');
   });
 
-  it('success variant text color uses accentSuccess', () => {
+  it("success variant text color uses accentSuccess", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="success" />);
     act(() => {
       jest.runAllTimers();
@@ -249,7 +249,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentSuccess);
   });
 
-  it('warning variant text color uses accentWarning', () => {
+  it("warning variant text color uses accentWarning", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="warning" />);
     act(() => {
       jest.runAllTimers();
@@ -258,7 +258,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentWarning);
   });
 
-  it('error variant text/icon color uses accentDanger', () => {
+  it("error variant text/icon color uses accentDanger", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
@@ -267,7 +267,7 @@ describe('Tooltip', () => {
     expect(json).toContain(lightColors.accentDanger);
   });
 
-  it('dismissible with onTrailingIconTap uses it instead of onDismiss', () => {
+  it("dismissible with onTrailingIconTap uses it instead of onDismiss", () => {
     const onTrailingTap = jest.fn();
     const onDismiss = jest.fn();
     const { toJSON } = render(
@@ -285,8 +285,8 @@ describe('Tooltip', () => {
     expect(toJSON()).toBeTruthy();
   });
 
-  it('info mode with onLeadingIconTap and custom leadingIcon renders custom icon in pressable', () => {
-    const { View } = require('react-native');
+  it("info mode with onLeadingIconTap and custom leadingIcon renders custom icon in pressable", () => {
+    const { View } = require("react-native");
     const onLeadingTap = jest.fn();
     const customIcon = <View testID="custom-icon-pressable" />;
     const { toJSON } = render(
@@ -301,10 +301,10 @@ describe('Tooltip', () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain('custom-icon-pressable');
+    expect(json).toContain("custom-icon-pressable");
   });
 
-  it('custom pointerSize renders correctly', () => {
+  it("custom pointerSize renders correctly", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} pointerPosition="top" pointerSize={12} />,
     );
@@ -313,10 +313,10 @@ describe('Tooltip', () => {
     });
     const json = JSON.stringify(toJSON());
     // With pointerSize=12, viewBox should be "0 0 24 12"
-    expect(json).toContain('0 0 24 12');
+    expect(json).toContain("0 0 24 12");
   });
 
-  it('dismissible tooltip with normal variant uses textTertiary for close icon color', () => {
+  it("dismissible tooltip with normal variant uses textTertiary for close icon color", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} isDismissible={true} variant="normal" />,
     );

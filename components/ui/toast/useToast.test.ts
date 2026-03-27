@@ -1,46 +1,46 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook } from "@testing-library/react-native";
 
-import { ToastOptions, useToast } from './useToast';
+import { ToastOptions, useToast } from "./useToast";
 
-describe('useToast', () => {
+describe("useToast", () => {
   const makeOptions = (overrides?: Partial<ToastOptions>): ToastOptions => ({
-    title: 'Success',
-    message: 'Operation completed.',
+    title: "Success",
+    message: "Operation completed.",
     ...overrides,
   });
 
-  it('initializes with visible=false', () => {
+  it("initializes with visible=false", () => {
     const { result } = renderHook(() => useToast());
 
     expect(result.current.toastState.visible).toBe(false);
-    expect(result.current.toastState.title).toBe('');
-    expect(result.current.toastState.message).toBe('');
+    expect(result.current.toastState.title).toBe("");
+    expect(result.current.toastState.message).toBe("");
   });
 
-  it('show() sets visible=true with provided props', () => {
+  it("show() sets visible=true with provided props", () => {
     const { result } = renderHook(() => useToast());
 
     act(() => {
       result.current.show(
         makeOptions({
-          title: 'Saved',
-          message: 'Your session has been saved.',
-          variant: 'informative',
-          primaryButtonText: 'Undo',
+          title: "Saved",
+          message: "Your session has been saved.",
+          variant: "informative",
+          primaryButtonText: "Undo",
         }),
       );
     });
 
     expect(result.current.toastState.visible).toBe(true);
-    expect(result.current.toastState.title).toBe('Saved');
+    expect(result.current.toastState.title).toBe("Saved");
     expect(result.current.toastState.message).toBe(
-      'Your session has been saved.',
+      "Your session has been saved.",
     );
-    expect(result.current.toastState.variant).toBe('informative');
-    expect(result.current.toastState.primaryButtonText).toBe('Undo');
+    expect(result.current.toastState.variant).toBe("informative");
+    expect(result.current.toastState.primaryButtonText).toBe("Undo");
   });
 
-  it('hide() sets visible=false', () => {
+  it("hide() sets visible=false", () => {
     const { result } = renderHook(() => useToast());
 
     act(() => {
@@ -54,7 +54,7 @@ describe('useToast', () => {
     expect(result.current.toastState.visible).toBe(false);
   });
 
-  it('wraps primary button callback to auto-hide on tap', () => {
+  it("wraps primary button callback to auto-hide on tap", () => {
     const onPrimaryTap = jest.fn();
     const { result } = renderHook(() => useToast());
 
@@ -62,7 +62,7 @@ describe('useToast', () => {
       result.current.show(
         makeOptions({
           onPrimaryButtonTap: onPrimaryTap,
-          primaryButtonText: 'Undo',
+          primaryButtonText: "Undo",
         }),
       );
     });
@@ -76,7 +76,7 @@ describe('useToast', () => {
     expect(result.current.toastState.visible).toBe(false);
   });
 
-  it('wraps secondary button callback to auto-hide on tap', () => {
+  it("wraps secondary button callback to auto-hide on tap", () => {
     const onSecondaryTap = jest.fn();
     const { result } = renderHook(() => useToast());
 
@@ -84,7 +84,7 @@ describe('useToast', () => {
       result.current.show(
         makeOptions({
           onSecondaryButtonTap: onSecondaryTap,
-          secondaryButtonText: 'Dismiss',
+          secondaryButtonText: "Dismiss",
         }),
       );
     });
@@ -98,7 +98,7 @@ describe('useToast', () => {
     expect(result.current.toastState.visible).toBe(false);
   });
 
-  it('onDismiss hides the toast', () => {
+  it("onDismiss hides the toast", () => {
     const { result } = renderHook(() => useToast());
 
     act(() => {

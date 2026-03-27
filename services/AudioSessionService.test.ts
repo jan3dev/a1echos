@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
-describe('AudioSessionService', () => {
+describe("AudioSessionService", () => {
   const setMockPlatform = (os: string) => {
-    Object.defineProperty(Platform, 'OS', { get: () => os });
+    Object.defineProperty(Platform, "OS", { get: () => os });
   };
 
   afterEach(() => {
@@ -11,13 +11,13 @@ describe('AudioSessionService', () => {
     jest.resetModules();
   });
 
-  describe('Android', () => {
-    it('returns true (no-op) on Android', async () => {
-      setMockPlatform('android');
+  describe("Android", () => {
+    it("returns true (no-op) on Android", async () => {
+      setMockPlatform("android");
 
-      const { setAudioModeAsync } = require('expo-audio');
+      const { setAudioModeAsync } = require("expo-audio");
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       const result = await audioSessionService.ensureRecordingMode();
 
@@ -26,15 +26,15 @@ describe('AudioSessionService', () => {
     });
   });
 
-  describe('iOS', () => {
+  describe("iOS", () => {
     beforeEach(() => {
-      setMockPlatform('ios');
+      setMockPlatform("ios");
     });
 
-    it('calls setAudioModeAsync with correct options', async () => {
-      const { setAudioModeAsync } = require('expo-audio');
+    it("calls setAudioModeAsync with correct options", async () => {
+      const { setAudioModeAsync } = require("expo-audio");
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       await audioSessionService.ensureRecordingMode();
 
@@ -46,36 +46,36 @@ describe('AudioSessionService', () => {
       });
     });
 
-    it('returns true on success', async () => {
+    it("returns true on success", async () => {
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       const result = await audioSessionService.ensureRecordingMode();
 
       expect(result).toBe(true);
     });
 
-    it('returns false on setAudioModeAsync failure', async () => {
-      const { setAudioModeAsync } = require('expo-audio');
+    it("returns false on setAudioModeAsync failure", async () => {
+      const { setAudioModeAsync } = require("expo-audio");
       (setAudioModeAsync as jest.Mock).mockRejectedValueOnce(
-        new Error('audio fail'),
+        new Error("audio fail"),
       );
 
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       const result = await audioSessionService.ensureRecordingMode();
 
       expect(result).toBe(false);
     });
 
-    it('previous failure does not block retry', async () => {
-      const { setAudioModeAsync } = require('expo-audio');
+    it("previous failure does not block retry", async () => {
+      const { setAudioModeAsync } = require("expo-audio");
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       (setAudioModeAsync as jest.Mock).mockRejectedValueOnce(
-        new Error('first fail'),
+        new Error("first fail"),
       );
       const first = await audioSessionService.ensureRecordingMode();
       expect(first).toBe(false);
@@ -85,10 +85,10 @@ describe('AudioSessionService', () => {
       expect(second).toBe(true);
     });
 
-    it('idempotent: second concurrent call waits for first', async () => {
-      const { setAudioModeAsync } = require('expo-audio');
+    it("idempotent: second concurrent call waits for first", async () => {
+      const { setAudioModeAsync } = require("expo-audio");
       const { audioSessionService } =
-        require('./AudioSessionService') as typeof import('./AudioSessionService');
+        require("./AudioSessionService") as typeof import("./AudioSessionService");
 
       let resolveAudio: () => void;
       (setAudioModeAsync as jest.Mock).mockImplementationOnce(

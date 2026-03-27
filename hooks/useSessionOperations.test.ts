@@ -1,11 +1,11 @@
-import { act, renderHook } from '@testing-library/react-native';
+import { act, renderHook } from "@testing-library/react-native";
 
-import { createSession } from '@/models/Session';
-import { useSessionStore, useTranscriptionStore } from '@/stores';
+import { createSession } from "@/models/Session";
+import { useSessionStore, useTranscriptionStore } from "@/stores";
 
-import { useSessionOperations } from './useSessionOperations';
+import { useSessionOperations } from "./useSessionOperations";
 
-describe('useSessionOperations', () => {
+describe("useSessionOperations", () => {
   const mockDeleteSession = jest.fn().mockResolvedValue(undefined);
   const mockClearIncognitoSession = jest.fn().mockResolvedValue(undefined);
   const mockDeleteAllTranscriptionsForSession = jest
@@ -28,44 +28,44 @@ describe('useSessionOperations', () => {
     });
   });
 
-  it('deleteSession calls deleteAllTranscriptionsForSession then deleteSession', async () => {
+  it("deleteSession calls deleteAllTranscriptionsForSession then deleteSession", async () => {
     const { result } = renderHook(() => useSessionOperations());
 
     await act(async () => {
-      await result.current.deleteSession('session-1');
+      await result.current.deleteSession("session-1");
     });
 
     expect(mockDeleteAllTranscriptionsForSession).toHaveBeenCalledWith(
-      'session-1',
+      "session-1",
     );
-    expect(mockDeleteSession).toHaveBeenCalledWith('session-1');
+    expect(mockDeleteSession).toHaveBeenCalledWith("session-1");
   });
 
-  it('deleteSession calls transcription deletion before session deletion', async () => {
+  it("deleteSession calls transcription deletion before session deletion", async () => {
     const callOrder: string[] = [];
     mockDeleteAllTranscriptionsForSession.mockImplementation(async () => {
-      callOrder.push('deleteTranscriptions');
+      callOrder.push("deleteTranscriptions");
     });
     mockDeleteSession.mockImplementation(async () => {
-      callOrder.push('deleteSession');
+      callOrder.push("deleteSession");
     });
 
     const { result } = renderHook(() => useSessionOperations());
 
     await act(async () => {
-      await result.current.deleteSession('session-1');
+      await result.current.deleteSession("session-1");
     });
 
-    expect(callOrder).toEqual(['deleteTranscriptions', 'deleteSession']);
+    expect(callOrder).toEqual(["deleteTranscriptions", "deleteSession"]);
   });
 
-  it('endIncognitoSession deletes transcriptions and clears session when incognito session exists', async () => {
+  it("endIncognitoSession deletes transcriptions and clears session when incognito session exists", async () => {
     useSessionStore.setState({
       deleteSession: mockDeleteSession,
       clearIncognitoSession: mockClearIncognitoSession,
       incognitoSession: createSession({
-        id: 'incognito-1',
-        name: 'Incognito',
+        id: "incognito-1",
+        name: "Incognito",
         timestamp: new Date(),
         isIncognito: true,
       }),
@@ -78,12 +78,12 @@ describe('useSessionOperations', () => {
     });
 
     expect(mockDeleteAllTranscriptionsForSession).toHaveBeenCalledWith(
-      'incognito-1',
+      "incognito-1",
     );
     expect(mockClearIncognitoSession).toHaveBeenCalled();
   });
 
-  it('endIncognitoSession is a no-op when no incognito session exists', async () => {
+  it("endIncognitoSession is a no-op when no incognito session exists", async () => {
     useSessionStore.setState({
       deleteSession: mockDeleteSession,
       clearIncognitoSession: mockClearIncognitoSession,
@@ -100,7 +100,7 @@ describe('useSessionOperations', () => {
     expect(mockClearIncognitoSession).not.toHaveBeenCalled();
   });
 
-  it('deleteSession and endIncognitoSession are stable function references', () => {
+  it("deleteSession and endIncognitoSession are stable function references", () => {
     const { result, rerender } = renderHook(() => useSessionOperations());
 
     const first = result.current;

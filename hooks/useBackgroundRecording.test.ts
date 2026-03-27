@@ -1,12 +1,12 @@
-import { renderHook } from '@testing-library/react-native';
-import { AppState } from 'react-native';
+import { renderHook } from "@testing-library/react-native";
+import { AppState } from "react-native";
 
-import { audioService } from '@/services';
-import { useTranscriptionStore } from '@/stores';
+import { audioService } from "@/services";
+import { useTranscriptionStore } from "@/stores";
 
-import { useBackgroundRecording } from './useBackgroundRecording';
+import { useBackgroundRecording } from "./useBackgroundRecording";
 
-jest.mock('@/services', () => ({
+jest.mock("@/services", () => ({
   audioService: {
     pauseAmplitudeMonitoring: jest.fn(),
     resumeAmplitudeMonitoring: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock('@/services', () => ({
 const mockPause = audioService.pauseAmplitudeMonitoring as jest.Mock;
 const mockResume = audioService.resumeAmplitudeMonitoring as jest.Mock;
 
-describe('useBackgroundRecording', () => {
+describe("useBackgroundRecording", () => {
   let appStateCallback: ((state: string) => void) | null = null;
   const mockRemove = jest.fn();
 
@@ -25,14 +25,14 @@ describe('useBackgroundRecording', () => {
     appStateCallback = null;
 
     jest
-      .spyOn(AppState, 'addEventListener')
+      .spyOn(AppState, "addEventListener")
       .mockImplementation((_, handler) => {
         appStateCallback = handler as (state: string) => void;
         return { remove: mockRemove } as any;
       });
 
-    Object.defineProperty(AppState, 'currentState', {
-      value: 'active',
+    Object.defineProperty(AppState, "currentState", {
+      value: "active",
       writable: true,
       configurable: true,
     });
@@ -46,31 +46,31 @@ describe('useBackgroundRecording', () => {
     jest.useRealTimers();
   });
 
-  it('pauses amplitude when app goes to background while recording', () => {
+  it("pauses amplitude when app goes to background while recording", () => {
     renderHook(() => useBackgroundRecording());
 
-    appStateCallback?.('background');
+    appStateCallback?.("background");
 
     expect(mockPause).toHaveBeenCalled();
   });
 
-  it('pauses amplitude when app goes to inactive while recording', () => {
+  it("pauses amplitude when app goes to inactive while recording", () => {
     renderHook(() => useBackgroundRecording());
 
-    appStateCallback?.('inactive');
+    appStateCallback?.("inactive");
 
     expect(mockPause).toHaveBeenCalled();
   });
 
-  it('resumes amplitude after 150ms when app comes to foreground while recording', () => {
+  it("resumes amplitude after 150ms when app comes to foreground while recording", () => {
     renderHook(() => useBackgroundRecording());
 
     // First go to background
-    appStateCallback?.('background');
+    appStateCallback?.("background");
     mockPause.mockClear();
 
     // Then come back to foreground
-    appStateCallback?.('active');
+    appStateCallback?.("active");
 
     // Not called immediately
     expect(mockResume).not.toHaveBeenCalled();
@@ -80,19 +80,19 @@ describe('useBackgroundRecording', () => {
     expect(mockResume).toHaveBeenCalled();
   });
 
-  it('does NOT pause when going to background while not recording', () => {
+  it("does NOT pause when going to background while not recording", () => {
     useTranscriptionStore.setState({
       isRecording: () => false,
     });
 
     renderHook(() => useBackgroundRecording());
 
-    appStateCallback?.('background');
+    appStateCallback?.("background");
 
     expect(mockPause).not.toHaveBeenCalled();
   });
 
-  it('does NOT resume when coming to foreground while not recording', () => {
+  it("does NOT resume when coming to foreground while not recording", () => {
     useTranscriptionStore.setState({
       isRecording: () => false,
     });
@@ -100,19 +100,19 @@ describe('useBackgroundRecording', () => {
     renderHook(() => useBackgroundRecording());
 
     // Go to background then foreground
-    appStateCallback?.('background');
-    appStateCallback?.('active');
+    appStateCallback?.("background");
+    appStateCallback?.("active");
     jest.advanceTimersByTime(150);
 
     expect(mockResume).not.toHaveBeenCalled();
   });
 
-  it('150ms delay is respected — resume not called before timer fires', () => {
+  it("150ms delay is respected — resume not called before timer fires", () => {
     renderHook(() => useBackgroundRecording());
 
     // Go to background then foreground
-    appStateCallback?.('background');
-    appStateCallback?.('active');
+    appStateCallback?.("background");
+    appStateCallback?.("active");
 
     jest.advanceTimersByTime(100);
     expect(mockResume).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('useBackgroundRecording', () => {
     expect(mockResume).toHaveBeenCalled();
   });
 
-  it('cleans up subscription on unmount', () => {
+  it("cleans up subscription on unmount", () => {
     const { unmount } = renderHook(() => useBackgroundRecording());
 
     unmount();

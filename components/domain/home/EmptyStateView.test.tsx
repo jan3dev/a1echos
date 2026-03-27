@@ -1,17 +1,16 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { render } from '@testing-library/react-native';
-import React from 'react';
+import { render } from "@testing-library/react-native";
+import React from "react";
 
-import { EmptyStateView } from './EmptyStateView';
+import { EmptyStateView } from "./EmptyStateView";
 
-jest.mock('react-native-worklets', () => ({
+jest.mock("react-native-worklets", () => ({
   scheduleOnRN: jest.fn((fn) => fn()),
 }));
 
-jest.mock('../../ui/tooltip/Tooltip', () => ({
+jest.mock("../../ui/tooltip/Tooltip", () => ({
   Tooltip: (props: any) => {
-     
-    const { View, Text } = require('react-native');
+    const { View, Text } = require("react-native");
     return (
       <View testID="tooltip">
         <Text>{props.message}</Text>
@@ -20,34 +19,34 @@ jest.mock('../../ui/tooltip/Tooltip', () => ({
   },
 }));
 
-describe('EmptyStateView', () => {
+describe("EmptyStateView", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders message text via Tooltip', () => {
+  it("renders message text via Tooltip", () => {
     const { getByText } = render(
       <EmptyStateView message="Tap to record" shouldDisappear={false} />,
     );
-    expect(getByText('Tap to record')).toBeTruthy();
+    expect(getByText("Tap to record")).toBeTruthy();
   });
 
-  it('renders without crashing when shouldDisappear=false', () => {
+  it("renders without crashing when shouldDisappear=false", () => {
     const { getByTestId } = render(
       <EmptyStateView message="Hello" shouldDisappear={false} />,
     );
-    expect(getByTestId('tooltip')).toBeTruthy();
+    expect(getByTestId("tooltip")).toBeTruthy();
   });
 
-  it('renders without crashing when shouldDisappear=true', () => {
+  it("renders without crashing when shouldDisappear=true", () => {
     const { getByTestId } = render(
       <EmptyStateView message="Hello" shouldDisappear={true} />,
     );
-    expect(getByTestId('tooltip')).toBeTruthy();
+    expect(getByTestId("tooltip")).toBeTruthy();
   });
 
-  it('calls withTiming when shouldDisappear transitions to true', () => {
-    const { withTiming } = require('react-native-reanimated');
+  it("calls withTiming when shouldDisappear transitions to true", () => {
+    const { withTiming } = require("react-native-reanimated");
     const onDisappearComplete = jest.fn();
     const { rerender } = render(
       <EmptyStateView
@@ -68,35 +67,35 @@ describe('EmptyStateView', () => {
     expect(withTiming).toHaveBeenCalled();
   });
 
-  it('calls withSpring when shouldDisappear is false (reset animation)', () => {
-    const { withSpring } = require('react-native-reanimated');
+  it("calls withSpring when shouldDisappear is false (reset animation)", () => {
+    const { withSpring } = require("react-native-reanimated");
     (withSpring as jest.Mock).mockClear();
     render(<EmptyStateView message="Hello" shouldDisappear={false} />);
     // withSpring is called to reset scale and opacity to 1
     expect(withSpring).toHaveBeenCalled();
   });
 
-  it('renders different messages correctly', () => {
+  it("renders different messages correctly", () => {
     const { getByText, rerender } = render(
       <EmptyStateView message="First message" shouldDisappear={false} />,
     );
-    expect(getByText('First message')).toBeTruthy();
+    expect(getByText("First message")).toBeTruthy();
 
     rerender(
       <EmptyStateView message="Second message" shouldDisappear={false} />,
     );
-    expect(getByText('Second message')).toBeTruthy();
+    expect(getByText("Second message")).toBeTruthy();
   });
 
-  it('does not crash when onDisappearComplete is undefined and shouldDisappear is true', () => {
+  it("does not crash when onDisappearComplete is undefined and shouldDisappear is true", () => {
     expect(() => {
       render(<EmptyStateView message="Hello" shouldDisappear={true} />);
     }).not.toThrow();
   });
 
-  it('onDisappearComplete is called via scheduleOnRN when animation finishes', () => {
-    const { withTiming } = require('react-native-reanimated');
-    const { scheduleOnRN } = require('react-native-worklets');
+  it("onDisappearComplete is called via scheduleOnRN when animation finishes", () => {
+    const { withTiming } = require("react-native-reanimated");
+    const { scheduleOnRN } = require("react-native-worklets");
     const onDisappearComplete = jest.fn();
 
     // Mock withTiming to immediately call the callback with finished=true
@@ -124,9 +123,9 @@ describe('EmptyStateView', () => {
     expect(scheduleOnRN).toHaveBeenCalledWith(onDisappearComplete);
   });
 
-  it('withTiming callback does not call scheduleOnRN when finished is false', () => {
-    const { withTiming } = require('react-native-reanimated');
-    const { scheduleOnRN } = require('react-native-worklets');
+  it("withTiming callback does not call scheduleOnRN when finished is false", () => {
+    const { withTiming } = require("react-native-reanimated");
+    const { scheduleOnRN } = require("react-native-worklets");
     const onDisappearComplete = jest.fn();
 
     (scheduleOnRN as jest.Mock).mockClear();

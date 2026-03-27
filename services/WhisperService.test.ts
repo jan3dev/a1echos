@@ -1,94 +1,94 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-jest.mock('./AudioService', () => ({
+jest.mock("./AudioService", () => ({
   audioService: {
     warmUpIosAudioInput: jest.fn(async () => true),
   },
 }));
 
-jest.mock('./AudioSessionService', () => ({
+jest.mock("./AudioSessionService", () => ({
   audioSessionService: {
     ensureRecordingMode: jest.fn(async () => true),
   },
 }));
 
-jest.mock('@/utils', () => ({
-  ...jest.requireActual('@/utils'),
+jest.mock("@/utils", () => ({
+  ...jest.requireActual("@/utils"),
   logError: jest.fn(),
   logWarn: jest.fn(),
   logInfo: jest.fn(),
   logDebug: jest.fn(),
   FeatureFlag: {
-    service: 'service',
-    recording: 'recording',
-    model: 'model',
-    transcription: 'transcription',
-    storage: 'storage',
+    service: "service",
+    recording: "recording",
+    model: "model",
+    transcription: "transcription",
+    storage: "storage",
   },
 }));
 
-describe('WhisperService', () => {
+describe("WhisperService", () => {
   beforeEach(() => {
     jest.resetModules();
   });
 
   const setupPlatform = (os: string) => {
-    const { Platform } = require('react-native');
-    Object.defineProperty(Platform, 'OS', { get: () => os });
+    const { Platform } = require("react-native");
+    Object.defineProperty(Platform, "OS", { get: () => os });
   };
 
-  const getWhisperRn = () => require('whisper.rn');
+  const getWhisperRn = () => require("whisper.rn");
   const getRealtimeModule = () =>
-    require('whisper.rn/src/realtime-transcription');
+    require("whisper.rn/src/realtime-transcription");
   const getAdapterModule = () =>
-    require('whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter');
+    require("whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter");
 
   const setupInitialized = async () => {
-    setupPlatform('ios');
-    const { File } = require('expo-file-system');
+    setupPlatform("ios");
+    const { File } = require("expo-file-system");
     (File as jest.Mock).mockImplementation(() => ({ exists: true }));
     const mod =
-      require('./WhisperService') as typeof import('./WhisperService');
+      require("./WhisperService") as typeof import("./WhisperService");
     await mod.whisperService.initialize();
     return mod.whisperService;
   };
 
-  describe('initialize', () => {
-    it('downloads model assets and creates whisper + VAD contexts', async () => {
-      setupPlatform('ios');
+  describe("initialize", () => {
+    it("downloads model assets and creates whisper + VAD contexts", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const result = await whisperService.initialize();
 
       expect(result).toBe(true);
       expect(whisperRn.initWhisper).toHaveBeenCalledWith(
         expect.objectContaining({
-          filePath: '/mock/asset/path',
+          filePath: "/mock/asset/path",
         }),
       );
       expect(whisperRn.initWhisperVad).toHaveBeenCalledWith(
         expect.objectContaining({
-          filePath: '/mock/asset/path',
+          filePath: "/mock/asset/path",
         }),
       );
     });
 
-    it('sets isInitialized and status to ready', async () => {
-      setupPlatform('ios');
+    it("sets isInitialized and status to ready", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       await whisperService.initialize();
 
-      expect(whisperService.initializationStatus).toBe('Whisper ready');
+      expect(whisperService.initializationStatus).toBe("Whisper ready");
     });
 
-    it('is idempotent (returns cached promise)', async () => {
-      setupPlatform('ios');
+    it("is idempotent (returns cached promise)", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const [r1, r2] = await Promise.all([
         whisperService.initialize(),
@@ -100,11 +100,11 @@ describe('WhisperService', () => {
       expect(whisperRn.initWhisper).toHaveBeenCalledTimes(1);
     });
 
-    it('iOS-specific thread config', async () => {
-      setupPlatform('ios');
+    it("iOS-specific thread config", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       await whisperService.initialize();
 
@@ -122,42 +122,42 @@ describe('WhisperService', () => {
       );
     });
 
-    it('resets state and returns false on failure', async () => {
-      setupPlatform('ios');
+    it("resets state and returns false on failure", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
-      whisperRn.initWhisper.mockRejectedValueOnce(new Error('init failed'));
+      whisperRn.initWhisper.mockRejectedValueOnce(new Error("init failed"));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const result = await whisperService.initialize();
 
       expect(result).toBe(false);
       expect(whisperService.initializationStatus).toContain(
-        'Initialization failed',
+        "Initialization failed",
       );
     });
   });
 
-  describe('transcribeFile', () => {
-    it('throws if not initialized', async () => {
-      setupPlatform('ios');
+  describe("transcribeFile", () => {
+    it("throws if not initialized", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       await expect(
-        whisperService.transcribeFile('/audio/test.wav'),
-      ).rejects.toThrow('Whisper service not initialized');
+        whisperService.transcribeFile("/audio/test.wav"),
+      ).rejects.toThrow("Whisper service not initialized");
     });
 
-    it('throws if already transcribing', async () => {
-      setupPlatform('ios');
+    it("throws if already transcribing", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
           promise: new Promise(() => {}), // Never resolves
@@ -165,54 +165,54 @@ describe('WhisperService', () => {
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       // Start first transcription (won't resolve)
-      whisperService.transcribeFile('/audio/test.wav');
+      whisperService.transcribeFile("/audio/test.wav");
 
       await expect(
-        whisperService.transcribeFile('/audio/test2.wav'),
-      ).rejects.toThrow('Transcription already in progress');
+        whisperService.transcribeFile("/audio/test2.wav"),
+      ).rejects.toThrow("Transcription already in progress");
     });
 
-    it('throws if file not found', async () => {
+    it("throws if file not found", async () => {
       const service = await setupInitialized();
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: false }));
 
       await expect(
-        service.transcribeFile('/audio/nonexistent.wav'),
-      ).rejects.toThrow('Audio file not found');
+        service.transcribeFile("/audio/nonexistent.wav"),
+      ).rejects.toThrow("Audio file not found");
     });
 
-    it('calls whisperContext.transcribe and returns trimmed result', async () => {
+    it("calls whisperContext.transcribe and returns trimmed result", async () => {
       const service = await setupInitialized();
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
-      const result = await service.transcribeFile('/audio/test.wav');
-      expect(result).toBe('mock transcription');
+      const result = await service.transcribeFile("/audio/test.wav");
+      expect(result).toBe("mock transcription");
     });
 
-    it('returns null on empty result', async () => {
-      setupPlatform('ios');
+    it("returns null on empty result", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
           promise: Promise.resolve({
-            result: '   ',
+            result: "   ",
             segments: [],
             isAborted: false,
           }),
@@ -220,29 +220,29 @@ describe('WhisperService', () => {
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
-      const result = await whisperService.transcribeFile('/audio/test.wav');
+      const result = await whisperService.transcribeFile("/audio/test.wav");
       expect(result).toBeNull();
     });
   });
 
-  describe('startRealtimeTranscription', () => {
-    it('returns false if not initialized', async () => {
-      setupPlatform('ios');
+  describe("startRealtimeTranscription", () => {
+    it("returns false if not initialized", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const result = await whisperService.startRealtimeTranscription();
       expect(result).toBe(false);
     });
 
-    it('returns false if already recording', async () => {
+    it("returns false if already recording", async () => {
       const service = await setupInitialized();
 
       await service.startRealtimeTranscription();
@@ -251,17 +251,17 @@ describe('WhisperService', () => {
       expect(result).toBe(false);
     });
 
-    it('warms up iOS audio and creates adapter and transcriber', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("warms up iOS audio and creates adapter and transcriber", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
-      const audioServiceMod = require('./AudioService');
+      const audioServiceMod = require("./AudioService");
       const adapterModule = getAdapterModule();
       const realtimeModule = getRealtimeModule();
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const result = await whisperService.startRealtimeTranscription();
@@ -275,70 +275,70 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('stopRealtimeTranscription', () => {
-    it('returns empty string when not recording', async () => {
-      setupPlatform('ios');
+  describe("stopRealtimeTranscription", () => {
+    it("returns empty string when not recording", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const result = await whisperService.stopRealtimeTranscription();
-      expect(result).toBe('');
+      expect(result).toBe("");
     });
 
-    it('stops transcriber and returns text', async () => {
+    it("stops transcriber and returns text", async () => {
       const service = await setupInitialized();
       await service.startRealtimeTranscription();
 
       const result = await service.stopRealtimeTranscription();
-      expect(typeof result).toBe('string');
+      expect(typeof result).toBe("string");
     });
   });
 
-  describe('subscribeToPartialResults', () => {
-    it('adds callback and unsubscribe removes it', () => {
-      setupPlatform('ios');
+  describe("subscribeToPartialResults", () => {
+    it("adds callback and unsubscribe removes it", () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const callback = jest.fn();
       const unsubscribe = whisperService.subscribeToPartialResults(callback);
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
       unsubscribe();
     });
   });
 
-  describe('subscribeToAudioLevel', () => {
-    it('adds callback and unsubscribe removes it', () => {
-      setupPlatform('ios');
+  describe("subscribeToAudioLevel", () => {
+    it("adds callback and unsubscribe removes it", () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const callback = jest.fn();
       const unsubscribe = whisperService.subscribeToAudioLevel(callback);
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
       unsubscribe();
     });
   });
 
-  describe('dispose', () => {
-    it('releases whisper and VAD contexts, clears callbacks, resets state', async () => {
+  describe("dispose", () => {
+    it("releases whisper and VAD contexts, clears callbacks, resets state", async () => {
       const service = await setupInitialized();
 
       await service.dispose();
 
-      await expect(service.transcribeFile('/audio/test.wav')).rejects.toThrow(
-        'not initialized',
+      await expect(service.transcribeFile("/audio/test.wav")).rejects.toThrow(
+        "not initialized",
       );
     });
 
-    it('releases VAD context', async () => {
-      setupPlatform('ios');
+    it("releases VAD context", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       // Get the resolved VAD context
@@ -350,29 +350,29 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('initializationStatus getter', () => {
-    it('returns current status string', async () => {
-      setupPlatform('ios');
+  describe("initializationStatus getter", () => {
+    it("returns current status string", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       expect(whisperService.initializationStatus).toBeNull();
 
       await whisperService.initialize();
 
-      expect(whisperService.initializationStatus).toBe('Whisper ready');
+      expect(whisperService.initializationStatus).toBe("Whisper ready");
     });
   });
 
-  describe('startRealtimeTranscription - additional branches', () => {
-    it('returns false if file transcription is in progress', async () => {
-      setupPlatform('ios');
+  describe("startRealtimeTranscription - additional branches", () => {
+    it("returns false if file transcription is in progress", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
           promise: new Promise(() => {}), // Never resolves
@@ -380,80 +380,80 @@ describe('WhisperService', () => {
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       // Start a file transcription (won't resolve)
-      whisperService.transcribeFile('/audio/test.wav');
+      whisperService.transcribeFile("/audio/test.wav");
 
       // Now try realtime - should fail because isTranscribing is true
       const result = await whisperService.startRealtimeTranscription();
       expect(result).toBe(false);
     });
 
-    it('returns false if iOS audio warm-up fails', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("returns false if iOS audio warm-up fails", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
-      const audioServiceMod = require('./AudioService');
+      const audioServiceMod = require("./AudioService");
       audioServiceMod.audioService.warmUpIosAudioInput.mockResolvedValueOnce(
         false,
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const result = await whisperService.startRealtimeTranscription();
       expect(result).toBe(false);
     });
 
-    it('passes language and prompt to transcribeOptions', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("passes language and prompt to transcribeOptions", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
-      await whisperService.startRealtimeTranscription('en', 'test prompt');
+      await whisperService.startRealtimeTranscription("en", "test prompt");
 
       // Verify the RealtimeTranscriber was created with correct options
       const constructorCall = realtimeModule.RealtimeTranscriber.mock.calls[0];
       const options = constructorCall[1];
       expect(options.transcribeOptions).toEqual(
         expect.objectContaining({
-          language: 'en',
-          prompt: 'test prompt',
+          language: "en",
+          prompt: "test prompt",
           maxThreads: 2,
         }),
       );
     });
 
-    it('cleans up resources on start failure', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("cleans up resources on start failure", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
       const mockRelease = jest.fn();
       realtimeModule.RealtimeTranscriber.mockImplementationOnce(() => ({
-        start: jest.fn().mockRejectedValue(new Error('start failed')),
+        start: jest.fn().mockRejectedValue(new Error("start failed")),
         stop: jest.fn(),
         release: mockRelease,
         getTranscriptionResults: jest.fn(() => []),
       }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const result = await whisperService.startRealtimeTranscription();
@@ -461,9 +461,9 @@ describe('WhisperService', () => {
       expect(mockRelease).toHaveBeenCalled();
     });
 
-    it('processes onTranscribe callback with transcription results', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("processes onTranscribe callback with transcription results", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -483,7 +483,7 @@ describe('WhisperService', () => {
             getTranscriptionResults: jest.fn(() => [
               {
                 transcribeEvent: {
-                  data: { result: 'hello world' },
+                  data: { result: "hello world" },
                 },
               },
             ]),
@@ -492,7 +492,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const partialCallback = jest.fn();
@@ -502,24 +502,24 @@ describe('WhisperService', () => {
 
       // Simulate a transcription event
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 0,
-        data: { result: 'hello world' },
+        data: { result: "hello world" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 1000,
       });
 
-      expect(partialCallback).toHaveBeenCalledWith('hello world');
+      expect(partialCallback).toHaveBeenCalledWith("hello world");
     });
 
-    it('handles onTranscribe callback error in partial callback', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("handles onTranscribe callback error in partial callback", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
       let onTranscribeCallback: (event: Record<string, unknown>) => void;
 
       realtimeModule.RealtimeTranscriber.mockImplementationOnce(
@@ -536,7 +536,7 @@ describe('WhisperService', () => {
             getTranscriptionResults: jest.fn(() => [
               {
                 transcribeEvent: {
-                  data: { result: 'test' },
+                  data: { result: "test" },
                 },
               },
             ]),
@@ -545,11 +545,11 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const errorCallback = jest.fn(() => {
-        throw new Error('callback error');
+        throw new Error("callback error");
       });
       whisperService.subscribeToPartialResults(errorCallback);
 
@@ -559,9 +559,9 @@ describe('WhisperService', () => {
 
       // Should not throw even though callback throws
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 0,
-        data: { result: 'test' },
+        data: { result: "test" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 1000,
@@ -570,13 +570,13 @@ describe('WhisperService', () => {
       expect(logError).toHaveBeenCalled();
     });
 
-    it('handles onError callback', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("handles onError callback", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
       let onErrorCallback: (error: string) => void;
 
       realtimeModule.RealtimeTranscriber.mockImplementationOnce(
@@ -596,25 +596,25 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
 
       (logError as jest.Mock).mockClear();
-      onErrorCallback!('test error');
+      onErrorCallback!("test error");
 
       expect(logError).toHaveBeenCalledWith(
-        'test error',
+        "test error",
         expect.objectContaining({
-          message: 'RealtimeTranscriber error',
+          message: "RealtimeTranscriber error",
         }),
       );
     });
 
-    it('handles onStatusChange callback', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("handles onStatusChange callback", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -637,7 +637,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
@@ -652,10 +652,10 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('stopRealtimeTranscription - additional branches', () => {
-    it('aggregates final results from transcription history', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("stopRealtimeTranscription - additional branches", () => {
+    it("aggregates final results from transcription history", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -666,30 +666,30 @@ describe('WhisperService', () => {
         getTranscriptionResults: jest.fn(() => [
           {
             transcribeEvent: {
-              data: { result: 'Hello' },
+              data: { result: "Hello" },
             },
           },
           {
             transcribeEvent: {
-              data: { result: 'World' },
+              data: { result: "World" },
             },
           },
         ]),
       }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
       const result = await whisperService.stopRealtimeTranscription();
 
-      expect(result).toBe('Hello World');
+      expect(result).toBe("Hello World");
     });
 
-    it('returns current transcription on error during stop', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("returns current transcription on error during stop", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -704,12 +704,12 @@ describe('WhisperService', () => {
           onTranscribeCallback = callbacks.onTranscribe;
           return {
             start: jest.fn(),
-            stop: jest.fn().mockRejectedValue(new Error('stop error')),
+            stop: jest.fn().mockRejectedValue(new Error("stop error")),
             release: jest.fn(),
             getTranscriptionResults: jest.fn(() => [
               {
                 transcribeEvent: {
-                  data: { result: 'partial text' },
+                  data: { result: "partial text" },
                 },
               },
             ]),
@@ -718,16 +718,16 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
 
       // Simulate some transcription to set currentTranscription
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 0,
-        data: { result: 'partial text' },
+        data: { result: "partial text" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 1000,
@@ -735,12 +735,12 @@ describe('WhisperService', () => {
 
       const result = await whisperService.stopRealtimeTranscription();
       // Should return the current transcription even though stop threw
-      expect(result).toBe('partial text');
+      expect(result).toBe("partial text");
     });
 
-    it('returns empty final text and falls back to currentTranscription', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("returns empty final text and falls back to currentTranscription", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -763,16 +763,16 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
 
       // Set current transcription via callback
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 0,
-        data: { result: 'saved text' },
+        data: { result: "saved text" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 1000,
@@ -781,14 +781,14 @@ describe('WhisperService', () => {
       const result = await whisperService.stopRealtimeTranscription();
       // finalText is empty (getTranscriptionResults returns []),
       // so it should fallback to currentTranscription
-      expect(result).toBe('saved text');
+      expect(result).toBe("saved text");
     });
   });
 
-  describe('processAudioLevel', () => {
-    it('computes RMS and calls audio level callbacks', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("processAudioLevel", () => {
+    it("computes RMS and calls audio level callbacks", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -836,7 +836,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const levelCallback = jest.fn();
@@ -862,14 +862,14 @@ describe('WhisperService', () => {
       expect(level).toBeLessThanOrEqual(1.0);
     });
 
-    it('handles error in audio level callback gracefully', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("handles error in audio level callback gracefully", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
       const adapterModule = getAdapterModule();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
       let capturedOnDataCallback:
         | ((data: { data: Uint8Array }) => void)
         | null = null;
@@ -905,11 +905,11 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const errorCallback = jest.fn(() => {
-        throw new Error('level callback error');
+        throw new Error("level callback error");
       });
       whisperService.subscribeToAudioLevel(errorCallback);
 
@@ -928,14 +928,14 @@ describe('WhisperService', () => {
       expect(logError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          message: 'Error in audio level callback',
+          message: "Error in audio level callback",
         }),
       );
     });
 
-    it('handles empty audio data (< 2 bytes) with zero RMS', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("handles empty audio data (< 2 bytes) with zero RMS", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -975,7 +975,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const levelCallback = jest.fn();
@@ -993,10 +993,10 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('subscribeToPartialResults - receive and unsubscribe', () => {
-    it('receives partial results and stops after unsubscribe', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("subscribeToPartialResults - receive and unsubscribe", () => {
+    it("receives partial results and stops after unsubscribe", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -1016,7 +1016,7 @@ describe('WhisperService', () => {
             getTranscriptionResults: jest.fn(() => [
               {
                 transcribeEvent: {
-                  data: { result: 'test result' },
+                  data: { result: "test result" },
                 },
               },
             ]),
@@ -1025,7 +1025,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const callback = jest.fn();
@@ -1035,9 +1035,9 @@ describe('WhisperService', () => {
 
       // Emit a transcription event
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 0,
-        data: { result: 'test result' },
+        data: { result: "test result" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 1000,
@@ -1050,9 +1050,9 @@ describe('WhisperService', () => {
       callback.mockClear();
 
       onTranscribeCallback!({
-        type: 'transcribe',
+        type: "transcribe",
         sliceIndex: 1,
-        data: { result: 'more text' },
+        data: { result: "more text" },
         isCapturing: true,
         processTime: 100,
         recordingTime: 2000,
@@ -1062,10 +1062,10 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('subscribeToAudioLevel - receive and unsubscribe', () => {
-    it('stops receiving levels after unsubscribe', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("subscribeToAudioLevel - receive and unsubscribe", () => {
+    it("stops receiving levels after unsubscribe", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -1105,7 +1105,7 @@ describe('WhisperService', () => {
       );
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const levelCallback = jest.fn();
@@ -1131,10 +1131,10 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('dispose - additional branches', () => {
-    it('stops realtime transcription if recording during dispose', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("dispose - additional branches", () => {
+    it("stops realtime transcription if recording during dispose", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -1148,7 +1148,7 @@ describe('WhisperService', () => {
       }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
@@ -1159,28 +1159,28 @@ describe('WhisperService', () => {
       expect(mockRelease).toHaveBeenCalled();
     });
 
-    it('handles error when releasing whisper context', async () => {
-      setupPlatform('ios');
+    it("handles error when releasing whisper context", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
-          promise: Promise.resolve({ result: 'test', segments: [] }),
+          promise: Promise.resolve({ result: "test", segments: [] }),
         })),
-        release: jest.fn().mockRejectedValue(new Error('release error')),
+        release: jest.fn().mockRejectedValue(new Error("release error")),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       (logError as jest.Mock).mockClear();
@@ -1191,30 +1191,30 @@ describe('WhisperService', () => {
       expect(logError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          message: 'Error releasing Whisper context',
+          message: "Error releasing Whisper context",
         }),
       );
     });
 
-    it('handles error when releasing VAD context', async () => {
-      setupPlatform('ios');
+    it("handles error when releasing VAD context", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisperVad.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         detectSpeech: jest.fn(),
         detectSpeechData: jest.fn(),
-        release: jest.fn().mockRejectedValue(new Error('vad release error')),
+        release: jest.fn().mockRejectedValue(new Error("vad release error")),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       (logError as jest.Mock).mockClear();
@@ -1224,12 +1224,12 @@ describe('WhisperService', () => {
       expect(logError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          message: 'Error releasing VAD context',
+          message: "Error releasing VAD context",
         }),
       );
     });
 
-    it('clears partial callbacks on dispose', async () => {
+    it("clears partial callbacks on dispose", async () => {
       const service = await setupInitialized();
 
       const callback = jest.fn();
@@ -1239,32 +1239,32 @@ describe('WhisperService', () => {
 
       // After dispose, state is reset - re-initialize would be needed
       // Verify by checking that transcribeFile throws not initialized
-      await expect(service.transcribeFile('/audio/test.wav')).rejects.toThrow(
-        'not initialized',
+      await expect(service.transcribeFile("/audio/test.wav")).rejects.toThrow(
+        "not initialized",
       );
     });
   });
 
-  describe('cleanupRealtimeResources', () => {
-    it('handles error during transcriber release', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("cleanupRealtimeResources", () => {
+    it("handles error during transcriber release", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
 
       realtimeModule.RealtimeTranscriber.mockImplementationOnce(() => ({
         start: jest.fn(),
         stop: jest.fn(),
         release: jest
           .fn()
-          .mockRejectedValue(new Error('release transcriber error')),
+          .mockRejectedValue(new Error("release transcriber error")),
         getTranscriptionResults: jest.fn(() => []),
       }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.startRealtimeTranscription();
@@ -1277,14 +1277,14 @@ describe('WhisperService', () => {
       expect(logError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          message: 'Error releasing RealtimeTranscriber',
+          message: "Error releasing RealtimeTranscriber",
         }),
       );
     });
 
-    it('resets audio level to minimum and notifies callbacks on cleanup', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("resets audio level to minimum and notifies callbacks on cleanup", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const realtimeModule = getRealtimeModule();
@@ -1297,7 +1297,7 @@ describe('WhisperService', () => {
       }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const levelCallback = jest.fn();
@@ -1314,106 +1314,106 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('transcribeFile - additional branches', () => {
-    it('passes language and prompt options', async () => {
+  describe("transcribeFile - additional branches", () => {
+    it("passes language and prompt options", async () => {
       const service = await setupInitialized();
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const whisperRn = getWhisperRn();
       const whisperContext = await whisperRn.initWhisper.mock.results[0].value;
 
-      await service.transcribeFile('/audio/test.wav', 'en', 'context prompt');
+      await service.transcribeFile("/audio/test.wav", "en", "context prompt");
 
       expect(whisperContext.transcribe).toHaveBeenCalledWith(
-        '/audio/test.wav',
+        "/audio/test.wav",
         expect.objectContaining({
-          language: 'en',
-          prompt: 'context prompt',
+          language: "en",
+          prompt: "context prompt",
         }),
       );
     });
 
-    it('throws and logs error on transcription failure', async () => {
-      setupPlatform('ios');
+    it("throws and logs error on transcription failure", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
-          promise: Promise.reject(new Error('transcription error')),
+          promise: Promise.reject(new Error("transcription error")),
         })),
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       (logError as jest.Mock).mockClear();
 
       await expect(
-        whisperService.transcribeFile('/audio/test.wav'),
-      ).rejects.toThrow('transcription error');
+        whisperService.transcribeFile("/audio/test.wav"),
+      ).rejects.toThrow("transcription error");
 
       expect(logError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
-          message: 'Whisper file transcription failed',
+          message: "Whisper file transcription failed",
         }),
       );
     });
 
-    it('resets isTranscribing flag after error', async () => {
-      setupPlatform('ios');
+    it("resets isTranscribing flag after error", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         ptr: 1,
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
-          promise: Promise.reject(new Error('transcription error')),
+          promise: Promise.reject(new Error("transcription error")),
         })),
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       // First call fails
       await expect(
-        whisperService.transcribeFile('/audio/test.wav'),
+        whisperService.transcribeFile("/audio/test.wav"),
       ).rejects.toThrow();
 
       // Should be able to try again (isTranscribing reset to false)
       // This would throw again because mock still rejects, but it shouldn't
       // throw "already in progress"
       await expect(
-        whisperService.transcribeFile('/audio/test.wav'),
-      ).rejects.toThrow('transcription error');
+        whisperService.transcribeFile("/audio/test.wav"),
+      ).rejects.toThrow("transcription error");
     });
   });
 
-  describe('initialize - Android path', () => {
-    it('does not pass iOS-specific config on Android', async () => {
-      setupPlatform('android');
+  describe("initialize - Android path", () => {
+    it("does not pass iOS-specific config on Android", async () => {
+      setupPlatform("android");
       const whisperRn = getWhisperRn();
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       await whisperService.initialize();
 
@@ -1423,65 +1423,65 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('transcribeFile - options branches', () => {
-    it('passes language and prompt when both provided', async () => {
-      setupPlatform('ios');
+  describe("transcribeFile - options branches", () => {
+    it("passes language and prompt when both provided", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const mockTranscribe = jest.fn(() => ({
         stop: jest.fn(),
-        promise: Promise.resolve({ result: 'Hello' }),
+        promise: Promise.resolve({ result: "Hello" }),
       }));
       whisperRn.initWhisper.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: mockTranscribe,
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.transcribeFile(
-        '/audio/test.wav',
-        'en',
-        'test prompt',
+        "/audio/test.wav",
+        "en",
+        "test prompt",
       );
 
       const transcribeCall = mockTranscribe.mock.calls[0];
       // @ts-expect-error - transcribeCall is an array of arguments
-      expect(transcribeCall[1].language).toBe('en');
+      expect(transcribeCall[1].language).toBe("en");
       // @ts-expect-error - transcribeCall is an array of arguments
-      expect(transcribeCall[1].prompt).toBe('test prompt');
+      expect(transcribeCall[1].prompt).toBe("test prompt");
     });
 
-    it('passes no options when language and prompt not provided', async () => {
-      setupPlatform('ios');
+    it("passes no options when language and prompt not provided", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const mockTranscribe = jest.fn(() => ({
         stop: jest.fn(),
-        promise: Promise.resolve({ result: 'Hello' }),
+        promise: Promise.resolve({ result: "Hello" }),
       }));
       whisperRn.initWhisper.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: mockTranscribe,
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
-      await whisperService.transcribeFile('/audio/test.wav');
+      await whisperService.transcribeFile("/audio/test.wav");
 
       const transcribeCall = mockTranscribe.mock.calls[0];
       // @ts-expect-error - transcribeCall is an array of arguments
@@ -1491,36 +1491,36 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('transcribeFile - result.result null', () => {
-    it('returns null when result.result is empty/whitespace', async () => {
-      setupPlatform('ios');
+  describe("transcribeFile - result.result null", () => {
+    it("returns null when result.result is empty/whitespace", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
-          promise: Promise.resolve({ result: '   ' }),
+          promise: Promise.resolve({ result: "   " }),
         })),
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
-      const result = await whisperService.transcribeFile('/audio/test.wav');
+      const result = await whisperService.transcribeFile("/audio/test.wav");
       expect(result).toBeNull();
     });
   });
 
-  describe('startRealtimeTranscription - isTranscribing branch', () => {
-    it('returns false when file transcription is in progress', async () => {
-      setupPlatform('ios');
+  describe("startRealtimeTranscription - isTranscribing branch", () => {
+    it("returns false when file transcription is in progress", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
 
       // Make transcribe hang indefinitely
@@ -1528,7 +1528,7 @@ describe('WhisperService', () => {
       whisperRn.initWhisper.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
           promise: new Promise<void>((resolve) => {
@@ -1538,16 +1538,16 @@ describe('WhisperService', () => {
         release: jest.fn(),
       });
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({ exists: true }));
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       // Start a file transcription (will hang)
       const transcribePromise =
-        whisperService.transcribeFile('/audio/test.wav');
+        whisperService.transcribeFile("/audio/test.wav");
 
       // Try to start realtime while file transcription is "in progress"
       const realtimeResult = await whisperService.startRealtimeTranscription();
@@ -1566,31 +1566,31 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('stopRealtimeTranscription - not recording', () => {
-    it('returns empty string when not recording', async () => {
-      setupPlatform('ios');
+  describe("stopRealtimeTranscription - not recording", () => {
+    it("returns empty string when not recording", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       const result = await whisperService.stopRealtimeTranscription();
-      expect(result).toBe('');
+      expect(result).toBe("");
     });
   });
 
-  describe('dispose - cleanup', () => {
-    it('disposes whisper and vad contexts', async () => {
-      setupPlatform('ios');
+  describe("dispose - cleanup", () => {
+    it("disposes whisper and vad contexts", async () => {
+      setupPlatform("ios");
       const whisperRn = getWhisperRn();
       const mockRelease = jest.fn();
       const mockVadRelease = jest.fn();
       whisperRn.initWhisper.mockResolvedValueOnce({
         id: 1,
         gpu: false,
-        reasonNoGPU: 'mock',
+        reasonNoGPU: "mock",
         transcribe: jest.fn(() => ({
           stop: jest.fn(),
-          promise: Promise.resolve({ result: 'Hello' }),
+          promise: Promise.resolve({ result: "Hello" }),
         })),
         release: mockRelease,
       });
@@ -1599,7 +1599,7 @@ describe('WhisperService', () => {
       });
 
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
       await whisperService.initialize();
 
       await whisperService.dispose();
@@ -1609,31 +1609,31 @@ describe('WhisperService', () => {
     });
   });
 
-  describe('subscribeToAudioLevel', () => {
-    it('subscribes and unsubscribes audio level callbacks', async () => {
-      setupPlatform('ios');
+  describe("subscribeToAudioLevel", () => {
+    it("subscribes and unsubscribes audio level callbacks", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const callback = jest.fn();
       const unsubscribe = whisperService.subscribeToAudioLevel(callback);
 
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
       unsubscribe();
       // Should not throw after unsubscribe
     });
   });
 
-  describe('subscribeToPartialResults', () => {
-    it('subscribes and unsubscribes partial result callbacks', async () => {
-      setupPlatform('ios');
+  describe("subscribeToPartialResults", () => {
+    it("subscribes and unsubscribes partial result callbacks", async () => {
+      setupPlatform("ios");
       const { whisperService } =
-        require('./WhisperService') as typeof import('./WhisperService');
+        require("./WhisperService") as typeof import("./WhisperService");
 
       const callback = jest.fn();
       const unsubscribe = whisperService.subscribeToPartialResults(callback);
 
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
       unsubscribe();
     });
   });

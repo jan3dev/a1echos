@@ -1,65 +1,65 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { render } from '@testing-library/react-native';
-import React from 'react';
+import { render } from "@testing-library/react-native";
+import React from "react";
 
-import { TranscriptionState } from '@/models';
+import { TranscriptionState } from "@/models";
 
-import { RecordingControlsView } from './RecordingControlsView';
+import { RecordingControlsView } from "./RecordingControlsView";
 
-jest.mock('./RecordingButton', () => ({
+jest.mock("./RecordingButton", () => ({
   RecordingButton: (props: any) => {
-    const { View } = require('react-native');
+    const { View } = require("react-native");
     return <View testID="recording-button" {...props} />;
   },
 }));
 
-jest.mock('./ThreeWaveLines', () => ({
+jest.mock("./ThreeWaveLines", () => ({
   ThreeWaveLines: (props: any) => {
-    const { View } = require('react-native');
+    const { View } = require("react-native");
     return <View testID="three-wave-lines" {...props} />;
   },
 }));
 
 const mockColors = {
-  accentBrand: '#6366F1',
-  glassInverse: 'rgba(0,0,0,0.1)',
-  textInverse: '#FFFFFF',
-  textPrimary: '#000000',
-  textTertiary: '#999999',
-  surfacePrimary: '#FFFFFF',
+  accentBrand: "#6366F1",
+  glassInverse: "rgba(0,0,0,0.1)",
+  textInverse: "#FFFFFF",
+  textPrimary: "#000000",
+  textTertiary: "#999999",
+  surfacePrimary: "#FFFFFF",
 } as any;
 
-describe('RecordingControlsView', () => {
-  it('renders without crashing', () => {
+describe("RecordingControlsView", () => {
+  it("renders without crashing", () => {
     const { toJSON } = render(<RecordingControlsView colors={mockColors} />);
     expect(toJSON()).toBeTruthy();
   });
 
-  it('renders RecordingButton', () => {
+  it("renders RecordingButton", () => {
     const { getByTestId } = render(
       <RecordingControlsView colors={mockColors} />,
     );
-    expect(getByTestId('recording-button')).toBeTruthy();
+    expect(getByTestId("recording-button")).toBeTruthy();
   });
 
-  it('renders ThreeWaveLines', () => {
+  it("renders ThreeWaveLines", () => {
     const { getByTestId } = render(
       <RecordingControlsView colors={mockColors} />,
     );
-    expect(getByTestId('three-wave-lines')).toBeTruthy();
+    expect(getByTestId("three-wave-lines")).toBeTruthy();
   });
 
-  it('passes state prop to child components', () => {
+  it("passes state prop to child components", () => {
     const { getByTestId } = render(
       <RecordingControlsView
         state={TranscriptionState.RECORDING}
         colors={mockColors}
       />,
     );
-    expect(getByTestId('recording-button').props.state).toBe(
+    expect(getByTestId("recording-button").props.state).toBe(
       TranscriptionState.RECORDING,
     );
-    expect(getByTestId('three-wave-lines').props.state).toBe(
+    expect(getByTestId("three-wave-lines").props.state).toBe(
       TranscriptionState.RECORDING,
     );
   });

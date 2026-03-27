@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-jest.mock('./PermissionService', () => ({
+jest.mock("./PermissionService", () => ({
   permissionService: {
     ensureRecordPermission: jest.fn(async () => true),
   },
 }));
 
-jest.mock('@/utils', () => ({
-  ...jest.requireActual('@/utils'),
+jest.mock("@/utils", () => ({
+  ...jest.requireActual("@/utils"),
   createPcmStreamWriter: jest.fn(() => ({
     write: jest.fn(),
     finalize: jest.fn(async () => true),
@@ -18,11 +18,11 @@ jest.mock('@/utils', () => ({
   logInfo: jest.fn(),
   logDebug: jest.fn(),
   FeatureFlag: {
-    service: 'service',
-    recording: 'recording',
-    model: 'model',
-    transcription: 'transcription',
-    storage: 'storage',
+    service: "service",
+    recording: "recording",
+    model: "model",
+    transcription: "transcription",
+    storage: "storage",
   },
 }));
 
@@ -34,11 +34,11 @@ const makeMockRecorder = () => ({
   release: jest.fn(),
   getStatus: jest.fn(() => ({ isRecording: true, metering: -30 })),
   getAvailableInputs: jest.fn().mockResolvedValue([]),
-  uri: 'file:///recording.wav',
+  uri: "file:///recording.wav",
   currentTime: 5,
 });
 
-jest.mock('expo-audio', () => ({
+jest.mock("expo-audio", () => ({
   AudioRecorder: jest.fn().mockImplementation(makeMockRecorder),
   AudioModule: {
     AudioRecorder: jest.fn().mockImplementation(makeMockRecorder),
@@ -47,22 +47,22 @@ jest.mock('expo-audio', () => ({
   setAudioModeAsync: jest.fn(),
   getRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
-    status: 'granted',
+    status: "granted",
     canAskAgain: true,
   })),
   requestRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
-    status: 'granted',
+    status: "granted",
     canAskAgain: true,
   })),
   PermissionStatus: {
-    GRANTED: 'granted',
-    DENIED: 'denied',
-    UNDETERMINED: 'undetermined',
+    GRANTED: "granted",
+    DENIED: "denied",
+    UNDETERMINED: "undetermined",
   },
 }));
 
-describe('AudioService', () => {
+describe("AudioService", () => {
   let cleanupService: (() => Promise<void>) | null = null;
 
   beforeEach(() => {
@@ -75,25 +75,25 @@ describe('AudioService', () => {
   });
 
   const setupPlatform = (os: string) => {
-    const { Platform } = require('react-native');
-    Object.defineProperty(Platform, 'OS', { get: () => os });
+    const { Platform } = require("react-native");
+    Object.defineProperty(Platform, "OS", { get: () => os });
   };
 
-  const getExpoAudio = () => require('expo-audio');
-  const getExpoHaptics = () => require('expo-haptics');
+  const getExpoAudio = () => require("expo-audio");
+  const getExpoHaptics = () => require("expo-haptics");
   const getAudioRecord = () =>
-    require('@fugood/react-native-audio-pcm-stream').default;
+    require("@fugood/react-native-audio-pcm-stream").default;
   const getPermissionService = () =>
-    require('./PermissionService').permissionService;
+    require("./PermissionService").permissionService;
   const getCreatePcmStreamWriter = () =>
-    require('@/utils').createPcmStreamWriter;
+    require("@/utils").createPcmStreamWriter;
 
-  describe('iOS recording', () => {
-    it('startRecording checks permission, configures audio, creates recorder', async () => {
-      setupPlatform('ios');
+  describe("iOS recording", () => {
+    it("startRecording checks permission, configures audio, creates recorder", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.startRecording();
@@ -108,11 +108,11 @@ describe('AudioService', () => {
       expect(result).toBe(true);
     });
 
-    it('startRecording triggers haptic feedback', async () => {
-      setupPlatform('ios');
+    it("startRecording triggers haptic feedback", async () => {
+      setupPlatform("ios");
       const haptics = getExpoHaptics();
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -122,17 +122,17 @@ describe('AudioService', () => {
       );
     });
 
-    it('stopRecording stops recorder, validates file, returns URI', async () => {
-      setupPlatform('ios');
+    it("stopRecording stops recorder, validates file, returns URI", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
 
@@ -144,20 +144,20 @@ describe('AudioService', () => {
 
       expect(recorderInstance.stop).toHaveBeenCalled();
       expect(recorderInstance.release).toHaveBeenCalled();
-      expect(uri).toBe('file:///recording.wav');
+      expect(uri).toBe("file:///recording.wav");
     });
 
-    it('stopRecording triggers haptic notification', async () => {
-      setupPlatform('ios');
+    it("stopRecording triggers haptic notification", async () => {
+      setupPlatform("ios");
       const haptics = getExpoHaptics();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       await audioService.stopRecording();
@@ -168,12 +168,12 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android recording', () => {
-    it('startRecording inits AudioRecord with correct config and starts', async () => {
-      setupPlatform('android');
+  describe("Android recording", () => {
+    it("startRecording inits AudioRecord with correct config and starts", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const result = await audioService.startRecording();
 
@@ -189,72 +189,72 @@ describe('AudioService', () => {
       expect(result).toBe(true);
     });
 
-    it('stopRecording stops AudioRecord, finalizes WAV, returns path', async () => {
-      setupPlatform('android');
+    it("stopRecording stops AudioRecord, finalizes WAV, returns path", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
-        uri: 'file:///rec.wav',
+        uri: "file:///rec.wav",
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       const path = await audioService.stopRecording();
 
       expect(AudioRecord.stop).toHaveBeenCalled();
-      expect(path).toContain('.wav');
+      expect(path).toContain(".wav");
     });
   });
 
-  describe('Permission denied', () => {
-    it('startRecording returns false when permission denied', async () => {
-      setupPlatform('ios');
+  describe("Permission denied", () => {
+    it("startRecording returns false when permission denied", async () => {
+      setupPlatform("ios");
       getPermissionService().ensureRecordPermission.mockResolvedValueOnce(
         false,
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const result = await audioService.startRecording();
       expect(result).toBe(false);
     });
   });
 
-  describe('subscribeToAudioLevel', () => {
-    it('callback receives events and unsubscribe works', () => {
-      setupPlatform('ios');
+  describe("subscribeToAudioLevel", () => {
+    it("callback receives events and unsubscribe works", () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const callback = jest.fn();
       const unsubscribe = audioService.subscribeToAudioLevel(callback);
-      expect(typeof unsubscribe).toBe('function');
+      expect(typeof unsubscribe).toBe("function");
       unsubscribe();
     });
   });
 
-  describe('dispose', () => {
-    it('cleans up all resources', async () => {
-      setupPlatform('ios');
+  describe("dispose", () => {
+    it("cleans up all resources", async () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.dispose();
     });
   });
 
-  describe('warmUpIosAudioInput', () => {
-    it('records 50ms dummy on iOS', async () => {
-      setupPlatform('ios');
+  describe("warmUpIosAudioInput", () => {
+    it("records 50ms dummy on iOS", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const result = await audioService.warmUpIosAudioInput();
 
@@ -266,20 +266,20 @@ describe('AudioService', () => {
       expect(recorderInstance.stop).toHaveBeenCalled();
     });
 
-    it('no-op on Android', async () => {
-      setupPlatform('android');
+    it("no-op on Android", async () => {
+      setupPlatform("android");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const result = await audioService.warmUpIosAudioInput();
       expect(result).toBe(true);
     });
 
-    it('idempotent (returns true on second call)', async () => {
-      setupPlatform('ios');
+    it("idempotent (returns true on second call)", async () => {
+      setupPlatform("ios");
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.warmUpIosAudioInput();
 
@@ -288,25 +288,25 @@ describe('AudioService', () => {
     });
   });
 
-  describe('pauseAmplitudeMonitoring / resumeAmplitudeMonitoring', () => {
-    it('toggles monitoring', () => {
-      setupPlatform('ios');
+  describe("pauseAmplitudeMonitoring / resumeAmplitudeMonitoring", () => {
+    it("toggles monitoring", () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       audioService.pauseAmplitudeMonitoring();
       audioService.resumeAmplitudeMonitoring();
     });
   });
 
-  describe('Error handling', () => {
-    it('start failure cleans up', async () => {
-      setupPlatform('ios');
+  describe("Error handling", () => {
+    it("start failure cleans up", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest
           .fn()
-          .mockRejectedValueOnce(new Error('fail')),
+          .mockRejectedValueOnce(new Error("fail")),
         record: jest.fn(),
         stop: jest.fn(),
         release: jest.fn(),
@@ -316,28 +316,28 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const result = await audioService.startRecording();
       expect(result).toBe(false);
     });
 
-    it('stop failure returns null', async () => {
-      setupPlatform('ios');
+    it("stop failure returns null", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(),
-        stop: jest.fn().mockRejectedValueOnce(new Error('stop fail')),
+        stop: jest.fn().mockRejectedValueOnce(new Error("stop fail")),
         release: jest.fn(),
         getStatus: jest.fn(() => ({ isRecording: true, metering: -30 })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       const result = await audioService.stopRecording();
@@ -345,17 +345,17 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android PCM recording - stopRecording edge cases', () => {
-    it('returns null when WAV file is too small', async () => {
-      setupPlatform('android');
-      const { File } = require('expo-file-system');
+  describe("Android PCM recording - stopRecording edge cases", () => {
+    it("returns null when WAV file is too small", async () => {
+      setupPlatform("android");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 512, // < 1024
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -364,16 +364,16 @@ describe('AudioService', () => {
       expect(path).toBeNull();
     });
 
-    it('returns null when WAV file does not exist after finalize', async () => {
-      setupPlatform('android');
-      const { File } = require('expo-file-system');
+    it("returns null when WAV file does not exist after finalize", async () => {
+      setupPlatform("android");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: false,
         size: 0,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -382,9 +382,9 @@ describe('AudioService', () => {
       expect(path).toBeNull();
     });
 
-    it('returns null when pcmStreamWriter.finalize fails', async () => {
-      setupPlatform('android');
-      const { createPcmStreamWriter } = require('@/utils');
+    it("returns null when pcmStreamWriter.finalize fails", async () => {
+      setupPlatform("android");
+      const { createPcmStreamWriter } = require("@/utils");
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
         finalize: jest.fn(async () => false),
@@ -393,7 +393,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -402,14 +402,14 @@ describe('AudioService', () => {
       expect(path).toBeNull();
     });
 
-    it('cleans up pcmStreamWriter on error during stop', async () => {
-      setupPlatform('android');
+    it("cleans up pcmStreamWriter on error during stop", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
       AudioRecord.stop.mockImplementationOnce(() => {
-        throw new Error('stop error');
+        throw new Error("stop error");
       });
 
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockAbort = jest.fn(async () => {});
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -419,7 +419,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -429,17 +429,17 @@ describe('AudioService', () => {
       expect(mockAbort).toHaveBeenCalled();
     });
 
-    it('triggers haptic on successful Android stop', async () => {
-      setupPlatform('android');
+    it("triggers haptic on successful Android stop", async () => {
+      setupPlatform("android");
       const haptics = getExpoHaptics();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -451,15 +451,15 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android PCM recording - startRecording failure', () => {
-    it('cleans up pcmStreamWriter when AudioRecord.start throws', async () => {
-      setupPlatform('android');
+  describe("Android PCM recording - startRecording failure", () => {
+    it("cleans up pcmStreamWriter when AudioRecord.start throws", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
       AudioRecord.start.mockImplementationOnce(() => {
-        throw new Error('start error');
+        throw new Error("start error");
       });
 
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockAbort = jest.fn(async () => {});
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -469,7 +469,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.startRecording();
@@ -479,9 +479,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS recording edge cases', () => {
-    it('stopRecording returns null when recorder URI is null', async () => {
-      setupPlatform('ios');
+  describe("iOS recording edge cases", () => {
+    it("stopRecording returns null when recorder URI is null", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -495,7 +495,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -504,8 +504,8 @@ describe('AudioService', () => {
       expect(result).toBeNull();
     });
 
-    it('stopRecording returns null when file is too small', async () => {
-      setupPlatform('ios');
+    it("stopRecording returns null when file is too small", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -514,18 +514,18 @@ describe('AudioService', () => {
         release: jest.fn(),
         getStatus: jest.fn(() => ({ isRecording: true, metering: -30 })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 512, // < 1024
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -534,10 +534,10 @@ describe('AudioService', () => {
       expect(result).toBeNull();
     });
 
-    it('stopRecording returns currentAudioFile when no recorder active', async () => {
-      setupPlatform('ios');
+    it("stopRecording returns currentAudioFile when no recorder active", async () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // Call stop without starting - recorder is null
@@ -546,15 +546,15 @@ describe('AudioService', () => {
       expect(result).toBeNull();
     });
 
-    it('startRecording failure cleans up recorder (stop + release)', async () => {
-      setupPlatform('ios');
+    it("startRecording failure cleans up recorder (stop + release)", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       const mockStop = jest.fn();
       const mockRelease = jest.fn();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(() => {
-          throw new Error('record fail');
+          throw new Error("record fail");
         }),
         stop: mockStop,
         release: mockRelease,
@@ -564,7 +564,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.startRecording();
@@ -575,14 +575,14 @@ describe('AudioService', () => {
     });
   });
 
-  describe('warmUpIosAudioInput edge cases', () => {
-    it('returns false when warmup recorder throws', async () => {
-      setupPlatform('ios');
+  describe("warmUpIosAudioInput edge cases", () => {
+    it("returns false when warmup recorder throws", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest
           .fn()
-          .mockRejectedValue(new Error('warmup fail')),
+          .mockRejectedValue(new Error("warmup fail")),
         record: jest.fn(),
         stop: jest.fn(),
         release: jest.fn(),
@@ -592,7 +592,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.warmUpIosAudioInput();
@@ -600,12 +600,12 @@ describe('AudioService', () => {
       expect(result).toBe(false);
     });
 
-    it('skips warmup if already recording (recorder exists)', async () => {
-      setupPlatform('ios');
+    it("skips warmup if already recording (recorder exists)", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // Start recording first to set internal recorder
@@ -619,10 +619,10 @@ describe('AudioService', () => {
       expect(expoAudio.AudioModule.AudioRecorder).toHaveBeenCalledTimes(1);
     });
 
-    it('cleans up warmup file if URI exists', async () => {
-      setupPlatform('ios');
+    it("cleans up warmup file if URI exists", async () => {
+      setupPlatform("ios");
       const mockDelete = jest.fn();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 100,
@@ -630,7 +630,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.warmUpIosAudioInput();
@@ -639,9 +639,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent branches', () => {
-    it('handles undefined metering (does not emit level)', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent branches", () => {
+    it("handles undefined metering (does not emit level)", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -653,12 +653,12 @@ describe('AudioService', () => {
           metering: undefined,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -674,9 +674,9 @@ describe('AudioService', () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
-    it('handles valid metering values and emits audio level', async () => {
+    it("handles valid metering values and emits audio level", async () => {
       jest.useRealTimers();
-      setupPlatform('ios');
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -688,12 +688,12 @@ describe('AudioService', () => {
           metering: -30,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -710,8 +710,8 @@ describe('AudioService', () => {
       expect(level).toBeLessThanOrEqual(1.0);
     });
 
-    it('handles very low metering (-160 or below) as minimum level', async () => {
-      setupPlatform('ios');
+    it("handles very low metering (-160 or below) as minimum level", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -723,12 +723,12 @@ describe('AudioService', () => {
           metering: -160,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -745,23 +745,23 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAndroidPcmData / computeRmsFromBase64Pcm', () => {
-    it('processes PCM data and emits audio level on Android', async () => {
-      setupPlatform('android');
+  describe("handleAndroidPcmData / computeRmsFromBase64Pcm", () => {
+    it("processes PCM data and emits audio level on Android", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
 
       // Capture the data handler
       let dataHandler: ((data: string) => void) | null = null;
       AudioRecord.on.mockImplementation(
         (event: string, handler: (data: string) => void) => {
-          if (event === 'data') {
+          if (event === "data") {
             dataHandler = handler;
           }
         },
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -777,7 +777,7 @@ describe('AudioService', () => {
         const sample = Math.floor(Math.sin(i * 0.5) * 8000);
         buffer.writeInt16LE(sample, i * 2);
       }
-      const base64Data = buffer.toString('base64');
+      const base64Data = buffer.toString("base64");
 
       expect(dataHandler).not.toBeNull();
       dataHandler!(base64Data);
@@ -788,21 +788,21 @@ describe('AudioService', () => {
       expect(level).toBeLessThanOrEqual(1.0);
     });
 
-    it('handles empty/invalid base64 data gracefully', async () => {
-      setupPlatform('android');
+    it("handles empty/invalid base64 data gracefully", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
 
       let dataHandler: ((data: string) => void) | null = null;
       AudioRecord.on.mockImplementation(
         (event: string, handler: (data: string) => void) => {
-          if (event === 'data') {
+          if (event === "data") {
             dataHandler = handler;
           }
         },
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -811,7 +811,7 @@ describe('AudioService', () => {
       await audioService.startRecording();
 
       // Empty base64 = single byte which is < 2
-      const emptyBase64 = Buffer.alloc(1).toString('base64');
+      const emptyBase64 = Buffer.alloc(1).toString("base64");
       dataHandler!(emptyBase64);
 
       // Should still emit minimum level
@@ -820,20 +820,20 @@ describe('AudioService', () => {
       expect(level).toBe(0.02);
     });
 
-    it('writes PCM data to stream writer', async () => {
-      setupPlatform('android');
+    it("writes PCM data to stream writer", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
 
       let dataHandler: ((data: string) => void) | null = null;
       AudioRecord.on.mockImplementation(
         (event: string, handler: (data: string) => void) => {
-          if (event === 'data') {
+          if (event === "data") {
             dataHandler = handler;
           }
         },
       );
 
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockWrite = jest.fn();
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: mockWrite,
@@ -843,22 +843,22 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
 
-      const base64Data = Buffer.alloc(32).toString('base64');
+      const base64Data = Buffer.alloc(32).toString("base64");
       dataHandler!(base64Data);
 
       expect(mockWrite).toHaveBeenCalledWith(base64Data);
     });
   });
 
-  describe('pauseAmplitudeMonitoring / resumeAmplitudeMonitoring', () => {
-    it('pausing prevents amplitude events from being processed', async () => {
+  describe("pauseAmplitudeMonitoring / resumeAmplitudeMonitoring", () => {
+    it("pausing prevents amplitude events from being processed", async () => {
       jest.useRealTimers();
-      setupPlatform('ios');
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -870,12 +870,12 @@ describe('AudioService', () => {
           metering: -30,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -899,11 +899,11 @@ describe('AudioService', () => {
     });
   });
 
-  describe('dispose - full cleanup', () => {
-    it('disposes Android PCM recording resources', async () => {
-      setupPlatform('android');
+  describe("dispose - full cleanup", () => {
+    it("disposes Android PCM recording resources", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockAbort = jest.fn(async () => {});
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -913,7 +913,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       // Dispose while recording
@@ -923,12 +923,12 @@ describe('AudioService', () => {
       expect(mockAbort).toHaveBeenCalled();
     });
 
-    it('disposes iOS recorder resources', async () => {
-      setupPlatform('ios');
+    it("disposes iOS recorder resources", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       await audioService.dispose();
@@ -939,11 +939,11 @@ describe('AudioService', () => {
       expect(recorderInstance.release).toHaveBeenCalled();
     });
 
-    it('removes all audio level listeners', async () => {
-      setupPlatform('ios');
+    it("removes all audio level listeners", async () => {
+      setupPlatform("ios");
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       const callback = jest.fn();
       audioService.subscribeToAudioLevel(callback);
@@ -954,26 +954,26 @@ describe('AudioService', () => {
     });
   });
 
-  describe('amplitude monitoring error handling', () => {
-    it('handles error when getting status during amplitude monitoring', async () => {
-      setupPlatform('ios');
+  describe("amplitude monitoring error handling", () => {
+    it("handles error when getting status during amplitude monitoring", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(),
         stop: jest.fn(),
         release: jest.fn(),
         getStatus: jest.fn(() => {
-          throw new Error('status error');
+          throw new Error("status error");
         }),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       (logError as jest.Mock).mockClear();
@@ -986,17 +986,17 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS recording - haptics failure on start', () => {
-    it('logs warning when haptics not supported on start', async () => {
-      setupPlatform('ios');
+  describe("iOS recording - haptics failure on start", () => {
+    it("logs warning when haptics not supported on start", async () => {
+      setupPlatform("ios");
       const haptics = getExpoHaptics();
-      const { logWarn } = require('@/utils');
+      const { logWarn } = require("@/utils");
       haptics.impactAsync.mockRejectedValueOnce(
-        new Error('Haptics not available'),
+        new Error("Haptics not available"),
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       (logWarn as jest.Mock).mockClear();
@@ -1004,23 +1004,23 @@ describe('AudioService', () => {
       const result = await audioService.startRecording();
 
       expect(result).toBe(true);
-      expect(logWarn).toHaveBeenCalledWith('Haptics not supported', {
-        flag: 'recording',
+      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
+        flag: "recording",
       });
     });
   });
 
-  describe('Android recording - haptics failure on start', () => {
-    it('logs warning when haptics not supported on Android start', async () => {
-      setupPlatform('android');
+  describe("Android recording - haptics failure on start", () => {
+    it("logs warning when haptics not supported on Android start", async () => {
+      setupPlatform("android");
       const haptics = getExpoHaptics();
-      const { logWarn } = require('@/utils');
+      const { logWarn } = require("@/utils");
       haptics.impactAsync.mockRejectedValueOnce(
-        new Error('Haptics not available'),
+        new Error("Haptics not available"),
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       (logWarn as jest.Mock).mockClear();
@@ -1028,29 +1028,29 @@ describe('AudioService', () => {
       const result = await audioService.startRecording();
 
       expect(result).toBe(true);
-      expect(logWarn).toHaveBeenCalledWith('Haptics not supported', {
-        flag: 'recording',
+      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
+        flag: "recording",
       });
     });
   });
 
-  describe('iOS stopRecording - haptics failure on stop', () => {
-    it('logs warning when haptics not supported on stop', async () => {
-      setupPlatform('ios');
+  describe("iOS stopRecording - haptics failure on stop", () => {
+    it("logs warning when haptics not supported on stop", async () => {
+      setupPlatform("ios");
       const haptics = getExpoHaptics();
-      const { logWarn } = require('@/utils');
-      const { File } = require('expo-file-system');
+      const { logWarn } = require("@/utils");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       haptics.notificationAsync.mockRejectedValueOnce(
-        new Error('Haptics not available'),
+        new Error("Haptics not available"),
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       (logWarn as jest.Mock).mockClear();
@@ -1058,30 +1058,30 @@ describe('AudioService', () => {
       await audioService.startRecording();
       const uri = await audioService.stopRecording();
 
-      expect(uri).toBe('file:///recording.wav');
-      expect(logWarn).toHaveBeenCalledWith('Haptics not supported', {
-        flag: 'recording',
+      expect(uri).toBe("file:///recording.wav");
+      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
+        flag: "recording",
       });
     });
   });
 
-  describe('Android stopRecording - haptics failure on stop', () => {
-    it('logs warning when haptics not supported on Android stop', async () => {
-      setupPlatform('android');
+  describe("Android stopRecording - haptics failure on stop", () => {
+    it("logs warning when haptics not supported on Android stop", async () => {
+      setupPlatform("android");
       const haptics = getExpoHaptics();
-      const { logWarn } = require('@/utils');
-      const { File } = require('expo-file-system');
+      const { logWarn } = require("@/utils");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       haptics.notificationAsync.mockRejectedValueOnce(
-        new Error('Haptics not available'),
+        new Error("Haptics not available"),
       );
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       (logWarn as jest.Mock).mockClear();
@@ -1089,23 +1089,23 @@ describe('AudioService', () => {
       await audioService.startRecording();
       await audioService.stopRecording();
 
-      expect(logWarn).toHaveBeenCalledWith('Haptics not supported', {
-        flag: 'recording',
+      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
+        flag: "recording",
       });
     });
   });
 
-  describe('iOS stopRecording - file does not exist', () => {
-    it('returns null when file does not exist after recording', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("iOS stopRecording - file does not exist", () => {
+    it("returns null when file does not exist after recording", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: false,
         size: 0,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1115,32 +1115,32 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - min duration wait', () => {
-    it('waits for minimum duration if recording is very short', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("iOS stopRecording - min duration wait", () => {
+    it("waits for minimum duration if recording is very short", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
       // Stop immediately - should still have minimum wait
       const result = await audioService.stopRecording();
 
-      expect(result).toBe('file:///recording.wav');
+      expect(result).toBe("file:///recording.wav");
     });
   });
 
-  describe('cleanup during Android recording', () => {
-    it('cleanup stops Android PCM recording and aborts writer', async () => {
-      setupPlatform('android');
+  describe("cleanup during Android recording", () => {
+    it("cleanup stops Android PCM recording and aborts writer", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockAbort = jest.fn(async () => {});
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -1150,7 +1150,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
 
@@ -1162,13 +1162,13 @@ describe('AudioService', () => {
     });
   });
 
-  describe('cleanup error handling', () => {
-    it('cleanup handles AudioRecord.stop failure on Android', async () => {
-      setupPlatform('android');
+  describe("cleanup error handling", () => {
+    it("cleanup handles AudioRecord.stop failure on Android", async () => {
+      setupPlatform("android");
       const AudioRecord = getAudioRecord();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
 
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
       const mockAbort = jest.fn(async () => {});
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -1178,13 +1178,13 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
 
       // Make cleanup's AudioRecord.stop fail
       AudioRecord.stop.mockImplementationOnce(() => {
-        throw new Error('stop error during cleanup');
+        throw new Error("stop error during cleanup");
       });
 
       (logError as jest.Mock).mockClear();
@@ -1201,24 +1201,24 @@ describe('AudioService', () => {
       expect(logError).toHaveBeenCalled();
     });
 
-    it('cleanup handles recorder.stop failure on iOS', async () => {
-      setupPlatform('ios');
+    it("cleanup handles recorder.stop failure on iOS", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
-      const { logError } = require('@/utils');
+      const { logError } = require("@/utils");
 
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(),
-        stop: jest.fn().mockRejectedValue(new Error('stop fail')),
+        stop: jest.fn().mockRejectedValue(new Error("stop fail")),
         release: jest.fn(),
         getStatus: jest.fn(() => ({ isRecording: true, metering: -30 })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
 
       await audioService.startRecording();
       (logError as jest.Mock).mockClear();
@@ -1230,11 +1230,11 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - duration calc error', () => {
-    it('handles error during duration calculation gracefully', async () => {
-      setupPlatform('ios');
+  describe("iOS stopRecording - duration calc error", () => {
+    it("handles error during duration calculation gracefully", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
@@ -1248,29 +1248,29 @@ describe('AudioService', () => {
         release: jest.fn(),
         getStatus: jest.fn(() => ({ isRecording: true, metering: -30 })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
       const result = await audioService.stopRecording();
 
       // Should still return the file path
-      expect(result).toBe('file:///recording.wav');
+      expect(result).toBe("file:///recording.wav");
     });
   });
 
-  describe('warmUpIosAudioInput - cleanup file delete failure', () => {
-    it('handles warmup file cleanup error gracefully', async () => {
-      setupPlatform('ios');
+  describe("warmUpIosAudioInput - cleanup file delete failure", () => {
+    it("handles warmup file cleanup error gracefully", async () => {
+      setupPlatform("ios");
       const mockDelete = jest.fn(() => {
-        throw new Error('delete failed');
+        throw new Error("delete failed");
       });
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 100,
@@ -1278,7 +1278,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // Should not throw even though file delete fails
@@ -1288,18 +1288,18 @@ describe('AudioService', () => {
     });
   });
 
-  describe('warmUpIosAudioInput - release fails on error path', () => {
-    it('handles release failure during warmup error recovery', async () => {
-      setupPlatform('ios');
+  describe("warmUpIosAudioInput - release fails on error path", () => {
+    it("handles release failure during warmup error recovery", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(() => {
-          throw new Error('record fail during warmup');
+          throw new Error("record fail during warmup");
         }),
         stop: jest.fn(),
         release: jest.fn(() => {
-          throw new Error('release failed');
+          throw new Error("release failed");
         }),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
         uri: null,
@@ -1307,7 +1307,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.warmUpIosAudioInput();
@@ -1316,9 +1316,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('warmUpIosAudioInput - no URI after recording', () => {
-    it('skips file cleanup when warmup recorder has no URI', async () => {
-      setupPlatform('ios');
+  describe("warmUpIosAudioInput - no URI after recording", () => {
+    it("skips file cleanup when warmup recorder has no URI", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1330,7 +1330,7 @@ describe('AudioService', () => {
         currentTime: 0,
       }));
 
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       const mockDelete = jest.fn();
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
@@ -1339,7 +1339,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.warmUpIosAudioInput();
@@ -1350,33 +1350,33 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android stopRecording - minimum duration wait', () => {
-    it('waits for minimum duration on Android when recording is very short', async () => {
-      setupPlatform('android');
-      const { File } = require('expo-file-system');
+  describe("Android stopRecording - minimum duration wait", () => {
+    it("waits for minimum duration on Android when recording is very short", async () => {
+      setupPlatform("android");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
       // Stop immediately - should still have minimum wait
       const result = await audioService.stopRecording();
 
-      expect(result).toContain('.wav');
+      expect(result).toContain(".wav");
     });
   });
 
-  describe('startRecording on iOS - second start cleans up first', () => {
-    it('cleanup clears amplitude interval on second start', async () => {
-      setupPlatform('ios');
+  describe("startRecording on iOS - second start cleans up first", () => {
+    it("cleanup clears amplitude interval on second start", async () => {
+      setupPlatform("ios");
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1387,19 +1387,19 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android stopRecording - no wavFilePath or pcmStreamWriter', () => {
-    it('returns null when androidWavFilePath or pcmStreamWriter is null', async () => {
-      setupPlatform('android');
+  describe("Android stopRecording - no wavFilePath or pcmStreamWriter", () => {
+    it("returns null when androidWavFilePath or pcmStreamWriter is null", async () => {
+      setupPlatform("android");
 
       // Create a service where we can manipulate internal state
       // by making AudioRecord.init throw after setting androidPcmRecording
-      const { createPcmStreamWriter } = require('@/utils');
+      const { createPcmStreamWriter } = require("@/utils");
 
       // Create a writer that returns null-like behavior
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce(null);
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // This will fail because pcmStreamWriter is null when trying to write
@@ -1416,9 +1416,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent - Infinity metering', () => {
-    it('handles Infinity metering value as minimum level', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent - Infinity metering", () => {
+    it("handles Infinity metering value as minimum level", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1430,12 +1430,12 @@ describe('AudioService', () => {
           metering: Infinity,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -1450,9 +1450,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent - metering is undefined', () => {
-    it('does not process amplitude when metering is undefined', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent - metering is undefined", () => {
+    it("does not process amplitude when metering is undefined", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1464,12 +1464,12 @@ describe('AudioService', () => {
           metering: undefined,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -1483,9 +1483,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent - metering is null', () => {
-    it('does not process amplitude when metering is null', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent - metering is null", () => {
+    it("does not process amplitude when metering is null", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1497,12 +1497,12 @@ describe('AudioService', () => {
           metering: null,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -1515,9 +1515,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent - metering below -160', () => {
-    it('treats metering <= -160 as minimum level', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent - metering below -160", () => {
+    it("treats metering <= -160 as minimum level", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1529,12 +1529,12 @@ describe('AudioService', () => {
           metering: -200,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -1548,11 +1548,11 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - no recorder', () => {
-    it('returns null when no recorder exists (iOS)', async () => {
-      setupPlatform('ios');
+  describe("iOS stopRecording - no recorder", () => {
+    it("returns null when no recorder exists (iOS)", async () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // Stop without starting should return currentAudioFile (null)
@@ -1561,17 +1561,17 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - file too small', () => {
-    it('returns null when recorded file is too small (< 1024 bytes)', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("iOS stopRecording - file too small", () => {
+    it("returns null when recorded file is too small (< 1024 bytes)", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 100, // too small
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1580,17 +1580,17 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - file does not exist', () => {
-    it('returns null when recorded file does not exist', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+  describe("iOS stopRecording - file does not exist", () => {
+    it("returns null when recorded file does not exist", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: false,
         size: 0,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1599,26 +1599,26 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - recorder stop throws', () => {
-    it('handles error during iOS recorder stop gracefully', async () => {
-      setupPlatform('ios');
+  describe("iOS stopRecording - recorder stop throws", () => {
+    it("handles error during iOS recorder stop gracefully", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
         record: jest.fn(),
-        stop: jest.fn().mockRejectedValue(new Error('stop failed')),
+        stop: jest.fn().mockRejectedValue(new Error("stop failed")),
         release: jest.fn(),
         getStatus: jest.fn(() => ({
           isRecording: true,
           metering: -30,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1627,9 +1627,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('iOS stopRecording - uri is null', () => {
-    it('returns null when recorder uri is null', async () => {
-      setupPlatform('ios');
+  describe("iOS stopRecording - uri is null", () => {
+    it("returns null when recorder uri is null", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1644,14 +1644,14 @@ describe('AudioService', () => {
         uri: null,
         currentTime: 5,
       }));
-      const { File } = require('expo-file-system');
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 2048,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1660,11 +1660,11 @@ describe('AudioService', () => {
     });
   });
 
-  describe('pauseAmplitudeMonitoring and resumeAmplitudeMonitoring', () => {
-    it('pauses and resumes amplitude monitoring', async () => {
-      setupPlatform('ios');
+  describe("pauseAmplitudeMonitoring and resumeAmplitudeMonitoring", () => {
+    it("pauses and resumes amplitude monitoring", async () => {
+      setupPlatform("ios");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();
@@ -1688,20 +1688,20 @@ describe('AudioService', () => {
     });
   });
 
-  describe('warmUpIosAudioInput branches', () => {
-    it('returns true on non-iOS platform', async () => {
-      setupPlatform('android');
+  describe("warmUpIosAudioInput branches", () => {
+    it("returns true on non-iOS platform", async () => {
+      setupPlatform("android");
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.warmUpIosAudioInput();
       expect(result).toBe(true);
     });
 
-    it('returns true when already warmed up', async () => {
-      setupPlatform('ios');
-      const { File } = require('expo-file-system');
+    it("returns true when already warmed up", async () => {
+      setupPlatform("ios");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 100,
@@ -1709,7 +1709,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       // First call warms up
@@ -1721,13 +1721,13 @@ describe('AudioService', () => {
       expect(result2).toBe(true);
     });
 
-    it('handles warm-up failure gracefully', async () => {
-      setupPlatform('ios');
+    it("handles warm-up failure gracefully", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest
           .fn()
-          .mockRejectedValue(new Error('prepare fail')),
+          .mockRejectedValue(new Error("prepare fail")),
         record: jest.fn(),
         stop: jest.fn(),
         release: jest.fn(),
@@ -1736,7 +1736,7 @@ describe('AudioService', () => {
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const result = await audioService.warmUpIosAudioInput();
@@ -1744,9 +1744,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android stopRecording - finalize fails', () => {
-    it('returns null when WAV finalize fails', async () => {
-      setupPlatform('android');
+  describe("Android stopRecording - finalize fails", () => {
+    it("returns null when WAV finalize fails", async () => {
+      setupPlatform("android");
       const createPcmStreamWriter = getCreatePcmStreamWriter();
       (createPcmStreamWriter as jest.Mock).mockReturnValueOnce({
         write: jest.fn(),
@@ -1756,7 +1756,7 @@ describe('AudioService', () => {
       });
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1765,17 +1765,17 @@ describe('AudioService', () => {
     });
   });
 
-  describe('Android stopRecording - WAV file validation fails', () => {
-    it('returns null when WAV file is too small after finalize', async () => {
-      setupPlatform('android');
-      const { File } = require('expo-file-system');
+  describe("Android stopRecording - WAV file validation fails", () => {
+    it("returns null when WAV file is too small after finalize", async () => {
+      setupPlatform("android");
+      const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
         size: 100, // too small (< 1024)
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       await audioService.startRecording();
@@ -1784,9 +1784,9 @@ describe('AudioService', () => {
     });
   });
 
-  describe('handleAmplitudeEvent - getStatus returns not recording', () => {
-    it('does not emit level when status.isRecording is false', async () => {
-      setupPlatform('ios');
+  describe("handleAmplitudeEvent - getStatus returns not recording", () => {
+    it("does not emit level when status.isRecording is false", async () => {
+      setupPlatform("ios");
       const expoAudio = getExpoAudio();
       expoAudio.AudioModule.AudioRecorder.mockImplementationOnce(() => ({
         prepareToRecordAsync: jest.fn(),
@@ -1798,12 +1798,12 @@ describe('AudioService', () => {
           metering: -30,
         })),
         getAvailableInputs: jest.fn().mockResolvedValue([]),
-        uri: 'file:///recording.wav',
+        uri: "file:///recording.wav",
         currentTime: 5,
       }));
 
       const { audioService } =
-        require('./AudioService') as typeof import('./AudioService');
+        require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
       const callback = jest.fn();

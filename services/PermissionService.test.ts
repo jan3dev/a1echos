@@ -2,21 +2,21 @@ import {
   getRecordingPermissionsAsync,
   PermissionStatus,
   requestRecordingPermissionsAsync,
-} from 'expo-audio';
-import * as Linking from 'expo-linking';
+} from "expo-audio";
+import * as Linking from "expo-linking";
 
-import { permissionService } from './PermissionService';
+import { permissionService } from "./PermissionService";
 
 const mockGetPerms = getRecordingPermissionsAsync as jest.Mock;
 const mockRequestPerms = requestRecordingPermissionsAsync as jest.Mock;
 const mockOpenSettings = Linking.openSettings as jest.Mock;
 
-describe('PermissionService', () => {
-  describe('getRecordPermission', () => {
-    it('returns granted result from expo-audio', async () => {
+describe("PermissionService", () => {
+  describe("getRecordPermission", () => {
+    it("returns granted result from expo-audio", async () => {
       mockGetPerms.mockResolvedValueOnce({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: true,
       });
 
@@ -24,15 +24,15 @@ describe('PermissionService', () => {
 
       expect(result).toEqual({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: true,
       });
     });
 
-    it('returns denied status', async () => {
+    it("returns denied status", async () => {
       mockGetPerms.mockResolvedValueOnce({
         granted: false,
-        status: 'denied',
+        status: "denied",
         canAskAgain: false,
       });
 
@@ -40,15 +40,15 @@ describe('PermissionService', () => {
 
       expect(result).toEqual({
         granted: false,
-        status: 'denied',
+        status: "denied",
         canAskAgain: false,
       });
     });
 
-    it('defaults canAskAgain to true when undefined', async () => {
+    it("defaults canAskAgain to true when undefined", async () => {
       mockGetPerms.mockResolvedValueOnce({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: undefined,
       });
 
@@ -57,8 +57,8 @@ describe('PermissionService', () => {
       expect(result.canAskAgain).toBe(true);
     });
 
-    it('returns fallback on error (granted=false, UNDETERMINED)', async () => {
-      mockGetPerms.mockRejectedValueOnce(new Error('fail'));
+    it("returns fallback on error (granted=false, UNDETERMINED)", async () => {
+      mockGetPerms.mockRejectedValueOnce(new Error("fail"));
 
       const result = await permissionService.getRecordPermission();
 
@@ -70,11 +70,11 @@ describe('PermissionService', () => {
     });
   });
 
-  describe('requestRecordPermission', () => {
-    it('calls requestRecordingPermissionsAsync and returns result', async () => {
+  describe("requestRecordPermission", () => {
+    it("calls requestRecordingPermissionsAsync and returns result", async () => {
       mockRequestPerms.mockResolvedValueOnce({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: true,
       });
 
@@ -84,8 +84,20 @@ describe('PermissionService', () => {
       expect(result.granted).toBe(true);
     });
 
-    it('returns fallback on error', async () => {
-      mockRequestPerms.mockRejectedValueOnce(new Error('fail'));
+    it("defaults canAskAgain to true when undefined", async () => {
+      mockRequestPerms.mockResolvedValueOnce({
+        granted: true,
+        status: "granted",
+        canAskAgain: undefined,
+      });
+
+      const result = await permissionService.requestRecordPermission();
+
+      expect(result.canAskAgain).toBe(true);
+    });
+
+    it("returns fallback on error", async () => {
+      mockRequestPerms.mockRejectedValueOnce(new Error("fail"));
 
       const result = await permissionService.requestRecordPermission();
 
@@ -97,11 +109,11 @@ describe('PermissionService', () => {
     });
   });
 
-  describe('ensureRecordPermission', () => {
-    it('returns true when already granted', async () => {
+  describe("ensureRecordPermission", () => {
+    it("returns true when already granted", async () => {
       mockGetPerms.mockResolvedValueOnce({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: true,
       });
 
@@ -111,15 +123,15 @@ describe('PermissionService', () => {
       expect(mockRequestPerms).not.toHaveBeenCalled();
     });
 
-    it('requests when not granted and returns request result', async () => {
+    it("requests when not granted and returns request result", async () => {
       mockGetPerms.mockResolvedValueOnce({
         granted: false,
-        status: 'denied',
+        status: "denied",
         canAskAgain: true,
       });
       mockRequestPerms.mockResolvedValueOnce({
         granted: true,
-        status: 'granted',
+        status: "granted",
         canAskAgain: true,
       });
 
@@ -130,8 +142,8 @@ describe('PermissionService', () => {
     });
   });
 
-  describe('openAppSettings', () => {
-    it('calls Linking.openSettings and returns true', async () => {
+  describe("openAppSettings", () => {
+    it("calls Linking.openSettings and returns true", async () => {
       mockOpenSettings.mockResolvedValueOnce(undefined);
 
       const result = await permissionService.openAppSettings();
@@ -140,8 +152,8 @@ describe('PermissionService', () => {
       expect(result).toBe(true);
     });
 
-    it('returns false on error', async () => {
-      mockOpenSettings.mockRejectedValueOnce(new Error('fail'));
+    it("returns false on error", async () => {
+      mockOpenSettings.mockRejectedValueOnce(new Error("fail"));
 
       const result = await permissionService.openAppSettings();
 

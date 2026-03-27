@@ -1,30 +1,30 @@
-import { fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
+import { fireEvent, render } from "@testing-library/react-native";
+import React from "react";
 
-import { Radio } from './Radio';
+import { Radio } from "./Radio";
 
-describe('Radio', () => {
-  it('renders selected state when value equals groupValue', () => {
+describe("Radio", () => {
+  it("renders selected state when value equals groupValue", () => {
     const { getByRole } = render(
       <Radio value="a" groupValue="a" onValueChange={jest.fn()} />,
     );
-    const radio = getByRole('radio');
+    const radio = getByRole("radio");
     expect(radio.props.accessibilityState).toEqual(
       expect.objectContaining({ checked: true }),
     );
   });
 
-  it('renders unselected state when value differs from groupValue', () => {
+  it("renders unselected state when value differs from groupValue", () => {
     const { getByRole } = render(
       <Radio value="a" groupValue="b" onValueChange={jest.fn()} />,
     );
-    const radio = getByRole('radio');
+    const radio = getByRole("radio");
     expect(radio.props.accessibilityState).toEqual(
       expect.objectContaining({ checked: false }),
     );
   });
 
-  it('calls onValueChange with its value on press', () => {
+  it("calls onValueChange with its value on press", () => {
     const onValueChange = jest.fn();
     const { getByRole } = render(
       <Radio
@@ -33,12 +33,12 @@ describe('Radio', () => {
         onValueChange={onValueChange}
       />,
     );
-    fireEvent.press(getByRole('radio'));
+    fireEvent.press(getByRole("radio"));
     expect(onValueChange).toHaveBeenCalledTimes(1);
-    expect(onValueChange).toHaveBeenCalledWith('option-b');
+    expect(onValueChange).toHaveBeenCalledWith("option-b");
   });
 
-  it('disabled state prevents onValueChange from being called', () => {
+  it("disabled state prevents onValueChange from being called", () => {
     const onValueChange = jest.fn();
     const { getByRole } = render(
       <Radio
@@ -48,11 +48,11 @@ describe('Radio', () => {
         enabled={false}
       />,
     );
-    fireEvent.press(getByRole('radio'));
+    fireEvent.press(getByRole("radio"));
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it('renders small size variant with smaller dimensions', () => {
+  it("renders small size variant with smaller dimensions", () => {
     const { toJSON: toJSONLarge } = render(
       <Radio value="a" groupValue="a" size="large" />,
     );

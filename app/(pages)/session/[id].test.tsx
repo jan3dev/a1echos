@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import React from 'react';
-import { Keyboard } from 'react-native';
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import React from "react";
+import { Keyboard } from "react-native";
 
-import { shareService } from '@/services';
+import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
   useFindSessionById,
@@ -15,26 +15,26 @@ import {
   useSessionTranscriptions,
   useStopRecordingAndSave,
   useToggleTranscriptionSelection,
-} from '@/stores';
+} from "@/stores";
 
-import SessionScreen from './[id]';
+import SessionScreen from "./[id]";
 
 // --- Mocks ---
 
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
-jest.mock('expo-router', () => ({
+jest.mock("expo-router", () => ({
   useRouter: () => ({
     back: mockBack,
     replace: mockReplace,
     canGoBack: mockCanGoBack,
     push: jest.fn(),
   }),
-  useLocalSearchParams: () => ({ id: 'session-1' }),
+  useLocalSearchParams: () => ({ id: "session-1" }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
+jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: any) => {
     cb();
   },
@@ -43,24 +43,23 @@ jest.mock('@react-navigation/native', () => ({
   })),
 }));
 
-jest.mock('@/theme', () => ({
+jest.mock("@/theme", () => ({
   useTheme: jest.fn(() => ({
     theme: {
       colors: {
-        surfaceBackground: '#fff',
-        surfacePrimary: '#fff',
-        textPrimary: '#000',
-        textSecondary: '#666',
-        textInverse: '#fff',
+        surfaceBackground: "#fff",
+        surfacePrimary: "#fff",
+        textPrimary: "#000",
+        textSecondary: "#666",
+        textInverse: "#fff",
       },
     },
   })),
 }));
 
- 
-const { mockMakeLoc } = require('../../../test-utils/mockLocalization');
+const { mockMakeLoc } = require("../../../test-utils/mockLocalization");
 
-jest.mock('@/hooks', () => ({
+jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
   usePermissions: jest.fn(() => ({
     hasPermission: true,
@@ -73,16 +72,16 @@ jest.mock('@/hooks', () => ({
   })),
 }));
 
-jest.mock('@/utils', () => ({
+jest.mock("@/utils", () => ({
   logError: jest.fn(),
   FeatureFlag: {
-    recording: 'recording',
-    session: 'session',
-    transcription: 'transcription',
+    recording: "recording",
+    session: "session",
+    transcription: "transcription",
   },
 }));
 
-jest.mock('@/services', () => ({
+jest.mock("@/services", () => ({
   shareService: { shareTranscriptions: jest.fn() },
 }));
 
@@ -94,18 +93,18 @@ const mockExitSelectionMode = jest.fn();
 const mockSetRecordingCallbacks = jest.fn();
 const mockSetRecordingControlsEnabled = jest.fn();
 let mockSession: any = {
-  id: 'session-1',
-  name: 'Test Session',
+  id: "session-1",
+  name: "Test Session",
   isIncognito: false,
 };
 
-jest.mock('@/stores', () => ({
+jest.mock("@/stores", () => ({
   useFindSessionById: jest.fn(
-    () => (id: string) => (id === 'session-1' ? mockSession : null),
+    () => (id: string) => (id === "session-1" ? mockSession : null),
   ),
   useRenameSession: jest.fn(() => mockRenameSession),
   useSwitchSession: jest.fn(() => mockSwitchSession),
-  useSelectedModelType: jest.fn(() => 'whisper_file'),
+  useSelectedModelType: jest.fn(() => "whisper_file"),
   useIsRecording: jest.fn(() => false),
   useStartRecording: jest.fn(() => jest.fn()),
   useStopRecordingAndSave: jest.fn(() => jest.fn()),
@@ -147,9 +146,8 @@ let mockOnEditEnd: (() => void) | null = null;
 const mockShowDeleteToast = jest.fn();
 const mockHideDeleteToast = jest.fn();
 
-jest.mock('@/components', () => {
-   
-  const { View, Text, TouchableOpacity } = require('react-native');
+jest.mock("@/components", () => {
+  const { View, Text, TouchableOpacity } = require("react-native");
   return {
     SessionAppBar: (props: any) => {
       mockOnTitlePressed = props.onTitlePressed;
@@ -164,10 +162,10 @@ jest.mock('@/components', () => {
         <View testID="session-app-bar">
           <Text testID="session-name">{props.sessionName}</Text>
           <Text testID="selection-mode">
-            {props.selectionMode ? 'selection' : 'normal'}
+            {props.selectionMode ? "selection" : "normal"}
           </Text>
           <Text testID="edit-mode">
-            {props.editMode ? 'editing' : 'not-editing'}
+            {props.editMode ? "editing" : "not-editing"}
           </Text>
         </View>
       );
@@ -206,8 +204,8 @@ jest.mock('@/components', () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSession = {
-    id: 'session-1',
-    name: 'Test Session',
+    id: "session-1",
+    name: "Test Session",
     isIncognito: false,
   };
   mockOnTitlePressed = null;
@@ -226,13 +224,13 @@ beforeEach(() => {
   mockSwitchSession.mockResolvedValue(undefined);
 
   // Restore default mock return values after clearAllMocks
-  const stores = jest.requireMock('@/stores');
+  const stores = jest.requireMock("@/stores");
   (stores.useFindSessionById as jest.Mock).mockReturnValue((id: string) =>
-    id === 'session-1' ? mockSession : null,
+    id === "session-1" ? mockSession : null,
   );
   (stores.useRenameSession as jest.Mock).mockReturnValue(mockRenameSession);
   (stores.useSwitchSession as jest.Mock).mockReturnValue(mockSwitchSession);
-  (stores.useSelectedModelType as jest.Mock).mockReturnValue('whisper_file');
+  (stores.useSelectedModelType as jest.Mock).mockReturnValue("whisper_file");
   (stores.useIsRecording as jest.Mock).mockReturnValue(false);
   (stores.useStartRecording as jest.Mock).mockReturnValue(jest.fn());
   (stores.useStopRecordingAndSave as jest.Mock).mockReturnValue(jest.fn());
@@ -268,7 +266,7 @@ beforeEach(() => {
   (stores.useDeleteTranscriptions as jest.Mock).mockReturnValue(jest.fn());
 
   // Restore component mocks
-  const components = jest.requireMock('@/components');
+  const components = jest.requireMock("@/components");
   (components.useToast as jest.Mock).mockReturnValue({
     show: mockShowDeleteToast,
     hide: mockHideDeleteToast,
@@ -276,7 +274,7 @@ beforeEach(() => {
   });
 
   // Restore hooks
-  const hooks = jest.requireMock('@/hooks');
+  const hooks = jest.requireMock("@/hooks");
   (hooks.useLocalization as jest.Mock).mockReturnValue({ loc: mockMakeLoc() });
   (hooks.usePermissions as jest.Mock).mockReturnValue({
     hasPermission: true,
@@ -289,29 +287,29 @@ beforeEach(() => {
   });
 
   // Restore navigation
-  const nav = jest.requireMock('@react-navigation/native');
+  const nav = jest.requireMock("@react-navigation/native");
   (nav.useNavigation as jest.Mock).mockReturnValue({
     addListener: jest.fn(() => jest.fn()),
   });
 });
 
-describe('SessionScreen', () => {
-  it('renders SessionAppBar with session name', async () => {
+describe("SessionScreen", () => {
+  it("renders SessionAppBar with session name", async () => {
     const { getByTestId } = render(<SessionScreen />);
-    expect(getByTestId('session-app-bar')).toBeTruthy();
-    expect(getByTestId('session-name')).toHaveTextContent('Test Session');
+    expect(getByTestId("session-app-bar")).toBeTruthy();
+    expect(getByTestId("session-name")).toHaveTextContent("Test Session");
     await act(async () => {});
   });
 
-  it('shows TranscriptionContentView after initialization', async () => {
+  it("shows TranscriptionContentView after initialization", async () => {
     const { getByTestId } = render(<SessionScreen />);
     await waitFor(() => {
-      expect(getByTestId('transcription-content')).toBeTruthy();
+      expect(getByTestId("transcription-content")).toBeTruthy();
     });
-    expect(mockSwitchSession).toHaveBeenCalledWith('session-1');
+    expect(mockSwitchSession).toHaveBeenCalledWith("session-1");
   });
 
-  it('missing session navigates back', async () => {
+  it("missing session navigates back", async () => {
     mockSession = null;
     (useFindSessionById as jest.Mock).mockReturnValue(() => null);
 
@@ -322,31 +320,31 @@ describe('SessionScreen', () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it('selection mode shows share button', async () => {
+  it("selection mode shows share button", async () => {
     (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
     const { getByTestId } = render(<SessionScreen />);
-    expect(getByTestId('share-button')).toBeTruthy();
-    expect(getByTestId('selection-mode')).toHaveTextContent('selection');
+    expect(getByTestId("share-button")).toBeTruthy();
+    expect(getByTestId("selection-mode")).toHaveTextContent("selection");
     await act(async () => {});
   });
 
-  it('title press opens rename modal for non-incognito', async () => {
+  it("title press opens rename modal for non-incognito", async () => {
     const { queryByTestId } = render(<SessionScreen />);
-    expect(queryByTestId('rename-modal')).toBeNull();
+    expect(queryByTestId("rename-modal")).toBeNull();
 
     await act(async () => {
       mockOnTitlePressed!();
     });
 
     await waitFor(() => {
-      expect(queryByTestId('rename-modal')).toBeTruthy();
+      expect(queryByTestId("rename-modal")).toBeTruthy();
     });
   });
 
-  it('title press does NOT open rename modal for incognito', async () => {
+  it("title press does NOT open rename modal for incognito", async () => {
     mockSession = {
-      id: 'session-1',
-      name: 'Incognito',
+      id: "session-1",
+      name: "Incognito",
       isIncognito: true,
     };
     (useFindSessionById as jest.Mock).mockReturnValue(
@@ -359,10 +357,10 @@ describe('SessionScreen', () => {
       mockOnTitlePressed!();
     });
 
-    expect(queryByTestId('rename-modal')).toBeNull();
+    expect(queryByTestId("rename-modal")).toBeNull();
   });
 
-  it('rename modal submit calls renameSession', async () => {
+  it("rename modal submit calls renameSession", async () => {
     const { queryByTestId } = render(<SessionScreen />);
 
     // Open modal
@@ -370,20 +368,20 @@ describe('SessionScreen', () => {
       mockOnTitlePressed!();
     });
     await waitFor(() => {
-      expect(queryByTestId('rename-modal')).toBeTruthy();
+      expect(queryByTestId("rename-modal")).toBeTruthy();
     });
 
     // Submit rename
     await act(async () => {
-      mockOnRenameSubmit!('New Name');
+      mockOnRenameSubmit!("New Name");
     });
 
     await waitFor(() => {
-      expect(mockRenameSession).toHaveBeenCalledWith('session-1', 'New Name');
+      expect(mockRenameSession).toHaveBeenCalledWith("session-1", "New Name");
     });
   });
 
-  it('unmount calls exitSelectionMode cleanup', async () => {
+  it("unmount calls exitSelectionMode cleanup", async () => {
     const { unmount } = render(<SessionScreen />);
     await act(async () => {});
     unmount();
@@ -392,8 +390,8 @@ describe('SessionScreen', () => {
 
   // --- A. handleBackPressed branches ---
 
-  describe('handleBackPressed', () => {
-    it('when recording: calls stopRecordingAndSave then navigates back', async () => {
+  describe("handleBackPressed", () => {
+    it("when recording: calls stopRecordingAndSave then navigates back", async () => {
       const mockStopAndSave = jest.fn().mockResolvedValue(undefined);
       (useIsRecording as jest.Mock).mockReturnValue(true);
       (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStopAndSave);
@@ -411,8 +409,8 @@ describe('SessionScreen', () => {
       });
     });
 
-    it('when editing: calls handleCancelEdit (dismiss keyboard)', async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, 'dismiss');
+    it("when editing: calls handleCancelEdit (dismiss keyboard)", async () => {
+      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
 
       render(<SessionScreen />);
       await act(async () => {});
@@ -431,7 +429,7 @@ describe('SessionScreen', () => {
       keyboardDismissSpy.mockRestore();
     });
 
-    it('when selectionMode: calls exitSelectionMode', async () => {
+    it("when selectionMode: calls exitSelectionMode", async () => {
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
 
       render(<SessionScreen />);
@@ -444,7 +442,7 @@ describe('SessionScreen', () => {
       expect(mockExitSelectionMode).toHaveBeenCalled();
     });
 
-    it('default: calls router.back()', async () => {
+    it("default: calls router.back()", async () => {
       render(<SessionScreen />);
       await act(async () => {});
 
@@ -458,8 +456,8 @@ describe('SessionScreen', () => {
 
   // --- B. handleLongPress ---
 
-  describe('handleLongPress', () => {
-    it('first long press enters selection mode and triggers haptics', async () => {
+  describe("handleLongPress", () => {
+    it("first long press enters selection mode and triggers haptics", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(false);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
@@ -470,16 +468,16 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        mockOnTranscriptionLongPress!('transcription-1');
+        mockOnTranscriptionLongPress!("transcription-1");
       });
 
-      expect(mockToggle).toHaveBeenCalledWith('transcription-1');
+      expect(mockToggle).toHaveBeenCalledWith("transcription-1");
       expect(Haptics.impactAsync).toHaveBeenCalledWith(
         Haptics.ImpactFeedbackStyle.Heavy,
       );
     });
 
-    it('second long press in selection mode toggles without haptics', async () => {
+    it("second long press in selection mode toggles without haptics", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
@@ -491,18 +489,18 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        mockOnTranscriptionLongPress!('transcription-2');
+        mockOnTranscriptionLongPress!("transcription-2");
       });
 
-      expect(mockToggle).toHaveBeenCalledWith('transcription-2');
+      expect(mockToggle).toHaveBeenCalledWith("transcription-2");
       expect(Haptics.impactAsync).not.toHaveBeenCalled();
     });
   });
 
   // --- C. handleTranscriptionTap ---
 
-  describe('handleTranscriptionTap', () => {
-    it('in selection mode: calls toggleTranscriptionSelection', async () => {
+  describe("handleTranscriptionTap", () => {
+    it("in selection mode: calls toggleTranscriptionSelection", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
@@ -513,13 +511,13 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        mockOnTranscriptionTap!('transcription-1');
+        mockOnTranscriptionTap!("transcription-1");
       });
 
-      expect(mockToggle).toHaveBeenCalledWith('transcription-1');
+      expect(mockToggle).toHaveBeenCalledWith("transcription-1");
     });
 
-    it('not in selection mode: does nothing', async () => {
+    it("not in selection mode: does nothing", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(false);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
@@ -530,7 +528,7 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        mockOnTranscriptionTap!('transcription-1');
+        mockOnTranscriptionTap!("transcription-1");
       });
 
       expect(mockToggle).not.toHaveBeenCalled();
@@ -539,10 +537,10 @@ describe('SessionScreen', () => {
 
   // --- D. handleCopyAllPressed ---
 
-  describe('handleCopyAllPressed', () => {
-    it('with empty transcriptions: shows no transcriptions tooltip', async () => {
+  describe("handleCopyAllPressed", () => {
+    it("with empty transcriptions: shows no transcriptions tooltip", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
@@ -557,31 +555,31 @@ describe('SessionScreen', () => {
 
       expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
         expect.anything(),
-        'normal',
+        "normal",
         undefined,
         true,
       );
       expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
     });
 
-    it('success: copies text and shows tooltip on iOS', async () => {
+    it("success: copies text and shows tooltip on iOS", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello world' },
-        { id: 't2', text: 'Second transcription' },
+        { id: "t1", text: "Hello world" },
+        { id: "t2", text: "Second transcription" },
       ]);
       (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
 
       const originalPlatform = Object.getOwnPropertyDescriptor(
-        require('react-native').Platform,
-        'OS',
+        require("react-native").Platform,
+        "OS",
       );
-      Object.defineProperty(require('react-native').Platform, 'OS', {
-        value: 'ios',
+      Object.defineProperty(require("react-native").Platform, "OS", {
+        value: "ios",
         configurable: true,
       });
 
@@ -594,7 +592,7 @@ describe('SessionScreen', () => {
 
       await waitFor(() => {
         expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
-          'Hello world\n\nSecond transcription',
+          "Hello world\n\nSecond transcription",
         );
       });
 
@@ -605,24 +603,24 @@ describe('SessionScreen', () => {
       // Restore
       if (originalPlatform) {
         Object.defineProperty(
-          require('react-native').Platform,
-          'OS',
+          require("react-native").Platform,
+          "OS",
           originalPlatform,
         );
       }
     });
 
-    it('failure: shows error tooltip', async () => {
+    it("failure: shows error tooltip", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
       (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error('Clipboard error'),
+        new Error("Clipboard error"),
       );
 
       render(<SessionScreen />);
@@ -635,7 +633,7 @@ describe('SessionScreen', () => {
       await waitFor(() => {
         expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
           expect.anything(),
-          'normal',
+          "normal",
           undefined,
           true,
         );
@@ -645,8 +643,8 @@ describe('SessionScreen', () => {
 
   // --- E. handleSharePressed ---
 
-  describe('handleSharePressed', () => {
-    it('with no selected items: shows warning toast', async () => {
+  describe("handleSharePressed", () => {
+    it("with no selected items: shows warning toast", async () => {
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
 
@@ -654,21 +652,21 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId('share-button'));
+        fireEvent.press(getByTestId("share-button"));
       });
 
-      expect(mockShowToast).toHaveBeenCalledWith(expect.anything(), 'warning');
+      expect(mockShowToast).toHaveBeenCalledWith(expect.anything(), "warning");
     });
 
-    it('success: calls shareService.shareTranscriptions', async () => {
-      const selectedIds = new Set(['t1']);
+    it("success: calls shareService.shareTranscriptions", async () => {
+      const selectedIds = new Set(["t1"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
-        { id: 't2', text: 'World' },
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
       ]);
       (shareService.shareTranscriptions as jest.Mock).mockResolvedValue(
         undefined,
@@ -678,12 +676,12 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId('share-button'));
+        fireEvent.press(getByTestId("share-button"));
       });
 
       await waitFor(() => {
         expect(shareService.shareTranscriptions).toHaveBeenCalledWith([
-          { id: 't1', text: 'Hello' },
+          { id: "t1", text: "Hello" },
         ]);
       });
     });
@@ -691,9 +689,9 @@ describe('SessionScreen', () => {
 
   // --- F. handleDeleteSelectedPressed ---
 
-  describe('handleDeleteSelectedPressed', () => {
-    it('shows delete confirmation toast', async () => {
-      const selectedIds = new Set(['t1', 't2']);
+  describe("handleDeleteSelectedPressed", () => {
+    it("shows delete confirmation toast", async () => {
+      const selectedIds = new Set(["t1", "t2"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
@@ -710,16 +708,16 @@ describe('SessionScreen', () => {
         expect.objectContaining({
           primaryButtonText: expect.anything(),
           secondaryButtonText: expect.anything(),
-          variant: 'informative',
+          variant: "informative",
         }),
       );
     });
 
-    it('primary button tap deletes and shows tooltip', async () => {
-      const selectedIds = new Set(['t1']);
+    it("primary button tap deletes and shows tooltip", async () => {
+      const selectedIds = new Set(["t1"]);
       const mockDeleteTranscriptions = jest.fn().mockResolvedValue(undefined);
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
 
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
@@ -754,8 +752,8 @@ describe('SessionScreen', () => {
 
   // --- G. Recording callbacks ---
 
-  describe('recording callbacks', () => {
-    it('sets recording callbacks on focus via useFocusEffect', async () => {
+  describe("recording callbacks", () => {
+    it("sets recording callbacks on focus via useFocusEffect", async () => {
       render(<SessionScreen />);
       await act(async () => {});
 
@@ -765,7 +763,7 @@ describe('SessionScreen', () => {
       );
     });
 
-    it('sets recording controls enabled based on initialization state', async () => {
+    it("sets recording controls enabled based on initialization state", async () => {
       render(<SessionScreen />);
 
       // Initially isInitializing is true and isRecording is false, so controlsEnabled = false
@@ -777,7 +775,7 @@ describe('SessionScreen', () => {
       });
     });
 
-    it('controls enabled when recording even during initialization', async () => {
+    it("controls enabled when recording even during initialization", async () => {
       (useIsRecording as jest.Mock).mockReturnValue(true);
 
       render(<SessionScreen />);
@@ -790,17 +788,17 @@ describe('SessionScreen', () => {
 
   // --- H. Navigation lifecycle ---
 
-  describe('navigation lifecycle', () => {
-    it('beforeRemove when recording: stops recording then navigates', async () => {
+  describe("navigation lifecycle", () => {
+    it("beforeRemove when recording: stops recording then navigates", async () => {
       const mockStopAndSave = jest.fn().mockResolvedValue(undefined);
       (useIsRecording as jest.Mock).mockReturnValue(true);
       (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStopAndSave);
 
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -820,17 +818,17 @@ describe('SessionScreen', () => {
       expect(mockBack).toHaveBeenCalled();
     });
 
-    it('beforeRemove for incognito: ends incognito session then navigates', async () => {
+    it("beforeRemove for incognito: ends incognito session then navigates", async () => {
       const mockEndIncognito = jest.fn().mockResolvedValue(undefined);
-      const { useSessionOperations } = jest.requireMock('@/hooks');
+      const { useSessionOperations } = jest.requireMock("@/hooks");
       (useSessionOperations as jest.Mock).mockReturnValue({
         deleteSession: jest.fn(),
         endIncognitoSession: mockEndIncognito,
       });
 
       mockSession = {
-        id: 'session-1',
-        name: 'Incognito',
+        id: "session-1",
+        name: "Incognito",
         isIncognito: true,
       };
       (useFindSessionById as jest.Mock).mockReturnValue(
@@ -838,10 +836,10 @@ describe('SessionScreen', () => {
       );
 
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -864,10 +862,10 @@ describe('SessionScreen', () => {
 
   // --- Additional edge cases ---
 
-  describe('recording controls visibility', () => {
-    it('hides recording controls when in selection mode', async () => {
+  describe("recording controls visibility", () => {
+    it("hides recording controls when in selection mode", async () => {
       const mockSetVisible = jest.fn();
-      const { useSetRecordingControlsVisible } = jest.requireMock('@/stores');
+      const { useSetRecordingControlsVisible } = jest.requireMock("@/stores");
       (useSetRecordingControlsVisible as jest.Mock).mockReturnValue(
         mockSetVisible,
       );
@@ -879,9 +877,9 @@ describe('SessionScreen', () => {
       expect(mockSetVisible).toHaveBeenCalledWith(false);
     });
 
-    it('hides recording controls when editing', async () => {
+    it("hides recording controls when editing", async () => {
       const mockSetVisible = jest.fn();
-      const { useSetRecordingControlsVisible } = jest.requireMock('@/stores');
+      const { useSetRecordingControlsVisible } = jest.requireMock("@/stores");
       (useSetRecordingControlsVisible as jest.Mock).mockReturnValue(
         mockSetVisible,
       );
@@ -897,9 +895,9 @@ describe('SessionScreen', () => {
       expect(mockSetVisible).toHaveBeenCalledWith(false);
     });
 
-    it('shows recording controls when not in selection or edit mode', async () => {
+    it("shows recording controls when not in selection or edit mode", async () => {
       const mockSetVisible = jest.fn();
-      const { useSetRecordingControlsVisible } = jest.requireMock('@/stores');
+      const { useSetRecordingControlsVisible } = jest.requireMock("@/stores");
       (useSetRecordingControlsVisible as jest.Mock).mockReturnValue(
         mockSetVisible,
       );
@@ -911,8 +909,8 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('handleDeleteSelectedPressed with no selection', () => {
-    it('does nothing when no items selected', async () => {
+  describe("handleDeleteSelectedPressed with no selection", () => {
+    it("does nothing when no items selected", async () => {
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
 
@@ -927,9 +925,9 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('save edit callback', () => {
-    it('onSaveEditPressed dismisses keyboard and exits edit mode', async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, 'dismiss');
+  describe("save edit callback", () => {
+    it("onSaveEditPressed dismisses keyboard and exits edit mode", async () => {
+      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
 
       render(<SessionScreen />);
       await act(async () => {});
@@ -951,31 +949,31 @@ describe('SessionScreen', () => {
 
   // --- Additional coverage tests ---
 
-  describe('copyAllTranscriptions', () => {
-    it('clipboard success on Android < 12 shows tooltip', async () => {
+  describe("copyAllTranscriptions", () => {
+    it("clipboard success on Android < 12 shows tooltip", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello world' },
+        { id: "t1", text: "Hello world" },
       ]);
       (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
 
       const originalOS = Object.getOwnPropertyDescriptor(
-        require('react-native').Platform,
-        'OS',
+        require("react-native").Platform,
+        "OS",
       );
       const originalVersion = Object.getOwnPropertyDescriptor(
-        require('react-native').Platform,
-        'Version',
+        require("react-native").Platform,
+        "Version",
       );
-      Object.defineProperty(require('react-native').Platform, 'OS', {
-        value: 'android',
+      Object.defineProperty(require("react-native").Platform, "OS", {
+        value: "android",
         configurable: true,
       });
-      Object.defineProperty(require('react-native').Platform, 'Version', {
+      Object.defineProperty(require("react-native").Platform, "Version", {
         value: 30,
         configurable: true,
       });
@@ -995,44 +993,44 @@ describe('SessionScreen', () => {
       // Restore
       if (originalOS) {
         Object.defineProperty(
-          require('react-native').Platform,
-          'OS',
+          require("react-native").Platform,
+          "OS",
           originalOS,
         );
       }
       if (originalVersion) {
         Object.defineProperty(
-          require('react-native').Platform,
-          'Version',
+          require("react-native").Platform,
+          "Version",
           originalVersion,
         );
       }
     });
 
-    it('clipboard success on Android >= 12 does NOT show tooltip', async () => {
+    it("clipboard success on Android >= 12 does NOT show tooltip", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello world' },
+        { id: "t1", text: "Hello world" },
       ]);
       (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
 
       const originalOS = Object.getOwnPropertyDescriptor(
-        require('react-native').Platform,
-        'OS',
+        require("react-native").Platform,
+        "OS",
       );
       const originalVersion = Object.getOwnPropertyDescriptor(
-        require('react-native').Platform,
-        'Version',
+        require("react-native").Platform,
+        "Version",
       );
-      Object.defineProperty(require('react-native').Platform, 'OS', {
-        value: 'android',
+      Object.defineProperty(require("react-native").Platform, "OS", {
+        value: "android",
         configurable: true,
       });
-      Object.defineProperty(require('react-native').Platform, 'Version', {
+      Object.defineProperty(require("react-native").Platform, "Version", {
         value: 31,
         configurable: true,
       });
@@ -1054,34 +1052,34 @@ describe('SessionScreen', () => {
       // Restore
       if (originalOS) {
         Object.defineProperty(
-          require('react-native').Platform,
-          'OS',
+          require("react-native").Platform,
+          "OS",
           originalOS,
         );
       }
       if (originalVersion) {
         Object.defineProperty(
-          require('react-native').Platform,
-          'Version',
+          require("react-native").Platform,
+          "Version",
           originalVersion,
         );
       }
     });
 
-    it('copyAllTranscriptions returns false when clipboard fails (inside handleCopyAllPressed)', async () => {
+    it("copyAllTranscriptions returns false when clipboard fails (inside handleCopyAllPressed)", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
       // Make clipboard fail but NOT throw (resolved)
       // This exercises the copyAllTranscriptions catch → return false path
       // and then handleCopyAllPressed success===false branch
       (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error('Clipboard write error'),
+        new Error("Clipboard write error"),
       );
 
       render(<SessionScreen />);
@@ -1095,7 +1093,7 @@ describe('SessionScreen', () => {
       await waitFor(() => {
         expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
           expect.anything(),
-          'normal',
+          "normal",
           undefined,
           true,
         );
@@ -1103,46 +1101,46 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('shareSelectedTranscriptions', () => {
-    it('returns false when selectedIds are present but no matching transcriptions', async () => {
-      const selectedIds = new Set(['nonexistent']);
+  describe("shareSelectedTranscriptions", () => {
+    it("returns false when selectedIds are present but no matching transcriptions", async () => {
+      const selectedIds = new Set(["nonexistent"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
 
       const { getByTestId } = render(<SessionScreen />);
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId('share-button'));
+        fireEvent.press(getByTestId("share-button"));
       });
 
       // shareService should NOT be called because selectedTranscriptions is empty
       expect(shareService.shareTranscriptions).not.toHaveBeenCalled();
     });
 
-    it('handles share failure gracefully (returns false)', async () => {
-      const selectedIds = new Set(['t1']);
+    it("handles share failure gracefully (returns false)", async () => {
+      const selectedIds = new Set(["t1"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
       (shareService.shareTranscriptions as jest.Mock).mockRejectedValue(
-        new Error('Share failed'),
+        new Error("Share failed"),
       );
 
       const { getByTestId } = render(<SessionScreen />);
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId('share-button'));
+        fireEvent.press(getByTestId("share-button"));
       });
 
       await waitFor(() => {
@@ -1151,18 +1149,18 @@ describe('SessionScreen', () => {
         expect(Haptics.notificationAsync).not.toHaveBeenCalled();
       });
       // The error was logged
-      const { logError } = jest.requireMock('@/utils');
+      const { logError } = jest.requireMock("@/utils");
       expect(logError).toHaveBeenCalled();
     });
 
-    it('share success triggers haptics', async () => {
-      const selectedIds = new Set(['t1']);
+    it("share success triggers haptics", async () => {
+      const selectedIds = new Set(["t1"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
       (shareService.shareTranscriptions as jest.Mock).mockResolvedValue(
         undefined,
@@ -1172,7 +1170,7 @@ describe('SessionScreen', () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId('share-button'));
+        fireEvent.press(getByTestId("share-button"));
       });
 
       await waitFor(() => {
@@ -1183,14 +1181,14 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('deleteSelectedTranscriptions', () => {
-    it('delete error is thrown and handled', async () => {
-      const selectedIds = new Set(['t1']);
+  describe("deleteSelectedTranscriptions", () => {
+    it("delete error is thrown and handled", async () => {
+      const selectedIds = new Set(["t1"]);
       const mockDeleteTranscriptions = jest
         .fn()
-        .mockRejectedValue(new Error('Delete failed'));
+        .mockRejectedValue(new Error("Delete failed"));
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
 
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
@@ -1226,8 +1224,8 @@ describe('SessionScreen', () => {
       expect(mockExitSelectionMode).toHaveBeenCalled();
     });
 
-    it('secondary button tap hides toast', async () => {
-      const selectedIds = new Set(['t1']);
+    it("secondary button tap hides toast", async () => {
+      const selectedIds = new Set(["t1"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
         selectedIds,
@@ -1249,7 +1247,7 @@ describe('SessionScreen', () => {
       expect(mockHideDeleteToast).toHaveBeenCalled();
     });
 
-    it('deleteSelectedTranscriptions returns early with 0 when no items selected', async () => {
+    it("deleteSelectedTranscriptions returns early with 0 when no items selected", async () => {
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
 
@@ -1274,33 +1272,33 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('handleLongPress haptics failure', () => {
-    it('handles haptics not supported gracefully', async () => {
+  describe("handleLongPress haptics failure", () => {
+    it("handles haptics not supported gracefully", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(false);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
         mockToggle,
       );
       (Haptics.impactAsync as jest.Mock).mockRejectedValue(
-        new Error('Haptics not supported'),
+        new Error("Haptics not supported"),
       );
 
       render(<SessionScreen />);
       await act(async () => {});
 
       await act(async () => {
-        mockOnTranscriptionLongPress!('t1');
+        mockOnTranscriptionLongPress!("t1");
       });
 
       // toggle should still be called even if haptics fail
-      expect(mockToggle).toHaveBeenCalledWith('t1');
+      expect(mockToggle).toHaveBeenCalledWith("t1");
     });
   });
 
-  describe('handleLanguageFlagPressed', () => {
-    it('navigates to language settings', async () => {
+  describe("handleLanguageFlagPressed", () => {
+    it("navigates to language settings", async () => {
       const mockPush = jest.fn();
-      const routerMock = jest.requireMock('expo-router');
+      const routerMock = jest.requireMock("expo-router");
       const originalUseRouter = routerMock.useRouter;
       routerMock.useRouter = () => ({
         back: mockBack,
@@ -1316,15 +1314,15 @@ describe('SessionScreen', () => {
         mockOnLanguageFlagPressed!();
       });
 
-      expect(mockPush).toHaveBeenCalledWith('/settings/language');
+      expect(mockPush).toHaveBeenCalledWith("/settings/language");
 
       routerMock.useRouter = originalUseRouter;
     });
   });
 
-  describe('handleCancelEdit', () => {
-    it('sets isCancellingEdit to true and dismisses keyboard', async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, 'dismiss');
+  describe("handleCancelEdit", () => {
+    it("sets isCancellingEdit to true and dismisses keyboard", async () => {
+      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
 
       render(<SessionScreen />);
       await act(async () => {});
@@ -1344,18 +1342,18 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('navigation beforeRemove edge cases', () => {
-    it('beforeRemove when recording and canGoBack is false: replaces route', async () => {
+  describe("navigation beforeRemove edge cases", () => {
+    it("beforeRemove when recording and canGoBack is false: replaces route", async () => {
       const mockStopAndSave = jest.fn().mockResolvedValue(undefined);
       (useIsRecording as jest.Mock).mockReturnValue(true);
       (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStopAndSave);
       mockCanGoBack.mockReturnValue(false);
 
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -1372,30 +1370,30 @@ describe('SessionScreen', () => {
 
       expect(mockPreventDefault).toHaveBeenCalled();
       expect(mockStopAndSave).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith('/');
+      expect(mockReplace).toHaveBeenCalledWith("/");
     });
 
-    it('beforeRemove for incognito when canGoBack is false: replaces route', async () => {
+    it("beforeRemove for incognito when canGoBack is false: replaces route", async () => {
       const mockEndIncognito = jest.fn().mockResolvedValue(undefined);
-      const { useSessionOperations } = jest.requireMock('@/hooks');
+      const { useSessionOperations } = jest.requireMock("@/hooks");
       (useSessionOperations as jest.Mock).mockReturnValue({
         deleteSession: jest.fn(),
         endIncognitoSession: mockEndIncognito,
       });
 
       mockSession = {
-        id: 'session-1',
-        name: 'Incognito',
+        id: "session-1",
+        name: "Incognito",
         isIncognito: true,
       };
       (useFindSessionById as jest.Mock).mockReturnValue(() => mockSession);
       mockCanGoBack.mockReturnValue(false);
 
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -1412,31 +1410,31 @@ describe('SessionScreen', () => {
 
       expect(mockPreventDefault).toHaveBeenCalled();
       expect(mockEndIncognito).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith('/');
+      expect(mockReplace).toHaveBeenCalledWith("/");
     });
 
-    it('beforeRemove for incognito with error in endIncognitoSession', async () => {
+    it("beforeRemove for incognito with error in endIncognitoSession", async () => {
       const mockEndIncognito = jest
         .fn()
-        .mockRejectedValue(new Error('Incognito end error'));
-      const { useSessionOperations } = jest.requireMock('@/hooks');
+        .mockRejectedValue(new Error("Incognito end error"));
+      const { useSessionOperations } = jest.requireMock("@/hooks");
       (useSessionOperations as jest.Mock).mockReturnValue({
         deleteSession: jest.fn(),
         endIncognitoSession: mockEndIncognito,
       });
 
       mockSession = {
-        id: 'session-1',
-        name: 'Incognito',
+        id: "session-1",
+        name: "Incognito",
         isIncognito: true,
       };
       (useFindSessionById as jest.Mock).mockReturnValue(() => mockSession);
 
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -1454,16 +1452,16 @@ describe('SessionScreen', () => {
       expect(mockPreventDefault).toHaveBeenCalled();
       expect(mockEndIncognito).toHaveBeenCalled();
       // Should not navigate on error (no back or replace call after the error)
-      const { logError } = jest.requireMock('@/utils');
+      const { logError } = jest.requireMock("@/utils");
       expect(logError).toHaveBeenCalled();
     });
 
-    it('beforeRemove for non-recording, non-incognito session: does nothing', async () => {
+    it("beforeRemove for non-recording, non-incognito session: does nothing", async () => {
       let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock('@react-navigation/native');
+      const { useNavigation } = jest.requireMock("@react-navigation/native");
       (useNavigation as jest.Mock).mockReturnValue({
         addListener: jest.fn((event: string, handler: any) => {
-          if (event === 'beforeRemove') {
+          if (event === "beforeRemove") {
             beforeRemoveHandler = handler;
           }
           return jest.fn();
@@ -1483,8 +1481,8 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('auto-scroll effect', () => {
-    it('auto-scrolls during recording', async () => {
+  describe("auto-scroll effect", () => {
+    it("auto-scrolls during recording", async () => {
       (useIsRecording as jest.Mock).mockReturnValue(true);
 
       render(<SessionScreen />);
@@ -1494,12 +1492,12 @@ describe('SessionScreen', () => {
       // We just verify the component renders without error when recording.
     });
 
-    it('auto-scrolls when realtime model has live preview', async () => {
-      const stores = jest.requireMock('@/stores');
+    it("auto-scrolls when realtime model has live preview", async () => {
+      const stores = jest.requireMock("@/stores");
       (stores.useSelectedModelType as jest.Mock).mockReturnValue(
-        'whisper_realtime',
+        "whisper_realtime",
       );
-      (stores.useLivePreview as jest.Mock).mockReturnValue('Some live text');
+      (stores.useLivePreview as jest.Mock).mockReturnValue("Some live text");
       (useIsRecording as jest.Mock).mockReturnValue(false);
 
       render(<SessionScreen />);
@@ -1509,8 +1507,8 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('handleEditEnd callback', () => {
-    it('onEditEnd sets editing and cancelling state to false', async () => {
+  describe("handleEditEnd callback", () => {
+    it("onEditEnd sets editing and cancelling state to false", async () => {
       const { getByTestId } = render(<SessionScreen />);
       await act(async () => {});
 
@@ -1519,27 +1517,27 @@ describe('SessionScreen', () => {
         mockOnEditStart!();
       });
 
-      expect(getByTestId('edit-mode')).toHaveTextContent('editing');
+      expect(getByTestId("edit-mode")).toHaveTextContent("editing");
 
       // End edit
       await act(async () => {
         mockOnEditEnd!();
       });
 
-      expect(getByTestId('edit-mode')).toHaveTextContent('not-editing');
+      expect(getByTestId("edit-mode")).toHaveTextContent("not-editing");
     });
   });
 
-  describe('selectAllTranscriptions', () => {
-    it('selects all transcriptions when none are selected', async () => {
+  describe("selectAllTranscriptions", () => {
+    it("selects all transcriptions when none are selected", async () => {
       const mockSelectAll = jest.fn();
-      const { useSelectAllTranscriptions } = jest.requireMock('@/stores');
+      const { useSelectAllTranscriptions } = jest.requireMock("@/stores");
       (useSelectAllTranscriptions as jest.Mock).mockReturnValue(mockSelectAll);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
-        { id: 't2', text: 'World' },
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
       ]);
 
       render(<SessionScreen />);
@@ -1549,20 +1547,20 @@ describe('SessionScreen', () => {
         mockOnSelectAllPressed!();
       });
 
-      expect(mockSelectAll).toHaveBeenCalledWith(['t1', 't2']);
+      expect(mockSelectAll).toHaveBeenCalledWith(["t1", "t2"]);
     });
 
-    it('deselects all transcriptions when all are already selected', async () => {
+    it("deselects all transcriptions when all are already selected", async () => {
       const mockSelectAll = jest.fn();
-      const { useSelectAllTranscriptions } = jest.requireMock('@/stores');
+      const { useSelectAllTranscriptions } = jest.requireMock("@/stores");
       (useSelectAllTranscriptions as jest.Mock).mockReturnValue(mockSelectAll);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
-        new Set(['t1', 't2']),
+        new Set(["t1", "t2"]),
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
-        { id: 't2', text: 'World' },
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
       ]);
 
       render(<SessionScreen />);
@@ -1576,19 +1574,19 @@ describe('SessionScreen', () => {
     });
   });
 
-  describe('handleCopyAllPressed - copyAllTranscriptions returns false', () => {
-    it('shows copyFailed tooltip when copyAllTranscriptions returns false', async () => {
+  describe("handleCopyAllPressed - copyAllTranscriptions returns false", () => {
+    it("shows copyFailed tooltip when copyAllTranscriptions returns false", async () => {
       const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock('@/stores');
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
       (useShowGlobalTooltip as jest.Mock).mockReturnValue(
         mockShowGlobalTooltip,
       );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: 't1', text: 'Hello' },
+        { id: "t1", text: "Hello" },
       ]);
       // Make clipboard fail silently (returns false from copyAllTranscriptions)
       (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error('fail'),
+        new Error("fail"),
       );
 
       render(<SessionScreen />);

@@ -355,7 +355,7 @@ const createAudioService = () => {
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
 
-        audioPcmStream.stop();
+        await audioPcmStream.stop();
         androidPcmRecording = false;
 
         try {

@@ -1,26 +1,26 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render } from '@testing-library/react-native';
-import React from 'react';
+import { fireEvent, render } from "@testing-library/react-native";
+import React from "react";
 
-import { Session } from '@/models';
-import { useSessionTranscriptions } from '@/stores';
+import { Session } from "@/models";
+import { useSessionTranscriptions } from "@/stores";
 
-import { SessionListItem } from './SessionListItem';
+import { SessionListItem } from "./SessionListItem";
 
-jest.mock('@/stores', () => ({
+jest.mock("@/stores", () => ({
   useSessionTranscriptions: jest.fn(() => []),
 }));
 
-jest.mock('./SessionMoreMenu', () => ({
+jest.mock("./SessionMoreMenu", () => ({
   SessionMoreMenu: () => {
-    const { View } = require('react-native');
+    const { View } = require("react-native");
     return <View testID="session-more-menu" />;
   },
 }));
 
-jest.mock('../../shared/list-item/ListItem', () => ({
+jest.mock("../../shared/list-item/ListItem", () => ({
   ListItem: (props: any) => {
-    const { Pressable, Text, View } = require('react-native');
+    const { Pressable, Text, View } = require("react-native");
     return (
       <Pressable
         testID="list-item"
@@ -36,16 +36,16 @@ jest.mock('../../shared/list-item/ListItem', () => ({
   },
 }));
 
-jest.mock('../../ui/checkbox/Checkbox', () => ({
+jest.mock("../../ui/checkbox/Checkbox", () => ({
   Checkbox: (props: any) => {
-    const { View } = require('react-native');
+    const { View } = require("react-native");
     return <View testID="checkbox" />;
   },
 }));
 
 const mockSession: Session = {
-  id: 's1',
-  name: 'My Session',
+  id: "s1",
+  name: "My Session",
   timestamp: new Date(),
   lastModified: new Date(),
   isIncognito: false,
@@ -57,40 +57,40 @@ const defaultProps = {
   onLongPress: jest.fn(),
 };
 
-describe('SessionListItem', () => {
+describe("SessionListItem", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useSessionTranscriptions as jest.Mock).mockReturnValue([
-      { id: 't1' },
-      { id: 't2' },
+      { id: "t1" },
+      { id: "t2" },
     ]);
   });
 
-  it('renders session name as title', () => {
+  it("renders session name as title", () => {
     const { getByTestId } = render(<SessionListItem {...defaultProps} />);
-    expect(getByTestId('list-item-title').props.children).toBe('My Session');
+    expect(getByTestId("list-item-title").props.children).toBe("My Session");
   });
 
-  it('renders transcription count subtitle', () => {
+  it("renders transcription count subtitle", () => {
     const { getByTestId } = render(<SessionListItem {...defaultProps} />);
     // useLocalization.loc.transcriptionCount calls t('transcriptionCount', { count: 2 })
     // which returns the key as string
-    expect(getByTestId('list-item-subtitle').props.children).toBeTruthy();
+    expect(getByTestId("list-item-subtitle").props.children).toBeTruthy();
   });
 
-  it('onTap fires callback', () => {
+  it("onTap fires callback", () => {
     const { getByTestId } = render(<SessionListItem {...defaultProps} />);
-    fireEvent.press(getByTestId('list-item'));
+    fireEvent.press(getByTestId("list-item"));
     expect(defaultProps.onTap).toHaveBeenCalledTimes(1);
   });
 
-  it('long press fires onLongPress callback', () => {
+  it("long press fires onLongPress callback", () => {
     const { getByTestId } = render(<SessionListItem {...defaultProps} />);
-    fireEvent(getByTestId('list-item'), 'longPress');
+    fireEvent(getByTestId("list-item"), "longPress");
     expect(defaultProps.onLongPress).toHaveBeenCalledTimes(1);
   });
 
-  it('selection mode shows checkbox, not SessionMoreMenu', () => {
+  it("selection mode shows checkbox, not SessionMoreMenu", () => {
     const { getByTestId, queryByTestId } = render(
       <SessionListItem
         {...defaultProps}
@@ -98,7 +98,7 @@ describe('SessionListItem', () => {
         isSelected={true}
       />,
     );
-    expect(getByTestId('checkbox')).toBeTruthy();
-    expect(queryByTestId('session-more-menu')).toBeNull();
+    expect(getByTestId("checkbox")).toBeTruthy();
+    expect(queryByTestId("session-more-menu")).toBeNull();
   });
 });
