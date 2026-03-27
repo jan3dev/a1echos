@@ -1,7 +1,8 @@
 import { fromByteArray } from "base64-js";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
-import AesGcmCrypto from "react-native-aes-gcm-crypto";
+
+import { aesGcmCrypto } from "@/native";
 
 const KEY_STORAGE_KEY = "aes_data_key";
 
@@ -28,7 +29,7 @@ const createEncryptionService = () => {
   const encrypt = async (plainText: string): Promise<string> => {
     try {
       const key = await getKey();
-      const result = await AesGcmCrypto.encrypt(plainText, false, key);
+      const result = await aesGcmCrypto.encrypt(plainText, false, key);
 
       return `${result.iv}:${result.content}${result.tag}`;
     } catch (error) {
@@ -53,7 +54,7 @@ const createEncryptionService = () => {
       const tag = contentWithTag.slice(-32);
       const content = contentWithTag.slice(0, -32);
 
-      const decrypted = await AesGcmCrypto.decrypt(
+      const decrypted = await aesGcmCrypto.decrypt(
         content,
         key,
         iv,

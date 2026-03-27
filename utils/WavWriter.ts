@@ -1,4 +1,4 @@
-import RNFS from "react-native-fs";
+import { fileSystem } from "@/native";
 
 import { FeatureFlag, logError } from "./log";
 
@@ -95,9 +95,9 @@ export const createPcmStreamWriter = (
       if (isFinalized || hasError) return;
       try {
         if (isFirst) {
-          await RNFS.writeFile(tempPath, base64Chunk, "base64");
+          await fileSystem.writeFile(tempPath, base64Chunk, "base64");
         } else {
-          await RNFS.appendFile(tempPath, base64Chunk, "base64");
+          await fileSystem.appendFile(tempPath, base64Chunk, "base64");
         }
       } catch (error) {
         hasError = true;
@@ -127,10 +127,10 @@ export const createPcmStreamWriter = (
         numChannels,
         bitsPerSample,
       );
-      await RNFS.writeFile(outputPath, wavHeader, "base64");
-      const pcmData = await RNFS.readFile(tempPath, "base64");
-      await RNFS.appendFile(outputPath, pcmData, "base64");
-      await RNFS.unlink(tempPath);
+      await fileSystem.writeFile(outputPath, wavHeader, "base64");
+      const pcmData = await fileSystem.readFile(tempPath, "base64");
+      await fileSystem.appendFile(outputPath, pcmData, "base64");
+      await fileSystem.unlink(tempPath);
       return true;
     } catch (error) {
       logError(error, {
@@ -144,13 +144,13 @@ export const createPcmStreamWriter = (
 
   const cleanup = async (): Promise<void> => {
     try {
-      if (await RNFS.exists(tempPath)) {
-        await RNFS.unlink(tempPath);
+      if (await fileSystem.exists(tempPath)) {
+        await fileSystem.unlink(tempPath);
       }
     } catch {}
     try {
-      if (await RNFS.exists(outputPath)) {
-        await RNFS.unlink(outputPath);
+      if (await fileSystem.exists(outputPath)) {
+        await fileSystem.unlink(outputPath);
       }
     } catch {}
   };

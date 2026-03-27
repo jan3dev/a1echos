@@ -1,6 +1,5 @@
 import { EventEmitter } from "events";
 
-import AudioRecord from "@fugood/react-native-audio-pcm-stream";
 import {
   AudioModule,
   AudioRecorder,
@@ -12,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
 import { AppConstants } from "@/constants";
+import { audioPcmStream } from "@/native";
 import {
   createPcmStreamWriter,
   FeatureFlag,
@@ -201,7 +201,7 @@ const createAudioService = () => {
   const cleanup = async (): Promise<void> => {
     if (androidPcmRecording) {
       try {
-        await AudioRecord.stop();
+        await audioPcmStream.stop();
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
@@ -268,7 +268,7 @@ const createAudioService = () => {
           16,
         );
 
-        AudioRecord.init({
+        audioPcmStream.init({
           sampleRate: AppConstants.AUDIO_SAMPLE_RATE,
           channels: AppConstants.AUDIO_NUM_CHANNELS,
           bitsPerSample: 16,
@@ -276,8 +276,8 @@ const createAudioService = () => {
           bufferSize: 4096,
         });
 
-        AudioRecord.on("data", handleAndroidPcmData);
-        AudioRecord.start();
+        audioPcmStream.on("data", handleAndroidPcmData);
+        audioPcmStream.start();
         androidPcmRecording = true;
         recordStart = new Date();
 
@@ -355,7 +355,7 @@ const createAudioService = () => {
           await new Promise((resolve) => setTimeout(resolve, waitMs));
         }
 
-        AudioRecord.stop();
+        audioPcmStream.stop();
         androidPcmRecording = false;
 
         try {
@@ -501,7 +501,7 @@ const createAudioService = () => {
 
       if (androidPcmRecording) {
         try {
-          await AudioRecord.stop();
+          await audioPcmStream.stop();
         } catch {}
         if (pcmStreamWriter) {
           await pcmStreamWriter.abort();

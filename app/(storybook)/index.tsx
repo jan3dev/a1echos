@@ -1,7 +1,7 @@
 import { ComponentType } from "react";
 import { Text, View } from "react-native";
 
-import { FeatureFlag, logError } from "@/utils";
+import { FeatureFlag, logError } from "@/utils/log";
 
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
