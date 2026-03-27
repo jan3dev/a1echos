@@ -8,48 +8,22 @@ import type {
 } from "whisper.rn/src/realtime-transcription";
 import type { AudioPcmStreamAdapter as AudioPcmStreamAdapterType } from "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter";
 
+import {
+  fileSystem,
+  whisperModule,
+  type RealtimeTranscribeEvent,
+} from "@/native";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
 import { audioService } from "./AudioService";
 import { audioSessionService } from "./AudioSessionService";
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-let RNFS: any;
-try {
-  RNFS = require("react-native-fs").default;
-} catch {}
-let initWhisper: any;
-try {
-  initWhisper = require("whisper.rn").initWhisper;
-} catch {}
-let initWhisperVad: any;
-try {
-  initWhisperVad = require("whisper.rn").initWhisperVad;
-} catch {}
-let RealtimeTranscriber: any;
-try {
-  RealtimeTranscriber =
-    require("whisper.rn/src/realtime-transcription").RealtimeTranscriber;
-} catch {}
-let AudioPcmStreamAdapter: any;
-try {
-  AudioPcmStreamAdapter =
-    require("whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter").AudioPcmStreamAdapter;
-} catch {}
-
 const IOS_INIT_THREADS = 2;
 const IOS_VAD_THREADS = 1;
 
-interface RealtimeTranscribeEvent {
-  type: "error" | "start" | "transcribe" | "end";
-  sliceIndex: number;
-  data?: { result: string };
-  isCapturing: boolean;
-  processTime: number;
-  recordingTime: number;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const modelAsset = require("@/assets/models/whisper/ggml-tiny.bin");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const vadModelAsset = require("@/assets/models/whisper/ggml-silero-v6.2.0.bin");
 
 interface WhisperServiceState {
@@ -183,7 +157,7 @@ const createWhisperService = () => {
 
       const isIos = Platform.OS === "ios";
 
-      state.whisperContext = await initWhisper({
+      state.whisperContext = await whisperModule.initWhisper({
         filePath: modelPath,
         ...(isIos && {
           useGpu: false,
@@ -197,7 +171,7 @@ const createWhisperService = () => {
 
       state.initializationStatus = "Initializing VAD context...";
 
-      state.vadContext = await initWhisperVad({
+      state.vadContext = await whisperModule.initWhisperVad({
         filePath: vadModelPath,
         ...(isIos && {
           useGpu: false,
@@ -315,7 +289,7 @@ const createWhisperService = () => {
 
       await configureAudioSession(100);
 
-      const audioStream = new AudioPcmStreamAdapter();
+      const audioStream = whisperModule.createAudioPcmStreamAdapter();
       state.realtimeAudioStream = audioStream;
 
       // Wrap the audioStream to intercept audio data for level metering
@@ -342,12 +316,12 @@ const createWhisperService = () => {
       if (prompt) transcribeOptions.prompt = prompt;
       transcribeOptions.maxThreads = 2;
 
-      const transcriber = new RealtimeTranscriber(
+      const transcriber = whisperModule.createRealtimeTranscriber(
         {
           whisperContext: state.whisperContext,
           vadContext: state.vadContext,
           audioStream,
-          fs: RNFS,
+          fs: fileSystem,
         },
         {
           audioSliceSec: 30,
