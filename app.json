@@ -20,7 +20,6 @@
     },
     "android": {
       "minSdkVersion": 26,
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "RECORD_AUDIO",
@@ -53,7 +52,7 @@
         }
       ],
       "./plugins/withRnForegroundService",
-      "./plugins/withMinSdk26"
+      "./plugins/withFixJcenter"
     ],
     "experiments": {
       "typedRoutes": true,
