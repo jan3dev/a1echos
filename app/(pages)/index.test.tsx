@@ -2,6 +2,7 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { useIsSessionSelectionMode } from "@/stores";
 
 import HomeScreen from "./index";
@@ -84,12 +85,13 @@ let mockOnDeleteSelected: (() => void) | null = null;
 
 jest.mock("@/components", () => {
   const { View, Text } = require("react-native");
+  const { TestID: TID } = require("@/constants");
   return {
     HomeAppBar: (props: any) => {
       mockOnDeleteSelected = props.onDeleteSelected;
       return (
-        <View testID="home-app-bar">
-          <Text testID="home-app-bar-selection">
+        <View testID={TID.HomeAppBar}>
+          <Text testID={TID.HomeAppBarSelection}>
             {props.selectionMode ? "selection" : "normal"}
           </Text>
         </View>
@@ -98,19 +100,19 @@ jest.mock("@/components", () => {
     HomeContent: (props: any) => {
       mockOnSessionTap = props.onSessionTap;
       return (
-        <View testID="home-content">
-          <Text testID="home-content-selection">
+        <View testID={TID.HomeContent}>
+          <Text testID={TID.HomeContentSelection}>
             {props.selectionMode ? "selection" : "normal"}
           </Text>
         </View>
       );
     },
     EmptyStateView: ({ message }: any) => (
-      <View testID="empty-state-view">
+      <View testID={TID.EmptyStateView}>
         <Text>{String(message)}</Text>
       </View>
     ),
-    Toast: (props: any) => <View testID="delete-toast" {...props} />,
+    Toast: (props: any) => <View testID={TID.DeleteToast} {...props} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,
       hide: mockHideDeleteToast,
@@ -128,20 +130,20 @@ beforeEach(() => {
 describe("HomeScreen", () => {
   it("renders HomeAppBar and HomeContent", () => {
     const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId("home-app-bar")).toBeTruthy();
-    expect(getByTestId("home-content")).toBeTruthy();
+    expect(getByTestId(TestID.HomeAppBar)).toBeTruthy();
+    expect(getByTestId(TestID.HomeContent)).toBeTruthy();
   });
 
   it("shows EmptyStateView when sessions empty", () => {
     mockSessions = [];
     const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId("empty-state-view")).toBeTruthy();
+    expect(getByTestId(TestID.EmptyStateView)).toBeTruthy();
   });
 
   it("hides EmptyStateView when sessions exist", () => {
     mockSessions = [{ id: "s1", name: "Session 1" }];
     const { queryByTestId } = render(<HomeScreen />);
-    expect(queryByTestId("empty-state-view")).toBeNull();
+    expect(queryByTestId(TestID.EmptyStateView)).toBeNull();
   });
 
   it("session tap navigates to session detail", () => {
@@ -158,10 +160,10 @@ describe("HomeScreen", () => {
   it("passes selection mode props to HomeAppBar", () => {
     (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
     const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId("home-app-bar-selection")).toHaveTextContent(
+    expect(getByTestId(TestID.HomeAppBarSelection)).toHaveTextContent(
       "selection",
     );
-    expect(getByTestId("home-content-selection")).toHaveTextContent(
+    expect(getByTestId(TestID.HomeContentSelection)).toHaveTextContent(
       "selection",
     );
   });
@@ -206,6 +208,6 @@ describe("HomeScreen", () => {
 
   it("renders Toast component", () => {
     const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId("delete-toast")).toBeTruthy();
+    expect(getByTestId(TestID.DeleteToast)).toBeTruthy();
   });
 });

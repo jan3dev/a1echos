@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Card, Divider, ListItem, Radio, Text, TopAppBar } from "@/components";
+import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { ModelType } from "@/models";
 import { useSelectedModelType, useSetModelType } from "@/stores";
@@ -81,7 +82,7 @@ export default function ModelSettingsScreen() {
 
         <Card>
           <ListItem
-            testID="model-whisper-file"
+            testID={TestID.ModelWhisperFile}
             title={loc.whisperModelFileTitle}
             titleTrailing={loc.whisperModelFileSubtitle}
             titleTrailingColor={theme.colors.textSecondary}
@@ -106,7 +107,7 @@ export default function ModelSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
-            testID="model-whisper-realtime"
+            testID={TestID.ModelWhisperRealtime}
             title={loc.whisperModelRealtimeTitle}
             titleTrailing={loc.whisperModelRealtimeSubtitle}
             titleTrailingColor={theme.colors.textSecondary}

@@ -2,6 +2,7 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { useTranscriptionStore } from "@/stores";
 
 import { TranscriptionContentView } from "./TranscriptionContentView";
@@ -13,14 +14,16 @@ jest.mock("@/stores", () => ({
 jest.mock("./TranscriptionList", () => ({
   TranscriptionList: (props: any) => {
     const { View } = require("react-native");
-    return <View testID="transcription-list" {...props} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.TranscriptionList} {...props} />;
   },
 }));
 
 jest.mock("../../ui/progress/ProgressIndicator", () => ({
   ProgressIndicator: () => {
     const { View } = require("react-native");
-    return <View testID="progress-indicator" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.ProgressIndicator} />;
   },
 }));
 
@@ -44,8 +47,8 @@ describe("TranscriptionContentView", () => {
     const { getByTestId, queryByTestId } = render(
       <TranscriptionContentView {...defaultProps} />,
     );
-    expect(getByTestId("progress-indicator")).toBeTruthy();
-    expect(queryByTestId("transcription-list")).toBeNull();
+    expect(getByTestId(TestID.ProgressIndicator)).toBeTruthy();
+    expect(queryByTestId(TestID.TranscriptionList)).toBeNull();
   });
 
   it("shows error text when error state", () => {
@@ -57,7 +60,7 @@ describe("TranscriptionContentView", () => {
       <TranscriptionContentView {...defaultProps} />,
     );
     expect(getByText("Something went wrong")).toBeTruthy();
-    expect(queryByTestId("transcription-list")).toBeNull();
+    expect(queryByTestId(TestID.TranscriptionList)).toBeNull();
   });
 
   it("renders TranscriptionList in normal state", () => {
@@ -68,8 +71,8 @@ describe("TranscriptionContentView", () => {
     const { getByTestId, queryByTestId } = render(
       <TranscriptionContentView {...defaultProps} />,
     );
-    expect(getByTestId("transcription-list")).toBeTruthy();
-    expect(queryByTestId("progress-indicator")).toBeNull();
+    expect(getByTestId(TestID.TranscriptionList)).toBeTruthy();
+    expect(queryByTestId(TestID.ProgressIndicator)).toBeNull();
   });
 
   it("passes selection props through to TranscriptionList", () => {
@@ -85,7 +88,7 @@ describe("TranscriptionContentView", () => {
         selectedTranscriptionIds={selectedIds}
       />,
     );
-    const list = getByTestId("transcription-list");
+    const list = getByTestId(TestID.TranscriptionList);
     expect(list.props.selectionMode).toBe(true);
     expect(list.props.selectedTranscriptionIds).toBe(selectedIds);
   });

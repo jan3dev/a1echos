@@ -2,6 +2,7 @@
 import { act, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { lightColors } from "@/theme/themeColors";
 
 import { Tooltip } from "./Tooltip";
@@ -203,7 +204,7 @@ describe("Tooltip", () => {
 
   it("info mode with custom leadingIcon renders it", () => {
     const { View } = require("react-native");
-    const customIcon = <View testID="custom-leading-icon" />;
+    const customIcon = <View testID={TestID.CustomLeadingIcon} />;
     const { toJSON } = render(
       <Tooltip {...defaultProps} isInfo={true} leadingIcon={customIcon} />,
     );
@@ -211,12 +212,12 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("custom-leading-icon");
+    expect(json).toContain(TestID.CustomLeadingIcon);
   });
 
   it("dismissible with custom trailingIcon renders it", () => {
     const { View } = require("react-native");
-    const customTrailing = <View testID="custom-trailing-icon" />;
+    const customTrailing = <View testID={TestID.CustomTrailingIcon} />;
     const { toJSON } = render(
       <Tooltip
         {...defaultProps}
@@ -228,7 +229,7 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("custom-trailing-icon");
+    expect(json).toContain(TestID.CustomTrailingIcon);
   });
 
   it("custom margin is applied", () => {
@@ -288,7 +289,7 @@ describe("Tooltip", () => {
   it("info mode with onLeadingIconTap and custom leadingIcon renders custom icon in pressable", () => {
     const { View } = require("react-native");
     const onLeadingTap = jest.fn();
-    const customIcon = <View testID="custom-icon-pressable" />;
+    const customIcon = <View testID={TestID.CustomIconPressable} />;
     const { toJSON } = render(
       <Tooltip
         {...defaultProps}

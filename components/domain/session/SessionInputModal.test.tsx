@@ -2,14 +2,17 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID, dynamicTestID } from "@/constants";
+
 import { SessionInputModal } from "./SessionInputModal";
 
 jest.mock("../../ui/modal/Dimmer", () => ({
   Dimmer: ({ children, visible, onDismiss }: any) => {
     const { View, Pressable } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return visible ? (
-      <View testID="dimmer">
-        <Pressable testID="dimmer-backdrop" onPress={onDismiss} />
+      <View testID={TID.Dimmer}>
+        <Pressable testID={TID.DimmerBackdrop} onPress={onDismiss} />
         {children}
       </View>
     ) : null;
@@ -19,16 +22,17 @@ jest.mock("../../ui/modal/Dimmer", () => ({
 jest.mock("../../ui/textfield/TextField", () => ({
   TextField: (props: any) => {
     const { TextInput, Pressable } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return (
       <>
         <TextInput
-          testID="text-field"
+          testID={TID.TextField}
           value={props.value}
           onChangeText={props.onChangeText}
           maxLength={props.maxLength}
         />
         {props.onClear && (
-          <Pressable testID="clear-button" onPress={props.onClear} />
+          <Pressable testID={TID.ClearButton} onPress={props.onClear} />
         )}
       </>
     );
@@ -39,8 +43,9 @@ jest.mock("../../ui/button/Button", () => ({
   Button: {
     primary: (props: any) => {
       const { Pressable, Text } = require("react-native");
+      const { TestID: TID } = require("@/constants");
       return (
-        <Pressable testID="primary-button" onPress={props.onPress}>
+        <Pressable testID={TID.PrimaryButton} onPress={props.onPress}>
           <Text>{props.text}</Text>
         </Pressable>
       );
@@ -51,7 +56,8 @@ jest.mock("../../ui/button/Button", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
@@ -83,36 +89,36 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="Hello" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "  New Name  ");
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).toHaveBeenCalledWith("New Name");
   });
 
   it("close button calls onCancel", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const closeIcon = getByTestId("icon-close");
+    const closeIcon = getByTestId(dynamicTestID.icon("close"));
     fireEvent.press(closeIcon.parent!);
     expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
   });
 
   it("validates max length", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     expect(textField.props.maxLength).toBe(30);
   });
 
   it("does not submit empty text when no initial value", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
   it("does not submit whitespace-only text when no initial value", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "   ");
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
@@ -120,16 +126,16 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="Old Name" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "   ");
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     // trimmed is empty but initialValue.length > 0, so submit is called with ''
     expect(defaultProps.onSubmit).toHaveBeenCalledWith("");
   });
 
   it("text field value updates on change", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "Updated");
     expect(textField.props.value).toBe("Updated");
   });
@@ -138,7 +144,7 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="Existing Name" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     expect(textField.props.value).toBe("Existing Name");
   });
 
@@ -146,23 +152,23 @@ describe("SessionInputModal", () => {
     const { queryByTestId } = render(
       <SessionInputModal {...defaultProps} visible={false} />,
     );
-    expect(queryByTestId("dimmer")).toBeNull();
+    expect(queryByTestId(TestID.Dimmer)).toBeNull();
   });
 
   it("renders when visible", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} visible={true} />,
     );
-    expect(getByTestId("dimmer")).toBeTruthy();
+    expect(getByTestId(TestID.Dimmer)).toBeTruthy();
   });
 
   it("submits trimmed text correctly", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="test" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "  Hello World  ");
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).toHaveBeenCalledWith("Hello World");
   });
 
@@ -170,7 +176,7 @@ describe("SessionInputModal", () => {
     const { getByTestId, rerender } = render(
       <SessionInputModal {...defaultProps} visible={true} initialValue="Old" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, "Modified");
     expect(textField.props.value).toBe("Modified");
 
@@ -182,16 +188,16 @@ describe("SessionInputModal", () => {
         initialValue="New Value"
       />,
     );
-    const updatedField = getByTestId("text-field");
+    const updatedField = getByTestId(TestID.TextField);
     expect(updatedField.props.value).toBe("New Value");
   });
 
   it("does not submit text exceeding max length", () => {
     const longText = "A".repeat(51);
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, longText);
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
@@ -210,12 +216,12 @@ describe("SessionInputModal", () => {
 
   it("renders close icon button", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    expect(getByTestId("icon-close")).toBeTruthy();
+    expect(getByTestId(dynamicTestID.icon("close"))).toBeTruthy();
   });
 
   it("close button is accessible via parent pressable", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const closeIcon = getByTestId("icon-close");
+    const closeIcon = getByTestId(dynamicTestID.icon("close"));
     // Verify the close icon exists and its parent can be pressed
     expect(closeIcon.parent).toBeTruthy();
     fireEvent.press(closeIcon.parent!);
@@ -224,7 +230,7 @@ describe("SessionInputModal", () => {
 
   it("text field shows correct maxLength from AppConstants", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     expect(textField.props.maxLength).toBe(30);
   });
 
@@ -240,9 +246,9 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="test" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     fireEvent.changeText(textField, maxLengthText);
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).toHaveBeenCalledWith(maxLengthText);
   });
 
@@ -251,7 +257,7 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} onCancel={onCancel} />,
     );
-    fireEvent.press(getByTestId("dimmer-backdrop"));
+    fireEvent.press(getByTestId(TestID.DimmerBackdrop));
     expect(onCancel).toHaveBeenCalled();
   });
 
@@ -283,7 +289,7 @@ describe("SessionInputModal", () => {
       keyboardShowCallback();
     }
 
-    fireEvent.press(getByTestId("dimmer-backdrop"));
+    fireEvent.press(getByTestId(TestID.DimmerBackdrop));
     // Should have called dismiss (which we spy on)
     expect(mockDismiss).toHaveBeenCalled();
 
@@ -295,11 +301,11 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="Some text" />,
     );
-    const textField = getByTestId("text-field");
+    const textField = getByTestId(TestID.TextField);
     expect(textField.props.value).toBe("Some text");
 
-    fireEvent.press(getByTestId("clear-button"));
-    const updatedField = getByTestId("text-field");
+    fireEvent.press(getByTestId(TestID.ClearButton));
+    const updatedField = getByTestId(TestID.TextField);
     expect(updatedField.props.value).toBe("");
   });
 
@@ -307,7 +313,7 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
     // The inner Pressable with stopPropagation should exist
     // and pressing content should not dismiss
-    const dimmer = getByTestId("dimmer");
+    const dimmer = getByTestId(TestID.Dimmer);
     expect(dimmer).toBeTruthy();
   });
 
@@ -324,7 +330,9 @@ describe("SessionInputModal", () => {
       <SessionInputModal {...propsWithoutCancel} />,
     );
     // Should not throw when pressing backdrop without onCancel
-    expect(() => fireEvent.press(getByTestId("dimmer-backdrop"))).not.toThrow();
+    expect(() =>
+      fireEvent.press(getByTestId(TestID.DimmerBackdrop)),
+    ).not.toThrow();
   });
 
   it("close button with undefined onCancel calls empty function", () => {
@@ -338,7 +346,7 @@ describe("SessionInputModal", () => {
     const { getByTestId } = render(
       <SessionInputModal {...propsWithoutCancel} />,
     );
-    const closeIcon = getByTestId("icon-close");
+    const closeIcon = getByTestId(dynamicTestID.icon("close"));
     // Should not throw - close button calls onCancel || (() => {})
     expect(() => fireEvent.press(closeIcon.parent!)).not.toThrow();
   });
@@ -347,10 +355,10 @@ describe("SessionInputModal", () => {
     const { rerender, getByTestId, queryByTestId } = render(
       <SessionInputModal {...defaultProps} visible={false} />,
     );
-    expect(queryByTestId("dimmer")).toBeNull();
+    expect(queryByTestId(TestID.Dimmer)).toBeNull();
 
     rerender(<SessionInputModal {...defaultProps} visible={true} />);
-    expect(getByTestId("dimmer")).toBeTruthy();
+    expect(getByTestId(TestID.Dimmer)).toBeTruthy();
   });
 
   it("keyboard listeners are cleaned up on unmount", () => {

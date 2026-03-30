@@ -3,6 +3,8 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 
+import { TestID, dynamicTestID } from "@/constants";
+
 import { SessionMoreMenu } from "./SessionMoreMenu";
 
 // Mock measureInWindow on View prototype so the menu can open
@@ -65,7 +67,8 @@ jest.mock("@/utils", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
@@ -79,8 +82,9 @@ jest.mock("../../ui/ripple-pressable/RipplePressable", () => ({
 jest.mock("../../shared/list-item/ListItem", () => ({
   ListItem: (props: any) => {
     const { Pressable, Text } = require("react-native");
+    const { dynamicTestID: dTID } = require("@/constants");
     return (
-      <Pressable testID={`menu-item-${props.title}`} onPress={props.onPress}>
+      <Pressable testID={dTID.menuItem(props.title)} onPress={props.onPress}>
         <Text>{props.title}</Text>
       </Pressable>
     );
@@ -97,14 +101,16 @@ jest.mock("../../ui/text/Text", () => ({
 jest.mock("../../ui/toast/Toast", () => ({
   Toast: () => {
     const { View } = require("react-native");
-    return <View testID="toast" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Toast} />;
   },
 }));
 
 jest.mock("./SessionInputModal", () => ({
   SessionInputModal: (props: any) => {
     const { View } = require("react-native");
-    return props.visible ? <View testID="session-input-modal" /> : null;
+    const { TestID: TID } = require("@/constants");
+    return props.visible ? <View testID={TID.SessionInputModal} /> : null;
   },
 }));
 
@@ -118,7 +124,7 @@ const mockSession = {
 
 function renderAndOpenMenu() {
   const result = render(<SessionMoreMenu session={mockSession as any} />);
-  fireEvent.press(result.getByTestId("icon-more").parent!);
+  fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
   return result;
 }
 
@@ -131,20 +137,22 @@ describe("SessionMoreMenu", () => {
     const { getByTestId } = render(
       <SessionMoreMenu session={mockSession as any} />,
     );
-    expect(getByTestId("icon-more")).toBeTruthy();
+    expect(getByTestId(dynamicTestID.icon("more"))).toBeTruthy();
   });
 
   it("menu has rename and delete options", () => {
     const { getByTestId } = renderAndOpenMenu();
-    expect(getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
-    expect(getByTestId("menu-item-delete")).toBeTruthy();
+    expect(
+      getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
+    expect(getByTestId(dynamicTestID.menuItem("delete"))).toBeTruthy();
   });
 
   it("rename option opens SessionInputModal", () => {
     const { getByTestId, queryByTestId } = renderAndOpenMenu();
-    expect(queryByTestId("session-input-modal")).toBeNull();
-    fireEvent.press(getByTestId("menu-item-sessionRenameTitle"));
-    expect(getByTestId("session-input-modal")).toBeTruthy();
+    expect(queryByTestId(TestID.SessionInputModal)).toBeNull();
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("sessionRenameTitle")));
+    expect(getByTestId(TestID.SessionInputModal)).toBeTruthy();
   });
 
   it("renders session info (dates) in menu", () => {
@@ -154,13 +162,15 @@ describe("SessionMoreMenu", () => {
 
   it("delete option triggers confirmation toast", () => {
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-delete"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("delete")));
     expect(mockShowToast).toHaveBeenCalled();
   });
 
   it("menu visible after opening", () => {
     const { getByTestId } = renderAndOpenMenu();
-    expect(getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    expect(
+      getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
   });
 
   it("rename action calls renameSession", async () => {
@@ -175,9 +185,9 @@ describe("SessionMoreMenu", () => {
       const { View, Pressable } = require("react-native");
       if (!props.visible) return null;
       return (
-        <View testID="session-input-modal">
+        <View testID={TestID.SessionInputModal}>
           <Pressable
-            testID="submit-rename"
+            testID={TestID.SubmitRename}
             onPress={() => props.onSubmit("New Name")}
           />
         </View>
@@ -186,10 +196,10 @@ describe("SessionMoreMenu", () => {
 
     const { getByTestId } = renderAndOpenMenu();
     // Open rename modal
-    fireEvent.press(getByTestId("menu-item-sessionRenameTitle"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("sessionRenameTitle")));
     // Submit rename
     await act(async () => {
-      fireEvent.press(getByTestId("submit-rename"));
+      fireEvent.press(getByTestId(TestID.SubmitRename));
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(mockRenameSession).toHaveBeenCalledWith("s1", "New Name");
@@ -203,7 +213,7 @@ describe("SessionMoreMenu", () => {
     });
 
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-delete"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("delete")));
 
     expect(mockShowToast).toHaveBeenCalled();
     // Extract and invoke onPrimaryButtonTap from the toast call
@@ -216,7 +226,7 @@ describe("SessionMoreMenu", () => {
 
   it("delete confirmation cancels when secondary button is tapped", () => {
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-delete"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("delete")));
 
     const toastArgs = mockShowToast.mock.calls[0][0];
     toastArgs.onSecondaryButtonTap();
@@ -228,9 +238,11 @@ describe("SessionMoreMenu", () => {
     // measureInWindow returns (100, 100, 24, 24)
     // proposedTop = 100 + 24 + 8 = 132
     // menuHeight fallback = 200, screenHeight from Dimensions
-    fireEvent.press(result.getByTestId("icon-more").parent!);
+    fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
     // Menu should become visible with correct items
-    expect(result.getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    expect(
+      result.getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
   });
 
   it("openMenu positions menu above when overflow detected", () => {
@@ -243,9 +255,11 @@ describe("SessionMoreMenu", () => {
     };
 
     const result = render(<SessionMoreMenu session={mockSession as any} />);
-    fireEvent.press(result.getByTestId("icon-more").parent!);
+    fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
     // Menu should still render (positioned above)
-    expect(result.getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    expect(
+      result.getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
 
     // Restore
     (View.prototype as any).measureInWindow = function (
@@ -258,16 +272,20 @@ describe("SessionMoreMenu", () => {
   it("menu onLayout measures menu height", () => {
     const { getByTestId } = renderAndOpenMenu();
     // The menu container should be rendered; finding by testID of inner elements confirms layout
-    expect(getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
-    expect(getByTestId("menu-item-delete")).toBeTruthy();
+    expect(
+      getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
+    expect(getByTestId(dynamicTestID.menuItem("delete"))).toBeTruthy();
   });
 
   it("overlay press closes menu", () => {
     const { getByTestId, queryByTestId } = renderAndOpenMenu();
-    expect(getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    expect(
+      getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
     // The Modal's onRequestClose is wired to close menu
     // Pressing overlay closes the menu - we verify menu items exist initially
-    expect(queryByTestId("menu-item-delete")).toBeTruthy();
+    expect(queryByTestId(dynamicTestID.menuItem("delete"))).toBeTruthy();
   });
 
   it("rename modal cancel closes rename modal", () => {
@@ -278,18 +296,18 @@ describe("SessionMoreMenu", () => {
       const { View, Pressable } = require("react-native");
       if (!props.visible) return null;
       return (
-        <View testID="session-input-modal">
-          <Pressable testID="cancel-rename" onPress={props.onCancel} />
+        <View testID={TestID.SessionInputModal}>
+          <Pressable testID={TestID.CancelRename} onPress={props.onCancel} />
         </View>
       );
     };
 
     const { getByTestId, queryByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-sessionRenameTitle"));
-    expect(getByTestId("session-input-modal")).toBeTruthy();
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("sessionRenameTitle")));
+    expect(getByTestId(TestID.SessionInputModal)).toBeTruthy();
 
-    fireEvent.press(getByTestId("cancel-rename"));
-    expect(queryByTestId("session-input-modal")).toBeNull();
+    fireEvent.press(getByTestId(TestID.CancelRename));
+    expect(queryByTestId(TestID.SessionInputModal)).toBeNull();
   });
 
   it("delete confirmation handles error gracefully when deleteSession fails", async () => {
@@ -303,7 +321,7 @@ describe("SessionMoreMenu", () => {
     });
 
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-delete"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("delete")));
 
     const toastArgs = mockShowToast.mock.calls[0][0];
     await toastArgs.onPrimaryButtonTap();
@@ -323,7 +341,7 @@ describe("SessionMoreMenu", () => {
     (useShowGlobalTooltip as jest.Mock).mockReturnValue(mockShowGlobalTooltip);
 
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-delete"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("delete")));
 
     const toastArgs = mockShowToast.mock.calls[0][0];
     await toastArgs.onPrimaryButtonTap();
@@ -336,19 +354,22 @@ describe("SessionMoreMenu", () => {
     const result = render(<SessionMoreMenu session={mockSession as any} />);
 
     // Open menu first time
-    fireEvent.press(result.getByTestId("icon-more").parent!);
-    expect(result.getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
+    expect(
+      result.getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
   });
 
   it("onLayout sets measured menu height for subsequent opens", () => {
     const result = render(<SessionMoreMenu session={mockSession as any} />);
 
     // Open menu to render the menu container
-    fireEvent.press(result.getByTestId("icon-more").parent!);
+    fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
 
     // Trigger onLayout on the menu container (the View with onLayout prop)
-    const menuContainer = result.getByTestId("menu-item-sessionRenameTitle")
-      .parent!.parent!.parent!;
+    const menuContainer = result.getByTestId(
+      dynamicTestID.menuItem("sessionRenameTitle"),
+    ).parent!.parent!.parent!;
     fireEvent(menuContainer, "layout", {
       nativeEvent: { layout: { height: 180 } },
     });
@@ -360,8 +381,10 @@ describe("SessionMoreMenu", () => {
     });
 
     // Re-open — measured height should now be used instead of fallback
-    fireEvent.press(result.getByTestId("icon-more").parent!);
-    expect(result.getByTestId("menu-item-sessionRenameTitle")).toBeTruthy();
+    fireEvent.press(result.getByTestId(dynamicTestID.icon("more")).parent!);
+    expect(
+      result.getByTestId(dynamicTestID.menuItem("sessionRenameTitle")),
+    ).toBeTruthy();
   });
 
   it("rename handles error gracefully", async () => {
@@ -378,9 +401,9 @@ describe("SessionMoreMenu", () => {
       const { View, Pressable } = require("react-native");
       if (!props.visible) return null;
       return (
-        <View testID="session-input-modal">
+        <View testID={TestID.SessionInputModal}>
           <Pressable
-            testID="submit-rename"
+            testID={TestID.SubmitRename}
             onPress={() => props.onSubmit("Fail Name")}
           />
         </View>
@@ -388,9 +411,9 @@ describe("SessionMoreMenu", () => {
     };
 
     const { getByTestId } = renderAndOpenMenu();
-    fireEvent.press(getByTestId("menu-item-sessionRenameTitle"));
+    fireEvent.press(getByTestId(dynamicTestID.menuItem("sessionRenameTitle")));
     await act(async () => {
-      fireEvent.press(getByTestId("submit-rename"));
+      fireEvent.press(getByTestId(TestID.SubmitRename));
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(logError).toHaveBeenCalled();

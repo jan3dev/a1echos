@@ -3,6 +3,7 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { StyleProp, StyleSheet, ViewStyle } from "react-native";
 
+import { TestID } from "@/constants";
 import { lightColors } from "@/theme/themeColors";
 
 import { TextField } from "./TextField";
@@ -329,13 +330,13 @@ describe("TextField", () => {
       <TextField
         label="Password"
         value="secret"
-        trailingIcon={<View testID="trailing-icon" />}
+        trailingIcon={<View testID={TestID.TrailingIcon} />}
       />,
     );
     act(() => {
       jest.runAllTimers();
     });
-    expect(getByTestId("trailing-icon")).toBeTruthy();
+    expect(getByTestId(TestID.TrailingIcon)).toBeTruthy();
   });
 
   // --- Function coverage: trailingIcon with onTrailingPress ---
@@ -346,7 +347,7 @@ describe("TextField", () => {
       <TextField
         label="Password"
         value="secret"
-        trailingIcon={<View testID="trailing-icon" />}
+        trailingIcon={<View testID={TestID.TrailingIcon} />}
         onTrailingPress={onTrailingPress}
       />,
     );
@@ -355,7 +356,7 @@ describe("TextField", () => {
     });
 
     // Navigate up from the trailing icon to find the Pressable ancestor with onPress
-    const trailingIcon = getByTestId("trailing-icon");
+    const trailingIcon = getByTestId(TestID.TrailingIcon);
     let node = trailingIcon.parent;
     while (node) {
       if (node.props?.onPress) {
@@ -375,13 +376,13 @@ describe("TextField", () => {
         label="Search"
         value="query"
         showClearIcon={true}
-        trailingIcon={<View testID="search-icon" />}
+        trailingIcon={<View testID={TestID.SearchIcon} />}
       />,
     );
     act(() => {
       jest.runAllTimers();
     });
-    expect(getByTestId("search-icon")).toBeTruthy();
+    expect(getByTestId(TestID.SearchIcon)).toBeTruthy();
     const json = JSON.stringify(toJSON());
     // Both the clear icon (borderRadius:9) and trailing icon should be present
     expect(json).toContain('"borderRadius":9');

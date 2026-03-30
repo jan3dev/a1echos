@@ -1,3 +1,4 @@
+import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { lightColors } from "@/theme";
 
@@ -19,7 +20,7 @@ export const IncognitoExplainerModal = ({
 
   return (
     <Modal
-      testID="incognito-modal"
+      testID={TestID.IncognitoModal}
       visible={visible}
       title={loc.incognitoExplainerTitle}
       message={loc.incognitoExplainerBody}

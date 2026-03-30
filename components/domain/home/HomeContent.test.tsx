@@ -2,12 +2,15 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { HomeContent } from "./HomeContent";
 
 jest.mock("../session/SessionList", () => ({
   SessionList: (props: any) => {
     const { View } = require("react-native");
-    return <View testID="session-list" {...props} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.SessionList} {...props} />;
   },
 }));
 
@@ -26,7 +29,7 @@ describe("HomeContent", () => {
 
   it("renders SessionList component", () => {
     const { getByTestId } = render(<HomeContent {...defaultProps} />);
-    expect(getByTestId("session-list")).toBeTruthy();
+    expect(getByTestId(TestID.SessionList)).toBeTruthy();
   });
 
   it("passes selection props to SessionList", () => {
@@ -38,7 +41,7 @@ describe("HomeContent", () => {
         selectedSessionIds={selectedIds}
       />,
     );
-    const list = getByTestId("session-list");
+    const list = getByTestId(TestID.SessionList);
     expect(list.props.selectionMode).toBe(true);
     expect(list.props.selectedSessionIds).toBe(selectedIds);
   });
@@ -46,6 +49,6 @@ describe("HomeContent", () => {
   it("wraps content in a scrollable container", () => {
     const { getByTestId } = render(<HomeContent {...defaultProps} />);
     // SessionList is rendered inside a ScrollView — verify it exists within the tree
-    expect(getByTestId("session-list").parent).toBeTruthy();
+    expect(getByTestId(TestID.SessionList).parent).toBeTruthy();
   });
 });

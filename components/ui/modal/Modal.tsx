@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { dynamicTestID } from "@/constants";
 import { getShadow, useTheme } from "@/theme";
 
 import { Button, ButtonVariant } from "../button/Button";
@@ -125,7 +126,7 @@ export const Modal = ({
     <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
       <View style={styles.contentWrapper}>
         <Animated.View
-          testID={testID ?? `modal-${title.toLowerCase().replace(/\s+/g, "-")}`}
+          testID={testID ?? dynamicTestID.modal(title)}
           style={[
             styles.container,
             {

@@ -40,27 +40,28 @@ jest.mock("@/stores", () => ({
 
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
+  const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     Card: ({ children, ...rest }: any) => (
-      <View testID="card" {...rest}>
+      <View testID={TID.Card} {...rest}>
         {children}
       </View>
     ),
-    Divider: () => <View testID="divider" />,
-    Icon: ({ name }: any) => <View testID={`icon-${name}`} />,
-    InAppBanner: () => <View testID="in-app-banner" />,
+    Divider: () => <View testID={TID.Divider} />,
+    Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
+    InAppBanner: () => <View testID={TID.InAppBanner} />,
     ListItem: ({ title, titleTrailing, onPress, iconTrailing }: any) => (
-      <TouchableOpacity testID={`list-item-${title}`} onPress={onPress}>
+      <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
         <Text>{String(title)}</Text>
         {titleTrailing && (
-          <Text testID={`trailing-${title}`}>{String(titleTrailing)}</Text>
+          <Text testID={dTID.trailing(title)}>{String(titleTrailing)}</Text>
         )}
         {iconTrailing}
       </TouchableOpacity>
     ),
-    SettingsFooter: () => <View testID="settings-footer" />,
+    SettingsFooter: () => <View testID={TID.SettingsFooter} />,
     TopAppBar: ({ title }: any) => (
-      <View testID="top-app-bar">
+      <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>
       </View>
     ),

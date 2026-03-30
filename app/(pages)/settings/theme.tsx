@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Card, Divider, ListItem, Radio, TopAppBar } from "@/components";
+import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme } from "@/models";
 import { useSetTheme } from "@/stores";
@@ -71,7 +72,7 @@ export default function ThemeSettingsScreen() {
       >
         <Card>
           <ListItem
-            testID="theme-auto"
+            testID={TestID.ThemeAuto}
             title={loc.auto}
             iconTrailing={
               <Radio<AppTheme>
@@ -90,7 +91,7 @@ export default function ThemeSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
-            testID="theme-light"
+            testID={TestID.ThemeLight}
             title={loc.light}
             iconTrailing={
               <Radio<AppTheme>
@@ -109,7 +110,7 @@ export default function ThemeSettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
-            testID="theme-dark"
+            testID={TestID.ThemeDark}
             title={loc.dark}
             iconTrailing={
               <Radio<AppTheme>

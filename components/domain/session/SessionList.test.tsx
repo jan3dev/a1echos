@@ -2,6 +2,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID, dynamicTestID } from "@/constants";
 import { Session } from "@/models";
 import { useSessions } from "@/stores";
 
@@ -14,9 +15,10 @@ jest.mock("@/stores", () => ({
 jest.mock("./SessionListItem", () => ({
   SessionListItem: (props: any) => {
     const { Pressable, Text } = require("react-native");
+    const { dynamicTestID: dTID } = require("@/constants");
     return (
       <Pressable
-        testID={`session-item-${props.session.id}`}
+        testID={dTID.sessionItem(props.session.id)}
         onPress={props.onTap}
       >
         <Text>{props.session.name}</Text>
@@ -28,14 +30,16 @@ jest.mock("./SessionListItem", () => ({
 jest.mock("../../ui/card/Card", () => ({
   Card: ({ children }: any) => {
     const { View } = require("react-native");
-    return <View testID="card">{children}</View>;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Card}>{children}</View>;
   },
 }));
 
 jest.mock("../../ui/divider/Divider", () => ({
   Divider: () => {
     const { View } = require("react-native");
-    return <View testID="divider" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Divider} />;
   },
 }));
 
@@ -79,15 +83,15 @@ describe("SessionList", () => {
   it("renders SessionListItem for each session", () => {
     (useSessions as jest.Mock).mockReturnValue(mockSessions);
     const { getByTestId } = render(<SessionList {...defaultProps} />);
-    expect(getByTestId("session-item-s1")).toBeTruthy();
-    expect(getByTestId("session-item-s2")).toBeTruthy();
-    expect(getByTestId("session-item-s3")).toBeTruthy();
+    expect(getByTestId(dynamicTestID.sessionItem("s1"))).toBeTruthy();
+    expect(getByTestId(dynamicTestID.sessionItem("s2"))).toBeTruthy();
+    expect(getByTestId(dynamicTestID.sessionItem("s3"))).toBeTruthy();
   });
 
   it("renders dividers between items (not after last)", () => {
     (useSessions as jest.Mock).mockReturnValue(mockSessions);
     const { getAllByTestId } = render(<SessionList {...defaultProps} />);
-    const dividers = getAllByTestId("divider");
+    const dividers = getAllByTestId(TestID.Divider);
     expect(dividers).toHaveLength(2);
   });
 
@@ -96,8 +100,8 @@ describe("SessionList", () => {
     const { getByTestId, queryByTestId } = render(
       <SessionList {...defaultProps} />,
     );
-    expect(getByTestId("card")).toBeTruthy();
-    expect(queryByTestId("session-item-s1")).toBeNull();
+    expect(getByTestId(TestID.Card)).toBeTruthy();
+    expect(queryByTestId(dynamicTestID.sessionItem("s1"))).toBeNull();
   });
 
   it("tap in selection mode calls onSelectionToggle, not onSessionTap", () => {
@@ -105,7 +109,7 @@ describe("SessionList", () => {
     const { getByTestId } = render(
       <SessionList {...defaultProps} selectionMode={true} />,
     );
-    fireEvent.press(getByTestId("session-item-s1"));
+    fireEvent.press(getByTestId(dynamicTestID.sessionItem("s1")));
     expect(defaultProps.onSelectionToggle).toHaveBeenCalledWith("s1");
     expect(defaultProps.onSessionTap).not.toHaveBeenCalled();
   });

@@ -4,6 +4,8 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Text, View } from "react-native";
 
+import { TestID } from "@/constants";
+
 import { TopAppBar } from "./TopAppBar";
 
 beforeEach(() => {
@@ -123,10 +125,10 @@ describe("TopAppBar", () => {
       <TopAppBar
         title="Home"
         showBackButton={false}
-        leading={<View testID="custom-leading" />}
+        leading={<View testID={TestID.CustomLeading} />}
       />,
     );
-    expect(getByTestId("custom-leading")).toBeTruthy();
+    expect(getByTestId(TestID.CustomLeading)).toBeTruthy();
     // Back button should NOT be rendered
     const backBtn = findBackButton(UNSAFE_root);
     expect(backBtn).toBeNull();
@@ -136,7 +138,7 @@ describe("TopAppBar", () => {
     const { getByTestId, toJSON } = render(
       <TopAppBar title="Transparent" transparent />,
     );
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
     const json = JSON.stringify(toJSON());
     // Transparent mode should NOT have BlurView
     expect(json).not.toContain("BlurView");
@@ -144,7 +146,7 @@ describe("TopAppBar", () => {
 
   it("renders non-transparent mode (default)", () => {
     const { getByTestId, toJSON } = render(<TopAppBar title="Default" />);
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
     const json = JSON.stringify(toJSON());
     // Non-transparent mode should have BlurView
     expect(json).toContain("BlurView");
@@ -154,17 +156,17 @@ describe("TopAppBar", () => {
     const { getByTestId } = render(
       <TopAppBar
         title="Ignored"
-        titleWidget={<View testID="custom-title-widget" />}
+        titleWidget={<View testID={TestID.CustomTitleWidget} />}
       />,
     );
-    expect(getByTestId("custom-title-widget")).toBeTruthy();
+    expect(getByTestId(TestID.CustomTitleWidget)).toBeTruthy();
   });
 
   it("renders with empty actions array", () => {
     const { getByTestId } = render(
       <TopAppBar title="No Actions" actions={[]} />,
     );
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
   });
 
   it("renders single action without spacer", () => {
@@ -179,7 +181,7 @@ describe("TopAppBar", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "dark" });
     const { getByTestId } = render(<TopAppBar title="Dark" />);
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
   });
 
   it("renders on Android platform without BlurView", () => {
@@ -188,7 +190,7 @@ describe("TopAppBar", () => {
     Platform.OS = "android";
 
     const { getByTestId } = render(<TopAppBar title="Android" />);
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
 
     Platform.OS = originalOS;
   });
@@ -204,6 +206,6 @@ describe("TopAppBar", () => {
 
   it("renders with default empty title", () => {
     const { getByTestId } = render(<TopAppBar />);
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
   });
 });

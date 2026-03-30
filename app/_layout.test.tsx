@@ -4,6 +4,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import React from "react";
 
+import { TestID } from "@/constants";
 import {
   initializeSessionStore,
   initializeSettingsStore,
@@ -73,36 +74,41 @@ jest.mock("@/localization", () => ({}));
 
 jest.mock("@/components", () => {
   const { View } = require("react-native");
+  const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     AppErrorBoundary: ({ children }: any) => (
-      <View testID="app-error-boundary">{children}</View>
+      <View testID={TID.AppErrorBoundary}>{children}</View>
     ),
-    Icon: ({ name }: any) => <View testID={`icon-${name}`} />,
-    RecordingControlsView: () => <View testID="recording-controls-view" />,
-    Tooltip: () => <View testID="tooltip" />,
+    Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
+    RecordingControlsView: () => <View testID={TID.RecordingControlsView} />,
+    Tooltip: () => <View testID={TID.Tooltip} />,
   };
 });
 
-jest.mock("expo-router", () => ({
-  Stack: Object.assign(
-    ({ children }: any) => {
-      const { View } = require("react-native");
-      return <View testID="stack">{children}</View>;
-    },
-    {
-      Screen: (props: any) => {
+jest.mock("expo-router", () => {
+  const { TestID: TID } = require("@/constants");
+  return {
+    Stack: Object.assign(
+      ({ children }: any) => {
         const { View } = require("react-native");
-        return <View testID={`stack-screen-${props.name}`} />;
+        return <View testID={TID.Stack}>{children}</View>;
       },
-    },
-  ),
-  usePathname: jest.fn(() => "/"),
-}));
+      {
+        Screen: (props: any) => {
+          const { View } = require("react-native");
+          return <View testID={`stack-screen-${props.name}`} />;
+        },
+      },
+    ),
+    usePathname: jest.fn(() => "/"),
+  };
+});
 
 jest.mock("@react-native-masked-view/masked-view", () => {
   const { View } = require("react-native");
+  const { TestID: TID } = require("@/constants");
   const MockMaskedView = ({ children }: any) => (
-    <View testID="masked-view">{children}</View>
+    <View testID={TID.MaskedView}>{children}</View>
   );
   return { __esModule: true, default: MockMaskedView };
 });
@@ -116,7 +122,7 @@ const mockInitTranscriptionStore = initializeTranscriptionStore as jest.Mock;
 async function renderAndWaitForInit() {
   const result = render(<RootLayout />);
   await waitFor(() => {
-    expect(result.getByTestId("app-error-boundary")).toBeTruthy();
+    expect(result.getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
   });
   return result;
 }
@@ -140,8 +146,8 @@ describe("RootLayout", () => {
 
   it("renders after initialization", async () => {
     const { getByTestId } = await renderAndWaitForInit();
-    expect(getByTestId("app-error-boundary")).toBeTruthy();
-    expect(getByTestId("stack")).toBeTruthy();
+    expect(getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
+    expect(getByTestId(TestID.Stack)).toBeTruthy();
   });
 
   it("store initialization functions called", async () => {
@@ -177,7 +183,7 @@ describe("RootLayout", () => {
     const { getByTestId } = await renderAndWaitForInit();
     // onLayoutRootView is on GestureHandlerRootView (child of AppErrorBoundary)
     // GestureHandlerRootView is mocked as View, find it and trigger layout
-    const boundary = getByTestId("app-error-boundary");
+    const boundary = getByTestId(TestID.AppErrorBoundary);
     const gestureRoot = boundary.children[0] as any;
     await act(async () => {
       gestureRoot.props.onLayout?.();
@@ -187,8 +193,8 @@ describe("RootLayout", () => {
 
   it("AppErrorBoundary wraps content", async () => {
     const { getByTestId } = await renderAndWaitForInit();
-    expect(getByTestId("app-error-boundary")).toBeTruthy();
-    expect(getByTestId("stack")).toBeTruthy();
+    expect(getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
+    expect(getByTestId(TestID.Stack)).toBeTruthy();
   });
 
   it("font error logged via logError", async () => {
@@ -213,17 +219,17 @@ describe("RootLayout", () => {
       message: "Failed to initialize app",
     });
     // App should still render despite error
-    expect(getByTestId("app-error-boundary")).toBeTruthy();
+    expect(getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
   });
 
   it("renders GlobalRecordingControls on home path", async () => {
     const { getByTestId } = await renderAndWaitForInit();
-    expect(getByTestId("recording-controls-view")).toBeTruthy();
+    expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
   });
 
   it("renders GlobalTooltipRenderer", async () => {
     const { getByTestId } = await renderAndWaitForInit();
-    expect(getByTestId("tooltip")).toBeTruthy();
+    expect(getByTestId(TestID.Tooltip)).toBeTruthy();
   });
 
   it("GlobalRecordingControls hidden when not on recording screen", async () => {
@@ -231,7 +237,7 @@ describe("RootLayout", () => {
     (usePathname as jest.Mock).mockReturnValue("/settings");
 
     const { queryByTestId } = await renderAndWaitForInit();
-    expect(queryByTestId("recording-controls-view")).toBeNull();
+    expect(queryByTestId(TestID.RecordingControlsView)).toBeNull();
   });
 
   it("GlobalRecordingControls hidden when not visible", async () => {
@@ -239,7 +245,7 @@ describe("RootLayout", () => {
     (useRecordingControlsVisible as jest.Mock).mockReturnValue(false);
 
     const { queryByTestId } = await renderAndWaitForInit();
-    expect(queryByTestId("recording-controls-view")).toBeNull();
+    expect(queryByTestId(TestID.RecordingControlsView)).toBeNull();
   });
 
   it("GlobalRecordingControls visible on session path", async () => {
@@ -249,7 +255,7 @@ describe("RootLayout", () => {
     (useRecordingControlsVisible as jest.Mock).mockReturnValue(true);
 
     const { getByTestId } = await renderAndWaitForInit();
-    expect(getByTestId("recording-controls-view")).toBeTruthy();
+    expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
   });
 
   // --- Additional coverage tests ---
@@ -275,7 +281,7 @@ describe("RootLayout", () => {
       const { getByTestId } = await renderAndWaitForInit();
 
       // Tooltip should be rendered with the action
-      expect(getByTestId("tooltip")).toBeTruthy();
+      expect(getByTestId(TestID.Tooltip)).toBeTruthy();
     });
 
     it("renders dismissible tooltip", async () => {
@@ -291,7 +297,7 @@ describe("RootLayout", () => {
       (useHideGlobalTooltip as jest.Mock).mockReturnValue(mockHideTooltip);
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("tooltip")).toBeTruthy();
+      expect(getByTestId(TestID.Tooltip)).toBeTruthy();
     });
 
     it("auto-dismisses non-dismissible tooltip after duration", async () => {
@@ -324,7 +330,7 @@ describe("RootLayout", () => {
       (useGlobalTooltip as jest.Mock).mockReturnValue(null);
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("tooltip")).toBeTruthy();
+      expect(getByTestId(TestID.Tooltip)).toBeTruthy();
     });
   });
 
@@ -353,7 +359,7 @@ describe("RootLayout", () => {
       });
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("recording-controls-view")).toBeTruthy();
+      expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
     });
   });
 
@@ -364,7 +370,7 @@ describe("RootLayout", () => {
       (useOnRecordingStop as jest.Mock).mockReturnValue(null);
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("recording-controls-view")).toBeTruthy();
+      expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
     });
   });
 
@@ -393,7 +399,7 @@ describe("RootLayout", () => {
       });
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("app-error-boundary")).toBeTruthy();
+      expect(getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
     });
 
     it("renders with light StatusBar style when not dark", async () => {
@@ -410,7 +416,7 @@ describe("RootLayout", () => {
       });
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("app-error-boundary")).toBeTruthy();
+      expect(getByTestId(TestID.AppErrorBoundary)).toBeTruthy();
     });
   });
 
@@ -429,23 +435,23 @@ describe("RootLayout", () => {
       }: any) => {
         const { View, Pressable } = require("react-native");
         return (
-          <View testID="recording-controls-view">
-            <Pressable testID="btn-start" onPress={onRecordingStart} />
-            <Pressable testID="btn-stop" onPress={onRecordingStop} />
+          <View testID={TestID.RecordingControlsView}>
+            <Pressable testID={TestID.BtnStart} onPress={onRecordingStart} />
+            <Pressable testID={TestID.BtnStop} onPress={onRecordingStop} />
           </View>
         );
       };
 
       const { getByTestId } = await renderAndWaitForInit();
       await act(async () => {
-        fireEvent.press(getByTestId("btn-start"));
+        fireEvent.press(getByTestId(TestID.BtnStart));
       });
       expect(mockOnStart).toHaveBeenCalled();
 
       // Restore mock
       comps.RecordingControlsView = () => {
         const { View } = require("react-native");
-        return <View testID="recording-controls-view" />;
+        return <View testID={TestID.RecordingControlsView} />;
       };
     });
 
@@ -462,22 +468,22 @@ describe("RootLayout", () => {
       }: any) => {
         const { View, Pressable } = require("react-native");
         return (
-          <View testID="recording-controls-view">
-            <Pressable testID="btn-start" onPress={onRecordingStart} />
-            <Pressable testID="btn-stop" onPress={onRecordingStop} />
+          <View testID={TestID.RecordingControlsView}>
+            <Pressable testID={TestID.BtnStart} onPress={onRecordingStart} />
+            <Pressable testID={TestID.BtnStop} onPress={onRecordingStop} />
           </View>
         );
       };
 
       const { getByTestId } = await renderAndWaitForInit();
       await act(async () => {
-        fireEvent.press(getByTestId("btn-stop"));
+        fireEvent.press(getByTestId(TestID.BtnStop));
       });
       expect(mockOnStop).toHaveBeenCalled();
 
       comps.RecordingControlsView = () => {
         const { View } = require("react-native");
-        return <View testID="recording-controls-view" />;
+        return <View testID={TestID.RecordingControlsView} />;
       };
     });
   });
@@ -506,10 +512,10 @@ describe("RootLayout", () => {
       comps.Tooltip = (props: any) => {
         const { View, Pressable } = require("react-native");
         return (
-          <View testID="tooltip">
+          <View testID={TestID.Tooltip}>
             {props.onLeadingIconTap && (
               <Pressable
-                testID="tooltip-action-btn"
+                testID={TestID.TooltipActionBtn}
                 onPress={props.onLeadingIconTap}
               />
             )}
@@ -519,7 +525,7 @@ describe("RootLayout", () => {
 
       const { getByTestId } = await renderAndWaitForInit();
       await act(async () => {
-        fireEvent.press(getByTestId("tooltip-action-btn"));
+        fireEvent.press(getByTestId(TestID.TooltipActionBtn));
       });
 
       expect(mockHideTooltip).toHaveBeenCalled();
@@ -541,7 +547,7 @@ describe("RootLayout", () => {
       });
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("recording-controls-view")).toBeTruthy();
+      expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
 
       if (originalOS) {
         Object.defineProperty(
@@ -563,7 +569,7 @@ describe("RootLayout", () => {
       });
 
       const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId("recording-controls-view")).toBeTruthy();
+      expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
 
       if (originalOS) {
         Object.defineProperty(

@@ -1,6 +1,8 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { FlagIcon } from "./FlagIcon";
 
 const mockLogWarn = jest.fn();
@@ -15,9 +17,11 @@ jest.mock("./flagIcons", () => ({
     us: jest.fn((props: { width?: number; height?: number }) => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { View } = require("react-native");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { TestID: TID } = require("@/constants");
       return (
         <View
-          testID="mock-flag-svg"
+          testID={TID.MockFlagSvg}
           style={{ width: props.width, height: props.height }}
         />
       );
@@ -32,7 +36,7 @@ describe("FlagIcon", () => {
 
   it("renders flag icon for known country code", () => {
     const { getByTestId } = render(<FlagIcon name="us" />);
-    expect(getByTestId("mock-flag-svg")).toBeTruthy();
+    expect(getByTestId(TestID.MockFlagSvg)).toBeTruthy();
   });
 
   it("renders empty View for unknown country code", () => {

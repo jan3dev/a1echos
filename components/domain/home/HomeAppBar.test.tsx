@@ -5,6 +5,8 @@ import React from "react";
 
 import { useSettingsStore } from "@/stores";
 
+import { TestID } from "@/constants";
+
 import { HomeAppBar } from "./HomeAppBar";
 
 jest.mock("@/stores", () => ({
@@ -14,7 +16,8 @@ jest.mock("@/stores", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
@@ -29,24 +32,30 @@ jest.mock("../../ui/ripple-pressable/RipplePressable", () => ({
   },
 }));
 
-jest.mock("../../ui/top-app-bar/TopAppBar", () => ({
-  TopAppBar: (props: any) => {
-    const { View } = require("react-native");
-    return (
-      <View testID="top-app-bar">
-        {props.leading}
-        {props.actions}
-      </View>
-    );
-  },
-}));
+jest.mock("../../ui/top-app-bar/TopAppBar", () => {
+  const { TestID: TID } = require("@/constants");
+  return {
+    TopAppBar: (props: any) => {
+      const { View } = require("react-native");
+      return (
+        <View testID={TID.TopAppBar}>
+          {props.leading}
+          {props.actions}
+        </View>
+      );
+    },
+  };
+});
 
-jest.mock("./IncognitoExplainerModal", () => ({
-  IncognitoExplainerModal: () => {
-    const { View } = require("react-native");
-    return <View testID="incognito-modal" />;
-  },
-}));
+jest.mock("./IncognitoExplainerModal", () => {
+  const { TestID: TID } = require("@/constants");
+  return {
+    IncognitoExplainerModal: () => {
+      const { View } = require("react-native");
+      return <View testID={TID.IncognitoModal} />;
+    },
+  };
+});
 
 const mockSettingsStore = {
   isIncognitoMode: false,
@@ -137,14 +146,15 @@ describe("HomeAppBar", () => {
       props: any,
     ) => {
       const { View } = require("react-native");
-      return props.visible ? <View testID="incognito-modal-visible" /> : null;
+      const { TestID: TID } = require("@/constants");
+      return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
     };
 
     const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
     await act(async () => {
       fireEvent.press(getByTestId("icon-ghost").parent!);
     });
-    expect(getByTestId("incognito-modal-visible")).toBeTruthy();
+    expect(getByTestId(TestID.IncognitoModalVisible)).toBeTruthy();
   });
 
   it("incognito toggle does not show modal when already seen explainer", async () => {
@@ -158,14 +168,15 @@ describe("HomeAppBar", () => {
       props: any,
     ) => {
       const { View } = require("react-native");
-      return props.visible ? <View testID="incognito-modal-visible" /> : null;
+      const { TestID: TID } = require("@/constants");
+      return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
     };
 
     const { queryByTestId, getByTestId } = render(
       <HomeAppBar selectionMode={false} />,
     );
     await fireEvent.press(getByTestId("icon-ghost").parent!);
-    expect(queryByTestId("incognito-modal-visible")).toBeNull();
+    expect(queryByTestId(TestID.IncognitoModalVisible)).toBeNull();
   });
 
   it("incognito toggle does not show modal when disabling incognito", async () => {
@@ -179,7 +190,8 @@ describe("HomeAppBar", () => {
       props: any,
     ) => {
       const { View } = require("react-native");
-      return props.visible ? <View testID="incognito-modal-visible" /> : null;
+      const { TestID: TID } = require("@/constants");
+      return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
     };
 
     const { queryByTestId, getByTestId } = render(
@@ -188,7 +200,7 @@ describe("HomeAppBar", () => {
     await fireEvent.press(getByTestId("icon-ghost").parent!);
     // Disabling incognito mode (newValue=false), so modal should not show
     expect(mockSettingsStore.setIncognitoMode).toHaveBeenCalledWith(false);
-    expect(queryByTestId("incognito-modal-visible")).toBeNull();
+    expect(queryByTestId(TestID.IncognitoModalVisible)).toBeNull();
   });
 
   it("in selection mode: hides ghost and settings icons", () => {
@@ -231,10 +243,11 @@ describe("HomeAppBar", () => {
       props: any,
     ) => {
       const { View, Pressable } = require("react-native");
+      const { TestID: TID } = require("@/constants");
       return props.visible ? (
-        <View testID="incognito-modal-visible">
-          <Pressable testID="confirm-btn" onPress={props.onConfirm} />
-          <Pressable testID="cancel-btn" onPress={props.onCancel} />
+        <View testID={TID.IncognitoModalVisible}>
+          <Pressable testID={TID.ConfirmBtn} onPress={props.onConfirm} />
+          <Pressable testID={TID.CancelBtn} onPress={props.onCancel} />
         </View>
       ) : null;
     };
@@ -249,15 +262,15 @@ describe("HomeAppBar", () => {
       fireEvent.press(getByTestId("icon-ghost").parent!);
     });
 
-    expect(getByTestId("incognito-modal-visible")).toBeTruthy();
+    expect(getByTestId(TestID.IncognitoModalVisible)).toBeTruthy();
 
     // Confirm the modal
     await act(async () => {
-      fireEvent.press(getByTestId("confirm-btn"));
+      fireEvent.press(getByTestId(TestID.ConfirmBtn));
     });
 
     expect(store.markIncognitoExplainerSeen).toHaveBeenCalled();
-    expect(queryByTestId("incognito-modal-visible")).toBeNull();
+    expect(queryByTestId(TestID.IncognitoModalVisible)).toBeNull();
   });
 
   it("IncognitoExplainerModal onCancel closes modal without marking seen", async () => {
@@ -271,9 +284,10 @@ describe("HomeAppBar", () => {
       props: any,
     ) => {
       const { View, Pressable } = require("react-native");
+      const { TestID: TID } = require("@/constants");
       return props.visible ? (
-        <View testID="incognito-modal-visible">
-          <Pressable testID="cancel-btn" onPress={props.onCancel} />
+        <View testID={TID.IncognitoModalVisible}>
+          <Pressable testID={TID.CancelBtn} onPress={props.onCancel} />
         </View>
       ) : null;
     };
@@ -287,14 +301,14 @@ describe("HomeAppBar", () => {
       fireEvent.press(getByTestId("icon-ghost").parent!);
     });
 
-    expect(getByTestId("incognito-modal-visible")).toBeTruthy();
+    expect(getByTestId(TestID.IncognitoModalVisible)).toBeTruthy();
 
     // Cancel the modal
     await act(async () => {
-      fireEvent.press(getByTestId("cancel-btn"));
+      fireEvent.press(getByTestId(TestID.CancelBtn));
     });
 
-    expect(queryByTestId("incognito-modal-visible")).toBeNull();
+    expect(queryByTestId(TestID.IncognitoModalVisible)).toBeNull();
     expect(mockSettingsStore.markIncognitoExplainerSeen).not.toHaveBeenCalled();
   });
 });

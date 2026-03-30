@@ -24,21 +24,24 @@ jest.mock("expo-constants", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
 jest.mock("../../ui/divider/Divider", () => ({
   Divider: () => {
     const { View } = require("react-native");
-    return <View testID="divider" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Divider} />;
   },
 }));
 
 jest.mock("../../ui/tooltip/Tooltip", () => ({
   Tooltip: () => {
     const { View } = require("react-native");
-    return <View testID="tooltip" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Tooltip} />;
   },
 }));
 

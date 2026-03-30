@@ -2,6 +2,8 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { Button } from "./Button";
 
 describe("Button", () => {
@@ -189,11 +191,11 @@ describe("Button", () => {
       <Button.primary
         text="With Icon"
         onPress={jest.fn()}
-        icon={<View testID="test-icon" />}
+        icon={<View testID={TestID.TestIcon} />}
       />,
     );
     expect(getByText("With Icon")).toBeTruthy();
-    expect(getByTestId("test-icon")).toBeTruthy();
+    expect(getByTestId(TestID.TestIcon)).toBeTruthy();
   });
 
   // --- Branch coverage: icon with utility button ---
@@ -203,11 +205,11 @@ describe("Button", () => {
       <Button.utility
         text="Util Icon"
         onPress={jest.fn()}
-        icon={<View testID="util-icon" />}
+        icon={<View testID={TestID.UtilIcon} />}
       />,
     );
     expect(getByText("Util Icon")).toBeTruthy();
-    expect(getByTestId("util-icon")).toBeTruthy();
+    expect(getByTestId(TestID.UtilIcon)).toBeTruthy();
   });
 
   // --- Branch coverage: small size ---

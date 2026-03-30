@@ -2,6 +2,8 @@
 import { act, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { Slider } from "./Slider";
 
 // Suppress RN Animated internals triggering act() warnings for timer-based animations
@@ -25,7 +27,8 @@ afterAll(() => {
 jest.mock("../icon/Icon", () => ({
   Icon: ({ name, ...rest }: { name: string; [key: string]: unknown }) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${name}`} {...rest} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(name)} {...rest} />;
   },
 }));
 
@@ -33,7 +36,8 @@ jest.mock("../icon/Icon", () => ({
 jest.mock("../progress/ProgressIndicator", () => ({
   ProgressIndicator: (props: Record<string, unknown>) => {
     const { View } = require("react-native");
-    return <View testID="progress-indicator" {...props} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.ProgressIndicator} {...props} />;
   },
 }));
 
@@ -45,10 +49,10 @@ describe("Slider", () => {
 
   it.each([
     ["initial", "icon-arrow_right"],
-    ["inProgress", "progress-indicator"],
+    ["inProgress", TestID.ProgressIndicator],
     ["completed", "icon-check"],
     ["error", "icon-close"],
-  ] as const)(
+  ] as [string, string][])(
     "renders %s state with correct indicator",
     (sliderState, expectedTestId) => {
       const { getByTestId } = render(

@@ -1,5 +1,6 @@
 import { View } from "react-native";
 
+import { dynamicTestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { Session } from "@/models";
 import { useSessionTranscriptions } from "@/stores";
@@ -33,7 +34,7 @@ export const SessionListItem = ({
 
   return (
     <ListItem
-      testID={`session-${session.id}`}
+      testID={dynamicTestID.session(session.id)}
       title={session.name}
       subtitle={subtitle}
       iconTrailing={

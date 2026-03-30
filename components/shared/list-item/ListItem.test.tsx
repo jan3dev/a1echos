@@ -2,6 +2,8 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 
+import { TestID } from "@/constants";
+
 import { ListItem } from "./ListItem";
 
 const defaultProps = {
@@ -47,20 +49,20 @@ describe("ListItem", () => {
     const { getByTestId } = render(
       <ListItem
         {...defaultProps}
-        iconLeading={<View testID="leading-icon" />}
+        iconLeading={<View testID={TestID.LeadingIcon} />}
       />,
     );
-    expect(getByTestId("leading-icon")).toBeTruthy();
+    expect(getByTestId(TestID.LeadingIcon)).toBeTruthy();
   });
 
   it("renders trailing icon element", () => {
     const { getByTestId } = render(
       <ListItem
         {...defaultProps}
-        iconTrailing={<View testID="trailing-icon" />}
+        iconTrailing={<View testID={TestID.TrailingIcon} />}
       />,
     );
-    expect(getByTestId("trailing-icon")).toBeTruthy();
+    expect(getByTestId(TestID.TrailingIcon)).toBeTruthy();
   });
 
   it("selection state applies selected accessibility state", () => {
@@ -92,10 +94,10 @@ describe("ListItem", () => {
       <ListItem
         {...defaultProps}
         subtitle="Should not appear"
-        contentWidget={<View testID="custom-widget" />}
+        contentWidget={<View testID={TestID.CustomWidget} />}
       />,
     );
-    expect(getByTestId("custom-widget")).toBeTruthy();
+    expect(getByTestId(TestID.CustomWidget)).toBeTruthy();
     expect(queryByText("Should not appear")).toBeNull();
   });
 
@@ -119,8 +121,8 @@ describe("ListItem", () => {
 
   it("renders with testID", () => {
     const { getByTestId } = render(
-      <ListItem {...defaultProps} testID="custom-test-id" />,
+      <ListItem {...defaultProps} testID={TestID.CustomTestId} />,
     );
-    expect(getByTestId("custom-test-id")).toBeTruthy();
+    expect(getByTestId(TestID.CustomTestId)).toBeTruthy();
   });
 });

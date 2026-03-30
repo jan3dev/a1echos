@@ -2,6 +2,8 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import ModelSettingsScreen from "./model";
 
 // --- Mocks ---
@@ -46,28 +48,29 @@ jest.mock("@/utils", () => ({
 
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
+  const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
-    Card: ({ children }: any) => <View testID="card">{children}</View>,
-    Divider: () => <View testID="divider" />,
+    Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
+    Divider: () => <View testID={TID.Divider} />,
     ListItem: ({ title, onPress, iconTrailing }: any) => (
-      <TouchableOpacity testID={`list-item-${title}`} onPress={onPress}>
+      <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
         <Text>{String(title)}</Text>
         {iconTrailing}
       </TouchableOpacity>
     ),
     Radio: ({ value, groupValue, onValueChange }: any) => (
       <TouchableOpacity
-        testID={`radio-${value}`}
+        testID={dTID.radio(value)}
         onPress={() => onValueChange?.(value)}
       >
-        <Text testID={`radio-selected-${value}`}>
+        <Text testID={dTID.radioSelected(value)}>
           {value === groupValue ? "selected" : "unselected"}
         </Text>
       </TouchableOpacity>
     ),
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
     TopAppBar: ({ title }: any) => (
-      <View testID="top-app-bar">
+      <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>
       </View>
     ),
@@ -77,7 +80,7 @@ jest.mock("@/components", () => {
 describe("ModelSettingsScreen", () => {
   it("renders TopAppBar with model title", () => {
     const { getByTestId, getByText } = render(<ModelSettingsScreen />);
-    expect(getByTestId("top-app-bar")).toBeTruthy();
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
     expect(getByText("modelTitle")).toBeTruthy();
   });
 

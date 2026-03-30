@@ -2,6 +2,7 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { TranscriptionState } from "@/models";
 
 import { RecordingControlsView } from "./RecordingControlsView";
@@ -9,14 +10,16 @@ import { RecordingControlsView } from "./RecordingControlsView";
 jest.mock("./RecordingButton", () => ({
   RecordingButton: (props: any) => {
     const { View } = require("react-native");
-    return <View testID="recording-button" {...props} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.RecordingButton} {...props} />;
   },
 }));
 
 jest.mock("./ThreeWaveLines", () => ({
   ThreeWaveLines: (props: any) => {
     const { View } = require("react-native");
-    return <View testID="three-wave-lines" {...props} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.ThreeWaveLines} {...props} />;
   },
 }));
 
@@ -39,14 +42,14 @@ describe("RecordingControlsView", () => {
     const { getByTestId } = render(
       <RecordingControlsView colors={mockColors} />,
     );
-    expect(getByTestId("recording-button")).toBeTruthy();
+    expect(getByTestId(TestID.RecordingButton)).toBeTruthy();
   });
 
   it("renders ThreeWaveLines", () => {
     const { getByTestId } = render(
       <RecordingControlsView colors={mockColors} />,
     );
-    expect(getByTestId("three-wave-lines")).toBeTruthy();
+    expect(getByTestId(TestID.ThreeWaveLines)).toBeTruthy();
   });
 
   it("passes state prop to child components", () => {
@@ -56,10 +59,10 @@ describe("RecordingControlsView", () => {
         colors={mockColors}
       />,
     );
-    expect(getByTestId("recording-button").props.state).toBe(
+    expect(getByTestId(TestID.RecordingButton).props.state).toBe(
       TranscriptionState.RECORDING,
     );
-    expect(getByTestId("three-wave-lines").props.state).toBe(
+    expect(getByTestId(TestID.ThreeWaveLines).props.state).toBe(
       TranscriptionState.RECORDING,
     );
   });

@@ -2,6 +2,8 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { Icon } from "./Icon";
 
 const mockLogWarn = jest.fn();
@@ -16,9 +18,10 @@ jest.mock("./iconMap", () => ({
     check: jest.fn(
       (props: { width?: number; height?: number; color?: string }) => {
         const { View } = require("react-native");
+        const { TestID: TID } = require("@/constants");
         return (
           <View
-            testID="mock-svg"
+            testID={TID.MockSvg}
             style={{ width: props.width, height: props.height }}
           />
         );
@@ -27,9 +30,10 @@ jest.mock("./iconMap", () => ({
     settings: jest.fn(
       (props: { width?: number; height?: number; color?: string }) => {
         const { View } = require("react-native");
+        const { TestID: TID } = require("@/constants");
         return (
           <View
-            testID="mock-svg"
+            testID={TID.MockSvg}
             style={{ width: props.width, height: props.height }}
           />
         );
@@ -45,7 +49,7 @@ describe("Icon", () => {
 
   it("renders icon from iconMap for a known icon name", () => {
     const { getByTestId } = render(<Icon name={"check" as any} />);
-    expect(getByTestId("mock-svg")).toBeTruthy();
+    expect(getByTestId(TestID.MockSvg)).toBeTruthy();
   });
 
   it("returns null for unknown icon name", () => {

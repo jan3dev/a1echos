@@ -12,6 +12,7 @@ import {
   Text,
   TopAppBar,
 } from "@/components";
+import { dynamicTestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { getCountryCode, SpokenLanguage, SupportedLanguages } from "@/models";
 import { useSelectedLanguage, useSetLanguage } from "@/stores";
@@ -96,7 +97,7 @@ export default function LanguageSettingsScreen() {
                 <Divider color={theme.colors.surfaceBorderPrimary} />
               )}
               <ListItem
-                testID={`language-${language.code}`}
+                testID={dynamicTestID.language(language.code)}
                 title={language.name}
                 iconLeading={
                   <FlagIcon name={getCountryCode(language)} size={24} />

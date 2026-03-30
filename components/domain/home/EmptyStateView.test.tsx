@@ -2,6 +2,8 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { EmptyStateView } from "./EmptyStateView";
 
 jest.mock("react-native-worklets", () => ({
@@ -11,8 +13,9 @@ jest.mock("react-native-worklets", () => ({
 jest.mock("../../ui/tooltip/Tooltip", () => ({
   Tooltip: (props: any) => {
     const { View, Text } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return (
-      <View testID="tooltip">
+      <View testID={TID.Tooltip}>
         <Text>{props.message}</Text>
       </View>
     );
@@ -35,14 +38,14 @@ describe("EmptyStateView", () => {
     const { getByTestId } = render(
       <EmptyStateView message="Hello" shouldDisappear={false} />,
     );
-    expect(getByTestId("tooltip")).toBeTruthy();
+    expect(getByTestId(TestID.Tooltip)).toBeTruthy();
   });
 
   it("renders without crashing when shouldDisappear=true", () => {
     const { getByTestId } = render(
       <EmptyStateView message="Hello" shouldDisappear={true} />,
     );
-    expect(getByTestId("tooltip")).toBeTruthy();
+    expect(getByTestId(TestID.Tooltip)).toBeTruthy();
   });
 
   it("calls withTiming when shouldDisappear transitions to true", () => {

@@ -4,6 +4,7 @@ import { Fragment, ReactNode } from "react";
 import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TestID } from "@/constants";
 import { AppTheme } from "@/models";
 import { useTheme, useThemeStore } from "@/theme";
 import { iosPressed } from "@/utils";
@@ -76,7 +77,7 @@ export const TopAppBar = ({
         <View style={styles.leadingContainer}>
           {showBackButton ? (
             <RipplePressable
-              testID="top-app-bar-back"
+              testID={TestID.TopAppBarBack}
               onPress={handleBack}
               hitSlop={10}
               rippleColor={theme.colors.ripple}
@@ -153,18 +154,16 @@ export const TopAppBar = ({
     style,
   ];
 
-  const topAppBarTestID = "top-app-bar";
-
   if (transparent) {
     return (
-      <View testID={topAppBarTestID} style={containerStyles}>
+      <View testID={TestID.TopAppBar} style={containerStyles}>
         {renderContent()}
       </View>
     );
   }
 
   return (
-    <View testID={topAppBarTestID} style={containerStyles}>
+    <View testID={TestID.TopAppBar} style={containerStyles}>
       {Platform.OS === "ios" ? (
         <BlurView
           intensity={20}

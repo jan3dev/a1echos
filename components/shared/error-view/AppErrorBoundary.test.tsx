@@ -3,6 +3,7 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import { Text } from "react-native";
 
+import { TestID } from "@/constants";
 import { logError } from "@/utils";
 
 import { AppErrorBoundary } from "./AppErrorBoundary";
@@ -22,11 +23,12 @@ jest.mock("./ErrorView", () => ({
     onRetry?: () => void;
   }) => {
     const { View, Text, TouchableOpacity } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return (
-      <View testID="error-view">
+      <View testID={TID.ErrorView}>
         <Text>{errorMessage}</Text>
         {onRetry && (
-          <TouchableOpacity testID="retry-button" onPress={onRetry}>
+          <TouchableOpacity testID={TID.RetryButton} onPress={onRetry}>
             <Text>Retry</Text>
           </TouchableOpacity>
         )}
@@ -65,7 +67,7 @@ describe("AppErrorBoundary", () => {
         <ThrowingChild shouldThrow={true} />
       </AppErrorBoundary>,
     );
-    expect(getByTestId("error-view")).toBeTruthy();
+    expect(getByTestId(TestID.ErrorView)).toBeTruthy();
     expect(getByText("Test render error")).toBeTruthy();
   });
 
@@ -82,10 +84,10 @@ describe("AppErrorBoundary", () => {
       </AppErrorBoundary>,
     );
 
-    expect(getByTestId("error-view")).toBeTruthy();
+    expect(getByTestId(TestID.ErrorView)).toBeTruthy();
 
     shouldThrow = false;
-    fireEvent.press(getByTestId("retry-button"));
+    fireEvent.press(getByTestId(TestID.RetryButton));
 
     expect(getByText("Recovered")).toBeTruthy();
   });

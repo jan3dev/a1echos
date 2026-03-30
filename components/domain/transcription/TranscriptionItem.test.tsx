@@ -4,6 +4,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { Transcription } from "@/models";
 
 import { TranscriptionItem } from "./TranscriptionItem";
@@ -20,7 +21,8 @@ jest.mock("@/stores", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
@@ -45,14 +47,16 @@ jest.mock("../../ui/ripple-pressable/RipplePressable", () => ({
 jest.mock("../../ui/checkbox/Checkbox", () => ({
   Checkbox: () => {
     const { View } = require("react-native");
-    return <View testID="checkbox" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Checkbox} />;
   },
 }));
 
 jest.mock("../../ui/skeleton/Skeleton", () => ({
   Skeleton: () => {
     const { View } = require("react-native");
-    return <View testID="skeleton" />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.Skeleton} />;
   },
 }));
 
@@ -123,7 +127,7 @@ describe("TranscriptionItem", () => {
         isSelected={false}
       />,
     );
-    expect(getByTestId("checkbox")).toBeTruthy();
+    expect(getByTestId(TestID.Checkbox)).toBeTruthy();
     expect(queryByTestId("icon-edit")).toBeNull();
     expect(queryByTestId("icon-copy")).toBeNull();
   });
@@ -140,14 +144,14 @@ describe("TranscriptionItem", () => {
     const { getAllByTestId } = render(
       <TranscriptionItem {...defaultProps} isLoadingWhisperResult={true} />,
     );
-    expect(getAllByTestId("skeleton").length).toBeGreaterThanOrEqual(1);
+    expect(getAllByTestId(TestID.Skeleton).length).toBeGreaterThanOrEqual(1);
   });
 
   it("recording state shows skeleton", () => {
     const { getAllByTestId } = render(
       <TranscriptionItem {...defaultProps} isWhisperRecording={true} />,
     );
-    expect(getAllByTestId("skeleton").length).toBeGreaterThanOrEqual(1);
+    expect(getAllByTestId(TestID.Skeleton).length).toBeGreaterThanOrEqual(1);
   });
 
   it("edit mode text change updates local state", () => {

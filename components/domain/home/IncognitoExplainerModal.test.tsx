@@ -2,6 +2,8 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import { IncognitoExplainerModal } from "./IncognitoExplainerModal";
 
 let capturedModalProps: any = {};
@@ -10,13 +12,14 @@ jest.mock("../../ui/modal/Modal", () => ({
   Modal: (props: any) => {
     capturedModalProps = props;
     const { View, Text, Pressable } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return (
-      <View testID="modal">
-        <Text testID="modal-title">{props.title}</Text>
-        <Text testID="modal-message">{props.message}</Text>
+      <View testID={TID.Modal}>
+        <Text testID={TID.ModalTitle}>{props.title}</Text>
+        <Text testID={TID.ModalMessage}>{props.message}</Text>
         {props.primaryButton && (
           <Pressable
-            testID="primary-button"
+            testID={TID.PrimaryButton}
             onPress={props.primaryButton.onTap}
           />
         )}
@@ -28,7 +31,8 @@ jest.mock("../../ui/modal/Modal", () => ({
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
     const { View } = require("react-native");
-    return <View testID={`icon-${props.name}`} />;
+    const { dynamicTestID: dTID } = require("@/constants");
+    return <View testID={dTID.icon(props.name)} />;
   },
 }));
 
@@ -49,7 +53,7 @@ describe("IncognitoExplainerModal", () => {
         onCancel={onCancel}
       />,
     );
-    expect(getByTestId("modal-title").props.children).toBe(
+    expect(getByTestId(TestID.ModalTitle).props.children).toBe(
       "incognitoExplainerTitle",
     );
   });
@@ -62,7 +66,7 @@ describe("IncognitoExplainerModal", () => {
         onCancel={onCancel}
       />,
     );
-    expect(getByTestId("modal-message").props.children).toBe(
+    expect(getByTestId(TestID.ModalMessage).props.children).toBe(
       "incognitoExplainerBody",
     );
   });
@@ -75,7 +79,7 @@ describe("IncognitoExplainerModal", () => {
         onCancel={onCancel}
       />,
     );
-    fireEvent.press(getByTestId("primary-button"));
+    fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -155,6 +159,6 @@ describe("IncognitoExplainerModal", () => {
         onCancel={onCancel}
       />,
     );
-    expect(capturedModalProps.testID).toBe("incognito-modal");
+    expect(capturedModalProps.testID).toBe(TestID.IncognitoModal);
   });
 });

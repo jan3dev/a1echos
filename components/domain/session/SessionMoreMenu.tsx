@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
 
+import { TestID } from "@/constants";
 import { useLocalization, useSessionOperations } from "@/hooks";
 import { Session } from "@/models";
 import { useRenameSession, useShowGlobalTooltip } from "@/stores";
@@ -112,7 +113,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   return (
     <>
       <RipplePressable
-        testID="session-more-menu"
+        testID={TestID.SessionMoreMenu}
         onPress={openMenu}
         hitSlop={10}
         rippleColor={theme.colors.ripple}
@@ -152,7 +153,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
             >
               {/* Rename */}
               <ListItem
-                testID="session-rename"
+                testID={TestID.SessionRename}
                 title={loc.sessionRenameTitle}
                 iconLeading={
                   <Icon
@@ -177,7 +178,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
               {/* Delete */}
               <ListItem
-                testID="session-delete"
+                testID={TestID.SessionDelete}
                 title={loc.delete}
                 iconLeading={
                   <Icon

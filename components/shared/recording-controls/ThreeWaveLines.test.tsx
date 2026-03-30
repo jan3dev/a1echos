@@ -3,6 +3,7 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 import { AppState } from "react-native";
 
+import { TestID } from "@/constants";
 import { TranscriptionState } from "@/models";
 
 import { ThreeWaveLines } from "./ThreeWaveLines";
@@ -11,15 +12,17 @@ import { ThreeWaveLines } from "./ThreeWaveLines";
 jest.mock("@shopify/react-native-skia", () => ({
   Canvas: ({ children, ...rest }: any) => {
     const { View } = require("react-native");
+    const { TestID: TID } = require("@/constants");
     return (
-      <View testID="skia-canvas" {...rest}>
+      <View testID={TID.SkiaCanvas} {...rest}>
         {children}
       </View>
     );
   },
   Path: ({ ...rest }: any) => {
     const { View } = require("react-native");
-    return <View testID="skia-path" {...rest} />;
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.SkiaPath} {...rest} />;
   },
   usePathValue: jest.fn(() => ({ current: null })),
   Skia: {
@@ -73,14 +76,14 @@ describe("ThreeWaveLines", () => {
     const { getByTestId } = render(
       <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
     );
-    expect(getByTestId("skia-canvas")).toBeTruthy();
+    expect(getByTestId(TestID.SkiaCanvas)).toBeTruthy();
   });
 
   it("renders 3 Path elements", () => {
     const { getAllByTestId } = render(
       <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
     );
-    expect(getAllByTestId("skia-path")).toHaveLength(3);
+    expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(3);
   });
 
   it("subscribes to transcriptionStore audio level changes", () => {

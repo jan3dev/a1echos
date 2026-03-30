@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import React from "react";
 import { Keyboard } from "react-native";
 
+import { TestID } from "@/constants";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
@@ -148,6 +149,7 @@ const mockHideDeleteToast = jest.fn();
 
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
+  const { TestID: TID } = require("@/constants");
   return {
     SessionAppBar: (props: any) => {
       mockOnTitlePressed = props.onTitlePressed;
@@ -159,12 +161,12 @@ jest.mock("@/components", () => {
       mockOnSaveEditPressed = props.onSaveEditPressed;
       mockOnLanguageFlagPressed = props.onLanguageFlagPressed;
       return (
-        <View testID="session-app-bar">
-          <Text testID="session-name">{props.sessionName}</Text>
-          <Text testID="selection-mode">
+        <View testID={TID.SessionAppBar}>
+          <Text testID={TID.SessionName}>{props.sessionName}</Text>
+          <Text testID={TID.SelectionMode}>
             {props.selectionMode ? "selection" : "normal"}
           </Text>
-          <Text testID="edit-mode">
+          <Text testID={TID.EditMode}>
             {props.editMode ? "editing" : "not-editing"}
           </Text>
         </View>
@@ -173,7 +175,7 @@ jest.mock("@/components", () => {
     SessionInputModal: (props: any) => {
       mockOnRenameSubmit = props.onSubmit;
       return props.visible ? (
-        <View testID="rename-modal">
+        <View testID={TID.RenameModal}>
           <Text>{String(props.title)}</Text>
         </View>
       ) : null;
@@ -183,16 +185,16 @@ jest.mock("@/components", () => {
       mockOnTranscriptionLongPress = props.onTranscriptionLongPress;
       mockOnEditStart = props.onEditStart;
       mockOnEditEnd = props.onEditEnd;
-      return <View testID="transcription-content" />;
+      return <View testID={TID.TranscriptionContent} />;
     },
     Button: {
       primary: (props: any) => (
-        <TouchableOpacity testID="share-button" onPress={props.onPress}>
+        <TouchableOpacity testID={TID.ShareButton} onPress={props.onPress}>
           <Text>{String(props.text)}</Text>
         </TouchableOpacity>
       ),
     },
-    Toast: (props: any) => <View testID="toast" />,
+    Toast: (props: any) => <View testID={TID.Toast} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,
       hide: mockHideDeleteToast,
@@ -296,15 +298,15 @@ beforeEach(() => {
 describe("SessionScreen", () => {
   it("renders SessionAppBar with session name", async () => {
     const { getByTestId } = render(<SessionScreen />);
-    expect(getByTestId("session-app-bar")).toBeTruthy();
-    expect(getByTestId("session-name")).toHaveTextContent("Test Session");
+    expect(getByTestId(TestID.SessionAppBar)).toBeTruthy();
+    expect(getByTestId(TestID.SessionName)).toHaveTextContent("Test Session");
     await act(async () => {});
   });
 
   it("shows TranscriptionContentView after initialization", async () => {
     const { getByTestId } = render(<SessionScreen />);
     await waitFor(() => {
-      expect(getByTestId("transcription-content")).toBeTruthy();
+      expect(getByTestId(TestID.TranscriptionContent)).toBeTruthy();
     });
     expect(mockSwitchSession).toHaveBeenCalledWith("session-1");
   });
@@ -323,21 +325,21 @@ describe("SessionScreen", () => {
   it("selection mode shows share button", async () => {
     (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
     const { getByTestId } = render(<SessionScreen />);
-    expect(getByTestId("share-button")).toBeTruthy();
-    expect(getByTestId("selection-mode")).toHaveTextContent("selection");
+    expect(getByTestId(TestID.ShareButton)).toBeTruthy();
+    expect(getByTestId(TestID.SelectionMode)).toHaveTextContent("selection");
     await act(async () => {});
   });
 
   it("title press opens rename modal for non-incognito", async () => {
     const { queryByTestId } = render(<SessionScreen />);
-    expect(queryByTestId("rename-modal")).toBeNull();
+    expect(queryByTestId(TestID.RenameModal)).toBeNull();
 
     await act(async () => {
       mockOnTitlePressed!();
     });
 
     await waitFor(() => {
-      expect(queryByTestId("rename-modal")).toBeTruthy();
+      expect(queryByTestId(TestID.RenameModal)).toBeTruthy();
     });
   });
 
@@ -357,7 +359,7 @@ describe("SessionScreen", () => {
       mockOnTitlePressed!();
     });
 
-    expect(queryByTestId("rename-modal")).toBeNull();
+    expect(queryByTestId(TestID.RenameModal)).toBeNull();
   });
 
   it("rename modal submit calls renameSession", async () => {
@@ -368,7 +370,7 @@ describe("SessionScreen", () => {
       mockOnTitlePressed!();
     });
     await waitFor(() => {
-      expect(queryByTestId("rename-modal")).toBeTruthy();
+      expect(queryByTestId(TestID.RenameModal)).toBeTruthy();
     });
 
     // Submit rename
@@ -652,7 +654,7 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId("share-button"));
+        fireEvent.press(getByTestId(TestID.ShareButton));
       });
 
       expect(mockShowToast).toHaveBeenCalledWith(expect.anything(), "warning");
@@ -676,7 +678,7 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId("share-button"));
+        fireEvent.press(getByTestId(TestID.ShareButton));
       });
 
       await waitFor(() => {
@@ -1116,7 +1118,7 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId("share-button"));
+        fireEvent.press(getByTestId(TestID.ShareButton));
       });
 
       // shareService should NOT be called because selectedTranscriptions is empty
@@ -1140,7 +1142,7 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId("share-button"));
+        fireEvent.press(getByTestId(TestID.ShareButton));
       });
 
       await waitFor(() => {
@@ -1170,7 +1172,7 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       await act(async () => {
-        fireEvent.press(getByTestId("share-button"));
+        fireEvent.press(getByTestId(TestID.ShareButton));
       });
 
       await waitFor(() => {
@@ -1517,14 +1519,14 @@ describe("SessionScreen", () => {
         mockOnEditStart!();
       });
 
-      expect(getByTestId("edit-mode")).toHaveTextContent("editing");
+      expect(getByTestId(TestID.EditMode)).toHaveTextContent("editing");
 
       // End edit
       await act(async () => {
         mockOnEditEnd!();
       });
 
-      expect(getByTestId("edit-mode")).toHaveTextContent("not-editing");
+      expect(getByTestId(TestID.EditMode)).toHaveTextContent("not-editing");
     });
   });
 
