@@ -298,11 +298,7 @@ export default function RootLayout() {
         style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
         onLayout={onLayoutRootView}
       >
-        <StatusBar
-          style={isDark ? "light" : "dark"}
-          backgroundColor="transparent"
-          translucent
-        />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(storybook)/index" />
         </Stack>
@@ -317,11 +313,7 @@ export default function RootLayout() {
         onLayout={onLayoutRootView}
       >
         <BackgroundRecordingHandler />
-        <StatusBar
-          style={isDark ? "light" : "dark"}
-          backgroundColor="transparent"
-          translucent
-        />
+        <StatusBar style={isDark ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(pages)/index" />
         </Stack>
