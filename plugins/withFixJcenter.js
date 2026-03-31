@@ -12,7 +12,6 @@ const withFixJcenter = (config) => {
     // Use a post-prebuild hook via dangerous mod to patch the library's build.gradle
     const buildGradlePath = path.resolve(
       config.modRequest.projectRoot,
-      "..",
       "node_modules",
       "react-native-aes-gcm-crypto",
       "android",
