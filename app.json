@@ -52,7 +52,15 @@
         }
       ],
       "./plugins/withRnForegroundService",
-      "./plugins/withFixJcenter"
+      "./plugins/withFixJcenter",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

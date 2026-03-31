@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { dynamicTestID } from "@/constants";
 import { getShadow, useTheme } from "@/theme";
 
 import { Button, ButtonVariant } from "../button/Button";
@@ -38,6 +39,7 @@ export interface ModalProps {
   titleMaxLines?: number;
   messageMaxLines?: number;
   onDismiss?: () => void;
+  testID?: string;
 }
 
 export const Modal = ({
@@ -53,6 +55,7 @@ export const Modal = ({
   titleMaxLines = 3,
   messageMaxLines = 5,
   onDismiss,
+  testID,
 }: ModalProps) => {
   const { width } = useWindowDimensions();
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -123,6 +126,7 @@ export const Modal = ({
     <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
       <View style={styles.contentWrapper}>
         <Animated.View
+          testID={testID ?? dynamicTestID.modal(title)}
           style={[
             styles.container,
             {

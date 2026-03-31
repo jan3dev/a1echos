@@ -31,6 +31,7 @@ export const RipplePressable = ({
 
     return (
       <TouchableNativeFeedback
+        testID={rest.testID}
         onPress={rest.onPress ?? undefined}
         onLongPress={rest.onLongPress ?? undefined}
         disabled={rest.disabled ?? undefined}

@@ -24,6 +24,5 @@ export type {
   NativeModules,
   RealtimeTranscribeEvent,
   WhisperInitOptions,
-  WhisperVadInitOptions
+  WhisperVadInitOptions,
 } from "./types";
-

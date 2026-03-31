@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { TestID } from "@/constants";
 import { AppTheme, TranscriptionState } from "@/models";
 import { AquaColors, getShadow, useThemeStore } from "@/theme";
 
@@ -228,6 +229,7 @@ export const RecordingButton = ({
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
+          testID={TestID.RecordingButtonTranscribing}
           style={styles.buttonTouchable}
           disabled={true}
           activeOpacity={0.7}
@@ -264,6 +266,7 @@ export const RecordingButton = ({
         ]}
       >
         <TouchableOpacity
+          testID={TestID.RecordingButtonStop}
           style={styles.buttonTouchable}
           onPress={handleStopRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}
@@ -293,6 +296,7 @@ export const RecordingButton = ({
         style={[StyleSheet.absoluteFill, styles.blurContainer]}
       >
         <TouchableOpacity
+          testID={TestID.RecordingButtonStart}
           style={styles.buttonTouchable}
           onPress={handleStartRecording}
           disabled={isDebouncing || gestureIsolationActive || !enabled}

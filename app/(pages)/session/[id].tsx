@@ -29,6 +29,7 @@ import {
   TranscriptionContentView,
   useToast,
 } from "@/components";
+import { TestID } from "@/constants";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
 import { ModelType, Transcription } from "@/models";
 import { shareService } from "@/services";
@@ -634,6 +635,7 @@ export default function SessionScreen() {
           style={[styles.shareButtonContainer, { bottom: insets.bottom + 32 }]}
         >
           <Button.primary
+            testID={TestID.SessionShare}
             text={loc.share}
             onPress={handleSharePressed}
             enabled={hasSelectedItems}

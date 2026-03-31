@@ -12,6 +12,7 @@ import {
   SettingsFooter,
   TopAppBar,
 } from "@/components";
+import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme, ModelType } from "@/models";
 import {
@@ -75,6 +76,7 @@ export default function SettingsScreen() {
       >
         <Card>
           <ListItem
+            testID={TestID.SettingsModel}
             title={loc.modelTitle}
             titleTrailing={modelDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -95,6 +97,7 @@ export default function SettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID={TestID.SettingsTheme}
             title={loc.themeTitle}
             titleTrailing={themeDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -115,6 +118,7 @@ export default function SettingsScreen() {
           <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
+            testID={TestID.SettingsLanguage}
             title={loc.spokenLanguageTitle}
             titleTrailing={languageDisplay}
             titleTrailingColor={theme.colors.textSecondary}
@@ -139,6 +143,7 @@ export default function SettingsScreen() {
 
         <Card style={{ marginTop: 16 }}>
           <ListItem
+            testID={TestID.SettingsContactSupport}
             title={loc.contactSupport}
             iconLeading={
               <Icon

@@ -1,9 +1,9 @@
-import type { Decorator, Preview } from '@storybook/react-native';
-import React from 'react';
-import { Switch, Text, View } from 'react-native';
+import type { Decorator, Preview } from "@storybook/react-native";
+import React from "react";
+import { Switch, Text, View } from "react-native";
 
-import { AppTheme } from '../models/AppTheme';
-import { useTheme } from '../theme/useTheme';
+import { AppTheme } from "../models/AppTheme";
+import { useTheme } from "../theme/useTheme";
 
 const ThemeDecorator: Decorator = (Story) => {
   const { theme, selectedTheme, setTheme } = useTheme();
@@ -13,9 +13,9 @@ const ThemeDecorator: Decorator = (Story) => {
       <View
         style={{
           padding: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "flex-end",
           backgroundColor: theme.colors.surfaceSecondary,
           borderBottomWidth: 1,
           borderBottomColor: theme.colors.surfaceBorderPrimary,
@@ -43,10 +43,10 @@ const preview: Preview = {
   decorators: [ThemeDecorator],
   parameters: {
     backgrounds: {
-      default: 'light',
+      default: "light",
       values: [
-        { name: 'light', value: '#F4F5F6' },
-        { name: 'dark', value: '#090A0B' },
+        { name: "light", value: "#F4F5F6" },
+        { name: "dark", value: "#090A0B" },
       ],
     },
     controls: {

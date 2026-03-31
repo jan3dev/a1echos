@@ -33,7 +33,22 @@ npm run lint          # Run ESLint
 
 ### Testing
 
-- No test command is configured yet in package.json
+```bash
+npm run test              # Run all tests
+npm run test:watch        # Run tests in watch mode
+npm run test:coverage     # Run tests with coverage report
+```
+
+**Coverage Thresholds** (enforced in `jest.config.js`):
+
+| Metric     | Minimum |
+| ---------- | ------- |
+| Statements | 95%     |
+| Branches   | 90%     |
+| Functions  | 95%     |
+| Lines      | 95%     |
+
+Always run `npm run test:coverage` after changes to verify thresholds are met.
 
 ## Architecture
 
