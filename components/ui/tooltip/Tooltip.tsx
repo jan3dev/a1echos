@@ -215,7 +215,6 @@ export const Tooltip = ({
   const bubble =
     variant === "normal" ? (
       <BlurView
-        experimentalBlurMethod="dimezisBlurView"
         intensity={20}
         style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" }}
       >

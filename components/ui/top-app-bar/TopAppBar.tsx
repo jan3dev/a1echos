@@ -172,7 +172,6 @@ export const TopAppBar = ({
         />
       ) : (
         <BlurView
-          experimentalBlurMethod="dimezisBlurView"
           intensity={50}
           tint={blurTint}
           style={[StyleSheet.absoluteFill, { backgroundColor }]}

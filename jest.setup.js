@@ -333,7 +333,7 @@ jest.mock("react-native-aes-gcm-crypto", () => ({
   },
 }));
 
-jest.mock("react-native-fs", () => ({
+jest.mock("@dr.pogodin/react-native-fs", () => ({
   __esModule: true,
   default: {
     DocumentDirectoryPath: "/mock/document",

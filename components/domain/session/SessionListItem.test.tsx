@@ -2,10 +2,9 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
 import { Session } from "@/models";
 import { useSessionTranscriptions } from "@/stores";
-
-import { TestID } from "@/constants";
 
 import { SessionListItem } from "./SessionListItem";
 

@@ -1,4 +1,10 @@
-import RNFS from "react-native-fs";
+import {
+  appendFile,
+  exists,
+  readFile,
+  unlink,
+  writeFile,
+} from "@dr.pogodin/react-native-fs";
 
 import { createPcmStreamWriter } from "./WavWriter";
 
@@ -16,11 +22,11 @@ describe("createPcmStreamWriter", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (RNFS.exists as jest.Mock).mockResolvedValue(true);
-    (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-    (RNFS.appendFile as jest.Mock).mockResolvedValue(undefined);
-    (RNFS.readFile as jest.Mock).mockResolvedValue("bW9jayBwY20gZGF0YQ==");
-    (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+    (exists as jest.Mock).mockResolvedValue(true);
+    (writeFile as jest.Mock).mockResolvedValue(undefined);
+    (appendFile as jest.Mock).mockResolvedValue(undefined);
+    (readFile as jest.Mock).mockResolvedValue("bW9jayBwY20gZGF0YQ==");
+    (unlink as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe("creation", () => {
@@ -59,7 +65,7 @@ describe("createPcmStreamWriter", () => {
       writer.write("AAAA");
       // Flush the write queue via a microtask tick
       await new Promise((r) => setTimeout(r, 0));
-      expect(RNFS.writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
+      expect(writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
     });
 
     it("subsequent chunks use appendFile", async () => {
@@ -72,8 +78,8 @@ describe("createPcmStreamWriter", () => {
       writer.write("AAAA");
       writer.write("BBBB");
       await new Promise((r) => setTimeout(r, 0));
-      expect(RNFS.writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
-      expect(RNFS.appendFile).toHaveBeenCalledWith(tempPath, "BBBB", "base64");
+      expect(writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
+      expect(appendFile).toHaveBeenCalledWith(tempPath, "BBBB", "base64");
     });
 
     it("tracks byte count", () => {
@@ -132,21 +138,21 @@ describe("createPcmStreamWriter", () => {
 
       expect(result).toBe(true);
       // Should write WAV header to output path
-      expect(RNFS.writeFile).toHaveBeenCalledWith(
+      expect(writeFile).toHaveBeenCalledWith(
         outputPath,
         expect.any(String),
         "base64",
       );
       // Should read PCM data from temp path
-      expect(RNFS.readFile).toHaveBeenCalledWith(tempPath, "base64");
+      expect(readFile).toHaveBeenCalledWith(tempPath, "base64");
       // Should append PCM data to output
-      expect(RNFS.appendFile).toHaveBeenCalledWith(
+      expect(appendFile).toHaveBeenCalledWith(
         outputPath,
         expect.any(String),
         "base64",
       );
       // Should clean up temp file
-      expect(RNFS.unlink).toHaveBeenCalledWith(tempPath);
+      expect(unlink).toHaveBeenCalledWith(tempPath);
     });
 
     it("returns false when 0 bytes written", async () => {
@@ -186,10 +192,10 @@ describe("createPcmStreamWriter", () => {
       writer.write("AAAA");
       await writer.abort();
 
-      expect(RNFS.exists).toHaveBeenCalledWith(tempPath);
-      expect(RNFS.exists).toHaveBeenCalledWith(outputPath);
-      expect(RNFS.unlink).toHaveBeenCalledWith(tempPath);
-      expect(RNFS.unlink).toHaveBeenCalledWith(outputPath);
+      expect(exists).toHaveBeenCalledWith(tempPath);
+      expect(exists).toHaveBeenCalledWith(outputPath);
+      expect(unlink).toHaveBeenCalledWith(tempPath);
+      expect(unlink).toHaveBeenCalledWith(outputPath);
     });
   });
 });

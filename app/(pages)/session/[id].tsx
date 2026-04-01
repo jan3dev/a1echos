@@ -31,7 +31,7 @@ import {
 } from "@/components";
 import { TestID } from "@/constants";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
-import { ModelType, Transcription } from "@/models";
+import { Transcription, TranscriptionMode } from "@/models";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
@@ -43,7 +43,7 @@ import {
   useLivePreview,
   useRenameSession,
   useSelectAllTranscriptions,
-  useSelectedModelType,
+  useSelectedTranscriptionMode,
   useSelectedTranscriptionIdsSet,
   useSessionStore,
   useSessionTranscriptions,
@@ -82,7 +82,7 @@ export default function SessionScreen() {
   const renameSessionAction = useRenameSession();
   const switchSession = useSwitchSession();
   const { endIncognitoSession } = useSessionOperations();
-  const selectedModelType = useSelectedModelType();
+  const selectedMode = useSelectedTranscriptionMode();
   const isRecording = useIsRecording();
   const startRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
@@ -225,7 +225,7 @@ export default function SessionScreen() {
   useEffect(() => {
     const shouldScroll =
       isRecording ||
-      (selectedModelType === ModelType.WHISPER_REALTIME && livePreview);
+      (selectedMode === TranscriptionMode.REALTIME && livePreview);
 
     if (!shouldScroll) return;
 
@@ -244,7 +244,7 @@ export default function SessionScreen() {
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [isRecording, selectedModelType, livePreview, transcriptions.length]);
+  }, [isRecording, selectedMode, livePreview, transcriptions.length]);
 
   // Cleanup on unmount
   useEffect(() => {

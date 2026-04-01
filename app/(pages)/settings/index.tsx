@@ -14,10 +14,10 @@ import {
 } from "@/components";
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { AppTheme, ModelType } from "@/models";
+import { AppTheme, getModelInfo } from "@/models";
 import {
   useSelectedLanguage,
-  useSelectedModelType,
+  useSelectedModelId,
   useSelectedTheme,
 } from "@/stores";
 import { useTheme } from "@/theme";
@@ -30,14 +30,11 @@ export default function SettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
-  const selectedModelType = useSelectedModelType();
+  const selectedModelId = useSelectedModelId();
   const selectedTheme = useSelectedTheme();
   const selectedLanguage = useSelectedLanguage();
 
-  const modelDisplay =
-    selectedModelType === ModelType.WHISPER_REALTIME
-      ? loc.whisperModelRealtimeTitle
-      : loc.whisperModelFileTitle;
+  const modelDisplay = getModelInfo(selectedModelId).name;
 
   const themeDisplay = (() => {
     switch (selectedTheme) {

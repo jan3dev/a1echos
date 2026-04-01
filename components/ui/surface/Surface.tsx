@@ -70,7 +70,6 @@ export const Surface = ({
 
   const GlassContent = (
     <BlurView
-      experimentalBlurMethod="dimezisBlurView"
       intensity={20}
       style={[
         {

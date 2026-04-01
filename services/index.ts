@@ -17,9 +17,9 @@ export {
 } from "./BackgroundRecordingService";
 
 export {
-  whisperService,
-  default as whisperServiceDefault,
-} from "./WhisperService";
+  sherpaTranscriptionService,
+  default as sherpaTranscriptionServiceDefault,
+} from "./SherpaTranscriptionService";
 
 export { shareService, default as shareServiceDefault } from "./ShareService";
 
@@ -33,3 +33,9 @@ export {
   audioSessionService,
   default as audioSessionServiceDefault,
 } from "./AudioSessionService";
+
+export {
+  modelDownloadService,
+  default as modelDownloadServiceDefault,
+} from "./ModelDownloadService";
+export type { DownloadProgress } from "./ModelDownloadService";

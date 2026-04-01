@@ -107,6 +107,19 @@ export const SupportedLanguages = {
     return { code: "en", name: "English" };
   },
 
+  /** Returns languages filtered to those supported by the given language codes. */
+  forCodes(codes: string[] | undefined): SpokenLanguage[] {
+    if (!codes) return allLanguages;
+    const codeSet = new Set(codes);
+    return allLanguages.filter((lang) => codeSet.has(lang.code));
+  },
+
+  /** Checks whether a language code is in the given supported set. */
+  isSupported(code: string, supportedCodes: string[] | undefined): boolean {
+    if (!supportedCodes) return true;
+    return supportedCodes.includes(code);
+  },
+
   findByCode(code: string): SpokenLanguage | null {
     const normalizedCode = code.toLowerCase();
     return languageData[normalizedCode]

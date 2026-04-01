@@ -5,18 +5,13 @@ import { Platform } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
-import {
-  ModelType,
-  SupportedLanguages,
-  Transcription,
-  TranscriptionState,
-} from "@/models";
+import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
 import {
   audioService,
   backgroundRecordingService,
   permissionService,
+  sherpaTranscriptionService,
   storageService,
-  whisperService,
 } from "@/services";
 import {
   FeatureFlag,
@@ -45,7 +40,7 @@ interface TranscriptionStore {
   isLoaded: boolean;
   isInitialized: boolean;
   initError: string | null;
-  isWhisperReady: boolean;
+  isEngineReady: boolean;
 
   isOperationLocked: boolean;
   activeOperations: Set<string>;
@@ -228,7 +223,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     isLoaded: false,
     isInitialized: false,
     initError: null,
-    isWhisperReady: false,
+    isEngineReady: false,
 
     isOperationLocked: false,
     activeOperations: new Set(),
@@ -661,24 +656,24 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           }
         }
 
-        // Get settings for model type and language
+        // Get settings for model and language
         const settingsState = useSettingsStore.getState();
-        const modelType = settingsState.selectedModelType;
-        const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
-          settingsState.selectedLanguage?.code ?? "en",
-        );
-        const isRealtime = modelType === ModelType.WHISPER_REALTIME;
+        const transcriptionMode = settingsState.selectedTranscriptionMode;
+        const modelId = settingsState.selectedModelId;
+        const languageCode = settingsState.selectedLanguage?.code ?? "en";
+        const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
 
-        // Ensure Whisper is initialized
-        if (!state.isWhisperReady) {
-          const initialized = await whisperService.initialize();
-          if (!initialized) {
-            get().setError("Failed to initialize transcription engine");
-            releaseOperationLock(operationName);
-            return false;
-          }
-          set({ isWhisperReady: true });
+        // Ensure transcription engine is initialized with the right model and language
+        const initialized = await sherpaTranscriptionService.initialize(
+          modelId,
+          languageCode,
+        );
+        if (!initialized) {
+          get().setError("Failed to initialize transcription engine");
+          releaseOperationLock(operationName);
+          return false;
         }
+        set({ isEngineReady: true });
 
         if (!get().transitionTo(TranscriptionState.RECORDING)) {
           releaseOperationLock(operationName);
@@ -706,24 +701,27 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         }
 
         if (isRealtime) {
-          const unsubscribeAudioLevel = whisperService.subscribeToAudioLevel(
-            (level) => {
+          const unsubscribeAudioLevel =
+            sherpaTranscriptionService.subscribeToAudioLevel((level) => {
               get().updateAudioLevel(level);
-            },
-          );
+            });
           set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
 
           // Subscribe to partial results
-          const unsubscribe = whisperService.subscribeToPartialResults(
-            (partial) => {
+          const unsubscribe =
+            sherpaTranscriptionService.subscribeToPartialResults((partial) => {
               get().onPartialTranscription(partial);
-            },
-          );
+            });
           set({ partialResultUnsubscribe: unsubscribe });
 
-          // Real-time mode: start Whisper real-time transcription
+          // Real-time mode: start real-time transcription
           const realtimeStarted =
-            await whisperService.startRealtimeTranscription(language, prompt);
+            await sherpaTranscriptionService.startRealtimeTranscription();
+          if (realtimeStarted) {
+            // Show an empty live preview card immediately so the UI
+            // displays the transcription area (updated as partials arrive)
+            get().updateLivePreview("", sessionId);
+          }
           if (!realtimeStarted) {
             // Cleanup subscriptions on failure
             unsubscribeAudioLevel();
@@ -825,11 +823,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const state = get();
       const sessionId = state.recordingSessionId;
       const settingsState = useSettingsStore.getState();
-      const modelType = settingsState.selectedModelType;
-      const { language, prompt } = SupportedLanguages.transcribeOptionsFor(
-        settingsState.selectedLanguage?.code ?? "en",
-      );
-      const isRealtime = modelType === ModelType.WHISPER_REALTIME;
+      const transcriptionMode = settingsState.selectedTranscriptionMode;
+      const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
       const isIncognito = useSessionStore.getState().isActiveSessionIncognito();
 
       try {
@@ -842,8 +837,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         let audioPath: string = "";
 
         if (isRealtime) {
-          // Real-time mode: stop Whisper and get final text
-          transcribedText = await whisperService.stopRealtimeTranscription();
+          // Real-time mode: stop and get final text
+          transcribedText =
+            await sherpaTranscriptionService.stopRealtimeTranscription();
 
           // Clean up partial result subscription
           if (state.partialResultUnsubscribe) {
@@ -869,6 +865,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             return;
           }
 
+          // Transcribe the original recording file first (before copy),
+          // to avoid any format issues from the file copy step
+          transcribedText =
+            await sherpaTranscriptionService.transcribeFile(recordedFilePath);
+
           // Save audio file to app's audio directory (preserve original extension)
           const lastDotIndex = recordedFilePath.lastIndexOf(".");
           const lastSlashIndex = Math.max(
@@ -884,13 +885,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           audioPath = await storageService.saveAudioFile(
             recordedFilePath,
             fileName,
-          );
-
-          // Transcribe the audio file
-          transcribedText = await whisperService.transcribeFile(
-            audioPath,
-            language,
-            prompt,
           );
         }
 
@@ -1010,16 +1004,17 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         await get()._loadTranscriptionsInternal();
 
-        // Initialize Whisper service
-        const whisperInitialized = await whisperService.initialize();
+        // Initialize transcription engine
+        const whisperInitialized =
+          await sherpaTranscriptionService.initialize();
         if (!whisperInitialized) {
           logWarn(
-            `Whisper initialization failed: ${whisperService.initializationStatus}`,
+            `Engine initialization failed: ${sherpaTranscriptionService.initializationStatus}`,
             { flag: FeatureFlag.model },
           );
-          set({ isWhisperReady: false });
+          set({ isEngineReady: false });
         } else {
-          set({ isWhisperReady: true });
+          set({ isEngineReady: true });
         }
 
         // Warm up iOS audio input if mic permission already granted
@@ -1124,7 +1119,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
 
       await audioService.dispose();
-      await whisperService.dispose();
+      await sherpaTranscriptionService.dispose();
     },
   };
 });

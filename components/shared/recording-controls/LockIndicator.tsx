@@ -46,7 +46,6 @@ export const LockIndicator = ({
         ]}
       >
         <BlurView
-          experimentalBlurMethod="dimezisBlurView"
           intensity={80}
           style={[
             StyleSheet.absoluteFill,

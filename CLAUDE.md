@@ -59,8 +59,8 @@ Always run `npm run test:coverage` after changes to verify thresholds are met.
 - **State Management**: Zustand
 - **Localization**: i18next + react-i18next
 - **Audio**: expo-audio + @fugood/react-native-audio-pcm-stream
-- **Transcription**: whisper.rn (on-device Whisper inference)
-- **Storage**: expo-file-system + expo-secure-store + react-native-fs
+- **Transcription**: react-native-sherpa-onnx (on-device Whisper + NeMo Parakeet inference)
+- **Storage**: expo-file-system + expo-secure-store
 - **Encryption**: expo-crypto + react-native-aes-gcm-crypto
 
 ### Path Aliases
@@ -101,7 +101,8 @@ All services follow singleton pattern and are exported from `services/index.ts`:
 
 - **AudioService** - Audio recording lifecycle (expo-audio + PCM streaming for Android)
 - **AudioSessionService** - iOS AVAudioSession configuration management
-- **WhisperService** - Whisper model initialization, real-time transcription, file transcription
+- **SherpaTranscriptionService** - sherpa-onnx STT engine init, real-time + file transcription (replaced WhisperService)
+- **ModelDownloadService** - Downloads non-bundled models from HuggingFace via `expo-file-system/legacy` `createDownloadResumable` (streams to disk, progress callbacks, cancel support)
 - **BackgroundRecordingService** - Android foreground service for background recording
 - **StorageService** - Session/transcription CRUD with encrypted file storage
 - **EncryptionService** - AES-GCM encryption for audio files
@@ -110,12 +111,13 @@ All services follow singleton pattern and are exported from `services/index.ts`:
 
 #### `/stores` - Zustand State Management
 
-Four main stores (all exported from `stores/index.ts`):
+Five main stores (all exported from `stores/index.ts`):
 
 1. **sessionStore** - Session CRUD, active session tracking, incognito mode
-2. **transcriptionStore** - Recording state machine, transcription CRUD, Whisper coordination
-3. **settingsStore** - User preferences (theme, language, model type, incognito mode)
+2. **transcriptionStore** - Recording state machine, transcription CRUD, sherpa-onnx coordination
+3. **settingsStore** - User preferences (theme, language, model, incognito mode). Auto-resets language to English when switching to a model that doesn't support the current language.
 4. **uiStore** - UI state (tooltips, toasts, selection modes, recording controls visibility)
+5. **modelDownloadStore** - Download progress tracking, downloaded model verification
 
 **Critical**: Stores have initialization functions that must be called in order:
 
@@ -186,18 +188,18 @@ Recording flow requires careful service coordination:
 
 1. **Permission** check (PermissionService)
 2. **Audio session** configuration (AudioSessionService on iOS)
-3. **Whisper** initialization (WhisperService)
+3. **STT engine** initialization (SherpaTranscriptionService) — reinitializes if model or language changed
 4. **Audio recording** start (AudioService)
-5. **Real-time transcription** or file transcription (WhisperService)
+5. **Real-time transcription** or file transcription (SherpaTranscriptionService)
 6. **Storage** save (StorageService with encryption)
 
-#### Whisper Model Management
+#### Model Management
 
-- Models stored in `assets/models/whisper/`
-- Default: `ggml-tiny.bin` (Whisper tiny model)
-- VAD model: `ggml-silero-v6.2.0.bin`
-- Models loaded into native context on first use
-- iOS uses 2 threads for inference, 1 for VAD
+- **Whisper Tiny** (bundled): assets in `assets/models/sherpa-whisper/`, copied to cache on first use. 99 languages. Language set at engine init time via `modelOptions.whisper.language`.
+- **Parakeet V3** (downloadable): ~670MB from HuggingFace, stored in `DocumentDirectory/models/`. 25 European languages. Language auto-detected by model (no config param).
+- Downloads use `expo-file-system/legacy` `createDownloadResumable` — streams to disk natively, zero JS memory overhead, progress callbacks, cancel support.
+- `ModelRegistry.supportedLanguageCodes` defines per-model language restrictions; language picker filters accordingly.
+- iOS uses 2 threads for inference
 
 #### Platform-Specific Recording
 
@@ -262,11 +264,13 @@ DocumentDirectory/
 
 Key native dependencies requiring development builds:
 
-- whisper.rn (Whisper inference)
+- react-native-sherpa-onnx (on-device STT inference)
 - @fugood/react-native-audio-pcm-stream (Android PCM)
 - @shopify/react-native-skia (graphics)
 - react-native-reanimated (animations)
 - @supersami/rn-foreground-service (Android background recording)
+
+**File system adapter** (`native/adapters.ts`): Wraps `expo-file-system` `File` API to provide `writeFile`/`appendFile`/`readFile`/`unlink`/`exists` interface used by `WavWriter`. Uses `File.write()` with `{ append: true }` for efficient streaming writes. No `react-native-fs` dependency.
 
 #### Background Recording
 
@@ -298,13 +302,14 @@ When writing tests:
 
 ### Common Gotchas
 
-1. **Whisper initialization is async** - Must call `whisperService.initialize()` before use
+1. **STT engine initialization** - `sherpaTranscriptionService.initialize(modelId, language)` reinitializes if model or language changed. Whisper sets language at init time (no runtime change).
 2. **Audio permissions** - Always check before starting recording
 3. **iOS audio session** - Configure before starting AudioRecorder
 4. **Android background** - Foreground service must be running for background recording
-5. **Store initialization order** - Settings → Session → Transcription
+5. **Store initialization order** - Settings → Session → Transcription → ModelDownload
 6. **Path aliases** - VSCode/IDE may need TypeScript workspace configuration
-7. **Model files** - Large binary files in assets/, ensure they're not gitignored
-8. **Real-time transcription** - Requires VAD model and specific audio format
+7. **Model files** - Bundled models in `assets/models/sherpa-whisper/`, downloaded models in `DocumentDirectory/models/`
+8. **No FFmpeg** - Do not use `convertAudioToWav16k` from sherpa-onnx; AudioService already records in 16kHz mono 16-bit PCM WAV which sherpa-onnx's WaveReader reads directly
 9. **Encryption keys** - Stored in secure storage, lost keys mean unrecoverable audio
 10. **State machine** - Only specific state transitions are valid, enforce in transitionTo()
+11. **Model language support** - Parakeet has `supportedLanguageCodes` in ModelRegistry; `settingsStore.setModelId` auto-resets language to English if current language unsupported

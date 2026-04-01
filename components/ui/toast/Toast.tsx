@@ -125,7 +125,6 @@ export const Toast = ({
         >
           <Pressable>
             <BlurView
-              experimentalBlurMethod="dimezisBlurView"
               intensity={32}
               style={[styles.card, { backgroundColor: colors.glassSurface }]}
             >
