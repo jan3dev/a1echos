@@ -299,7 +299,14 @@ export default function RootLayout() {
         onLayout={onLayoutRootView}
       >
         <StatusBar style={isDark ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation:
+              Platform.OS === "ios" ? "ios_from_right" : "fade_from_bottom",
+            animationDuration: 200,
+          }}
+        >
           <Stack.Screen name="(storybook)/index" />
         </Stack>
       </GestureHandlerRootView>
@@ -314,7 +321,14 @@ export default function RootLayout() {
       >
         <BackgroundRecordingHandler />
         <StatusBar style={isDark ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation:
+              Platform.OS === "ios" ? "ios_from_right" : "fade_from_bottom",
+            animationDuration: 200,
+          }}
+        >
           <Stack.Screen name="(pages)/index" />
         </Stack>
         <GlobalRecordingControls />
