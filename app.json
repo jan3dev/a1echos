@@ -54,6 +54,7 @@
       "./plugins/withFixJcenter",
       "./plugins/withReactNativeFsFix",
       "./plugins/withNdkVersion",
+      "./plugins/withEchosKeyboard",
       [
         "expo-build-properties",
         {

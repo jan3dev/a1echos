@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme keyboard colors (from Echos AquaPrimitiveColors) -->
+    <color name="keyboard_background">#FFF4F5F6</color>       <!-- gray50 -->
+    <color name="key_background">#FFFFFFFF</color>             <!-- white -->
+    <color name="key_background_pressed">#FFE9EBEC</color>     <!-- gray100 -->
+    <color name="key_text">#FF090A0B</color>                   <!-- gray1000 -->
+    <color name="key_text_secondary">#FF5C6063</color>         <!-- gray600 -->
+    <color name="special_key_background">#FFE9EBEC</color>     <!-- gray100 -->
+    <color name="special_key_background_pressed">#FFCDD0D2</color> <!-- gray200 -->
+    <color name="mic_button_background">#FF4361EE</color>      <!-- neonBlue500 -->
+    <color name="mic_button_recording">#FFFF3B13</color>       <!-- scarlet500 -->
+    <color name="mic_button_icon">#FFFFFFFF</color>            <!-- white -->
+    <color name="key_shadow">#1A000000</color>                 <!-- 10% black -->
+    <color name="key_popup_background">#FFFFFFFF</color>       <!-- white -->
+    <color name="spacebar_background">#FFFFFFFF</color>        <!-- white -->
+</resources>
