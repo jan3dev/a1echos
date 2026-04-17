@@ -51,6 +51,7 @@
       "./plugins/withRnForegroundService",
       "./plugins/withFixJcenter",
       "./plugins/withReactNativeFsFix",
+      "./plugins/withEchosKeyboard",
       [
         "expo-build-properties",
         {

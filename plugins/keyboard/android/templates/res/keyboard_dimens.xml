@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material Design 3 keyboard dimensions -->
+    <dimen name="keyboard_height">228dp</dimen>
+    <dimen name="keyboard_height_landscape">162dp</dimen>
+    <dimen name="key_height">46dp</dimen>
+    <dimen name="key_min_touch_target">48dp</dimen>
+    <dimen name="key_horizontal_gap">4dp</dimen>
+    <dimen name="key_vertical_gap">8dp</dimen>
+    <dimen name="key_corner_radius">8dp</dimen>
+    <dimen name="key_text_size">22sp</dimen>
+    <dimen name="key_text_size_special">14sp</dimen>
+    <dimen name="key_popup_text_size">32sp</dimen>
+    <dimen name="keyboard_padding_horizontal">4dp</dimen>
+    <dimen name="keyboard_padding_bottom">8dp</dimen>
+    <dimen name="mic_button_size">48dp</dimen>
+    <dimen name="key_shadow_elevation">1dp</dimen>
+</resources>
