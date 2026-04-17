@@ -12,7 +12,7 @@ import {
   SettingsFooter,
   TopAppBar,
 } from "@/components";
-import { TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme, getModelInfo } from "@/models";
 import {
@@ -21,8 +21,6 @@ import {
   useSelectedTheme,
 } from "@/stores";
 import { useTheme } from "@/theme";
-
-const APP_BAR_HEIGHT = 60;
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -64,7 +62,7 @@ export default function SettingsScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
             flexGrow: 1,
           },
@@ -87,7 +85,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/model")}
+            onPress={() => router.push(Routes.settingsModel)}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -108,7 +106,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/theme")}
+            onPress={() => router.push(Routes.settingsTheme)}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -133,7 +131,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/language")}
+            onPress={() => router.push(Routes.settingsLanguage)}
             backgroundColor={theme.colors.surfacePrimary}
           />
         </Card>

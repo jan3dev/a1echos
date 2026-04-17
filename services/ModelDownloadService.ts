@@ -158,6 +158,19 @@ const createModelDownloadService = () => {
         const filePath = `${modelDir}/${fileInfo.name}`;
         const file = new File(filePath);
 
+        // Ensure intermediate directories exist for files nested in subfolders
+        // (e.g. "tokenizer/vocab.json"); the native download streamer won't
+        // auto-create them.
+        const lastSlash = fileInfo.name.lastIndexOf("/");
+        if (lastSlash > 0) {
+          const subDir = new Directory(
+            `${modelDir}/${fileInfo.name.slice(0, lastSlash)}`,
+          );
+          if (!subDir.exists) {
+            subDir.create();
+          }
+        }
+
         // Skip if file already exists and is at least the expected size
         if (file.exists && (file.size ?? 0) >= fileInfo.sizeBytes) {
           totalDownloaded += fileInfo.sizeBytes;

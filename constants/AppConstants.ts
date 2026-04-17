@@ -6,4 +6,6 @@ export const AppConstants = {
   AUDIO_ENCODER: "wav" as const,
   WORDS_PER_PARAGRAPH: 30,
   SENTENCES_PER_PARAGRAPH: 3,
+  APP_BAR_HEIGHT: 60,
+  RECORDING_CONTROLS_HEIGHT: 96,
 } as const;

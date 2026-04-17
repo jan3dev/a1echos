@@ -4,7 +4,7 @@ import { Fragment, ReactNode } from "react";
 import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TestID } from "@/constants";
+import { AppConstants, TestID } from "@/constants";
 import { AppTheme } from "@/models";
 import { useTheme, useThemeStore } from "@/theme";
 import { iosPressed } from "@/utils";
@@ -54,9 +54,8 @@ export const TopAppBar = ({
     }
   };
 
-  const APP_BAR_HEIGHT = 60;
   const topPadding = insets.top;
-  const totalHeight = APP_BAR_HEIGHT + topPadding;
+  const totalHeight = AppConstants.APP_BAR_HEIGHT + topPadding;
 
   const backgroundColor = transparent
     ? "transparent"

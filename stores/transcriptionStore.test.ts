@@ -2,13 +2,18 @@ import * as Crypto from "expo-crypto";
 import { renderHook } from "@testing-library/react-native";
 import { Platform } from "react-native";
 
-import { ModelType, Transcription, TranscriptionState } from "@/models";
+import {
+  ModelType,
+  Transcription,
+  TranscriptionMode,
+  TranscriptionState,
+} from "@/models";
 import {
   audioService,
   backgroundRecordingService,
   permissionService,
   storageService,
-  whisperService,
+  sherpaTranscriptionService,
 } from "@/services";
 
 import { useSessionStore } from "./sessionStore";
@@ -50,7 +55,7 @@ jest.mock("@/services", () => ({
     warmUpIosAudioInput: jest.fn(async () => undefined),
     dispose: jest.fn(async () => undefined),
   },
-  whisperService: {
+  sherpaTranscriptionService: {
     initialize: jest.fn(async () => true),
     transcribeFile: jest.fn(async () => "Transcribed text."),
     startRealtimeTranscription: jest.fn(async () => true),
@@ -111,7 +116,7 @@ const getInitialState = () => ({
   isLoaded: false,
   isInitialized: false,
   initError: null,
-  isWhisperReady: false,
+  isEngineReady: false,
   isOperationLocked: false,
   activeOperations: new Set<string>(),
   lastOperationTime: null,
@@ -135,6 +140,7 @@ describe("transcriptionStore", () => {
     });
     useSettingsStore.setState({
       selectedModelType: ModelType.WHISPER_FILE,
+      selectedTranscriptionMode: TranscriptionMode.FILE,
       selectedLanguage: { code: "en", name: "English" },
     });
     (Crypto.randomUUID as jest.Mock).mockReturnValue("transcription-uuid");
@@ -151,7 +157,7 @@ describe("transcriptionStore", () => {
       expect(state.errorMessage).toBeNull();
       expect(state.transcriptions).toEqual([]);
       expect(state.isInitialized).toBe(false);
-      expect(state.isWhisperReady).toBe(false);
+      expect(state.isEngineReady).toBe(false);
       expect(state.isOperationLocked).toBe(false);
     });
   });
@@ -627,21 +633,23 @@ describe("transcriptionStore", () => {
       const state = useTranscriptionStore.getState();
 
       expect(state.isInitialized).toBe(true);
-      expect(state.isWhisperReady).toBe(true);
+      expect(state.isEngineReady).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
       expect(state.audioLevelUnsubscribe).not.toBeNull();
-      expect(whisperService.initialize).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.initialize).toHaveBeenCalled();
       expect(audioService.subscribeToAudioLevel).toHaveBeenCalled();
     });
 
     it("whisper init failure is non-fatal", async () => {
       (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
-      (whisperService.initialize as jest.Mock).mockResolvedValueOnce(false);
+      (
+        sherpaTranscriptionService.initialize as jest.Mock
+      ).mockResolvedValueOnce(false);
 
       await useTranscriptionStore.getState().initialize();
       const state = useTranscriptionStore.getState();
 
-      expect(state.isWhisperReady).toBe(false);
+      expect(state.isEngineReady).toBe(false);
       expect(state.isInitialized).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
     });
@@ -661,7 +669,7 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().initialize();
 
-      expect(whisperService.initialize).not.toHaveBeenCalled();
+      expect(sherpaTranscriptionService.initialize).not.toHaveBeenCalled();
     });
 
     it("sets error on initialization failure", async () => {
@@ -681,12 +689,13 @@ describe("transcriptionStore", () => {
     beforeEach(() => {
       useTranscriptionStore.setState({
         state: TranscriptionState.READY,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
     });
 
@@ -713,17 +722,19 @@ describe("transcriptionStore", () => {
     });
 
     it("initializes whisper if not ready", async () => {
-      useTranscriptionStore.setState({ isWhisperReady: false });
+      useTranscriptionStore.setState({ isEngineReady: false });
 
       await useTranscriptionStore.getState().startRecording();
 
-      expect(whisperService.initialize).toHaveBeenCalled();
-      expect(useTranscriptionStore.getState().isWhisperReady).toBe(true);
+      expect(sherpaTranscriptionService.initialize).toHaveBeenCalled();
+      expect(useTranscriptionStore.getState().isEngineReady).toBe(true);
     });
 
     it("returns false when whisper init fails", async () => {
-      useTranscriptionStore.setState({ isWhisperReady: false });
-      (whisperService.initialize as jest.Mock).mockResolvedValueOnce(false);
+      useTranscriptionStore.setState({ isEngineReady: false });
+      (
+        sherpaTranscriptionService.initialize as jest.Mock
+      ).mockResolvedValueOnce(false);
 
       const result = await useTranscriptionStore.getState().startRecording();
       expect(result).toBe(false);
@@ -744,12 +755,13 @@ describe("transcriptionStore", () => {
     beforeEach(() => {
       useTranscriptionStore.setState({
         state: TranscriptionState.READY,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
     });
 
@@ -759,14 +771,20 @@ describe("transcriptionStore", () => {
 
       expect(result).toBe(true);
       expect(state.state).toBe(TranscriptionState.RECORDING);
-      expect(whisperService.subscribeToPartialResults).toHaveBeenCalled();
-      expect(whisperService.subscribeToAudioLevel).toHaveBeenCalled();
-      expect(whisperService.startRealtimeTranscription).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.subscribeToPartialResults,
+      ).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.subscribeToAudioLevel,
+      ).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.startRealtimeTranscription,
+      ).toHaveBeenCalled();
     });
 
     it("cleans up on realtime start failure", async () => {
       (
-        whisperService.startRealtimeTranscription as jest.Mock
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
       ).mockResolvedValueOnce(false);
 
       const result = await useTranscriptionStore.getState().startRecording();
@@ -787,13 +805,14 @@ describe("transcriptionStore", () => {
     beforeEach(() => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
         recordingSessionId: "session-1",
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
     });
 
@@ -805,7 +824,7 @@ describe("transcriptionStore", () => {
       expect(state.transcriptions).toHaveLength(1);
       expect(state.transcriptions[0].text).toBe("Transcribed text.");
       expect(audioService.stopRecording).toHaveBeenCalled();
-      expect(whisperService.transcribeFile).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.transcribeFile).toHaveBeenCalled();
       expect(storageService.saveTranscription).toHaveBeenCalled();
       expect(storageService.saveAudioFile).toHaveBeenCalled();
       expect(
@@ -852,7 +871,7 @@ describe("transcriptionStore", () => {
     beforeEach(() => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
         recordingSessionId: "session-1",
@@ -861,13 +880,16 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
     });
 
     it("stops whisper realtime and cleans up subscriptions", async () => {
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(whisperService.stopRealtimeTranscription).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).toHaveBeenCalled();
       expect(mockPartialUnsub).toHaveBeenCalled();
       expect(mockAudioLevelUnsub).toHaveBeenCalled();
       expect(useTranscriptionStore.getState().state).toBe(
@@ -877,7 +899,7 @@ describe("transcriptionStore", () => {
 
     it("handles empty realtime text", async () => {
       (
-        whisperService.stopRealtimeTranscription as jest.Mock
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
       ).mockResolvedValueOnce("");
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
@@ -1020,7 +1042,7 @@ describe("transcriptionStore", () => {
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
       expect(audioService.dispose).toHaveBeenCalled();
-      expect(whisperService.dispose).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
     });
   });
 
@@ -1068,7 +1090,7 @@ describe("transcriptionStore", () => {
     beforeEach(() => {
       useTranscriptionStore.setState({
         state: TranscriptionState.READY,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
       });
@@ -1108,6 +1130,7 @@ describe("transcriptionStore", () => {
     it("logs warning but continues when background service fails to start (file mode)", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
@@ -1123,6 +1146,7 @@ describe("transcriptionStore", () => {
     it("stops background service when file-mode audioService.startRecording fails and bg was started", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (audioService.startRecording as jest.Mock).mockResolvedValueOnce(false);
       (
@@ -1142,6 +1166,7 @@ describe("transcriptionStore", () => {
     it("does NOT stop background service when file-mode start fails and bg was not started", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (audioService.startRecording as jest.Mock).mockResolvedValueOnce(false);
       (
@@ -1158,9 +1183,10 @@ describe("transcriptionStore", () => {
     it("stops background service when realtime start fails and bg was started", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
-        whisperService.startRealtimeTranscription as jest.Mock
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
       ).mockResolvedValueOnce(false);
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
@@ -1177,9 +1203,10 @@ describe("transcriptionStore", () => {
     it("does NOT stop background service when realtime start fails and bg was not started", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
-        whisperService.startRealtimeTranscription as jest.Mock
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
       ).mockResolvedValueOnce(false);
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
@@ -1195,18 +1222,19 @@ describe("transcriptionStore", () => {
     it("handles unexpected exception during startRecording and cleans up subscriptions", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       const mockAudioUnsub = jest.fn();
       const mockPartialUnsub = jest.fn();
 
-      (whisperService.subscribeToAudioLevel as jest.Mock).mockReturnValueOnce(
-        mockAudioUnsub,
-      );
       (
-        whisperService.subscribeToPartialResults as jest.Mock
+        sherpaTranscriptionService.subscribeToAudioLevel as jest.Mock
+      ).mockReturnValueOnce(mockAudioUnsub);
+      (
+        sherpaTranscriptionService.subscribeToPartialResults as jest.Mock
       ).mockReturnValueOnce(mockPartialUnsub);
       (
-        whisperService.startRealtimeTranscription as jest.Mock
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
       ).mockRejectedValueOnce(new Error("unexpected error"));
 
       const result = await useTranscriptionStore.getState().startRecording();
@@ -1221,6 +1249,7 @@ describe("transcriptionStore", () => {
     it("logs warning but continues when background service fails to start (realtime mode)", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
@@ -1248,7 +1277,9 @@ describe("transcriptionStore", () => {
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
       expect(audioService.stopRecording).not.toHaveBeenCalled();
-      expect(whisperService.stopRealtimeTranscription).not.toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).not.toHaveBeenCalled();
     });
 
     it("allows stopRecordingAndSave through lock when state is RECORDING", async () => {
@@ -1274,6 +1305,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (audioService.stopRecording as jest.Mock).mockRejectedValueOnce(
         new Error("stop error"),
@@ -1298,8 +1330,11 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (whisperService.transcribeFile as jest.Mock).mockResolvedValueOnce(null);
+      (
+        sherpaTranscriptionService.transcribeFile as jest.Mock
+      ).mockResolvedValueOnce(null);
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -1318,10 +1353,11 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (whisperService.transcribeFile as jest.Mock).mockResolvedValueOnce(
-        "   \n  ",
-      );
+      (
+        sherpaTranscriptionService.transcribeFile as jest.Mock
+      ).mockResolvedValueOnce("   \n  ");
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -1340,6 +1376,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
@@ -1359,6 +1396,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (audioService.stopRecording as jest.Mock).mockResolvedValueOnce(
         "/tmp/recording.m4a",
@@ -1381,6 +1419,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (audioService.stopRecording as jest.Mock).mockResolvedValueOnce(
         "/tmp/recording",
@@ -1405,6 +1444,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
@@ -1437,6 +1477,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
@@ -1454,6 +1495,7 @@ describe("transcriptionStore", () => {
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
+        selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
         backgroundRecordingService.stopBackgroundService as jest.Mock
@@ -1603,7 +1645,7 @@ describe("transcriptionStore", () => {
       await useTranscriptionStore.getState().dispose();
 
       expect(audioService.dispose).toHaveBeenCalled();
-      expect(whisperService.dispose).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
       expect(
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
@@ -1622,7 +1664,7 @@ describe("transcriptionStore", () => {
       await useTranscriptionStore.getState().dispose();
 
       expect(audioService.dispose).toHaveBeenCalled();
-      expect(whisperService.dispose).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
     });
   });
 
@@ -2182,7 +2224,7 @@ describe("transcriptionStore", () => {
     it("returns false when ERROR -> READY transition is blocked", async () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.ERROR,
-        isWhisperReady: true,
+        isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
       });

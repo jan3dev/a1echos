@@ -29,7 +29,7 @@ import {
   TranscriptionContentView,
   useToast,
 } from "@/components";
-import { TestID } from "@/constants";
+import { Routes, TestID } from "@/constants";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
 import { shareService } from "@/services";
@@ -265,7 +265,7 @@ export default function SessionScreen() {
         if (router.canGoBack()) {
           router.back();
         } else {
-          router.replace("/");
+          router.replace(Routes.home);
         }
         return;
       }
@@ -277,7 +277,7 @@ export default function SessionScreen() {
           if (router.canGoBack()) {
             router.back();
           } else {
-            router.replace("/");
+            router.replace(Routes.home);
           }
         } catch (error) {
           logError(error, {
@@ -425,7 +425,7 @@ export default function SessionScreen() {
   }, [transcriptions.length, copyAllTranscriptions, showGlobalTooltip, loc]);
 
   const handleLanguageFlagPressed = useCallback(() => {
-    router.push("/settings/language");
+    router.push(Routes.settingsLanguage);
   }, [router]);
 
   const handleSelectAllPressed = useCallback(() => {

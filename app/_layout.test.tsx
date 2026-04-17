@@ -42,6 +42,7 @@ jest.mock("@/theme", () => ({
 
 // Define mock fns INSIDE the factory so they exist at evaluation time
 jest.mock("@/stores", () => ({
+  initializeModelDownloadStore: jest.fn(),
   initializeSettingsStore: jest.fn().mockResolvedValue(undefined),
   initializeSessionStore: jest.fn().mockResolvedValue(undefined),
   initializeTranscriptionStore: jest.fn().mockResolvedValue(undefined),

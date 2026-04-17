@@ -58,6 +58,7 @@ jest.mock("expo-file-system", () => {
     uri: args.join("/"),
     exists: true,
     text: jest.fn().mockResolvedValue(""),
+    textSync: jest.fn(() => ""),
     write: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockResolvedValue(undefined),
@@ -67,6 +68,7 @@ jest.mock("expo-file-system", () => {
     size: 0,
     md5: "mock-md5",
     base64: jest.fn().mockResolvedValue(""),
+    base64Sync: jest.fn(() => ""),
   }));
   const mockDirectory = jest.fn().mockImplementation((...args) => ({
     uri: args.join("/"),
@@ -526,6 +528,43 @@ jest.mock("react-native-gesture-handler", () => {
     GestureDetector: View,
   };
 });
+
+// ---------------------------------------------------------------------------
+// Sherpa-ONNX (on-device STT engine)
+// ---------------------------------------------------------------------------
+jest.mock("react-native-sherpa-onnx/audio", () => ({
+  createPcmLiveStream: jest.fn(async () => ({
+    start: jest.fn(async () => undefined),
+    stop: jest.fn(async () => undefined),
+    release: jest.fn(async () => undefined),
+    setOnSamples: jest.fn(),
+    setOnError: jest.fn(),
+  })),
+  convertAudioToFormat: jest.fn(async () => "/mock/audio/out.wav"),
+  convertAudioToWav16k: jest.fn(async () => "/mock/audio/out.wav"),
+  decodeAudioFileToFloatSamples: jest.fn(async () => ({
+    samples: new Float32Array(0),
+    sampleRate: 16000,
+  })),
+}));
+
+jest.mock("react-native-sherpa-onnx/stt", () => ({
+  detectSttModel: jest.fn(async () => null),
+  createSTT: jest.fn(async () => ({
+    transcribeFile: jest.fn(async () => ({ text: "", segments: [] })),
+    transcribeSamples: jest.fn(async () => ({ text: "", segments: [] })),
+    createStream: jest.fn(() => ({
+      acceptWaveform: jest.fn(),
+      getResult: jest.fn(() => ({ text: "" })),
+      isEndpoint: jest.fn(() => false),
+      reset: jest.fn(),
+      finish: jest.fn(),
+      free: jest.fn(),
+    })),
+    release: jest.fn(async () => undefined),
+  })),
+  ONLINE_STT_MODEL_TYPES: [],
+}));
 
 // ---------------------------------------------------------------------------
 // Audio PCM stream (Android)

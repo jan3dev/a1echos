@@ -2,8 +2,8 @@ import { SupportedLanguages, getCountryCode } from "./SpokenLanguage";
 
 describe("SpokenLanguage", () => {
   describe("SupportedLanguages.all", () => {
-    it("returns array with 66 entries", () => {
-      expect(SupportedLanguages.all).toHaveLength(66);
+    it("returns array with 100 entries", () => {
+      expect(SupportedLanguages.all).toHaveLength(100);
     });
 
     it("entries have code and name properties", () => {
@@ -78,6 +78,31 @@ describe("SpokenLanguage", () => {
       expect(SupportedLanguages.transcribeOptionsFor("unknown")).toEqual({
         language: "unknown",
       });
+    });
+  });
+
+  describe("forCodes", () => {
+    it("returns all languages when codes is undefined", () => {
+      expect(SupportedLanguages.forCodes(undefined)).toHaveLength(100);
+    });
+
+    it("filters to the matching subset", () => {
+      const result = SupportedLanguages.forCodes(["en", "ja", "zz"]);
+      expect(result.map((l) => l.code).sort()).toEqual(["en", "ja"]);
+    });
+  });
+
+  describe("isSupported", () => {
+    it("returns true when supportedCodes is undefined", () => {
+      expect(SupportedLanguages.isSupported("en", undefined)).toBe(true);
+    });
+
+    it("returns true when code is in the list", () => {
+      expect(SupportedLanguages.isSupported("en", ["en", "es"])).toBe(true);
+    });
+
+    it("returns false when code is not in the list", () => {
+      expect(SupportedLanguages.isSupported("ja", ["en", "es"])).toBe(false);
     });
   });
 

@@ -33,9 +33,14 @@ jest.mock("@/hooks", () => ({
 }));
 
 jest.mock("@/stores", () => ({
-  useSelectedModelType: jest.fn(() => "whisper_file"),
+  useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSelectedTheme: jest.fn(() => "auto"),
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
+}));
+
+jest.mock("@/models", () => ({
+  AppTheme: { AUTO: "auto", LIGHT: "light", DARK: "dark" },
+  getModelInfo: jest.fn(() => ({ name: "Whisper Tiny" })),
 }));
 
 jest.mock("@/components", () => {
@@ -76,11 +81,10 @@ describe("SettingsScreen", () => {
     expect(getByTestId("list-item-spokenLanguageTitle")).toBeTruthy();
   });
 
-  it("model item shows current model display text", () => {
+  it("model item shows current model name", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    // selectedModelType is 'whisper_file' → modelDisplay = loc.whisperModelFileTitle
     expect(getByTestId("trailing-modelTitle")).toHaveTextContent(
-      "whisperModelFileTitle",
+      "Whisper Tiny",
     );
   });
 
@@ -115,14 +119,14 @@ describe("SettingsScreen", () => {
     );
   });
 
-  it("model item shows realtime display text when realtime selected", () => {
-    const { useSelectedModelType } = require("@/stores");
-    (useSelectedModelType as jest.Mock).mockReturnValue("whisper_realtime");
+  it("model item shows parakeet name when parakeet selected", () => {
+    const { useSelectedModelId } = require("@/stores");
+    const { getModelInfo } = require("@/models");
+    (useSelectedModelId as jest.Mock).mockReturnValue("nemo_parakeet_v3");
+    (getModelInfo as jest.Mock).mockReturnValue({ name: "Parakeet V3" });
 
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-modelTitle")).toHaveTextContent(
-      "whisperModelRealtimeTitle",
-    );
+    expect(getByTestId("trailing-modelTitle")).toHaveTextContent("Parakeet V3");
   });
 
   it("theme item shows light display text when light selected", () => {

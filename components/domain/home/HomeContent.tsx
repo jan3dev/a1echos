@@ -2,6 +2,7 @@ import { RefObject } from "react";
 import { ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppConstants } from "@/constants";
 import { Session } from "@/models";
 
 import { SessionList } from "../session/SessionList";
@@ -15,8 +16,6 @@ interface HomeContentProps {
   scrollRef?: RefObject<ScrollView | null>;
 }
 
-const RECORDING_CONTROLS_HEIGHT = 96;
-
 export const HomeContent = ({
   selectionMode,
   selectedSessionIds,
@@ -26,15 +25,14 @@ export const HomeContent = ({
   scrollRef,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
-  const APP_BAR_HEIGHT = 60; // Standard top app bar height
 
   return (
     <ScrollView
       ref={scrollRef}
       contentContainerStyle={{
-        paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+        paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
         paddingHorizontal: 16,
-        paddingBottom: insets.bottom + RECORDING_CONTROLS_HEIGHT,
+        paddingBottom: insets.bottom + AppConstants.RECORDING_CONTROLS_HEIGHT,
       }}
       showsVerticalScrollIndicator={false}
     >

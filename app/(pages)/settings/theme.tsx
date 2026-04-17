@@ -4,14 +4,12 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Card, Divider, ListItem, Radio, TopAppBar } from "@/components";
-import { TestID } from "@/constants";
+import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme } from "@/models";
 import { useSetTheme } from "@/stores";
 import { useTheme } from "@/theme";
 import { delay, FeatureFlag, logError } from "@/utils";
-
-const APP_BAR_HEIGHT = 60;
 
 export default function ThemeSettingsScreen() {
   const router = useRouter();
@@ -64,7 +62,7 @@ export default function ThemeSettingsScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
           },
         ]}

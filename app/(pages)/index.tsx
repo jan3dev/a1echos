@@ -12,6 +12,7 @@ import {
   Toast,
   useToast,
 } from "@/components";
+import { Routes } from "@/constants";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
 import { Session } from "@/models";
 import {
@@ -109,7 +110,7 @@ export default function HomeScreen() {
       if (isSessionSelectionMode) {
         toggleSessionSelection(sessionId);
       } else {
-        router.push({ pathname: "/session/[id]", params: { id: sessionId } });
+        router.push(Routes.session(sessionId));
       }
     },
     [isSessionSelectionMode, toggleSessionSelection, router],
@@ -173,7 +174,7 @@ export default function HomeScreen() {
         // brief pause to ensure recording has started before navigation (50ms)
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        router.push({ pathname: "/session/[id]", params: { id: sessionId } });
+        router.push(Routes.session(sessionId));
 
         scrollToTop();
       } catch (error) {

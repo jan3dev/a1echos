@@ -41,15 +41,18 @@ jest.mock("@/hooks", () => ({
 
 jest.mock("@/models", () => ({
   getCountryCode: jest.fn((lang: any) => `flag_${lang.code}`),
+  getModelInfo: jest.fn(() => ({ supportedLanguageCodes: undefined })),
   SupportedLanguages: {
     get all() {
       return mockLanguages;
     },
+    forCodes: jest.fn(() => mockLanguages),
   },
 }));
 
 jest.mock("@/stores", () => ({
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
+  useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSetLanguage: jest.fn(() => mockSetLanguage),
 }));
 

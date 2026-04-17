@@ -41,6 +41,7 @@ import CrossingDown from "@/assets/icons/crossing_down.svg";
 import CrossingUp from "@/assets/icons/crossing_up.svg";
 import Danger from "@/assets/icons/danger.svg";
 import DocumentLayoutLeft from "@/assets/icons/document_layout_left.svg";
+import Download from "@/assets/icons/download.svg";
 import EchosIcon from "@/assets/icons/echos_icon.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
 import Edit from "@/assets/icons/edit.svg";
@@ -174,6 +175,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   crossing_up: CrossingUp,
   danger: Danger,
   document_layout_left: DocumentLayoutLeft,
+  download: Download,
   echos_icon: EchosIcon,
   echos_logo: EchosLogo,
   edit: Edit,

@@ -2,18 +2,27 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
-import { TestID } from "@/constants";
-
 import ModelSettingsScreen from "./model";
 
 // --- Mocks ---
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
 }));
 
-const mockSetModelType = jest.fn();
+const mockSetModelId = jest.fn();
+const mockSetTranscriptionMode = jest.fn();
+const mockShowGlobalTooltip = jest.fn();
+
+const mockDownloadStore = {
+  getProgress: jest.fn() as jest.Mock,
+  isDownloaded: jest.fn() as jest.Mock,
+  startDownload: jest.fn() as jest.Mock,
+  cancelDownload: jest.fn(),
+  deleteModel: jest.fn() as jest.Mock,
+};
 
 jest.mock("@/theme", () => ({
   useTheme: jest.fn(() => ({
@@ -29,21 +38,78 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../../test-utils/mockLocalization");
-
 jest.mock("@/hooks", () => ({
-  useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useLocalization: jest.fn(() => ({
+    loc: new Proxy(
+      {},
+      {
+        get: (_, p: string) => (typeof p === "string" ? p : undefined),
+      },
+    ),
+  })),
+}));
+
+const whisperModel = {
+  id: "whisper_tiny",
+  name: "Whisper Tiny",
+  description: "Fast",
+  sizeBytes: 100_000_000,
+  supportedModes: ["file", "realtime"],
+  isBundled: true,
+  languages: 99,
+};
+
+const parakeetModel = {
+  id: "nemo_parakeet_v3",
+  name: "Parakeet V3",
+  description: "High accuracy",
+  sizeBytes: 670_000_000,
+  supportedModes: ["file", "realtime"],
+  isBundled: false,
+  languages: 25,
+  supportedLanguageCodes: ["en", "es"],
+};
+
+jest.mock("@/models", () => ({
+  ModelId: {
+    WHISPER_TINY: "whisper_tiny",
+    NEMO_PARAKEET_V3: "nemo_parakeet_v3",
+  },
+  TranscriptionMode: { FILE: "file", REALTIME: "realtime" },
+  getAllModels: jest.fn(() => [whisperModel, parakeetModel]),
+  getModelInfo: jest.fn((id: string) =>
+    id === "whisper_tiny" ? whisperModel : parakeetModel,
+  ),
 }));
 
 jest.mock("@/stores", () => ({
-  useSelectedModelType: jest.fn(() => "whisper_file"),
-  useSetModelType: jest.fn(() => mockSetModelType),
+  useModelDownloadStore: jest.fn(() => mockDownloadStore),
+  useSelectedModelId: jest.fn(() => "whisper_tiny"),
+  useSelectedTranscriptionMode: jest.fn(() => "file"),
+  useSettingsStore: jest.fn((selector: any) =>
+    selector({
+      setModelId: mockSetModelId,
+      setTranscriptionMode: mockSetTranscriptionMode,
+    }),
+  ),
+  useShowGlobalTooltip: jest.fn(() => mockShowGlobalTooltip),
 }));
 
 jest.mock("@/utils", () => ({
-  delay: jest.fn(() => Promise.resolve()),
   logError: jest.fn(),
   FeatureFlag: { settings: "settings" },
+  iosPressed: jest.fn(() => 1),
+  logWarn: jest.fn(),
+}));
+
+jest.mock("@/components/ui/toast/Toast", () => ({
+  Toast: () => null,
+}));
+
+const mockShow = jest.fn();
+const mockHide = jest.fn();
+jest.mock("@/components/ui/toast/useToast", () => ({
+  useToast: () => ({ show: mockShow, hide: mockHide, toastState: {} }),
 }));
 
 jest.mock("@/components", () => {
@@ -57,6 +123,44 @@ jest.mock("@/components", () => {
         <Text>{String(title)}</Text>
         {iconTrailing}
       </TouchableOpacity>
+    ),
+    ModelCard: ({
+      name,
+      testID,
+      onSelect,
+      onDownload,
+      onDelete,
+      onRetry,
+      onCancelDownload,
+      onLanguagesPress,
+    }: any) => (
+      <View testID={testID}>
+        <Text>{String(name)}</Text>
+        <TouchableOpacity testID={`${testID}-select`} onPress={onSelect}>
+          <Text>select</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID={`${testID}-download`} onPress={onDownload}>
+          <Text>download</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID={`${testID}-delete`} onPress={onDelete}>
+          <Text>delete</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID={`${testID}-retry`} onPress={onRetry}>
+          <Text>retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID={`${testID}-cancel`}
+          onPress={onCancelDownload}
+        >
+          <Text>cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID={`${testID}-languages`}
+          onPress={onLanguagesPress}
+        >
+          <Text>languages</Text>
+        </TouchableOpacity>
+      </View>
     ),
     Radio: ({ value, groupValue, onValueChange }: any) => (
       <TouchableOpacity
@@ -78,118 +182,262 @@ jest.mock("@/components", () => {
 });
 
 describe("ModelSettingsScreen", () => {
-  it("renders TopAppBar with model title", () => {
-    const { getByTestId, getByText } = render(<ModelSettingsScreen />);
-    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDownloadStore.getProgress.mockReturnValue(undefined);
+    mockDownloadStore.isDownloaded.mockReturnValue(false);
+    mockDownloadStore.startDownload.mockResolvedValue(true);
+    mockDownloadStore.deleteModel.mockResolvedValue(true);
+    mockSetModelId.mockResolvedValue(undefined);
+    mockSetTranscriptionMode.mockResolvedValue(undefined);
+  });
+
+  it("renders TopAppBar and section headers", () => {
+    const { getByText, getByTestId } = render(<ModelSettingsScreen />);
+    expect(getByTestId("top-app-bar")).toBeTruthy();
     expect(getByText("modelTitle")).toBeTruthy();
+    expect(getByText("modelSectionDownloaded")).toBeTruthy();
+    expect(getByText("modelSectionAvailable")).toBeTruthy();
   });
 
-  it("renders two model options (File, Realtime)", () => {
+  it("places bundled model in downloaded section and non-downloaded in available", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    expect(getByTestId("list-item-whisperModelFileTitle")).toBeTruthy();
-    expect(getByTestId("list-item-whisperModelRealtimeTitle")).toBeTruthy();
+    expect(getByTestId("model-card-whisper_tiny")).toBeTruthy();
+    expect(getByTestId("model-card-nemo_parakeet_v3")).toBeTruthy();
   });
 
-  it("current model radio is selected", () => {
+  it("selecting the same model is a no-op", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    expect(getByTestId("radio-selected-whisper_file")).toHaveTextContent(
-      "selected",
+    fireEvent.press(getByTestId("model-card-whisper_tiny-select"));
+    expect(mockSetModelId).not.toHaveBeenCalled();
+  });
+
+  it("selecting a downloaded non-selected model calls setModelId", async () => {
+    mockDownloadStore.isDownloaded.mockImplementation(
+      (id: string) => id === "nemo_parakeet_v3",
     );
-    expect(getByTestId("radio-selected-whisper_realtime")).toHaveTextContent(
-      "unselected",
-    );
-  });
-
-  it("selecting same model navigates back without calling setModelType", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-whisperModelFileTitle"));
-    expect(mockBack).toHaveBeenCalled();
-    expect(mockSetModelType).not.toHaveBeenCalled();
-  });
-
-  it("selecting different model calls setModelType and navigates back", async () => {
-    mockSetModelType.mockResolvedValue(undefined);
-
-    const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-whisperModelRealtimeTitle"));
-
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
     await waitFor(() => {
-      expect(mockSetModelType).toHaveBeenCalledWith("whisper_realtime");
-      expect(mockBack).toHaveBeenCalled();
+      expect(mockSetModelId).toHaveBeenCalledWith("nemo_parakeet_v3");
     });
   });
 
-  it("handles error when setModelType fails", async () => {
-    const { logError } = require("@/utils");
-    mockSetModelType.mockRejectedValue(new Error("model error"));
-
+  it("tapping select on a not-downloaded model triggers download flow", async () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-whisperModelRealtimeTitle"));
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
+    await waitFor(() => {
+      expect(mockDownloadStore.startDownload).toHaveBeenCalledWith(
+        "nemo_parakeet_v3",
+      );
+    });
+  });
 
+  it("download success auto-selects the model", async () => {
+    mockDownloadStore.startDownload.mockResolvedValue(true);
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
+    await waitFor(() => {
+      expect(mockSetModelId).toHaveBeenCalledWith("nemo_parakeet_v3");
+    });
+  });
+
+  it("download failure logs error when auto-select throws", async () => {
+    const { logError } = require("@/utils");
+    mockDownloadStore.startDownload.mockResolvedValue(true);
+    mockSetModelId.mockRejectedValueOnce(new Error("nope"));
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
     await waitFor(() => {
       expect(logError).toHaveBeenCalled();
     });
   });
 
-  it("selecting realtime model when file is selected changes radio selection", async () => {
-    let resolveSetModelType: () => void;
-    mockSetModelType.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveSetModelType = resolve;
-        }),
-    );
-
+  it("skips download when model is currently downloading", async () => {
+    mockDownloadStore.getProgress.mockReturnValue({
+      modelId: "nemo_parakeet_v3",
+      status: "downloading",
+      progress: 0.5,
+      downloadedBytes: 0,
+      totalBytes: 0,
+      currentFileIndex: 0,
+      totalFiles: 1,
+    });
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-whisperModelRealtimeTitle"));
-
-    // While saving, realtime should appear selected (pendingModelType)
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
     await waitFor(() => {
-      expect(getByTestId("radio-selected-whisper_realtime")).toHaveTextContent(
-        "selected",
+      expect(mockDownloadStore.startDownload).not.toHaveBeenCalled();
+    });
+  });
+
+  it("cancel tap calls downloadStore.cancelDownload", () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-cancel"));
+    expect(mockDownloadStore.cancelDownload).toHaveBeenCalledWith(
+      "nemo_parakeet_v3",
+    );
+  });
+
+  it("retry tap calls startDownload", async () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-retry"));
+    await waitFor(() => {
+      expect(mockDownloadStore.startDownload).toHaveBeenCalledWith(
+        "nemo_parakeet_v3",
       );
     });
+  });
 
-    resolveSetModelType!();
+  it("delete flow shows confirm toast and triggers global tooltip on success", async () => {
+    mockDownloadStore.isDownloaded.mockReturnValue(true);
+    mockShow.mockImplementation(async (opts: any) => {
+      await opts.onPrimaryButtonTap();
+    });
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-delete"));
     await waitFor(() => {
-      expect(mockBack).toHaveBeenCalled();
+      expect(mockDownloadStore.deleteModel).toHaveBeenCalledWith(
+        "nemo_parakeet_v3",
+      );
+      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
+        "modelDeletedToast",
+        "normal",
+        3000,
+      );
     });
   });
 
-  it("does not call handleSelect when isSaving is true", async () => {
-    mockSetModelType.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 5000)),
+  it("delete of currently-selected non-bundled model falls back to WHISPER_TINY", async () => {
+    const { useSelectedModelId } = require("@/stores");
+    useSelectedModelId.mockReturnValueOnce("nemo_parakeet_v3");
+    mockDownloadStore.isDownloaded.mockReturnValue(true);
+    mockShow.mockImplementation(async (opts: any) => {
+      await opts.onPrimaryButtonTap();
+    });
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-delete"));
+    await waitFor(() => {
+      expect(mockSetModelId).toHaveBeenCalledWith("whisper_tiny");
+    });
+  });
+
+  it("delete cancel button hides the toast", () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    mockShow.mockImplementation((opts: any) => {
+      opts.onSecondaryButtonTap();
+    });
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-delete"));
+    expect(mockHide).toHaveBeenCalled();
+  });
+
+  it("languages tap navigates to model-languages route", () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-whisper_tiny-languages"));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/settings/model-languages",
+      params: { modelId: "whisper_tiny" },
+    });
+  });
+
+  it("renders transcription mode selector with current mode selected", () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    expect(getByTestId("radio-selected-file")).toHaveTextContent("selected");
+    expect(getByTestId("radio-selected-realtime")).toHaveTextContent(
+      "unselected",
     );
+  });
 
+  it("selecting a different transcription mode calls setTranscriptionMode", async () => {
+    mockSetTranscriptionMode.mockResolvedValue(undefined);
     const { getByTestId } = render(<ModelSettingsScreen />);
-
-    // First press starts saving
-    fireEvent.press(getByTestId("list-item-whisperModelRealtimeTitle"));
-
-    // Second press while saving should be ignored (onPress is undefined when isSaving)
-    fireEvent.press(getByTestId("list-item-whisperModelFileTitle"));
-
+    fireEvent.press(getByTestId("list-item-modelModeRealtime"));
     await waitFor(() => {
-      expect(mockSetModelType).toHaveBeenCalledTimes(1);
-      expect(mockSetModelType).toHaveBeenCalledWith("whisper_realtime");
+      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("realtime");
     });
   });
 
-  it("Radio onValueChange triggers handleSelect for realtime model", async () => {
-    mockSetModelType.mockResolvedValue(undefined);
-
+  it("selecting the same transcription mode does not call setter", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("radio-whisper_realtime"));
+    fireEvent.press(getByTestId("list-item-modelModeFile"));
+    expect(mockSetTranscriptionMode).not.toHaveBeenCalled();
+  });
 
+  it("logs error when setTranscriptionMode fails", async () => {
+    const { logError } = require("@/utils");
+    mockSetTranscriptionMode.mockRejectedValue(new Error("mode error"));
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("list-item-modelModeRealtime"));
     await waitFor(() => {
-      expect(mockSetModelType).toHaveBeenCalledWith("whisper_realtime");
+      expect(logError).toHaveBeenCalled();
     });
   });
 
-  it("Radio onValueChange triggers handleSelect for file model (same as current)", () => {
+  it("logs error when setModelId fails", async () => {
+    mockDownloadStore.isDownloaded.mockImplementation(
+      (id: string) => id === "nemo_parakeet_v3",
+    );
+    const { logError } = require("@/utils");
+    mockSetModelId.mockRejectedValue(new Error("fail"));
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("radio-whisper_file"));
-    // File is the current model, so it should just navigate back
-    expect(mockBack).toHaveBeenCalled();
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
+    await waitFor(() => {
+      expect(logError).toHaveBeenCalled();
+    });
+  });
+
+  it("switches to FILE mode if new model does not support current realtime mode", async () => {
+    const { useSelectedTranscriptionMode } = require("@/stores");
+    const { getModelInfo } = require("@/models");
+    useSelectedTranscriptionMode.mockReturnValueOnce("realtime");
+    mockDownloadStore.isDownloaded.mockReturnValue(true);
+    getModelInfo.mockImplementation((id: string) => {
+      if (id === "nemo_parakeet_v3") {
+        return { ...parakeetModel, supportedModes: ["file"] };
+      }
+      return whisperModel;
+    });
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
+    await waitFor(() => {
+      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("file");
+    });
+  });
+
+  it("ignores taps while saving", async () => {
+    mockDownloadStore.isDownloaded.mockImplementation(
+      (id: string) => id === "nemo_parakeet_v3",
+    );
+    let resolveSet: () => void;
+    mockSetModelId.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSet = resolve;
+        }),
+    );
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
+    await waitFor(() => {
+      expect(mockSetModelId).toHaveBeenCalledTimes(1);
+    });
+    resolveSet!();
+    await waitFor(() => {
+      expect(mockSetModelId).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("toggles mode via Radio onValueChange", async () => {
+    mockSetTranscriptionMode.mockResolvedValue(undefined);
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("radio-realtime"));
+    await waitFor(() => {
+      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("realtime");
+    });
+  });
+
+  it("Radio onValueChange for current mode is a no-op", () => {
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("radio-file"));
+    expect(mockSetTranscriptionMode).not.toHaveBeenCalled();
   });
 });

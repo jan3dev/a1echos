@@ -1,19 +1,20 @@
-import { useCallback, useRef, useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  Button,
   Card,
   Divider,
   ListItem,
+  ModelCard,
   Radio,
   Text,
   TopAppBar,
 } from "@/components";
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
-import { TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
@@ -22,26 +23,23 @@ import {
   getAllModels,
   getModelInfo,
 } from "@/models";
-import type { DownloadProgress } from "@/services/ModelDownloadService";
 import {
   useModelDownloadStore,
   useSelectedModelId,
   useSelectedTranscriptionMode,
   useSettingsStore,
+  useShowGlobalTooltip,
 } from "@/stores";
 import { useTheme } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
-const APP_BAR_HEIGHT = 60;
-
-const formatBytes = (bytes: number): string => {
+const formatSize = (bytes: number): string => {
   if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
-  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(0)} MB`;
-  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(0)} KB`;
-  return `${bytes} B`;
+  return `${Math.round(bytes / 1_000_000)} MB`;
 };
 
 export default function ModelSettingsScreen() {
+  const router = useRouter();
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -52,6 +50,7 @@ export default function ModelSettingsScreen() {
   const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
 
   const downloadStore = useModelDownloadStore();
+  const showGlobalTooltip = useShowGlobalTooltip();
   const [isSaving, setIsSaving] = useState(false);
   const {
     show: showDeleteToast,
@@ -60,8 +59,44 @@ export default function ModelSettingsScreen() {
   } = useToast();
 
   const models = getAllModels();
+  const { downloadedSection, availableSection } = useMemo(() => {
+    const downloaded: ModelInfo[] = [];
+    const available: ModelInfo[] = [];
+    for (const model of models) {
+      const progress = downloadStore.getProgress(model.id);
+      const isActiveDownload =
+        progress?.status === "downloading" || progress?.status === "error";
+      if (
+        (model.isBundled || downloadStore.isDownloaded(model.id)) &&
+        !isActiveDownload
+      ) {
+        downloaded.push(model);
+      } else {
+        available.push(model);
+      }
+    }
+    return { downloadedSection: downloaded, availableSection: available };
+  }, [models, downloadStore]);
 
-  const handleDownloadRef = useRef<(modelId: ModelId) => void>(() => {});
+  const handleDownload = useCallback(
+    async (modelId: ModelId) => {
+      const progress = downloadStore.getProgress(modelId);
+      if (progress?.status === "downloading") return;
+
+      const success = await downloadStore.startDownload(modelId);
+      if (success) {
+        try {
+          await setModelId(modelId);
+        } catch (error) {
+          logError(error, {
+            flag: FeatureFlag.settings,
+            message: "Failed to auto-select downloaded model",
+          });
+        }
+      }
+    },
+    [downloadStore, setModelId],
+  );
 
   const handleSelectModel = useCallback(
     async (modelId: ModelId) => {
@@ -69,17 +104,14 @@ export default function ModelSettingsScreen() {
       if (isSaving) return;
 
       const info = getModelInfo(modelId);
-
-      // Check if model is available
       if (!info.isBundled && !downloadStore.isDownloaded(modelId)) {
-        handleDownloadRef.current(modelId);
+        handleDownload(modelId);
         return;
       }
 
       setIsSaving(true);
       try {
         await setModelId(modelId);
-        // If current mode isn't supported by new model, switch to FILE
         if (!info.supportedModes.includes(selectedMode)) {
           await setTranscriptionMode(TranscriptionMode.FILE);
         }
@@ -99,6 +131,7 @@ export default function ModelSettingsScreen() {
       downloadStore,
       setModelId,
       setTranscriptionMode,
+      handleDownload,
     ],
   );
 
@@ -117,29 +150,6 @@ export default function ModelSettingsScreen() {
     [selectedMode, setTranscriptionMode],
   );
 
-  const handleDownload = useCallback(
-    async (modelId: ModelId) => {
-      const progress = downloadStore.getProgress(modelId);
-      if (progress?.status === "downloading") return;
-
-      const success = await downloadStore.startDownload(modelId);
-      if (success) {
-        // Auto-select the model after download
-        try {
-          await setModelId(modelId);
-        } catch (error) {
-          logError(error, {
-            flag: FeatureFlag.settings,
-            message: "Failed to auto-select downloaded model",
-          });
-        }
-      }
-    },
-    [downloadStore, setModelId],
-  );
-
-  handleDownloadRef.current = handleDownload;
-
   const handleCancelDownload = useCallback(
     (modelId: ModelId) => {
       downloadStore.cancelDownload(modelId);
@@ -156,9 +166,12 @@ export default function ModelSettingsScreen() {
         primaryButtonText: loc.modelDelete,
         onPrimaryButtonTap: async () => {
           hideDeleteToast();
-          await downloadStore.deleteModel(modelId);
+          const success = await downloadStore.deleteModel(modelId);
           if (selectedModelId === modelId) {
             await setModelId(ModelId.WHISPER_TINY);
+          }
+          if (success) {
+            showGlobalTooltip(loc.modelDeletedToast, "normal", 3000);
           }
         },
         secondaryButtonText: loc.modelCancel,
@@ -173,10 +186,45 @@ export default function ModelSettingsScreen() {
       loc,
       showDeleteToast,
       hideDeleteToast,
+      showGlobalTooltip,
     ],
   );
 
+  const handleOpenLanguages = useCallback(
+    (modelId: ModelId) => {
+      router.push(Routes.settingsModelLanguages(modelId));
+    },
+    [router],
+  );
+
   const selectedModelInfo = getModelInfo(selectedModelId);
+
+  const renderCard = (model: ModelInfo) => {
+    const progress = downloadStore.getProgress(model.id);
+    const isDownloaded =
+      model.isBundled || downloadStore.isDownloaded(model.id);
+    return (
+      <ModelCard
+        key={model.id}
+        testID={`model-card-${model.id}`}
+        name={model.name}
+        description={model.description}
+        languageCount={model.languages}
+        sizeLabel={formatSize(model.sizeBytes)}
+        isBundled={model.isBundled}
+        isSelected={model.id === selectedModelId}
+        isDownloaded={isDownloaded}
+        downloadProgress={progress}
+        onSelect={() => handleSelectModel(model.id)}
+        onDownload={() => handleDownload(model.id)}
+        onCancelDownload={() => handleCancelDownload(model.id)}
+        onDelete={() => handleDelete(model.id)}
+        onRetry={() => handleDownload(model.id)}
+        onLanguagesPress={() => handleOpenLanguages(model.id)}
+        disabled={isSaving}
+      />
+    );
+  };
 
   return (
     <View
@@ -185,55 +233,66 @@ export default function ModelSettingsScreen() {
         { backgroundColor: theme.colors.surfaceBackground },
       ]}
     >
-      <TopAppBar title={loc.modelTitle} />
+      <TopAppBar title="" />
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text
-          variant="body1"
-          color={theme.colors.textPrimary}
-          style={styles.description}
-        >
-          {loc.modelDescription}
-        </Text>
+        <View style={styles.header}>
+          <Text variant="h4" weight="semibold" color={theme.colors.textPrimary}>
+            {loc.modelTitle}
+          </Text>
+          <Text
+            variant="body1"
+            weight="medium"
+            color={theme.colors.textSecondary}
+          >
+            {loc.modelDescription}
+          </Text>
+        </View>
 
-        {/* Model list */}
-        <Card>
-          {models.map((model, index) => (
-            <View key={model.id}>
-              {index > 0 && (
-                <Divider color={theme.colors.surfaceBorderPrimary} />
-              )}
-              <ModelRow
-                model={model}
-                isSelected={model.id === selectedModelId}
-                isDownloaded={
-                  model.isBundled || downloadStore.isDownloaded(model.id)
-                }
-                downloadProgress={downloadStore.getProgress(model.id)}
-                onSelect={() => handleSelectModel(model.id)}
-                onDownload={() => handleDownload(model.id)}
-                onCancelDownload={() => handleCancelDownload(model.id)}
-                onDelete={() => handleDelete(model.id)}
-                isSaving={isSaving}
-              />
+        {downloadedSection.length > 0 && (
+          <View style={styles.section}>
+            <Text
+              variant="body2"
+              weight="medium"
+              color={theme.colors.textSecondary}
+            >
+              {loc.modelSectionDownloaded}
+            </Text>
+            <View style={styles.cardList}>
+              {downloadedSection.map(renderCard)}
             </View>
-          ))}
-        </Card>
+          </View>
+        )}
 
-        {/* Transcription mode selector */}
+        {availableSection.length > 0 && (
+          <View style={styles.section}>
+            <Text
+              variant="body2"
+              weight="medium"
+              color={theme.colors.textSecondary}
+            >
+              {loc.modelSectionAvailable}
+            </Text>
+            <View style={styles.cardList}>
+              {availableSection.map(renderCard)}
+            </View>
+          </View>
+        )}
+
         {selectedModelInfo.supportedModes.length > 1 && (
           <View style={styles.modeSection}>
             <Text
               variant="body2"
+              weight="medium"
               color={theme.colors.textSecondary}
               style={styles.modeLabel}
             >
@@ -285,300 +344,25 @@ export default function ModelSettingsScreen() {
   );
 }
 
-// --- Model Row Component ---
-
-interface ModelRowProps {
-  model: ModelInfo;
-  isSelected: boolean;
-  isDownloaded: boolean;
-  downloadProgress: DownloadProgress | undefined;
-  onSelect: () => void;
-  onDownload: () => void;
-  onCancelDownload: () => void;
-  onDelete: () => void;
-  isSaving: boolean;
-}
-
-function ModelRow({
-  model,
-  isSelected,
-  isDownloaded,
-  downloadProgress,
-  onSelect,
-  onDownload,
-  onCancelDownload,
-  onDelete,
-  isSaving,
-}: ModelRowProps) {
-  const { theme } = useTheme();
-  const { loc } = useLocalization();
-  const isDownloading = downloadProgress?.status === "downloading";
-  const hasError = downloadProgress?.status === "error";
-  const isSelectable = isDownloaded && !isSaving;
-
-  return (
-    <View style={styles.modelRow}>
-      <TouchableOpacity
-        onPress={isSelectable ? onSelect : undefined}
-        disabled={!isSelectable}
-        activeOpacity={0.7}
-        style={styles.modelRowMain}
-      >
-        <View style={styles.modelInfo}>
-          <View style={styles.modelHeader}>
-            <Text
-              variant="body1"
-              color={theme.colors.textPrimary}
-              style={styles.modelName}
-            >
-              {model.name}
-            </Text>
-            {isSelected && isDownloaded && (
-              <View
-                style={[
-                  styles.selectedBadge,
-                  { backgroundColor: theme.colors.accentBrand },
-                ]}
-              >
-                <Text variant="caption1" color="#FFFFFF">
-                  {loc.modelSelected}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <Text
-            variant="body2"
-            color={theme.colors.textSecondary}
-            style={styles.modelDescription}
-          >
-            {model.description}
-          </Text>
-
-          <View style={styles.modelMeta}>
-            <Text variant="caption1" color={theme.colors.textTertiary}>
-              {formatBytes(model.sizeBytes)}
-            </Text>
-            <Text variant="caption1" color={theme.colors.textTertiary}>
-              {" \u00B7 "}
-            </Text>
-            <Text variant="caption1" color={theme.colors.textTertiary}>
-              {loc.modelLanguageCount.replace(
-                "{{count}}",
-                String(model.languages),
-              )}
-            </Text>
-            <Text variant="caption1" color={theme.colors.textTertiary}>
-              {" \u00B7 "}
-            </Text>
-            <StatusBadge
-              model={model}
-              isDownloaded={isDownloaded}
-              isDownloading={isDownloading}
-              hasError={hasError}
-            />
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {/* Download progress bar */}
-      {isDownloading && downloadProgress && (
-        <View style={styles.progressSection}>
-          <View
-            style={[
-              styles.progressBarBg,
-              { backgroundColor: theme.colors.surfaceBorderPrimary },
-            ]}
-          >
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  backgroundColor: theme.colors.accentBrand,
-                  width: `${Math.round(downloadProgress.progress * 100)}%`,
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.progressRow}>
-            <Text variant="caption1" color={theme.colors.textSecondary}>
-              {Math.round(downloadProgress.progress * 100)}%{" \u00B7 "}
-              {formatBytes(downloadProgress.downloadedBytes)} /{" "}
-              {formatBytes(downloadProgress.totalBytes)}
-            </Text>
-            <TouchableOpacity onPress={onCancelDownload}>
-              <Text variant="caption1" color={theme.colors.accentDanger}>
-                {loc.modelCancel}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Error view */}
-      {hasError && downloadProgress && (
-        <View style={styles.errorSection}>
-          <Text variant="caption1" color={theme.colors.accentDanger}>
-            {loc.modelDownloadError.replace(
-              "{{error}}",
-              downloadProgress.error ?? "Unknown error",
-            )}
-          </Text>
-          <Button.tertiary
-            text={loc.modelRetry}
-            size="small"
-            onPress={onDownload}
-          />
-        </View>
-      )}
-
-      {/* Action buttons */}
-      {!isDownloading && !model.isBundled && (
-        <View style={styles.actionRow}>
-          {!isDownloaded && !hasError && (
-            <Button.secondary
-              text={loc.modelDownload}
-              size="small"
-              onPress={onDownload}
-            />
-          )}
-          {isDownloaded && (
-            <TouchableOpacity onPress={onDelete}>
-              <Text variant="caption1" color={theme.colors.accentDanger}>
-                {loc.modelDelete}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
-  );
-}
-
-// --- Status Badge ---
-
-function StatusBadge({
-  model,
-  isDownloaded,
-  isDownloading,
-  hasError,
-}: {
-  model: ModelInfo;
-  isDownloaded: boolean;
-  isDownloading: boolean;
-  hasError: boolean;
-}) {
-  const { theme } = useTheme();
-  const { loc } = useLocalization();
-  if (model.isBundled) {
-    return (
-      <Text variant="caption1" color={theme.colors.accentBrand}>
-        {loc.modelIncluded}
-      </Text>
-    );
-  }
-  if (isDownloading) {
-    return (
-      <Text variant="caption1" color={theme.colors.textTertiary}>
-        {loc.modelDownloading}
-      </Text>
-    );
-  }
-  if (hasError) {
-    return (
-      <Text variant="caption1" color={theme.colors.accentDanger}>
-        {loc.modelErrorStatus}
-      </Text>
-    );
-  }
-  if (isDownloaded) {
-    return (
-      <Text variant="caption1" color={theme.colors.accentBrand}>
-        {loc.modelDownloaded}
-      </Text>
-    );
-  }
-  return (
-    <Text variant="caption1" color={theme.colors.textTertiary}>
-      {loc.modelNotDownloaded}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
+    gap: 24,
   },
-  description: {
-    marginBottom: 16,
-  },
-  modelRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  modelRowMain: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  modelInfo: {
-    flex: 1,
-  },
-  modelHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+  header: {
     gap: 8,
   },
-  modelName: {
-    fontWeight: "600",
-  },
-  selectedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  modelDescription: {
-    marginTop: 2,
-  },
-  modelMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  progressSection: {
-    marginTop: 8,
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  errorSection: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  section: {
     gap: 8,
   },
-  actionRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    justifyContent: "flex-end",
+  cardList: {
+    gap: 8,
   },
   modeSection: {
-    marginTop: 24,
+    marginTop: 8,
   },
   modeLabel: {
     marginBottom: 8,

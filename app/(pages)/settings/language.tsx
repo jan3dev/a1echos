@@ -12,7 +12,7 @@ import {
   Text,
   TopAppBar,
 } from "@/components";
-import { dynamicTestID } from "@/constants";
+import { AppConstants, dynamicTestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
   getCountryCode,
@@ -27,8 +27,6 @@ import {
 } from "@/stores";
 import { useTheme } from "@/theme";
 import { delay, FeatureFlag, logError } from "@/utils";
-
-const APP_BAR_HEIGHT = 60;
 
 export default function LanguageSettingsScreen() {
   const router = useRouter();
@@ -89,7 +87,7 @@ export default function LanguageSettingsScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
           },
         ]}

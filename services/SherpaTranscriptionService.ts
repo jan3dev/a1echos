@@ -84,10 +84,15 @@ const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
 };
 
 /**
- * Get the directory path for a downloaded (non-bundled) model.
+ * Get the directory URI for a downloaded (non-bundled) model.
+ * Keeps the `file://` scheme so expo-file-system's `Directory` accepts it;
+ * strip the prefix with `toNativePath` when passing to sherpa-onnx.
  */
 const getDownloadedModelDir = (modelId: ModelId): string =>
-  `${Paths.document.uri.replace(/^file:\/\//, "")}/models/${modelId}/`;
+  `${Paths.document.uri}/models/${modelId}`;
+
+/** Strip the `file://` scheme for native code that wants a plain filesystem path. */
+const toNativePath = (uri: string): string => uri.replace(/^file:\/\//, "");
 
 /**
  * Prepare bundled model assets: download to local cache, then move into a
@@ -129,8 +134,7 @@ const prepareBundledModel = async (
 
   await Promise.all(assetPromises);
 
-  // sherpa-onnx expects a plain filesystem path, not a file:// URI
-  return modelDir.uri.replace(/^file:\/\//, "");
+  return modelDir.uri;
 };
 
 const createSherpaTranscriptionService = () => {
@@ -376,8 +380,11 @@ const createSherpaTranscriptionService = () => {
         SupportedLanguages.transcribeOptionsFor(languageCode);
 
       const sttEngine = await createSTT({
-        modelPath: { type: "file", path: modelDir },
-        modelType: modelInfo.sherpaModelType as "whisper" | "nemo_transducer",
+        modelPath: { type: "file", path: toNativePath(modelDir) },
+        modelType: modelInfo.sherpaModelType as
+          | "whisper"
+          | "nemo_transducer"
+          | "qwen3_asr",
         preferInt8: true,
         numThreads: Platform.OS === "ios" ? IOS_NUM_THREADS : undefined,
         modelOptions:

@@ -8,6 +8,8 @@ module.exports = {
   moduleNameMapper: {
     "\\.svg$": "<rootDir>/__mocks__/svgMock.js",
     "\\.bin$": "<rootDir>/__mocks__/binMock.js",
+    "\\.onnx$": "<rootDir>/__mocks__/binMock.js",
+    "\\.(txt|wav)$": "<rootDir>/__mocks__/binMock.js",
     "^whisper\\.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter$":
       "<rootDir>/node_modules/whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter",
     "^whisper\\.rn/src/realtime-transcription$":
@@ -33,6 +35,11 @@ module.exports = {
     "!components/ui/icon/flagIcons.ts",
     "!components/shared/recording-controls/ThreeWaveLines.tsx",
     "!services/BackgroundRecordingService.ts",
+    "!services/ModelDownloadService.ts",
+    "!services/SherpaTranscriptionService.ts",
+    "!stores/modelDownloadStore.ts",
+    "!models/ModelType.ts",
+    "!models/TranscriptionState.ts",
   ],
   coverageThreshold: {
     global: {

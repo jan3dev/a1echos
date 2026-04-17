@@ -106,6 +106,7 @@ jest.mock("@/stores", () => ({
   useRenameSession: jest.fn(() => mockRenameSession),
   useSwitchSession: jest.fn(() => mockSwitchSession),
   useSelectedModelType: jest.fn(() => "whisper_file"),
+  useSelectedTranscriptionMode: jest.fn(() => "file"),
   useIsRecording: jest.fn(() => false),
   useStartRecording: jest.fn(() => jest.fn()),
   useStopRecordingAndSave: jest.fn(() => jest.fn()),
