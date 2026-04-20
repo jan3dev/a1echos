@@ -44,26 +44,6 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
     }
 
     try {
-      const diskCheck = await modelDownloadService.checkDiskSpace(modelId);
-      if (!diskCheck.sufficient) {
-        set((state) => ({
-          downloadStates: {
-            ...state.downloadStates,
-            [modelId]: {
-              modelId,
-              totalBytes: diskCheck.required,
-              downloadedBytes: 0,
-              progress: 0,
-              status: "error" as const,
-              error: `Not enough storage space. Need ${Math.round(diskCheck.required / 1_000_000)}MB, have ${Math.round(diskCheck.available / 1_000_000)}MB.`,
-              currentFileIndex: 0,
-              totalFiles: 0,
-            },
-          },
-        }));
-        return false;
-      }
-
       const success = await modelDownloadService.downloadModel(
         modelId,
         (progress) => {

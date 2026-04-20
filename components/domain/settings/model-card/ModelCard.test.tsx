@@ -39,6 +39,11 @@ jest.mock("@/utils", () => ({
   logWarn: jest.fn(),
   FeatureFlag: { ui: "ui" },
   logError: jest.fn(),
+  formatBytes: jest.fn((bytes: number) => {
+    if (bytes >= 1_000_000_000)
+      return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
+    return `${Math.round(bytes / 1_000_000)} MB`;
+  }),
 }));
 
 jest.mock("@/hooks", () => ({

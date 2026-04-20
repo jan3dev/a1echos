@@ -126,4 +126,15 @@ describe("useLocalization", () => {
       error: "share sheet error",
     });
   });
+
+  it("modelInsufficientSpace interpolates required and available", () => {
+    const { result } = renderHook(() => useLocalization());
+    const { loc, t } = result.current;
+
+    loc.modelInsufficientSpace("670 MB", "50 MB");
+    expect(t).toHaveBeenCalledWith("modelInsufficientSpace", {
+      required: "670 MB",
+      available: "50 MB",
+    });
+  });
 });

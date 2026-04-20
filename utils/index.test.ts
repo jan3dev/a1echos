@@ -1,4 +1,4 @@
-import { formatDate, formatSessionSubtitle } from "./index";
+import { formatBytes, formatDate, formatSessionSubtitle } from "./index";
 
 describe("formatDate", () => {
   it('formats date as "MMM D, YYYY"', () => {
@@ -9,6 +9,19 @@ describe("formatDate", () => {
   it("formats different months correctly", () => {
     const date = new Date(2023, 11, 25); // Dec 25, 2023
     expect(formatDate(date)).toBe("Dec 25, 2023");
+  });
+});
+
+describe("formatBytes", () => {
+  it("formats values below 1 GB in rounded MB", () => {
+    expect(formatBytes(670_000_000)).toBe("670 MB");
+    expect(formatBytes(160_609_290)).toBe("161 MB");
+  });
+
+  it("formats values at or above 1 GB in GB with one decimal", () => {
+    expect(formatBytes(1_000_000_000)).toBe("1.0 GB");
+    expect(formatBytes(982_571_347)).toBe("983 MB");
+    expect(formatBytes(1_500_000_000)).toBe("1.5 GB");
   });
 });
 

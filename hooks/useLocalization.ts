@@ -71,7 +71,8 @@ export const useLocalization = () => {
       modelDeleteConfirmTitle: t("modelDeleteConfirmTitle"),
       modelDeleteConfirmMessage: t("modelDeleteConfirmMessage"),
       modelDownloadError: t("modelDownloadError"),
-      modelInsufficientSpace: t("modelInsufficientSpace"),
+      modelInsufficientSpace: (required: string, available: string) =>
+        t("modelInsufficientSpace", { required, available }),
       modelLanguageCount: (count: number) => t("modelLanguageCount", { count }),
       modelModeFile: t("modelModeFile"),
       modelModeRealtime: t("modelModeRealtime"),

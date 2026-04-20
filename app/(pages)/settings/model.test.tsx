@@ -15,6 +15,13 @@ jest.mock("expo-router", () => ({
 const mockSetModelId = jest.fn();
 const mockSetTranscriptionMode = jest.fn();
 const mockShowGlobalTooltip = jest.fn();
+const mockCheckDiskSpace = jest.fn();
+
+jest.mock("@/services/ModelDownloadService", () => ({
+  modelDownloadService: {
+    checkDiskSpace: (...args: unknown[]) => mockCheckDiskSpace(...args),
+  },
+}));
 
 const mockDownloadStore = {
   getProgress: jest.fn() as jest.Mock,
@@ -43,7 +50,14 @@ jest.mock("@/hooks", () => ({
     loc: new Proxy(
       {},
       {
-        get: (_, p: string) => (typeof p === "string" ? p : undefined),
+        get: (_, p: string) => {
+          if (typeof p !== "string") return undefined;
+          if (p === "modelInsufficientSpace") {
+            return (required: string, available: string) =>
+              `modelInsufficientSpace:${required},${available}`;
+          }
+          return p;
+        },
       },
     ),
   })),
@@ -100,6 +114,9 @@ jest.mock("@/utils", () => ({
   FeatureFlag: { settings: "settings" },
   iosPressed: jest.fn(() => 1),
   logWarn: jest.fn(),
+  formatBytes: jest.fn(
+    (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`,
+  ),
 }));
 
 jest.mock("@/components/ui/toast/Toast", () => ({
@@ -190,6 +207,11 @@ describe("ModelSettingsScreen", () => {
     mockDownloadStore.deleteModel.mockResolvedValue(true);
     mockSetModelId.mockResolvedValue(undefined);
     mockSetTranscriptionMode.mockResolvedValue(undefined);
+    mockCheckDiskSpace.mockResolvedValue({
+      available: 10_000_000_000,
+      required: 670_000_000,
+      sufficient: true,
+    });
   });
 
   it("renders TopAppBar and section headers", () => {
@@ -251,6 +273,24 @@ describe("ModelSettingsScreen", () => {
     await waitFor(() => {
       expect(logError).toHaveBeenCalled();
     });
+  });
+
+  it("shows a warning tooltip and skips startDownload when disk space is insufficient", async () => {
+    mockCheckDiskSpace.mockResolvedValueOnce({
+      available: 50_000_000,
+      required: 670_000_000,
+      sufficient: false,
+    });
+    const { getByTestId } = render(<ModelSettingsScreen />);
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
+    await waitFor(() => {
+      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
+        expect.stringContaining("modelInsufficientSpace"),
+        "warning",
+        5000,
+      );
+    });
+    expect(mockDownloadStore.startDownload).not.toHaveBeenCalled();
   });
 
   it("skips download when model is currently downloading", async () => {

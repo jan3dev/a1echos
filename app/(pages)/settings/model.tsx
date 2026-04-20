@@ -30,13 +30,9 @@ import {
   useSettingsStore,
   useShowGlobalTooltip,
 } from "@/stores";
+import { modelDownloadService } from "@/services/ModelDownloadService";
 import { useTheme } from "@/theme";
-import { FeatureFlag, logError } from "@/utils";
-
-const formatSize = (bytes: number): string => {
-  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
-  return `${Math.round(bytes / 1_000_000)} MB`;
-};
+import { FeatureFlag, formatBytes, logError } from "@/utils";
 
 export default function ModelSettingsScreen() {
   const router = useRouter();
@@ -83,6 +79,19 @@ export default function ModelSettingsScreen() {
       const progress = downloadStore.getProgress(modelId);
       if (progress?.status === "downloading") return;
 
+      const diskCheck = await modelDownloadService.checkDiskSpace(modelId);
+      if (!diskCheck.sufficient) {
+        showGlobalTooltip(
+          loc.modelInsufficientSpace(
+            formatBytes(diskCheck.required),
+            formatBytes(diskCheck.available),
+          ),
+          "warning",
+          5000,
+        );
+        return;
+      }
+
       const success = await downloadStore.startDownload(modelId);
       if (success) {
         try {
@@ -95,7 +104,7 @@ export default function ModelSettingsScreen() {
         }
       }
     },
-    [downloadStore, setModelId],
+    [downloadStore, setModelId, loc, showGlobalTooltip],
   );
 
   const handleSelectModel = useCallback(
@@ -210,7 +219,7 @@ export default function ModelSettingsScreen() {
         name={model.name}
         description={model.description}
         languageCount={model.languages}
-        sizeLabel={formatSize(model.sizeBytes)}
+        sizeLabel={formatBytes(model.sizeBytes)}
         isBundled={model.isBundled}
         isSelected={model.id === selectedModelId}
         isDownloaded={isDownloaded}

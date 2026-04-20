@@ -52,7 +52,7 @@
   "modelDeleteConfirmTitle": "Delete Model",
   "modelDeleteConfirmMessage": "Are you sure you want to delete {{name}}? You can download it again later.",
   "modelDownloadError": "Download failed: {{error}}",
-  "modelInsufficientSpace": "Not enough storage space. {{required}} required, {{available}} available.",
+  "modelInsufficientSpace": "Not enough storage to download this model. Need {{required}}, {{available}} available. Free up space and try again.",
   "modelLanguageCount": "{{count}} languages",
   "modelModeFile": "File",
   "modelModeRealtime": "Real-time",

@@ -313,3 +313,5 @@ When writing tests:
 9. **Encryption keys** - Stored in secure storage, lost keys mean unrecoverable audio
 10. **State machine** - Only specific state transitions are valid, enforce in transitionTo()
 11. **Model language support** - Parakeet has `supportedLanguageCodes` in ModelRegistry; `settingsStore.setModelId` auto-resets language to English if current language unsupported
+
+Codex will review your code.

@@ -6,7 +6,7 @@ import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressabl
 import { useLocalization } from "@/hooks";
 import type { DownloadProgress } from "@/services/ModelDownloadService";
 import { AquaColors, useTheme } from "@/theme";
-import { iosPressed } from "@/utils";
+import { formatBytes, iosPressed } from "@/utils";
 
 interface ModelCardProps {
   name: string;
@@ -242,8 +242,6 @@ function DownloadProgressSection({
   const { colors } = theme;
 
   const percent = Math.round(progress.progress * 100);
-  const downloadedMb = Math.round(progress.downloadedBytes / 1_000_000);
-  const totalMb = Math.round(progress.totalBytes / 1_000_000);
 
   return (
     <View style={styles.progressSection}>
@@ -275,7 +273,8 @@ function DownloadProgressSection({
           </Text>
           <MetaDivider />
           <Text variant="caption1" weight="medium" color={colors.textSecondary}>
-            {downloadedMb} MB / {totalMb} MB
+            {formatBytes(progress.downloadedBytes)} /{" "}
+            {formatBytes(progress.totalBytes)}
           </Text>
         </View>
         {onCancel && (
