@@ -3,18 +3,10 @@ import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  Card,
-  Divider,
-  ListItem,
-  ModelCard,
-  Radio,
-  Text,
-  TopAppBar,
-} from "@/components";
+import { ModelCard, Text, TopAppBar } from "@/components";
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
-import { AppConstants, Routes, TestID } from "@/constants";
+import { AppConstants, Routes } from "@/constants";
 import { useLocalization } from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
@@ -25,8 +17,8 @@ import {
 } from "@/models";
 import {
   useModelDownloadStore,
+  useModelModes,
   useSelectedModelId,
-  useSelectedTranscriptionMode,
   useSettingsStore,
   useShowGlobalTooltip,
 } from "@/stores";
@@ -41,9 +33,9 @@ export default function ModelSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const selectedModelId = useSelectedModelId();
-  const selectedMode = useSelectedTranscriptionMode();
+  const modelModes = useModelModes();
   const setModelId = useSettingsStore((s) => s.setModelId);
-  const setTranscriptionMode = useSettingsStore((s) => s.setTranscriptionMode);
+  const setModelMode = useSettingsStore((s) => s.setModelMode);
 
   const downloadStore = useModelDownloadStore();
   const showGlobalTooltip = useShowGlobalTooltip();
@@ -121,9 +113,6 @@ export default function ModelSettingsScreen() {
       setIsSaving(true);
       try {
         await setModelId(modelId);
-        if (!info.supportedModes.includes(selectedMode)) {
-          await setTranscriptionMode(TranscriptionMode.FILE);
-        }
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.settings,
@@ -133,22 +122,13 @@ export default function ModelSettingsScreen() {
         setIsSaving(false);
       }
     },
-    [
-      selectedModelId,
-      selectedMode,
-      isSaving,
-      downloadStore,
-      setModelId,
-      setTranscriptionMode,
-      handleDownload,
-    ],
+    [selectedModelId, isSaving, downloadStore, setModelId, handleDownload],
   );
 
   const handleSelectMode = useCallback(
-    async (mode: TranscriptionMode) => {
-      if (mode === selectedMode) return;
+    async (modelId: ModelId, mode: TranscriptionMode) => {
       try {
-        await setTranscriptionMode(mode);
+        await setModelMode(modelId, mode);
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.settings,
@@ -156,7 +136,7 @@ export default function ModelSettingsScreen() {
         });
       }
     },
-    [selectedMode, setTranscriptionMode],
+    [setModelMode],
   );
 
   const handleCancelDownload = useCallback(
@@ -206,12 +186,16 @@ export default function ModelSettingsScreen() {
     [router],
   );
 
-  const selectedModelInfo = getModelInfo(selectedModelId);
-
   const renderCard = (model: ModelInfo) => {
     const progress = downloadStore.getProgress(model.id);
     const isDownloaded =
       model.isBundled || downloadStore.isDownloaded(model.id);
+    const isSelectedCard = model.id === selectedModelId;
+    const savedMode = modelModes[model.id];
+    const cardMode =
+      savedMode && model.supportedModes.includes(savedMode)
+        ? savedMode
+        : model.supportedModes[0];
     return (
       <ModelCard
         key={model.id}
@@ -221,8 +205,11 @@ export default function ModelSettingsScreen() {
         languageCount={model.languages}
         sizeLabel={formatBytes(model.sizeBytes)}
         isBundled={model.isBundled}
-        isSelected={model.id === selectedModelId}
+        isSelected={isSelectedCard}
         isDownloaded={isDownloaded}
+        supportedModes={model.supportedModes}
+        selectedMode={cardMode}
+        onSelectMode={(mode) => handleSelectMode(model.id, mode)}
         downloadProgress={progress}
         onSelect={() => handleSelectModel(model.id)}
         onDownload={() => handleDownload(model.id)}
@@ -296,56 +283,6 @@ export default function ModelSettingsScreen() {
             </View>
           </View>
         )}
-
-        {selectedModelInfo.supportedModes.length > 1 && (
-          <View style={styles.modeSection}>
-            <Text
-              variant="body2"
-              weight="medium"
-              color={theme.colors.textSecondary}
-              style={styles.modeLabel}
-            >
-              {loc.modelModeLabel}
-            </Text>
-            <Card>
-              <ListItem
-                testID={TestID.ModelWhisperFile}
-                title={loc.modelModeFile}
-                titleTrailing={loc.whisperModelFileSubtitle}
-                titleTrailingColor={theme.colors.textSecondary}
-                iconTrailing={
-                  <Radio<TranscriptionMode>
-                    value={TranscriptionMode.FILE}
-                    groupValue={selectedMode}
-                    onValueChange={() =>
-                      handleSelectMode(TranscriptionMode.FILE)
-                    }
-                  />
-                }
-                onPress={() => handleSelectMode(TranscriptionMode.FILE)}
-                backgroundColor={theme.colors.surfacePrimary}
-              />
-              <Divider color={theme.colors.surfaceBorderPrimary} />
-              <ListItem
-                testID={TestID.ModelWhisperRealtime}
-                title={loc.modelModeRealtime}
-                titleTrailing={loc.whisperModelRealtimeSubtitle}
-                titleTrailingColor={theme.colors.textSecondary}
-                iconTrailing={
-                  <Radio<TranscriptionMode>
-                    value={TranscriptionMode.REALTIME}
-                    groupValue={selectedMode}
-                    onValueChange={() =>
-                      handleSelectMode(TranscriptionMode.REALTIME)
-                    }
-                  />
-                }
-                onPress={() => handleSelectMode(TranscriptionMode.REALTIME)}
-                backgroundColor={theme.colors.surfacePrimary}
-              />
-            </Card>
-          </View>
-        )}
       </ScrollView>
 
       <Toast {...deleteToastState} />
@@ -369,11 +306,5 @@ const styles = StyleSheet.create({
   },
   cardList: {
     gap: 8,
-  },
-  modeSection: {
-    marginTop: 8,
-  },
-  modeLabel: {
-    marginBottom: 8,
   },
 });

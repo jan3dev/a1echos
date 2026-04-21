@@ -245,7 +245,7 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.NEMO_PARAKEET_V3]: {
     id: ModelId.NEMO_PARAKEET_V3,
     name: "Parakeet V3",
-    description: "High accuracy, 25 European languages",
+    description: "High accuracy, high speed",
     sizeBytes: 670_000_000,
     supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
     isBundled: false,
@@ -264,7 +264,7 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.QWEN3_ASR]: {
     id: ModelId.QWEN3_ASR,
     name: "Qwen3 ASR",
-    description: "30 languages and 22 Chinese dialects",
+    description: "High accuracy, 22 Chinese dialects",
     sizeBytes: 982_571_347,
     supportedModes: [TranscriptionMode.FILE],
     isBundled: false,

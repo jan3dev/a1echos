@@ -11,6 +11,7 @@ export {
 export {
   initializeSettingsStore,
   useIsIncognitoMode,
+  useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
   useSelectedModelType,
@@ -18,6 +19,7 @@ export {
   useSelectedTranscriptionMode,
   useSetLanguage,
   useSetModelId,
+  useSetModelMode,
   useSetModelType,
   useSetTheme,
   useSetTranscriptionMode,

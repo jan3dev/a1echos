@@ -13,7 +13,7 @@ jest.mock("expo-router", () => ({
 }));
 
 const mockSetModelId = jest.fn();
-const mockSetTranscriptionMode = jest.fn();
+const mockSetModelMode = jest.fn();
 const mockShowGlobalTooltip = jest.fn();
 const mockCheckDiskSpace = jest.fn();
 
@@ -99,11 +99,11 @@ jest.mock("@/models", () => ({
 jest.mock("@/stores", () => ({
   useModelDownloadStore: jest.fn(() => mockDownloadStore),
   useSelectedModelId: jest.fn(() => "whisper_tiny"),
-  useSelectedTranscriptionMode: jest.fn(() => "file"),
+  useModelModes: jest.fn(() => ({ whisper_tiny: "file" })),
   useSettingsStore: jest.fn((selector: any) =>
     selector({
       setModelId: mockSetModelId,
-      setTranscriptionMode: mockSetTranscriptionMode,
+      setModelMode: mockSetModelMode,
     }),
   ),
   useShowGlobalTooltip: jest.fn(() => mockShowGlobalTooltip),
@@ -131,25 +131,19 @@ jest.mock("@/components/ui/toast/useToast", () => ({
 
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
-  const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
+  const { TestID: TID } = require("@/constants");
   return {
-    Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
-    Divider: () => <View testID={TID.Divider} />,
-    ListItem: ({ title, onPress, iconTrailing }: any) => (
-      <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
-        <Text>{String(title)}</Text>
-        {iconTrailing}
-      </TouchableOpacity>
-    ),
     ModelCard: ({
       name,
       testID,
+      supportedModes,
       onSelect,
       onDownload,
       onDelete,
       onRetry,
       onCancelDownload,
       onLanguagesPress,
+      onSelectMode,
     }: any) => (
       <View testID={testID}>
         <Text>{String(name)}</Text>
@@ -177,17 +171,16 @@ jest.mock("@/components", () => {
         >
           <Text>languages</Text>
         </TouchableOpacity>
+        {supportedModes?.map((m: string) => (
+          <TouchableOpacity
+            key={m}
+            testID={`${testID}-mode-${m}`}
+            onPress={() => onSelectMode?.(m)}
+          >
+            <Text>mode-{m}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-    ),
-    Radio: ({ value, groupValue, onValueChange }: any) => (
-      <TouchableOpacity
-        testID={dTID.radio(value)}
-        onPress={() => onValueChange?.(value)}
-      >
-        <Text testID={dTID.radioSelected(value)}>
-          {value === groupValue ? "selected" : "unselected"}
-        </Text>
-      </TouchableOpacity>
     ),
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
     TopAppBar: ({ title }: any) => (
@@ -206,7 +199,7 @@ describe("ModelSettingsScreen", () => {
     mockDownloadStore.startDownload.mockResolvedValue(true);
     mockDownloadStore.deleteModel.mockResolvedValue(true);
     mockSetModelId.mockResolvedValue(undefined);
-    mockSetTranscriptionMode.mockResolvedValue(undefined);
+    mockSetModelMode.mockResolvedValue(undefined);
     mockCheckDiskSpace.mockResolvedValue({
       available: 10_000_000_000,
       required: 670_000_000,
@@ -379,34 +372,33 @@ describe("ModelSettingsScreen", () => {
     });
   });
 
-  it("renders transcription mode selector with current mode selected", () => {
+  it("tapping a mode chip on the selected card calls setModelMode with that model id", async () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    expect(getByTestId("radio-selected-file")).toHaveTextContent("selected");
-    expect(getByTestId("radio-selected-realtime")).toHaveTextContent(
-      "unselected",
-    );
-  });
-
-  it("selecting a different transcription mode calls setTranscriptionMode", async () => {
-    mockSetTranscriptionMode.mockResolvedValue(undefined);
-    const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-modelModeRealtime"));
+    fireEvent.press(getByTestId("model-card-whisper_tiny-mode-realtime"));
     await waitFor(() => {
-      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("realtime");
+      expect(mockSetModelMode).toHaveBeenCalledWith("whisper_tiny", "realtime");
     });
+    expect(mockSetModelId).not.toHaveBeenCalled();
   });
 
-  it("selecting the same transcription mode does not call setter", () => {
+  it("tapping a mode chip on a non-selected card updates only that model's mode", async () => {
+    mockDownloadStore.isDownloaded.mockReturnValue(true);
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-modelModeFile"));
-    expect(mockSetTranscriptionMode).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-mode-realtime"));
+    await waitFor(() => {
+      expect(mockSetModelMode).toHaveBeenCalledWith(
+        "nemo_parakeet_v3",
+        "realtime",
+      );
+    });
+    expect(mockSetModelId).not.toHaveBeenCalled();
   });
 
-  it("logs error when setTranscriptionMode fails", async () => {
+  it("logs error when setModelMode fails", async () => {
     const { logError } = require("@/utils");
-    mockSetTranscriptionMode.mockRejectedValue(new Error("mode error"));
+    mockSetModelMode.mockRejectedValue(new Error("mode error"));
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("list-item-modelModeRealtime"));
+    fireEvent.press(getByTestId("model-card-whisper_tiny-mode-realtime"));
     await waitFor(() => {
       expect(logError).toHaveBeenCalled();
     });
@@ -422,24 +414,6 @@ describe("ModelSettingsScreen", () => {
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
     await waitFor(() => {
       expect(logError).toHaveBeenCalled();
-    });
-  });
-
-  it("switches to FILE mode if new model does not support current realtime mode", async () => {
-    const { useSelectedTranscriptionMode } = require("@/stores");
-    const { getModelInfo } = require("@/models");
-    useSelectedTranscriptionMode.mockReturnValueOnce("realtime");
-    mockDownloadStore.isDownloaded.mockReturnValue(true);
-    getModelInfo.mockImplementation((id: string) => {
-      if (id === "nemo_parakeet_v3") {
-        return { ...parakeetModel, supportedModes: ["file"] };
-      }
-      return whisperModel;
-    });
-    const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
-    await waitFor(() => {
-      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("file");
     });
   });
 
@@ -464,20 +438,5 @@ describe("ModelSettingsScreen", () => {
     await waitFor(() => {
       expect(mockSetModelId).toHaveBeenCalledTimes(1);
     });
-  });
-
-  it("toggles mode via Radio onValueChange", async () => {
-    mockSetTranscriptionMode.mockResolvedValue(undefined);
-    const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("radio-realtime"));
-    await waitFor(() => {
-      expect(mockSetTranscriptionMode).toHaveBeenCalledWith("realtime");
-    });
-  });
-
-  it("Radio onValueChange for current mode is a no-op", () => {
-    const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("radio-file"));
-    expect(mockSetTranscriptionMode).not.toHaveBeenCalled();
   });
 });

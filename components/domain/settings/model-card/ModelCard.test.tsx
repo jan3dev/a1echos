@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { ModelId } from "@/models";
+import { ModelId, TranscriptionMode } from "@/models";
 
 import { ModelCard } from "./ModelCard";
 
@@ -56,6 +56,10 @@ jest.mock("@/hooks", () => ({
       modelCancel: "Cancel",
       modelTryAgain: "Try again",
       modelDownloadFailed: "Download failed",
+      modelModeRealtime: "Real-time",
+      modelModeHighAccuracy: "High Accuracy",
+      modelModeRealtimeOnly: "Real-time Only",
+      modelModeHighAccuracyOnly: "High Accuracy Only",
     },
   })),
 }));
@@ -65,6 +69,7 @@ const baseProps = {
   description: "Fast, lightweight transcription",
   languageCount: 99,
   sizeLabel: "250 MB",
+  supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
 };
 
 describe("ModelCard", () => {
@@ -227,11 +232,11 @@ describe("ModelCard", () => {
     expect(onLanguagesPress).toHaveBeenCalled();
   });
 
-  it("shows size label only for non-bundled models", () => {
+  it("shows size label for downloaded models (bundled and not)", () => {
     const { queryByText, rerender } = render(
       <ModelCard {...baseProps} isBundled isSelected isDownloaded />,
     );
-    expect(queryByText("250 MB")).toBeNull();
+    expect(queryByText("250 MB")).toBeTruthy();
 
     rerender(
       <ModelCard
@@ -243,5 +248,79 @@ describe("ModelCard", () => {
       />,
     );
     expect(queryByText("250 MB")).toBeTruthy();
+  });
+
+  it("renders two-chip mode selector for models supporting both modes", () => {
+    const onSelectMode = jest.fn();
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        isBundled
+        isSelected
+        isDownloaded
+        selectedMode={TranscriptionMode.REALTIME}
+        onSelectMode={onSelectMode}
+      />,
+    );
+    expect(getByText("Real-time")).toBeTruthy();
+    expect(getByText("High Accuracy")).toBeTruthy();
+
+    fireEvent.press(getByText("High Accuracy"));
+    expect(onSelectMode).toHaveBeenCalledWith(TranscriptionMode.FILE);
+  });
+
+  it("renders single 'Real-time Only' chip when model only supports realtime", () => {
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        supportedModes={[TranscriptionMode.REALTIME]}
+        isBundled={false}
+        isSelected
+        isDownloaded
+      />,
+    );
+    expect(getByText("Real-time Only")).toBeTruthy();
+  });
+
+  it("renders single 'High Accuracy Only' chip when model only supports file mode", () => {
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        supportedModes={[TranscriptionMode.FILE]}
+        isBundled={false}
+        isSelected
+        isDownloaded
+      />,
+    );
+    expect(getByText("High Accuracy Only")).toBeTruthy();
+  });
+
+  it("shows supported-mode meta inline when not downloaded", () => {
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        supportedModes={[TranscriptionMode.FILE, TranscriptionMode.REALTIME]}
+        isBundled={false}
+        isSelected={false}
+        isDownloaded={false}
+        onDownload={jest.fn()}
+      />,
+    );
+    expect(getByText("Real-time")).toBeTruthy();
+    expect(getByText("High Accuracy")).toBeTruthy();
+  });
+
+  it("shows 'High Accuracy Only' meta inline when not downloaded and single-mode", () => {
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        supportedModes={[TranscriptionMode.FILE]}
+        isBundled={false}
+        isSelected={false}
+        isDownloaded={false}
+        onDownload={jest.fn()}
+      />,
+    );
+    expect(getByText("High Accuracy Only")).toBeTruthy();
   });
 });

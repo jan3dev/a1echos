@@ -76,7 +76,11 @@ export default function SettingsScreen() {
             titleTrailing={modelDisplay}
             titleTrailingColor={theme.colors.textSecondary}
             iconLeading={
-              <Icon name="mic" size={24} color={theme.colors.textSecondary} />
+              <Icon
+                name="voice_circle"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
             }
             iconTrailing={
               <Icon

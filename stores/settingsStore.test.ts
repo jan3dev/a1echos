@@ -1,8 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { renderHook } from "@testing-library/react-native";
 
-import { AppTheme, ModelId, ModelType, SupportedLanguages, TranscriptionMode } from "@/models";
-
+import {
+  AppTheme,
+  ModelId,
+  ModelType,
+  SupportedLanguages,
+  TranscriptionMode,
+} from "@/models";
 
 import {
   useIsIncognitoMode,
@@ -29,6 +34,7 @@ const initialState = {
   selectedModelType: ModelType.WHISPER_FILE,
   selectedModelId: ModelId.WHISPER_TINY,
   selectedTranscriptionMode: TranscriptionMode.FILE,
+  modelModes: {},
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
@@ -51,11 +57,12 @@ describe("settingsStore", () => {
   });
 
   describe("initialize()", () => {
-    // Storage key read order: THEME, MODEL_TYPE, MODEL_ID, TRANSCRIPTION_MODE, LANGUAGE, INCOGNITO_MODE, INCOGNITO_EXPLAINER_SEEN
+    // Storage key read order: THEME, MODEL_TYPE, MODEL_ID, TRANSCRIPTION_MODE, MODEL_MODES, LANGUAGE, INCOGNITO_MODE, INCOGNITO_EXPLAINER_SEEN
     it("loads all keys from storage in parallel", async () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(AppTheme.DARK)
         .mockResolvedValueOnce(ModelType.WHISPER_REALTIME)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("fr")
@@ -70,6 +77,46 @@ describe("settingsStore", () => {
       expect(state.selectedLanguage).toEqual({ code: "fr", name: "French" });
       expect(state.isIncognitoMode).toBe(true);
       expect(state.hasSeenIncognitoExplainer).toBe(true);
+    });
+
+    it("loads and validates per-model modes from storage", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(ModelId.NEMO_PARAKEET_V3)
+        .mockResolvedValueOnce(TranscriptionMode.REALTIME)
+        .mockResolvedValueOnce(
+          JSON.stringify({
+            [ModelId.WHISPER_TINY]: TranscriptionMode.FILE,
+            [ModelId.NEMO_PARAKEET_V3]: TranscriptionMode.REALTIME,
+            junk_id: "bogus",
+          }),
+        )
+        .mockResolvedValue(null);
+
+      await useSettingsStore.getState().initialize();
+      const { modelModes } = useSettingsStore.getState();
+
+      expect(modelModes[ModelId.WHISPER_TINY]).toBe(TranscriptionMode.FILE);
+      expect(modelModes[ModelId.NEMO_PARAKEET_V3]).toBe(
+        TranscriptionMode.REALTIME,
+      );
+      expect(modelModes).not.toHaveProperty("junk_id");
+    });
+
+    it("ignores corrupt model_modes JSON and seeds selected model's mode", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(ModelId.WHISPER_TINY)
+        .mockResolvedValueOnce(TranscriptionMode.REALTIME)
+        .mockResolvedValueOnce("{not json")
+        .mockResolvedValue(null);
+
+      await useSettingsStore.getState().initialize();
+      expect(useSettingsStore.getState().modelModes).toEqual({
+        [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME,
+      });
     });
 
     it("falls back to defaults when storage returns null", async () => {
@@ -103,6 +150,7 @@ describe("settingsStore", () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("zzz_invalid")
         .mockResolvedValue(null);
 
@@ -115,6 +163,7 @@ describe("settingsStore", () => {
 
     it('incognito mode is false for non-"true" string', async () => {
       (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
@@ -334,6 +383,15 @@ describe("settingsStore", () => {
       );
     });
 
+    it("mirrors the change into modelModes for the selected model", async () => {
+      await useSettingsStore
+        .getState()
+        .setTranscriptionMode(TranscriptionMode.REALTIME);
+      expect(useSettingsStore.getState().modelModes[ModelId.WHISPER_TINY]).toBe(
+        TranscriptionMode.REALTIME,
+      );
+    });
+
     it("rolls back on persist failure", async () => {
       (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
         new Error("write fail"),
@@ -343,6 +401,82 @@ describe("settingsStore", () => {
           .getState()
           .setTranscriptionMode(TranscriptionMode.REALTIME),
       ).rejects.toThrow("write fail");
+      expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
+        TranscriptionMode.FILE,
+      );
+    });
+  });
+
+  describe("setModelMode()", () => {
+    it("updates the per-model map for a non-active model", async () => {
+      await useSettingsStore
+        .getState()
+        .setModelMode(ModelId.NEMO_PARAKEET_V3, TranscriptionMode.REALTIME);
+      const state = useSettingsStore.getState();
+      expect(state.modelModes[ModelId.NEMO_PARAKEET_V3]).toBe(
+        TranscriptionMode.REALTIME,
+      );
+      // Global selected mode untouched
+      expect(state.selectedTranscriptionMode).toBe(TranscriptionMode.FILE);
+    });
+
+    it("also updates global mode when the model is active", async () => {
+      await useSettingsStore
+        .getState()
+        .setModelMode(ModelId.WHISPER_TINY, TranscriptionMode.REALTIME);
+      const state = useSettingsStore.getState();
+      expect(state.modelModes[ModelId.WHISPER_TINY]).toBe(
+        TranscriptionMode.REALTIME,
+      );
+      expect(state.selectedTranscriptionMode).toBe(TranscriptionMode.REALTIME);
+    });
+
+    it("ignores modes unsupported by the target model", async () => {
+      // QWEN3_ASR only supports FILE
+      await useSettingsStore
+        .getState()
+        .setModelMode(ModelId.QWEN3_ASR, TranscriptionMode.REALTIME);
+      expect(
+        useSettingsStore.getState().modelModes[ModelId.QWEN3_ASR],
+      ).toBeUndefined();
+    });
+
+    it("rolls back on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+      await expect(
+        useSettingsStore
+          .getState()
+          .setModelMode(ModelId.WHISPER_TINY, TranscriptionMode.REALTIME),
+      ).rejects.toThrow("write fail");
+      expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
+        TranscriptionMode.FILE,
+      );
+      expect(
+        useSettingsStore.getState().modelModes[ModelId.WHISPER_TINY],
+      ).toBeUndefined();
+    });
+  });
+
+  describe("setModelId() applies saved per-model mode", () => {
+    it("restores the target model's saved mode when switching", async () => {
+      useSettingsStore.setState({
+        modelModes: {
+          [ModelId.NEMO_PARAKEET_V3]: TranscriptionMode.REALTIME,
+        },
+      });
+      await useSettingsStore.getState().setModelId(ModelId.NEMO_PARAKEET_V3);
+      expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
+        TranscriptionMode.REALTIME,
+      );
+    });
+
+    it("falls back to first supported mode when saved mode is unsupported", async () => {
+      useSettingsStore.setState({
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
+      });
+      await useSettingsStore.getState().setModelId(ModelId.QWEN3_ASR);
       expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
         TranscriptionMode.FILE,
       );
