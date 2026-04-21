@@ -51,6 +51,10 @@ export const Toast = ({
 
   useEffect(() => {
     if (visible) {
+      // Modal detaches the native view on close before the hide animation's
+      // JS-side value settles, leaving slideAnim stuck at 1. Reset so the
+      // slide-in plays every time.
+      slideAnim.setValue(0);
       Animated.spring(slideAnim, {
         toValue: 1,
         useNativeDriver: true,

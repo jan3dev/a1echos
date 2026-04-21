@@ -697,6 +697,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 16,
+    overflow: "hidden",
   },
   headerRow: {
     flexDirection: "row",
@@ -763,6 +764,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
+    overflow: "hidden",
   },
   modeChipFlex: {
     flex: 1,
