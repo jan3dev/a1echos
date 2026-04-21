@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { TestID } from "@/constants";
+import { feedbackService } from "@/services";
 import { useSettingsStore } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -37,6 +38,7 @@ export const HomeAppBar = ({
     const newValue = !isIncognitoMode;
     const shouldShowModal = newValue && !hasSeenIncognitoExplainer;
 
+    feedbackService.tap("toggle");
     await setIncognitoMode(newValue);
 
     if (shouldShowModal) {

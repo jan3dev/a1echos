@@ -66,6 +66,11 @@ export const useLocalization = () => {
       failedToInitializeEngine: t("failedToInitializeEngine"),
       copiedToClipboard: t("copiedToClipboard"),
       contactSupport: t("contactSupport"),
+      feedbackSectionTitle: t("feedbackSectionTitle"),
+      hapticsTitle: t("hapticsTitle"),
+      hapticsDescription: t("hapticsDescription"),
+      soundsTitle: t("soundsTitle"),
+      soundsDescription: t("soundsDescription"),
     },
   };
 };

@@ -56,5 +56,10 @@
   "transcriptionFailed": "Transcription failed",
   "failedToInitializeEngine": "Failed to initialize transcription engine",
   "copiedToClipboard": "Copied to clipboard",
-  "contactSupport": "Contact Support"
+  "contactSupport": "Contact Support",
+  "feedbackSectionTitle": "Feedback",
+  "hapticsTitle": "Haptics",
+  "hapticsDescription": "Subtle vibrations on key interactions.",
+  "soundsTitle": "Sounds",
+  "soundsDescription": "Soft audio cues for recording and completion."
 }

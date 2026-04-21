@@ -1,8 +1,19 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { feedbackService } from "@/services";
+
 import { Toast } from "./Toast";
+
+jest.mock("@/services", () => ({
+  feedbackService: {
+    haptic: jest.fn(),
+    sound: jest.fn(),
+    tap: jest.fn(),
+    setRecordingActive: jest.fn(),
+  },
+}));
 
 // Mock Icon to expose the icon name in the rendered tree
 jest.mock("../icon/Icon", () => ({
@@ -79,5 +90,71 @@ describe("Toast", () => {
     );
     expect(getByText("Retry")).toBeTruthy();
     expect(getByText("Dismiss")).toBeTruthy();
+  });
+
+  it("primary button in two-button layout fires medium haptic and callback", () => {
+    const onPrimary = jest.fn();
+    const onSecondary = jest.fn();
+    const { getByText } = render(
+      <Toast
+        {...defaultProps}
+        primaryButtonText="Retry"
+        onPrimaryButtonTap={onPrimary}
+        secondaryButtonText="Dismiss"
+        onSecondaryButtonTap={onSecondary}
+      />,
+    );
+
+    fireEvent.press(getByText("Retry"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("medium");
+    expect(onPrimary).toHaveBeenCalled();
+  });
+
+  it("secondary button fires selection haptic and callback", () => {
+    const onSecondary = jest.fn();
+    const { getByText } = render(
+      <Toast
+        {...defaultProps}
+        primaryButtonText="Retry"
+        onPrimaryButtonTap={jest.fn()}
+        secondaryButtonText="Dismiss"
+        onSecondaryButtonTap={onSecondary}
+      />,
+    );
+
+    fireEvent.press(getByText("Dismiss"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("selection");
+    expect(onSecondary).toHaveBeenCalled();
+  });
+
+  it("single primary button (no secondary) fires medium haptic and callback", () => {
+    const onPrimary = jest.fn();
+    const { getByText } = render(
+      <Toast
+        {...defaultProps}
+        primaryButtonText="Retry"
+        onPrimaryButtonTap={onPrimary}
+      />,
+    );
+
+    fireEvent.press(getByText("Retry"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("medium");
+    expect(onPrimary).toHaveBeenCalled();
+  });
+
+  it("buttons tolerate missing callback handlers", () => {
+    const { getByText } = render(
+      <Toast
+        {...defaultProps}
+        primaryButtonText="Retry"
+        secondaryButtonText="Dismiss"
+      />,
+    );
+
+    expect(() => fireEvent.press(getByText("Retry"))).not.toThrow();
+    expect(() => fireEvent.press(getByText("Dismiss"))).not.toThrow();
   });
 });

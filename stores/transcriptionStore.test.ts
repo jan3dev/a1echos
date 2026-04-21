@@ -67,6 +67,14 @@ jest.mock("@/services", () => ({
   permissionService: {
     getRecordPermission: jest.fn(async () => ({ granted: true })),
   },
+  feedbackService: {
+    haptic: jest.fn(),
+    sound: jest.fn(),
+    tap: jest.fn(),
+    setRecordingActive: jest.fn(),
+    initialize: jest.fn(async () => undefined),
+    dispose: jest.fn(),
+  },
 }));
 
 jest.mock("@/utils", () => ({

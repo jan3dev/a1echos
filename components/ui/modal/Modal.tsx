@@ -9,6 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { dynamicTestID } from "@/constants";
+import { feedbackService } from "@/services";
 import { getShadow, useTheme } from "@/theme";
 
 import { Button, ButtonVariant } from "../button/Button";
@@ -62,9 +63,16 @@ export const Modal = ({
   const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const wasVisibleRef = useRef(visible);
 
   useEffect(() => {
+    const previouslyVisible = wasVisibleRef.current;
+    wasVisibleRef.current = visible;
+
     if (visible) {
+      if (!previouslyVisible) {
+        feedbackService.haptic("light");
+      }
       Animated.spring(slideAnim, {
         toValue: 1,
         useNativeDriver: true,
@@ -72,6 +80,9 @@ export const Modal = ({
         friction: 8,
       }).start();
     } else {
+      if (previouslyVisible) {
+        feedbackService.haptic("soft");
+      }
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 250,
@@ -222,7 +233,18 @@ export const Modal = ({
               <Button.primary
                 text={primaryButton.text}
                 variant={primaryButton.variant || "normal"}
-                onPress={primaryButton.onTap}
+                onPress={() => {
+                  const variant = primaryButton.variant;
+                  if (variant === "error") {
+                    feedbackService.haptic("heavy");
+                    feedbackService.sound("error");
+                  } else if (variant === "success") {
+                    feedbackService.haptic("success");
+                  } else {
+                    feedbackService.haptic("medium");
+                  }
+                  primaryButton.onTap();
+                }}
               />
 
               {/* Secondary Button */}
@@ -232,7 +254,10 @@ export const Modal = ({
                   <Button.secondary
                     text={secondaryButton.text}
                     variant={secondaryButton.variant || "normal"}
-                    onPress={secondaryButton.onTap}
+                    onPress={() => {
+                      feedbackService.haptic("selection");
+                      secondaryButton.onTap();
+                    }}
                   />
                 </>
               )}

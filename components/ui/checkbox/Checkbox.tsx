@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
+import { feedbackService } from "@/services";
 import { lightColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
@@ -31,6 +32,7 @@ export const Checkbox = ({
 
   const handlePress = () => {
     if (enabled && onValueChange) {
+      feedbackService.tap("toggle");
       onValueChange(!value);
     }
   };

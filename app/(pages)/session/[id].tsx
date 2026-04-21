@@ -1,6 +1,5 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   RefObject,
@@ -32,7 +31,7 @@ import {
 import { TestID } from "@/constants";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
 import { ModelType, Transcription } from "@/models";
-import { shareService } from "@/services";
+import { feedbackService, shareService } from "@/services";
 import {
   useDeleteTranscriptions,
   useExitTranscriptionSelection,
@@ -112,14 +111,10 @@ export default function SessionScreen() {
   const deleteTranscriptions = useDeleteTranscriptions();
 
   const handleLongPress = useCallback(
-    async (transcriptionId: string) => {
+    (transcriptionId: string) => {
       if (!selectionMode) {
         toggleTranscriptionSelection(transcriptionId);
-        try {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        } catch {
-          // Haptics not supported
-        }
+        feedbackService.haptic("heavy");
       } else {
         toggleTranscriptionSelection(transcriptionId);
       }
@@ -392,9 +387,8 @@ export default function SessionScreen() {
     try {
       const success = await copyAllTranscriptions();
       if (success) {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
+        feedbackService.haptic("success");
+        feedbackService.sound("copySuccess");
         // Only show tooltip on iOS or Android < 12 (Android 12+ has native clipboard feedback)
         if (
           Platform.OS === "ios" ||
@@ -463,22 +457,23 @@ export default function SessionScreen() {
 
   const handleSharePressed = useCallback(async () => {
     if (!hasSelectedItems) {
+      feedbackService.haptic("warning");
       showToast(loc.noTranscriptionsSelectedToShare, "warning");
       return;
     }
 
+    feedbackService.haptic("light");
     try {
       const success = await shareSelectedTranscriptions();
       if (success) {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
+        feedbackService.haptic("success");
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: "Failed to share transcriptions",
       });
+      feedbackService.haptic("error");
       showToast(
         loc.shareFailed(error instanceof Error ? error.message : String(error)),
         "error",

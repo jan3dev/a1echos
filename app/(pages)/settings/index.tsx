@@ -10,15 +10,20 @@ import {
   InAppBanner,
   ListItem,
   SettingsFooter,
+  Toggle,
   TopAppBar,
 } from "@/components";
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme, ModelType } from "@/models";
 import {
+  useIsHapticsEnabled,
+  useIsSoundsEnabled,
   useSelectedLanguage,
   useSelectedModelType,
   useSelectedTheme,
+  useSetHapticsEnabled,
+  useSetSoundsEnabled,
 } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -33,6 +38,10 @@ export default function SettingsScreen() {
   const selectedModelType = useSelectedModelType();
   const selectedTheme = useSelectedTheme();
   const selectedLanguage = useSelectedLanguage();
+  const isHapticsEnabled = useIsHapticsEnabled();
+  const isSoundsEnabled = useIsSoundsEnabled();
+  const setHapticsEnabled = useSetHapticsEnabled();
+  const setSoundsEnabled = useSetSoundsEnabled();
 
   const modelDisplay =
     selectedModelType === ModelType.WHISPER_REALTIME
@@ -137,6 +146,56 @@ export default function SettingsScreen() {
               />
             }
             onPress={() => router.push("/settings/language")}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
+
+        <Card style={{ marginTop: 16 }}>
+          <ListItem
+            testID={TestID.SettingsHaptics}
+            title={loc.hapticsTitle}
+            iconLeading={
+              <Icon name="wave" size={24} color={theme.colors.textSecondary} />
+            }
+            iconTrailing={
+              <Toggle
+                value={isHapticsEnabled}
+                onValueChange={(value) => {
+                  setHapticsEnabled(value).catch(() => {});
+                }}
+                accessibilityLabel={loc.hapticsTitle}
+              />
+            }
+            onPress={() => {
+              setHapticsEnabled(!isHapticsEnabled).catch(() => {});
+            }}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+
+          <Divider color={theme.colors.surfaceBorderPrimary} />
+
+          <ListItem
+            testID={TestID.SettingsSounds}
+            title={loc.soundsTitle}
+            iconLeading={
+              <Icon
+                name="volume_high"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            iconTrailing={
+              <Toggle
+                value={isSoundsEnabled}
+                onValueChange={(value) => {
+                  setSoundsEnabled(value).catch(() => {});
+                }}
+                accessibilityLabel={loc.soundsTitle}
+              />
+            }
+            onPress={() => {
+              setSoundsEnabled(!isSoundsEnabled).catch(() => {});
+            }}
             backgroundColor={theme.colors.surfacePrimary}
           />
         </Card>

@@ -7,7 +7,6 @@ import {
   setAudioModeAsync,
 } from "expo-audio";
 import { File, Paths } from "expo-file-system";
-import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 
 import { AppConstants } from "@/constants";
@@ -16,10 +15,10 @@ import {
   createPcmStreamWriter,
   FeatureFlag,
   logError,
-  logWarn,
   PcmStreamWriter,
 } from "@/utils";
 
+import { feedbackService } from "./FeedbackService";
 import { permissionService } from "./PermissionService";
 
 const RECORDING_OPTIONS: RecordingOptions = {
@@ -281,11 +280,7 @@ const createAudioService = () => {
         androidPcmRecording = true;
         recordStart = new Date();
 
-        try {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        } catch {
-          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
-        }
+        feedbackService.haptic("medium");
 
         return true;
       } catch (error) {
@@ -318,11 +313,7 @@ const createAudioService = () => {
       recorder.record();
       recordStart = new Date();
 
-      try {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch {
-        logWarn("Haptics not supported", { flag: FeatureFlag.recording });
-      }
+      feedbackService.haptic("medium");
 
       startAmplitudeMonitoring();
 
@@ -358,13 +349,8 @@ const createAudioService = () => {
         await audioPcmStream.stop();
         androidPcmRecording = false;
 
-        try {
-          await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          );
-        } catch {
-          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
-        }
+        feedbackService.haptic("success");
+        feedbackService.sound("recStop");
 
         if (androidWavFilePath && pcmStreamWriter) {
           const byteCount = pcmStreamWriter.getByteCount();
@@ -448,13 +434,8 @@ const createAudioService = () => {
 
         const uri = recorder.uri;
 
-        try {
-          await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Success,
-          );
-        } catch {
-          logWarn("Haptics not supported", { flag: FeatureFlag.recording });
-        }
+        feedbackService.haptic("success");
+        feedbackService.sound("recStop");
         if (uri) {
           const file = new File(uri);
           if (file.exists) {

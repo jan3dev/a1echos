@@ -8,6 +8,7 @@ module.exports = {
   moduleNameMapper: {
     "\\.svg$": "<rootDir>/__mocks__/svgMock.js",
     "\\.bin$": "<rootDir>/__mocks__/binMock.js",
+    "\\.wav$": "<rootDir>/__mocks__/wavMock.js",
     "^whisper\\.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter$":
       "<rootDir>/node_modules/whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter",
     "^whisper\\.rn/src/realtime-transcription$":

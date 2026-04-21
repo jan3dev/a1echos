@@ -24,6 +24,12 @@ export {
 export { shareService, default as shareServiceDefault } from "./ShareService";
 
 export {
+  feedbackService,
+  default as feedbackServiceDefault,
+} from "./FeedbackService";
+export type { HapticKind, SoundKind } from "./FeedbackService";
+
+export {
   permissionService,
   default as permissionServiceDefault,
 } from "./PermissionService";

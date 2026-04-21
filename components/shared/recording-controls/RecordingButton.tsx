@@ -1,5 +1,4 @@
 import { BlurView } from "expo-blur";
-import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import Animated, {
@@ -14,6 +13,7 @@ import Animated, {
 
 import { TestID } from "@/constants";
 import { AppTheme, TranscriptionState } from "@/models";
+import { feedbackService } from "@/services";
 import { AquaColors, getShadow, useThemeStore } from "@/theme";
 
 import { Icon } from "../../ui/icon/Icon";
@@ -168,7 +168,8 @@ export const RecordingButton = ({
 
   const handleStartRecording = () => {
     if (onRecordingStart) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      feedbackService.haptic("medium");
+      feedbackService.sound("recStart");
       handleRecordingAction(onRecordingStart);
     }
   };
@@ -178,7 +179,7 @@ export const RecordingButton = ({
       setIsDebouncing(true);
       isPulseAnimating.current = true;
       triggerScaleAnimation();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      feedbackService.haptic("light");
 
       const pulseDuration = scaleAnimationDuration * 2;
       if (pulseAnimationTimerRef.current) {

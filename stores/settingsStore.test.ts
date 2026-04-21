@@ -9,8 +9,12 @@ import {
   useSelectedModelType,
   useSelectedLanguage,
   useIsIncognitoMode,
+  useIsHapticsEnabled,
+  useIsSoundsEnabled,
+  useSetHapticsEnabled,
   useSetLanguage,
   useSetModelType,
+  useSetSoundsEnabled,
   useSetTheme,
 } from "./settingsStore";
 
@@ -25,6 +29,8 @@ const initialState = {
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
+  isHapticsEnabled: true,
+  isSoundsEnabled: true,
 };
 
 describe("settingsStore", () => {
@@ -40,17 +46,21 @@ describe("settingsStore", () => {
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
       expect(state.hasSeenIncognitoExplainer).toBe(false);
+      expect(state.isHapticsEnabled).toBe(true);
+      expect(state.isSoundsEnabled).toBe(true);
     });
   });
 
   describe("initialize()", () => {
-    it("loads all 5 keys from storage in parallel", async () => {
+    it("loads all 7 keys from storage in parallel", async () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(AppTheme.DARK)
         .mockResolvedValueOnce(ModelType.WHISPER_REALTIME)
         .mockResolvedValueOnce("fr")
         .mockResolvedValueOnce("true")
-        .mockResolvedValueOnce("true");
+        .mockResolvedValueOnce("true")
+        .mockResolvedValueOnce("false")
+        .mockResolvedValueOnce("false");
 
       await useSettingsStore.getState().initialize();
       const state = useSettingsStore.getState();
@@ -60,10 +70,14 @@ describe("settingsStore", () => {
       expect(state.selectedLanguage).toEqual({ code: "fr", name: "French" });
       expect(state.isIncognitoMode).toBe(true);
       expect(state.hasSeenIncognitoExplainer).toBe(true);
+      expect(state.isHapticsEnabled).toBe(false);
+      expect(state.isSoundsEnabled).toBe(false);
     });
 
     it("falls back to defaults when storage returns null", async () => {
       (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
@@ -78,12 +92,16 @@ describe("settingsStore", () => {
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
       expect(state.hasSeenIncognitoExplainer).toBe(false);
+      expect(state.isHapticsEnabled).toBe(true);
+      expect(state.isSoundsEnabled).toBe(true);
     });
 
     it("falls back to default for invalid model type", async () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("invalid_model")
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
@@ -100,6 +118,8 @@ describe("settingsStore", () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("zzz_invalid")
         .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
 
       await useSettingsStore.getState().initialize();
@@ -115,10 +135,29 @@ describe("settingsStore", () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("false")
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null);
 
       await useSettingsStore.getState().initialize();
       expect(useSettingsStore.getState().isIncognitoMode).toBe(false);
+    });
+
+    it("haptics/sounds: null → default true, 'true' → true, anything else → false", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce("true")
+        .mockResolvedValueOnce("anything-else");
+
+      await useSettingsStore.getState().initialize();
+      const state = useSettingsStore.getState();
+
+      expect(state.isHapticsEnabled).toBe(true);
+      expect(state.isSoundsEnabled).toBe(false);
     });
 
     it("falls back to safe defaults on storage error", async () => {
@@ -130,6 +169,8 @@ describe("settingsStore", () => {
       useSettingsStore.setState({
         selectedTheme: AppTheme.DARK,
         isIncognitoMode: true,
+        isHapticsEnabled: false,
+        isSoundsEnabled: false,
       });
 
       await useSettingsStore.getState().initialize();
@@ -138,6 +179,8 @@ describe("settingsStore", () => {
       expect(state.selectedTheme).toBe(AppTheme.AUTO);
       expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.isIncognitoMode).toBe(false);
+      expect(state.isHapticsEnabled).toBe(true);
+      expect(state.isSoundsEnabled).toBe(true);
     });
   });
 
@@ -248,6 +291,54 @@ describe("settingsStore", () => {
     });
   });
 
+  describe("setHapticsEnabled()", () => {
+    it("optimistically updates and persists as string", async () => {
+      await useSettingsStore.getState().setHapticsEnabled(false);
+
+      expect(useSettingsStore.getState().isHapticsEnabled).toBe(false);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "haptics_enabled",
+        "false",
+      );
+    });
+
+    it("rolls back on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setHapticsEnabled(false),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().isHapticsEnabled).toBe(true);
+    });
+  });
+
+  describe("setSoundsEnabled()", () => {
+    it("optimistically updates and persists as string", async () => {
+      await useSettingsStore.getState().setSoundsEnabled(false);
+
+      expect(useSettingsStore.getState().isSoundsEnabled).toBe(false);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "sounds_enabled",
+        "false",
+      );
+    });
+
+    it("rolls back on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setSoundsEnabled(false),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().isSoundsEnabled).toBe(true);
+    });
+  });
+
   describe("markIncognitoExplainerSeen()", () => {
     it("sets true and persists", async () => {
       await useSettingsStore.getState().markIncognitoExplainerSeen();
@@ -306,6 +397,26 @@ describe("settingsStore", () => {
 
     it("useSetTheme returns a function", () => {
       const { result } = renderHook(() => useSetTheme());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useIsHapticsEnabled returns true by default", () => {
+      const { result } = renderHook(() => useIsHapticsEnabled());
+      expect(result.current).toBe(true);
+    });
+
+    it("useIsSoundsEnabled returns true by default", () => {
+      const { result } = renderHook(() => useIsSoundsEnabled());
+      expect(result.current).toBe(true);
+    });
+
+    it("useSetHapticsEnabled returns a function", () => {
+      const { result } = renderHook(() => useSetHapticsEnabled());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useSetSoundsEnabled returns a function", () => {
+      const { result } = renderHook(() => useSetSoundsEnabled());
       expect(typeof result.current).toBe("function");
     });
   });

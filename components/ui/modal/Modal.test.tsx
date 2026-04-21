@@ -1,7 +1,18 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { feedbackService } from "@/services";
+
 import { Modal } from "./Modal";
+
+jest.mock("@/services", () => ({
+  feedbackService: {
+    haptic: jest.fn(),
+    sound: jest.fn(),
+    tap: jest.fn(),
+    setRecordingActive: jest.fn(),
+  },
+}));
 
 const defaultProps = {
   visible: true,
@@ -156,5 +167,56 @@ describe("Modal", () => {
     );
     expect(getByText("Delete")).toBeTruthy();
     expect(getByText("Cancel")).toBeTruthy();
+  });
+
+  it("primary button with 'error' variant fires heavy haptic + error sound", () => {
+    const onTap = jest.fn();
+    const { getByText } = render(
+      <Modal
+        {...defaultProps}
+        primaryButton={{ text: "Delete", onTap, variant: "error" }}
+      />,
+    );
+    fireEvent.press(getByText("Delete"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("heavy");
+    expect(feedbackService.sound).toHaveBeenCalledWith("error");
+    expect(onTap).toHaveBeenCalled();
+  });
+
+  it("primary button with 'success' variant fires success haptic", () => {
+    const onTap = jest.fn();
+    const { getByText } = render(
+      <Modal
+        {...defaultProps}
+        primaryButton={{ text: "Done", onTap, variant: "success" }}
+      />,
+    );
+    fireEvent.press(getByText("Done"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("success");
+    expect(onTap).toHaveBeenCalled();
+  });
+
+  it("primary button with default variant fires medium haptic", () => {
+    const onTap = jest.fn();
+    const { getByText } = render(
+      <Modal {...defaultProps} primaryButton={{ text: "Ok", onTap }} />,
+    );
+    fireEvent.press(getByText("Ok"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("medium");
+    expect(onTap).toHaveBeenCalled();
+  });
+
+  it("secondary button fires selection haptic", () => {
+    const onTap = jest.fn();
+    const { getByText } = render(
+      <Modal {...defaultProps} secondaryButton={{ text: "Cancel", onTap }} />,
+    );
+    fireEvent.press(getByText("Cancel"));
+
+    expect(feedbackService.haptic).toHaveBeenCalledWith("selection");
+    expect(onTap).toHaveBeenCalled();
   });
 });

@@ -59,6 +59,9 @@ jest.mock("@/services", () => ({
   storageService: {
     processPendingDeletes: jest.fn().mockResolvedValue(undefined),
   },
+  feedbackService: {
+    initialize: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 
 jest.mock("@/hooks", () => ({

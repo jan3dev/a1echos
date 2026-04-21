@@ -127,8 +127,10 @@ import TrendUp from "@/assets/icons/trend_up.svg";
 import Unlink from "@/assets/icons/unlink.svg";
 import Upload from "@/assets/icons/upload.svg";
 import User from "@/assets/icons/user.svg";
+import VolumeHigh from "@/assets/icons/volume_high.svg";
 import Wallet from "@/assets/icons/wallet.svg";
 import Warning from "@/assets/icons/warning.svg";
+import Wave from "@/assets/icons/wave.svg";
 import Web from "@/assets/icons/web.svg";
 import XLogo from "@/assets/icons/x_logo.svg";
 import Zendesk from "@/assets/icons/zendesk.svg";
@@ -260,6 +262,8 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   unlink: Unlink,
   upload: Upload,
   user: User,
+  wave: Wave,
+  volume_high: VolumeHigh,
   wallet: Wallet,
   warning: Warning,
   web: Web,

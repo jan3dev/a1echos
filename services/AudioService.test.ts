@@ -45,6 +45,14 @@ jest.mock("expo-audio", () => ({
     setAudioModeAsync: jest.fn(),
   },
   setAudioModeAsync: jest.fn(),
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    seekTo: jest.fn(),
+    remove: jest.fn(),
+    playing: false,
+    currentTime: 0,
+  })),
   getRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
     status: "granted",
@@ -987,10 +995,9 @@ describe("AudioService", () => {
   });
 
   describe("iOS recording - haptics failure on start", () => {
-    it("logs warning when haptics not supported on start", async () => {
+    it("recording succeeds even when haptics throw (handled by FeedbackService)", async () => {
       setupPlatform("ios");
       const haptics = getExpoHaptics();
-      const { logWarn } = require("@/utils");
       haptics.impactAsync.mockRejectedValueOnce(
         new Error("Haptics not available"),
       );
@@ -999,22 +1006,16 @@ describe("AudioService", () => {
         require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
-      (logWarn as jest.Mock).mockClear();
-
       const result = await audioService.startRecording();
 
       expect(result).toBe(true);
-      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
-        flag: "recording",
-      });
     });
   });
 
   describe("Android recording - haptics failure on start", () => {
-    it("logs warning when haptics not supported on Android start", async () => {
+    it("recording succeeds even when haptics throw on Android start", async () => {
       setupPlatform("android");
       const haptics = getExpoHaptics();
-      const { logWarn } = require("@/utils");
       haptics.impactAsync.mockRejectedValueOnce(
         new Error("Haptics not available"),
       );
@@ -1023,22 +1024,16 @@ describe("AudioService", () => {
         require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
-      (logWarn as jest.Mock).mockClear();
-
       const result = await audioService.startRecording();
 
       expect(result).toBe(true);
-      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
-        flag: "recording",
-      });
     });
   });
 
   describe("iOS stopRecording - haptics failure on stop", () => {
-    it("logs warning when haptics not supported on stop", async () => {
+    it("stop returns URI even when haptics throw", async () => {
       setupPlatform("ios");
       const haptics = getExpoHaptics();
-      const { logWarn } = require("@/utils");
       const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
@@ -1052,24 +1047,18 @@ describe("AudioService", () => {
       const { audioService } =
         require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
-
-      (logWarn as jest.Mock).mockClear();
 
       await audioService.startRecording();
       const uri = await audioService.stopRecording();
 
       expect(uri).toBe("file:///recording.wav");
-      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
-        flag: "recording",
-      });
     });
   });
 
   describe("Android stopRecording - haptics failure on stop", () => {
-    it("logs warning when haptics not supported on Android stop", async () => {
+    it("stop completes even when haptics throw on Android stop", async () => {
       setupPlatform("android");
       const haptics = getExpoHaptics();
-      const { logWarn } = require("@/utils");
       const { File } = require("expo-file-system");
       (File as jest.Mock).mockImplementation(() => ({
         exists: true,
@@ -1084,14 +1073,8 @@ describe("AudioService", () => {
         require("./AudioService") as typeof import("./AudioService");
       cleanupService = () => audioService.dispose();
 
-      (logWarn as jest.Mock).mockClear();
-
       await audioService.startRecording();
-      await audioService.stopRecording();
-
-      expect(logWarn).toHaveBeenCalledWith("Haptics not supported", {
-        flag: "recording",
-      });
+      await expect(audioService.stopRecording()).resolves.not.toThrow();
     });
   });
 

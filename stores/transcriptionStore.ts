@@ -14,6 +14,7 @@ import {
 import {
   audioService,
   backgroundRecordingService,
+  feedbackService,
   permissionService,
   storageService,
   whisperService,
@@ -290,6 +291,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       } else if (keepAwakeStates.has(currentState)) {
         deactivateKeepAwake("recording").catch(() => {});
       }
+
+      // Gate feedback sounds while the mic is open to prevent playback bleed
+      feedbackService.setRecordingActive(
+        newState === TranscriptionState.RECORDING ||
+          newState === TranscriptionState.STREAMING,
+      );
 
       set({
         state: newState,
@@ -673,6 +680,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         if (!state.isWhisperReady) {
           const initialized = await whisperService.initialize();
           if (!initialized) {
+            feedbackService.haptic("error");
+            feedbackService.sound("error");
             get().setError("Failed to initialize transcription engine");
             releaseOperationLock(operationName);
             return false;
@@ -746,6 +755,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
+            feedbackService.haptic("warning");
+            feedbackService.sound("error");
             get().setError("Failed to start real-time transcription");
             releaseOperationLock(operationName);
             return false;
@@ -768,6 +779,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             }
             get().transitionTo(TranscriptionState.READY);
             get().clearRecordingSessionId();
+            feedbackService.haptic("warning");
+            feedbackService.sound("error");
             get().setError("Failed to start recording");
             releaseOperationLock(operationName);
             return false;
@@ -861,6 +874,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           const recordedFilePath = await audioService.stopRecording();
 
           if (!recordedFilePath) {
+            feedbackService.haptic("warning");
             get().setError("Recording was too short or failed");
             get().clearLivePreview();
             get().clearLoadingPreview();
@@ -921,6 +935,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             currentStreamingText: "",
           });
           get().transitionTo(TranscriptionState.READY);
+          feedbackService.haptic("success");
+          feedbackService.sound("transcriptionComplete");
           // Persist to storage (skip for incognito sessions)
           if (!isIncognito) {
             await storageService.saveTranscription(transcription);
@@ -942,6 +958,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           flag: FeatureFlag.recording,
           message: "Error stopping recording",
         });
+        feedbackService.haptic("error");
+        feedbackService.sound("error");
         get().setError(`Error stopping recording: ${error}`);
 
         get().clearLivePreview();
@@ -1081,6 +1099,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         });
       }
 
+      feedbackService.setRecordingActive(false);
+
       set({
         isOperationLocked: false,
         activeOperations: new Set(),
@@ -1122,6 +1142,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           message: "Failed to stop background service during dispose",
         });
       }
+
+      feedbackService.setRecordingActive(false);
 
       await audioService.dispose();
       await whisperService.dispose();

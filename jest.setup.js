@@ -36,6 +36,15 @@ jest.mock("expo-audio", () => ({
     setAudioModeAsync: jest.fn(),
   },
   setAudioModeAsync: jest.fn(),
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    seekTo: jest.fn(),
+    replace: jest.fn(),
+    remove: jest.fn(),
+    playing: false,
+    currentTime: 0,
+  })),
   getRecordingPermissionsAsync: jest.fn(async () => ({
     granted: true,
     status: "granted",
@@ -100,7 +109,13 @@ jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
   selectionAsync: jest.fn(),
-  ImpactFeedbackStyle: { Light: "light", Medium: "medium", Heavy: "heavy" },
+  ImpactFeedbackStyle: {
+    Light: "light",
+    Medium: "medium",
+    Heavy: "heavy",
+    Rigid: "rigid",
+    Soft: "soft",
+  },
   NotificationFeedbackType: {
     Success: "success",
     Warning: "warning",

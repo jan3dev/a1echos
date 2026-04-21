@@ -3,9 +3,8 @@ import { act, fireEvent, render } from "@testing-library/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 
-import { useSettingsStore } from "@/stores";
-
 import { TestID } from "@/constants";
+import { useSettingsStore } from "@/stores";
 
 import { HomeAppBar } from "./HomeAppBar";
 

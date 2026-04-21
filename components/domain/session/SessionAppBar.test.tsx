@@ -10,6 +10,25 @@ jest.mock("@/stores", () => ({
   useSelectedLanguage: jest.fn(() => "en"),
 }));
 
+jest.mock("@/hooks", () => {
+  const { useTranslation } = require("react-i18next");
+  return {
+    useLocalization: () => {
+      const { t } = useTranslation();
+      return { t, loc: new Proxy({}, { get: (_t, key) => String(key) }) };
+    },
+  };
+});
+
+jest.mock("@/services", () => ({
+  feedbackService: {
+    haptic: jest.fn(),
+    sound: jest.fn(),
+    tap: jest.fn(),
+    setRecordingActive: jest.fn(),
+  },
+}));
+
 jest.mock("@/models", () => ({
   getCountryCode: jest.fn((lang: string) => lang),
 }));

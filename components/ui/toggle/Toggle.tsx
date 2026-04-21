@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from "react-native";
 
+import { feedbackService } from "@/services";
 import { AquaPrimitiveColors, useTheme } from "@/theme";
 
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
@@ -45,6 +46,7 @@ export const Toggle = ({
 
   const handlePress = () => {
     if (enabled && onValueChange) {
+      feedbackService.tap("toggle");
       onValueChange(!value);
     }
   };

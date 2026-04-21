@@ -1,10 +1,10 @@
 import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
 import { useLocalization } from "@/hooks";
 import { Transcription } from "@/models";
+import { feedbackService } from "@/services";
 import { useUIStore } from "@/stores";
 import { getShadow, useTheme } from "@/theme";
 import { FeatureFlag, iosPressed, logError } from "@/utils";
@@ -88,7 +88,7 @@ export const TranscriptionItem = ({
   const handleCopyToClipboard = async () => {
     try {
       await Clipboard.setStringAsync(transcription.text);
-      await Haptics.selectionAsync();
+      feedbackService.tap("copySuccess");
 
       // Show tooltip on iOS or Android < 12 (API 31 has native clipboard feedback)
       if (

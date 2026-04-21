@@ -60,6 +60,8 @@ export enum TestID {
   SettingsTheme = "settings-theme",
   SettingsLanguage = "settings-language",
   SettingsContactSupport = "settings-contact-support",
+  SettingsHaptics = "settings-haptics",
+  SettingsSounds = "settings-sounds",
   SettingsFooter = "settings-footer",
 
   // --- Theme Settings ---

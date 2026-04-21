@@ -16,6 +16,8 @@ const STORAGE_KEYS = {
   LANGUAGE: "spoken_language",
   INCOGNITO_MODE: "incognito_mode",
   INCOGNITO_EXPLAINER_SEEN: "incognito_explainer_seen",
+  HAPTICS_ENABLED: "haptics_enabled",
+  SOUNDS_ENABLED: "sounds_enabled",
 };
 
 interface SettingsStore {
@@ -24,6 +26,8 @@ interface SettingsStore {
   selectedLanguage: SpokenLanguage;
   isIncognitoMode: boolean;
   hasSeenIncognitoExplainer: boolean;
+  isHapticsEnabled: boolean;
+  isSoundsEnabled: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -31,6 +35,8 @@ interface SettingsStore {
   setLanguage: (language: SpokenLanguage) => Promise<void>;
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   markIncognitoExplainerSeen: () => Promise<void>;
+  setHapticsEnabled: (enabled: boolean) => Promise<void>;
+  setSoundsEnabled: (enabled: boolean) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -43,6 +49,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
+  isHapticsEnabled: true,
+  isSoundsEnabled: true,
 
   initialize: async () => {
     try {
@@ -52,12 +60,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         languageValue,
         incognitoModeValue,
         incognitoExplainerValue,
+        hapticsEnabledValue,
+        soundsEnabledValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN),
+        AsyncStorage.getItem(STORAGE_KEYS.HAPTICS_ENABLED),
+        AsyncStorage.getItem(STORAGE_KEYS.SOUNDS_ENABLED),
       ]);
 
       const selectedTheme = themeValue
@@ -74,6 +86,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         : SupportedLanguages.defaultLanguage;
       const isIncognitoMode = incognitoModeValue === "true";
       const hasSeenIncognitoExplainer = incognitoExplainerValue === "true";
+      const isHapticsEnabled =
+        hapticsEnabledValue === null ? true : hapticsEnabledValue === "true";
+      const isSoundsEnabled =
+        soundsEnabledValue === null ? true : soundsEnabledValue === "true";
 
       set({
         selectedTheme,
@@ -81,6 +97,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage,
         isIncognitoMode,
         hasSeenIncognitoExplainer,
+        isHapticsEnabled,
+        isSoundsEnabled,
       });
     } catch (error) {
       logError(error, {
@@ -93,6 +111,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage: SupportedLanguages.defaultLanguage,
         isIncognitoMode: false,
         hasSeenIncognitoExplainer: false,
+        isHapticsEnabled: true,
+        isSoundsEnabled: true,
       });
     }
   },
@@ -171,6 +191,42 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
+
+  setHapticsEnabled: async (enabled: boolean) => {
+    const previousValue = get().isHapticsEnabled;
+    set({ isHapticsEnabled: enabled });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.HAPTICS_ENABLED,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save haptics enabled",
+      });
+      set({ isHapticsEnabled: previousValue });
+      throw error;
+    }
+  },
+
+  setSoundsEnabled: async (enabled: boolean) => {
+    const previousValue = get().isSoundsEnabled;
+    set({ isSoundsEnabled: enabled });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.SOUNDS_ENABLED,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save sounds enabled",
+      });
+      set({ isSoundsEnabled: previousValue });
+      throw error;
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -183,6 +239,14 @@ export const useIsIncognitoMode = () =>
 export const useSetLanguage = () => useSettingsStore((s) => s.setLanguage);
 export const useSetModelType = () => useSettingsStore((s) => s.setModelType);
 export const useSetTheme = () => useSettingsStore((s) => s.setTheme);
+export const useIsHapticsEnabled = () =>
+  useSettingsStore((s) => s.isHapticsEnabled);
+export const useIsSoundsEnabled = () =>
+  useSettingsStore((s) => s.isSoundsEnabled);
+export const useSetHapticsEnabled = () =>
+  useSettingsStore((s) => s.setHapticsEnabled);
+export const useSetSoundsEnabled = () =>
+  useSettingsStore((s) => s.setSoundsEnabled);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

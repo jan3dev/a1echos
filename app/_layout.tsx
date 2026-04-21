@@ -19,7 +19,11 @@ import {
 } from "@/components";
 import { useBackgroundRecording } from "@/hooks";
 import { AppTheme } from "@/models";
-import { registerForegroundService, storageService } from "@/services";
+import {
+  feedbackService,
+  registerForegroundService,
+  storageService,
+} from "@/services";
 import {
   initializeSessionStore,
   initializeSettingsStore,
@@ -255,6 +259,7 @@ export default function RootLayout() {
             initializeSessionStore(),
             storageService.processPendingDeletes(),
           ]);
+          await feedbackService.initialize();
           await initializeTranscriptionStore();
         }
 

@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
 import React from "react";
 import { Keyboard } from "react-native";
 
 import { TestID } from "@/constants";
-import { shareService } from "@/services";
+import { feedbackService, shareService } from "@/services";
 import {
   useDeleteTranscriptions,
   useFindSessionById,
@@ -84,6 +83,12 @@ jest.mock("@/utils", () => ({
 
 jest.mock("@/services", () => ({
   shareService: { shareTranscriptions: jest.fn() },
+  feedbackService: {
+    haptic: jest.fn(),
+    sound: jest.fn(),
+    tap: jest.fn(),
+    setRecordingActive: jest.fn(),
+  },
 }));
 
 const mockEmptySet = new Set();
@@ -474,9 +479,7 @@ describe("SessionScreen", () => {
       });
 
       expect(mockToggle).toHaveBeenCalledWith("transcription-1");
-      expect(Haptics.impactAsync).toHaveBeenCalledWith(
-        Haptics.ImpactFeedbackStyle.Heavy,
-      );
+      expect(feedbackService.haptic).toHaveBeenCalledWith("heavy");
     });
 
     it("second long press in selection mode toggles without haptics", async () => {
@@ -485,7 +488,7 @@ describe("SessionScreen", () => {
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
         mockToggle,
       );
-      (Haptics.impactAsync as jest.Mock).mockClear();
+      (feedbackService.haptic as jest.Mock).mockClear();
 
       render(<SessionScreen />);
       await act(async () => {});
@@ -495,7 +498,7 @@ describe("SessionScreen", () => {
       });
 
       expect(mockToggle).toHaveBeenCalledWith("transcription-2");
-      expect(Haptics.impactAsync).not.toHaveBeenCalled();
+      expect(feedbackService.haptic).not.toHaveBeenCalled();
     });
   });
 
@@ -598,9 +601,7 @@ describe("SessionScreen", () => {
         );
       });
 
-      expect(Haptics.notificationAsync).toHaveBeenCalledWith(
-        Haptics.NotificationFeedbackType.Success,
-      );
+      expect(feedbackService.haptic).toHaveBeenCalledWith("success");
 
       // Restore
       if (originalPlatform) {
@@ -1146,9 +1147,8 @@ describe("SessionScreen", () => {
       });
 
       await waitFor(() => {
-        // shareSelectedTranscriptions catches the error internally and returns false
-        // So no haptics should fire (success was false)
-        expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+        // success haptic should not fire when share failed
+        expect(feedbackService.haptic).not.toHaveBeenCalledWith("success");
       });
       // The error was logged
       const { logError } = jest.requireMock("@/utils");
@@ -1176,9 +1176,7 @@ describe("SessionScreen", () => {
       });
 
       await waitFor(() => {
-        expect(Haptics.notificationAsync).toHaveBeenCalledWith(
-          Haptics.NotificationFeedbackType.Success,
-        );
+        expect(feedbackService.haptic).toHaveBeenCalledWith("success");
       });
     });
   });
@@ -1275,14 +1273,11 @@ describe("SessionScreen", () => {
   });
 
   describe("handleLongPress haptics failure", () => {
-    it("handles haptics not supported gracefully", async () => {
+    it("toggles selection even when haptics native call fails (feedback catches internally)", async () => {
       const mockToggle = jest.fn();
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(false);
       (useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
         mockToggle,
-      );
-      (Haptics.impactAsync as jest.Mock).mockRejectedValue(
-        new Error("Haptics not supported"),
       );
 
       render(<SessionScreen />);
@@ -1292,8 +1287,8 @@ describe("SessionScreen", () => {
         mockOnTranscriptionLongPress!("t1");
       });
 
-      // toggle should still be called even if haptics fail
       expect(mockToggle).toHaveBeenCalledWith("t1");
+      expect(feedbackService.haptic).toHaveBeenCalledWith("heavy");
     });
   });
 

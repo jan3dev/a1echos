@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { feedbackService } from "@/services";
 import { getShadow, useTheme } from "@/theme";
 
 import { Icon } from "../icon/Icon";
@@ -194,7 +195,10 @@ export const Toast = ({
                           styles.leftButton,
                           { backgroundColor: colors.surfacePrimary },
                         ]}
-                        onPress={onSecondaryButtonTap}
+                        onPress={() => {
+                          feedbackService.haptic("selection");
+                          onSecondaryButtonTap?.();
+                        }}
                         rippleColor={colors.ripple}
                       >
                         <Text
@@ -211,7 +215,10 @@ export const Toast = ({
                           styles.rightButton,
                           { backgroundColor: colors.surfacePrimary },
                         ]}
-                        onPress={onPrimaryButtonTap}
+                        onPress={() => {
+                          feedbackService.haptic("medium");
+                          onPrimaryButtonTap?.();
+                        }}
                         rippleColor={colors.ripple}
                       >
                         <Text
@@ -230,7 +237,10 @@ export const Toast = ({
                         styles.singleButton,
                         { backgroundColor: colors.surfacePrimary },
                       ]}
-                      onPress={onPrimaryButtonTap}
+                      onPress={() => {
+                        feedbackService.haptic("medium");
+                        onPrimaryButtonTap?.();
+                      }}
                       rippleColor={colors.ripple}
                     >
                       <Text

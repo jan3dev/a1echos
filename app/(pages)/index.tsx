@@ -1,5 +1,4 @@
 import { useFocusEffect } from "@react-navigation/native";
-import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
@@ -14,6 +13,7 @@ import {
 } from "@/components";
 import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
 import { Session } from "@/models";
+import { feedbackService } from "@/services";
 import {
   useCreateSession,
   useExitSessionSelection,
@@ -91,14 +91,10 @@ export default function HomeScreen() {
   }, []);
 
   const handleSessionLongPress = useCallback(
-    async (session: Session) => {
+    (session: Session) => {
       if (!isSessionSelectionMode) {
         toggleSessionSelection(session.id);
-        try {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        } catch {
-          // Haptics not supported
-        }
+        feedbackService.haptic("heavy");
       }
     },
     [isSessionSelectionMode, toggleSessionSelection],
@@ -123,6 +119,7 @@ export default function HomeScreen() {
       if (!hasPermission) {
         const result = await requestPermission();
         if (!result.granted) {
+          feedbackService.haptic("warning");
           if (!result.canAskAgain) {
             showGlobalTooltip(
               loc.homeMicrophonePermissionRequired,
@@ -226,6 +223,8 @@ export default function HomeScreen() {
   const performDelete = useCallback(async () => {
     const count = selectedSessionIds.length;
     hideDeleteToast();
+    feedbackService.haptic("heavy");
+    feedbackService.sound("error");
 
     try {
       await Promise.all(

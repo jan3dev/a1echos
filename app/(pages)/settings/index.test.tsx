@@ -32,10 +32,17 @@ jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
 }));
 
+const mockSetHapticsEnabled = jest.fn();
+const mockSetSoundsEnabled = jest.fn();
+
 jest.mock("@/stores", () => ({
   useSelectedModelType: jest.fn(() => "whisper_file"),
   useSelectedTheme: jest.fn(() => "auto"),
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
+  useIsHapticsEnabled: jest.fn(() => true),
+  useIsSoundsEnabled: jest.fn(() => true),
+  useSetHapticsEnabled: jest.fn(() => mockSetHapticsEnabled),
+  useSetSoundsEnabled: jest.fn(() => mockSetSoundsEnabled),
 }));
 
 jest.mock("@/components", () => {
@@ -60,6 +67,12 @@ jest.mock("@/components", () => {
       </TouchableOpacity>
     ),
     SettingsFooter: () => <View testID={TID.SettingsFooter} />,
+    Toggle: ({ value, onValueChange }: any) => (
+      <TouchableOpacity
+        testID={`toggle-${value}`}
+        onPress={() => onValueChange?.(!value)}
+      />
+    ),
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>

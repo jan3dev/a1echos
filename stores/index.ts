@@ -10,12 +10,16 @@ export {
 } from "./sessionStore";
 export {
   initializeSettingsStore,
+  useIsHapticsEnabled,
   useIsIncognitoMode,
+  useIsSoundsEnabled,
   useSelectedLanguage,
   useSelectedModelType,
   useSelectedTheme,
+  useSetHapticsEnabled,
   useSetLanguage,
   useSetModelType,
+  useSetSoundsEnabled,
   useSetTheme,
   useSettingsStore,
 } from "./settingsStore";

@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
+import { feedbackService } from "@/services";
 import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
@@ -70,7 +71,14 @@ export const ListItem = ({
   return (
     <View testID={testID} style={[styles.card, containerStyle, style]}>
       <RipplePressable
-        onPress={onPress}
+        onPress={
+          onPress
+            ? () => {
+                feedbackService.haptic("selection");
+                onPress();
+              }
+            : undefined
+        }
         onLongPress={onLongPress}
         disabled={!onPress && !onLongPress}
         rippleColor={theme.colors.ripple}

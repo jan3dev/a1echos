@@ -4,6 +4,7 @@ import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
 import { TestID } from "@/constants";
 import { useLocalization, useSessionOperations } from "@/hooks";
 import { Session } from "@/models";
+import { feedbackService } from "@/services";
 import { useRenameSession, useShowGlobalTooltip } from "@/stores";
 import { getShadow, useTheme } from "@/theme";
 import {
@@ -81,6 +82,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
 
   const performDelete = async () => {
     hideDeleteToast();
+    feedbackService.haptic("heavy");
+    feedbackService.sound("error");
 
     try {
       await deleteSession(session.id);
