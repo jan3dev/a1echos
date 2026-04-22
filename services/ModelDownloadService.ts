@@ -8,8 +8,7 @@ export interface DownloadProgress {
   modelId: ModelId;
   totalBytes: number;
   downloadedBytes: number;
-  /** 0 to 1 */
-  progress: number;
+  progressRatio: number;
   status: "checking" | "downloading" | "complete" | "error" | "cancelled";
   error?: string;
   /** Index of the file currently being downloaded */
@@ -134,7 +133,7 @@ const createModelDownloadService = () => {
         modelId,
         totalBytes: modelInfo.sizeBytes,
         downloadedBytes: totalDownloaded,
-        progress:
+        progressRatio:
           modelInfo.sizeBytes > 0
             ? Math.min(1, totalDownloaded / modelInfo.sizeBytes)
             : 0,

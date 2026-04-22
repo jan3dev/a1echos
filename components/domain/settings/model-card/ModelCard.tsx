@@ -303,7 +303,7 @@ function DownloadProgressSection({
   const { loc } = useLocalization();
   const { colors } = theme;
 
-  const percent = Math.round(progress.progress * 100);
+  const percent = Math.round(progress.progressRatio * 100);
 
   return (
     <View style={styles.progressSection}>
