@@ -8,7 +8,16 @@ export {
 } from "./Transcription";
 export type { Transcription, TranscriptionJSON } from "./Transcription";
 
-export { ModelType } from "./ModelType";
+export { ModelId, ModelType, TranscriptionMode } from "./ModelType";
+
+export {
+  getAllModels,
+  getBundledModels,
+  getDownloadableModels,
+  getModelInfo,
+  MODEL_REGISTRY,
+} from "./ModelRegistry";
+export type { ModelFileInfo, ModelInfo } from "./ModelRegistry";
 
 export { AppTheme, getThemeByName, getThemeName } from "./AppTheme";
 

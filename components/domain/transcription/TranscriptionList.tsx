@@ -1,7 +1,7 @@
 import { RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Keyboard, Platform, View } from "react-native";
 
-import { ModelType, Transcription } from "@/models";
+import { Transcription, TranscriptionMode } from "@/models";
 import {
   useSessionTranscriptions,
   useSettingsStore,
@@ -64,11 +64,11 @@ export const TranscriptionList = ({
   const loadingPreview = transcriptionStore.loadingPreview;
   const isRecording = transcriptionStore.isRecording();
   const isTranscribing = transcriptionStore.isTranscribing();
-  const modelType = settingsStore.selectedModelType;
+  const transcriptionMode = settingsStore.selectedTranscriptionMode;
 
   // Determine active preview state
   const previewState = useMemo((): ActivePreviewState => {
-    const isRealtime = modelType === ModelType.WHISPER_REALTIME;
+    const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
 
     // Handle Streaming/Realtime
     if (isRecording && isRealtime) {
@@ -132,7 +132,7 @@ export const TranscriptionList = ({
     loadingPreview,
     isRecording,
     isTranscribing,
-    modelType,
+    transcriptionMode,
     activeSessionId,
   ]);
 

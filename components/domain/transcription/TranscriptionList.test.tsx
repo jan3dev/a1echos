@@ -146,6 +146,7 @@ describe("TranscriptionList", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     (useSettingsStore as unknown as jest.Mock).mockReturnValue({
       selectedModelType: "whisper_realtime",
+      selectedTranscriptionMode: "realtime",
     });
     const liveItem = {
       id: "live-preview",

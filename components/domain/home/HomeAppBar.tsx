@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
-import { TestID } from "@/constants";
+import { Routes, TestID } from "@/constants";
 import { useSettingsStore } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -112,7 +112,7 @@ export const HomeAppBar = ({
       <RipplePressable
         key="settings"
         testID={TestID.HomeSettingsButton}
-        onPress={() => router.push("/settings" as any)}
+        onPress={() => router.push(Routes.settings)}
         hitSlop={10}
         rippleColor={theme.colors.ripple}
         borderless

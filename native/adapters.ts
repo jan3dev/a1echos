@@ -1,11 +1,44 @@
 import AudioRecord from "@fugood/react-native-audio-pcm-stream";
 import AesGcmCrypto from "react-native-aes-gcm-crypto";
-import RNFS from "react-native-fs";
-import { initWhisper, initWhisperVad } from "whisper.rn";
-import { RealtimeTranscriber } from "whisper.rn/src/realtime-transcription";
-import { AudioPcmStreamAdapter } from "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter";
+import { File } from "expo-file-system";
 
-import type { NativeModules } from "./types";
+import type { IFileSystem, NativeModules } from "./types";
+
+const decodeBase64 = (b64: string): Uint8Array =>
+  Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+const fileSystem: IFileSystem = {
+  writeFile: async (path, content, encoding) => {
+    const file = new File(`file://${path}`);
+    if (encoding === "base64") {
+      file.write(decodeBase64(content));
+    } else {
+      file.write(content);
+    }
+  },
+  appendFile: async (path, content, encoding) => {
+    const file = new File(`file://${path}`);
+    if (encoding === "base64") {
+      file.write(decodeBase64(content), { append: true });
+    } else {
+      file.write(content, { append: true });
+    }
+  },
+  readFile: async (path, encoding) => {
+    const file = new File(`file://${path}`);
+    if (encoding === "base64") {
+      return file.base64Sync();
+    }
+    return file.textSync();
+  },
+  unlink: async (path) => {
+    const file = new File(`file://${path}`);
+    if (file.exists) file.delete();
+  },
+  exists: async (path) => {
+    return new File(`file://${path}`).exists;
+  },
+};
 
 export const nativeModules: NativeModules = {
   audioPcmStream: {
@@ -23,13 +56,5 @@ export const nativeModules: NativeModules = {
       AesGcmCrypto.decrypt(content, key, iv, tag, aad),
   },
 
-  fileSystem: RNFS,
-
-  whisperModule: {
-    initWhisper: (options) => initWhisper(options),
-    initWhisperVad: (options) => initWhisperVad(options),
-    createRealtimeTranscriber: (config, options, callbacks) =>
-      new RealtimeTranscriber(config, options, callbacks),
-    createAudioPcmStreamAdapter: () => new AudioPcmStreamAdapter(),
-  },
+  fileSystem,
 };

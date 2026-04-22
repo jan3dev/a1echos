@@ -12,14 +12,21 @@ import {
   Text,
   TopAppBar,
 } from "@/components";
-import { dynamicTestID } from "@/constants";
+import { AppConstants, dynamicTestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { getCountryCode, SpokenLanguage, SupportedLanguages } from "@/models";
-import { useSelectedLanguage, useSetLanguage } from "@/stores";
+import {
+  getCountryCode,
+  getModelInfo,
+  SpokenLanguage,
+  SupportedLanguages,
+} from "@/models";
+import {
+  useSelectedLanguage,
+  useSelectedModelId,
+  useSetLanguage,
+} from "@/stores";
 import { useTheme } from "@/theme";
 import { delay, FeatureFlag, logError } from "@/utils";
-
-const APP_BAR_HEIGHT = 60;
 
 export default function LanguageSettingsScreen() {
   const router = useRouter();
@@ -28,6 +35,7 @@ export default function LanguageSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const selectedLanguage = useSelectedLanguage();
+  const selectedModelId = useSelectedModelId();
   const setLanguage = useSetLanguage();
 
   const [pendingLanguageCode, setPendingLanguageCode] = useState<string | null>(
@@ -61,7 +69,10 @@ export default function LanguageSettingsScreen() {
     }
   };
 
-  const languages = SupportedLanguages.all;
+  const modelInfo = getModelInfo(selectedModelId);
+  const languages = SupportedLanguages.forCodes(
+    modelInfo.supportedLanguageCodes,
+  );
 
   return (
     <View
@@ -76,7 +87,7 @@ export default function LanguageSettingsScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
           },
         ]}

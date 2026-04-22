@@ -53,6 +53,7 @@
       ],
       "./plugins/withRnForegroundService",
       "./plugins/withFixJcenter",
+      "./plugins/withReactNativeFsFix",
       [
         "expo-build-properties",
         {

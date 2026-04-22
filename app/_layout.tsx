@@ -21,6 +21,7 @@ import { useBackgroundRecording } from "@/hooks";
 import { AppTheme } from "@/models";
 import { registerForegroundService, storageService } from "@/services";
 import {
+  initializeModelDownloadStore,
   initializeSessionStore,
   initializeSettingsStore,
   initializeTranscriptionStore,
@@ -200,7 +201,6 @@ function GlobalRecordingControls() {
           />
         ) : (
           <BlurView
-            experimentalBlurMethod="dimezisBlurView"
             intensity={10}
             tint={blurTint}
             style={StyleSheet.absoluteFill}
@@ -255,6 +255,7 @@ export default function RootLayout() {
             initializeSessionStore(),
             storageService.processPendingDeletes(),
           ]);
+          initializeModelDownloadStore();
           await initializeTranscriptionStore();
         }
 

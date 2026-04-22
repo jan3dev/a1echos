@@ -11,12 +11,18 @@ export {
 export {
   initializeSettingsStore,
   useIsIncognitoMode,
+  useModelModes,
   useSelectedLanguage,
+  useSelectedModelId,
   useSelectedModelType,
   useSelectedTheme,
+  useSelectedTranscriptionMode,
   useSetLanguage,
+  useSetModelId,
+  useSetModelMode,
   useSetModelType,
   useSetTheme,
+  useSetTranscriptionMode,
   useSettingsStore,
 } from "./settingsStore";
 export {
@@ -31,6 +37,12 @@ export {
   useTranscriptionState,
   useTranscriptionStore,
 } from "./transcriptionStore";
+export {
+  initializeModelDownloadStore,
+  useIsModelDownloaded,
+  useModelDownloadProgress,
+  useModelDownloadStore,
+} from "./modelDownloadStore";
 export {
   useExitSessionSelection,
   useExitTranscriptionSelection,

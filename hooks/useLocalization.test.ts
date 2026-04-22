@@ -43,17 +43,13 @@ describe("useLocalization", () => {
       "noTranscriptionsSelectedToShare",
       "sessionNotFound",
       "settingsTitle",
-      "modelTitle",
+      "title",
       "themeTitle",
       "spokenLanguageTitle",
       "auto",
       "light",
       "dark",
-      "whisperModelRealtimeTitle",
-      "whisperModelFileTitle",
-      "whisperModelRealtimeSubtitle",
-      "whisperModelFileSubtitle",
-      "modelDescription",
+      "description",
       "spokenLanguageDescription",
       "recordingTooShort",
       "transcriptionFailed",
@@ -124,6 +120,17 @@ describe("useLocalization", () => {
     loc.shareFailed("share sheet error");
     expect(t).toHaveBeenCalledWith("shareFailed", {
       error: "share sheet error",
+    });
+  });
+
+  it("insufficientSpace interpolates required and available", () => {
+    const { result } = renderHook(() => useLocalization());
+    const { loc, t } = result.current;
+
+    loc.insufficientSpace("670 MB", "50 MB");
+    expect(t).toHaveBeenCalledWith("insufficientSpace", {
+      required: "670 MB",
+      available: "50 MB",
     });
   });
 });

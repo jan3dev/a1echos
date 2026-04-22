@@ -1,17 +1,30 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, Divider, ListItem, Radio, Text, TopAppBar } from "@/components";
-import { TestID } from "@/constants";
+import { ModelCard, Text, TopAppBar } from "@/components";
+import { Toast } from "@/components/ui/toast/Toast";
+import { useToast } from "@/components/ui/toast/useToast";
+import { AppConstants, Routes } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { ModelType } from "@/models";
-import { useSelectedModelType, useSetModelType } from "@/stores";
+import type { ModelInfo } from "@/models";
+import {
+  ModelId,
+  TranscriptionMode,
+  getAllModels,
+  getModelInfo,
+} from "@/models";
+import {
+  useModelDownloadStore,
+  useModelModes,
+  useSelectedModelId,
+  useSettingsStore,
+  useShowGlobalTooltip,
+} from "@/stores";
+import { modelDownloadService } from "@/services/ModelDownloadService";
 import { useTheme } from "@/theme";
-import { delay, FeatureFlag, logError } from "@/utils";
-
-const APP_BAR_HEIGHT = 60;
+import { FeatureFlag, formatBytes, logError } from "@/utils";
 
 export default function ModelSettingsScreen() {
   const router = useRouter();
@@ -19,38 +32,194 @@ export default function ModelSettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
-  const selectedModelType = useSelectedModelType();
-  const setModelType = useSetModelType();
+  const selectedModelId = useSelectedModelId();
+  const modelModes = useModelModes();
+  const setModelId = useSettingsStore((s) => s.setModelId);
+  const setModelMode = useSettingsStore((s) => s.setModelMode);
 
-  const [pendingModelType, setPendingModelType] = useState<ModelType | null>(
-    null,
-  );
+  const downloadStore = useModelDownloadStore();
+  const showGlobalTooltip = useShowGlobalTooltip();
   const [isSaving, setIsSaving] = useState(false);
-  const effectiveModelType = pendingModelType ?? selectedModelType;
+  const {
+    show: showDeleteToast,
+    hide: hideDeleteToast,
+    toastState: deleteToastState,
+  } = useToast();
 
-  const handleSelect = async (modelType: ModelType) => {
-    if (modelType === selectedModelType) {
-      router.back();
-      return;
+  const models = getAllModels();
+  const { downloadedSection, availableSection } = useMemo(() => {
+    const downloaded: ModelInfo[] = [];
+    const available: ModelInfo[] = [];
+    for (const model of models) {
+      const progress = downloadStore.getProgress(model.id);
+      const isActiveDownload =
+        progress?.status === "downloading" || progress?.status === "error";
+      if (
+        (model.isBundled || downloadStore.isDownloaded(model.id)) &&
+        !isActiveDownload
+      ) {
+        downloaded.push(model);
+      } else {
+        available.push(model);
+      }
     }
-    if (isSaving) return;
+    return { downloadedSection: downloaded, availableSection: available };
+  }, [models, downloadStore]);
 
-    setPendingModelType(modelType);
-    setIsSaving(true);
+  const handleDownload = useCallback(
+    async (modelId: ModelId) => {
+      const progress = downloadStore.getProgress(modelId);
+      if (progress?.status === "downloading") return;
 
-    const feedback = delay(400);
-    try {
-      await setModelType(modelType);
-      await feedback;
-      router.back();
-    } catch (error) {
-      setPendingModelType(null);
-      setIsSaving(false);
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to set model type",
+      const diskCheck = await modelDownloadService.checkDiskSpace(modelId);
+      if (!diskCheck.sufficient) {
+        showGlobalTooltip(
+          loc.insufficientSpace(
+            formatBytes(diskCheck.required),
+            formatBytes(diskCheck.available),
+          ),
+          "warning",
+          5000,
+        );
+        return;
+      }
+
+      const success = await downloadStore.startDownload(modelId);
+      if (success) {
+        try {
+          await setModelId(modelId);
+        } catch (error) {
+          logError(error, {
+            flag: FeatureFlag.settings,
+            message: "Failed to auto-select downloaded model",
+          });
+        }
+      }
+    },
+    [downloadStore, setModelId, loc, showGlobalTooltip],
+  );
+
+  const handleSelectModel = useCallback(
+    async (modelId: ModelId) => {
+      if (modelId === selectedModelId) return;
+      if (isSaving) return;
+
+      const info = getModelInfo(modelId);
+      if (!info.isBundled && !downloadStore.isDownloaded(modelId)) {
+        handleDownload(modelId);
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        await setModelId(modelId);
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.settings,
+          message: "Failed to set model",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [selectedModelId, isSaving, downloadStore, setModelId, handleDownload],
+  );
+
+  const handleSelectMode = useCallback(
+    async (modelId: ModelId, mode: TranscriptionMode) => {
+      try {
+        await setModelMode(modelId, mode);
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.settings,
+          message: "Failed to set transcription mode",
+        });
+      }
+    },
+    [setModelMode],
+  );
+
+  const handleCancelDownload = useCallback(
+    (modelId: ModelId) => {
+      downloadStore.cancelDownload(modelId);
+    },
+    [downloadStore],
+  );
+
+  const handleDelete = useCallback(
+    (modelId: ModelId) => {
+      const info = getModelInfo(modelId);
+      showDeleteToast({
+        title: loc.deleteConfirmTitle,
+        message: loc.deleteConfirmMessage.replace("{{name}}", info.name),
+        primaryButtonText: loc.delete,
+        onPrimaryButtonTap: async () => {
+          hideDeleteToast();
+          const success = await downloadStore.deleteModel(modelId);
+          if (selectedModelId === modelId) {
+            await setModelId(ModelId.WHISPER_TINY);
+          }
+          if (success) {
+            showGlobalTooltip(loc.deletedToast, "normal", 3000);
+          }
+        },
+        secondaryButtonText: loc.cancel,
+        onSecondaryButtonTap: hideDeleteToast,
+        variant: "informative",
       });
-    }
+    },
+    [
+      downloadStore,
+      selectedModelId,
+      setModelId,
+      loc,
+      showDeleteToast,
+      hideDeleteToast,
+      showGlobalTooltip,
+    ],
+  );
+
+  const handleOpenLanguages = useCallback(
+    (modelId: ModelId) => {
+      router.push(Routes.settingsModelLanguages(modelId));
+    },
+    [router],
+  );
+
+  const renderCard = (model: ModelInfo) => {
+    const progress = downloadStore.getProgress(model.id);
+    const isDownloaded =
+      model.isBundled || downloadStore.isDownloaded(model.id);
+    const isSelectedCard = model.id === selectedModelId;
+    const savedMode = modelModes[model.id];
+    const cardMode =
+      savedMode && model.supportedModes.includes(savedMode)
+        ? savedMode
+        : model.supportedModes[0];
+    return (
+      <ModelCard
+        key={model.id}
+        testID={`model-card-${model.id}`}
+        name={model.name}
+        description={model.description}
+        languageCount={model.languages}
+        sizeLabel={formatBytes(model.sizeBytes)}
+        isBundled={model.isBundled}
+        isSelected={isSelectedCard}
+        isDownloaded={isDownloaded}
+        supportedModes={model.supportedModes}
+        selectedMode={cardMode}
+        onSelectMode={(mode) => handleSelectMode(model.id, mode)}
+        downloadProgress={progress}
+        onSelect={() => handleSelectModel(model.id)}
+        onDownload={() => handleDownload(model.id)}
+        onCancelDownload={() => handleCancelDownload(model.id)}
+        onDelete={() => handleDelete(model.id)}
+        onRetry={() => handleDownload(model.id)}
+        onLanguagesPress={() => handleOpenLanguages(model.id)}
+        disabled={isSaving}
+      />
+    );
   };
 
   return (
@@ -60,78 +229,63 @@ export default function ModelSettingsScreen() {
         { backgroundColor: theme.colors.surfaceBackground },
       ]}
     >
-      <TopAppBar title={loc.modelTitle} />
+      <TopAppBar title="" />
 
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
           },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text
-          variant="body1"
-          color={theme.colors.textPrimary}
-          style={styles.description}
-        >
-          {loc.modelDescription}
-        </Text>
+        <View style={styles.header}>
+          <Text variant="h4" weight="semibold" color={theme.colors.textPrimary}>
+            {loc.title}
+          </Text>
+          <Text
+            variant="body1"
+            weight="medium"
+            color={theme.colors.textSecondary}
+          >
+            {loc.description}
+          </Text>
+        </View>
 
-        <Card>
-          <ListItem
-            testID={TestID.ModelWhisperFile}
-            title={loc.whisperModelFileTitle}
-            titleTrailing={loc.whisperModelFileSubtitle}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconTrailing={
-              <Radio<ModelType>
-                value={ModelType.WHISPER_FILE}
-                groupValue={effectiveModelType}
-                onValueChange={
-                  isSaving
-                    ? undefined
-                    : () => handleSelect(ModelType.WHISPER_FILE)
-                }
-                enabled={!isSaving}
-              />
-            }
-            onPress={
-              isSaving ? undefined : () => handleSelect(ModelType.WHISPER_FILE)
-            }
-            backgroundColor={theme.colors.surfacePrimary}
-          />
+        {downloadedSection.length > 0 && (
+          <View style={styles.section}>
+            <Text
+              variant="body2"
+              weight="medium"
+              color={theme.colors.textSecondary}
+            >
+              {loc.sectionDownloaded}
+            </Text>
+            <View style={styles.cardList}>
+              {downloadedSection.map(renderCard)}
+            </View>
+          </View>
+        )}
 
-          <Divider color={theme.colors.surfaceBorderPrimary} />
-
-          <ListItem
-            testID={TestID.ModelWhisperRealtime}
-            title={loc.whisperModelRealtimeTitle}
-            titleTrailing={loc.whisperModelRealtimeSubtitle}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconTrailing={
-              <Radio<ModelType>
-                value={ModelType.WHISPER_REALTIME}
-                groupValue={effectiveModelType}
-                onValueChange={
-                  isSaving
-                    ? undefined
-                    : () => handleSelect(ModelType.WHISPER_REALTIME)
-                }
-                enabled={!isSaving}
-              />
-            }
-            onPress={
-              isSaving
-                ? undefined
-                : () => handleSelect(ModelType.WHISPER_REALTIME)
-            }
-            backgroundColor={theme.colors.surfacePrimary}
-          />
-        </Card>
+        {availableSection.length > 0 && (
+          <View style={styles.section}>
+            <Text
+              variant="body2"
+              weight="medium"
+              color={theme.colors.textSecondary}
+            >
+              {loc.sectionAvailable}
+            </Text>
+            <View style={styles.cardList}>
+              {availableSection.map(renderCard)}
+            </View>
+          </View>
+        )}
       </ScrollView>
+
+      <Toast {...deleteToastState} />
     </View>
   );
 }
@@ -142,8 +296,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
+    gap: 24,
   },
-  description: {
-    marginBottom: 16,
+  header: {
+    gap: 8,
+  },
+  section: {
+    gap: 8,
+  },
+  cardList: {
+    gap: 8,
   },
 });

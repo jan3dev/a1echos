@@ -1,4 +1,4 @@
-import RNFS from "react-native-fs";
+import { File } from "expo-file-system";
 
 import { createPcmStreamWriter } from "./WavWriter";
 
@@ -6,6 +6,24 @@ jest.mock("./log", () => ({
   FeatureFlag: { recording: "RECORDING" },
   logError: jest.fn(),
 }));
+
+const MockFile = File as unknown as jest.Mock;
+
+// Per-path File instance so writes/reads can be tracked independently.
+const fileInstances = new Map<string, any>();
+const makeFileInstance = (uri: string) => {
+  if (!fileInstances.has(uri)) {
+    fileInstances.set(uri, {
+      uri,
+      exists: true,
+      write: jest.fn(),
+      base64Sync: jest.fn(() => "bW9jayBwY20gZGF0YQ=="),
+      textSync: jest.fn(() => ""),
+      delete: jest.fn(),
+    });
+  }
+  return fileInstances.get(uri);
+};
 
 describe("createPcmStreamWriter", () => {
   const outputPath = "/mock/output.wav";
@@ -15,13 +33,20 @@ describe("createPcmStreamWriter", () => {
   const bitsPerSample = 16;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (RNFS.exists as jest.Mock).mockResolvedValue(true);
-    (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-    (RNFS.appendFile as jest.Mock).mockResolvedValue(undefined);
-    (RNFS.readFile as jest.Mock).mockResolvedValue("bW9jayBwY20gZGF0YQ==");
-    (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+    fileInstances.clear();
+    MockFile.mockReset().mockImplementation((uri: string) =>
+      makeFileInstance(uri),
+    );
   });
+
+  const flush = async () => {
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+  };
+
+  const tempFile = () => makeFileInstance(`file://${tempPath}`);
+  const outFile = () => makeFileInstance(`file://${outputPath}`);
 
   describe("creation", () => {
     it("returns correct interface", () => {
@@ -49,7 +74,7 @@ describe("createPcmStreamWriter", () => {
   });
 
   describe("write", () => {
-    it("first chunk uses writeFile on temp path", async () => {
+    it("first chunk writes PCM bytes to the temp path", async () => {
       const writer = createPcmStreamWriter(
         outputPath,
         sampleRate,
@@ -57,12 +82,14 @@ describe("createPcmStreamWriter", () => {
         bitsPerSample,
       );
       writer.write("AAAA");
-      // Flush the write queue via a microtask tick
-      await new Promise((r) => setTimeout(r, 0));
-      expect(RNFS.writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
+      await flush();
+      expect(tempFile().write).toHaveBeenCalled();
+      const call = tempFile().write.mock.calls[0];
+      expect(call[0]).toBeInstanceOf(Uint8Array);
+      expect(call[1]).toBeUndefined();
     });
 
-    it("subsequent chunks use appendFile", async () => {
+    it("subsequent chunks append to the temp path", async () => {
       const writer = createPcmStreamWriter(
         outputPath,
         sampleRate,
@@ -71,9 +98,9 @@ describe("createPcmStreamWriter", () => {
       );
       writer.write("AAAA");
       writer.write("BBBB");
-      await new Promise((r) => setTimeout(r, 0));
-      expect(RNFS.writeFile).toHaveBeenCalledWith(tempPath, "AAAA", "base64");
-      expect(RNFS.appendFile).toHaveBeenCalledWith(tempPath, "BBBB", "base64");
+      await flush();
+      expect(tempFile().write).toHaveBeenCalledTimes(2);
+      expect(tempFile().write.mock.calls[1][1]).toEqual({ append: true });
     });
 
     it("tracks byte count", () => {
@@ -83,7 +110,6 @@ describe("createPcmStreamWriter", () => {
         numChannels,
         bitsPerSample,
       );
-      // "AAAA" = 3 bytes, "BBBBBB==" = 4 bytes
       writer.write("AAAA");
       expect(writer.getByteCount()).toBe(3);
       writer.write("BBBBBB==");
@@ -99,9 +125,8 @@ describe("createPcmStreamWriter", () => {
       );
       writer.write("AAAA");
       await writer.finalize();
-      jest.clearAllMocks();
       writer.write("CCCC");
-      expect(writer.getByteCount()).toBe(3); // unchanged
+      expect(writer.getByteCount()).toBe(3);
     });
 
     it("ignores writes after abort", async () => {
@@ -113,14 +138,13 @@ describe("createPcmStreamWriter", () => {
       );
       writer.write("AAAA");
       await writer.abort();
-      jest.clearAllMocks();
       writer.write("CCCC");
-      expect(writer.getByteCount()).toBe(3); // unchanged
+      expect(writer.getByteCount()).toBe(3);
     });
   });
 
   describe("finalize", () => {
-    it("writes WAV header then appends PCM data and cleans up temp", async () => {
+    it("writes WAV header, appends PCM data, and deletes temp", async () => {
       const writer = createPcmStreamWriter(
         outputPath,
         sampleRate,
@@ -131,22 +155,10 @@ describe("createPcmStreamWriter", () => {
       const result = await writer.finalize();
 
       expect(result).toBe(true);
-      // Should write WAV header to output path
-      expect(RNFS.writeFile).toHaveBeenCalledWith(
-        outputPath,
-        expect.any(String),
-        "base64",
-      );
-      // Should read PCM data from temp path
-      expect(RNFS.readFile).toHaveBeenCalledWith(tempPath, "base64");
-      // Should append PCM data to output
-      expect(RNFS.appendFile).toHaveBeenCalledWith(
-        outputPath,
-        expect.any(String),
-        "base64",
-      );
-      // Should clean up temp file
-      expect(RNFS.unlink).toHaveBeenCalledWith(tempPath);
+      // First call to output: write header (append: undefined/absent)
+      expect(outFile().write).toHaveBeenCalled();
+      expect(tempFile().base64Sync).toHaveBeenCalled();
+      expect(tempFile().delete).toHaveBeenCalled();
     });
 
     it("returns false when 0 bytes written", async () => {
@@ -186,10 +198,8 @@ describe("createPcmStreamWriter", () => {
       writer.write("AAAA");
       await writer.abort();
 
-      expect(RNFS.exists).toHaveBeenCalledWith(tempPath);
-      expect(RNFS.exists).toHaveBeenCalledWith(outputPath);
-      expect(RNFS.unlink).toHaveBeenCalledWith(tempPath);
-      expect(RNFS.unlink).toHaveBeenCalledWith(outputPath);
+      expect(tempFile().delete).toHaveBeenCalled();
+      expect(outFile().delete).toHaveBeenCalled();
     });
   });
 });

@@ -11,8 +11,7 @@ const modules: NativeModules = isStorybook
   ? require("./mocks").nativeModules
   : require("./adapters").nativeModules;
 
-export const { audioPcmStream, aesGcmCrypto, fileSystem, whisperModule } =
-  modules;
+export const { audioPcmStream, aesGcmCrypto, fileSystem } = modules;
 
 export type {
   AudioPcmStreamConfig,
@@ -20,9 +19,6 @@ export type {
   IAesGcmCrypto,
   IAudioPcmStream,
   IFileSystem,
-  IWhisperModule,
-  NativeModules,
-  RealtimeTranscribeEvent,
-  WhisperInitOptions,
-  WhisperVadInitOptions,
+  NativeModules
 } from "./types";
+

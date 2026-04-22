@@ -24,11 +24,4 @@ export const nativeModules: NativeModules = {
     unlink: () => unavailable("FileSystem"),
     exists: () => unavailable("FileSystem"),
   },
-
-  whisperModule: {
-    initWhisper: () => unavailable("Whisper"),
-    initWhisperVad: () => unavailable("Whisper"),
-    createRealtimeTranscriber: () => unavailable("Whisper"),
-    createAudioPcmStreamAdapter: () => unavailable("Whisper"),
-  },
 };

@@ -62,6 +62,11 @@ export const formatSessionSubtitle = ({
   return isModified ? `${modifiedPrefix} ${dateStr}` : dateStr;
 };
 
+export const formatBytes = (bytes: number): string => {
+  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(1)} GB`;
+  return `${Math.round(bytes / 1_000_000)} MB`;
+};
+
 export { delay } from "./delay";
 export {
   FeatureFlag,

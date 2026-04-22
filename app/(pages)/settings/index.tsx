@@ -12,17 +12,15 @@ import {
   SettingsFooter,
   TopAppBar,
 } from "@/components";
-import { TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { AppTheme, ModelType } from "@/models";
+import { AppTheme, getModelInfo } from "@/models";
 import {
   useSelectedLanguage,
-  useSelectedModelType,
+  useSelectedModelId,
   useSelectedTheme,
 } from "@/stores";
 import { useTheme } from "@/theme";
-
-const APP_BAR_HEIGHT = 60;
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -30,14 +28,11 @@ export default function SettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
-  const selectedModelType = useSelectedModelType();
+  const selectedModelId = useSelectedModelId();
   const selectedTheme = useSelectedTheme();
   const selectedLanguage = useSelectedLanguage();
 
-  const modelDisplay =
-    selectedModelType === ModelType.WHISPER_REALTIME
-      ? loc.whisperModelRealtimeTitle
-      : loc.whisperModelFileTitle;
+  const modelDisplay = getModelInfo(selectedModelId).name;
 
   const themeDisplay = (() => {
     switch (selectedTheme) {
@@ -67,7 +62,7 @@ export default function SettingsScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + APP_BAR_HEIGHT + 16,
+            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
             paddingBottom: insets.bottom + 16,
             flexGrow: 1,
           },
@@ -77,11 +72,15 @@ export default function SettingsScreen() {
         <Card>
           <ListItem
             testID={TestID.SettingsModel}
-            title={loc.modelTitle}
+            title={loc.title}
             titleTrailing={modelDisplay}
             titleTrailingColor={theme.colors.textSecondary}
             iconLeading={
-              <Icon name="mic" size={24} color={theme.colors.textSecondary} />
+              <Icon
+                name="voice_circle"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
             }
             iconTrailing={
               <Icon
@@ -90,7 +89,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/model")}
+            onPress={() => router.push(Routes.settingsModel)}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -111,7 +110,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/theme")}
+            onPress={() => router.push(Routes.settingsTheme)}
             backgroundColor={theme.colors.surfacePrimary}
           />
 
@@ -136,7 +135,7 @@ export default function SettingsScreen() {
                 color={theme.colors.textSecondary}
               />
             }
-            onPress={() => router.push("/settings/language")}
+            onPress={() => router.push(Routes.settingsLanguage)}
             backgroundColor={theme.colors.surfacePrimary}
           />
         </Card>

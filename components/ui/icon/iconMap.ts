@@ -31,6 +31,7 @@ import ChevronUp from "@/assets/icons/chevron_up.svg";
 import ChevronUpDown from "@/assets/icons/chevron_up_down.svg";
 import CircularProgress from "@/assets/icons/circular_progress.svg";
 import Close from "@/assets/icons/close.svg";
+import CloseCircle from "@/assets/icons/close_circle.svg";
 import ContractCheck from "@/assets/icons/contract_check.svg";
 import ContractSearch from "@/assets/icons/contract_search.svg";
 import Copy from "@/assets/icons/copy.svg";
@@ -41,6 +42,7 @@ import CrossingDown from "@/assets/icons/crossing_down.svg";
 import CrossingUp from "@/assets/icons/crossing_up.svg";
 import Danger from "@/assets/icons/danger.svg";
 import DocumentLayoutLeft from "@/assets/icons/document_layout_left.svg";
+import Download from "@/assets/icons/download.svg";
 import EchosIcon from "@/assets/icons/echos_icon.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
 import Edit from "@/assets/icons/edit.svg";
@@ -52,6 +54,7 @@ import EyeOpen from "@/assets/icons/eye_open.svg";
 import Faq from "@/assets/icons/faq.svg";
 import Fees from "@/assets/icons/fees.svg";
 import Filter from "@/assets/icons/filter.svg";
+import Flash from "@/assets/icons/flash.svg";
 import FooterLogo from "@/assets/icons/footer_logo.svg";
 import Ghost from "@/assets/icons/ghost.svg";
 import Gift from "@/assets/icons/gift.svg";
@@ -101,6 +104,7 @@ import ReferenceRate from "@/assets/icons/reference_rate.svg";
 import Refresh from "@/assets/icons/refresh.svg";
 import Remove from "@/assets/icons/remove.svg";
 import Rotate from "@/assets/icons/rotate.svg";
+import RotateLeft from "@/assets/icons/rotate_left.svg";
 import Scan from "@/assets/icons/scan.svg";
 import Search from "@/assets/icons/search.svg";
 import SelectAll from "@/assets/icons/select_all.svg";
@@ -121,12 +125,14 @@ import SwapVertical from "@/assets/icons/swap_vertical.svg";
 import SwitchIcon from "@/assets/icons/switch_icon.svg";
 import TelegramLogo from "@/assets/icons/telegram_logo.svg";
 import Theme from "@/assets/icons/theme.svg";
+import Timer from "@/assets/icons/timer.svg";
 import Tool from "@/assets/icons/tool.svg";
 import Trash from "@/assets/icons/trash.svg";
 import TrendUp from "@/assets/icons/trend_up.svg";
 import Unlink from "@/assets/icons/unlink.svg";
 import Upload from "@/assets/icons/upload.svg";
 import User from "@/assets/icons/user.svg";
+import VoiceCircle from "@/assets/icons/voice_circle.svg";
 import Wallet from "@/assets/icons/wallet.svg";
 import Warning from "@/assets/icons/warning.svg";
 import Web from "@/assets/icons/web.svg";
@@ -164,6 +170,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   chevron_up_down: ChevronUpDown,
   circular_progress: CircularProgress,
   close: Close,
+  close_circle: CloseCircle,
   contract_check: ContractCheck,
   contract_search: ContractSearch,
   copy: Copy,
@@ -174,6 +181,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   crossing_up: CrossingUp,
   danger: Danger,
   document_layout_left: DocumentLayoutLeft,
+  download: Download,
   echos_icon: EchosIcon,
   echos_logo: EchosLogo,
   edit: Edit,
@@ -185,6 +193,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   faq: Faq,
   fees: Fees,
   filter: Filter,
+  flash: Flash,
   footer_logo: FooterLogo,
   ghost: Ghost,
   gift: Gift,
@@ -234,6 +243,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   refresh: Refresh,
   remove: Remove,
   rotate: Rotate,
+  rotate_left: RotateLeft,
   scan: Scan,
   search: Search,
   select_all: SelectAll,
@@ -254,12 +264,14 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   switch_icon: SwitchIcon,
   telegram_logo: TelegramLogo,
   theme: Theme,
+  timer: Timer,
   tool: Tool,
   trash: Trash,
   trend_up: TrendUp,
   unlink: Unlink,
   upload: Upload,
   user: User,
+  voice_circle: VoiceCircle,
   wallet: Wallet,
   warning: Warning,
   web: Web,
