@@ -72,7 +72,7 @@ export default function SettingsScreen() {
         <Card>
           <ListItem
             testID={TestID.SettingsModel}
-            title={loc.modelTitle}
+            title={loc.title}
             titleTrailing={modelDisplay}
             titleTrailingColor={theme.colors.textSecondary}
             iconLeading={

@@ -43,13 +43,13 @@ describe("useLocalization", () => {
       "noTranscriptionsSelectedToShare",
       "sessionNotFound",
       "settingsTitle",
-      "modelTitle",
+      "title",
       "themeTitle",
       "spokenLanguageTitle",
       "auto",
       "light",
       "dark",
-      "modelDescription",
+      "description",
       "spokenLanguageDescription",
       "recordingTooShort",
       "transcriptionFailed",
@@ -123,12 +123,12 @@ describe("useLocalization", () => {
     });
   });
 
-  it("modelInsufficientSpace interpolates required and available", () => {
+  it("insufficientSpace interpolates required and available", () => {
     const { result } = renderHook(() => useLocalization());
     const { loc, t } = result.current;
 
-    loc.modelInsufficientSpace("670 MB", "50 MB");
-    expect(t).toHaveBeenCalledWith("modelInsufficientSpace", {
+    loc.insufficientSpace("670 MB", "50 MB");
+    expect(t).toHaveBeenCalledWith("insufficientSpace", {
       required: "670 MB",
       available: "50 MB",
     });

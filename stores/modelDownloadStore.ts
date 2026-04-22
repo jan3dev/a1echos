@@ -61,7 +61,7 @@ const notifyDownloadComplete = () => {
 
   useUIStore
     .getState()
-    .showGlobalTooltip(i18next.t("modelDownloadedToast"), "success", 3000);
+    .showGlobalTooltip(i18next.t("downloadedToast"), "success", 3000);
 };
 
 interface ModelDownloadStore {

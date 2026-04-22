@@ -62,7 +62,7 @@ export default function ModelLanguagesScreen() {
             weight="medium"
             color={theme.colors.textSecondary}
           >
-            {loc.modelLanguagesSupported(languages.length)}
+            {loc.languagesSupported(languages.length)}
           </Text>
         </View>
 

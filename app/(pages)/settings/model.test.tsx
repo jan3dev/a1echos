@@ -52,9 +52,9 @@ jest.mock("@/hooks", () => ({
       {
         get: (_, p: string) => {
           if (typeof p !== "string") return undefined;
-          if (p === "modelInsufficientSpace") {
+          if (p === "insufficientSpace") {
             return (required: string, available: string) =>
-              `modelInsufficientSpace:${required},${available}`;
+              `insufficientSpace:${required},${available}`;
           }
           return p;
         },
@@ -210,9 +210,9 @@ describe("ModelSettingsScreen", () => {
   it("renders TopAppBar and section headers", () => {
     const { getByText, getByTestId } = render(<ModelSettingsScreen />);
     expect(getByTestId("top-app-bar")).toBeTruthy();
-    expect(getByText("modelTitle")).toBeTruthy();
-    expect(getByText("modelSectionDownloaded")).toBeTruthy();
-    expect(getByText("modelSectionAvailable")).toBeTruthy();
+    expect(getByText("title")).toBeTruthy();
+    expect(getByText("sectionDownloaded")).toBeTruthy();
+    expect(getByText("sectionAvailable")).toBeTruthy();
   });
 
   it("places bundled model in downloaded section and non-downloaded in available", () => {
@@ -278,7 +278,7 @@ describe("ModelSettingsScreen", () => {
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
     await waitFor(() => {
       expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        expect.stringContaining("modelInsufficientSpace"),
+        expect.stringContaining("insufficientSpace"),
         "warning",
         5000,
       );
@@ -333,7 +333,7 @@ describe("ModelSettingsScreen", () => {
         "nemo_parakeet_v3",
       );
       expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        "modelDeletedToast",
+        "deletedToast",
         "normal",
         3000,
       );

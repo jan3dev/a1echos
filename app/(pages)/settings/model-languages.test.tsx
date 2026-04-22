@@ -26,8 +26,7 @@ jest.mock("@/theme", () => ({
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({
     loc: {
-      modelLanguagesSupported: (count: number) =>
-        `modelLanguagesSupported_${count}`,
+      languagesSupported: (count: number) => `languagesSupported_${count}`,
     },
   })),
 }));
@@ -98,7 +97,7 @@ describe("ModelLanguagesScreen", () => {
     const { getByText, getByTestId } = render(<ModelLanguagesScreen />);
     expect(getByText("Whisper Tiny")).toBeTruthy();
     // Whisper with no supportedLanguageCodes → forCodes returns 2 mock entries
-    expect(getByText("modelLanguagesSupported_2")).toBeTruthy();
+    expect(getByText("languagesSupported_2")).toBeTruthy();
     expect(getByTestId("language-chip-en")).toBeTruthy();
     expect(getByTestId("language-chip-ja")).toBeTruthy();
   });

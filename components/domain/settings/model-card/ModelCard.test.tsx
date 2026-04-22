@@ -49,17 +49,17 @@ jest.mock("@/utils", () => ({
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({
     loc: {
-      modelLanguageCount: (count: number) => `${count} languages`,
-      modelIncluded: "Included",
-      modelDownload: "Download",
-      modelDelete: "Delete",
-      modelCancel: "Cancel",
-      modelTryAgain: "Try again",
-      modelDownloadFailed: "Download failed",
-      modelModeRealtime: "Real-time",
-      modelModeHighAccuracy: "High Accuracy",
-      modelModeRealtimeOnly: "Real-time Only",
-      modelModeHighAccuracyOnly: "High Accuracy Only",
+      languageCount: (count: number) => `${count} languages`,
+      included: "Included",
+      download: "Download",
+      delete: "Delete",
+      cancel: "Cancel",
+      tryAgain: "Try again",
+      downloadFailed: "Download failed",
+      realtime: "Real-time",
+      highAccuracy: "High Accuracy",
+      realtimeOnly: "Real-time Only",
+      highAccuracyOnly: "High Accuracy Only",
     },
   })),
 }));

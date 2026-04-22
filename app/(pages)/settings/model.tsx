@@ -74,7 +74,7 @@ export default function ModelSettingsScreen() {
       const diskCheck = await modelDownloadService.checkDiskSpace(modelId);
       if (!diskCheck.sufficient) {
         showGlobalTooltip(
-          loc.modelInsufficientSpace(
+          loc.insufficientSpace(
             formatBytes(diskCheck.required),
             formatBytes(diskCheck.available),
           ),
@@ -150,9 +150,9 @@ export default function ModelSettingsScreen() {
     (modelId: ModelId) => {
       const info = getModelInfo(modelId);
       showDeleteToast({
-        title: loc.modelDeleteConfirmTitle,
-        message: loc.modelDeleteConfirmMessage.replace("{{name}}", info.name),
-        primaryButtonText: loc.modelDelete,
+        title: loc.deleteConfirmTitle,
+        message: loc.deleteConfirmMessage.replace("{{name}}", info.name),
+        primaryButtonText: loc.delete,
         onPrimaryButtonTap: async () => {
           hideDeleteToast();
           const success = await downloadStore.deleteModel(modelId);
@@ -160,10 +160,10 @@ export default function ModelSettingsScreen() {
             await setModelId(ModelId.WHISPER_TINY);
           }
           if (success) {
-            showGlobalTooltip(loc.modelDeletedToast, "normal", 3000);
+            showGlobalTooltip(loc.deletedToast, "normal", 3000);
           }
         },
-        secondaryButtonText: loc.modelCancel,
+        secondaryButtonText: loc.cancel,
         onSecondaryButtonTap: hideDeleteToast,
         variant: "informative",
       });
@@ -243,14 +243,14 @@ export default function ModelSettingsScreen() {
       >
         <View style={styles.header}>
           <Text variant="h4" weight="semibold" color={theme.colors.textPrimary}>
-            {loc.modelTitle}
+            {loc.title}
           </Text>
           <Text
             variant="body1"
             weight="medium"
             color={theme.colors.textSecondary}
           >
-            {loc.modelDescription}
+            {loc.description}
           </Text>
         </View>
 
@@ -261,7 +261,7 @@ export default function ModelSettingsScreen() {
               weight="medium"
               color={theme.colors.textSecondary}
             >
-              {loc.modelSectionDownloaded}
+              {loc.sectionDownloaded}
             </Text>
             <View style={styles.cardList}>
               {downloadedSection.map(renderCard)}
@@ -276,7 +276,7 @@ export default function ModelSettingsScreen() {
               weight="medium"
               color={theme.colors.textSecondary}
             >
-              {loc.modelSectionAvailable}
+              {loc.sectionAvailable}
             </Text>
             <View style={styles.cardList}>
               {availableSection.map(renderCard)}

@@ -27,6 +27,7 @@ import {
 jest.mock("@/utils", () => ({
   FeatureFlag: { settings: "SETTINGS" },
   logError: jest.fn(),
+  logWarn: jest.fn(),
 }));
 
 const initialState = {

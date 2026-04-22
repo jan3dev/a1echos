@@ -65,7 +65,7 @@ export const ModelCard = ({
 
   const canSelect = isDownloaded && !disabled && !isDownloading;
 
-  const languagesText = loc.modelLanguageCount(languageCount);
+  const languagesText = loc.languageCount(languageCount);
 
   return (
     <RipplePressable
@@ -93,7 +93,7 @@ export const ModelCard = ({
             >
               {name}
             </Text>
-            {isBundled && <IncludedChip label={loc.modelIncluded} />}
+            {isBundled && <IncludedChip label={loc.included} />}
           </View>
           <Text
             variant="body2"
@@ -206,7 +206,7 @@ function DownloadedBody({
         {showDelete && onDelete && (
           <ActionButton
             icon="trash"
-            label={loc.modelDelete}
+            label={loc.delete}
             color={colors.accentDanger}
             onPress={onDelete}
           />
@@ -272,7 +272,7 @@ function AvailableBody({
         {onDownload && (
           <ActionButton
             icon="download"
-            label={loc.modelDownload}
+            label={loc.download}
             color={colors.accentBrand}
             onPress={onDownload}
           />
@@ -344,7 +344,7 @@ function DownloadProgressSection({
         {onCancel && (
           <ActionButton
             icon="close_circle"
-            label={loc.modelCancel}
+            label={loc.cancel}
             color={colors.accentDanger}
             onPress={onCancel}
           />
@@ -388,12 +388,12 @@ function ErrorSection({
       />
       <View style={styles.progressRow}>
         <Text variant="caption1" weight="medium" color={colors.accentWarning}>
-          {loc.modelDownloadFailed}
+          {loc.downloadFailed}
         </Text>
         {onRetry && (
           <ActionButton
             icon="rotate_left"
-            label={loc.modelTryAgain}
+            label={loc.tryAgain}
             color={colors.accentBrand}
             onPress={onRetry}
           />
@@ -426,7 +426,7 @@ function ModeSelector({
       <View style={styles.modeRow}>
         <ModeSelectorChip
           icon="flash"
-          label={loc.modelModeRealtime}
+          label={loc.realtime}
           active={selectedMode === TranscriptionMode.REALTIME}
           onPress={
             onSelectMode
@@ -436,7 +436,7 @@ function ModeSelector({
         />
         <ModeSelectorChip
           icon="timer"
-          label={loc.modelModeHighAccuracy}
+          label={loc.highAccuracy}
           active={selectedMode === TranscriptionMode.FILE}
           onPress={
             onSelectMode
@@ -452,7 +452,7 @@ function ModeSelector({
     return (
       <ModeSelectorChip
         icon="flash"
-        label={loc.modelModeRealtimeOnly}
+        label={loc.realtimeOnly}
         active
         fullWidth
       />
@@ -462,7 +462,7 @@ function ModeSelector({
   return (
     <ModeSelectorChip
       icon="timer"
-      label={loc.modelModeHighAccuracyOnly}
+      label={loc.highAccuracyOnly}
       active
       fullWidth
     />
@@ -546,9 +546,7 @@ function ModeMetaRow({
           <MetaDivider />
           <ModeMetaChip
             icon="flash"
-            label={
-              isSingleMode ? loc.modelModeRealtimeOnly : loc.modelModeRealtime
-            }
+            label={isSingleMode ? loc.realtimeOnly : loc.realtime}
           />
         </>
       )}
@@ -557,11 +555,7 @@ function ModeMetaRow({
           <MetaDivider />
           <ModeMetaChip
             icon="timer"
-            label={
-              isSingleMode
-                ? loc.modelModeHighAccuracyOnly
-                : loc.modelModeHighAccuracy
-            }
+            label={isSingleMode ? loc.highAccuracyOnly : loc.highAccuracy}
           />
         </>
       )}

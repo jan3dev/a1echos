@@ -76,16 +76,14 @@ jest.mock("@/components", () => {
 describe("SettingsScreen", () => {
   it("renders settings items (model, theme, language titles)", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("list-item-modelTitle")).toBeTruthy();
+    expect(getByTestId("list-item-title")).toBeTruthy();
     expect(getByTestId("list-item-themeTitle")).toBeTruthy();
     expect(getByTestId("list-item-spokenLanguageTitle")).toBeTruthy();
   });
 
   it("model item shows current model name", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-modelTitle")).toHaveTextContent(
-      "Whisper Tiny",
-    );
+    expect(getByTestId("trailing-title")).toHaveTextContent("Whisper Tiny");
   });
 
   it("theme item shows current theme display text", () => {
@@ -101,7 +99,7 @@ describe("SettingsScreen", () => {
 
   it("settings item press navigates to correct route", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    fireEvent.press(getByTestId("list-item-modelTitle"));
+    fireEvent.press(getByTestId("list-item-title"));
     expect(mockPush).toHaveBeenCalledWith("/settings/model");
 
     fireEvent.press(getByTestId("list-item-themeTitle"));
@@ -126,7 +124,7 @@ describe("SettingsScreen", () => {
     (getModelInfo as jest.Mock).mockReturnValue({ name: "Parakeet V3" });
 
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-modelTitle")).toHaveTextContent("Parakeet V3");
+    expect(getByTestId("trailing-title")).toHaveTextContent("Parakeet V3");
   });
 
   it("theme item shows light display text when light selected", () => {
