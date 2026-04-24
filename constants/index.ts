@@ -1,3 +1,3 @@
-export { AppConstants } from "./AppConstants";
-export { Routes } from "./Routes";
-export { TestID, dynamicTestID } from "./TestID";
+export { AppConstants } from "./app-constants/AppConstants";
+export { Routes } from "./routes/Routes";
+export { TestID, dynamicTestID } from "./test-id/TestID";

@@ -1,14 +1,21 @@
-export { createSession, sessionFromJSON, sessionToJSON } from "./Session";
-export type { Session, SessionJSON } from "./Session";
+export {
+  createSession,
+  sessionFromJSON,
+  sessionToJSON,
+} from "./session/Session";
+export type { Session, SessionJSON } from "./session/Session";
 
 export {
   createTranscription,
   transcriptionFromJSON,
   transcriptionToJSON,
-} from "./Transcription";
-export type { Transcription, TranscriptionJSON } from "./Transcription";
+} from "./transcription/Transcription";
+export type {
+  Transcription,
+  TranscriptionJSON,
+} from "./transcription/Transcription";
 
-export { ModelId, ModelType, TranscriptionMode } from "./ModelType";
+export { ModelId, ModelType, TranscriptionMode } from "./model-type/ModelType";
 
 export {
   getAllModels,
@@ -16,12 +23,15 @@ export {
   getDownloadableModels,
   getModelInfo,
   MODEL_REGISTRY,
-} from "./ModelRegistry";
-export type { ModelFileInfo, ModelInfo } from "./ModelRegistry";
+} from "./model-registry/ModelRegistry";
+export type { ModelFileInfo, ModelInfo } from "./model-registry/ModelRegistry";
 
-export { AppTheme, getThemeByName, getThemeName } from "./AppTheme";
+export { AppTheme, getThemeByName, getThemeName } from "./app-theme/AppTheme";
 
-export { TranscriptionState } from "./TranscriptionState";
+export { TranscriptionState } from "./transcription-state/TranscriptionState";
 
-export { getCountryCode, SupportedLanguages } from "./SpokenLanguage";
-export type { SpokenLanguage } from "./SpokenLanguage";
+export {
+  getCountryCode,
+  SupportedLanguages,
+} from "./spoken-language/SpokenLanguage";
+export type { SpokenLanguage } from "./spoken-language/SpokenLanguage";

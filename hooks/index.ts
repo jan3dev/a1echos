@@ -1,3 +1,3 @@
-export { useLocalization } from "./useLocalization";
-export { usePermissions } from "./usePermissions";
-export { useSessionOperations } from "./useSessionOperations";
+export { useLocalization } from "./use-localization/useLocalization";
+export { usePermissions } from "./use-permissions/usePermissions";
+export { useSessionOperations } from "./use-session-operations/useSessionOperations";

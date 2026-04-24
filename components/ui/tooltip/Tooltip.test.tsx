@@ -3,7 +3,7 @@ import { act, render } from "@testing-library/react-native";
 import React from "react";
 
 import { TestID } from "@/constants";
-import { lightColors } from "@/theme/themeColors";
+import { lightColors } from "@/theme";
 
 import { Tooltip } from "./Tooltip";
 

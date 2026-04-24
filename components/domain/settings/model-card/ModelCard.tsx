@@ -5,7 +5,7 @@ import { Icon, IconName, Radio, Text } from "@/components/ui";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { useLocalization } from "@/hooks";
 import { TranscriptionMode } from "@/models";
-import type { DownloadProgress } from "@/services/ModelDownloadService";
+import type { DownloadProgress } from "@/services";
 import { AquaColors, useTheme } from "@/theme";
 import { formatBytes, iosPressed } from "@/utils";
 

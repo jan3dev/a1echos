@@ -4,7 +4,7 @@ import React from "react";
 
 import { TestID } from "@/constants";
 
-import { Slider } from "./Slider";
+import { Slider, SliderState } from "./Slider";
 
 // Suppress RN Animated internals triggering act() warnings for timer-based animations
 const originalConsoleError = console.error;
@@ -56,7 +56,7 @@ describe("Slider", () => {
     "renders %s state with correct indicator",
     (sliderState, expectedTestId) => {
       const { getByTestId } = render(
-        <Slider {...defaultProps} sliderState={sliderState} />,
+        <Slider {...defaultProps} sliderState={sliderState as SliderState} />,
       );
       expect(getByTestId(expectedTestId)).toBeTruthy();
     },

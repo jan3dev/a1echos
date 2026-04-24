@@ -4,7 +4,7 @@ import React from "react";
 import { StyleProp, StyleSheet, ViewStyle } from "react-native";
 
 import { TestID } from "@/constants";
-import { lightColors } from "@/theme/themeColors";
+import { lightColors } from "@/theme";
 
 import { TextField } from "./TextField";
 

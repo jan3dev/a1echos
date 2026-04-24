@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import type { NativeModules } from "./types";
+import type { NativeModules } from "./types/types";
 
 const isStorybook = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
@@ -8,9 +8,13 @@ const isStorybook = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 // ensures the adapter module factory never executes in that environment.
 
 const modules: NativeModules = isStorybook
-  ? require("./mocks").nativeModules
-  : require("./adapters").nativeModules;
+  ? require("./mocks/mocks").nativeModules
+  : require("./adapters/adapters").nativeModules;
 
 export const { aesGcmCrypto } = modules;
 
-export type { EncryptResult, IAesGcmCrypto, NativeModules } from "./types";
+export type {
+  EncryptResult,
+  IAesGcmCrypto,
+  NativeModules,
+} from "./types/types";

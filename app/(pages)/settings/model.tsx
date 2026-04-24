@@ -15,6 +15,7 @@ import {
   getAllModels,
   getModelInfo,
 } from "@/models";
+import { modelDownloadService } from "@/services";
 import {
   useModelDownloadStore,
   useModelModes,
@@ -22,7 +23,6 @@ import {
   useSettingsStore,
   useShowGlobalTooltip,
 } from "@/stores";
-import { modelDownloadService } from "@/services/ModelDownloadService";
 import { useTheme } from "@/theme";
 import { FeatureFlag, formatBytes, logError } from "@/utils";
 

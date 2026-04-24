@@ -3,7 +3,7 @@ import React from "react";
 import { StyleSheet } from "react-native";
 
 import { TestID } from "@/constants";
-import { lightColors } from "@/theme/themeColors";
+import { lightColors } from "@/theme";
 
 import { Divider } from "./Divider";
 

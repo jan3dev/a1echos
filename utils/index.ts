@@ -67,7 +67,7 @@ export const formatBytes = (bytes: number): string => {
   return `${Math.round(bytes / 1_000_000)} MB`;
 };
 
-export { delay } from "./delay";
+export { delay } from "./delay/delay";
 export {
   FeatureFlag,
   LOG,
@@ -76,8 +76,8 @@ export {
   logFor,
   logInfo,
   logWarn,
-} from "./log";
-export { formatTranscriptionText } from "./TranscriptionFormatter";
-export { createPcmStreamWriter } from "./WavWriter";
-export type { PcmStreamWriter } from "./WavWriter";
-export { iosPressed } from "./ripple";
+} from "./log/log";
+export { formatTranscriptionText } from "./transcription-formatter/TranscriptionFormatter";
+export { createPcmStreamWriter } from "./wav-writer/WavWriter";
+export type { PcmStreamWriter } from "./wav-writer/WavWriter";
+export { iosPressed } from "./ripple/ripple";

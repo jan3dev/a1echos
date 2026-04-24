@@ -29,12 +29,12 @@ module.exports = {
     "!**/node_modules/**",
     "!components/ui/icon/flagIcons.ts",
     "!components/shared/recording-controls/ThreeWaveLines.tsx",
-    "!services/BackgroundRecordingService.ts",
-    "!services/ModelDownloadService.ts",
-    "!services/SherpaTranscriptionService.ts",
-    "!stores/modelDownloadStore.ts",
-    "!models/ModelType.ts",
-    "!models/TranscriptionState.ts",
+    "!services/background-recording-service/BackgroundRecordingService.ts",
+    "!services/model-download-service/ModelDownloadService.ts",
+    "!services/sherpa-transcription-service/SherpaTranscriptionService.ts",
+    "!stores/model-download-store/modelDownloadStore.ts",
+    "!models/model-type/ModelType.ts",
+    "!models/transcription-state/TranscriptionState.ts",
   ],
   coverageThreshold: {
     global: {

@@ -17,7 +17,7 @@ const mockSetModelMode = jest.fn();
 const mockShowGlobalTooltip = jest.fn();
 const mockCheckDiskSpace = jest.fn();
 
-jest.mock("@/services/ModelDownloadService", () => ({
+jest.mock("@/services", () => ({
   modelDownloadService: {
     checkDiskSpace: (...args: unknown[]) => mockCheckDiskSpace(...args),
   },

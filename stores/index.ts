@@ -7,7 +7,7 @@ export {
   useSessions,
   useSessionStore,
   useSwitchSession,
-} from "./sessionStore";
+} from "./session-store/sessionStore";
 export {
   initializeSettingsStore,
   useIsIncognitoMode,
@@ -26,7 +26,7 @@ export {
   useSetTranscriptionMode,
   useSettingsStore,
   useSmartSplitEnabled,
-} from "./settingsStore";
+} from "./settings-store/settingsStore";
 export {
   initializeTranscriptionStore,
   useAudioLevel,
@@ -38,13 +38,13 @@ export {
   useStopRecordingAndSave,
   useTranscriptionState,
   useTranscriptionStore,
-} from "./transcriptionStore";
+} from "./transcription-store/transcriptionStore";
 export {
   initializeModelDownloadStore,
   useIsModelDownloaded,
   useModelDownloadProgress,
   useModelDownloadStore,
-} from "./modelDownloadStore";
+} from "./model-download-store/modelDownloadStore";
 export {
   useExitSessionSelection,
   useExitTranscriptionSelection,
@@ -68,5 +68,9 @@ export {
   useToggleSessionSelection,
   useToggleTranscriptionSelection,
   useUIStore,
-} from "./uiStore";
-export type { GlobalTooltipAction, Toast, ToastVariant } from "./uiStore";
+} from "./ui-store/uiStore";
+export type {
+  GlobalTooltipAction,
+  Toast,
+  ToastVariant,
+} from "./ui-store/uiStore";
