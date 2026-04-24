@@ -1,15 +1,16 @@
 import * as Crypto from "expo-crypto";
+import { File, Paths } from "expo-file-system";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useMemo } from "react";
-import { Platform } from "react-native";
+import { AppState } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
+import { AppConstants } from "@/constants";
 import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
+import type { ChunkEvent } from "@/services";
 import {
-  audioService,
   backgroundRecordingService,
-  permissionService,
   sherpaTranscriptionService,
   storageService,
 } from "@/services";
@@ -25,6 +26,45 @@ import { useSettingsStore } from "./settingsStore";
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
+
+interface SmartSplitState {
+  /** ID of the in-progress item, or null if no text has landed yet. */
+  currentItemId: string | null;
+  /** Accumulated text for the in-progress item. */
+  currentItemText: string;
+  /** Wall time (ms since epoch) when the current item started collecting text. */
+  currentItemStartMs: number;
+  /** Items finalized during the active recording, in order. */
+  createdTranscriptions: Transcription[];
+  /**
+   * When true (file mode), the chunk handler skips storage writes. The caller
+   * inspects `createdTranscriptions` after the scan and persists in one pass.
+   */
+  deferPersist: boolean;
+}
+
+const createEmptySmartSplit = (): SmartSplitState => ({
+  currentItemId: null,
+  currentItemText: "",
+  currentItemStartMs: 0,
+  createdTranscriptions: [],
+  deferPersist: false,
+});
+
+const insertSortedTranscription = (
+  list: Transcription[],
+  t: Transcription,
+): Transcription[] => {
+  // Items typically arrive in chronological order — fast-path the common case
+  // and fall back to a full sort when something older lands.
+  const ts = t.timestamp.getTime();
+  if (list.length === 0 || list[list.length - 1].timestamp.getTime() <= ts) {
+    return [...list, t];
+  }
+  const next = [...list, t];
+  next.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  return next;
+};
 
 interface TranscriptionStore {
   state: TranscriptionState;
@@ -46,9 +86,10 @@ interface TranscriptionStore {
   activeOperations: Set<string>;
   lastOperationTime: Date | null;
 
-  audioLevelUnsubscribe: (() => void) | null;
-  partialResultUnsubscribe: (() => void) | null;
+  chunkUnsubscribe: (() => void) | null;
   realtimeAudioLevelUnsubscribe: (() => void) | null;
+
+  smartSplit: SmartSplitState;
 
   isLoading: () => boolean;
   isRecording: () => boolean;
@@ -96,7 +137,7 @@ interface TranscriptionStore {
 
   startRecording: () => Promise<boolean>;
   stopRecordingAndSave: () => Promise<void>;
-  onPartialTranscription: (partial: string) => void;
+  onChunkEvent: (event: ChunkEvent) => void;
 
   initialize: () => Promise<void>;
   clearErrorState: () => void;
@@ -144,6 +185,110 @@ const validateStateTransition = (
 
 export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
   const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // Serializes storage writes triggered by chunk events so concurrent
+  // saveTranscription calls don't stomp on each other's read-modify-write.
+  let storageWriteQueue: Promise<void> = Promise.resolve();
+  const enqueueStorageWrite = (op: () => Promise<void>): void => {
+    storageWriteQueue = storageWriteQueue.then(op).catch((error) => {
+      logError(error, {
+        flag: FeatureFlag.store,
+        message: "Queued transcription storage write failed",
+      });
+    });
+  };
+  const drainStorageWriteQueue = (): Promise<void> => storageWriteQueue;
+
+  const tearDownRealtimeSubscriptions = (): void => {
+    const state = get();
+    state.chunkUnsubscribe?.();
+    state.realtimeAudioLevelUnsubscribe?.();
+    set({
+      chunkUnsubscribe: null,
+      realtimeAudioLevelUnsubscribe: null,
+    });
+  };
+
+  const persistFileModeItems = async (
+    items: Transcription[],
+    recordedFileUri: string | null,
+    sessionId: string,
+  ): Promise<void> => {
+    if (items.length === 1 && recordedFileUri) {
+      const audioPath = await storageService.saveAudioFile(
+        recordedFileUri,
+        `audio_${Date.now()}.wav`,
+      );
+      const updated: Transcription = { ...items[0], audioPath };
+      set({
+        transcriptions: get().transcriptions.map((t) =>
+          t.id === updated.id ? updated : t,
+        ),
+      });
+      await storageService.saveTranscription(updated);
+    } else {
+      for (const t of items) {
+        await storageService.saveTranscription(t);
+      }
+    }
+    await useSessionStore.getState().updateSessionModifiedTimestamp(sessionId);
+  };
+
+  const finalizeSmartSplitItem = (): void => {
+    const state = get();
+    const split = state.smartSplit;
+
+    const sessionId = state.recordingSessionId;
+    const trimmed = split.currentItemText.trim();
+
+    if (!split.currentItemId || !trimmed || !sessionId) {
+      // Nothing to finalize — reset the in-progress state.
+      if (split.currentItemId || split.currentItemText) {
+        set({
+          smartSplit: {
+            ...split,
+            currentItemId: null,
+            currentItemText: "",
+            currentItemStartMs: 0,
+          },
+        });
+      }
+      return;
+    }
+
+    const transcription: Transcription = {
+      id: split.currentItemId,
+      sessionId,
+      text: formatTranscriptionText(trimmed),
+      timestamp: new Date(),
+      audioPath: "",
+    };
+
+    set({
+      transcriptions: insertSortedTranscription(
+        state.transcriptions,
+        transcription,
+      ),
+      smartSplit: {
+        ...split,
+        currentItemId: null,
+        currentItemText: "",
+        currentItemStartMs: 0,
+        createdTranscriptions: [...split.createdTranscriptions, transcription],
+      },
+      livePreview: null,
+    });
+
+    if (split.deferPersist) return;
+    if (useSessionStore.getState().isActiveSessionIncognito()) return;
+
+    enqueueStorageWrite(async () => {
+      await storageService.saveTranscription(transcription);
+      await useSessionStore
+        .getState()
+        .updateSessionModifiedTimestamp(sessionId);
+    });
+  };
 
   const acquireOperationLock = async (
     operationName: string,
@@ -229,9 +374,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     activeOperations: new Set(),
     lastOperationTime: null,
 
-    audioLevelUnsubscribe: null,
-    partialResultUnsubscribe: null,
+    chunkUnsubscribe: null,
     realtimeAudioLevelUnsubscribe: null,
+
+    smartSplit: createEmptySmartSplit(),
 
     isLoading: () => get().state === TranscriptionState.LOADING,
     isRecording: () => get().state === TranscriptionState.RECORDING,
@@ -280,10 +426,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         TranscriptionState.STREAMING,
         TranscriptionState.TRANSCRIBING,
       ]);
-      if (keepAwakeStates.has(newState)) {
-        activateKeepAwakeAsync("recording").catch(() => {});
-      } else if (keepAwakeStates.has(currentState)) {
-        deactivateKeepAwake("recording").catch(() => {});
+      if (AppState.currentState === "active") {
+        if (keepAwakeStates.has(newState)) {
+          void activateKeepAwakeAsync("recording").catch(() => {});
+        } else if (keepAwakeStates.has(currentState)) {
+          void deactivateKeepAwake("recording").catch(() => {});
+        }
       }
 
       set({
@@ -318,11 +466,19 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     updateLivePreview: (text: string, sessionId: string) => {
+      const existing = get().livePreview;
+      if (
+        existing &&
+        existing.sessionId === sessionId &&
+        existing.text === text
+      ) {
+        return;
+      }
       set({
         livePreview: {
-          id: "live_vosk_active_preview",
+          id: "live_active_preview",
           text,
-          timestamp: new Date(),
+          timestamp: existing?.timestamp ?? new Date(),
           sessionId,
           audioPath: "",
         },
@@ -338,7 +494,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     createLoadingPreview: (sessionId: string) => {
       set({
         loadingPreview: {
-          id: "whisper_loading_active_preview",
+          id: "loading_active_preview",
           text: "",
           timestamp: new Date(),
           sessionId,
@@ -418,13 +574,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     addTranscription: (transcription: Transcription) => {
-      const state = get();
-      const newTranscriptions = [...state.transcriptions, transcription];
-      newTranscriptions.sort(
-        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-      );
-
-      set({ transcriptions: newTranscriptions });
+      set({
+        transcriptions: insertSortedTranscription(
+          get().transcriptions,
+          transcription,
+        ),
+      });
     },
 
     updateTranscription: async (updated: Transcription) => {
@@ -700,78 +855,60 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           bgServiceStarted = true;
         }
 
+        // File-mode defers per-chunk persistence so stopRecordingAndSave can
+        // save items in one pass and attach a WAV to the single-item case.
+        set({
+          smartSplit: { ...createEmptySmartSplit(), deferPersist: !isRealtime },
+        });
+        const unsubscribeChunk = sherpaTranscriptionService.subscribeToChunk(
+          (event) => {
+            get().onChunkEvent(event);
+          },
+        );
+        set({ chunkUnsubscribe: unsubscribeChunk });
+
+        const unsubscribeAudioLevel =
+          sherpaTranscriptionService.subscribeToAudioLevel((level) => {
+            get().updateAudioLevel(level);
+          });
+        set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
+
+        const wavOutputUri = isRealtime
+          ? undefined
+          : new File(Paths.cache, `rec_${Date.now()}.wav`).uri;
+
+        const captureStarted =
+          await sherpaTranscriptionService.startRealtimeTranscription(
+            wavOutputUri ? { wavOutputUri } : {},
+          );
+
+        if (!captureStarted) {
+          tearDownRealtimeSubscriptions();
+          if (bgServiceStarted) {
+            try {
+              await backgroundRecordingService.stopBackgroundService();
+            } catch (bgError) {
+              logError(bgError, {
+                flag: FeatureFlag.service,
+                message:
+                  "Failed to stop background service after capture start failure",
+              });
+            }
+          }
+          get().transitionTo(TranscriptionState.READY);
+          get().clearRecordingSessionId();
+          get().setError(
+            isRealtime
+              ? "Failed to start real-time transcription"
+              : "Failed to start recording",
+          );
+          releaseOperationLock(operationName);
+          return false;
+        }
+
         if (isRealtime) {
-          const unsubscribeAudioLevel =
-            sherpaTranscriptionService.subscribeToAudioLevel((level) => {
-              get().updateAudioLevel(level);
-            });
-          set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
-
-          // Subscribe to partial results
-          const unsubscribe =
-            sherpaTranscriptionService.subscribeToPartialResults((partial) => {
-              get().onPartialTranscription(partial);
-            });
-          set({ partialResultUnsubscribe: unsubscribe });
-
-          // Real-time mode: start real-time transcription
-          const realtimeStarted =
-            await sherpaTranscriptionService.startRealtimeTranscription();
-          if (realtimeStarted) {
-            // Show an empty live preview card immediately so the UI
-            // displays the transcription area (updated as partials arrive)
-            get().updateLivePreview("", sessionId);
-          }
-          if (!realtimeStarted) {
-            // Cleanup subscriptions on failure
-            unsubscribeAudioLevel();
-            unsubscribe();
-            set({
-              realtimeAudioLevelUnsubscribe: null,
-              partialResultUnsubscribe: null,
-            });
-            // Stop background service if it was started
-            if (bgServiceStarted) {
-              try {
-                await backgroundRecordingService.stopBackgroundService();
-              } catch (bgError) {
-                logError(bgError, {
-                  flag: FeatureFlag.service,
-                  message:
-                    "Failed to stop background service after realtime start failure",
-                });
-              }
-            }
-            get().transitionTo(TranscriptionState.READY);
-            get().clearRecordingSessionId();
-            get().setError("Failed to start real-time transcription");
-            releaseOperationLock(operationName);
-            return false;
-          }
+          get().updateLivePreview("", sessionId);
         } else {
-          // File-based mode: start audio recording and show loading preview
-          const recordingStarted = await audioService.startRecording();
-          if (!recordingStarted) {
-            // Stop background service if it was started
-            if (bgServiceStarted) {
-              try {
-                await backgroundRecordingService.stopBackgroundService();
-              } catch (bgError) {
-                logError(bgError, {
-                  flag: FeatureFlag.service,
-                  message:
-                    "Failed to stop background service after recording start failure",
-                });
-              }
-            }
-            get().transitionTo(TranscriptionState.READY);
-            get().clearRecordingSessionId();
-            get().setError("Failed to start recording");
-            releaseOperationLock(operationName);
-            return false;
-          }
-
-          // Create loading preview for file-based mode
           get().createLoadingPreview(sessionId);
         }
 
@@ -781,17 +918,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           flag: FeatureFlag.recording,
           message: "Error starting recording",
         });
-        // Clean up any subscriptions that may have been set before the error
-        const currentState = get();
-        if (currentState.realtimeAudioLevelUnsubscribe) {
-          currentState.realtimeAudioLevelUnsubscribe();
-          set({ realtimeAudioLevelUnsubscribe: null });
-        }
-        if (currentState.partialResultUnsubscribe) {
-          currentState.partialResultUnsubscribe();
-          set({ partialResultUnsubscribe: null });
-        }
-        // Stop background service if needed
+        tearDownRealtimeSubscriptions();
         try {
           await backgroundRecordingService.stopBackgroundService();
         } catch (bgError) {
@@ -833,30 +960,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           return;
         }
 
-        let transcribedText: string | null = null;
-        let audioPath: string = "";
+        const recordedFileUri =
+          await sherpaTranscriptionService.stopRealtimeTranscription();
+        tearDownRealtimeSubscriptions();
 
         if (isRealtime) {
-          // Real-time mode: stop and get final text
-          transcribedText =
-            await sherpaTranscriptionService.stopRealtimeTranscription();
-
-          // Clean up partial result subscription
-          if (state.partialResultUnsubscribe) {
-            state.partialResultUnsubscribe();
-            set({ partialResultUnsubscribe: null });
-          }
-
-          // Clean up realtime audio level subscription
-          if (state.realtimeAudioLevelUnsubscribe) {
-            state.realtimeAudioLevelUnsubscribe();
-            set({ realtimeAudioLevelUnsubscribe: null });
-          }
+          await drainStorageWriteQueue();
         } else {
-          // File-based mode: stop recording and transcribe
-          const recordedFilePath = await audioService.stopRecording();
+          const createdItems = get().smartSplit.createdTranscriptions;
 
-          if (!recordedFilePath) {
+          if (createdItems.length === 0) {
             get().setError("Recording was too short or failed");
             get().clearLivePreview();
             get().clearLoadingPreview();
@@ -865,72 +978,23 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             return;
           }
 
-          // Transcribe the original recording file first (before copy),
-          // to avoid any format issues from the file copy step
-          transcribedText =
-            await sherpaTranscriptionService.transcribeFile(recordedFilePath);
-
-          // Save audio file to app's audio directory (preserve original extension)
-          const lastDotIndex = recordedFilePath.lastIndexOf(".");
-          const lastSlashIndex = Math.max(
-            recordedFilePath.lastIndexOf("/"),
-            recordedFilePath.lastIndexOf("\\"),
-          );
-          const hasValidExtension =
-            lastDotIndex > lastSlashIndex && lastDotIndex !== -1;
-          const originalExt = hasValidExtension
-            ? recordedFilePath.substring(lastDotIndex)
-            : ".wav";
-          const fileName = `audio_${Date.now()}${originalExt}`;
-          audioPath = await storageService.saveAudioFile(
-            recordedFilePath,
-            fileName,
-          );
-        }
-
-        // Create and save transcription if we have text
-        if (transcribedText && transcribedText.trim() && sessionId) {
-          const formattedText = formatTranscriptionText(transcribedText.trim());
-          const transcription: Transcription = {
-            id: Crypto.randomUUID(),
-            sessionId,
-            text: formattedText,
-            timestamp: new Date(),
-            audioPath,
-          };
-
-          // Clear previews and add transcription atomically to avoid glitch
-          const currentState = get();
-          const newTranscriptions = [
-            ...currentState.transcriptions,
-            transcription,
-          ];
-          newTranscriptions.sort(
-            (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-          );
-          set({
-            transcriptions: newTranscriptions,
-            livePreview: null,
-            loadingPreview: null,
-            currentStreamingText: "",
-          });
-          get().transitionTo(TranscriptionState.READY);
-          // Persist to storage (skip for incognito sessions)
-          if (!isIncognito) {
-            await storageService.saveTranscription(transcription);
-            await useSessionStore
-              .getState()
-              .updateSessionModifiedTimestamp(sessionId);
+          const canPersist = !isIncognito && sessionId;
+          if (canPersist) {
+            await persistFileModeItems(
+              createdItems,
+              recordedFileUri,
+              sessionId,
+            );
           }
-        } else {
-          // No transcription to add, just clear previews and transition
-          set({
-            livePreview: null,
-            loadingPreview: null,
-            currentStreamingText: "",
-          });
-          get().transitionTo(TranscriptionState.READY);
         }
+
+        set({
+          livePreview: null,
+          loadingPreview: null,
+          currentStreamingText: "",
+          smartSplit: createEmptySmartSplit(),
+        });
+        get().transitionTo(TranscriptionState.READY);
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,
@@ -962,18 +1026,76 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
     },
 
-    onPartialTranscription: (partial: string) => {
+    onChunkEvent: (event: ChunkEvent) => {
+      const { text, boundary } = event;
       const state = get();
-      get().updateStreamingText(partial);
+      const split = state.smartSplit;
 
-      if (
-        state.state === TranscriptionState.RECORDING ||
-        state.state === TranscriptionState.STREAMING
-      ) {
+      let currentItemId = split.currentItemId;
+      let currentItemText = split.currentItemText;
+      let currentItemStartMs = split.currentItemStartMs;
+
+      if (text) {
+        if (!currentItemId) {
+          currentItemId = Crypto.randomUUID();
+          currentItemText = "";
+          currentItemStartMs = Date.now();
+        }
+
+        const separator = currentItemText ? " " : "";
+        currentItemText = currentItemText + separator + text;
+
         const sessionId =
           state.recordingSessionId ??
           useSessionStore.getState().activeSessionId;
-        get().updateLivePreview(partial, sessionId);
+        const canShowPreview =
+          !!sessionId &&
+          (state.state === TranscriptionState.RECORDING ||
+            state.state === TranscriptionState.STREAMING ||
+            state.state === TranscriptionState.TRANSCRIBING);
+
+        const nextLivePreview =
+          canShowPreview && sessionId
+            ? {
+                id: "live_active_preview",
+                text: currentItemText,
+                timestamp: state.livePreview?.timestamp ?? new Date(),
+                sessionId,
+                audioPath: "",
+              }
+            : state.livePreview;
+
+        set({
+          currentStreamingText: currentItemText,
+          smartSplit: {
+            ...split,
+            currentItemId,
+            currentItemText,
+            currentItemStartMs,
+          },
+          livePreview: nextLivePreview,
+          loadingPreview: canShowPreview ? null : state.loadingPreview,
+        });
+      }
+
+      const smartSplitEnabled = useSettingsStore.getState().smartSplitEnabled;
+      const itemDurationMs =
+        currentItemStartMs > 0 ? Date.now() - currentItemStartMs : 0;
+      const exceededMaxDuration =
+        currentItemStartMs > 0 &&
+        itemDurationMs >= AppConstants.SMART_SPLIT_MAX_ITEM_MS;
+
+      switch (boundary) {
+        case "none":
+          break;
+        case "long":
+          if (smartSplitEnabled && exceededMaxDuration) {
+            finalizeSmartSplitItem();
+          }
+          break;
+        case "final":
+          finalizeSmartSplitItem();
+          break;
       }
     },
 
@@ -1017,22 +1139,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           set({ isEngineReady: true });
         }
 
-        // Warm up iOS audio input if mic permission already granted
-        if (Platform.OS === "ios") {
-          const { granted } = await permissionService.getRecordPermission();
-          if (granted) {
-            await audioService.warmUpIosAudioInput();
-          }
-        }
-
-        // Subscribe to audio level updates
-        const unsubscribeAudioLevel = audioService.subscribeToAudioLevel(
-          (level) => {
-            get().updateAudioLevel(level);
-          },
-        );
-        set({ audioLevelUnsubscribe: unsubscribeAudioLevel });
-
         get().transitionTo(TranscriptionState.READY);
 
         set({ isInitialized: true });
@@ -1058,14 +1164,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     forceSystemReset: async () => {
-      const state = get();
+      try {
+        await sherpaTranscriptionService.stopRealtimeTranscription();
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.transcription,
+          message: "Failed to stop realtime transcription during reset",
+        });
+      }
 
-      if (state.partialResultUnsubscribe) {
-        state.partialResultUnsubscribe();
-      }
-      if (state.realtimeAudioLevelUnsubscribe) {
-        state.realtimeAudioLevelUnsubscribe();
-      }
+      tearDownRealtimeSubscriptions();
 
       try {
         await backgroundRecordingService.stopBackgroundService();
@@ -1080,8 +1188,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         isOperationLocked: false,
         activeOperations: new Set(),
         lastOperationTime: null,
-        partialResultUnsubscribe: null,
-        realtimeAudioLevelUnsubscribe: null,
       });
 
       get().clearRecordingSessionId();
@@ -1092,22 +1198,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     dispose: async () => {
-      const state = get();
-
-      if (state.audioLevelUnsubscribe) {
-        state.audioLevelUnsubscribe();
-        set({ audioLevelUnsubscribe: null });
-      }
-
-      if (state.partialResultUnsubscribe) {
-        state.partialResultUnsubscribe();
-        set({ partialResultUnsubscribe: null });
-      }
-
-      if (state.realtimeAudioLevelUnsubscribe) {
-        state.realtimeAudioLevelUnsubscribe();
-        set({ realtimeAudioLevelUnsubscribe: null });
-      }
+      tearDownRealtimeSubscriptions();
 
       try {
         await backgroundRecordingService.stopBackgroundService();
@@ -1118,7 +1209,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         });
       }
 
-      await audioService.dispose();
       await sherpaTranscriptionService.dispose();
     },
   };

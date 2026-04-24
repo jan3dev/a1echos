@@ -74,6 +74,7 @@ jest.mock("@/components", () => {
   const { View, Text } = require("react-native");
   return {
     FlagIcon: ({ name }: any) => <View testID={`flag-icon-${name}`} />,
+    Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
     TopAppBar: ({ title }: any) => (
       <View testID="top-app-bar">

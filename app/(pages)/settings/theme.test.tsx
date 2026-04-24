@@ -68,6 +68,7 @@ jest.mock("@/components", () => {
         </Text>
       </TouchableOpacity>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>

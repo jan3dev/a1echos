@@ -15,6 +15,7 @@ export const Routes = {
   settingsModel: "/settings/model" as Href,
   settingsTheme: "/settings/theme" as Href,
   settingsLanguage: "/settings/language" as Href,
+  settingsAdvanced: "/settings/advanced" as Href,
   settingsModelLanguages: (modelId: string): Href =>
     ({
       pathname: "/settings/model-languages",

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   Button,
+  Screen,
   SessionAppBar,
   SessionInputModal,
   Toast,
@@ -57,14 +58,12 @@ import {
   useSwitchSession,
   useToggleTranscriptionSelection,
 } from "@/stores";
-import { useTheme } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
@@ -589,12 +588,7 @@ export default function SessionScreen() {
   const isIncognito = session?.isIncognito ?? false;
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <SessionAppBar
         sessionName={sessionName}
         selectionMode={selectionMode}
@@ -653,14 +647,11 @@ export default function SessionScreen() {
       />
 
       <Toast {...deleteToastState} />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   keyboardAvoidingView: {
     flex: 1,
   },

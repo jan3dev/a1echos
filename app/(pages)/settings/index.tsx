@@ -9,6 +9,7 @@ import {
   Icon,
   InAppBanner,
   ListItem,
+  Screen,
   SettingsFooter,
   TopAppBar,
 } from "@/components";
@@ -50,12 +51,7 @@ export default function SettingsScreen() {
   const languageDisplay = selectedLanguage.code.toUpperCase();
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title={loc.settingsTitle} />
 
       <ScrollView
@@ -138,6 +134,29 @@ export default function SettingsScreen() {
             onPress={() => router.push(Routes.settingsLanguage)}
             backgroundColor={theme.colors.surfacePrimary}
           />
+
+          <Divider color={theme.colors.surfaceBorderPrimary} />
+
+          <ListItem
+            testID={TestID.SettingsAdvanced}
+            title={loc.advancedSettingsTitle}
+            iconLeading={
+              <Icon
+                name="settings"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push(Routes.settingsAdvanced)}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
         </Card>
 
         <Card style={{ marginTop: 16 }}>
@@ -171,14 +190,11 @@ export default function SettingsScreen() {
         <View style={styles.spacer} />
         <SettingsFooter />
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
   },

@@ -10,27 +10,6 @@ declare module "*.onnx" {
   export default content;
 }
 
-declare module "@fugood/react-native-audio-pcm-stream" {
-  export interface IAudioRecord {
-    init: (options: Options) => void;
-    start: () => void;
-    stop: () => Promise<string>;
-    on: (event: "data", callback: (data: string) => void) => void;
-  }
-
-  export interface Options {
-    sampleRate: number;
-    channels: number;
-    bitsPerSample: number;
-    audioSource?: number;
-    wavFile?: string;
-    bufferSize?: number;
-  }
-
-  const AudioRecord: IAudioRecord;
-  export default AudioRecord;
-}
-
 declare module "@supersami/rn-foreground-service" {
   interface RegisterConfig {
     config: {

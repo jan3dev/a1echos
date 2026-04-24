@@ -1,9 +1,12 @@
 import { AppConstants } from "@/constants";
 
-export const formatTranscriptionText = (text: string): string => {
-  if (!text || text.length === 0) return text;
-
-  const normalizedText = text.trim().replace(/\s+/g, " ");
+/**
+ * Collapse horizontal whitespace in a single run of text and auto-paragraph
+ * it into `\n\n`-separated blocks using sentence- or word-count heuristics.
+ */
+const formatRun = (run: string): string => {
+  const normalizedText = run.replace(/[^\S\n]+/g, " ").trim();
+  if (!normalizedText) return "";
 
   // If there are no sentence-ending punctuation marks, split into fixed-size paragraphs
   if (!/[.?!]/.test(normalizedText)) {
@@ -52,4 +55,13 @@ export const formatTranscriptionText = (text: string): string => {
   }
 
   return paragraphs.join("\n\n");
+};
+
+export const formatTranscriptionText = (text: string): string => {
+  if (!text || text.length === 0) return text;
+
+  const runs = text.split(/\n+/);
+  const formatted = runs.map(formatRun).filter((segment) => segment.length > 0);
+  if (formatted.length === 0) return "";
+  return formatted.join("\n\n");
 };

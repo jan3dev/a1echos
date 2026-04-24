@@ -21,8 +21,26 @@ describe("formatTranscriptionText", () => {
       expect(formatTranscriptionText("hello    world")).toBe("hello world");
     });
 
-    it("handles tabs and newlines", () => {
-      expect(formatTranscriptionText("hello\t\nworld")).toBe("hello world");
+    it("collapses tabs to spaces within a single run", () => {
+      expect(formatTranscriptionText("hello\tworld")).toBe("hello world");
+    });
+
+    it("preserves newlines as paragraph breaks (pause markers)", () => {
+      expect(formatTranscriptionText("hello\nworld")).toBe("hello\n\nworld");
+    });
+
+    it("collapses multiple consecutive newlines into a single paragraph break", () => {
+      expect(formatTranscriptionText("hello\n\n\nworld")).toBe(
+        "hello\n\nworld",
+      );
+    });
+
+    it("formats each pause-separated segment independently", () => {
+      const text = "One. Two. Three. Four.\nFive. Six. Seven.";
+      const result = formatTranscriptionText(text);
+      // First segment: 4 sentences → group into 3 + 1 with \n\n; joined with \n\n
+      // to the second segment which groups into 3.
+      expect(result).toBe("One. Two. Three.\n\nFour.\n\nFive. Six. Seven.");
     });
   });
 

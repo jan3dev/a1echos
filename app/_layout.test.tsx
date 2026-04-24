@@ -62,9 +62,7 @@ jest.mock("@/services", () => ({
   },
 }));
 
-jest.mock("@/hooks", () => ({
-  useBackgroundRecording: jest.fn(),
-}));
+jest.mock("@/hooks", () => ({}));
 
 jest.mock("@/utils", () => ({
   logError: jest.fn(),

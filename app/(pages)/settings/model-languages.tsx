@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FlagIcon, Text, TopAppBar } from "@/components";
+import { FlagIcon, Screen, Text, TopAppBar } from "@/components";
 import { AppConstants } from "@/constants";
 import { useLocalization } from "@/hooks";
 import type { ModelId } from "@/models";
@@ -35,12 +35,7 @@ export default function ModelLanguagesScreen() {
   );
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title="" />
 
       <ScrollView
@@ -91,14 +86,11 @@ export default function ModelLanguagesScreen() {
           ))}
         </View>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
     gap: 24,

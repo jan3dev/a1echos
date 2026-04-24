@@ -17,7 +17,6 @@ import {
   RecordingControlsView,
   Tooltip,
 } from "@/components";
-import { useBackgroundRecording } from "@/hooks";
 import { AppTheme } from "@/models";
 import { registerForegroundService, storageService } from "@/services";
 import {
@@ -137,11 +136,6 @@ function GlobalTooltipRenderer() {
       />
     </View>
   );
-}
-
-function BackgroundRecordingHandler() {
-  useBackgroundRecording();
-  return null;
 }
 
 function GlobalRecordingControls() {
@@ -313,7 +307,6 @@ export default function RootLayout() {
         style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
         onLayout={onLayoutRootView}
       >
-        <BackgroundRecordingHandler />
         <StatusBar style={isDark ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(pages)/index" />

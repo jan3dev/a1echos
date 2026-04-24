@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
   LANGUAGE: "spoken_language",
   INCOGNITO_MODE: "incognito_mode",
   INCOGNITO_EXPLAINER_SEEN: "incognito_explainer_seen",
+  SMART_SPLIT_ENABLED: "smart_split_enabled",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -37,6 +38,7 @@ interface SettingsStore {
   selectedLanguage: SpokenLanguage;
   isIncognitoMode: boolean;
   hasSeenIncognitoExplainer: boolean;
+  smartSplitEnabled: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -48,6 +50,7 @@ interface SettingsStore {
   setLanguage: (language: SpokenLanguage) => Promise<void>;
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   markIncognitoExplainerSeen: () => Promise<void>;
+  setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -98,6 +101,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
+  smartSplitEnabled: true,
 
   initialize: async () => {
     try {
@@ -110,6 +114,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         languageValue,
         incognitoModeValue,
         incognitoExplainerValue,
+        smartSplitValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -119,6 +124,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN),
+        AsyncStorage.getItem(STORAGE_KEYS.SMART_SPLIT_ENABLED),
       ]);
 
       const selectedTheme = themeValue
@@ -176,6 +182,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         : SupportedLanguages.defaultLanguage;
       const isIncognitoMode = incognitoModeValue === "true";
       const hasSeenIncognitoExplainer = incognitoExplainerValue === "true";
+      // Default true — only the explicit string "false" disables.
+      const smartSplitEnabled =
+        smartSplitValue === null || smartSplitValue === "true";
 
       set({
         selectedTheme,
@@ -186,6 +195,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage,
         isIncognitoMode,
         hasSeenIncognitoExplainer,
+        smartSplitEnabled,
       });
     } catch (error) {
       logError(error, {
@@ -201,6 +211,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage: SupportedLanguages.defaultLanguage,
         isIncognitoMode: false,
         hasSeenIncognitoExplainer: false,
+        smartSplitEnabled: true,
       });
     }
   },
@@ -371,6 +382,23 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
+
+  setSmartSplitEnabled: async (enabled: boolean) => {
+    const previousValue = get().smartSplitEnabled;
+    set({ smartSplitEnabled: enabled });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.SMART_SPLIT_ENABLED,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save smart split preference",
+      });
+      set({ smartSplitEnabled: previousValue });
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -392,6 +420,10 @@ export const useSetTranscriptionMode = () =>
   useSettingsStore((s) => s.setTranscriptionMode);
 export const useSetModelMode = () => useSettingsStore((s) => s.setModelMode);
 export const useSetTheme = () => useSettingsStore((s) => s.setTheme);
+export const useSmartSplitEnabled = () =>
+  useSettingsStore((s) => s.smartSplitEnabled);
+export const useSetSmartSplitEnabled = () =>
+  useSettingsStore((s) => s.setSmartSplitEnabled);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

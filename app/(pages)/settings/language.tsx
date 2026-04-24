@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Fragment, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -9,6 +9,7 @@ import {
   FlagIcon,
   ListItem,
   Radio,
+  Screen,
   Text,
   TopAppBar,
 } from "@/components";
@@ -75,12 +76,7 @@ export default function LanguageSettingsScreen() {
   );
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title={loc.spokenLanguageTitle} />
 
       <ScrollView
@@ -130,14 +126,11 @@ export default function LanguageSettingsScreen() {
           ))}
         </Card>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
   },

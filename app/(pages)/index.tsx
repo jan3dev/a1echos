@@ -9,6 +9,7 @@ import {
   EmptyStateView,
   HomeAppBar,
   HomeContent,
+  Screen,
   Toast,
   useToast,
 } from "@/components";
@@ -18,6 +19,7 @@ import { Session } from "@/models";
 import {
   useCreateSession,
   useExitSessionSelection,
+  useIncognitoSession,
   useIsIncognitoMode,
   useIsSessionSelectionMode,
   useSelectedSessionIds,
@@ -30,17 +32,16 @@ import {
   useStopRecordingAndSave,
   useToggleSessionSelection,
 } from "@/stores";
-import { useTheme } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
 
   const sessions = useSessions();
+  const incognitoSession = useIncognitoSession();
   const createSession = useCreateSession();
   const { deleteSession } = useSessionOperations();
   const isIncognitoMode = useIsIncognitoMode();
@@ -64,7 +65,10 @@ export default function HomeScreen() {
 
   const [tooltipShouldDisappear, setTooltipShouldDisappear] = useState(false);
 
-  const effectivelyEmpty = sessions.length === 0;
+  // Incognito sessions live outside the sessions array; treat them as non-empty
+  // so the empty-state tooltip unmounts (instead of animating back in) between
+  // pressing record and the navigation to the session screen.
+  const effectivelyEmpty = sessions.length === 0 && !incognitoSession;
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -270,12 +274,7 @@ export default function HomeScreen() {
   ]);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <HomeAppBar
         selectionMode={isSessionSelectionMode}
         onDeleteSelected={handleDeleteSelected}
@@ -304,14 +303,11 @@ export default function HomeScreen() {
       )}
 
       <Toast {...deleteToastState} />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   tooltipContainer: {
     position: "absolute",
     left: 0,

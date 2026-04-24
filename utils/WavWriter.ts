@@ -1,40 +1,41 @@
-import { fileSystem } from "@/native";
+import { File } from "expo-file-system";
 
 import { FeatureFlag, logError } from "./log";
 
 const WAV_HEADER_SIZE = 44;
 
-const createWavHeaderBuffer = (
+/**
+ * Build a 44-byte WAV header for a PCM payload of the given length. The header
+ * is complete — dataLength and fileSize fields are filled at call time, so the
+ * writer can emit it without needing to patch bytes later.
+ */
+const createWavHeaderBytes = (
   dataLength: number,
   sampleRate: number,
   numChannels: number,
   bitsPerSample: number,
-): string => {
+): Uint8Array => {
   const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
   const blockAlign = (numChannels * bitsPerSample) / 8;
   const fileSize = dataLength + WAV_HEADER_SIZE - 8;
 
   const buffer = new ArrayBuffer(WAV_HEADER_SIZE);
   const view = new DataView(buffer);
+  const writeAscii = (offset: number, s: string): void => {
+    for (let i = 0; i < s.length; i++) {
+      view.setUint8(offset + i, s.charCodeAt(i));
+    }
+  };
 
   // RIFF chunk descriptor
-  view.setUint8(0, 0x52); // R
-  view.setUint8(1, 0x49); // I
-  view.setUint8(2, 0x46); // F
-  view.setUint8(3, 0x46); // F
+  writeAscii(0, "RIFF");
   view.setUint32(4, fileSize, true);
-  view.setUint8(8, 0x57); // W
-  view.setUint8(9, 0x41); // A
-  view.setUint8(10, 0x56); // V
-  view.setUint8(11, 0x45); // E
+  writeAscii(8, "WAVE");
 
   // fmt sub-chunk
-  view.setUint8(12, 0x66); // f
-  view.setUint8(13, 0x6d); // m
-  view.setUint8(14, 0x74); // t
-  view.setUint8(15, 0x20); // (space)
+  writeAscii(12, "fmt ");
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
+  view.setUint16(20, 1, true); // PCM
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
@@ -42,63 +43,46 @@ const createWavHeaderBuffer = (
   view.setUint16(34, bitsPerSample, true);
 
   // data sub-chunk
-  view.setUint8(36, 0x64); // d
-  view.setUint8(37, 0x61); // a
-  view.setUint8(38, 0x74); // t
-  view.setUint8(39, 0x61); // a
+  writeAscii(36, "data");
   view.setUint32(40, dataLength, true);
 
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+  return new Uint8Array(buffer);
 };
 
 export interface PcmStreamWriter {
-  write: (base64Chunk: string) => void;
+  /** Append raw little-endian PCM bytes to the in-progress recording. */
+  write: (bytes: Uint8Array) => void;
+  /** Flush queued writes, prepend the WAV header, return success. */
   finalize: () => Promise<boolean>;
+  /** Cancel: drop queued writes and remove any files on disk. */
   abort: () => Promise<void>;
   getByteCount: () => number;
 }
 
 export const createPcmStreamWriter = (
-  outputPath: string,
+  outputUri: string,
   sampleRate: number,
   numChannels: number,
   bitsPerSample: number = 16,
 ): PcmStreamWriter => {
-  const tempPath = `${outputPath}.pcm`;
+  const tempFile = new File(`${outputUri}.pcm`);
+  const outputFile = new File(outputUri);
+
   let totalBytes = 0;
   let writeQueue: Promise<void> = Promise.resolve();
   let hasError = false;
   let isFinalized = false;
 
-  const base64ByteLength = (b64: string): number => {
-    const len = b64.length;
-    if (len === 0) return 0;
-    let padding = 0;
-    if (b64[len - 1] === "=") padding++;
-    if (len > 1 && b64[len - 2] === "=") padding++;
-    return Math.floor((len * 3) / 4) - padding;
-  };
-
-  const write = (base64Chunk: string): void => {
+  const write = (bytes: Uint8Array): void => {
     if (isFinalized || hasError) return;
 
-    const chunkBytes = base64ByteLength(base64Chunk);
     const isFirst = totalBytes === 0;
-    totalBytes += chunkBytes;
+    totalBytes += bytes.byteLength;
 
     writeQueue = writeQueue.then(async () => {
       if (isFinalized || hasError) return;
       try {
-        if (isFirst) {
-          await fileSystem.writeFile(tempPath, base64Chunk, "base64");
-        } else {
-          await fileSystem.appendFile(tempPath, base64Chunk, "base64");
-        }
+        tempFile.write(bytes, isFirst ? undefined : { append: true });
       } catch (error) {
         hasError = true;
         logError(error, {
@@ -121,16 +105,16 @@ export const createPcmStreamWriter = (
     }
 
     try {
-      const wavHeader = createWavHeaderBuffer(
+      const header = createWavHeaderBytes(
         totalBytes,
         sampleRate,
         numChannels,
         bitsPerSample,
       );
-      await fileSystem.writeFile(outputPath, wavHeader, "base64");
-      const pcmData = await fileSystem.readFile(tempPath, "base64");
-      await fileSystem.appendFile(outputPath, pcmData, "base64");
-      await fileSystem.unlink(tempPath);
+      outputFile.write(header);
+      const pcm = tempFile.bytesSync();
+      outputFile.write(pcm, { append: true });
+      if (tempFile.exists) tempFile.delete();
       return true;
     } catch (error) {
       logError(error, {
@@ -142,20 +126,25 @@ export const createPcmStreamWriter = (
     }
   };
 
+  const deleteIfExists = (file: File, label: string): void => {
+    if (!file.exists) return;
+    try {
+      file.delete();
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.recording,
+        message: `Error deleting ${label} during WAV cleanup`,
+      });
+    }
+  };
+
   const cleanup = async (): Promise<void> => {
-    try {
-      if (await fileSystem.exists(tempPath)) {
-        await fileSystem.unlink(tempPath);
-      }
-    } catch {}
-    try {
-      if (await fileSystem.exists(outputPath)) {
-        await fileSystem.unlink(outputPath);
-      }
-    } catch {}
+    deleteIfExists(tempFile, "temp PCM file");
+    deleteIfExists(outputFile, "output WAV file");
   };
 
   const abort = async (): Promise<void> => {
+    if (isFinalized) return;
     isFinalized = true;
     hasError = true;
     await writeQueue;

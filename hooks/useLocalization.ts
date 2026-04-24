@@ -87,6 +87,9 @@ export const useLocalization = () => {
       failedToInitializeEngine: t("failedToInitializeEngine"),
       copiedToClipboard: t("copiedToClipboard"),
       contactSupport: t("contactSupport"),
+      advancedSettingsTitle: t("advancedSettingsTitle"),
+      smartSplitTitle: t("smartSplitTitle"),
+      smartSplitDescription: t("smartSplitDescription"),
     },
   };
 };

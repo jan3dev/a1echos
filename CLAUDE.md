@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Echos is a React Native voice notes app with on-device transcription built using Expo. It records audio and transcribes it locally using Whisper models with VAD (Voice Activity Detection), supporting both real-time streaming transcription and file-based transcription modes.
+Echos is a React Native voice notes app with on-device transcription built using Expo. It records audio and transcribes it locally using ASR models, supporting both real-time streaming transcription and file-based transcription modes.
 
 ## Development Commands
 
@@ -54,11 +54,11 @@ Always run `npm run test:coverage` after changes to verify thresholds are met.
 
 ### Core Technology Stack
 
-- **Framework**: Expo SDK 54 + React Native 0.81.5 + React 19.1.0
+- **Framework**: Expo SDK 55 + React Native 0.83+ + React 19.2
 - **Navigation**: expo-router (file-based routing)
 - **State Management**: Zustand
 - **Localization**: i18next + react-i18next
-- **Audio**: expo-audio + @fugood/react-native-audio-pcm-stream
+- **Audio**: expo-audio
 - **Transcription**: react-native-sherpa-onnx (on-device Whisper + NeMo Parakeet inference)
 - **Storage**: expo-file-system + expo-secure-store
 - **Encryption**: expo-crypto + react-native-aes-gcm-crypto
@@ -99,7 +99,6 @@ The project uses TypeScript path aliases (configured in tsconfig.json):
 
 All services follow singleton pattern and are exported from `services/index.ts`:
 
-- **AudioService** - Audio recording lifecycle (expo-audio + PCM streaming for Android)
 - **AudioSessionService** - iOS AVAudioSession configuration management
 - **SherpaTranscriptionService** - sherpa-onnx STT engine init, real-time + file transcription (replaced WhisperService)
 - **ModelDownloadService** - Downloads non-bundled models from HuggingFace via `expo-file-system/legacy` `createDownloadResumable` (streams to disk, progress callbacks, cancel support)
@@ -154,7 +153,6 @@ Domain models with JSON serialization helpers:
 
 #### `/hooks` - React Hooks
 
-- **useBackgroundRecording** - Handles background/foreground audio transitions
 - **useLocalization** - i18n helpers and language switching
 - **usePermissions** - Audio permission state management
 - **useSessionOperations** - Session CRUD operations
@@ -265,7 +263,6 @@ DocumentDirectory/
 Key native dependencies requiring development builds:
 
 - react-native-sherpa-onnx (on-device STT inference)
-- @fugood/react-native-audio-pcm-stream (Android PCM)
 - @shopify/react-native-skia (graphics)
 - react-native-reanimated (animations)
 - @supersami/rn-foreground-service (Android background recording)
@@ -295,9 +292,9 @@ Key native dependencies requiring development builds:
 
 When writing tests:
 
-- Focus on service logic (WhisperService, AudioService, StorageService)
+- Focus on service logic (StorageService)
 - Test state machine transitions in transcriptionStore
-- Mock native modules (whisper.rn, expo-audio, expo-file-system)
+- Mock native modules (expo-audio, expo-file-system)
 - Use React Native Testing Library for component tests
 
 ### Common Gotchas
@@ -315,3 +312,4 @@ When writing tests:
 11. **Model language support** - Parakeet has `supportedLanguageCodes` in ModelRegistry; `settingsStore.setModelId` auto-resets language to English if current language unsupported
 
 Codex will review your code.
+Don't add new dependencies if not absolutely necessary. Always check for CVEs before installing.

@@ -76,5 +76,8 @@
   "transcriptionFailed": "Transcription failed",
   "failedToInitializeEngine": "Failed to initialize transcription engine",
   "copiedToClipboard": "Copied to clipboard",
-  "contactSupport": "Contact Support"
+  "contactSupport": "Contact Support",
+  "advancedSettingsTitle": "Advanced Settings",
+  "smartSplitTitle": "Smart Split",
+  "smartSplitDescription": "Automatically splits long recordings into separate items at natural pauses. Turn off to keep each recording as one item."
 }

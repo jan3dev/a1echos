@@ -59,8 +59,10 @@ export enum TestID {
   SettingsModel = "settings-model",
   SettingsTheme = "settings-theme",
   SettingsLanguage = "settings-language",
+  SettingsAdvanced = "settings-advanced",
   SettingsContactSupport = "settings-contact-support",
   SettingsFooter = "settings-footer",
+  SettingsSmartSplitToggle = "settings-smart-split-toggle",
 
   // --- Theme Settings ---
   ThemeAuto = "theme-auto",

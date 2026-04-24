@@ -64,6 +64,7 @@ let mockSessions: any[] = [];
 
 jest.mock("@/stores", () => ({
   useSessions: jest.fn(() => mockSessions),
+  useIncognitoSession: jest.fn(() => null),
   useCreateSession: jest.fn(() => jest.fn()),
   useIsIncognitoMode: jest.fn(() => false),
   useIsSessionSelectionMode: jest.fn(() => false),
@@ -112,6 +113,7 @@ jest.mock("@/components", () => {
         <Text>{String(message)}</Text>
       </View>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     Toast: (props: any) => <View testID={TID.DeleteToast} {...props} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,

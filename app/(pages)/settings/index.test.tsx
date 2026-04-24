@@ -64,6 +64,7 @@ jest.mock("@/components", () => {
         {iconTrailing}
       </TouchableOpacity>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     SettingsFooter: () => <View testID={TID.SettingsFooter} />,
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>
@@ -74,11 +75,12 @@ jest.mock("@/components", () => {
 });
 
 describe("SettingsScreen", () => {
-  it("renders settings items (model, theme, language titles)", () => {
+  it("renders settings items (model, theme, language, advanced titles)", () => {
     const { getByTestId } = render(<SettingsScreen />);
     expect(getByTestId("list-item-title")).toBeTruthy();
     expect(getByTestId("list-item-themeTitle")).toBeTruthy();
     expect(getByTestId("list-item-spokenLanguageTitle")).toBeTruthy();
+    expect(getByTestId("list-item-advancedSettingsTitle")).toBeTruthy();
   });
 
   it("model item shows current model name", () => {
@@ -107,6 +109,9 @@ describe("SettingsScreen", () => {
 
     fireEvent.press(getByTestId("list-item-spokenLanguageTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/language");
+
+    fireEvent.press(getByTestId("list-item-advancedSettingsTitle"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/advanced");
   });
 
   it("contact support opens external URL via Linking", () => {
