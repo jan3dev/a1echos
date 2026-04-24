@@ -9,6 +9,7 @@ import {
   EmptyStateView,
   HomeAppBar,
   HomeContent,
+  Screen,
   Toast,
   useToast,
 } from "@/components";
@@ -31,12 +32,10 @@ import {
   useStopRecordingAndSave,
   useToggleSessionSelection,
 } from "@/stores";
-import { useTheme } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -275,12 +274,7 @@ export default function HomeScreen() {
   ]);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <HomeAppBar
         selectionMode={isSessionSelectionMode}
         onDeleteSelected={handleDeleteSelected}
@@ -309,14 +303,11 @@ export default function HomeScreen() {
       )}
 
       <Toast {...deleteToastState} />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   tooltipContainer: {
     position: "absolute",
     left: 0,

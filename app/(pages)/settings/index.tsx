@@ -9,6 +9,7 @@ import {
   Icon,
   InAppBanner,
   ListItem,
+  Screen,
   SettingsFooter,
   TopAppBar,
 } from "@/components";
@@ -50,12 +51,7 @@ export default function SettingsScreen() {
   const languageDisplay = selectedLanguage.code.toUpperCase();
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title={loc.settingsTitle} />
 
       <ScrollView
@@ -194,14 +190,11 @@ export default function SettingsScreen() {
         <View style={styles.spacer} />
         <SettingsFooter />
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
   },

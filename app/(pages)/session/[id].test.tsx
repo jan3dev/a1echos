@@ -195,6 +195,7 @@ jest.mock("@/components", () => {
         </TouchableOpacity>
       ),
     },
+    Screen: ({ children }: any) => <View>{children}</View>,
     Toast: (props: any) => <View testID={TID.Toast} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,

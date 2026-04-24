@@ -182,6 +182,7 @@ jest.mock("@/components", () => {
         ))}
       </View>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>

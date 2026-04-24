@@ -1,7 +1,7 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, ListItem, Text, Toggle, TopAppBar } from "@/components";
+import { Card, ListItem, Screen, Text, Toggle, TopAppBar } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { useSetSmartSplitEnabled, useSmartSplitEnabled } from "@/stores";
@@ -20,12 +20,7 @@ export default function AdvancedSettingsScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title={loc.advancedSettingsTitle} />
 
       <ScrollView
@@ -61,14 +56,11 @@ export default function AdvancedSettingsScreen() {
           {loc.smartSplitDescription}
         </Text>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
   },

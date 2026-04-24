@@ -113,6 +113,7 @@ jest.mock("@/components", () => {
         <Text>{String(message)}</Text>
       </View>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     Toast: (props: any) => <View testID={TID.DeleteToast} {...props} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,

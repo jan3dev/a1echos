@@ -64,6 +64,7 @@ jest.mock("@/components", () => {
         {iconTrailing}
       </TouchableOpacity>
     ),
+    Screen: ({ children }: any) => <View>{children}</View>,
     SettingsFooter: () => <View testID={TID.SettingsFooter} />,
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>

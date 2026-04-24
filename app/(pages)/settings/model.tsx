@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ModelCard, Text, TopAppBar } from "@/components";
+import { ModelCard, Screen, Text, TopAppBar } from "@/components";
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
 import { AppConstants, Routes } from "@/constants";
@@ -223,12 +223,7 @@ export default function ModelSettingsScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title="" />
 
       <ScrollView
@@ -286,14 +281,11 @@ export default function ModelSettingsScreen() {
       </ScrollView>
 
       <Toast {...deleteToastState} />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
     gap: 24,

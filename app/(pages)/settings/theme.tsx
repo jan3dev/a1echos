@@ -1,9 +1,16 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, Divider, ListItem, Radio, TopAppBar } from "@/components";
+import {
+  Card,
+  Divider,
+  ListItem,
+  Radio,
+  Screen,
+  TopAppBar,
+} from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme } from "@/models";
@@ -50,12 +57,7 @@ export default function ThemeSettingsScreen() {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
-    >
+    <Screen>
       <TopAppBar title={loc.themeTitle} />
 
       <ScrollView
@@ -125,14 +127,11 @@ export default function ThemeSettingsScreen() {
           />
         </Card>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 16,
   },
