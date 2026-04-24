@@ -1,33 +1,60 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { Asset } from "expo-asset";
 import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import type { PcmLiveStreamHandle } from "react-native-sherpa-onnx/audio";
-import { createPcmLiveStream } from "react-native-sherpa-onnx/audio";
 import type { SttEngine } from "react-native-sherpa-onnx/stt";
-import { createSTT } from "react-native-sherpa-onnx/stt";
 
+import { AppConstants } from "@/constants";
 import type { ModelInfo } from "@/models";
-import { ModelId, SupportedLanguages, getModelInfo } from "@/models";
-import { FeatureFlag, logError, logWarn } from "@/utils";
+import { getModelInfo, ModelId, SupportedLanguages } from "@/models";
+import {
+  createPcmStreamWriter,
+  FeatureFlag,
+  logError,
+  logWarn,
+  PcmStreamWriter,
+} from "@/utils";
 
 import { audioSessionService } from "./AudioSessionService";
+
+// Lazy-loaded sherpa-onnx native bindings. Deferred so Storybook (which runs
+// without a native bridge) can evaluate this module without hitting
+// TurboModuleRegistry.getEnforcing at import time.
+type CreatePcmLiveStream =
+  typeof import("react-native-sherpa-onnx/audio").createPcmLiveStream;
+type CreateSTT = typeof import("react-native-sherpa-onnx/stt").createSTT;
+
+let cachedCreatePcmLiveStream: CreatePcmLiveStream | null = null;
+let cachedCreateSTT: CreateSTT | null = null;
+
+const loadCreatePcmLiveStream = (): CreatePcmLiveStream => {
+  if (!cachedCreatePcmLiveStream) {
+    cachedCreatePcmLiveStream =
+      require("react-native-sherpa-onnx/audio").createPcmLiveStream;
+  }
+  return cachedCreatePcmLiveStream!;
+};
+
+const loadCreateSTT = (): CreateSTT => {
+  if (!cachedCreateSTT) {
+    cachedCreateSTT = require("react-native-sherpa-onnx/stt").createSTT;
+  }
+  return cachedCreateSTT!;
+};
 
 // Lazy-loaded Simplified → Traditional Chinese converter (OpenCC)
 let s2twConverter: ((text: string) => string) | null = null;
 const convertToTraditional = (text: string): string => {
   if (!s2twConverter) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const OpenCC = require("opencc-js");
     s2twConverter = OpenCC.Converter({ from: "cn", to: "twp" });
   }
   return s2twConverter ? s2twConverter(text) : text;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const whisperEncoderAsset = require("@/assets/models/sherpa-whisper/tiny-encoder.int8.onnx");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const whisperDecoderAsset = require("@/assets/models/sherpa-whisper/tiny-decoder.int8.onnx");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const whisperTokensAsset = require("@/assets/models/sherpa-whisper/tiny-tokens.txt");
 
 const BUNDLED_ASSETS: Record<string, number> = {
@@ -37,15 +64,32 @@ const BUNDLED_ASSETS: Record<string, number> = {
 };
 
 const IOS_NUM_THREADS = 2;
-
-/** Minimum energy to consider as speech */
-const SPEECH_ENERGY_THRESHOLD = 0.02;
-/** Silence duration (ms) before triggering chunked transcription */
-const SILENCE_TRIGGER_MS = 600;
-/** Maximum chunk duration (ms) — transcribe even during continuous speech */
+const SAMPLE_RATE = AppConstants.AUDIO_SAMPLE_RATE;
+const NUM_CHANNELS = AppConstants.AUDIO_NUM_CHANNELS;
+const BITS_PER_SAMPLE = 16;
 const MAX_CHUNK_DURATION_MS = 5000;
-/** Sample rate for all audio processing */
-const SAMPLE_RATE = 16000;
+const MIN_CHUNK_SECONDS = 0.3;
+const LONG_PAUSE_MS = AppConstants.SMART_SPLIT_LONG_PAUSE_MS;
+const ENERGY_THRESHOLD = AppConstants.SMART_SPLIT_SILENCE_ENERGY_THRESHOLD;
+
+export type ChunkBoundary = "none" | "long" | "final";
+
+export interface ChunkEvent {
+  /** Newly-transcribed text for this chunk (may be "" on a long-pause upgrade). */
+  text: string;
+  /** Structural hint about the silence that followed this chunk, if any. */
+  boundary: ChunkBoundary;
+}
+
+export interface StartRealtimeOptions {
+  /**
+   * If provided, PCM samples are mirrored into a WAV file at this URI
+   * (including the `file://` scheme) while recording. Used by file-mode so the
+   * recording is available for playback attachment on single-item runs. The
+   * same URI is returned by {@link stopRealtimeTranscription} once finalized.
+   */
+  wavOutputUri?: string;
+}
 
 interface ServiceState {
   sttEngine: SttEngine | null;
@@ -64,15 +108,17 @@ interface ServiceState {
   pcmUnsubError: (() => void) | null;
   audioBuffer: Float32Array[];
   audioBufferSampleCount: number;
-  partialResults: string[];
-  currentTranscription: string;
   chunkTimer: ReturnType<typeof setTimeout> | null;
   lastSpeechTime: number;
   isSpeaking: boolean;
-  silenceTimer: ReturnType<typeof setTimeout> | null;
+  longPauseTimer: ReturnType<typeof setTimeout> | null;
+
+  // Optional WAV sidecar (file-mode)
+  pcmStreamWriter: PcmStreamWriter | null;
+  wavOutputUri: string | null;
 
   // Callbacks
-  partialCallbacks: Set<(text: string) => void>;
+  chunkCallbacks: Set<(event: ChunkEvent) => void>;
   audioLevelCallbacks: Set<(level: number) => void>;
 }
 
@@ -154,14 +200,15 @@ const createSherpaTranscriptionService = () => {
     pcmUnsubError: null,
     audioBuffer: [],
     audioBufferSampleCount: 0,
-    partialResults: [],
-    currentTranscription: "",
     chunkTimer: null,
     lastSpeechTime: 0,
     isSpeaking: false,
-    silenceTimer: null,
+    longPauseTimer: null,
 
-    partialCallbacks: new Set(),
+    pcmStreamWriter: null,
+    wavOutputUri: null,
+
+    chunkCallbacks: new Set(),
     audioLevelCallbacks: new Set(),
   };
 
@@ -171,20 +218,20 @@ const createSherpaTranscriptionService = () => {
 
   // --- Audio level computation (Float32 variant) ---
 
-  const computeRmsFromFloat32 = (samples: Float32Array): number => {
+  /** Raw linear RMS of Float32 samples in [0, 1]. Used for VAD thresholding. */
+  const computeRawRmsFromFloat32 = (samples: Float32Array): number => {
     if (samples.length === 0) return 0;
     let sumSquares = 0;
     for (let i = 0; i < samples.length; i++) {
       sumSquares += samples[i] * samples[i];
     }
-    const rms = Math.sqrt(sumSquares / samples.length);
-    const boosted = Math.min(1.0, rms * 14);
-    return Math.pow(boosted, 0.5);
+    return Math.sqrt(sumSquares / samples.length);
   };
 
-  const processAudioLevel = (samples: Float32Array): void => {
-    const rawLevel = computeRmsFromFloat32(samples);
-    const level = Math.max(0.02, Math.min(1.0, rawLevel));
+  const processAudioLevel = (rawRms: number): void => {
+    const boosted = Math.min(1.0, rawRms * 14);
+    const visualRaw = Math.pow(boosted, 0.5);
+    const level = Math.max(0.02, Math.min(1.0, visualRaw));
 
     const now = Date.now();
     const dtMs =
@@ -215,7 +262,20 @@ const createSherpaTranscriptionService = () => {
     });
   };
 
-  // --- Chunked transcription helpers ---
+  // --- Chunk emission ---
+
+  const emitChunk = (event: ChunkEvent): void => {
+    state.chunkCallbacks.forEach((callback) => {
+      try {
+        callback(event);
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.transcription,
+          message: "Error in chunk callback",
+        });
+      }
+    });
+  };
 
   const collectBufferedSamples = (): number[] | null => {
     if (state.audioBufferSampleCount === 0) return null;
@@ -236,14 +296,22 @@ const createSherpaTranscriptionService = () => {
   let isTranscribingChunk = false;
 
   const transcribeBufferedAudio = async (
-    isFinalChunk = false,
+    boundary: ChunkBoundary,
   ): Promise<void> => {
+    const isFinalChunk = boundary === "final";
     if (!state.sttEngine || (!state.isRealtimeRecording && !isFinalChunk))
       return;
     if (isTranscribingChunk) return; // Prevent concurrent transcription calls
 
     const samples = collectBufferedSamples();
-    if (!samples || samples.length < SAMPLE_RATE * 0.3) return; // Skip if less than 300ms
+    if (!samples || samples.length < SAMPLE_RATE * MIN_CHUNK_SECONDS) {
+      // Nothing worth transcribing — emit a zero-text boundary so the store
+      // can still advance its item state for `final` / `long`.
+      if (boundary === "final" || boundary === "long") {
+        emitChunk({ text: "", boundary });
+      }
+      return;
+    }
 
     isTranscribingChunk = true;
     try {
@@ -252,27 +320,16 @@ const createSherpaTranscriptionService = () => {
         SAMPLE_RATE,
       );
       const rawText = result.text?.trim();
-      const text = rawText ? postProcessText(rawText) : rawText;
-      if (text) {
-        state.partialResults.push(text);
-        state.currentTranscription = state.partialResults.join(" ");
-
-        state.partialCallbacks.forEach((callback) => {
-          try {
-            callback(state.currentTranscription);
-          } catch (error) {
-            logError(error, {
-              flag: FeatureFlag.transcription,
-              message: "Error in partial callback",
-            });
-          }
-        });
-      }
+      const text = rawText ? postProcessText(rawText) : "";
+      emitChunk({ text, boundary });
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: "Error transcribing audio chunk",
       });
+      if (boundary === "final" || boundary === "long") {
+        emitChunk({ text: "", boundary });
+      }
     } finally {
       isTranscribingChunk = false;
     }
@@ -281,8 +338,11 @@ const createSherpaTranscriptionService = () => {
   const scheduleMaxChunkTimer = (): void => {
     clearChunkTimer();
     state.chunkTimer = setTimeout(async () => {
+      if (!state.isRealtimeRecording) return;
+      await transcribeBufferedAudio("none");
+      // Re-check after the await — recording may have stopped during transcribe
+      // and cleared the timer; rescheduling would leak it.
       if (state.isRealtimeRecording) {
-        await transcribeBufferedAudio();
         scheduleMaxChunkTimer();
       }
     }, MAX_CHUNK_DURATION_MS);
@@ -295,45 +355,57 @@ const createSherpaTranscriptionService = () => {
     }
   };
 
-  const clearSilenceTimer = (): void => {
-    if (state.silenceTimer) {
-      clearTimeout(state.silenceTimer);
-      state.silenceTimer = null;
+  const clearPauseTimers = (): void => {
+    if (state.longPauseTimer) {
+      clearTimeout(state.longPauseTimer);
+      state.longPauseTimer = null;
     }
+  };
+
+  const float32ToInt16PcmBytes = (samples: Float32Array): Uint8Array => {
+    const bytes = new Uint8Array(samples.length * 2);
+    const view = new DataView(bytes.buffer);
+    for (let i = 0; i < samples.length; i++) {
+      const clamped = Math.max(-1, Math.min(1, samples[i]));
+      const int16 = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+      view.setInt16(i * 2, int16 | 0, true);
+    }
+    return bytes;
   };
 
   const handleAudioData = (samples: Float32Array): void => {
     if (!state.isRealtimeRecording) return;
 
-    // Buffer audio
+    if (state.pcmStreamWriter) {
+      state.pcmStreamWriter.write(float32ToInt16PcmBytes(samples));
+    }
+
     state.audioBuffer.push(samples);
     state.audioBufferSampleCount += samples.length;
 
-    // Process audio level
-    processAudioLevel(samples);
+    const energy = computeRawRmsFromFloat32(samples);
+    processAudioLevel(energy);
 
-    // Speech boundary detection
-    const energy = computeRmsFromFloat32(samples);
     const now = Date.now();
 
-    if (energy > SPEECH_ENERGY_THRESHOLD) {
+    if (energy > ENERGY_THRESHOLD) {
       state.isSpeaking = true;
       state.lastSpeechTime = now;
-      clearSilenceTimer();
-    } else if (state.isSpeaking) {
-      // Energy dropped — start silence timer if not already running
-      if (!state.silenceTimer) {
-        state.silenceTimer = setTimeout(async () => {
-          if (
-            state.isRealtimeRecording &&
-            Date.now() - state.lastSpeechTime >= SILENCE_TRIGGER_MS
-          ) {
-            state.isSpeaking = false;
-            await transcribeBufferedAudio();
-            scheduleMaxChunkTimer(); // Reset the max chunk timer
-          }
-        }, SILENCE_TRIGGER_MS);
-      }
+      clearPauseTimers();
+    } else if (state.isSpeaking && !state.longPauseTimer) {
+      // Energy dropped — arm the long-pause timer. When it fires we emit a
+      // `long` boundary so the store finalizes the in-progress item.
+      state.longPauseTimer = setTimeout(() => {
+        state.longPauseTimer = null;
+        if (
+          !state.isRealtimeRecording ||
+          Date.now() - state.lastSpeechTime < LONG_PAUSE_MS
+        ) {
+          return;
+        }
+        state.isSpeaking = false;
+        emitChunk({ text: "", boundary: "long" });
+      }, LONG_PAUSE_MS);
     }
   };
 
@@ -379,7 +451,7 @@ const createSherpaTranscriptionService = () => {
       const { language: whisperLanguage } =
         SupportedLanguages.transcribeOptionsFor(languageCode);
 
-      const sttEngine = await createSTT({
+      const sttEngine = await loadCreateSTT()({
         modelPath: { type: "file", path: toNativePath(modelDir) },
         modelType: modelInfo.sherpaModelType as
           | "whisper"
@@ -422,14 +494,16 @@ const createSherpaTranscriptionService = () => {
     modelId?: ModelId,
     languageCode: string = "en",
   ): Promise<boolean> => {
-    // If an initialization is already in flight, wait for it
-    if (state.initializePromise) {
-      return state.initializePromise;
-    }
-
     const targetModelId = modelId ?? ModelId.WHISPER_TINY;
 
-    // Re-initialize if model or language changed (Whisper sets language at init time)
+    // If an init is already in flight, wait for it — then re-check, since the
+    // in-flight init may have been for a different model/language than we want.
+    if (state.initializePromise) {
+      await state.initializePromise;
+      return initialize(targetModelId, languageCode);
+    }
+
+    // Whisper sets language at init time; other model types read it at runtime.
     const needsReinit =
       !state.isInitialized ||
       state.activeModelId !== targetModelId ||
@@ -440,7 +514,6 @@ const createSherpaTranscriptionService = () => {
       return true;
     }
 
-    // If switching models or language, dispose the current engine first
     if (state.isInitialized) {
       await dispose();
     }
@@ -461,11 +534,7 @@ const createSherpaTranscriptionService = () => {
     try {
       state.isTranscribing = true;
 
-      // sherpa-onnx expects a plain filesystem path, not a file:// URI
-      const filePath = audioPath.replace(/^file:\/\//, "");
-
-      // AudioService already records in 16kHz mono 16-bit PCM WAV format,
-      // which is exactly what sherpa-onnx's WaveReader expects — no conversion needed.
+      const filePath = toNativePath(audioPath);
       const result = await state.sttEngine.transcribeFile(filePath);
       const text = result.text?.trim() || null;
       return text ? postProcessText(text) : null;
@@ -480,7 +549,9 @@ const createSherpaTranscriptionService = () => {
     }
   };
 
-  const startRealtimeTranscription = async (): Promise<boolean> => {
+  const startRealtimeTranscription = async (
+    options: StartRealtimeOptions = {},
+  ): Promise<boolean> => {
     if (!state.isInitialized || !state.sttEngine) {
       logError("Cannot start real-time: engine not initialized", {
         flag: FeatureFlag.transcription,
@@ -504,8 +575,6 @@ const createSherpaTranscriptionService = () => {
 
     try {
       // Reset realtime state
-      state.currentTranscription = "";
-      state.partialResults = [];
       state.audioBuffer = [];
       state.audioBufferSampleCount = 0;
       state.isSpeaking = false;
@@ -513,12 +582,21 @@ const createSherpaTranscriptionService = () => {
       smoothedLevel = 0.0;
       lastLevelTime = null;
 
+      if (options.wavOutputUri) {
+        state.wavOutputUri = options.wavOutputUri;
+        state.pcmStreamWriter = createPcmStreamWriter(
+          options.wavOutputUri,
+          SAMPLE_RATE,
+          NUM_CHANNELS,
+          BITS_PER_SAMPLE,
+        );
+      }
+
       await configureAudioSession(100);
 
-      // Create PCM live stream from sherpa-onnx
-      const pcmStream = createPcmLiveStream({
+      const pcmStream = loadCreatePcmLiveStream()({
         sampleRate: SAMPLE_RATE,
-        channelCount: 1,
+        channelCount: NUM_CHANNELS,
       });
 
       state.pcmLiveStream = pcmStream;
@@ -554,40 +632,54 @@ const createSherpaTranscriptionService = () => {
     }
   };
 
-  const stopRealtimeTranscription = async (): Promise<string> => {
+  /**
+   * Stop capture, flush the final buffered chunk, and finalize the WAV sidecar
+   * if one was requested. Returns the WAV path on success, or `null` when no
+   * sidecar was requested or finalization failed.
+   */
+  const stopRealtimeTranscription = async (): Promise<string | null> => {
     if (!state.isRealtimeRecording) {
       logWarn("No real-time transcription in progress", {
         flag: FeatureFlag.transcription,
       });
-      return "";
+      return null;
     }
 
+    let wavPath: string | null = null;
+
     try {
-      // Stop audio capture
+      // Clear pause/chunk timers up-front so in-flight callbacks cannot emit
+      // a spurious boundary after we've flipped isRealtimeRecording.
+      clearChunkTimer();
+      clearPauseTimers();
+
       if (state.pcmLiveStream) {
         await state.pcmLiveStream.stop();
+        state.pcmLiveStream = null;
       }
-
       state.isRealtimeRecording = false;
 
-      // Transcribe any remaining buffered audio (final chunk bypasses isRealtimeRecording guard)
-      await transcribeBufferedAudio(true);
+      await transcribeBufferedAudio("final");
 
-      return state.currentTranscription;
+      if (state.pcmStreamWriter && state.wavOutputUri) {
+        const success = await state.pcmStreamWriter.finalize();
+        wavPath = success ? state.wavOutputUri : null;
+      }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: "Failed to stop real-time recording",
       });
-      return state.currentTranscription;
     } finally {
       await cleanupRealtimeResources();
     }
+
+    return wavPath;
   };
 
   const cleanupRealtimeResources = async (): Promise<void> => {
     clearChunkTimer();
-    clearSilenceTimer();
+    clearPauseTimers();
 
     if (state.pcmUnsubData) {
       state.pcmUnsubData();
@@ -605,6 +697,17 @@ const createSherpaTranscriptionService = () => {
       }
       state.pcmLiveStream = null;
     }
+
+    // Abort the WAV writer if it wasn't finalized (e.g. start-failure path).
+    if (state.pcmStreamWriter) {
+      try {
+        await state.pcmStreamWriter.abort();
+      } catch {
+        // Ignore — abort is best-effort.
+      }
+      state.pcmStreamWriter = null;
+    }
+    state.wavOutputUri = null;
 
     state.audioBuffer = [];
     state.audioBufferSampleCount = 0;
@@ -631,16 +734,27 @@ const createSherpaTranscriptionService = () => {
       await stopRealtimeTranscription();
     }
 
+    const previousModelId = state.activeModelId;
+    const previousLanguage = state.activeLanguage;
+
     await dispose();
-    return initialize(modelId);
+    const ok = await initialize(modelId);
+    if (ok || !previousModelId) return ok;
+
+    // Init failed — try to restore the previous model so the app isn't wedged.
+    logWarn(`Model switch to ${modelId} failed; restoring ${previousModelId}`, {
+      flag: FeatureFlag.model,
+    });
+    await initialize(previousModelId, previousLanguage ?? "en");
+    return false;
   };
 
-  const subscribeToPartialResults = (
-    callback: (text: string) => void,
+  const subscribeToChunk = (
+    callback: (event: ChunkEvent) => void,
   ): (() => void) => {
-    state.partialCallbacks.add(callback);
+    state.chunkCallbacks.add(callback);
     return () => {
-      state.partialCallbacks.delete(callback);
+      state.chunkCallbacks.delete(callback);
     };
   };
 
@@ -671,7 +785,7 @@ const createSherpaTranscriptionService = () => {
       }
     }
 
-    state.partialCallbacks.clear();
+    state.chunkCallbacks.clear();
     state.audioLevelCallbacks.clear();
     resetState();
   };
@@ -684,8 +798,6 @@ const createSherpaTranscriptionService = () => {
     state.isInitializing = false;
     state.isTranscribing = false;
     state.isRealtimeRecording = false;
-    state.currentTranscription = "";
-    state.partialResults = [];
   };
 
   return {
@@ -693,7 +805,7 @@ const createSherpaTranscriptionService = () => {
     transcribeFile,
     startRealtimeTranscription,
     stopRealtimeTranscription,
-    subscribeToPartialResults,
+    subscribeToChunk,
     subscribeToAudioLevel,
     switchModel,
     dispose,

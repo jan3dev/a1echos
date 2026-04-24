@@ -219,7 +219,7 @@ describe("TranscriptionList", () => {
     expect(getByTestId("transcription-item-transcribing-loading")).toBeTruthy();
   });
 
-  it("shows transcribing state with default preview when no loading/live preview", () => {
+  it("transcribing state with no loading/live preview does not inject a ghost skeleton row", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     (useTranscriptionStore as unknown as jest.Mock).mockReturnValue({
       ...mockStoreDefaults,
@@ -227,8 +227,14 @@ describe("TranscriptionList", () => {
       livePreview: null,
       loadingPreview: null,
     });
-    const { getByTestId } = render(<TranscriptionList {...defaultProps} />);
-    expect(getByTestId("transcription-item-transcribing_preview")).toBeTruthy();
+    const { queryByTestId, getByTestId } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    // Real items still render, but no synthesized "transcribing_preview" row
+    // appears below them — that's what caused the flicker after stopping.
+    expect(getByTestId("transcription-item-t1")).toBeTruthy();
+    expect(getByTestId("transcription-item-t2")).toBeTruthy();
+    expect(queryByTestId("transcription-item-transcribing_preview")).toBeNull();
   });
 
   it("handleStartEdit calls onEditModeStarted callback", () => {

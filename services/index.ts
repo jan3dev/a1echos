@@ -8,8 +8,6 @@ export {
   default as storageServiceDefault,
 } from "./StorageService";
 
-export { audioService, default as audioServiceDefault } from "./AudioService";
-
 export {
   backgroundRecordingService,
   default as backgroundRecordingServiceDefault,
@@ -19,6 +17,11 @@ export {
 export {
   sherpaTranscriptionService,
   default as sherpaTranscriptionServiceDefault,
+} from "./SherpaTranscriptionService";
+export type {
+  ChunkBoundary,
+  ChunkEvent,
+  StartRealtimeOptions,
 } from "./SherpaTranscriptionService";
 
 export { shareService, default as shareServiceDefault } from "./ShareService";

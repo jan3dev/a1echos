@@ -21,9 +21,11 @@ export {
   useSetModelId,
   useSetModelMode,
   useSetModelType,
+  useSetSmartSplitEnabled,
   useSetTheme,
   useSetTranscriptionMode,
   useSettingsStore,
+  useSmartSplitEnabled,
 } from "./settingsStore";
 export {
   initializeTranscriptionStore,

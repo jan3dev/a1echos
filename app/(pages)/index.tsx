@@ -18,6 +18,7 @@ import { Session } from "@/models";
 import {
   useCreateSession,
   useExitSessionSelection,
+  useIncognitoSession,
   useIsIncognitoMode,
   useIsSessionSelectionMode,
   useSelectedSessionIds,
@@ -41,6 +42,7 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const sessions = useSessions();
+  const incognitoSession = useIncognitoSession();
   const createSession = useCreateSession();
   const { deleteSession } = useSessionOperations();
   const isIncognitoMode = useIsIncognitoMode();
@@ -64,7 +66,10 @@ export default function HomeScreen() {
 
   const [tooltipShouldDisappear, setTooltipShouldDisappear] = useState(false);
 
-  const effectivelyEmpty = sessions.length === 0;
+  // Incognito sessions live outside the sessions array; treat them as non-empty
+  // so the empty-state tooltip unmounts (instead of animating back in) between
+  // pressing record and the navigation to the session screen.
+  const effectivelyEmpty = sessions.length === 0 && !incognitoSession;
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

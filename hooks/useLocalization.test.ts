@@ -133,4 +133,15 @@ describe("useLocalization", () => {
       available: "50 MB",
     });
   });
+
+  it("languageCount and languagesSupported pass count interpolation", () => {
+    const { result } = renderHook(() => useLocalization());
+    const { loc, t } = result.current;
+
+    loc.languageCount(25);
+    expect(t).toHaveBeenCalledWith("languageCount", { count: 25 });
+
+    loc.languagesSupported(99);
+    expect(t).toHaveBeenCalledWith("languagesSupported", { count: 99 });
+  });
 });

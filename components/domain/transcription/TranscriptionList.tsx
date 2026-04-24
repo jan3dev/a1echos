@@ -108,22 +108,17 @@ export const TranscriptionList = ({
       };
     }
 
-    // Handle Loading/Transcribing (both file-based and real-time finalization)
+    // Handle Loading/Transcribing (both file-based and real-time finalization).
     if (isTranscribing) {
-      const previewItem = loadingPreview ||
-        livePreview || {
-          id: "transcribing_preview",
-          text: "",
-          timestamp: new Date(),
-          audioPath: "",
-          sessionId: activeSessionId,
+      const previewItem = loadingPreview || livePreview;
+      if (previewItem) {
+        return {
+          item: previewItem,
+          isStreamingLive: false,
+          isLoadingResult: true,
+          isRecording: false,
         };
-      return {
-        item: previewItem,
-        isStreamingLive: false,
-        isLoadingResult: true,
-        isRecording: false,
-      };
+      }
     }
 
     return EmptyPreviewState;

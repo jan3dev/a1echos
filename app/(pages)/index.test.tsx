@@ -64,6 +64,7 @@ let mockSessions: any[] = [];
 
 jest.mock("@/stores", () => ({
   useSessions: jest.fn(() => mockSessions),
+  useIncognitoSession: jest.fn(() => null),
   useCreateSession: jest.fn(() => jest.fn()),
   useIsIncognitoMode: jest.fn(() => false),
   useIsSessionSelectionMode: jest.fn(() => false),

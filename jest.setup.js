@@ -177,117 +177,6 @@ jest.mock("expo-status-bar", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Whisper
-// ---------------------------------------------------------------------------
-jest.mock("whisper.rn", () => ({
-  initWhisper: jest.fn(async () => ({
-    ptr: 1,
-    id: 1,
-    gpu: false,
-    reasonNoGPU: "mock",
-    transcribe: jest.fn(() => ({
-      stop: jest.fn(),
-      promise: Promise.resolve({
-        result: "mock transcription",
-        segments: [],
-        isAborted: false,
-      }),
-    })),
-    transcribeData: jest.fn(() => ({
-      stop: jest.fn(),
-      promise: Promise.resolve({
-        result: "mock transcription",
-        segments: [],
-        isAborted: false,
-      }),
-    })),
-    bench: jest.fn(),
-    release: jest.fn(),
-  })),
-  initWhisperVad: jest.fn(async () => ({
-    id: 1,
-    gpu: false,
-    reasonNoGPU: "mock",
-    detectSpeech: jest.fn(async () => []),
-    detectSpeechData: jest.fn(async () => []),
-    release: jest.fn(),
-  })),
-  releaseAllWhisper: jest.fn(),
-  releaseAllWhisperVad: jest.fn(),
-  toggleNativeLog: jest.fn(),
-  addNativeLogListener: jest.fn(() => ({ remove: jest.fn() })),
-  libVersion: "0.0.0-mock",
-  isUseCoreML: false,
-  isCoreMLAllowFallback: false,
-}));
-
-jest.mock("whisper.rn/src/realtime-transcription", () => ({
-  RealtimeTranscriber: jest.fn().mockImplementation(() => ({
-    start: jest.fn(),
-    stop: jest.fn(),
-    nextSlice: jest.fn(),
-    reset: jest.fn(),
-    release: jest.fn(),
-    updateCallbacks: jest.fn(),
-    updateVadOptions: jest.fn(),
-    updateAutoSliceOptions: jest.fn(),
-    updateVadThrottleOptions: jest.fn(),
-    getStatistics: jest.fn(() => ({
-      isActive: false,
-      isTranscribing: false,
-      vadEnabled: false,
-      audioStats: {},
-      vadStats: {},
-      sliceStats: {},
-      autoSliceConfig: {},
-    })),
-    getTranscriptionResults: jest.fn(() => []),
-  })),
-  SliceManager: jest.fn().mockImplementation(() => ({
-    addAudioData: jest.fn(() => ({ slice: null })),
-    forceNextSlice: jest.fn(() => ({ slice: null })),
-    getSliceByIndex: jest.fn(),
-    getAudioDataForTranscription: jest.fn(),
-    getCurrentSliceInfo: jest.fn(() => ({
-      currentSliceIndex: 0,
-      memoryUsage: { slicesInMemory: 0, totalSamples: 0, estimatedMB: 0 },
-    })),
-    getMemoryUsage: jest.fn(() => ({
-      slicesInMemory: 0,
-      totalSamples: 0,
-      estimatedMB: 0,
-    })),
-    reset: jest.fn(),
-  })),
-  VAD_PRESETS: {
-    default: {},
-    sensitive: {},
-    "very-sensitive": {},
-    conservative: {},
-    "very-conservative": {},
-    continuous: {},
-    meeting: {},
-    noisy: {},
-  },
-}));
-
-jest.mock(
-  "whisper.rn/src/realtime-transcription/adapters/AudioPcmStreamAdapter",
-  () => ({
-    AudioPcmStreamAdapter: jest.fn().mockImplementation(() => ({
-      initialize: jest.fn(),
-      start: jest.fn(),
-      stop: jest.fn(),
-      isRecording: jest.fn(() => false),
-      onData: jest.fn(),
-      onError: jest.fn(),
-      onStatusChange: jest.fn(),
-      release: jest.fn(),
-    })),
-  }),
-);
-
-// ---------------------------------------------------------------------------
 // AsyncStorage (in-memory)
 // ---------------------------------------------------------------------------
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -564,19 +453,6 @@ jest.mock("react-native-sherpa-onnx/stt", () => ({
     release: jest.fn(async () => undefined),
   })),
   ONLINE_STT_MODEL_TYPES: [],
-}));
-
-// ---------------------------------------------------------------------------
-// Audio PCM stream (Android)
-// ---------------------------------------------------------------------------
-jest.mock("@fugood/react-native-audio-pcm-stream", () => ({
-  __esModule: true,
-  default: {
-    init: jest.fn(),
-    start: jest.fn(),
-    stop: jest.fn(async () => "/mock/audio/path.wav"),
-    on: jest.fn(),
-  },
 }));
 
 // ---------------------------------------------------------------------------

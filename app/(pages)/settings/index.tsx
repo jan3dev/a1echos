@@ -138,6 +138,29 @@ export default function SettingsScreen() {
             onPress={() => router.push(Routes.settingsLanguage)}
             backgroundColor={theme.colors.surfacePrimary}
           />
+
+          <Divider color={theme.colors.surfaceBorderPrimary} />
+
+          <ListItem
+            testID={TestID.SettingsAdvanced}
+            title={loc.advancedSettingsTitle}
+            iconLeading={
+              <Icon
+                name="settings"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push(Routes.settingsAdvanced)}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
         </Card>
 
         <Card style={{ marginTop: 16 }}>

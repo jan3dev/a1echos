@@ -9,9 +9,7 @@ import {
   TranscriptionState,
 } from "@/models";
 import {
-  audioService,
   backgroundRecordingService,
-  permissionService,
   storageService,
   sherpaTranscriptionService,
 } from "@/services";
@@ -48,19 +46,12 @@ jest.mock("@/services", () => ({
     saveActiveSessionId: jest.fn(async () => undefined),
     clearActiveSessionId: jest.fn(async () => undefined),
   },
-  audioService: {
-    startRecording: jest.fn(async () => true),
-    stopRecording: jest.fn(async () => "/tmp/recording.wav"),
-    subscribeToAudioLevel: jest.fn(() => jest.fn()),
-    warmUpIosAudioInput: jest.fn(async () => undefined),
-    dispose: jest.fn(async () => undefined),
-  },
   sherpaTranscriptionService: {
     initialize: jest.fn(async () => true),
     transcribeFile: jest.fn(async () => "Transcribed text."),
     startRealtimeTranscription: jest.fn(async () => true),
-    stopRealtimeTranscription: jest.fn(async () => "Realtime text."),
-    subscribeToPartialResults: jest.fn(() => jest.fn()),
+    stopRealtimeTranscription: jest.fn(async () => null),
+    subscribeToChunk: jest.fn(() => jest.fn()),
     subscribeToAudioLevel: jest.fn(() => jest.fn()),
     initializationStatus: "ready",
     dispose: jest.fn(async () => undefined),
@@ -68,9 +59,6 @@ jest.mock("@/services", () => ({
   backgroundRecordingService: {
     startBackgroundService: jest.fn(async () => true),
     stopBackgroundService: jest.fn(async () => undefined),
-  },
-  permissionService: {
-    getRecordPermission: jest.fn(async () => ({ granted: true })),
   },
 }));
 
@@ -120,16 +108,39 @@ const getInitialState = () => ({
   isOperationLocked: false,
   activeOperations: new Set<string>(),
   lastOperationTime: null,
-  audioLevelUnsubscribe: null,
-  partialResultUnsubscribe: null,
+  chunkUnsubscribe: null,
   realtimeAudioLevelUnsubscribe: null,
+  smartSplit: {
+    currentItemId: null,
+    currentItemText: "",
+    currentItemStartMs: 0,
+    createdTranscriptions: [],
+    deferPersist: false,
+  },
 });
 
 const originalPlatformOS = Platform.OS;
 
+type ChunkBoundary = "none" | "long" | "final";
+interface ChunkEvent {
+  text: string;
+  boundary: ChunkBoundary;
+}
+
+let capturedChunkCallback: ((event: ChunkEvent) => void) | null = null;
+let capturedAudioLevelCallback: ((level: number) => void) | null = null;
+
+const emitChunk = (event: ChunkEvent) => {
+  if (!capturedChunkCallback) {
+    throw new Error("Chunk callback not captured — did startRecording run?");
+  }
+  capturedChunkCallback(event);
+};
+
 describe("transcriptionStore", () => {
   beforeEach(() => {
     useTranscriptionStore.setState(getInitialState());
+    capturedChunkCallback = null;
     // Reset cross-store state
     useSessionStore.setState({
       sessions: [],
@@ -142,8 +153,36 @@ describe("transcriptionStore", () => {
       selectedModelType: ModelType.WHISPER_FILE,
       selectedTranscriptionMode: TranscriptionMode.FILE,
       selectedLanguage: { code: "en", name: "English" },
+      smartSplitEnabled: true,
     });
     (Crypto.randomUUID as jest.Mock).mockReturnValue("transcription-uuid");
+
+    (
+      sherpaTranscriptionService.subscribeToChunk as jest.Mock
+    ).mockImplementation((cb: (event: ChunkEvent) => void) => {
+      capturedChunkCallback = cb;
+      return jest.fn();
+    });
+
+    capturedAudioLevelCallback = null;
+    (
+      sherpaTranscriptionService.subscribeToAudioLevel as jest.Mock
+    ).mockImplementation((cb: (level: number) => void) => {
+      capturedAudioLevelCallback = cb;
+      return jest.fn();
+    });
+
+    // Default: stop flushes a `final` boundary so the store finalizes the
+    // tail. Returns null — tests that need a saved WAV override per-case.
+    (
+      sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+    ).mockImplementation(async () => {
+      capturedChunkCallback?.({
+        text: "Realtime text.",
+        boundary: "final",
+      });
+      return null;
+    });
   });
 
   afterEach(() => {
@@ -352,7 +391,7 @@ describe("transcriptionStore", () => {
         .getState()
         .updateLivePreview("partial text", "session-1");
       const preview = useTranscriptionStore.getState().livePreview!;
-      expect(preview.id).toBe("live_vosk_active_preview");
+      expect(preview.id).toBe("live_active_preview");
       expect(preview.text).toBe("partial text");
       expect(preview.sessionId).toBe("session-1");
     });
@@ -366,7 +405,7 @@ describe("transcriptionStore", () => {
     it("createLoadingPreview creates with hardcoded ID", () => {
       useTranscriptionStore.getState().createLoadingPreview("session-1");
       const preview = useTranscriptionStore.getState().loadingPreview!;
-      expect(preview.id).toBe("whisper_loading_active_preview");
+      expect(preview.id).toBe("loading_active_preview");
       expect(preview.sessionId).toBe("session-1");
       expect(preview.text).toBe("");
     });
@@ -635,9 +674,7 @@ describe("transcriptionStore", () => {
       expect(state.isInitialized).toBe(true);
       expect(state.isEngineReady).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
-      expect(state.audioLevelUnsubscribe).not.toBeNull();
       expect(sherpaTranscriptionService.initialize).toHaveBeenCalled();
-      expect(audioService.subscribeToAudioLevel).toHaveBeenCalled();
     });
 
     it("whisper init failure is non-fatal", async () => {
@@ -652,16 +689,6 @@ describe("transcriptionStore", () => {
       expect(state.isEngineReady).toBe(false);
       expect(state.isInitialized).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
-    });
-
-    it("warms up iOS audio input when permission granted", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
-      Platform.OS = "ios";
-
-      await useTranscriptionStore.getState().initialize();
-
-      expect(permissionService.getRecordPermission).toHaveBeenCalled();
-      expect(audioService.warmUpIosAudioInput).toHaveBeenCalled();
     });
 
     it("skips if already initialized", async () => {
@@ -699,7 +726,7 @@ describe("transcriptionStore", () => {
       });
     });
 
-    it("full flow: transitions to RECORDING, starts audio, creates loading preview", async () => {
+    it("full flow: transitions to RECORDING, starts capture with a WAV sidecar, creates loading preview", async () => {
       const result = await useTranscriptionStore.getState().startRecording();
       const state = useTranscriptionStore.getState();
 
@@ -707,7 +734,13 @@ describe("transcriptionStore", () => {
       expect(state.state).toBe(TranscriptionState.RECORDING);
       expect(state.recordingSessionId).toBe("session-1");
       expect(state.loadingPreview).not.toBeNull();
-      expect(audioService.startRecording).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.startRealtimeTranscription,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          wavOutputUri: expect.stringMatching(/rec_\d+\.wav$/),
+        }),
+      );
       expect(
         backgroundRecordingService.startBackgroundService,
       ).toHaveBeenCalled();
@@ -740,8 +773,10 @@ describe("transcriptionStore", () => {
       expect(result).toBe(false);
     });
 
-    it("returns false when audio start fails", async () => {
-      (audioService.startRecording as jest.Mock).mockResolvedValueOnce(false);
+    it("returns false when capture start fails", async () => {
+      (
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
+      ).mockResolvedValueOnce(false);
 
       const result = await useTranscriptionStore.getState().startRecording();
       expect(result).toBe(false);
@@ -765,15 +800,13 @@ describe("transcriptionStore", () => {
       });
     });
 
-    it("subscribes to partials + audio levels, starts realtime transcription", async () => {
+    it("subscribes to chunks + audio levels, starts realtime transcription", async () => {
       const result = await useTranscriptionStore.getState().startRecording();
       const state = useTranscriptionStore.getState();
 
       expect(result).toBe(true);
       expect(state.state).toBe(TranscriptionState.RECORDING);
-      expect(
-        sherpaTranscriptionService.subscribeToPartialResults,
-      ).toHaveBeenCalled();
+      expect(sherpaTranscriptionService.subscribeToChunk).toHaveBeenCalled();
       expect(
         sherpaTranscriptionService.subscribeToAudioLevel,
       ).toHaveBeenCalled();
@@ -792,9 +825,7 @@ describe("transcriptionStore", () => {
       expect(useTranscriptionStore.getState().state).toBe(
         TranscriptionState.ERROR,
       );
-      expect(
-        useTranscriptionStore.getState().partialResultUnsubscribe,
-      ).toBeNull();
+      expect(useTranscriptionStore.getState().chunkUnsubscribe).toBeNull();
       expect(
         useTranscriptionStore.getState().realtimeAudioLevelUnsubscribe,
       ).toBeNull();
@@ -816,23 +847,84 @@ describe("transcriptionStore", () => {
       });
     });
 
-    it("stops audio, transcribes file, saves transcription, transitions to READY", async () => {
+    const primeFileModeSubscription = async () => {
+      // Reset smart-split state and stash the chunk callback by running
+      // through startRecording so the store wires its subscription up.
+      useTranscriptionStore.setState({
+        state: TranscriptionState.READY,
+        isEngineReady: true,
+        isOperationLocked: false,
+        lastOperationTime: null,
+      });
+      await useTranscriptionStore.getState().startRecording();
+    };
+
+    it("stops capture, finalizes WAV, saves transcription, transitions to READY", async () => {
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({
+          text: "Transcribed text.",
+          boundary: "final",
+        });
+        return "/tmp/recording.wav";
+      });
+
+      await primeFileModeSubscription();
       await useTranscriptionStore.getState().stopRecordingAndSave();
       const state = useTranscriptionStore.getState();
 
       expect(state.state).toBe(TranscriptionState.READY);
       expect(state.transcriptions).toHaveLength(1);
       expect(state.transcriptions[0].text).toBe("Transcribed text.");
-      expect(audioService.stopRecording).toHaveBeenCalled();
-      expect(sherpaTranscriptionService.transcribeFile).toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).toHaveBeenCalled();
       expect(storageService.saveTranscription).toHaveBeenCalled();
+      // Single-item file-mode runs still attach the WAV for playback.
       expect(storageService.saveAudioFile).toHaveBeenCalled();
       expect(
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
     });
 
+    it("skips audio attachment and persists all items on a multi-split run", async () => {
+      const dateSpy = jest.spyOn(Date, "now");
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        dateSpy.mockReturnValue(1_000_000);
+        (Crypto.randomUUID as jest.Mock).mockReturnValueOnce("id-1");
+        capturedChunkCallback?.({ text: "First.", boundary: "none" });
+        // Advance past the 60s cap so the long pause actually finalizes.
+        dateSpy.mockReturnValue(1_000_000 + 61_000);
+        capturedChunkCallback?.({ text: "", boundary: "long" });
+        (Crypto.randomUUID as jest.Mock).mockReturnValueOnce("id-2");
+        capturedChunkCallback?.({ text: "Second.", boundary: "final" });
+        return "/tmp/recording.wav";
+      });
+      await primeFileModeSubscription();
+
+      await useTranscriptionStore.getState().stopRecordingAndSave();
+      dateSpy.mockRestore();
+
+      const state = useTranscriptionStore.getState();
+      expect(state.transcriptions).toHaveLength(2);
+      expect(storageService.saveAudioFile).not.toHaveBeenCalled();
+      expect(storageService.saveTranscription).toHaveBeenCalledTimes(2);
+      expect(state.transcriptions.every((t) => t.audioPath === "")).toBe(true);
+    });
+
     it("skips persist for incognito session", async () => {
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({
+          text: "Transcribed text.",
+          boundary: "final",
+        });
+        return "/tmp/recording.wav";
+      });
       const incognito = {
         id: "inc",
         name: "Incognito",
@@ -844,6 +936,7 @@ describe("transcriptionStore", () => {
         activeSessionId: "inc",
         incognitoSession: incognito,
       });
+      await primeFileModeSubscription();
       useTranscriptionStore.setState({ recordingSessionId: "inc" });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
@@ -852,8 +945,11 @@ describe("transcriptionStore", () => {
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
     });
 
-    it("handles null file path from audio service", async () => {
-      (audioService.stopRecording as jest.Mock).mockResolvedValueOnce(null);
+    it("errors when no chunks were captured", async () => {
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => null);
+      await primeFileModeSubscription();
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -862,6 +958,27 @@ describe("transcriptionStore", () => {
       );
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
     });
+
+    it("persists text without audio when WAV finalize fails", async () => {
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({
+          text: "Transcribed text.",
+          boundary: "final",
+        });
+        return null;
+      });
+      await primeFileModeSubscription();
+
+      await useTranscriptionStore.getState().stopRecordingAndSave();
+
+      const state = useTranscriptionStore.getState();
+      expect(state.transcriptions).toHaveLength(1);
+      expect(state.transcriptions[0].audioPath).toBe("");
+      expect(storageService.saveAudioFile).not.toHaveBeenCalled();
+      expect(storageService.saveTranscription).toHaveBeenCalled();
+    });
   });
 
   describe("stopRecordingAndSave (realtime mode)", () => {
@@ -869,13 +986,20 @@ describe("transcriptionStore", () => {
     const mockAudioLevelUnsub = jest.fn();
 
     beforeEach(() => {
+      mockPartialUnsub.mockClear();
+      mockAudioLevelUnsub.mockClear();
+      // Emulate what startRecording does: wire the chunk callback so the
+      // stop mock can emit a `final` event through it.
+      capturedChunkCallback = (event) => {
+        useTranscriptionStore.getState().onChunkEvent(event);
+      };
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
         isEngineReady: true,
         isOperationLocked: false,
         lastOperationTime: null,
         recordingSessionId: "session-1",
-        partialResultUnsubscribe: mockPartialUnsub,
+        chunkUnsubscribe: mockPartialUnsub,
         realtimeAudioLevelUnsubscribe: mockAudioLevelUnsub,
       });
       useSettingsStore.setState({
@@ -900,7 +1024,9 @@ describe("transcriptionStore", () => {
     it("handles empty realtime text", async () => {
       (
         sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
-      ).mockResolvedValueOnce("");
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({ text: "", boundary: "final" });
+      });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -919,7 +1045,9 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(audioService.stopRecording).not.toHaveBeenCalled();
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).not.toHaveBeenCalled();
     });
 
     it("always stops background service", async () => {
@@ -951,14 +1079,17 @@ describe("transcriptionStore", () => {
     });
   });
 
-  describe("onPartialTranscription", () => {
-    it("updates streaming text and live preview when RECORDING", () => {
+  describe("onChunkEvent", () => {
+    it("accumulates text and updates live preview when RECORDING", () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
         recordingSessionId: "session-1",
       });
 
-      useTranscriptionStore.getState().onPartialTranscription("partial text");
+      useTranscriptionStore.getState().onChunkEvent({
+        text: "partial text",
+        boundary: "none",
+      });
 
       expect(useTranscriptionStore.getState().currentStreamingText).toBe(
         "partial text",
@@ -968,25 +1099,31 @@ describe("transcriptionStore", () => {
       );
     });
 
-    it("updates streaming text and live preview when STREAMING", () => {
+    it("updates live preview when STREAMING", () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.STREAMING,
         recordingSessionId: "session-1",
       });
 
-      useTranscriptionStore.getState().onPartialTranscription("streamed");
+      useTranscriptionStore.getState().onChunkEvent({
+        text: "streamed",
+        boundary: "none",
+      });
 
       expect(useTranscriptionStore.getState().livePreview!.text).toBe(
         "streamed",
       );
     });
 
-    it("updates streaming text but not preview in other states", () => {
+    it("updates streaming text but not preview in READY state", () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.READY,
       });
 
-      useTranscriptionStore.getState().onPartialTranscription("text");
+      useTranscriptionStore.getState().onChunkEvent({
+        text: "text",
+        boundary: "none",
+      });
 
       expect(useTranscriptionStore.getState().currentStreamingText).toBe(
         "text",
@@ -1001,7 +1138,7 @@ describe("transcriptionStore", () => {
       const mockUnsub2 = jest.fn();
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
-        partialResultUnsubscribe: mockUnsub1,
+        chunkUnsubscribe: mockUnsub1,
         realtimeAudioLevelUnsubscribe: mockUnsub2,
         isOperationLocked: true,
         recordingSessionId: "session-1",
@@ -1024,24 +1161,20 @@ describe("transcriptionStore", () => {
 
   describe("dispose", () => {
     it("unsubscribes all, stops bg service, disposes services", async () => {
-      const mockAudio = jest.fn();
       const mockPartial = jest.fn();
       const mockRealtime = jest.fn();
       useTranscriptionStore.setState({
-        audioLevelUnsubscribe: mockAudio,
-        partialResultUnsubscribe: mockPartial,
+        chunkUnsubscribe: mockPartial,
         realtimeAudioLevelUnsubscribe: mockRealtime,
       });
 
       await useTranscriptionStore.getState().dispose();
 
-      expect(mockAudio).toHaveBeenCalled();
       expect(mockPartial).toHaveBeenCalled();
       expect(mockRealtime).toHaveBeenCalled();
       expect(
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
-      expect(audioService.dispose).toHaveBeenCalled();
       expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
     });
   });
@@ -1143,12 +1276,14 @@ describe("transcriptionStore", () => {
       );
     });
 
-    it("stops background service when file-mode audioService.startRecording fails and bg was started", async () => {
+    it("stops background service when file-mode capture start fails and bg was started", async () => {
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (audioService.startRecording as jest.Mock).mockResolvedValueOnce(false);
+      (
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
+      ).mockResolvedValueOnce(false);
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
       ).mockResolvedValueOnce(true);
@@ -1168,7 +1303,9 @@ describe("transcriptionStore", () => {
         selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (audioService.startRecording as jest.Mock).mockResolvedValueOnce(false);
+      (
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
+      ).mockResolvedValueOnce(false);
       (
         backgroundRecordingService.startBackgroundService as jest.Mock
       ).mockResolvedValueOnce(false);
@@ -1231,8 +1368,11 @@ describe("transcriptionStore", () => {
         sherpaTranscriptionService.subscribeToAudioLevel as jest.Mock
       ).mockReturnValueOnce(mockAudioUnsub);
       (
-        sherpaTranscriptionService.subscribeToPartialResults as jest.Mock
-      ).mockReturnValueOnce(mockPartialUnsub);
+        sherpaTranscriptionService.subscribeToChunk as jest.Mock
+      ).mockImplementationOnce((cb: (event: ChunkEvent) => void) => {
+        capturedChunkCallback = cb;
+        return mockPartialUnsub;
+      });
       (
         sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
       ).mockRejectedValueOnce(new Error("unexpected error"));
@@ -1276,7 +1416,6 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(audioService.stopRecording).not.toHaveBeenCalled();
       expect(
         sherpaTranscriptionService.stopRealtimeTranscription,
       ).not.toHaveBeenCalled();
@@ -1307,9 +1446,9 @@ describe("transcriptionStore", () => {
         selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (audioService.stopRecording as jest.Mock).mockRejectedValueOnce(
-        new Error("stop error"),
-      );
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockRejectedValueOnce(new Error("stop error"));
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -1319,52 +1458,6 @@ describe("transcriptionStore", () => {
       expect(
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
-    });
-
-    it("handles null transcribed text in file mode", async () => {
-      useTranscriptionStore.setState({
-        state: TranscriptionState.RECORDING,
-        isOperationLocked: false,
-        lastOperationTime: null,
-        recordingSessionId: "session-1",
-      });
-      useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
-        selectedTranscriptionMode: TranscriptionMode.FILE,
-      });
-      (
-        sherpaTranscriptionService.transcribeFile as jest.Mock
-      ).mockResolvedValueOnce(null);
-
-      await useTranscriptionStore.getState().stopRecordingAndSave();
-
-      expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
-      expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.READY,
-      );
-    });
-
-    it("handles whitespace-only transcribed text", async () => {
-      useTranscriptionStore.setState({
-        state: TranscriptionState.RECORDING,
-        isOperationLocked: false,
-        lastOperationTime: null,
-        recordingSessionId: "session-1",
-      });
-      useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
-        selectedTranscriptionMode: TranscriptionMode.FILE,
-      });
-      (
-        sherpaTranscriptionService.transcribeFile as jest.Mock
-      ).mockResolvedValueOnce("   \n  ");
-
-      await useTranscriptionStore.getState().stopRecordingAndSave();
-
-      expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
-      expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.READY,
-      );
     });
 
     it("handles null sessionId (no session set)", async () => {
@@ -1387,7 +1480,13 @@ describe("transcriptionStore", () => {
       );
     });
 
-    it("file mode preserves original extension from recorded path", async () => {
+    const primeChunkCallback = () => {
+      capturedChunkCallback = (event) => {
+        useTranscriptionStore.getState().onChunkEvent(event);
+      };
+    };
+
+    it("file mode saves WAV with .wav extension when sidecar finalized", async () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
         isOperationLocked: false,
@@ -1398,37 +1497,21 @@ describe("transcriptionStore", () => {
         selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
-      (audioService.stopRecording as jest.Mock).mockResolvedValueOnce(
-        "/tmp/recording.m4a",
-      );
+      primeChunkCallback();
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({
+          text: "Transcribed text.",
+          boundary: "final",
+        });
+        return "/tmp/rec_123.wav";
+      });
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
       expect(storageService.saveAudioFile).toHaveBeenCalledWith(
-        "/tmp/recording.m4a",
-        expect.stringMatching(/^audio_\d+\.m4a$/),
-      );
-    });
-
-    it("file mode defaults to .wav when path has no extension", async () => {
-      useTranscriptionStore.setState({
-        state: TranscriptionState.RECORDING,
-        isOperationLocked: false,
-        lastOperationTime: null,
-        recordingSessionId: "session-1",
-      });
-      useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
-        selectedTranscriptionMode: TranscriptionMode.FILE,
-      });
-      (audioService.stopRecording as jest.Mock).mockResolvedValueOnce(
-        "/tmp/recording",
-      );
-
-      await useTranscriptionStore.getState().stopRecordingAndSave();
-
-      expect(storageService.saveAudioFile).toHaveBeenCalledWith(
-        "/tmp/recording",
+        "/tmp/rec_123.wav",
         expect.stringMatching(/^audio_\d+\.wav$/),
       );
     });
@@ -1439,13 +1522,14 @@ describe("transcriptionStore", () => {
         isOperationLocked: false,
         lastOperationTime: null,
         recordingSessionId: "session-1",
-        partialResultUnsubscribe: jest.fn(),
+        chunkUnsubscribe: jest.fn(),
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
+      primeChunkCallback();
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -1472,13 +1556,14 @@ describe("transcriptionStore", () => {
         isOperationLocked: false,
         lastOperationTime: null,
         recordingSessionId: "inc",
-        partialResultUnsubscribe: jest.fn(),
+        chunkUnsubscribe: jest.fn(),
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
         selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
+      primeChunkCallback();
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
@@ -1581,19 +1666,19 @@ describe("transcriptionStore", () => {
     it("handles null subscriptions gracefully", async () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
-        partialResultUnsubscribe: null,
+        chunkUnsubscribe: null,
         realtimeAudioLevelUnsubscribe: null,
         isOperationLocked: true,
         recordingSessionId: "session-1",
         livePreview: {
-          id: "live_vosk_active_preview",
+          id: "live_active_preview",
           text: "some text",
           timestamp: new Date(),
           sessionId: "session-1",
           audioPath: "",
         },
         loadingPreview: {
-          id: "whisper_loading_active_preview",
+          id: "loading_active_preview",
           text: "",
           timestamp: new Date(),
           sessionId: "session-1",
@@ -1615,7 +1700,7 @@ describe("transcriptionStore", () => {
     it("handles background service stop failure during reset", async () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
-        partialResultUnsubscribe: null,
+        chunkUnsubscribe: null,
         realtimeAudioLevelUnsubscribe: null,
       });
       (
@@ -1637,14 +1722,12 @@ describe("transcriptionStore", () => {
 
     it("handles null subscriptions gracefully", async () => {
       useTranscriptionStore.setState({
-        audioLevelUnsubscribe: null,
-        partialResultUnsubscribe: null,
+        chunkUnsubscribe: null,
         realtimeAudioLevelUnsubscribe: null,
       });
 
       await useTranscriptionStore.getState().dispose();
 
-      expect(audioService.dispose).toHaveBeenCalled();
       expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
       expect(
         backgroundRecordingService.stopBackgroundService,
@@ -1653,8 +1736,7 @@ describe("transcriptionStore", () => {
 
     it("handles background service stop failure during dispose", async () => {
       useTranscriptionStore.setState({
-        audioLevelUnsubscribe: null,
-        partialResultUnsubscribe: null,
+        chunkUnsubscribe: null,
         realtimeAudioLevelUnsubscribe: null,
       });
       (
@@ -1663,7 +1745,6 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().dispose();
 
-      expect(audioService.dispose).toHaveBeenCalled();
       expect(sherpaTranscriptionService.dispose).toHaveBeenCalled();
     });
   });
@@ -1970,7 +2051,7 @@ describe("transcriptionStore", () => {
     });
   });
 
-  describe("onPartialTranscription - sessionId fallback", () => {
+  describe("onChunkEvent - sessionId fallback", () => {
     it("uses activeSessionId when recordingSessionId is null", () => {
       useTranscriptionStore.setState({
         state: TranscriptionState.RECORDING,
@@ -1978,7 +2059,10 @@ describe("transcriptionStore", () => {
       });
       useSessionStore.setState({ activeSessionId: "fallback-session" });
 
-      useTranscriptionStore.getState().onPartialTranscription("partial");
+      useTranscriptionStore.getState().onChunkEvent({
+        text: "partial",
+        boundary: "none",
+      });
 
       const preview = useTranscriptionStore.getState().livePreview;
       expect(preview).not.toBeNull();
@@ -2001,27 +2085,6 @@ describe("transcriptionStore", () => {
 
       const state = useTranscriptionStore.getState();
       expect(state.initError).not.toBeNull();
-    });
-
-    it("skips iOS audio warm-up on Android", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
-      Platform.OS = "android";
-
-      await useTranscriptionStore.getState().initialize();
-
-      expect(audioService.warmUpIosAudioInput).not.toHaveBeenCalled();
-    });
-
-    it("skips iOS audio warm-up when permission not granted", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
-      Platform.OS = "ios";
-      (
-        permissionService.getRecordPermission as jest.Mock
-      ).mockResolvedValueOnce({ granted: false });
-
-      await useTranscriptionStore.getState().initialize();
-
-      expect(audioService.warmUpIosAudioInput).not.toHaveBeenCalled();
     });
   });
 
@@ -2048,8 +2111,10 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      // Should not have called audio stop since transition failed
-      expect(audioService.stopRecording).not.toHaveBeenCalled();
+      // Should not have called capture stop since transition failed
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -2286,6 +2351,172 @@ describe("transcriptionStore", () => {
     it("isRecording returns false in READY state", () => {
       useTranscriptionStore.setState({ state: TranscriptionState.READY });
       expect(useTranscriptionStore.getState().isRecording()).toBe(false);
+    });
+  });
+
+  describe("smart split chunk handling", () => {
+    const primeRealtimeSession = async () => {
+      useTranscriptionStore.setState({
+        state: TranscriptionState.READY,
+        isEngineReady: true,
+        isOperationLocked: false,
+        lastOperationTime: null,
+      });
+      useSettingsStore.setState({
+        selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
+      });
+      // Run the real startRecording so subscribeToChunk / subscribeToAudioLevel
+      // callbacks installed by the store are covered when we emit events.
+      await useTranscriptionStore.getState().startRecording();
+    };
+
+    it("propagates audio level updates from the sherpa subscription", async () => {
+      await primeRealtimeSession();
+      expect(capturedAudioLevelCallback).toBeDefined();
+      capturedAudioLevelCallback?.(0.42);
+      expect(useTranscriptionStore.getState().audioLevel).toBe(0.42);
+    });
+
+    it("long-pause boundary below the 60s cap keeps text in one item", async () => {
+      await primeRealtimeSession();
+
+      emitChunk({ text: "Thought one.", boundary: "long" });
+      emitChunk({ text: "Thought two.", boundary: "final" });
+
+      const txs = useTranscriptionStore.getState().transcriptions;
+      expect(txs).toHaveLength(1);
+      expect(txs[0].text).toBe("Thought one. Thought two.");
+    });
+
+    it("final boundary on empty buffer does not create a transcription", async () => {
+      await primeRealtimeSession();
+
+      emitChunk({ text: "", boundary: "final" });
+
+      expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
+      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+    });
+
+    it("final boundary on whitespace-only buffer resets state without persisting", async () => {
+      await primeRealtimeSession();
+
+      emitChunk({ text: "   ", boundary: "final" });
+
+      const state = useTranscriptionStore.getState();
+      expect(state.transcriptions).toHaveLength(0);
+      expect(state.smartSplit.currentItemId).toBeNull();
+      expect(state.smartSplit.currentItemText).toBe("");
+      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+    });
+
+    it("none boundary keeps accumulating text with a space separator", async () => {
+      await primeRealtimeSession();
+
+      emitChunk({ text: "alpha", boundary: "none" });
+      emitChunk({ text: "beta", boundary: "none" });
+
+      expect(useTranscriptionStore.getState().smartSplit.currentItemText).toBe(
+        "alpha beta",
+      );
+      expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
+    });
+
+    it("smart split disabled: long pause past 60s does NOT finalize", async () => {
+      useSettingsStore.setState({ smartSplitEnabled: false });
+      await primeRealtimeSession();
+
+      const dateSpy = jest.spyOn(Date, "now");
+      dateSpy.mockReturnValue(1_000_000);
+      emitChunk({ text: "Long speech.", boundary: "none" });
+      dateSpy.mockReturnValue(1_000_000 + 61_000);
+      emitChunk({ text: "", boundary: "long" });
+      emitChunk({ text: "Still the same item.", boundary: "final" });
+
+      dateSpy.mockRestore();
+
+      const txs = useTranscriptionStore.getState().transcriptions;
+      expect(txs).toHaveLength(1);
+      expect(txs[0].text).toBe("Long speech. Still the same item.");
+    });
+
+    it("60s rule: long pause on an item older than the max forces a split", async () => {
+      await primeRealtimeSession();
+      (Crypto.randomUUID as jest.Mock)
+        .mockReturnValueOnce("id-long")
+        .mockReturnValueOnce("id-next");
+
+      const dateSpy = jest.spyOn(Date, "now");
+      dateSpy.mockReturnValue(1_000_000);
+      emitChunk({ text: "Long speech.", boundary: "none" });
+      dateSpy.mockReturnValue(1_000_000 + 61_000);
+      emitChunk({ text: "", boundary: "long" });
+      emitChunk({ text: "Next one.", boundary: "final" });
+
+      dateSpy.mockRestore();
+
+      const txs = useTranscriptionStore.getState().transcriptions;
+      expect(txs).toHaveLength(2);
+      expect(txs[0].id).toBe("id-long");
+      expect(txs[0].text).toBe("Long speech.");
+      expect(txs[1].id).toBe("id-next");
+      expect(txs[1].text).toBe("Next one.");
+    });
+
+    it("queues storage writes sequentially across multiple finalized items", async () => {
+      await primeRealtimeSession();
+      (Crypto.randomUUID as jest.Mock)
+        .mockReturnValueOnce("id-q1")
+        .mockReturnValueOnce("id-q2")
+        .mockReturnValueOnce("id-q3");
+
+      // Advance the clock past the 60s cap between each chunk so the long
+      // pause actually finalizes — otherwise everything collapses into one.
+      const dateSpy = jest.spyOn(Date, "now");
+      dateSpy.mockReturnValue(1_000_000);
+      emitChunk({ text: "A.", boundary: "none" });
+      dateSpy.mockReturnValue(1_000_000 + 61_000);
+      emitChunk({ text: "", boundary: "long" });
+      emitChunk({ text: "B.", boundary: "none" });
+      dateSpy.mockReturnValue(1_000_000 + 2 * 61_000);
+      emitChunk({ text: "", boundary: "long" });
+      emitChunk({ text: "C.", boundary: "final" });
+      dateSpy.mockRestore();
+
+      // Flush the queued saves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(storageService.saveTranscription).toHaveBeenCalledTimes(3);
+      const calledIds = (
+        storageService.saveTranscription as jest.Mock
+      ).mock.calls.map(([t]) => t.id);
+      expect(calledIds).toEqual(["id-q1", "id-q2", "id-q3"]);
+    });
+
+    it("incognito: chunks appear in-memory but skip storage writes", async () => {
+      useSessionStore.setState({
+        activeSessionId: "inc",
+        incognitoSession: {
+          id: "inc",
+          name: "Incognito",
+          timestamp: new Date(),
+          lastModified: new Date(),
+          isIncognito: true,
+        },
+      });
+      useTranscriptionStore.setState({
+        state: TranscriptionState.READY,
+        isEngineReady: true,
+      });
+      useSettingsStore.setState({
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
+      });
+      await useTranscriptionStore.getState().startRecording();
+
+      emitChunk({ text: "Secret.", boundary: "final" });
+
+      expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
+      expect(storageService.saveTranscription).not.toHaveBeenCalled();
     });
   });
 });

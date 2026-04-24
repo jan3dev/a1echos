@@ -19,9 +19,11 @@ import {
   useSetLanguage,
   useSetModelId,
   useSetModelType,
+  useSetSmartSplitEnabled,
   useSetTheme,
   useSettingsStore,
   useSetTranscriptionMode,
+  useSmartSplitEnabled,
 } from "./settingsStore";
 
 jest.mock("@/utils", () => ({
@@ -39,6 +41,7 @@ const initialState = {
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
+  smartSplitEnabled: true,
 };
 
 describe("settingsStore", () => {
@@ -54,6 +57,7 @@ describe("settingsStore", () => {
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
       expect(state.hasSeenIncognitoExplainer).toBe(false);
+      expect(state.smartSplitEnabled).toBe(true);
     });
   });
 
@@ -304,6 +308,63 @@ describe("settingsStore", () => {
     });
   });
 
+  describe("setSmartSplitEnabled()", () => {
+    it("defaults to true in the store", () => {
+      expect(useSettingsStore.getState().smartSplitEnabled).toBe(true);
+    });
+
+    it("persists explicit disable as the string 'false'", async () => {
+      await useSettingsStore.getState().setSmartSplitEnabled(false);
+
+      expect(useSettingsStore.getState().smartSplitEnabled).toBe(false);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "smart_split_enabled",
+        "false",
+      );
+    });
+
+    it("persists re-enable as the string 'true'", async () => {
+      useSettingsStore.setState({ smartSplitEnabled: false });
+
+      await useSettingsStore.getState().setSmartSplitEnabled(true);
+
+      expect(useSettingsStore.getState().smartSplitEnabled).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "smart_split_enabled",
+        "true",
+      );
+    });
+
+    it("rolls back on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await useSettingsStore.getState().setSmartSplitEnabled(false);
+
+      expect(useSettingsStore.getState().smartSplitEnabled).toBe(true);
+    });
+
+    it("initialize() treats only the string 'false' as opt-out", async () => {
+      const keyOrder = [
+        null, // THEME
+        null, // MODEL_TYPE
+        null, // MODEL_ID
+        null, // TRANSCRIPTION_MODE
+        null, // MODEL_MODES
+        null, // LANGUAGE
+        null, // INCOGNITO_MODE
+        null, // INCOGNITO_EXPLAINER_SEEN
+        "false", // SMART_SPLIT_ENABLED
+      ];
+      const mock = AsyncStorage.getItem as jest.Mock;
+      for (const value of keyOrder) mock.mockResolvedValueOnce(value);
+
+      await useSettingsStore.getState().initialize();
+      expect(useSettingsStore.getState().smartSplitEnabled).toBe(false);
+    });
+  });
+
   describe("markIncognitoExplainerSeen()", () => {
     it("sets true and persists", async () => {
       await useSettingsStore.getState().markIncognitoExplainerSeen();
@@ -517,6 +578,16 @@ describe("settingsStore", () => {
 
     it("useSetTheme returns a function", () => {
       const { result } = renderHook(() => useSetTheme());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useSmartSplitEnabled returns true by default", () => {
+      const { result } = renderHook(() => useSmartSplitEnabled());
+      expect(result.current).toBe(true);
+    });
+
+    it("useSetSmartSplitEnabled returns a function", () => {
+      const { result } = renderHook(() => useSetSmartSplitEnabled());
       expect(typeof result.current).toBe("function");
     });
 

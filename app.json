@@ -32,9 +32,6 @@
       ],
       "package": "com.a1lab.echos"
     },
-    "web": {
-      "output": "static"
-    },
     "plugins": [
       "expo-router",
       "expo-dev-client",

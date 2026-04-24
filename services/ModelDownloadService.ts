@@ -16,9 +16,16 @@ export interface DownloadProgress {
   totalFiles: number;
 }
 
-const MODELS_DIR = `${Paths.document.uri}/models`;
+let cachedModelsDir: string | null = null;
+const getModelsDir = (): string => {
+  if (!cachedModelsDir) {
+    cachedModelsDir = `${Paths.document.uri}/models`;
+  }
+  return cachedModelsDir;
+};
 
-const getModelDir = (modelId: ModelId): string => `${MODELS_DIR}/${modelId}`;
+const getModelDir = (modelId: ModelId): string =>
+  `${getModelsDir()}/${modelId}`;
 
 const PROGRESS_THROTTLE_MS = 1000;
 
@@ -32,7 +39,7 @@ const createModelDownloadService = () => {
   >();
 
   const ensureModelsDir = (): void => {
-    const dir = new Directory(MODELS_DIR);
+    const dir = new Directory(getModelsDir());
     if (!dir.exists) {
       dir.create();
     }
