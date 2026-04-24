@@ -38,7 +38,12 @@ npm run test:coverage     # run with coverage (thresholds: 95/90/95/95)
 
 ### Models
 
-Transcription runs on-device via sherpa-onnx. Two models are supported:
+Transcription runs on-device via sherpa-onnx. Only Whisper Tiny is bundled; the rest are downloaded on demand from HuggingFace into `DocumentDirectory/models/`.
 
-- **Whisper Tiny** — bundled in `assets/models/sherpa-whisper/`, 99 languages, copied to cache on first use
-- **NeMo Parakeet V3** — ~670MB, downloaded on demand from HuggingFace into `DocumentDirectory/models/`, 25 European languages
+| Model            | Size   | Languages                | Modes           | Bundled |
+| ---------------- | ------ | ------------------------ | --------------- | ------- |
+| Whisper Tiny     | ~104MB | 99                       | realtime + file | yes     |
+| Whisper Base     | ~161MB | 99                       | realtime + file | no      |
+| Whisper Small    | ~375MB | 99                       | realtime + file | no      |
+| NeMo Parakeet V3 | ~670MB | 25 European              | realtime + file | no      |
+| Qwen3 ASR        | ~983MB | 30 + 22 Chinese dialects | file only       | no      |
