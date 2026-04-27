@@ -15,7 +15,7 @@ class EchosKeyboardViewController: UIInputViewController {
         ipcClient = IPCClient()
         audioRecorder = AudioRecorder()
 
-        keyboardView = KeyboardView(frame: .zero)
+        keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
         keyboardView.delegate = self
 
@@ -26,6 +26,8 @@ class EchosKeyboardViewController: UIInputViewController {
             keyboardView.topAnchor.constraint(equalTo: view.topAnchor),
             keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+
+        applyKeyboardAppearance()
 
         // Listen for transcription results from the main app
         ipcClient.onTranscriptionResult = { [weak self] text in
@@ -41,13 +43,21 @@ class EchosKeyboardViewController: UIInputViewController {
                 self?.keyboardView.setMicState(.idle)
             }
         }
+
+        // Drive the top-bar waveform from the recorder's metering loop.
+        audioRecorder.onAudioLevelChange = { [weak self] level in
+            self?.keyboardView.setAudioLevel(Double(level))
+        }
     }
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        // Set keyboard height based on orientation
+        // Keyboard = rows + top bar (Echos logo + record button).
+        // Row heights chosen so portrait keys land near 57pt and landscape
+        // keys near 40pt, matching the iPhone iOS 26 stock keyboard.
         let isLandscape = view.bounds.width > view.bounds.height
-        let height: CGFloat = isLandscape ? 162 : 216
+        let rowsHeight: CGFloat = isLandscape ? 204 : 272
+        let height = rowsHeight + KeyboardTopBar.preferredHeight
         keyboardView.heightConstraint?.constant = height
         if keyboardView.heightConstraint == nil {
             let constraint = keyboardView.heightAnchor.constraint(equalToConstant: height)
@@ -59,9 +69,26 @@ class EchosKeyboardViewController: UIInputViewController {
 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
-        // Update return key appearance based on context
+        // Update return key appearance based on context.
         let returnType = textDocumentProxy.returnKeyType ?? .default
         keyboardView.updateReturnKeyType(returnType)
+        applyKeyboardAppearance()
+    }
+
+    /// Honors `textDocumentProxy.keyboardAppearance` so a dark-mode host app
+    /// gets the dark keyboard even when the system appearance is light
+    /// (matches stock iOS keyboard behavior).
+    private func applyKeyboardAppearance() {
+        let appearance = textDocumentProxy.keyboardAppearance ?? .default
+        let style: UIUserInterfaceStyle
+        switch appearance {
+        case .dark: style = .dark
+        case .light: style = .light
+        default: style = .unspecified
+        }
+        if keyboardView.overrideUserInterfaceStyle != style {
+            keyboardView.overrideUserInterfaceStyle = style
+        }
     }
 }
 
@@ -89,7 +116,32 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         advanceToNextInputMode()
     }
 
-    func keyboardViewDidStartMicRecording(_ view: KeyboardView) {
+    func keyboardViewDidTapEmoji(_ view: KeyboardView) {
+        // iOS does not let third-party keyboards jump to the emoji keyboard
+        // directly — the best we can do is advance to the next installed
+        // keyboard, which is typically emoji when the user has it enabled
+        // right after Echos.
+        advanceToNextInputMode()
+    }
+
+    /// Long-press on the emoji key surfaces the system keyboard picker
+    /// (same list iOS shows when you long-press the stock globe key). This
+    /// is the replacement for the dedicated globe key that the iOS design
+    /// omits — users still need a reliable way to pick the Emoji keyboard.
+    func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView) {
+        handleInputModeList(from: sourceView, with: UIEvent())
+    }
+
+    /// Toggles recording from the top-bar record button. Tap-to-start begins
+    /// capture; tap-to-stop flushes the WAV and hands it off to the main app
+    /// listener for transcription.
+    func keyboardViewDidToggleRecord(_ view: KeyboardView) {
+        if isCurrentlyRecording {
+            view.setMicState(.transcribing)
+            audioRecorder.stopRecording()
+            return
+        }
+
         view.setMicState(.recording)
         audioRecorder.startRecording { [weak self] result in
             DispatchQueue.main.async {
@@ -105,7 +157,10 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         }
     }
 
-    func keyboardViewDidStopMicRecording(_ view: KeyboardView) {
-        audioRecorder.stopRecording()
+    /// Tracks whether the recorder is currently capturing. The view's mic
+    /// state is the source of truth — `AudioRecorder` doesn't expose its
+    /// internal AVAudioRecorder state publicly.
+    private var isCurrentlyRecording: Bool {
+        keyboardView.currentMicState == .recording
     }
 }

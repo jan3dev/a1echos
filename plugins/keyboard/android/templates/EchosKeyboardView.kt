@@ -35,6 +35,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         fun onReturnPress()
         fun onMicPress()
         fun onMicRelease()
+        fun onEmojiPress()
         fun onSwitchKeyboard()
     }
 
@@ -208,7 +209,8 @@ class EchosKeyboardView @JvmOverloads constructor(
             key.type == EchosKeyboardLayout.KeyType.DELETE ||
             key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH ||
-            key.type == EchosKeyboardLayout.KeyType.GLOBE -> {
+            key.type == EchosKeyboardLayout.KeyType.GLOBE ||
+            key.type == EchosKeyboardLayout.KeyType.EMOJI -> {
                 if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN -> {
@@ -311,6 +313,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             EchosKeyboardLayout.KeyType.COMMA -> listener?.onKeyPress(",")
             EchosKeyboardLayout.KeyType.PERIOD -> listener?.onKeyPress(".")
             EchosKeyboardLayout.KeyType.MIC -> listener?.onMicRelease()
+            EchosKeyboardLayout.KeyType.EMOJI -> listener?.onEmojiPress()
             EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()
             EchosKeyboardLayout.KeyType.SHIFT -> {
                 shiftState = when (shiftState) {

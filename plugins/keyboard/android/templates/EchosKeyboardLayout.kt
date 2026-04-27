@@ -14,6 +14,7 @@ object EchosKeyboardLayout {
         MIC,
         MODE_SWITCH,    // 123 / ABC toggle
         GLOBE,          // Switch keyboard
+        EMOJI,          // Cycle to next keyboard (emoji if user has one installed)
         SYMBOL_SWITCH,  // #+=  / 123 toggle
         COMMA,
         PERIOD,
@@ -59,10 +60,10 @@ object EchosKeyboardLayout {
     val LETTERS_ROW_4 = Row(
         listOf(
             Key(label = "123", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Numbers"),
+            Key(label = "\uD83D\uDE00", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji"),
             Key(label = "\uD83C\uDF10", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard"),
             Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
-            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
-            Key(label = "\uD83C\uDFA4", type = KeyType.MIC, widthWeight = 1f, contentDescription = "Microphone"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
             Key(label = "\u23CE", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return"),
         )
@@ -99,10 +100,10 @@ object EchosKeyboardLayout {
     val NUMBERS_ROW_4 = Row(
         listOf(
             Key(label = "ABC", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Letters"),
+            Key(label = "\uD83D\uDE00", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji"),
             Key(label = "\uD83C\uDF10", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard"),
             Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
-            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
-            Key(label = "\uD83C\uDFA4", type = KeyType.MIC, widthWeight = 1f, contentDescription = "Microphone"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
             Key(label = "\u23CE", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return"),
         )

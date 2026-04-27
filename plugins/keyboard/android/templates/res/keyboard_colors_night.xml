@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark theme keyboard colors (from Echos AquaPrimitiveColors) -->
-    <color name="keyboard_background">#FF090A0B</color>        <!-- gray1000 -->
-    <color name="key_background">#FF131516</color>             <!-- gray950 -->
-    <color name="key_background_pressed">#FF27292C</color>     <!-- gray850 -->
-    <color name="key_text">#FFF4F5F6</color>                   <!-- gray50 -->
-    <color name="key_text_secondary">#FF8C9196</color>         <!-- gray500 -->
-    <color name="special_key_background">#FF27292C</color>     <!-- gray850 -->
-    <color name="special_key_background_pressed">#FF3B3E42</color> <!-- gray750 -->
-    <color name="mic_button_background">#FF4361EE</color>      <!-- neonBlue500 (same) -->
+    <!-- Dark theme keyboard colors (Figma DS Echos App, node 637-3536) -->
+    <color name="keyboard_background">#FF333435</color>        <!-- Figma keyboard bg -->
+    <color name="key_background">#FF707171</color>             <!-- Figma key fill -->
+    <color name="key_background_pressed">#FF8A8B8B</color>     <!-- slightly lighter -->
+    <color name="key_text">#FFFEFEFE</color>                   <!-- Figma key text -->
+    <color name="key_text_secondary">#FFABABB2</color>         <!-- Figma secondary -->
+    <color name="special_key_background">#FF4D4D4E</color>     <!-- Figma special key -->
+    <color name="special_key_background_pressed">#FF5E5E5F</color> <!-- slightly lighter -->
+    <color name="mic_button_background">#FF5773EF</color>      <!-- Figma brand blue -->
     <color name="mic_button_recording">#FFFF3B13</color>       <!-- scarlet500 (same) -->
     <color name="mic_button_icon">#FFFFFFFF</color>            <!-- white -->
     <color name="key_shadow">#33000000</color>                 <!-- 20% black -->

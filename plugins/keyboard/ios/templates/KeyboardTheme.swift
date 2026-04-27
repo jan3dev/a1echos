@@ -1,75 +1,63 @@
 import UIKit
 
-/// Provides keyboard colors that adapt to the system appearance (light/dark).
-/// Color values are from the Echos AquaPrimitiveColors design tokens.
+/// Keyboard appearance tokens matching the iOS 26 stock keyboard as closely
+/// as UIKit lets a third-party keyboard get. The `.keyboard` input-view style
+/// supplies the native translucent backdrop, so the root background stays
+/// `.clear` and we only pin the per-key fills + brand accent.
+///
+/// iOS 26 unified the idle fill for every key — letters, modifiers, and the
+/// 123/ABC switch all share `keyBackground`. Only modifier keys flash to
+/// `specialKeyPressed` while held; the layout-switch key never flashes.
 struct KeyboardTheme {
 
-    var keyboardBackground: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x090A0B)  // gray1000
-                : UIColor(hex: 0xF4F5F6)  // gray50
+    /// Root keyboard backdrop. Clear so the `UIInputView(.keyboard)` native
+    /// blur shows through.
+    let keyboardBackground: UIColor = .clear
+
+    /// Character / space key fill. In light mode this is pure white; in dark
+    /// mode it's the lighter gray that stock iOS uses so character keys
+    /// visually pop above the blurred background.
+    let keyBackground: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            // ~#6B6C6D — matches stock iOS dark-mode character key.
+            return UIColor(red: 0.42, green: 0.42, blue: 0.43, alpha: 1.0)
         }
+        return .white
     }
 
-    var keyBackground: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x131516)  // gray950
-                : UIColor.white
+    /// Primary label / glyph color.
+    let keyText: UIColor = .label
+
+    /// Secondary label (sub-label on number rows etc.).
+    let keyTextSecondary: UIColor = .secondaryLabel
+
+    /// Pressed-state fill for modifier keys (shift / delete / #+= / globe /
+    /// emoji). On iOS 26 every key shares the same idle fill, and these
+    /// modifier keys flash to this darker grey only while held.
+    let specialKeyPressed: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            // ~#47494B
+            return UIColor(red: 0.28, green: 0.29, blue: 0.30, alpha: 1.0)
         }
+        // ~#ADB3B8
+        return UIColor(red: 0.68, green: 0.70, blue: 0.72, alpha: 1.0)
     }
 
-    var keyBackgroundPressed: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x27292C)  // gray850
-                : UIColor(hex: 0xE9EBEC)  // gray100
-        }
-    }
+    /// Brand accent — return key fill and top-bar record button idle.
+    /// Matches the Figma spec (DS Echos App).
+    let micButtonBackground: UIColor = UIColor(hex: 0x5773EF)
 
-    var keyText: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0xF4F5F6)  // gray50
-                : UIColor(hex: 0x090A0B)  // gray1000
-        }
-    }
+    /// Recording indicator color.
+    let micButtonRecording: UIColor = UIColor(hex: 0xFF3B13)
 
-    var keyTextSecondary: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x8C9196)  // gray500
-                : UIColor(hex: 0x5C6063)  // gray600
-        }
-    }
+    /// Icon tint on filled brand surfaces.
+    let micButtonIcon: UIColor = .white
 
-    var specialKeyBackground: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x27292C)  // gray850
-                : UIColor(hex: 0xE9EBEC)  // gray100
-        }
-    }
-
-    var specialKeyBackgroundPressed: UIColor {
-        UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(hex: 0x3B3E42)  // gray750
-                : UIColor(hex: 0xCDD0D2)  // gray200
-        }
-    }
-
-    var micButtonBackground: UIColor {
-        UIColor(hex: 0x4361EE)  // neonBlue500 (same in both themes)
-    }
-
-    var micButtonRecording: UIColor {
-        UIColor(hex: 0xFF3B13)  // scarlet500 (same in both themes)
-    }
-
-    var micButtonIcon: UIColor {
-        .white
+    /// Drop-shadow color used on each key to match stock iOS's subtle elevation.
+    let keyShadow: UIColor = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.black.withAlphaComponent(0.45)
+            : UIColor.black.withAlphaComponent(0.15)
     }
 }
 
