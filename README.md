@@ -1,7 +1,7 @@
 # Echos
 
 <p>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/jan3dev/a1echos?tab=MIT-1-ov-file"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://a1lab.com/"><img src="https://img.shields.io/badge/Built%20by-A1%20Lab-black?style=for-the-badge" alt="Built by A1 Lab"></a>
 </p>
 
