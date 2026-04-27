@@ -13,6 +13,8 @@ beforeEach(() => {
 jest.mock("expo-constants", () => ({
   __esModule: true,
   default: {
+    nativeApplicationVersion: null,
+    nativeBuildVersion: null,
     expoConfig: {
       version: "1.2.3",
       ios: { buildNumber: "42" },
@@ -73,6 +75,16 @@ describe("SettingsFooter", () => {
   it("renders app version text", () => {
     const { getByText } = render(<SettingsFooter />);
     expect(getByText("App Version 1.2.3 (42)")).toBeTruthy();
+  });
+
+  it("prefers native binary version/build over expoConfig", () => {
+    const Constants = require("expo-constants").default;
+    Constants.nativeApplicationVersion = "9.9.9";
+    Constants.nativeBuildVersion = "777";
+    const { getByText } = render(<SettingsFooter />);
+    expect(getByText("App Version 9.9.9 (777)")).toBeTruthy();
+    Constants.nativeApplicationVersion = null;
+    Constants.nativeBuildVersion = null;
   });
 
   it("social link press opens X URL", async () => {

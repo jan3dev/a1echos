@@ -2,13 +2,14 @@
   "expo": {
     "name": "Echos",
     "slug": "echos",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon-dark.png",
     "scheme": "echos",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "buildNumber": "1",
       "supportsTablet": true,
       "deploymentTarget": "16.0",
       "infoPlist": {
@@ -19,6 +20,7 @@
       "bundleIdentifier": "com.a1lab.echos"
     },
     "android": {
+      "versionCode": 7,
       "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
       "permissions": [
