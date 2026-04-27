@@ -55,8 +55,11 @@ function withKeyboardXcodeTarget(config) {
     const swiftFiles = [
       "EchosKeyboardViewController.swift",
       "KeyboardView.swift",
+      "KeyboardTopBar.swift",
       "KeyboardLayout.swift",
       "KeyButton.swift",
+      "KeyPreviewView.swift",
+      "KeyVariantsView.swift",
       "MicButton.swift",
       "KeyboardTheme.swift",
       "AudioRecorder.swift",
@@ -272,8 +275,11 @@ function withKeyboardExtensionFiles(config) {
       const swiftFiles = [
         "EchosKeyboardViewController.swift",
         "KeyboardView.swift",
+        "KeyboardTopBar.swift",
         "KeyboardLayout.swift",
         "KeyButton.swift",
+        "KeyPreviewView.swift",
+        "KeyVariantsView.swift",
         "MicButton.swift",
         "KeyboardTheme.swift",
         "AudioRecorder.swift",

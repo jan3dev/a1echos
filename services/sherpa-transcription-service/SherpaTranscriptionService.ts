@@ -141,6 +141,82 @@ const getDownloadedModelDir = (modelId: ModelId): string =>
 const toNativePath = (uri: string): string => uri.replace(/^file:\/\//, "");
 
 /**
+ * File name used by the Echos keyboard integration. Both
+ * `KeyboardTranscriptionListener.swift` (iOS) and `SherpaModelManager.kt`
+ * (Android) read this path from the main app's Documents directory. Kept in
+ * sync with those templates.
+ */
+const KEYBOARD_CONFIG_FILENAME = "keyboard-sherpa-model.json";
+
+/**
+ * Names of the three/four files sherpa-onnx needs for a given model, derived
+ * from `ModelInfo.files`. Whisper has encoder/decoder/tokens; transducer
+ * models add a joiner.
+ */
+const pickModelFileName = (
+  modelInfo: ModelInfo,
+  needle: RegExp,
+): string | null =>
+  modelInfo.files.find((f) => needle.test(f.name))?.name ?? null;
+
+/**
+ * Writes (or clears) the keyboard config JSON so `SherpaBridge` /
+ * `SherpaModelManager` can find the active model. Safe to call repeatedly —
+ * errors are logged and do not propagate. Returns nothing; callers should
+ * treat this as fire-and-forget.
+ */
+const writeKeyboardModelConfig = (
+  modelInfo: ModelInfo,
+  modelDir: string,
+  languageCode: string,
+): void => {
+  try {
+    const encoder = pickModelFileName(modelInfo, /encoder/i);
+    const decoder = pickModelFileName(modelInfo, /decoder/i);
+    const tokens = pickModelFileName(modelInfo, /tokens/i);
+    const joiner = pickModelFileName(modelInfo, /joiner/i);
+
+    // The keyboard only supports model families with separate
+    // encoder/decoder/tokens files (whisper, nemo_transducer). Qwen3 ASR and
+    // similar stay in-app only, so silently skip writing the config.
+    if (!encoder || !decoder || !tokens) {
+      return;
+    }
+    if (
+      modelInfo.sherpaModelType !== "whisper" &&
+      modelInfo.sherpaModelType !== "nemo_transducer"
+    ) {
+      return;
+    }
+    if (modelInfo.sherpaModelType === "nemo_transducer" && !joiner) {
+      return;
+    }
+
+    const config: Record<string, string> = {
+      modelDir: toNativePath(modelDir),
+      modelType: modelInfo.sherpaModelType,
+      encoder,
+      decoder,
+      tokens,
+    };
+    if (joiner) config.joiner = joiner;
+
+    if (modelInfo.sherpaModelType === "whisper") {
+      const { language: whisperLanguage } =
+        SupportedLanguages.transcribeOptionsFor(languageCode);
+      config.language = whisperLanguage ?? languageCode;
+    }
+
+    const configFile = new File(Paths.document, KEYBOARD_CONFIG_FILENAME);
+    configFile.write(JSON.stringify(config));
+  } catch (error) {
+    logWarn(`Failed to write keyboard model config: ${error}`, {
+      flag: FeatureFlag.model,
+    });
+  }
+};
+
+/**
  * Prepare bundled model assets: download to local cache, then move into a
  * dedicated directory with the original filenames sherpa-onnx expects.
  * Uses move instead of copy to avoid doubling disk usage.
@@ -475,6 +551,9 @@ const createSherpaTranscriptionService = () => {
       state.activeLanguage = languageCode;
       state.isInitialized = true;
       state.initializationStatus = "Ready";
+
+      writeKeyboardModelConfig(modelInfo, modelDir, languageCode);
+
       return true;
     } catch (error) {
       state.initializationStatus = `Initialization failed: ${error}`;

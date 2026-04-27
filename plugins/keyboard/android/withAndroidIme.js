@@ -123,9 +123,10 @@ function withImeSources(config) {
       const ktFiles = [
         "EchosInputMethodService.kt",
         "EchosKeyboardView.kt",
+        "EchosKeyboardTopBar.kt",
         "EchosKeyboardLayout.kt",
-        "WhisperModelManager.kt",
-        "ImeWhisperTranscriber.kt",
+        "SherpaModelManager.kt",
+        "ImeSherpaTranscriber.kt",
         "RecordingLock.kt",
         "KeyFeedback.kt",
         "KeyTheme.kt",
@@ -184,6 +185,20 @@ function withImeSources(config) {
           path.join(valuesNightDir, "keyboard_colors.xml"),
           fs.readFileSync(colorsNightPath, "utf8"),
         );
+      }
+
+      // res/drawable/ — vector icons for the keyboard (logo, mic, stop, emoji)
+      const drawableDir = path.join(resDir, "drawable");
+      ensureDir(drawableDir);
+      const drawableSrc = path.join(TEMPLATES_DIR, "res", "drawable");
+      if (fs.existsSync(drawableSrc)) {
+        for (const entry of fs.readdirSync(drawableSrc)) {
+          if (!entry.endsWith(".xml")) continue;
+          fs.writeFileSync(
+            path.join(drawableDir, entry),
+            fs.readFileSync(path.join(drawableSrc, entry), "utf8"),
+          );
+        }
       }
 
       // res/values/keyboard_dimens.xml

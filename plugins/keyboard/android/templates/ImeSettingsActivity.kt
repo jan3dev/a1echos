@@ -30,21 +30,21 @@ class ImeSettingsActivity : Activity() {
         layout.addView(title)
 
         val description = TextView(this).apply {
-            text = "Echos Keyboard provides a full QWERTY keyboard with voice transcription " +
-                "powered by on-device Whisper AI. Tap the microphone button to dictate text " +
-                "in any app."
+            text = "Echos Keyboard provides a full QWERTY keyboard with on-device voice " +
+                "transcription powered by sherpa-onnx. Tap the microphone button to dictate " +
+                "text in any app."
             textSize = 16f
             setPadding(0, 0, 0, 32)
         }
         layout.addView(description)
 
         // Model status
-        val modelPath = WhisperModelManager.getModelPath(this)
+        val modelFiles = SherpaModelManager.getModelFiles(this)
         val statusText = TextView(this).apply {
-            text = if (modelPath != null) {
-                "Voice model: Ready"
+            text = if (modelFiles != null) {
+                "Voice model: Ready (${modelFiles.modelType})"
             } else {
-                "Voice model: Not loaded. Open the Echos app to download the model."
+                "Voice model: Not loaded. Open the Echos app to set up the model."
             }
             textSize = 14f
             setPadding(0, 0, 0, 32)

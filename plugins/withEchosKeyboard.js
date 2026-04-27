@@ -10,8 +10,12 @@ const { withAndroidIme } = require("./keyboard/android/withAndroidIme");
  * Expo config plugin that adds a system keyboard extension to both platforms.
  *
  * iOS:  Custom Keyboard Extension (App Extension target) with App Group IPC
- *       to the main app for Whisper transcription.
- * Android: InputMethodService that calls whisper.rn JNI directly (same process).
+ *       to the main app for sherpa-onnx transcription. The extension records
+ *       audio and hands it off; the main app's listener (SherpaBridge) runs
+ *       the offline recognizer.
+ * Android: InputMethodService that calls sherpa-onnx directly via the
+ *       `com.k2fsa.sherpa.onnx` JNI wrappers bundled with react-native-sherpa-onnx
+ *       (same process as the main app).
  *
  * All native source files live as templates in plugins/keyboard/ and are written
  * to the generated ios/ and android/ directories during expo prebuild.

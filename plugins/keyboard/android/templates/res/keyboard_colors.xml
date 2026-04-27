@@ -8,7 +8,7 @@
     <color name="key_text_secondary">#FF5C6063</color>         <!-- gray600 -->
     <color name="special_key_background">#FFE9EBEC</color>     <!-- gray100 -->
     <color name="special_key_background_pressed">#FFCDD0D2</color> <!-- gray200 -->
-    <color name="mic_button_background">#FF4361EE</color>      <!-- neonBlue500 -->
+    <color name="mic_button_background">#FF5773EF</color>      <!-- Figma brand blue -->
     <color name="mic_button_recording">#FFFF3B13</color>       <!-- scarlet500 -->
     <color name="mic_button_icon">#FFFFFFFF</color>            <!-- white -->
     <color name="key_shadow">#1A000000</color>                 <!-- 10% black -->

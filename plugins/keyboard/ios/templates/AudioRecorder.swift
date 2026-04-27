@@ -5,6 +5,12 @@ import Foundation
 /// in the App Group shared container for the main app to transcribe.
 class AudioRecorder: NSObject {
 
+    /// Reports the current input amplitude as a normalised 0…1 value while
+    /// recording. Driven by the same metering loop that powers silence
+    /// detection, so callers don't pay for an extra timer. Callback fires
+    /// on the main thread.
+    var onAudioLevelChange: ((Float) -> Void)?
+
     private var audioRecorder: AVAudioRecorder?
     private var completion: ((Result<URL, Error>) -> Void)?
     private var silenceTimer: Timer?
@@ -14,6 +20,11 @@ class AudioRecorder: NSObject {
     private let maxDurationSeconds: TimeInterval = 30
     private let silenceTimeoutSeconds: TimeInterval = 1.5
     private let silenceThreshold: Float = -40.0 // dB
+    /// dB range mapped to the 0…1 visualizer level. -50dB ≈ a near-silent
+    /// room hum (visualizer at rest), -10dB ≈ a clearly raised voice
+    /// (visualizer at full reactivity).
+    private let levelMinDb: Float = -50.0
+    private let levelMaxDb: Float = -10.0
 
     enum RecorderError: LocalizedError {
         case noPermission
@@ -113,13 +124,22 @@ class AudioRecorder: NSObject {
 
     private func startSilenceDetection() {
         var silentDuration: TimeInterval = 0
-        let checkInterval: TimeInterval = 0.1
+        // 30Hz — fast enough for a snappy waveform, while still giving
+        // the silence detector accurate cumulative timing (it sums
+        // `checkInterval` directly).
+        let checkInterval: TimeInterval = 1.0 / 30.0
 
         silenceTimer = Timer.scheduledTimer(withTimeInterval: checkInterval, repeats: true) { [weak self] _ in
             guard let self = self, let recorder = self.audioRecorder, recorder.isRecording else { return }
 
             recorder.updateMeters()
             let power = recorder.averagePower(forChannel: 0)
+
+            // Normalise to 0…1 for the visualizer. Map [levelMinDb,
+            // levelMaxDb] linearly; clamp outside the range.
+            let span = self.levelMaxDb - self.levelMinDb
+            let normalized = max(0, min(1, (power - self.levelMinDb) / span))
+            self.onAudioLevelChange?(normalized)
 
             if power < self.silenceThreshold {
                 silentDuration += checkInterval

@@ -1,9 +1,9 @@
 import Foundation
 
-/// Runs in the main Echos app process. Listens for transcription requests
-/// from the keyboard extension via Darwin notifications, transcribes audio
-/// using WhisperBridge (whisper.rn C API), and writes results back to the
-/// App Group shared container.
+/// Runs in the main Echos app process. Listens for transcription requests from
+/// the keyboard extension via Darwin notifications, transcribes the audio via
+/// `SherpaBridge` (sherpa-onnx C++ API), and writes the result into the App
+/// Group shared container for the extension to pick up.
 @objc class KeyboardTranscriptionListener: NSObject {
 
     static let shared = KeyboardTranscriptionListener()
@@ -11,7 +11,12 @@ import Foundation
     private let appGroupID = "group.com.a1lab.echos.shared"
     private let requestNotificationName = "com.a1lab.echos.transcriptionRequest"
     private let resultNotificationName = "com.a1lab.echos.transcriptionResult"
-    private let modelPathKey = "whisper_model_path"
+    /// JSON file inside the main app's Documents directory that describes the
+    /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
+    /// when initialization succeeds, read here when the keyboard requests
+    /// transcription. The listener runs in the main app process so App Group
+    /// sharing is unnecessary for this file.
+    private let modelConfigFilename = "keyboard-sherpa-model.json"
 
     private override init() {
         super.init()
@@ -44,19 +49,6 @@ import Foundation
         CFNotificationCenterRemoveObserver(center, observer, nil, nil)
     }
 
-    /// Saves the Whisper model path to the App Group UserDefaults
-    /// so the listener (and extension) can find it.
-    @objc func saveModelPath(_ path: String) {
-        guard let defaults = UserDefaults(suiteName: appGroupID) else { return }
-        // Strip file:// prefix if present
-        let cleanPath = path.hasPrefix("file://")
-            ? String(path.dropFirst(7))
-            : path
-        defaults.set(cleanPath, forKey: modelPathKey)
-        defaults.synchronize()
-        NSLog("[KeyboardTranscriptionListener] Model path saved: %@", cleanPath)
-    }
-
     // MARK: - Handle Request
 
     private func handleTranscriptionRequest() {
@@ -78,7 +70,6 @@ import Foundation
         let audioURL = keyboardDir.appendingPathComponent("audio.wav")
         let resultURL = keyboardDir.appendingPathComponent("result.json")
 
-        // Read request
         guard FileManager.default.fileExists(atPath: requestURL.path),
               let requestData = try? Data(contentsOf: requestURL),
               let request = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any],
@@ -88,7 +79,6 @@ import Foundation
             return
         }
 
-        // Verify audio file exists
         guard FileManager.default.fileExists(atPath: audioURL.path) else {
             writeResult(to: resultURL, id: requestID, text: nil, error: "No audio file found")
             postResultNotification()
@@ -97,65 +87,85 @@ import Foundation
 
         NSLog("[KeyboardTranscriptionListener] Processing request: %@", requestID)
 
-        // Ensure model is loaded
-        let bridge = WhisperBridge.shared()
-        if !bridge.isModelLoaded() {
-            guard let modelPath = resolveModelPath() else {
-                writeResult(to: resultURL, id: requestID, text: nil, error: "Whisper model not found. Open Echos app first.")
-                postResultNotification()
-                return
-            }
-
-            if !bridge.loadModel(modelPath) {
-                writeResult(to: resultURL, id: requestID, text: nil, error: "Failed to load Whisper model")
-                postResultNotification()
-                return
-            }
+        let bridge = SherpaBridge.shared()
+        guard let files = resolveModelFiles(requestedLanguage: request["language"] as? String) else {
+            writeResult(to: resultURL, id: requestID, text: nil,
+                        error: "Echos voice model not ready. Open Echos app first.")
+            postResultNotification()
+            return
         }
 
-        // Transcribe
-        let language = request["language"] as? String
-        let text = bridge.transcribeFile(audioURL.path, language: language)
+        if !bridge.loadModel(files) {
+            writeResult(to: resultURL, id: requestID, text: nil, error: "Failed to load voice model")
+            postResultNotification()
+            return
+        }
 
+        let text = bridge.transcribeFile(audioURL.path)
         if let text = text, !text.isEmpty {
             writeResult(to: resultURL, id: requestID, text: text, error: nil)
         } else {
             writeResult(to: resultURL, id: requestID, text: nil, error: "Transcription returned empty result")
         }
 
-        // Clean up request
         try? FileManager.default.removeItem(at: requestURL)
         postResultNotification()
     }
 
-    // MARK: - Model Path Resolution
+    // MARK: - Model Resolution
 
-    private func resolveModelPath() -> String? {
-        // 1. Check App Group UserDefaults (set by WhisperService.ts)
-        if let defaults = UserDefaults(suiteName: appGroupID),
-           let savedPath = defaults.string(forKey: modelPathKey),
-           FileManager.default.fileExists(atPath: savedPath) {
-            return savedPath
+    /// Reads the saved model configuration from the main app's Documents
+    /// directory and returns a `SherpaModelFiles` ready for `SherpaBridge`.
+    /// The language from the keyboard request (if provided) overrides the
+    /// saved Whisper language.
+    private func resolveModelFiles(requestedLanguage: String?) -> SherpaModelFiles? {
+        guard let docsDir = NSSearchPathForDirectoriesInDomains(
+            .documentDirectory, .userDomainMask, true
+        ).first else {
+            NSLog("[KeyboardTranscriptionListener] Could not resolve Documents dir")
+            return nil
+        }
+        let configPath = (docsDir as NSString).appendingPathComponent(modelConfigFilename)
+
+        guard FileManager.default.fileExists(atPath: configPath),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let modelDir = json["modelDir"] as? String,
+              let modelTypeStr = json["modelType"] as? String,
+              let encoder = json["encoder"] as? String,
+              let decoder = json["decoder"] as? String,
+              let tokens = json["tokens"] as? String else {
+            NSLog("[KeyboardTranscriptionListener] No sherpa model config at %@", configPath)
+            return nil
         }
 
-        // 2. Fallback: scan Expo asset cache for .bin files matching model size
-        let cacheDir = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true).first ?? ""
-        if let enumerator = FileManager.default.enumerator(atPath: cacheDir) {
-            while let file = enumerator.nextObject() as? String {
-                if file.hasSuffix(".bin") {
-                    let fullPath = (cacheDir as NSString).appendingPathComponent(file)
-                    if let attrs = try? FileManager.default.attributesOfItem(atPath: fullPath),
-                       let size = attrs[.size] as? UInt64,
-                       size > 70_000_000 { // ~70MB for tiny model
-                        NSLog("[KeyboardTranscriptionListener] Found model at: %@", fullPath)
-                        return fullPath
-                    }
-                }
-            }
+        // Verify the encoder file actually exists on disk — bundled model
+        // files can be cleared by the OS under storage pressure.
+        let encoderPath = (modelDir as NSString).appendingPathComponent(encoder)
+        guard FileManager.default.fileExists(atPath: encoderPath) else {
+            NSLog("[KeyboardTranscriptionListener] Saved model file missing: %@", encoderPath)
+            return nil
         }
 
-        NSLog("[KeyboardTranscriptionListener] Model not found")
-        return nil
+        let files = SherpaModelFiles()
+        files.modelDir = modelDir
+        files.encoder = encoder
+        files.decoder = decoder
+        files.tokens = tokens
+        files.joiner = json["joiner"] as? String
+
+        switch modelTypeStr {
+        case "whisper":
+            files.modelType = .whisper
+            files.language = requestedLanguage ?? (json["language"] as? String) ?? "en"
+        case "nemo_transducer":
+            files.modelType = .nemoTransducer
+        default:
+            NSLog("[KeyboardTranscriptionListener] Unsupported model type: %@", modelTypeStr)
+            return nil
+        }
+
+        return files
     }
 
     // MARK: - Write Result
