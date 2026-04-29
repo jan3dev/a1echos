@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.a1lab.echos"
     },
     "android": {
-      "versionCode": 8,
+      "versionCode": 9,
       "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -53,12 +53,12 @@
       "./plugins/withRnForegroundService",
       "./plugins/withFixJcenter",
       "./plugins/withReactNativeFsFix",
+      "./plugins/withNdkVersion",
       [
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26,
-            "ndkVersion": "28.1.13356709"
+            "minSdkVersion": 26
           }
         }
       ]
