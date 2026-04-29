@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.a1lab.echos"
     },
     "android": {
-      "versionCode": 7,
+      "versionCode": 8,
       "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -57,7 +57,8 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "ndkVersion": "28.1.13356709"
           }
         }
       ]
