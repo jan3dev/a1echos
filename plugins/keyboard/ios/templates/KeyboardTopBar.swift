@@ -71,7 +71,7 @@ final class KeyboardTopBar: UIView {
         addSubview(waveform)
 
         NSLayoutConstraint.activate([
-            logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             logoView.centerYAnchor.constraint(equalTo: centerYAnchor),
             logoView.widthAnchor.constraint(equalToConstant: 18),
             logoView.heightAnchor.constraint(equalToConstant: 24),
@@ -79,7 +79,7 @@ final class KeyboardTopBar: UIView {
             logoLabel.leadingAnchor.constraint(equalTo: logoView.trailingAnchor, constant: 6),
             logoLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
 
-            recordButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            recordButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             recordButton.centerYAnchor.constraint(equalTo: centerYAnchor),
             recordButton.widthAnchor.constraint(equalToConstant: 72),
             recordButton.heightAnchor.constraint(equalToConstant: 40),
@@ -89,8 +89,8 @@ final class KeyboardTopBar: UIView {
             recordIcon.widthAnchor.constraint(equalToConstant: 24),
             recordIcon.heightAnchor.constraint(equalToConstant: 24),
 
-            waveform.leadingAnchor.constraint(equalTo: logoLabel.trailingAnchor, constant: 12),
-            waveform.trailingAnchor.constraint(equalTo: recordButton.leadingAnchor, constant: -12),
+            waveform.leadingAnchor.constraint(equalTo: logoLabel.trailingAnchor, constant: 8),
+            waveform.trailingAnchor.constraint(equalTo: recordButton.leadingAnchor, constant: -8),
             waveform.centerYAnchor.constraint(equalTo: centerYAnchor),
             waveform.heightAnchor.constraint(equalToConstant: RecordingWaveformView.preferredHeight),
         ])
@@ -125,22 +125,29 @@ final class KeyboardTopBar: UIView {
         case .idle:
             recordIcon.state = .microphone
             recordIcon.alpha = 1
+            recordButton.isEnabled = true
             waveform.stopAnimating()
             waveform.isHidden = true
             recordButton.accessibilityLabel = "Start recording"
         case .recording:
             recordIcon.state = .stop
             recordIcon.alpha = 1
+            recordButton.isEnabled = true
+            waveform.setMode(.recording)
             waveform.isHidden = false
             waveform.startAnimating()
             recordButton.accessibilityLabel = "Stop recording"
         case .transcribing:
-            // Same gray pill as idle but dimmed while the audio finishes
-            // transcribing — the button is non-actionable in this state.
+            // Mic glyph dimmed and button non-actionable while audio
+            // finishes transcribing; the waveform keeps animating with
+            // the breathing oscillation that mirrors `ThreeWaveLines`'
+            // transcribing mode in the main app.
             recordIcon.state = .microphone
             recordIcon.alpha = 0.5
-            waveform.stopAnimating()
-            waveform.isHidden = true
+            recordButton.isEnabled = false
+            waveform.setMode(.transcribing)
+            waveform.isHidden = false
+            waveform.startAnimating()
             recordButton.accessibilityLabel = "Transcribing"
         }
     }
@@ -344,25 +351,93 @@ final class RecordButtonIconView: UIView {
         stand.close()
         stand.fill()
 
-        // Mic body — outer rounded rect.
-        let body = UIBezierPath()
-        body.move(to: CGPoint(x: 16.7504, y: 11.5))
-        body.addCurve(to: CGPoint(x: 12.0004, y: 16.25),
+        // Mic head — built from four subpaths matching the Figma SVG and
+        // filled with the even-odd rule so the inner body subtracts a rim
+        // hole and the two grille subpaths punch back through it.
+        let head = UIBezierPath()
+
+        // Outer body capsule.
+        head.move(to: CGPoint(x: 16.7504, y: 11.5))
+        head.addCurve(to: CGPoint(x: 12.0004, y: 16.25),
                       controlPoint1: CGPoint(x: 16.7504, y: 14.1241),
                       controlPoint2: CGPoint(x: 14.6244, y: 16.2498))
-        body.addCurve(to: CGPoint(x: 7.2504, y: 11.5),
+        head.addCurve(to: CGPoint(x: 7.2504, y: 11.5),
                       controlPoint1: CGPoint(x: 9.3762, y: 16.25),
                       controlPoint2: CGPoint(x: 7.2504, y: 14.1242))
-        body.addLine(to: CGPoint(x: 7.2504, y: 6))
-        body.addCurve(to: CGPoint(x: 12.0004, y: 1.25),
+        head.addLine(to: CGPoint(x: 7.2504, y: 6))
+        head.addCurve(to: CGPoint(x: 12.0004, y: 1.25),
                       controlPoint1: CGPoint(x: 7.2504, y: 3.3758),
                       controlPoint2: CGPoint(x: 9.3762, y: 1.25))
-        body.addCurve(to: CGPoint(x: 16.7504, y: 6),
+        head.addCurve(to: CGPoint(x: 16.7504, y: 6),
                       controlPoint1: CGPoint(x: 14.6244, y: 1.2502),
                       controlPoint2: CGPoint(x: 16.7504, y: 3.3759))
-        body.addLine(to: CGPoint(x: 16.7504, y: 11.5))
-        body.close()
-        body.fill()
+        head.addLine(to: CGPoint(x: 16.7504, y: 11.5))
+        head.close()
+
+        // Inner body — carves the rim out of the outer capsule.
+        head.move(to: CGPoint(x: 15.2504, y: 6))
+        head.addCurve(to: CGPoint(x: 12.0004, y: 2.75),
+                      controlPoint1: CGPoint(x: 15.2504, y: 4.2043),
+                      controlPoint2: CGPoint(x: 13.796, y: 2.7502))
+        head.addCurve(to: CGPoint(x: 8.7504, y: 6),
+                      controlPoint1: CGPoint(x: 10.2046, y: 2.75),
+                      controlPoint2: CGPoint(x: 8.7504, y: 4.2042))
+        head.addLine(to: CGPoint(x: 8.7504, y: 11.5))
+        head.addCurve(to: CGPoint(x: 12.0004, y: 14.75),
+                      controlPoint1: CGPoint(x: 8.7504, y: 13.2958),
+                      controlPoint2: CGPoint(x: 10.2046, y: 14.75))
+        head.addCurve(to: CGPoint(x: 15.2504, y: 11.5),
+                      controlPoint1: CGPoint(x: 13.796, y: 14.7498),
+                      controlPoint2: CGPoint(x: 15.2504, y: 13.2957))
+        head.addLine(to: CGPoint(x: 15.2504, y: 6))
+        head.close()
+
+        // Lower grille line — fills back inside the rim cutout.
+        head.move(to: CGPoint(x: 11.0082, y: 7.8252))
+        head.addCurve(to: CGPoint(x: 13.0013, y: 7.8252),
+                      controlPoint1: CGPoint(x: 11.6637, y: 7.652),
+                      controlPoint2: CGPoint(x: 12.3458, y: 7.6521))
+        head.addCurve(to: CGPoint(x: 13.5355, y: 8.7412),
+                      controlPoint1: CGPoint(x: 13.4017, y: 7.9309),
+                      controlPoint2: CGPoint(x: 13.641, y: 8.3409))
+        head.addCurve(to: CGPoint(x: 12.6185, y: 9.2754),
+                      controlPoint1: CGPoint(x: 13.4297, y: 9.1417),
+                      controlPoint2: CGPoint(x: 13.019, y: 9.3811))
+        head.addCurve(to: CGPoint(x: 11.392, y: 9.2754),
+                      controlPoint1: CGPoint(x: 12.2142, y: 9.1686),
+                      controlPoint2: CGPoint(x: 11.7963, y: 9.1686))
+        head.addCurve(to: CGPoint(x: 10.475, y: 8.7412),
+                      controlPoint1: CGPoint(x: 10.9915, y: 9.3812),
+                      controlPoint2: CGPoint(x: 10.5808, y: 9.1417))
+        head.addCurve(to: CGPoint(x: 11.0082, y: 7.8252),
+                      controlPoint1: CGPoint(x: 10.3695, y: 8.341),
+                      controlPoint2: CGPoint(x: 10.608, y: 7.9311))
+        head.close()
+
+        // Upper grille line.
+        head.move(to: CGPoint(x: 10.3519, y: 5.7256))
+        head.addCurve(to: CGPoint(x: 13.6478, y: 5.7256),
+                      controlPoint1: CGPoint(x: 11.4184, y: 5.3346),
+                      controlPoint2: CGPoint(x: 12.5813, y: 5.3346))
+        head.addCurve(to: CGPoint(x: 14.0941, y: 6.6885),
+                      controlPoint1: CGPoint(x: 14.0367, y: 5.8682),
+                      controlPoint2: CGPoint(x: 14.2367, y: 6.2996))
+        head.addCurve(to: CGPoint(x: 13.1322, y: 7.1338),
+                      controlPoint1: CGPoint(x: 13.9515, y: 7.0772),
+                      controlPoint2: CGPoint(x: 13.521, y: 7.2762))
+        head.addCurve(to: CGPoint(x: 10.8685, y: 7.1338),
+                      controlPoint1: CGPoint(x: 12.3991, y: 6.865),
+                      controlPoint2: CGPoint(x: 11.6017, y: 6.8651))
+        head.addCurve(to: CGPoint(x: 9.9056, y: 6.6885),
+                      controlPoint1: CGPoint(x: 10.4797, y: 7.2764),
+                      controlPoint2: CGPoint(x: 10.0483, y: 7.0773))
+        head.addCurve(to: CGPoint(x: 10.3519, y: 5.7256),
+                      controlPoint1: CGPoint(x: 9.763, y: 6.2996),
+                      controlPoint2: CGPoint(x: 9.963, y: 5.8682))
+        head.close()
+
+        head.usesEvenOddFillRule = true
+        head.fill()
     }
 }
 
@@ -376,6 +451,14 @@ final class RecordButtonIconView: UIView {
 /// frame from a `CADisplayLink` tick.
 final class RecordingWaveformView: UIView {
 
+    /// Active animation mode — `.recording` is the audio-reactive default
+    /// while `.transcribing` switches to the slow phase-inverting breathing
+    /// pattern that signals "processing" in `ThreeWaveLines.tsx`.
+    enum Mode {
+        case recording
+        case transcribing
+    }
+
     /// Per-wave styling and behaviour. Values match `WAVE_PROFILES` in
     /// `components/shared/recording-controls/ThreeWaveLines.tsx`.
     private struct WaveProfile {
@@ -386,6 +469,8 @@ final class RecordingWaveformView: UIView {
         let strokeWidth: CGFloat
         let energyFloor: Double
         let audioAmplitudeReactivity: Double
+        let transcribingAmplitude: Double
+        let transcribingPhaseOffset: Double
         let color: UIColor
     }
 
@@ -393,14 +478,18 @@ final class RecordingWaveformView: UIView {
         WaveProfile(basePhaseSpeed: 0.04, frequency: 2.2, verticalOffset: -3.2,
                     amplitudeMultiplier: 0.35, strokeWidth: 3.0,
                     energyFloor: 0.06, audioAmplitudeReactivity: 0.7,
+                    transcribingAmplitude: 0.6, transcribingPhaseOffset: 0.0,
                     color: UIColor(hex: 0xF7931A)), // waveOrange
         WaveProfile(basePhaseSpeed: 0.07, frequency: 3.1, verticalOffset: 0.0,
                     amplitudeMultiplier: 0.55, strokeWidth: 2.8,
                     energyFloor: 0.05, audioAmplitudeReactivity: 1.0,
+                    transcribingAmplitude: 0.7, transcribingPhaseOffset: .pi,
                     color: UIColor(hex: 0x5773EF)), // accentBrand
         WaveProfile(basePhaseSpeed: 0.09, frequency: 2.5, verticalOffset: 3.6,
                     amplitudeMultiplier: 0.75, strokeWidth: 2.5,
                     energyFloor: 0.04, audioAmplitudeReactivity: 0.55,
+                    transcribingAmplitude: 0.8,
+                    transcribingPhaseOffset: 2 * .pi / 3,
                     color: UIColor(hex: 0x16BAC5)), // waveCyan
     ]
 
@@ -417,6 +506,16 @@ final class RecordingWaveformView: UIView {
         var displayLevel: Double = 0
         var phaseSpeedMultiplier: Double = 0.6
         var smoothedBaseEnergy: Double = 0.5
+        var smoothedAmplitudeMultiplier: Double
+        var smoothedOpacity: Double = 1.0
+        /// Seconds spent in transcribing mode — drives the slow `sin(t·π/3)`
+        /// breathing oscillation. Resets back to 0 once the oscillation
+        /// has fully decayed after leaving transcribing mode.
+        var transcribingTime: Double = 0
+        /// 0…1 ramp that fades the transcribing oscillation in and out so
+        /// the transition from recording reads as smooth rather than
+        /// snapping into an inverted wave.
+        var oscillationStrength: Double = 0
     }
 
     private var states: [WaveState]
@@ -424,12 +523,16 @@ final class RecordingWaveformView: UIView {
     private var displayLink: CADisplayLink?
     private var lastFrameTime: CFTimeInterval = 0
     private var audioLevel: Double = 0
+    private var mode: Mode = .recording
 
     override init(frame: CGRect) {
         // Seed phases with offsets of 0, π, 2π so the three waves start
         // out of phase rather than aligned in a flat line.
-        states = (0..<Self.profiles.count).map {
-            WaveState(phase: Double($0) * .pi)
+        states = (0..<Self.profiles.count).map { i in
+            WaveState(
+                phase: Double(i) * .pi,
+                smoothedAmplitudeMultiplier: Self.profiles[i].amplitudeMultiplier
+            )
         }
         super.init(frame: frame)
         backgroundColor = .clear
@@ -470,6 +573,14 @@ final class RecordingWaveformView: UIView {
         audioLevel = max(0, min(1, level))
     }
 
+    /// Switch between the recording (audio-reactive) and transcribing
+    /// (slow phase-inverting breathing) animations. Safe to call while
+    /// the display link is running — the amplitude/opacity smoothers
+    /// handle the cross-fade so the wave doesn't snap visually.
+    func setMode(_ newMode: Mode) {
+        mode = newMode
+    }
+
     func startAnimating() {
         guard displayLink == nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
@@ -482,6 +593,7 @@ final class RecordingWaveformView: UIView {
         displayLink?.invalidate()
         displayLink = nil
         audioLevel = 0
+        mode = .recording
         // Reset per-wave smoothers so the next recording session starts
         // from a calm baseline rather than wherever the previous one
         // left off.
@@ -489,11 +601,16 @@ final class RecordingWaveformView: UIView {
             states[i].displayLevel = 0
             states[i].phaseSpeedMultiplier = 0.6
             states[i].smoothedBaseEnergy = 0.5
+            states[i].smoothedAmplitudeMultiplier = Self.profiles[i].amplitudeMultiplier
+            states[i].smoothedOpacity = 1.0
+            states[i].transcribingTime = 0
+            states[i].oscillationStrength = 0
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for layer in shapeLayers {
             layer.path = nil
+            layer.opacity = 1.0
         }
         CATransaction.commit()
     }
@@ -516,37 +633,76 @@ final class RecordingWaveformView: UIView {
         let baseRange = Self.baseMaxAmplitude - Self.minAmplitude
         let recordingRange = Self.recordingMaxAmplitude - Self.minAmplitude
 
+        let isTranscribing = mode == .transcribing
+
         for (i, profile) in Self.profiles.enumerated() {
             var state = states[i]
 
-            // Envelope follower: slow attack, slower release — matches
-            // ThreeWaveLines.tsx so identical voice inputs produce a
-            // visually identical bend across keyboard and main app.
-            let target = audioLevel
+            // Audio is irrelevant while transcribing — collapse the
+            // displayLevel target so the recording-only "voice boost" and
+            // amplitude bump stay quiet during the breathing animation.
+            let target = isTranscribing ? 0 : audioLevel
             let diff = target - state.displayLevel
             let lerpSpeed = diff > 0 ? 0.08 : 0.04
             state.displayLevel = max(0, min(1.4,
                 state.displayLevel + diff * lerpSpeed * dtFactor))
 
-            // Louder input → faster phase advance → snappier wave motion.
-            let targetSpeedMult = 1.0 + state.displayLevel * 4.5
+            // Phase speed: fast/loud while recording, drifts back to the
+            // 0.6 base in idle/transcribing so the breathing reads slow.
+            let targetSpeedMult = isTranscribing
+                ? 0.6
+                : 1.0 + state.displayLevel * 4.5
+            let speedLerp = isTranscribing ? 0.04 : 0.08
             state.phaseSpeedMultiplier +=
-                (targetSpeedMult - state.phaseSpeedMultiplier) * 0.08 * dtFactor
+                (targetSpeedMult - state.phaseSpeedMultiplier) * speedLerp * dtFactor
 
-            // Amplitude target with a "voice boost" above the threshold so
-            // the waves react more dramatically to actual speech than to
-            // ambient noise.
             let dl = state.displayLevel
-            let voiceBoost = dl > Self.voiceThreshold
-                ? (dl - Self.voiceThreshold) * 0.5 * profile.audioAmplitudeReactivity
-                : 0
-            let audioReactiveEnergy = max(0, min(1, dl))
-            let targetEnergy = min(1.2,
-                profile.energyFloor
-                + audioReactiveEnergy * profile.audioAmplitudeReactivity
-                + voiceBoost)
+
+            // Mode-specific targets for the three smoothed channels.
+            // Recording: audio-reactive. Transcribing: pinned to the
+            // profile's transcribing constants so all three waves pulse
+            // together at half opacity.
+            let targetEnergy: Double
+            let targetAmpMult: Double
+            let targetOpacity: Double
+            if isTranscribing {
+                targetEnergy = 1.0
+                targetAmpMult = profile.transcribingAmplitude
+                targetOpacity = 0.5
+            } else {
+                let voiceBoost = dl > Self.voiceThreshold
+                    ? (dl - Self.voiceThreshold) * 0.5 * profile.audioAmplitudeReactivity
+                    : 0
+                let audioReactiveEnergy = max(0, min(1, dl))
+                targetEnergy = min(1.2,
+                    profile.energyFloor
+                    + audioReactiveEnergy * profile.audioAmplitudeReactivity
+                    + voiceBoost)
+                targetAmpMult = profile.amplitudeMultiplier
+                targetOpacity = 1.0
+            }
+            let smoothLerp = 0.08 * dtFactor
             state.smoothedBaseEnergy +=
-                (targetEnergy - state.smoothedBaseEnergy) * 0.08 * dtFactor
+                (targetEnergy - state.smoothedBaseEnergy) * smoothLerp
+            state.smoothedAmplitudeMultiplier +=
+                (targetAmpMult - state.smoothedAmplitudeMultiplier) * smoothLerp
+            state.smoothedOpacity +=
+                (targetOpacity - state.smoothedOpacity) * smoothLerp
+
+            // Oscillation strength fades the breathing in over ~0.3s when
+            // entering transcribing and back out when leaving, so the
+            // crossfade with recording isn't jarring.
+            if isTranscribing {
+                state.transcribingTime += dt
+                state.oscillationStrength = min(1.0,
+                    state.oscillationStrength + 0.1 * dtFactor)
+            } else if state.oscillationStrength > 0 {
+                state.oscillationStrength = max(0,
+                    state.oscillationStrength - 0.1 * dtFactor)
+                if state.oscillationStrength == 0 {
+                    state.transcribingTime = 0
+                }
+            }
 
             state.phase = (state.phase
                 + profile.basePhaseSpeed * state.phaseSpeedMultiplier * dtFactor)
@@ -558,7 +714,7 @@ final class RecordingWaveformView: UIView {
             let path = UIBezierPath()
             let freqTwoPi = profile.frequency * 2 * .pi
             let baseEnergy = state.smoothedBaseEnergy
-            let ampMult = profile.amplitudeMultiplier
+            let ampMult = state.smoothedAmplitudeMultiplier
             let phase = state.phase
             let edgePadding = max(2.0, Double(profile.strokeWidth))
             let adjustedCenterY = centerY + Double(profile.verticalOffset)
@@ -566,6 +722,14 @@ final class RecordingWaveformView: UIView {
                 adjustedCenterY - edgePadding,
                 h - adjustedCenterY - edgePadding
             ))
+
+            // Slow sin(t·π/3) modulation per wave (with a per-wave phase
+            // offset) flips the sine sign over time, producing the
+            // "breathing" pulse that signals the transcribing state.
+            let oscillation = sin(state.transcribingTime * .pi / 3.0
+                + profile.transcribingPhaseOffset)
+            let phaseInversion = 1.0
+                + (oscillation - 1.0) * state.oscillationStrength
 
             var prevX: Double = 0
             var prevY: Double = adjustedCenterY
@@ -583,7 +747,8 @@ final class RecordingWaveformView: UIView {
 
                 let sine = sin(freqTwoPi * normalizedX + phase)
                 let energyFactor = 0.65 + normalizedAmplitude * 0.35
-                let y = adjustedCenterY + amplitude * energyFactor * sine
+                let y = adjustedCenterY
+                    + amplitude * energyFactor * sine * phaseInversion
 
                 if j == 0 {
                     path.move(to: CGPoint(x: x, y: y))
@@ -605,6 +770,7 @@ final class RecordingWaveformView: UIView {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             shapeLayers[i].path = path.cgPath
+            shapeLayers[i].opacity = Float(state.smoothedOpacity)
             CATransaction.commit()
         }
     }

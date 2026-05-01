@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppErrorBoundary,
   Icon,
+  KeyboardPromptModal,
   RecordingControlsView,
   Tooltip,
 } from "@/components";
@@ -26,6 +27,9 @@ import {
   initializeTranscriptionStore,
   useGlobalTooltip,
   useHideGlobalTooltip,
+  useHideKeyboardPrompt,
+  useKeyboardPromptVisible,
+  useMarkKeyboardPromptSeen,
   useOnRecordingStart,
   useOnRecordingStop,
   useRecordingControlsEnabled,
@@ -33,7 +37,7 @@ import {
   useTranscriptionState,
 } from "@/stores";
 import { useTheme, useThemeStore } from "@/theme";
-import { FeatureFlag, logError } from "@/utils";
+import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
 
 const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
 
@@ -135,6 +139,31 @@ function GlobalTooltipRenderer() {
         onLeadingIconTap={hasAction ? handleActionPress : undefined}
       />
     </View>
+  );
+}
+
+function GlobalKeyboardPromptRenderer() {
+  const visible = useKeyboardPromptVisible();
+  const hide = useHideKeyboardPrompt();
+  const markSeen = useMarkKeyboardPromptSeen();
+
+  const handleConfirm = useCallback(() => {
+    void markSeen();
+    hide();
+    void openKeyboardSettings();
+  }, [hide, markSeen]);
+
+  const handleCancel = useCallback(() => {
+    void markSeen();
+    hide();
+  }, [hide, markSeen]);
+
+  return (
+    <KeyboardPromptModal
+      visible={visible}
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+    />
   );
 }
 
@@ -313,6 +342,7 @@ export default function RootLayout() {
         </Stack>
         <GlobalRecordingControls />
         <GlobalTooltipRenderer />
+        <GlobalKeyboardPromptRenderer />
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

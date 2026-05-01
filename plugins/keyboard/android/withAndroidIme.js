@@ -1,5 +1,6 @@
 const {
   withAndroidManifest,
+  withAppBuildGradle,
   withDangerousMod,
 } = require("expo/config-plugins");
 const fs = require("fs");
@@ -125,6 +126,7 @@ function withImeSources(config) {
         "EchosKeyboardView.kt",
         "EchosKeyboardTopBar.kt",
         "EchosKeyboardLayout.kt",
+        "EchosWaveformView.kt",
         "SherpaModelManager.kt",
         "ImeSherpaTranscriber.kt",
         "RecordingLock.kt",
@@ -216,11 +218,50 @@ function withImeSources(config) {
 }
 
 /**
+ * `react-native-sherpa-onnx` ships the `com.k2fsa.sherpa.onnx.*` Kotlin API as
+ * an `implementation`-scoped JAR inside its own Gradle module, which means the
+ * classes are NOT transitively visible to consumers (they're runtime-only on
+ * the AAR's `libs/`). The IME's `ImeSherpaTranscriber` compiles directly
+ * against those classes, so we need to add the same JAR to the app module's
+ * compile classpath. The `.builtBy(...)` wires the existing extract task so
+ * Gradle produces the JAR before our `:app:compileDebugKotlin` runs.
+ */
+function withImeGradleDeps(config) {
+  return withAppBuildGradle(config, (config) => {
+    if (config.modResults.language !== "groovy") {
+      console.warn(
+        "withAndroidIme: app build.gradle is not Groovy; skipping sherpa-onnx classes injection.",
+      );
+      return config;
+    }
+    const marker =
+      "// Echos IME — expose sherpa-onnx Kotlin API to app sources";
+    if (config.modResults.contents.includes(marker)) {
+      return config;
+    }
+    // Escape `\${...}` so JS template-literal interpolation doesn't eat the
+    // Groovy `${rootProject.projectDir}` reference.
+    const block = `
+${marker}
+dependencies {
+    implementation fileTree(
+        dir: "\${rootProject.projectDir}/../node_modules/react-native-sherpa-onnx/android/build/sherpa-onnx-classes",
+        include: ["*.jar"],
+    ).builtBy(":react-native-sherpa-onnx:extractSherpaOnnxClasses")
+}
+`;
+    config.modResults.contents = config.modResults.contents.trimEnd() + block;
+    return config;
+  });
+}
+
+/**
  * Composes Android IME manifest registration and source file generation.
  */
 function withAndroidIme(config) {
   config = withImeManifest(config);
   config = withImeSources(config);
+  config = withImeGradleDeps(config);
   return config;
 }
 

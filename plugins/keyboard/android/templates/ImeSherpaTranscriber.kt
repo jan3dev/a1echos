@@ -49,15 +49,18 @@ class ImeSherpaTranscriber(private val context: Context) {
     private var onResult: ((String) -> Unit)? = null
     private var onError: ((String) -> Unit)? = null
     private var onTranscribing: (() -> Unit)? = null
+    private var onAudioLevel: ((Double) -> Unit)? = null
 
     fun startTranscription(
         onResult: (String) -> Unit,
         onError: (String) -> Unit,
         onTranscribing: () -> Unit,
+        onAudioLevel: ((Double) -> Unit)? = null,
     ) {
         this.onResult = onResult
         this.onError = onError
         this.onTranscribing = onTranscribing
+        this.onAudioLevel = onAudioLevel
 
         val files = SherpaModelManager.getModelFiles(context)
         if (files == null) {
@@ -147,6 +150,11 @@ class ImeSherpaTranscriber(private val context: Context) {
                     } else {
                         silentFrames = 0
                     }
+                    // Push a normalised 0…1 level to the visualizer. ~3000
+                    // RMS is roughly normal-volume speech in 16-bit PCM —
+                    // tuned to give the wave expressive motion without
+                    // pegging at full amplitude on conversational input.
+                    onAudioLevel?.invoke((rms / 3000.0).coerceIn(0.0, 1.0))
                 }
             }
         } catch (e: Exception) {

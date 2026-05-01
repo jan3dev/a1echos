@@ -23,6 +23,7 @@ const STORAGE_KEYS = {
   INCOGNITO_MODE: "incognito_mode",
   INCOGNITO_EXPLAINER_SEEN: "incognito_explainer_seen",
   SMART_SPLIT_ENABLED: "smart_split_enabled",
+  KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -39,6 +40,7 @@ interface SettingsStore {
   isIncognitoMode: boolean;
   hasSeenIncognitoExplainer: boolean;
   smartSplitEnabled: boolean;
+  hasSeenKeyboardPrompt: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -51,6 +53,7 @@ interface SettingsStore {
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   markIncognitoExplainerSeen: () => Promise<void>;
   setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
+  markKeyboardPromptSeen: () => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -102,6 +105,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   isIncognitoMode: false,
   hasSeenIncognitoExplainer: false,
   smartSplitEnabled: true,
+  hasSeenKeyboardPrompt: false,
 
   initialize: async () => {
     try {
@@ -115,6 +119,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         incognitoModeValue,
         incognitoExplainerValue,
         smartSplitValue,
+        keyboardPromptValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -125,6 +130,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.SMART_SPLIT_ENABLED),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
       ]);
 
       const selectedTheme = themeValue
@@ -185,6 +191,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       // Default true — only the explicit string "false" disables.
       const smartSplitEnabled =
         smartSplitValue === null || smartSplitValue === "true";
+      const hasSeenKeyboardPrompt = keyboardPromptValue === "true";
 
       set({
         selectedTheme,
@@ -196,6 +203,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         isIncognitoMode,
         hasSeenIncognitoExplainer,
         smartSplitEnabled,
+        hasSeenKeyboardPrompt,
       });
     } catch (error) {
       logError(error, {
@@ -212,6 +220,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         isIncognitoMode: false,
         hasSeenIncognitoExplainer: false,
         smartSplitEnabled: true,
+        hasSeenKeyboardPrompt: false,
       });
     }
   },
@@ -399,6 +408,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       set({ smartSplitEnabled: previousValue });
     }
   },
+
+  markKeyboardPromptSeen: async () => {
+    set({ hasSeenKeyboardPrompt: true });
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN, "true");
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save keyboard prompt flag",
+      });
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -424,6 +445,10 @@ export const useSmartSplitEnabled = () =>
   useSettingsStore((s) => s.smartSplitEnabled);
 export const useSetSmartSplitEnabled = () =>
   useSettingsStore((s) => s.setSmartSplitEnabled);
+export const useHasSeenKeyboardPrompt = () =>
+  useSettingsStore((s) => s.hasSeenKeyboardPrompt);
+export const useMarkKeyboardPromptSeen = () =>
+  useSettingsStore((s) => s.markKeyboardPromptSeen);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

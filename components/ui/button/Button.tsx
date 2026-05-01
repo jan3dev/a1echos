@@ -1,7 +1,14 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode } from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
-import { AquaTypography, getShadow, lightColors, useTheme } from "@/theme";
+import {
+  AquaPrimitiveColors,
+  AquaTypography,
+  getShadow,
+  lightColors,
+  useTheme,
+} from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { ProgressIndicator } from "../progress/ProgressIndicator";
@@ -39,7 +46,8 @@ type UtilityButtonProps = BaseButtonProps;
 
 const BUTTON_HEIGHT_LARGE = 56;
 const BUTTON_HEIGHT_SMALL = 34;
-const BUTTON_BORDER_RADIUS = 8;
+const PILL_BORDER_RADIUS = 80;
+const UTILITY_BORDER_RADIUS = 8;
 
 const ButtonBase = ({
   text,
@@ -63,26 +71,28 @@ const ButtonBase = ({
     size === "small" || type === "utility" || type === "utilitySecondary";
   const height = isSmall ? BUTTON_HEIGHT_SMALL : BUTTON_HEIGHT_LARGE;
   const isUtility = type === "utility" || type === "utilitySecondary";
+  const isPill = !isUtility;
+  const borderRadius = isPill ? PILL_BORDER_RADIUS : UTILITY_BORDER_RADIUS;
+
+  const getVariantColor = () =>
+    ({
+      error: colors.accentDanger,
+      success: colors.accentSuccess,
+      warning: colors.accentWarning,
+      normal: colors.accentBrand,
+    })[variant];
+
+  const showsPrimaryGradient = type === "primary" && variant === "normal";
 
   const getBackgroundColor = (pressed: boolean) => {
     if (!enabled) {
       if (type === "primary") {
-        const variantColor = {
-          error: colors.accentDanger,
-          success: colors.accentSuccess,
-          warning: colors.accentWarning,
-          normal: colors.accentBrand,
-        }[variant];
-        return `${variantColor}80`;
+        // Disabled primary: handled via opacity for the gradient case;
+        // for non-normal variants we show a translucent flat fill.
+        return showsPrimaryGradient ? "transparent" : `${getVariantColor()}80`;
       }
       if (type === "secondary") {
-        return variant === "normal"
-          ? `${colors.accentBrand}14`
-          : variant === "error"
-            ? `${colors.accentDanger}14`
-            : variant === "success"
-              ? `${colors.accentSuccess}14`
-              : `${colors.accentWarning}14`;
+        return colors.surfaceSecondary;
       }
       if (type === "utility") {
         return `${colors.surfacePrimary}80`;
@@ -94,22 +104,11 @@ const ButtonBase = ({
     }
 
     if (type === "primary") {
-      return {
-        error: colors.accentDanger,
-        success: colors.accentSuccess,
-        warning: colors.accentWarning,
-        normal: colors.accentBrand,
-      }[variant];
+      return showsPrimaryGradient ? "transparent" : getVariantColor();
     }
 
     if (type === "secondary") {
-      return variant === "normal"
-        ? colors.accentBrandTransparent
-        : variant === "error"
-          ? colors.accentDangerTransparent
-          : variant === "success"
-            ? colors.accentSuccessTransparent
-            : colors.accentWarningTransparent;
+      return colors.surfaceSecondary;
     }
 
     if (type === "tertiary") {
@@ -132,12 +131,10 @@ const ButtonBase = ({
       return lightColors.textInverse;
     }
     if (type === "secondary") {
-      return {
-        error: colors.accentDanger,
-        success: colors.accentSuccess,
-        warning: colors.accentWarning,
-        normal: colors.accentBrand,
-      }[variant];
+      return variant === "normal" ? colors.textSecondary : getVariantColor();
+    }
+    if (type === "tertiary") {
+      return colors.textSecondary;
     }
     return colors.textPrimary;
   };
@@ -147,7 +144,10 @@ const ButtonBase = ({
       return lightColors.textInverse;
     }
     if (type === "secondary") {
-      return colors.accentBrand;
+      return variant === "normal" ? colors.textSecondary : getVariantColor();
+    }
+    if (type === "tertiary") {
+      return colors.textSecondary;
     }
     return colors.textPrimary;
   };
@@ -156,7 +156,7 @@ const ButtonBase = ({
     ? AquaTypography.body2SemiBold
     : AquaTypography.body1SemiBold;
 
-  const horizontalPadding = isUtility ? 14 : 24;
+  const horizontalPadding = isUtility ? 14 : 32;
 
   const shadowStyle: ViewStyle | undefined =
     type === "utility" ? getShadow("button") : undefined;
@@ -177,10 +177,31 @@ const ButtonBase = ({
           backgroundColor: getBackgroundColor(pressed),
           opacity: enabled ? iosPressed(pressed, 0.9) : 0.5,
           paddingHorizontal: isSmall ? horizontalPadding : 0,
-          borderRadius: BUTTON_BORDER_RADIUS,
+          borderRadius,
         },
       ]}
     >
+      {showsPrimaryGradient && (
+        <LinearGradient
+          colors={[
+            AquaPrimitiveColors.neonBlue400,
+            AquaPrimitiveColors.neonBlue500,
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { borderRadius }]}
+        />
+      )}
+      {showsPrimaryGradient && (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            styles.primaryInsetHighlight,
+            { borderRadius },
+          ]}
+        />
+      )}
       <View style={styles.content}>
         {isLoading ? (
           <View
@@ -221,7 +242,7 @@ const ButtonBase = ({
         style={[
           shadowStyle,
           {
-            borderRadius: BUTTON_BORDER_RADIUS,
+            borderRadius,
             alignSelf: "stretch",
           },
         ]}
@@ -262,6 +283,7 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   content: {
     flexDirection: "row",
@@ -285,5 +307,9 @@ const styles = StyleSheet.create({
   },
   utilityTextPadding: {
     paddingHorizontal: 2,
+  },
+  primaryInsetHighlight: {
+    borderTopWidth: 2,
+    borderTopColor: "#7A92F3",
   },
 });

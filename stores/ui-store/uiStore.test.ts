@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import { renderHook } from "@testing-library/react-native";
+import { act, renderHook } from "@testing-library/react-native";
 
 import {
   useUIStore,
@@ -17,6 +17,9 @@ import {
   useGlobalTooltip,
   useShowGlobalTooltip,
   useHideGlobalTooltip,
+  useKeyboardPromptVisible,
+  useShowKeyboardPrompt,
+  useHideKeyboardPrompt,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useOnRecordingStart,
@@ -355,6 +358,30 @@ describe("uiStore", () => {
     it("useSetRecordingCallbacks returns a function", () => {
       const { result } = renderHook(() => useSetRecordingCallbacks());
       expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("Keyboard prompt visibility", () => {
+    it("defaults to hidden", () => {
+      const { result } = renderHook(() => useKeyboardPromptVisible());
+      expect(result.current).toBe(false);
+    });
+
+    it("showKeyboardPrompt flips visibility to true", () => {
+      const { result } = renderHook(() => useShowKeyboardPrompt());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().keyboardPromptVisible).toBe(true);
+    });
+
+    it("hideKeyboardPrompt flips visibility back to false", () => {
+      useUIStore.setState({ keyboardPromptVisible: true });
+      const { result } = renderHook(() => useHideKeyboardPrompt());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().keyboardPromptVisible).toBe(false);
     });
   });
 });

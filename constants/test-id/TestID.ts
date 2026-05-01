@@ -63,6 +63,8 @@ export enum TestID {
   SettingsContactSupport = "settings-contact-support",
   SettingsFooter = "settings-footer",
   SettingsSmartSplitToggle = "settings-smart-split-toggle",
+  SettingsAddKeyboardRow = "settings-add-keyboard-row",
+  KeyboardPromptModal = "keyboard-prompt-modal",
 
   // --- Theme Settings ---
   ThemeAuto = "theme-auto",

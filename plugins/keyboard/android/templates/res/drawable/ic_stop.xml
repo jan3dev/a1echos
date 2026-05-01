@@ -1,4 +1,8 @@
-<!-- Material Design `stop` (filled square), 24×24. -->
+<!--
+  Echos stop glyph from the design system, 24×24. 16×16 rounded square with
+  4dp corner radius, centered — mirrors the Figma `record_button_recording`
+  asset and the iOS `RecordButtonIconView.drawStopRectangle()`.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -6,5 +10,5 @@
     android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M6,6h12v12H6z" />
+        android:pathData="M4,8C4,5.7909 5.7909,4 8,4H16C18.2091,4 20,5.7909 20,8V16C20,18.2091 18.2091,20 16,20H8C5.7909,20 4,18.2091 4,16V8Z" />
 </vector>

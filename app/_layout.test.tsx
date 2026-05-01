@@ -53,6 +53,11 @@ jest.mock("@/stores", () => ({
   useRecordingControlsEnabled: jest.fn(() => true),
   useRecordingControlsVisible: jest.fn(() => true),
   useTranscriptionState: jest.fn(() => "IDLE"),
+  useKeyboardPromptVisible: jest.fn(() => false),
+  useHideKeyboardPrompt: jest.fn(() => jest.fn()),
+  useMarkKeyboardPromptSeen: jest.fn(() =>
+    jest.fn().mockResolvedValue(undefined),
+  ),
 }));
 
 jest.mock("@/services", () => ({
@@ -67,6 +72,7 @@ jest.mock("@/hooks", () => ({}));
 jest.mock("@/utils", () => ({
   logError: jest.fn(),
   FeatureFlag: { general: "general", ui: "ui" },
+  openKeyboardSettings: jest.fn().mockResolvedValue(true),
 }));
 
 jest.mock("@/localization", () => ({}));
@@ -79,6 +85,16 @@ jest.mock("@/components", () => {
       <View testID={TID.AppErrorBoundary}>{children}</View>
     ),
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
+    KeyboardPromptModal: ({ visible, onConfirm, onCancel }: any) => {
+      const { TouchableOpacity } = require("react-native");
+      if (!visible) return null;
+      return (
+        <View testID={TID.KeyboardPromptModal}>
+          <TouchableOpacity testID="kbd-confirm" onPress={onConfirm} />
+          <TouchableOpacity testID="kbd-cancel" onPress={onCancel} />
+        </View>
+      );
+    },
     RecordingControlsView: () => <View testID={TID.RecordingControlsView} />,
     Tooltip: () => <View testID={TID.Tooltip} />,
   };
@@ -531,6 +547,74 @@ describe("RootLayout", () => {
       expect(mockActionOnPress).toHaveBeenCalled();
 
       comps.Tooltip = origTooltip;
+    });
+  });
+
+  describe("GlobalKeyboardPromptRenderer", () => {
+    it("does not render when keyboardPromptVisible is false", async () => {
+      const { useKeyboardPromptVisible } = require("@/stores");
+      (useKeyboardPromptVisible as jest.Mock).mockReturnValue(false);
+
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.KeyboardPromptModal)).toBeNull();
+    });
+
+    it("renders when keyboardPromptVisible is true", async () => {
+      const { useKeyboardPromptVisible } = require("@/stores");
+      (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
+
+      const { getByTestId } = await renderAndWaitForInit();
+      expect(getByTestId(TestID.KeyboardPromptModal)).toBeTruthy();
+    });
+
+    it("confirm marks seen, hides, and opens settings", async () => {
+      const mockHide = jest.fn();
+      const mockMark = jest.fn().mockResolvedValue(undefined);
+      const {
+        useKeyboardPromptVisible,
+        useHideKeyboardPrompt,
+        useMarkKeyboardPromptSeen,
+      } = require("@/stores");
+      (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
+      (useHideKeyboardPrompt as jest.Mock).mockReturnValue(mockHide);
+      (useMarkKeyboardPromptSeen as jest.Mock).mockReturnValue(mockMark);
+
+      const { openKeyboardSettings } = require("@/utils");
+      (openKeyboardSettings as jest.Mock).mockClear();
+
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("kbd-confirm"));
+      });
+
+      expect(mockMark).toHaveBeenCalled();
+      expect(mockHide).toHaveBeenCalled();
+      expect(openKeyboardSettings).toHaveBeenCalled();
+    });
+
+    it("cancel marks seen and hides without opening settings", async () => {
+      const mockHide = jest.fn();
+      const mockMark = jest.fn().mockResolvedValue(undefined);
+      const {
+        useKeyboardPromptVisible,
+        useHideKeyboardPrompt,
+        useMarkKeyboardPromptSeen,
+      } = require("@/stores");
+      (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
+      (useHideKeyboardPrompt as jest.Mock).mockReturnValue(mockHide);
+      (useMarkKeyboardPromptSeen as jest.Mock).mockReturnValue(mockMark);
+
+      const { openKeyboardSettings } = require("@/utils");
+      (openKeyboardSettings as jest.Mock).mockClear();
+
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("kbd-cancel"));
+      });
+
+      expect(mockMark).toHaveBeenCalled();
+      expect(mockHide).toHaveBeenCalled();
+      expect(openKeyboardSettings).not.toHaveBeenCalled();
     });
   });
 

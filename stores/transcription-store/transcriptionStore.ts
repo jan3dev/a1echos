@@ -23,6 +23,7 @@ import {
 
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
+import { useUIStore } from "../ui-store/uiStore";
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
@@ -964,8 +965,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           await sherpaTranscriptionService.stopRealtimeTranscription();
         tearDownRealtimeSubscriptions();
 
+        let producedTranscription = false;
+
         if (isRealtime) {
           await drainStorageWriteQueue();
+          producedTranscription =
+            get().smartSplit.createdTranscriptions.length > 0;
         } else {
           const createdItems = get().smartSplit.createdTranscriptions;
 
@@ -986,6 +991,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
               sessionId,
             );
           }
+          producedTranscription = true;
         }
 
         set({
@@ -995,6 +1001,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           smartSplit: createEmptySmartSplit(),
         });
         get().transitionTo(TranscriptionState.READY);
+
+        if (
+          producedTranscription &&
+          !useSettingsStore.getState().hasSeenKeyboardPrompt
+        ) {
+          useUIStore.getState().showKeyboardPrompt();
+        }
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.recording,

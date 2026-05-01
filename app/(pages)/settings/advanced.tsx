@@ -1,10 +1,22 @@
 import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Card, ListItem, Screen, Text, Toggle, TopAppBar } from "@/components";
+import {
+  Card,
+  Icon,
+  ListItem,
+  Screen,
+  Text,
+  Toggle,
+  TopAppBar,
+} from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { useSetSmartSplitEnabled, useSmartSplitEnabled } from "@/stores";
+import {
+  useSetSmartSplitEnabled,
+  useShowKeyboardPrompt,
+  useSmartSplitEnabled,
+} from "@/stores";
 import { useTheme } from "@/theme";
 
 export default function AdvancedSettingsScreen() {
@@ -14,6 +26,7 @@ export default function AdvancedSettingsScreen() {
 
   const smartSplitEnabled = useSmartSplitEnabled();
   const setSmartSplitEnabled = useSetSmartSplitEnabled();
+  const showKeyboardPrompt = useShowKeyboardPrompt();
 
   const handleToggle = (next: boolean) => {
     void setSmartSplitEnabled(next);
@@ -55,6 +68,29 @@ export default function AdvancedSettingsScreen() {
         >
           {loc.smartSplitDescription}
         </Text>
+
+        <Card style={styles.cardSpacing}>
+          <ListItem
+            testID={TestID.SettingsAddKeyboardRow}
+            title={loc.advancedSettingsAddKeyboardTitle}
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={showKeyboardPrompt}
+            backgroundColor={theme.colors.surfacePrimary}
+          />
+        </Card>
+        <Text
+          variant="caption1"
+          color={theme.colors.textSecondary}
+          style={styles.caption}
+        >
+          {loc.advancedSettingsAddKeyboardDescription}
+        </Text>
       </ScrollView>
     </Screen>
   );
@@ -67,5 +103,8 @@ const styles = StyleSheet.create({
   caption: {
     marginTop: 8,
     marginHorizontal: 12,
+  },
+  cardSpacing: {
+    marginTop: 24,
   },
 });

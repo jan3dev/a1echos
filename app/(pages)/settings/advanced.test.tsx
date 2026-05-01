@@ -26,16 +26,20 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../../test-utils/mock-localization/mockLocalization");
+const {
+  mockMakeLoc,
+} = require("../../../test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
 }));
 
 const mockSetSmartSplitEnabled = jest.fn();
+const mockShowKeyboardPrompt = jest.fn();
 jest.mock("@/stores", () => ({
   useSmartSplitEnabled: jest.fn(() => true),
   useSetSmartSplitEnabled: jest.fn(() => mockSetSmartSplitEnabled),
+  useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
 }));
 
 jest.mock("@/components", () => {
@@ -43,6 +47,7 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
+    Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
     ListItem: ({ title, subtitle, onPress, iconTrailing, testID }: any) => (
       <TouchableOpacity
         testID={testID ?? dTID.listItem(title)}
@@ -72,6 +77,7 @@ describe("AdvancedSettingsScreen", () => {
   beforeEach(() => {
     mockSetSmartSplitEnabled.mockReset();
     mockSetSmartSplitEnabled.mockResolvedValue(undefined);
+    mockShowKeyboardPrompt.mockReset();
     const { useSmartSplitEnabled } = require("@/stores");
     (useSmartSplitEnabled as jest.Mock).mockReturnValue(true);
   });
@@ -118,5 +124,18 @@ describe("AdvancedSettingsScreen", () => {
     await waitFor(() => {
       expect(mockSetSmartSplitEnabled).toHaveBeenCalledWith(false);
     });
+  });
+
+  it("renders the Add Echos Keyboard row with description caption", () => {
+    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByTestId(TestID.SettingsAddKeyboardRow)).toBeTruthy();
+    expect(getByText("advancedSettingsAddKeyboardTitle")).toBeTruthy();
+    expect(getByText("advancedSettingsAddKeyboardDescription")).toBeTruthy();
+  });
+
+  it("pressing Add Echos Keyboard row opens the prompt", () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId(TestID.SettingsAddKeyboardRow));
+    expect(mockShowKeyboardPrompt).toHaveBeenCalledTimes(1);
   });
 });

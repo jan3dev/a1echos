@@ -12,6 +12,7 @@ export const AquaPrimitiveColors = {
   gray1000: "#090A0B",
   gray: "#929BA0",
 
+  neonBlue300: "#7A92F3",
   neonBlue400: "#5773EF",
   neonBlue500: "#4361EE",
   neonBlue800: "#0E2795",

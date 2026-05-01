@@ -197,6 +197,11 @@ class EchosKeyboardView @JvmOverloads constructor(
     }
 
     private fun drawKey(canvas: Canvas, key: EchosKeyboardLayout.Key, rect: RectF, isPressed: Boolean) {
+        // Shift becomes "active" while uppercase or caps-lock is engaged —
+        // we light up its background (using the brighter regular-key tone)
+        // so the user can tell at a glance which mode they're in.
+        val isShiftActive = key.type == EchosKeyboardLayout.KeyType.SHIFT
+            && shiftState != ShiftState.OFF
         val bgColor = when {
             key.type == EchosKeyboardLayout.KeyType.MIC -> {
                 when (micState) {
@@ -204,6 +209,9 @@ class EchosKeyboardView @JvmOverloads constructor(
                     MicState.TRANSCRIBING -> theme.micButtonBackground
                     MicState.IDLE -> theme.micButtonBackground
                 }
+            }
+            isShiftActive -> {
+                if (isPressed) theme.keyBackgroundPressed else theme.keyBackground
             }
             key.type == EchosKeyboardLayout.KeyType.SHIFT ||
             key.type == EchosKeyboardLayout.KeyType.DELETE ||
@@ -240,6 +248,13 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         val displayLabel = when {
             key.type == EchosKeyboardLayout.KeyType.RETURN -> returnLabel
+            key.type == EchosKeyboardLayout.KeyType.SHIFT -> when (shiftState) {
+                // ⇧ outline (off) → ⇧ on lit background (one-shot) →
+                // ⇪ caps-lock glyph with the bar underneath
+                ShiftState.OFF -> "⇧"
+                ShiftState.ON -> "⇧"
+                ShiftState.CAPS_LOCK -> "⇪"
+            }
             key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState != ShiftState.OFF ->
                 key.label.uppercase()
             else -> key.label

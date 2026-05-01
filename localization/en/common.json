@@ -79,5 +79,12 @@
   "contactSupport": "Contact Support",
   "advancedSettingsTitle": "Advanced Settings",
   "smartSplitTitle": "Smart Split",
-  "smartSplitDescription": "Automatically splits long recordings into separate items at natural pauses. Turn off to keep each recording as one item."
+  "smartSplitDescription": "Automatically splits long recordings into separate items at natural pauses. Turn off to keep each recording as one item.",
+  "keyboardPromptTitle": "Take Echos Anywhere",
+  "keyboardPromptBody": "Transcribe directly inside any app, privately. Messages, emails, notes. Wherever you type.",
+  "keyboardPromptIosDisclaimer": "In Settings, tap Keyboards → Add New Keyboard → Echos. No Full Access required.",
+  "keyboardPromptCta": "Add Keyboard",
+  "keyboardPromptDismiss": "Maybe Later",
+  "advancedSettingsAddKeyboardTitle": "Add Echos Keyboard",
+  "advancedSettingsAddKeyboardDescription": "Use the Echos keyboard in any app to transcribe while typing."
 }

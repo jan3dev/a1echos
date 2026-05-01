@@ -90,6 +90,15 @@ export const useLocalization = () => {
       advancedSettingsTitle: t("advancedSettingsTitle"),
       smartSplitTitle: t("smartSplitTitle"),
       smartSplitDescription: t("smartSplitDescription"),
+      keyboardPromptTitle: t("keyboardPromptTitle"),
+      keyboardPromptBody: t("keyboardPromptBody"),
+      keyboardPromptIosDisclaimer: t("keyboardPromptIosDisclaimer"),
+      keyboardPromptCta: t("keyboardPromptCta"),
+      keyboardPromptDismiss: t("keyboardPromptDismiss"),
+      advancedSettingsAddKeyboardTitle: t("advancedSettingsAddKeyboardTitle"),
+      advancedSettingsAddKeyboardDescription: t(
+        "advancedSettingsAddKeyboardDescription",
+      ),
     },
   };
 };

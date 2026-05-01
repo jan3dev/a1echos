@@ -3,10 +3,13 @@ package com.a1lab.echos.ime
 import android.content.Context
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
+import android.widget.Toast
 
 /**
  * Echos system keyboard with voice transcription.
@@ -26,6 +29,7 @@ class EchosInputMethodService : InputMethodService(), EchosKeyboardView.Keyboard
     private lateinit var keyboardView: EchosKeyboardView
     private lateinit var transcriber: ImeSherpaTranscriber
     private var currentEditorAction: Int = EditorInfo.IME_ACTION_NONE
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -172,17 +176,34 @@ class EchosInputMethodService : InputMethodService(), EchosKeyboardView.Keyboard
         setMicState(MicState.RECORDING)
         transcriber.startTranscription(
             onResult = { text ->
-                currentInputConnection?.commitText(text, 1)
-                setMicState(MicState.IDLE)
-                RecordingLock.release("ime")
+                mainHandler.post {
+                    currentInputConnection?.commitText(text, 1)
+                    setMicState(MicState.IDLE)
+                    RecordingLock.release("ime")
+                }
             },
-            onError = {
-                setMicState(MicState.IDLE)
-                RecordingLock.release("ime")
+            onError = { message ->
+                // `onError` can fire on the audio capture thread, so bounce
+                // back to the main looper before touching UI/Toast/state.
+                mainHandler.post {
+                    setMicState(MicState.IDLE)
+                    RecordingLock.release("ime")
+                    // Surface failures (missing model, mic permission, empty
+                    // audio) — without this the button silently snaps back
+                    // to idle and the user has no idea the tap registered.
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                }
             },
             onTranscribing = {
-                setMicState(MicState.TRANSCRIBING)
-            }
+                mainHandler.post { setMicState(MicState.TRANSCRIBING) }
+            },
+            // Audio capture runs on a dedicated thread; bounce the level
+            // onto the main looper before it touches the UI-thread-only
+            // waveform state. The waveform field itself is @Volatile but
+            // we still want to avoid surprising teardown races.
+            onAudioLevel = { level ->
+                mainHandler.post { topBar.setAudioLevel(level) }
+            },
         )
     }
 }

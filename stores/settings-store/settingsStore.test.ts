@@ -10,7 +10,10 @@ import {
 } from "@/models";
 
 import {
+  initializeSettingsStore,
+  useHasSeenKeyboardPrompt,
   useIsIncognitoMode,
+  useMarkKeyboardPromptSeen,
   useSelectedLanguage,
   useSelectedModelId,
   useSelectedModelType,
@@ -387,6 +390,58 @@ describe("settingsStore", () => {
 
       // State is still set even though persist failed
       expect(useSettingsStore.getState().hasSeenIncognitoExplainer).toBe(true);
+    });
+  });
+
+  describe("markKeyboardPromptSeen()", () => {
+    it("sets true and persists", async () => {
+      expect(useSettingsStore.getState().hasSeenKeyboardPrompt).toBe(false);
+
+      await useSettingsStore.getState().markKeyboardPromptSeen();
+
+      expect(useSettingsStore.getState().hasSeenKeyboardPrompt).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_prompt_seen",
+        "true",
+      );
+    });
+
+    it("does NOT throw on persist failure (fire-and-forget)", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().markKeyboardPromptSeen(),
+      ).resolves.toBeUndefined();
+
+      expect(useSettingsStore.getState().hasSeenKeyboardPrompt).toBe(true);
+    });
+
+    it("initialize() reads persisted true value", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_prompt_seen" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().hasSeenKeyboardPrompt).toBe(true);
+    });
+
+    it("initializeSettingsStore() proxies to store initialize()", async () => {
+      await expect(initializeSettingsStore()).resolves.toBeUndefined();
+    });
+
+    it("useHasSeenKeyboardPrompt selector reflects state", () => {
+      useSettingsStore.setState({ hasSeenKeyboardPrompt: true });
+      const { result } = renderHook(() => useHasSeenKeyboardPrompt());
+      expect(result.current).toBe(true);
+    });
+
+    it("useMarkKeyboardPromptSeen returns the action", () => {
+      const { result } = renderHook(() => useMarkKeyboardPromptSeen());
+      expect(typeof result.current).toBe("function");
     });
   });
 

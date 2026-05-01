@@ -26,6 +26,8 @@ export {
   useSetTranscriptionMode,
   useSettingsStore,
   useSmartSplitEnabled,
+  useHasSeenKeyboardPrompt,
+  useMarkKeyboardPromptSeen,
 } from "./settings-store/settingsStore";
 export {
   initializeTranscriptionStore,
@@ -68,6 +70,9 @@ export {
   useToggleSessionSelection,
   useToggleTranscriptionSelection,
   useUIStore,
+  useKeyboardPromptVisible,
+  useShowKeyboardPrompt,
+  useHideKeyboardPrompt,
 } from "./ui-store/uiStore";
 export type {
   GlobalTooltipAction,
