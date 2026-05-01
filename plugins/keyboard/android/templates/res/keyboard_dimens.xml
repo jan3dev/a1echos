@@ -8,9 +8,10 @@
     <dimen name="keyboard_top_bar_logo_width">18dp</dimen>
     <dimen name="keyboard_top_bar_logo_height">24dp</dimen>
     <dimen name="keyboard_top_bar_label_size">15sp</dimen>
-    <dimen name="keyboard_top_bar_record_size">32dp</dimen>
-    <dimen name="keyboard_top_bar_record_corner_radius">16dp</dimen>
-    <dimen name="keyboard_top_bar_record_icon_size">16dp</dimen>
+    <dimen name="keyboard_top_bar_record_width">72dp</dimen>
+    <dimen name="keyboard_top_bar_record_height">40dp</dimen>
+    <dimen name="keyboard_top_bar_record_corner_radius">20dp</dimen>
+    <dimen name="keyboard_top_bar_record_icon_size">18dp</dimen>
     <dimen name="key_height">46dp</dimen>
     <dimen name="key_min_touch_target">48dp</dimen>
     <dimen name="key_horizontal_gap">4dp</dimen>

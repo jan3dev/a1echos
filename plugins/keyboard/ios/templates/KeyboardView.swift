@@ -4,10 +4,13 @@ import UIKit
 protocol KeyboardViewDelegate: AnyObject {
     func keyboardView(_ view: KeyboardView, didTapCharacter char: String)
     func keyboardViewDidTapDelete(_ view: KeyboardView)
+    /// Fired by the delete key's hold-to-repeat timer once the user has held
+    /// past the word-deletion threshold (matches native iOS behaviour where
+    /// long holds escalate from per-character to per-word deletion).
+    func keyboardViewDidHoldDeleteWord(_ view: KeyboardView)
     func keyboardViewDidTapSpace(_ view: KeyboardView)
     func keyboardViewDidTapReturn(_ view: KeyboardView)
     func keyboardViewDidTapGlobe(_ view: KeyboardView)
-    func keyboardViewDidTapEmoji(_ view: KeyboardView)
     /// Long-press on the emoji key (iOS-only path to the system keyboard
     /// picker now that the dedicated globe key is gone).
     func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView)
@@ -35,11 +38,22 @@ class KeyboardView: UIInputView {
     private let keyPreview = KeyPreviewView()
     private let keyVariants = KeyVariantsView()
     private var rowStackView: UIStackView!
+    private var emojiPickerView: EmojiPickerView?
     private var keyButtons: [[KeyButton]] = []
     private var currentLayout: KeyboardLayout.LayoutMode = .letters
     private var shiftState: KeyboardLayout.ShiftState = .off
     private var micState: MicState = .idle
     private var returnKeyType: UIReturnKeyType = .default
+
+    // Delete key auto-repeat: matches native iOS cadence — char-rate after
+    // a 0.4 s hold, escalating to word-rate after the press passes ~1.5 s.
+    private var deleteTimer: Timer?
+    private var deleteHoldStart: Date?
+    private var deleteDidRepeat = false
+    private static let deleteInitialDelay: TimeInterval = 0.4
+    private static let deleteCharInterval: TimeInterval = 0.08
+    private static let deleteWordThreshold: TimeInterval = 1.5
+    private static let deleteWordInterval: TimeInterval = 0.2
 
     init() {
         super.init(frame: .zero, inputViewStyle: .keyboard)
@@ -96,6 +110,17 @@ class KeyboardView: UIInputView {
             view.removeFromSuperview()
         }
         keyButtons.removeAll()
+
+        if currentLayout == .emoji {
+            rowStackView.isHidden = true
+            installEmojiPickerIfNeeded()
+            emojiPickerView?.isHidden = false
+            emojiPickerView?.refreshRecents()
+            return
+        }
+
+        emojiPickerView?.isHidden = true
+        rowStackView.isHidden = false
 
         let rows = KeyboardLayout.rows(for: currentLayout)
 
@@ -251,17 +276,83 @@ class KeyboardView: UIInputView {
         HapticManager.keyTap()
         sender.setPressed(true)
         showPreviewIfCharacter(sender)
+        if sender.keyDefinition.type == .delete {
+            startDeleteRepeat()
+        }
     }
 
     @objc private func keyTouchUp(_ sender: KeyButton) {
         sender.setPressed(false)
         keyPreview.hide()
+        if sender.keyDefinition.type == .delete {
+            // If the hold timer already fired one or more repeats we treat
+            // this as the release of an autorepeat — skip the trailing
+            // single-tap delete so we don't double-delete.
+            let suppressTap = deleteDidRepeat
+            stopDeleteRepeat()
+            if suppressTap { return }
+        }
         handleKeyAction(sender.keyDefinition)
     }
 
     @objc private func keyTouchCancel(_ sender: KeyButton) {
         sender.setPressed(false)
         keyPreview.hide()
+        if sender.keyDefinition.type == .delete {
+            stopDeleteRepeat()
+        }
+    }
+
+    // MARK: - Delete auto-repeat
+
+    private func startDeleteRepeat() {
+        deleteDidRepeat = false
+        deleteHoldStart = Date()
+        deleteTimer?.invalidate()
+        deleteTimer = Timer.scheduledTimer(
+            withTimeInterval: KeyboardView.deleteInitialDelay,
+            repeats: false
+        ) { [weak self] _ in
+            self?.fireDeleteRepeat()
+            self?.scheduleDeleteRepeat()
+        }
+    }
+
+    private func scheduleDeleteRepeat() {
+        deleteTimer?.invalidate()
+        deleteTimer = Timer.scheduledTimer(
+            withTimeInterval: KeyboardView.deleteCharInterval,
+            repeats: true
+        ) { [weak self] _ in
+            self?.fireDeleteRepeat()
+        }
+    }
+
+    private func fireDeleteRepeat() {
+        deleteDidRepeat = true
+        let elapsed = Date().timeIntervalSince(deleteHoldStart ?? Date())
+        if elapsed > KeyboardView.deleteWordThreshold {
+            // Escalate to word-rate the first time we cross the threshold.
+            if deleteTimer?.timeInterval != KeyboardView.deleteWordInterval {
+                deleteTimer?.invalidate()
+                deleteTimer = Timer.scheduledTimer(
+                    withTimeInterval: KeyboardView.deleteWordInterval,
+                    repeats: true
+                ) { [weak self] _ in
+                    self?.fireDeleteRepeat()
+                }
+            }
+            delegate?.keyboardViewDidHoldDeleteWord(self)
+        } else {
+            delegate?.keyboardViewDidTapDelete(self)
+        }
+    }
+
+    private func stopDeleteRepeat() {
+        deleteTimer?.invalidate()
+        deleteTimer = nil
+        deleteHoldStart = nil
+        deleteDidRepeat = false
     }
 
     private func handleAccentLongPress(
@@ -336,7 +427,10 @@ class KeyboardView: UIInputView {
         case .globe:
             delegate?.keyboardViewDidTapGlobe(self)
         case .emoji:
-            delegate?.keyboardViewDidTapEmoji(self)
+            // iOS gives third-party keyboards no API to programmatically
+            // jump to the system Emoji keyboard — instead we swap the row
+            // area for an in-keyboard emoji picker.
+            switchToLayout(.emoji)
         case .mic:
             // Mic key was replaced by the top-bar record button; no-op in
             // case a stale layout ever carries one.
@@ -351,7 +445,7 @@ class KeyboardView: UIInputView {
         case .modeSwitch:
             switch currentLayout {
             case .letters: switchToLayout(.numbers)
-            case .numbers, .symbols: switchToLayout(.letters)
+            case .numbers, .symbols, .emoji: switchToLayout(.letters)
             }
         case .symbolSwitch:
             switch currentLayout {
@@ -373,5 +467,47 @@ extension KeyboardView: KeyboardTopBarDelegate {
     func topBarDidTapRecord(_ topBar: KeyboardTopBar) {
         HapticManager.keyTap()
         delegate?.keyboardViewDidToggleRecord(self)
+    }
+}
+
+// MARK: - Emoji picker
+
+extension KeyboardView: EmojiPickerViewDelegate {
+
+    fileprivate func installEmojiPickerIfNeeded() {
+        guard emojiPickerView == nil else { return }
+        let picker = EmojiPickerView(theme: theme)
+        picker.translatesAutoresizingMaskIntoConstraints = false
+        picker.delegate = self
+        // Match the rowStackView constraints so the picker fills the same
+        // area the QWERTY rows would occupy.
+        addSubview(picker)
+        NSLayoutConstraint.activate([
+            picker.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            picker.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            picker.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 4),
+            picker.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+        ])
+        // Keep the popups (preview / variants) above the picker.
+        bringSubviewToFront(keyPreview)
+        bringSubviewToFront(keyVariants)
+        emojiPickerView = picker
+    }
+
+    func emojiPicker(_ view: EmojiPickerView, didSelect emoji: String) {
+        delegate?.keyboardView(self, didTapCharacter: emoji)
+    }
+
+    func emojiPicker(_ view: EmojiPickerView, registerBottomBarKey button: KeyButton) {
+        // Wire the picker's bottom-bar keys into the same touch pipeline as
+        // regular keys so delete inherits hold-to-repeat and ABC / space
+        // route through `handleKeyAction`.
+        button.addTarget(self, action: #selector(keyTouchDown(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(keyTouchUp(_:)), for: .touchUpInside)
+        button.addTarget(
+            self,
+            action: #selector(keyTouchCancel(_:)),
+            for: [.touchUpOutside, .touchCancel]
+        )
     }
 }

@@ -88,10 +88,14 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         addView(waveform)
 
-        val recordSize = dim("keyboard_top_bar_record_size", 32)
+        // 72×40 pill with 20dp corner radius — matches the iOS record button
+        // shape so the keyboard reads as the same product on both platforms.
+        val recordWidth = dim("keyboard_top_bar_record_width", 72)
+        val recordHeight = dim("keyboard_top_bar_record_height", 40)
+        val recordIconSize = dim("keyboard_top_bar_record_icon_size", 18)
         recordBackground = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dim("keyboard_top_bar_record_corner_radius", 16).toFloat()
+            cornerRadius = dim("keyboard_top_bar_record_corner_radius", 20).toFloat()
             setColor(pillColor)
         }
         // Wrap the gray pill in a translucent-white ripple so taps register
@@ -99,12 +103,13 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         val rippleColor = android.content.res.ColorStateList.valueOf(0x55FFFFFF)
         val rippleBackground = RippleDrawable(rippleColor, recordBackground, null)
         recordButton = ImageButton(context).apply {
-            layoutParams = LayoutParams(recordSize, recordSize)
+            layoutParams = LayoutParams(recordWidth, recordHeight)
             background = rippleBackground
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            val iconPad = (recordSize - dim("keyboard_top_bar_record_icon_size", 16)) / 2
-            setPadding(iconPad, iconPad, iconPad, iconPad)
+            val padH = (recordWidth - recordIconSize) / 2
+            val padV = (recordHeight - recordIconSize) / 2
+            setPadding(padH, padV, padH, padV)
             contentDescription = "Start recording"
             setImageResource(drawable("ic_mic"))
             setOnClickListener { listener?.onRecordClick() }

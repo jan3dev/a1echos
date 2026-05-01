@@ -25,6 +25,11 @@ object EchosKeyboardLayout {
         val type: KeyType = KeyType.CHARACTER,
         val widthWeight: Float = 1f,
         val contentDescription: String = label,
+        /// Optional drawable resource name (e.g. "ic_shift"). When set, the
+        /// keyboard view renders this vector icon instead of `label`. Used
+        /// for shift / return / delete / emoji so the glyphs match the iOS
+        /// SF Symbols visually rather than relying on Unicode characters.
+        val iconName: String? = null,
     )
 
     data class Row(val keys: List<Key>)
@@ -45,7 +50,7 @@ object EchosKeyboardLayout {
 
     val LETTERS_ROW_3 = Row(
         listOf(
-            Key(label = "\u21E7", type = KeyType.SHIFT, widthWeight = 1.5f, contentDescription = "Shift"),
+            Key(label = "", type = KeyType.SHIFT, widthWeight = 1.5f, contentDescription = "Shift", iconName = "ic_shift"),
             Key(label = "z"),
             Key(label = "x"),
             Key(label = "c"),
@@ -53,19 +58,19 @@ object EchosKeyboardLayout {
             Key(label = "b"),
             Key(label = "n"),
             Key(label = "m"),
-            Key(label = "\u232B", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
         )
     )
 
     val LETTERS_ROW_4 = Row(
         listOf(
             Key(label = "123", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Numbers"),
-            Key(label = "\uD83D\uDE00", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji"),
-            Key(label = "\uD83C\uDF10", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard"),
+            Key(label = "", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji", iconName = "ic_emoji"),
+            Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
             Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
             Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
-            Key(label = "\u23CE", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return", iconName = "ic_return"),
         )
     )
 
@@ -93,19 +98,19 @@ object EchosKeyboardLayout {
             Key(label = "?"),
             Key(label = "!"),
             Key(label = "'"),
-            Key(label = "\u232B", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
         )
     )
 
     val NUMBERS_ROW_4 = Row(
         listOf(
             Key(label = "ABC", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Letters"),
-            Key(label = "\uD83D\uDE00", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji"),
-            Key(label = "\uD83C\uDF10", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard"),
+            Key(label = "", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji", iconName = "ic_emoji"),
+            Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
             Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
             Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
-            Key(label = "\u23CE", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return", iconName = "ic_return"),
         )
     )
 
@@ -133,7 +138,7 @@ object EchosKeyboardLayout {
             Key(label = "?"),
             Key(label = "!"),
             Key(label = "'"),
-            Key(label = "\u232B", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
         )
     )
 

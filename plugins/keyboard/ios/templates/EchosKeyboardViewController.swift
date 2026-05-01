@@ -104,6 +104,39 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         textDocumentProxy.deleteBackward()
     }
 
+    func keyboardViewDidHoldDeleteWord(_ view: KeyboardView) {
+        deleteWordBackward()
+    }
+
+    /// Deletes a contiguous run of trailing whitespace plus the word before
+    /// it, falling back to a single character delete when the host doesn't
+    /// expose enough context. Mirrors how native iOS escalates a long delete
+    /// hold once the per-character repeat has been running for a while.
+    private func deleteWordBackward() {
+        guard
+            let context = textDocumentProxy.documentContextBeforeInput,
+            !context.isEmpty
+        else {
+            textDocumentProxy.deleteBackward()
+            return
+        }
+        let chars = Array(context)
+        var idx = chars.count - 1
+        var deleteCount = 0
+        while idx >= 0, chars[idx].isWhitespace {
+            deleteCount += 1
+            idx -= 1
+        }
+        while idx >= 0, !chars[idx].isWhitespace {
+            deleteCount += 1
+            idx -= 1
+        }
+        if deleteCount == 0 { deleteCount = 1 }
+        for _ in 0..<deleteCount {
+            textDocumentProxy.deleteBackward()
+        }
+    }
+
     func keyboardViewDidTapSpace(_ view: KeyboardView) {
         textDocumentProxy.insertText(" ")
     }
@@ -116,18 +149,11 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         advanceToNextInputMode()
     }
 
-    func keyboardViewDidTapEmoji(_ view: KeyboardView) {
-        // iOS does not let third-party keyboards jump to the emoji keyboard
-        // directly — the best we can do is advance to the next installed
-        // keyboard, which is typically emoji when the user has it enabled
-        // right after Echos.
-        advanceToNextInputMode()
-    }
-
     /// Long-press on the emoji key surfaces the system keyboard picker
-    /// (same list iOS shows when you long-press the stock globe key). This
-    /// is the replacement for the dedicated globe key that the iOS design
-    /// omits — users still need a reliable way to pick the Emoji keyboard.
+    /// (same list iOS shows when you long-press the stock globe key). The
+    /// short tap on the smiley now opens the in-keyboard emoji picker, so
+    /// long-press is the remaining path to switch to a different system
+    /// keyboard.
     func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView) {
         handleInputModeList(from: sourceView, with: UIEvent())
     }

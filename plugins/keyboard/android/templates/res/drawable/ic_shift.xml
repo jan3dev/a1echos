@@ -1,0 +1,11 @@
+<!-- Shift key glyph — chevron-up over a base bar, matching the iOS
+     SF Symbol `shift`. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,5L4,13h4v6h8v-6h4L12,5z"/>
+</vector>

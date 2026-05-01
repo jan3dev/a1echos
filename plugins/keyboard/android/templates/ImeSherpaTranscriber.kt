@@ -130,6 +130,11 @@ class ImeSherpaTranscriber(private val context: Context) {
         var silentFrames = 0
         val silentFrameThreshold = (SILENCE_DURATION_MS * SAMPLE_RATE) / (1000 * buffer.size)
         val maxSamples = MAX_RECORDING_SECONDS * SAMPLE_RATE
+        // The auto-stop on silence should only kick in *after* the user has
+        // actually started speaking. Otherwise the recording terminates a
+        // moment after the user taps record (since the mic is silent during
+        // their reaction time) and they never get a chance to dictate.
+        var hasReceivedSpeech = false
 
         try {
             while (isRecording.get() && pcmBuffer.size < maxSamples) {
@@ -142,13 +147,14 @@ class ImeSherpaTranscriber(private val context: Context) {
                     }
 
                     val rms = calculateRMS(buffer, read)
-                    if (rms < SILENCE_THRESHOLD_RMS) {
+                    if (rms >= SILENCE_THRESHOLD_RMS) {
+                        hasReceivedSpeech = true
+                        silentFrames = 0
+                    } else if (hasReceivedSpeech) {
                         silentFrames++
                         if (silentFrames >= silentFrameThreshold) {
                             isRecording.set(false)
                         }
-                    } else {
-                        silentFrames = 0
                     }
                     // Push a normalised 0…1 level to the visualizer. ~3000
                     // RMS is roughly normal-volume speech in 16-bit PCM —

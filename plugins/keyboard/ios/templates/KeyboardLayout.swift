@@ -22,6 +22,7 @@ enum KeyboardLayout {
         case letters
         case numbers
         case symbols
+        case emoji
     }
 
     enum ShiftState {
@@ -155,6 +156,10 @@ enum KeyboardLayout {
             return [numbersRow1, numbersRow2, numbersRow3, numbersRow4]
         case .symbols:
             return [symbolsRow1, symbolsRow2, symbolsRow3, symbolsRow4]
+        case .emoji:
+            // Emoji mode renders `EmojiPickerView` instead of QWERTY rows;
+            // KeyboardView.buildLayout() branches before calling this.
+            return []
         }
     }
 }
