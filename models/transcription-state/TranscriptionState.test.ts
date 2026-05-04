@@ -1,13 +1,14 @@
 import { TranscriptionState } from "./TranscriptionState";
 
 describe("TranscriptionState", () => {
-  it("has exactly 6 values", () => {
-    expect(Object.values(TranscriptionState)).toHaveLength(6);
+  it("has exactly 7 values", () => {
+    expect(Object.values(TranscriptionState)).toHaveLength(7);
   });
 
   it.each([
     ["LOADING", "loading"],
     ["READY", "ready"],
+    ["RECORDING_STARTING", "recording_starting"],
     ["RECORDING", "recording"],
     ["TRANSCRIBING", "transcribing"],
     ["STREAMING", "streaming"],

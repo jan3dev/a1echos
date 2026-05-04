@@ -3,12 +3,15 @@ import * as Haptics from "expo-haptics";
 import { create } from "zustand";
 
 import { i18n } from "@/localization";
-import { ModelId, TranscriptionState, getAllModels } from "@/models";
+import { ModelId, getAllModels } from "@/models";
 import { modelDownloadService } from "@/services";
 import type { DownloadProgress } from "@/services";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
-import { useTranscriptionStore } from "../transcription-store/transcriptionStore";
+import {
+  AUDIO_BUSY_STATES,
+  useTranscriptionStore,
+} from "../transcription-store/transcriptionStore";
 import { useUIStore } from "../ui-store/uiStore";
 
 let downloadCompletePlayer: AudioPlayer | null = null;
@@ -26,13 +29,6 @@ const getDownloadCompletePlayer = (): AudioPlayer | null => {
     return null;
   }
 };
-
-const AUDIO_BUSY_STATES: ReadonlySet<TranscriptionState> = new Set([
-  TranscriptionState.RECORDING,
-  TranscriptionState.TRANSCRIBING,
-  TranscriptionState.STREAMING,
-  TranscriptionState.LOADING,
-]);
 
 const notifyDownloadComplete = () => {
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(

@@ -30,9 +30,11 @@ export {
   useMarkKeyboardPromptSeen,
 } from "./settings-store/settingsStore";
 export {
+  AUDIO_BUSY_STATES,
   initializeTranscriptionStore,
   useAudioLevel,
   useDeleteTranscriptions,
+  useIsEngineInitializing,
   useIsRecording,
   useLivePreview,
   useSessionTranscriptions,
@@ -41,6 +43,7 @@ export {
   useTranscriptionState,
   useTranscriptionStore,
 } from "./transcription-store/transcriptionStore";
+export { preWarmModel } from "./transcription-store/preWarmModel";
 export {
   initializeModelDownloadStore,
   useIsModelDownloaded,

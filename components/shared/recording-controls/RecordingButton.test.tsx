@@ -492,6 +492,59 @@ describe("RecordingButton", () => {
     jest.useRealTimers();
   });
 
+  it("renders disabled spinner button in RECORDING_STARTING state", () => {
+    const onRecordingStart = jest.fn();
+    const { getByLabelText } = render(
+      <RecordingButton
+        state={TranscriptionState.RECORDING_STARTING}
+        onRecordingStart={onRecordingStart}
+        colors={mockColors}
+      />,
+    );
+
+    const button = getByLabelText("Preparing recording");
+    expect(button.props.accessibilityRole).toBe("button");
+    expect(button.props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true, busy: true }),
+    );
+    fireEvent.press(button);
+    expect(onRecordingStart).not.toHaveBeenCalled();
+  });
+
+  it("renders the spinner when isInitializing is true and state is READY", () => {
+    const { getByLabelText, queryByLabelText } = render(
+      <RecordingButton
+        state={TranscriptionState.READY}
+        isInitializing
+        colors={mockColors}
+      />,
+    );
+    expect(getByLabelText("Preparing recording")).toBeTruthy();
+    expect(queryByLabelText("Start Recording")).toBeNull();
+  });
+
+  it("renders the spinner when isInitializing is true and state is ERROR", () => {
+    const { getByLabelText } = render(
+      <RecordingButton
+        state={TranscriptionState.ERROR}
+        isInitializing
+        colors={mockColors}
+      />,
+    );
+    expect(getByLabelText("Preparing recording")).toBeTruthy();
+  });
+
+  it("ignores isInitializing while RECORDING (stop button stays visible)", () => {
+    const { getByLabelText } = render(
+      <RecordingButton
+        state={TranscriptionState.RECORDING}
+        isInitializing
+        colors={mockColors}
+      />,
+    );
+    expect(getByLabelText("Stop Recording")).toBeTruthy();
+  });
+
   it("state change to READY resets gesture isolation", () => {
     jest.useFakeTimers();
     const onRecordingStart = jest.fn();

@@ -28,6 +28,14 @@ import { useUIStore } from "../ui-store/uiStore";
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
 
+export const AUDIO_BUSY_STATES: ReadonlySet<TranscriptionState> = new Set([
+  TranscriptionState.RECORDING_STARTING,
+  TranscriptionState.RECORDING,
+  TranscriptionState.TRANSCRIBING,
+  TranscriptionState.STREAMING,
+  TranscriptionState.LOADING,
+]);
+
 interface SmartSplitState {
   /** ID of the in-progress item, or null if no text has landed yet. */
   currentItemId: string | null;
@@ -82,6 +90,7 @@ interface TranscriptionStore {
   isInitialized: boolean;
   initError: string | null;
   isEngineReady: boolean;
+  isEngineInitializing: boolean;
 
   isOperationLocked: boolean;
   activeOperations: Set<string>;
@@ -108,6 +117,7 @@ interface TranscriptionStore {
     newState: TranscriptionState,
     errorMessage?: string,
   ) => boolean;
+  setEngineInitializing: (value: boolean) => void;
   setError: (message: string) => void;
   clearError: () => void;
 
@@ -156,8 +166,13 @@ const validateStateTransition = (
       TranscriptionState.ERROR,
     ],
     [TranscriptionState.READY]: [
-      TranscriptionState.RECORDING,
+      TranscriptionState.RECORDING_STARTING,
       TranscriptionState.LOADING,
+      TranscriptionState.ERROR,
+    ],
+    [TranscriptionState.RECORDING_STARTING]: [
+      TranscriptionState.RECORDING,
+      TranscriptionState.READY,
       TranscriptionState.ERROR,
     ],
     [TranscriptionState.RECORDING]: [
@@ -370,6 +385,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     isInitialized: false,
     initError: null,
     isEngineReady: false,
+    isEngineInitializing: false,
 
     isOperationLocked: false,
     activeOperations: new Set(),
@@ -444,6 +460,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       });
 
       return true;
+    },
+
+    setEngineInitializing: (value: boolean) => {
+      if (get().isEngineInitializing === value) return;
+      set({ isEngineInitializing: value });
     },
 
     setError: (message: string) => {
@@ -819,6 +840,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const languageCode = settingsState.selectedLanguage?.code ?? "en";
         const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
 
+        // Surface the spinner before the (potentially multi-second) engine
+        // init so the user sees that something is happening. The service
+        // short-circuits when the model is already pre-warmed.
+        if (!get().transitionTo(TranscriptionState.RECORDING_STARTING)) {
+          releaseOperationLock(operationName);
+          return false;
+        }
+
         // Ensure transcription engine is initialized with the right model and language
         const initialized = await sherpaTranscriptionService.initialize(
           modelId,
@@ -832,6 +861,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         set({ isEngineReady: true });
 
         if (!get().transitionTo(TranscriptionState.RECORDING)) {
+          get().transitionTo(TranscriptionState.READY);
           releaseOperationLock(operationName);
           return false;
         }
@@ -1245,6 +1275,8 @@ export const useSessionTranscriptions = (sessionId?: string) => {
 
 export const useIsRecording = () =>
   useTranscriptionStore((s) => s.isRecording());
+export const useIsEngineInitializing = () =>
+  useTranscriptionStore((s) => s.isEngineInitializing);
 export const useAudioLevel = () => useTranscriptionStore((s) => s.audioLevel);
 export const useStartRecording = () =>
   useTranscriptionStore((s) => s.startRecording);

@@ -39,8 +39,19 @@ class EchosKeyboardViewController: UIInputViewController {
 
         ipcClient.onTranscriptionError = { [weak self] error in
             DispatchQueue.main.async {
-                self?.keyboardView.showMicError(error)
-                self?.keyboardView.setMicState(.idle)
+                guard let self = self else { return }
+                // Timeout = main app went away (force-killed, jetsamed)
+                // mid-recording. Show the same "open Echos" banner the
+                // pre-flight ping uses so the user gets a consistent
+                // recovery instruction instead of a vague timeout error.
+                if error.localizedCaseInsensitiveContains("timed out") {
+                    self.keyboardView.showOpenAppPrompt(
+                        "Open Echos to finish transcription"
+                    )
+                } else {
+                    self.keyboardView.showMicError(error)
+                }
+                self.keyboardView.setMicState(.idle)
             }
         }
 
@@ -161,6 +172,12 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// Toggles recording from the top-bar record button. Tap-to-start begins
     /// capture; tap-to-stop flushes the WAV and hands it off to the main app
     /// listener for transcription.
+    ///
+    /// Before starting, we ping the main app over the App Group IPC channel.
+    /// iOS keyboard extensions cannot launch the host app, so a force-killed
+    /// Echos app would silently swallow the audio and time out 10 seconds
+    /// later. Pinging first lets us surface a clear "open Echos" prompt
+    /// immediately and avoid wasting recording time.
     func keyboardViewDidToggleRecord(_ view: KeyboardView) {
         if isCurrentlyRecording {
             view.setMicState(.transcribing)
@@ -168,7 +185,20 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             return
         }
 
-        view.setMicState(.recording)
+        ipcClient.pingMainApp { [weak self] alive in
+            guard let self = self else { return }
+            guard alive else {
+                self.keyboardView.showOpenAppPrompt(
+                    "Open Echos to enable voice typing"
+                )
+                return
+            }
+            self.beginRecording()
+        }
+    }
+
+    private func beginRecording() {
+        keyboardView.setMicState(.recording)
         audioRecorder.startRecording { [weak self] result in
             DispatchQueue.main.async {
                 switch result {

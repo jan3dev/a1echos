@@ -2,6 +2,7 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.util.AttributeSet
@@ -12,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 
 /**
@@ -33,6 +35,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val labelView: TextView
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
+    private val recordSpinner: ProgressBar
     private val recordBackground: GradientDrawable
     private val theme = KeyTheme(context)
     private var listener: Listener? = null
@@ -130,8 +133,20 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         // visually even though the pill itself doesn't change color.
         val rippleColor = android.content.res.ColorStateList.valueOf(0x55FFFFFF)
         val rippleBackground = RippleDrawable(rippleColor, recordBackground, null)
-        recordButton = ImageButton(context).apply {
+        // Wrap the record button in a `FrameLayout` so the indeterminate
+        // `ProgressBar` shown during transcription can stack on top of the
+        // pill at the same 72×40 footprint without disturbing the
+        // foreground row's `LinearLayout` flow.
+        val recordContainer = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(recordWidth, recordHeight)
+        }
+        foreground.addView(recordContainer)
+
+        recordButton = ImageButton(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            )
             background = rippleBackground
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             scaleType = ImageView.ScaleType.CENTER_INSIDE
@@ -142,7 +157,27 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             setImageResource(drawable("ic_mic"))
             setOnClickListener { listener?.onRecordClick() }
         }
-        foreground.addView(recordButton)
+        recordContainer.addView(recordButton)
+
+        // Indeterminate spinner shown while transcribing — replaces the
+        // heavy waveform animation in that state. Built-in `ProgressBar`
+        // is GPU-accelerated and effectively free compared to the
+        // per-frame `BlurMaskFilter` + `LinearGradient` masking the
+        // waveform runs.
+        val spinnerSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, 20f, resources.displayMetrics,
+        ).toInt()
+        recordSpinner = ProgressBar(context).apply {
+            isIndeterminate = true
+            layoutParams = FrameLayout.LayoutParams(
+                spinnerSize, spinnerSize, Gravity.CENTER,
+            )
+            indeterminateDrawable?.setColorFilter(
+                Color.WHITE, PorterDuff.Mode.SRC_IN,
+            )
+            visibility = INVISIBLE
+        }
+        recordContainer.addView(recordSpinner)
     }
 
     fun setListener(listener: Listener) {
@@ -159,6 +194,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             MicState.IDLE -> {
                 recordButton.setImageResource(drawable("ic_mic"))
                 recordButton.imageAlpha = 0xFF
+                recordButton.visibility = VISIBLE
+                recordSpinner.visibility = INVISIBLE
                 recordButton.contentDescription = "Start recording"
                 recordButton.isEnabled = true
                 waveform.stopAnimating()
@@ -167,6 +204,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             MicState.RECORDING -> {
                 recordButton.setImageResource(drawable("ic_stop"))
                 recordButton.imageAlpha = 0xFF
+                recordButton.visibility = VISIBLE
+                recordSpinner.visibility = INVISIBLE
                 recordButton.contentDescription = "Stop recording"
                 recordButton.isEnabled = true
                 waveform.setMode(EchosWaveformView.Mode.RECORDING)
@@ -174,17 +213,18 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 waveform.startAnimating()
             }
             MicState.TRANSCRIBING -> {
-                // Mic glyph dimmed and button non-actionable while audio
-                // finishes transcribing; the waveform keeps animating with
-                // the breathing oscillation that mirrors `ThreeWaveLines`'
-                // transcribing mode in the main app.
-                recordButton.setImageResource(drawable("ic_mic"))
+                // Swap the mic glyph for an indeterminate spinner and
+                // stop the waveform entirely. The waveform's per-frame
+                // `BlurMaskFilter` + `LinearGradient` masking is the
+                // heaviest thing the keyboard runs; the spinner is both
+                // cheaper and a clearer signal that we're waiting.
+                recordSpinner.visibility = VISIBLE
+                recordButton.setImageDrawable(null)
                 recordButton.imageAlpha = 0x80
                 recordButton.contentDescription = "Transcribing"
                 recordButton.isEnabled = false
-                waveform.setMode(EchosWaveformView.Mode.TRANSCRIBING)
-                waveform.visibility = VISIBLE
-                waveform.startAnimating()
+                waveform.stopAnimating()
+                waveform.visibility = INVISIBLE
             }
         }
     }

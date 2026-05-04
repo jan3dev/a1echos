@@ -8,6 +8,7 @@ import { ThreeWaveLines } from "./ThreeWaveLines";
 
 interface RecordingControlsViewProps {
   state?: TranscriptionState;
+  isInitializing?: boolean;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
   enabled?: boolean;
@@ -17,6 +18,7 @@ interface RecordingControlsViewProps {
 
 export const RecordingControlsView = ({
   state = TranscriptionState.READY,
+  isInitializing = false,
   onRecordingStart,
   onRecordingStop,
   enabled = true,
@@ -29,11 +31,12 @@ export const RecordingControlsView = ({
     <View style={[styles.container, { height: controlsHeight }]}>
       <View style={[styles.contentContainer, { paddingVertical: spacing }]}>
         <View style={styles.waveContainer} pointerEvents="none">
-          <ThreeWaveLines colors={colors} state={state} />
+          <ThreeWaveLines state={state} />
         </View>
         <View style={styles.buttonContainer}>
           <RecordingButton
             state={state}
+            isInitializing={isInitializing}
             onRecordingStart={onRecordingStart}
             onRecordingStop={onRecordingStop}
             enabled={enabled}

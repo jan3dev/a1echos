@@ -21,6 +21,11 @@ final class KeyboardTopBar: UIView {
     private let logoLabel = UILabel()
     private let recordButton = UIButton(type: .system)
     private let recordIcon = RecordButtonIconView()
+    /// Replaces the waveform animation while transcribing — a built-in
+    /// `UIActivityIndicatorView` is far cheaper than the per-frame
+    /// `UIGraphicsImageRenderer` + `CIGaussianBlur` pipeline that the
+    /// wave runs at 30fps.
+    private let recordSpinner = UIActivityIndicatorView(style: .medium)
     private let waveform = RecordingWaveformView()
     private var micState: MicState = .idle
 
@@ -66,6 +71,12 @@ final class KeyboardTopBar: UIView {
         recordIcon.isUserInteractionEnabled = false
         recordButton.addSubview(recordIcon)
 
+        recordSpinner.translatesAutoresizingMaskIntoConstraints = false
+        recordSpinner.isUserInteractionEnabled = false
+        recordSpinner.color = UIColor(hex: 0xF5F5F8) // matches mic glyph
+        recordSpinner.hidesWhenStopped = true
+        recordButton.addSubview(recordSpinner)
+
         waveform.translatesAutoresizingMaskIntoConstraints = false
         waveform.isUserInteractionEnabled = false
         waveform.isHidden = true
@@ -93,6 +104,9 @@ final class KeyboardTopBar: UIView {
             recordIcon.centerYAnchor.constraint(equalTo: recordButton.centerYAnchor),
             recordIcon.widthAnchor.constraint(equalToConstant: 24),
             recordIcon.heightAnchor.constraint(equalToConstant: 24),
+
+            recordSpinner.centerXAnchor.constraint(equalTo: recordButton.centerXAnchor),
+            recordSpinner.centerYAnchor.constraint(equalTo: recordButton.centerYAnchor),
 
             waveform.leadingAnchor.constraint(equalTo: leadingAnchor),
             waveform.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -130,6 +144,8 @@ final class KeyboardTopBar: UIView {
         case .idle:
             recordIcon.state = .microphone
             recordIcon.alpha = 1
+            recordIcon.isHidden = false
+            recordSpinner.stopAnimating()
             recordButton.isEnabled = true
             waveform.stopAnimating()
             waveform.isHidden = true
@@ -137,22 +153,25 @@ final class KeyboardTopBar: UIView {
         case .recording:
             recordIcon.state = .stop
             recordIcon.alpha = 1
+            recordIcon.isHidden = false
+            recordSpinner.stopAnimating()
             recordButton.isEnabled = true
             waveform.setMode(.recording)
             waveform.isHidden = false
             waveform.startAnimating()
             recordButton.accessibilityLabel = "Stop recording"
         case .transcribing:
-            // Mic glyph dimmed and button non-actionable while audio
-            // finishes transcribing; the waveform keeps animating with
-            // the breathing oscillation that mirrors `ThreeWaveLines`'
-            // transcribing mode in the main app.
-            recordIcon.state = .microphone
-            recordIcon.alpha = 0.5
+            // Swap the mic glyph for a spinner and stop the waveform
+            // entirely. The waveform's per-frame `CIGaussianBlur`
+            // pipeline is the heaviest thing in the keyboard, and
+            // there's no audio to react to once recording stops, so
+            // the spinner is both cheaper and a clearer signal that
+            // the keyboard is waiting for the main app.
+            recordIcon.isHidden = true
             recordButton.isEnabled = false
-            waveform.setMode(.transcribing)
-            waveform.isHidden = false
-            waveform.startAnimating()
+            recordSpinner.startAnimating()
+            waveform.stopAnimating()
+            waveform.isHidden = true
             recordButton.accessibilityLabel = "Transcribing"
         }
     }
@@ -484,26 +503,22 @@ final class RecordingWaveformView: UIView {
         let audioAmplitudeReactivity: Double
         let transcribingAmplitude: Double
         let transcribingPhaseOffset: Double
-        let color: UIColor
     }
 
     private static let profiles: [WaveProfile] = [
         WaveProfile(basePhaseSpeed: 0.04, frequency: 2.2, verticalOffset: -3.2,
                     amplitudeMultiplier: 0.35, strokeWidth: 3.0,
                     energyFloor: 0.06, audioAmplitudeReactivity: 0.7,
-                    transcribingAmplitude: 0.6, transcribingPhaseOffset: 0.0,
-                    color: UIColor(hex: 0xF7931A)), // waveOrange
+                    transcribingAmplitude: 0.6, transcribingPhaseOffset: 0.0),
         WaveProfile(basePhaseSpeed: 0.07, frequency: 3.1, verticalOffset: 0.0,
                     amplitudeMultiplier: 0.55, strokeWidth: 3.0,
                     energyFloor: 0.05, audioAmplitudeReactivity: 1.0,
-                    transcribingAmplitude: 0.7, transcribingPhaseOffset: .pi,
-                    color: UIColor(hex: 0x5773EF)), // accentBrand
+                    transcribingAmplitude: 0.7, transcribingPhaseOffset: .pi),
         WaveProfile(basePhaseSpeed: 0.09, frequency: 2.5, verticalOffset: 3.6,
                     amplitudeMultiplier: 0.75, strokeWidth: 3.0,
                     energyFloor: 0.04, audioAmplitudeReactivity: 0.55,
                     transcribingAmplitude: 0.8,
-                    transcribingPhaseOffset: 2 * .pi / 3,
-                    color: UIColor(hex: 0x16BAC5)), // waveCyan
+                    transcribingPhaseOffset: 2 * .pi / 3),
     ]
 
     private static let pointCount = 60
@@ -532,13 +547,22 @@ final class RecordingWaveformView: UIView {
     }
 
     private var states: [WaveState]
-    private let imageView = UIImageView()
+    /// `CALayer` instead of `UIImageView` so we can hand a `CGImage`
+    /// directly to `contents` and skip the per-frame `UIImage` wrapper
+    /// allocation. Functionally identical for display.
+    private let imageLayer = CALayer()
     /// Reused across frames — `CIContext` is expensive to construct.
     private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
     /// Reused renderer keyed on bounds; recreated only when the view is
     /// laid out at a new size.
     private var imageRenderer: UIGraphicsImageRenderer?
     private var rendererSize: CGSize = .zero
+    /// Persistent CGBitmapContext used as the per-frame composite
+    /// canvas. Replaces a `UIGraphicsImageRenderer.image { … }` call
+    /// (which allocates a fresh bitmap buffer on every invocation) —
+    /// here we clear and reuse the same buffer each frame.
+    private var compositeContext: CGContext?
+    private var compositePixelSize: CGSize = .zero
     private var displayLink: CADisplayLink?
     private var lastFrameTime: CFTimeInterval = 0
     private var audioLevel: Double = 0
@@ -570,10 +594,9 @@ final class RecordingWaveformView: UIView {
         super.init(frame: frame)
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        imageView.frame = bounds
-        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        imageView.isUserInteractionEnabled = false
-        addSubview(imageView)
+        imageLayer.frame = bounds
+        imageLayer.contentsGravity = .resize
+        layer.addSublayer(imageLayer)
     }
 
     required init?(coder: NSCoder) {
@@ -597,8 +620,49 @@ final class RecordingWaveformView: UIView {
                 size: bounds.size,
                 format: UIGraphicsImageRendererFormat.preferred()
             )
+            ensureCompositeContext()
         }
+        // Disable implicit CALayer animations on `frame`/`contents` so
+        // size changes don't cross-fade visibly.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        imageLayer.frame = bounds
+        CATransaction.commit()
         updateMaskFrame()
+    }
+
+    /// Allocates (or re-allocates) the persistent bitmap context used as
+    /// the per-frame composite canvas. Called from `layoutSubviews` only
+    /// when the view's size changes.
+    private func ensureCompositeContext() {
+        let scale = UIScreen.main.scale
+        let pixelSize = CGSize(
+            width: bounds.width * scale,
+            height: bounds.height * scale
+        )
+        guard pixelSize.width > 0, pixelSize.height > 0 else {
+            compositeContext = nil
+            compositePixelSize = .zero
+            return
+        }
+        if compositePixelSize == pixelSize, compositeContext != nil { return }
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        compositeContext = CGContext(
+            data: nil,
+            width: Int(pixelSize.width),
+            height: Int(pixelSize.height),
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: cs,
+            bitmapInfo: bitmapInfo
+        )
+        compositePixelSize = pixelSize
+        // Scale once at allocation so per-frame draws can use point
+        // coordinates directly. The Y-axis stays in CG convention
+        // (origin at bottom) — the per-frame draw flips it before
+        // blitting `UIImage.cgImage`s.
+        compositeContext?.scaleBy(x: scale, y: scale)
     }
 
     /// Install a horizontal alpha gradient that fades the wave to
@@ -646,6 +710,13 @@ final class RecordingWaveformView: UIView {
     func startAnimating() {
         guard displayLink == nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        // 30fps cap. Per-frame work (3 stroke renders + 3 Gaussian blurs +
+        // 6 gradient-mask passes + 1 composite) is heavy; halving the
+        // tick rate cuts allocation pressure to ~half without a
+        // noticeable smoothness hit on a wave that already moves slowly.
+        // The simulation step still time-normalises against `dtFactor`,
+        // so the wave's apparent speed is unchanged.
+        link.preferredFramesPerSecond = 30
         link.add(to: .main, forMode: .common)
         displayLink = link
         lastFrameTime = CACurrentMediaTime()
@@ -668,7 +739,7 @@ final class RecordingWaveformView: UIView {
             states[i].transcribingTime = 0
             states[i].oscillationStrength = 0
         }
-        imageView.image = nil
+        imageLayer.contents = nil
     }
 
     @objc private func tick(_ link: CADisplayLink) {
@@ -691,9 +762,13 @@ final class RecordingWaveformView: UIView {
 
         let isTranscribing = mode == .transcribing
 
-        // Per-frame paths + matching colors that we'll stroke into the
-        // off-screen canvas after the simulation step finishes.
-        var paths: [(UIBezierPath, UIColor, CGFloat)] = []
+        // Per-frame paths + matching opacity that we'll stroke into the
+        // off-screen canvas after the simulation step finishes. Color is
+        // no longer per-wave — every wave shares the same vertical
+        // gradient (`#A54CFF → #4588D2 → #FBCAB9`), applied during the
+        // stroke pass. Opacity stays per-wave so each line still fades
+        // in/out independently with its own state machine.
+        var paths: [(UIBezierPath, CGFloat, CGFloat)] = []
         paths.reserveCapacity(Self.profiles.count)
 
         for (i, profile) in Self.profiles.enumerated() {
@@ -828,10 +903,7 @@ final class RecordingWaveformView: UIView {
                 prevY = y
             }
 
-            let strokeColor = profile.color.withAlphaComponent(
-                CGFloat(state.smoothedOpacity)
-            )
-            paths.append((path, strokeColor, profile.strokeWidth))
+            paths.append((path, CGFloat(state.smoothedOpacity), profile.strokeWidth))
         }
 
         renderBlurredImage(paths: paths)
@@ -843,7 +915,7 @@ final class RecordingWaveformView: UIView {
     /// and blurred segments along its length. Mirrors the Skia + Android
     /// implementations and the Figma design's mixed blur pattern.
     private func renderBlurredImage(
-        paths: [(UIBezierPath, UIColor, CGFloat)]
+        paths: [(UIBezierPath, CGFloat, CGFloat)]
     ) {
         if rendererSize != bounds.size || imageRenderer == nil {
             rendererSize = bounds.size
@@ -861,19 +933,27 @@ final class RecordingWaveformView: UIView {
         // composite block.
         var maskedImages: [UIImage] = []
         for (i, item) in paths.enumerated() {
-            let (path, color, lineWidth) = item
+            let (path, opacity, lineWidth) = item
             guard i < Self.gradientPositions.count else { continue }
             let stops = Self.gradientPositions[i]
             let visibility = Self.sharpVisibility[i]
 
             let strokeImage = renderer.image { ctx in
                 let cg = ctx.cgContext
+                cg.saveGState()
                 cg.setLineCap(.round)
                 cg.setLineJoin(.round)
-                cg.setStrokeColor(color.cgColor)
                 cg.setLineWidth(lineWidth)
                 cg.addPath(path.cgPath)
-                cg.strokePath()
+                // Convert the stroked outline into a fillable region, then
+                // clip to it so the vertical color gradient fills exactly
+                // the stroke's shape. Replaces the previous solid-color
+                // stroke with the shared `#A54CFF → #4588D2 → #FBCAB9`
+                // palette every wave now uses.
+                cg.replacePathWithStrokedPath()
+                cg.clip()
+                Self.drawWaveGradient(in: cg, opacity: opacity, height: bounds.height)
+                cg.restoreGState()
             }
             let blurredStroke = applyGaussianBlur(to: strokeImage)
             maskedImages.append(
@@ -890,12 +970,30 @@ final class RecordingWaveformView: UIView {
             )
         }
 
-        let composite = renderer.image { _ in
-            for img in maskedImages {
-                img.draw(in: bounds)
+        // Composite into the persistent bitmap context (no per-frame
+        // bitmap allocation). `CGContext` has Y-up, origin bottom-left;
+        // `UIImage.cgImage`s come in UIKit Y-down convention, so we
+        // flip once before blitting them in.
+        if compositeContext == nil { ensureCompositeContext() }
+        guard let ctx = compositeContext else { return }
+        ctx.clear(CGRect(origin: .zero, size: compositePixelSize))
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: bounds.height)
+        ctx.scaleBy(x: 1, y: -1)
+        for img in maskedImages {
+            if let cg = img.cgImage {
+                ctx.draw(cg, in: bounds)
             }
         }
-        imageView.image = composite
+        ctx.restoreGState()
+        // Set the snapshot directly on the layer's contents — skips the
+        // `UIImage` wrapper that `UIImageView.image` requires.
+        if let snapshot = ctx.makeImage() {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            imageLayer.contents = snapshot
+            CATransaction.commit()
+        }
     }
 
     private func applyGaussianBlur(to image: UIImage) -> UIImage {
@@ -966,4 +1064,35 @@ final class RecordingWaveformView: UIView {
         [0, 0, 1, 1, 0, 0, 1, 1],
         [1, 1, 0, 0, 1, 1, 0, 0],
     ]
+
+    /// Shared vertical color gradient applied to every wave — replaces
+    /// the previous per-wave orange / accent / cyan palette. Mirrors
+    /// `WAVE_GRADIENT_COLORS` in `ThreeWaveLines.tsx` and the Figma
+    /// SVG's `#A54CFF → #4588D2 → #FBCAB9` stops.
+    private static let gradientStops: [UInt32] = [0xA54CFF, 0x4588D2, 0xFBCAB9]
+    private static let gradientLocations: [CGFloat] = [0, 0.5, 1.0]
+
+    /// Fills the current clip region with the shared vertical gradient
+    /// at the given opacity (0…1). Caller is responsible for setting up
+    /// the clip via `replacePathWithStrokedPath` + `clip` so only the
+    /// stroke's shape is painted.
+    private static func drawWaveGradient(
+        in cg: CGContext, opacity: CGFloat, height: CGFloat
+    ) {
+        let cgColors: [CGColor] = gradientStops.map { hex -> CGColor in
+            UIColor(hex: hex, alpha: opacity).cgColor
+        }
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let gradient = CGGradient(
+            colorsSpace: colorSpace,
+            colors: cgColors as CFArray,
+            locations: gradientLocations
+        ) else { return }
+        cg.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: 0, y: 0),
+            end: CGPoint(x: 0, y: height),
+            options: []
+        )
+    }
 }

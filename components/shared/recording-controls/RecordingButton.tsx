@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import { ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -20,6 +20,7 @@ import { Icon } from "../../ui/icon/Icon";
 
 interface RecordingButtonProps {
   state?: TranscriptionState;
+  isInitializing?: boolean;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
   enabled?: boolean;
@@ -32,6 +33,7 @@ interface RecordingButtonProps {
 
 export const RecordingButton = ({
   state = TranscriptionState.READY,
+  isInitializing = false,
   onRecordingStart,
   onRecordingStop,
   enabled = true,
@@ -201,6 +203,17 @@ export const RecordingButton = ({
   }));
 
   const renderButton = () => {
+    if (state === TranscriptionState.RECORDING_STARTING) {
+      return renderStartingButton();
+    }
+    // Background pre-warm shows the same spinner — but only when we're not
+    // already mid-record/transcribe (engine init shouldn't preempt those).
+    if (
+      isInitializing &&
+      (state === TranscriptionState.READY || state === TranscriptionState.ERROR)
+    ) {
+      return renderStartingButton();
+    }
     switch (state) {
       case TranscriptionState.LOADING:
       case TranscriptionState.TRANSCRIBING:
@@ -212,6 +225,35 @@ export const RecordingButton = ({
         return renderReadyButton();
     }
   };
+
+  const renderStartingButton = () => (
+    <Animated.View
+      style={[
+        styles.buttonContainer,
+        { width: size, height: size },
+        styles.transcribingButton,
+        { backgroundColor: colors.glassInverse },
+      ]}
+    >
+      <BlurView
+        intensity={80}
+        tint={blurTint}
+        style={[StyleSheet.absoluteFill, styles.blurContainer]}
+      >
+        <TouchableOpacity
+          testID={TestID.RecordingButtonStarting}
+          style={styles.buttonTouchable}
+          disabled={true}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Preparing recording"
+          accessibilityState={{ disabled: true, busy: true }}
+        >
+          <ActivityIndicator size="small" color={colors.textInverse} />
+        </TouchableOpacity>
+      </BlurView>
+    </Animated.View>
+  );
 
   const renderTranscribingButton = () => (
     <Animated.View

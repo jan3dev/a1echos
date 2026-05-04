@@ -13,6 +13,8 @@ import {
 } from "@/models";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
+import { preWarmModel } from "../transcription-store/preWarmModel";
+
 const STORAGE_KEYS = {
   THEME: "selectedTheme",
   MODEL_TYPE: "selected_model_type",
@@ -293,6 +295,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       ) {
         await get().setLanguage(SupportedLanguages.defaultLanguage);
       }
+
+      // Pre-warm the engine so the next record tap doesn't pay the multi-second
+      // sherpa-onnx init cost. Use the language *after* the auto-reset above.
+      preWarmModel(modelId, get().selectedLanguage.code);
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,

@@ -15,6 +15,12 @@ class IPCClient {
     static let appGroupID = "group.com.a1lab.echos.shared"
     static let requestNotificationName = "com.a1lab.echos.transcriptionRequest"
     static let resultNotificationName = "com.a1lab.echos.transcriptionResult"
+    /// Pre-flight ping/pong notifications. The keyboard fires a ping
+    /// before recording so we can detect a force-killed main app and
+    /// surface a clear "open Echos" banner instead of letting the user
+    /// record and then time out 10 seconds later.
+    static let pingNotificationName = "com.a1lab.echos.transcriptionPing"
+    static let pongNotificationName = "com.a1lab.echos.transcriptionPong"
 
     var onTranscriptionResult: ((String) -> Void)?
     var onTranscriptionError: ((String) -> Void)?
@@ -24,12 +30,18 @@ class IPCClient {
     private let timeoutSeconds: TimeInterval = 10
     private let pollInterval: TimeInterval = 0.5
 
+    private var pingCompletion: ((Bool) -> Void)?
+    private var pingTimeoutTimer: Timer?
+    private var currentPingID: String?
+
     init() {
         registerForResultNotification()
+        registerForPongNotification()
     }
 
     deinit {
         pollTimer?.invalidate()
+        pingTimeoutTimer?.invalidate()
     }
 
     // MARK: - Shared Container Paths
@@ -56,6 +68,68 @@ class IPCClient {
 
     private static func resultFileURL() -> URL? {
         keyboardDirectory()?.appendingPathComponent("result.json")
+    }
+
+    private static func pingFileURL() -> URL? {
+        keyboardDirectory()?.appendingPathComponent("ping.json")
+    }
+
+    private static func pongFileURL() -> URL? {
+        keyboardDirectory()?.appendingPathComponent("pong.json")
+    }
+
+    // MARK: - Pre-flight Ping
+
+    /// Synchronous-feeling check that the main Echos app is running and
+    /// listening. Writes a ping file, posts a Darwin notification, and
+    /// waits up to `timeout` for a matching pong. Calls `completion(true)`
+    /// if a pong arrives in time, `completion(false)` otherwise.
+    /// `completion` is always invoked on the main thread.
+    func pingMainApp(
+        timeout: TimeInterval = 0.3,
+        completion: @escaping (Bool) -> Void
+    ) {
+        // Cancel any in-flight ping — only the most recent one is valid.
+        pingTimeoutTimer?.invalidate()
+        pingTimeoutTimer = nil
+        pingCompletion = completion
+
+        let pingID = UUID().uuidString
+        currentPingID = pingID
+
+        guard let pingURL = IPCClient.pingFileURL() else {
+            finishPing(alive: false)
+            return
+        }
+
+        let payload: [String: Any] = [
+            "id": pingID,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: payload)
+            try data.write(to: pingURL)
+        } catch {
+            finishPing(alive: false)
+            return
+        }
+
+        postDarwinNotification(IPCClient.pingNotificationName)
+
+        pingTimeoutTimer = Timer.scheduledTimer(
+            withTimeInterval: timeout, repeats: false
+        ) { [weak self] _ in
+            self?.finishPing(alive: false)
+        }
+    }
+
+    private func finishPing(alive: Bool) {
+        pingTimeoutTimer?.invalidate()
+        pingTimeoutTimer = nil
+        let completion = pingCompletion
+        pingCompletion = nil
+        currentPingID = nil
+        DispatchQueue.main.async { completion?(alive) }
     }
 
     // MARK: - Request Transcription
@@ -113,6 +187,39 @@ class IPCClient {
             nil,
             .deliverImmediately
         )
+    }
+
+    private func registerForPongNotification() {
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = Unmanaged.passUnretained(self).toOpaque()
+
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let client = Unmanaged<IPCClient>.fromOpaque(observer).takeUnretainedValue()
+                DispatchQueue.main.async {
+                    client.checkForPong()
+                }
+            },
+            IPCClient.pongNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+    }
+
+    private func checkForPong() {
+        guard let pongURL = IPCClient.pongFileURL(),
+              FileManager.default.fileExists(atPath: pongURL.path),
+              let data = try? Data(contentsOf: pongURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pongID = json["id"] as? String,
+              pongID == currentPingID else {
+            return
+        }
+        try? FileManager.default.removeItem(at: pongURL)
+        finishPing(alive: true)
     }
 
     private func postDarwinNotification(_ name: String) {

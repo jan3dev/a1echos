@@ -25,15 +25,18 @@ import {
   initializeSessionStore,
   initializeSettingsStore,
   initializeTranscriptionStore,
+  preWarmModel,
   useGlobalTooltip,
   useHideGlobalTooltip,
   useHideKeyboardPrompt,
+  useIsEngineInitializing,
   useKeyboardPromptVisible,
   useMarkKeyboardPromptSeen,
   useOnRecordingStart,
   useOnRecordingStop,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
+  useSettingsStore,
   useTranscriptionState,
 } from "@/stores";
 import { useTheme, useThemeStore } from "@/theme";
@@ -173,6 +176,7 @@ function GlobalRecordingControls() {
   const { currentTheme } = useThemeStore();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
+  const isEngineInitializing = useIsEngineInitializing();
   const onRecordingStart = useOnRecordingStart();
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
@@ -238,6 +242,7 @@ function GlobalRecordingControls() {
       </MaskedView>
       <RecordingControlsView
         state={transcriptionState}
+        isInitializing={isEngineInitializing}
         onRecordingStart={handleRecordingStart}
         onRecordingStop={handleRecordingStop}
         enabled={enabled}
@@ -280,6 +285,16 @@ export default function RootLayout() {
           ]);
           initializeModelDownloadStore();
           await initializeTranscriptionStore();
+
+          // Pre-warm the user's selected model so the first record tap doesn't
+          // pay the multi-second sherpa-onnx init cost. Fire-and-forget — the
+          // helper short-circuits if the model isn't downloaded or recording
+          // is in progress.
+          const settings = useSettingsStore.getState();
+          preWarmModel(
+            settings.selectedModelId,
+            settings.selectedLanguage.code,
+          );
         }
 
         setAppReady(true);

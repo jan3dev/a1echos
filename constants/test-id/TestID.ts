@@ -20,6 +20,7 @@ export enum TestID {
   RecordingButtonStart = "recording-button-start",
   RecordingButtonStop = "recording-button-stop",
   RecordingButtonTranscribing = "recording-button-transcribing",
+  RecordingButtonStarting = "recording-button-starting",
   RecordingButton = "recording-button",
   RecordingControlsView = "recording-controls-view",
   BtnStart = "btn-start",

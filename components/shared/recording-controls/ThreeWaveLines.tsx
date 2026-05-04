@@ -3,7 +3,9 @@ import {
   Canvas,
   Group,
   LinearGradient,
+  Mask,
   Path,
+  Rect,
   usePathValue,
   vec,
 } from "@shopify/react-native-skia";
@@ -18,11 +20,9 @@ import { scheduleOnUI } from "react-native-worklets";
 
 import { TranscriptionState } from "@/models";
 import { useTranscriptionStore } from "@/stores";
-import { AquaColors, AquaPrimitiveColors } from "@/theme";
 
 interface ThreeWaveLinesProps {
   height?: number;
-  colors: AquaColors;
   state?: TranscriptionState;
 }
 
@@ -97,11 +97,17 @@ const RECORDING_AMPLITUDE_RANGE = RECORDING_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const POINTS_MINUS_ONE = POINTS - 1;
 const VOICE_THRESHOLD = 0.38;
 
-const WAVE_COLORS = [
-  AquaPrimitiveColors.waveOrange,
-  "", // Will use accent color
-  AquaPrimitiveColors.waveCyan,
-];
+/// Shared vertical color gradient applied to every wave — replaces the
+/// previous per-wave orange / accent / cyan palette. Stops mirror the
+/// Figma SVG (`#A54CFF → #4588D2 → #FBCAB9` from top to bottom).
+const WAVE_GRADIENT_COLORS = ["#A54CFF", "#4588D2", "#FBCAB9"];
+const WAVE_GRADIENT_STOPS = [0, 0.5, 1.0];
+
+const MASK_OPAQUE = "rgb(255, 255, 255)";
+const MASK_CLEAR = "rgba(255, 255, 255, 0)";
+
+const buildAlphaMaskColors = (alphas: number[]): string[] =>
+  alphas.map((a) => (a === 1 ? MASK_OPAQUE : MASK_CLEAR));
 
 /// Per-wave horizontal gradient stops + visibility pattern controlling
 /// which segments of the wave render as a sharp 3pt stroke vs. a
@@ -138,15 +144,6 @@ const WAVE_GRADIENTS: WaveGradient[] = [
   },
 ];
 
-const buildGradientColors = (
-  rgb: { r: number; g: number; b: number },
-  alphas: number[],
-): string[] => {
-  const opaque = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-  const clear = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`;
-  return alphas.map((a) => (a === 1 ? opaque : clear));
-};
-
 const stateToNum = (state: TranscriptionState): number => {
   "worklet";
   switch (state) {
@@ -167,13 +164,6 @@ const stateToNum = (state: TranscriptionState): number => {
   }
 };
 
-const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
-  const r = parseInt(hex.slice(1, 3), 16) || 0;
-  const g = parseInt(hex.slice(3, 5), 16) || 0;
-  const b = parseInt(hex.slice(5, 7), 16) || 0;
-  return { r, g, b };
-};
-
 const useAnimatedWave = (
   waveIndex: number,
   audioLevel: { value: number },
@@ -181,7 +171,6 @@ const useAnimatedWave = (
   width: { value: number },
   height: number,
   centerY: number,
-  colorRgb: { r: number; g: number; b: number },
   isActive: { value: boolean },
   initialBlipTarget: { value: number },
   hasTriggeredInitialBlip: { value: boolean },
@@ -448,22 +437,16 @@ const useAnimatedWave = (
     }
   });
 
-  const color = useDerivedValue(() => {
-    const opacity = smoothedOpacity.value;
-    return `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${opacity})`;
-  });
-
-  // Group-level opacity drives the entire wave's alpha so the static
-  // gradient stops below can stay at full alpha and still scale with
-  // recording state via this single multiplier.
+  // Group-level opacity drives the entire wave's alpha so the shared
+  // vertical color gradient below can stay at full alpha and still
+  // scale with recording state via this single multiplier.
   const groupOpacity = useDerivedValue(() => smoothedOpacity.value);
 
-  return { path, color, groupOpacity, strokeWidth: profile.strokeWidth };
+  return { path, groupOpacity, strokeWidth: profile.strokeWidth };
 };
 
 export const ThreeWaveLines = ({
   height = 42.0,
-  colors,
   state = TranscriptionState.RECORDING,
 }: ThreeWaveLinesProps) => {
   const containerWidth = useSharedValue(400);
@@ -519,58 +502,47 @@ export const ThreeWaveLines = ({
 
   const centerY = height / 2;
 
-  const color0Rgb = useMemo(() => hexToRgb(WAVE_COLORS[0]), []);
-  const color1Rgb = useMemo(
-    () => hexToRgb(colors.accentBrand),
-    [colors.accentBrand],
+  // Per-wave horizontal alpha-mask color arrays: where the sharp pass
+  // is opaque the blurred pass is transparent (and vice versa). Built
+  // once per visibility pattern so the per-frame render stays
+  // allocation-free.
+  const wave0SharpMask = useMemo(
+    () => buildAlphaMaskColors(WAVE_GRADIENTS[0].sharpVisible),
+    [],
   );
-  const color2Rgb = useMemo(() => hexToRgb(WAVE_COLORS[2]), []);
-
-  // Static color stops per wave for the sharp/blurred alpha gradient.
-  // Built once per color so the per-frame render stays allocation-free.
-  // Each wave gets its own visibility pattern so the two blurred spots
-  // land at distinctly different x positions across the three lines.
-  const wave0SharpColors = useMemo(
-    () => buildGradientColors(color0Rgb, WAVE_GRADIENTS[0].sharpVisible),
-    [color0Rgb],
-  );
-  const wave0BlurredColors = useMemo(
+  const wave0BlurredMask = useMemo(
     () =>
-      buildGradientColors(
-        color0Rgb,
-        WAVE_GRADIENTS[0].sharpVisible.map((a) => 1 - a),
-      ),
-    [color0Rgb],
+      buildAlphaMaskColors(WAVE_GRADIENTS[0].sharpVisible.map((a) => 1 - a)),
+    [],
   );
-  const wave1SharpColors = useMemo(
-    () => buildGradientColors(color1Rgb, WAVE_GRADIENTS[1].sharpVisible),
-    [color1Rgb],
+  const wave1SharpMask = useMemo(
+    () => buildAlphaMaskColors(WAVE_GRADIENTS[1].sharpVisible),
+    [],
   );
-  const wave1BlurredColors = useMemo(
+  const wave1BlurredMask = useMemo(
     () =>
-      buildGradientColors(
-        color1Rgb,
-        WAVE_GRADIENTS[1].sharpVisible.map((a) => 1 - a),
-      ),
-    [color1Rgb],
+      buildAlphaMaskColors(WAVE_GRADIENTS[1].sharpVisible.map((a) => 1 - a)),
+    [],
   );
-  const wave2SharpColors = useMemo(
-    () => buildGradientColors(color2Rgb, WAVE_GRADIENTS[2].sharpVisible),
-    [color2Rgb],
+  const wave2SharpMask = useMemo(
+    () => buildAlphaMaskColors(WAVE_GRADIENTS[2].sharpVisible),
+    [],
   );
-  const wave2BlurredColors = useMemo(
+  const wave2BlurredMask = useMemo(
     () =>
-      buildGradientColors(
-        color2Rgb,
-        WAVE_GRADIENTS[2].sharpVisible.map((a) => 1 - a),
-      ),
-    [color2Rgb],
+      buildAlphaMaskColors(WAVE_GRADIENTS[2].sharpVisible.map((a) => 1 - a)),
+    [],
   );
 
-  // Gradient end follows the canvas width so the alternation pattern
-  // scales with the container instead of being clipped at a fixed pixel.
+  // Horizontal mask gradient endpoints follow the canvas width so the
+  // alternation pattern scales with the container.
   const gradientStart = useMemo(() => vec(0, 0), []);
   const gradientEnd = useDerivedValue(() => vec(containerWidth.value, 0));
+  // Vertical color gradient runs top-to-bottom across the canvas, so
+  // every wave shares the purple → blue → peach palette regardless of
+  // its individual vertical offset.
+  const colorGradientStart = useMemo(() => vec(0, 0), []);
+  const colorGradientEnd = useMemo(() => vec(0, height), [height]);
 
   const wave0 = useAnimatedWave(
     0,
@@ -579,7 +551,6 @@ export const ThreeWaveLines = ({
     containerWidth,
     height,
     centerY,
-    color0Rgb,
     isActive,
     initialBlipTarget,
     hasTriggeredInitialBlip,
@@ -591,7 +562,6 @@ export const ThreeWaveLines = ({
     containerWidth,
     height,
     centerY,
-    color1Rgb,
     isActive,
     initialBlipTarget,
     hasTriggeredInitialBlip,
@@ -603,7 +573,6 @@ export const ThreeWaveLines = ({
     containerWidth,
     height,
     centerY,
-    color2Rgb,
     isActive,
     initialBlipTarget,
     hasTriggeredInitialBlip,
@@ -621,102 +590,188 @@ export const ThreeWaveLines = ({
     >
       <Canvas style={styles.canvas}>
         {/* Each wave renders two stroked passes — one sharp, one with
-            `BlurMask blur={2.5}` — masked by opposing horizontal alpha
-            gradients. Where the sharp gradient is opaque the blurred one
-            is transparent (and vice versa), so the same wave alternates
-            between crisp segments and blurred segments along its length. */}
+            `BlurMask blur={2.5}` — gated by opposing horizontal alpha
+            masks (`<Mask mode="alpha">`). Both passes share the same
+            vertical color gradient (`#A54CFF → #4588D2 → #FBCAB9`),
+            applied through a `<LinearGradient>` shader on each path so
+            the colors remain consistent across waves while only the
+            blurred segments differ per wave. */}
         <Group opacity={wave0.groupOpacity}>
-          <Path
-            path={wave0.path}
-            style="stroke"
-            strokeWidth={wave0.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave0SharpMask}
+                  positions={WAVE_GRADIENTS[0].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave0SharpColors}
-              positions={WAVE_GRADIENTS[0].positions}
-            />
-          </Path>
-          <Path
-            path={wave0.path}
-            style="stroke"
-            strokeWidth={wave0.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+            <Path
+              path={wave0.path}
+              style="stroke"
+              strokeWidth={wave0.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+            </Path>
+          </Mask>
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave0BlurredMask}
+                  positions={WAVE_GRADIENTS[0].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave0BlurredColors}
-              positions={WAVE_GRADIENTS[0].positions}
-            />
-            <BlurMask blur={2.5} style="normal" />
-          </Path>
+            <Path
+              path={wave0.path}
+              style="stroke"
+              strokeWidth={wave0.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+              <BlurMask blur={2.5} style="normal" />
+            </Path>
+          </Mask>
         </Group>
         <Group opacity={wave1.groupOpacity}>
-          <Path
-            path={wave1.path}
-            style="stroke"
-            strokeWidth={wave1.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave1SharpMask}
+                  positions={WAVE_GRADIENTS[1].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave1SharpColors}
-              positions={WAVE_GRADIENTS[1].positions}
-            />
-          </Path>
-          <Path
-            path={wave1.path}
-            style="stroke"
-            strokeWidth={wave1.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+            <Path
+              path={wave1.path}
+              style="stroke"
+              strokeWidth={wave1.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+            </Path>
+          </Mask>
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave1BlurredMask}
+                  positions={WAVE_GRADIENTS[1].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave1BlurredColors}
-              positions={WAVE_GRADIENTS[1].positions}
-            />
-            <BlurMask blur={2.5} style="normal" />
-          </Path>
+            <Path
+              path={wave1.path}
+              style="stroke"
+              strokeWidth={wave1.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+              <BlurMask blur={2.5} style="normal" />
+            </Path>
+          </Mask>
         </Group>
         <Group opacity={wave2.groupOpacity}>
-          <Path
-            path={wave2.path}
-            style="stroke"
-            strokeWidth={wave2.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave2SharpMask}
+                  positions={WAVE_GRADIENTS[2].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave2SharpColors}
-              positions={WAVE_GRADIENTS[2].positions}
-            />
-          </Path>
-          <Path
-            path={wave2.path}
-            style="stroke"
-            strokeWidth={wave2.strokeWidth}
-            strokeCap="round"
-            strokeJoin="round"
+            <Path
+              path={wave2.path}
+              style="stroke"
+              strokeWidth={wave2.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+            </Path>
+          </Mask>
+          <Mask
+            mode="alpha"
+            mask={
+              <Rect x={0} y={0} width={containerWidth} height={height}>
+                <LinearGradient
+                  start={gradientStart}
+                  end={gradientEnd}
+                  colors={wave2BlurredMask}
+                  positions={WAVE_GRADIENTS[2].positions}
+                />
+              </Rect>
+            }
           >
-            <LinearGradient
-              start={gradientStart}
-              end={gradientEnd}
-              colors={wave2BlurredColors}
-              positions={WAVE_GRADIENTS[2].positions}
-            />
-            <BlurMask blur={2.5} style="normal" />
-          </Path>
+            <Path
+              path={wave2.path}
+              style="stroke"
+              strokeWidth={wave2.strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <LinearGradient
+                start={colorGradientStart}
+                end={colorGradientEnd}
+                colors={WAVE_GRADIENT_COLORS}
+                positions={WAVE_GRADIENT_STOPS}
+              />
+              <BlurMask blur={2.5} style="normal" />
+            </Path>
+          </Mask>
         </Group>
       </Canvas>
     </View>

@@ -7,7 +7,7 @@ import { SettingsFooter } from "./SettingsFooter";
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (Linking as any).canOpenURL = jest.fn(async () => true);
+  (Linking as any).openURL = jest.fn(async () => undefined);
 });
 
 jest.mock("expo-constants", () => ({
@@ -95,23 +95,14 @@ describe("SettingsFooter", () => {
     });
   });
 
-  it("shows error tooltip when canOpenURL returns false", async () => {
-    (Linking as any).canOpenURL = jest.fn(async () => false);
-    const { getByText } = render(<SettingsFooter />);
-    fireEvent.press(getByText("Echos"));
-    await waitFor(() => {
-      expect(Linking.openURL).not.toHaveBeenCalled();
-    });
-  });
-
-  it("shows error tooltip when openURL throws", async () => {
-    (Linking as any).canOpenURL = jest.fn(async () => {
-      throw new Error("network error");
+  it("swallows openURL errors without crashing", async () => {
+    (Linking as any).openURL = jest.fn(async () => {
+      throw new Error("no handler");
     });
     const { getByText } = render(<SettingsFooter />);
     fireEvent.press(getByText("Echos"));
     await waitFor(() => {
-      expect(Linking.openURL).not.toHaveBeenCalled();
+      expect(Linking.openURL).toHaveBeenCalledWith("https://x.com/a1echos");
     });
   });
 });

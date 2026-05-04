@@ -47,15 +47,7 @@ export const SettingsFooter = () => {
     const url = `https://x.com/${sanitizedHandle}`;
 
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        showTooltip({
-          message: loc.couldNotOpenLink,
-          variant: "error",
-        });
-      }
+      await Linking.openURL(url);
     } catch {
       showTooltip({
         message: loc.couldNotOpenLink,

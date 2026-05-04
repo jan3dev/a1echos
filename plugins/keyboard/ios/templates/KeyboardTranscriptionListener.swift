@@ -11,6 +11,8 @@ import Foundation
     private let appGroupID = "group.com.a1lab.echos.shared"
     private let requestNotificationName = "com.a1lab.echos.transcriptionRequest"
     private let resultNotificationName = "com.a1lab.echos.transcriptionResult"
+    private let pingNotificationName = "com.a1lab.echos.transcriptionPing"
+    private let pongNotificationName = "com.a1lab.echos.transcriptionPong"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -40,6 +42,22 @@ import Foundation
             .deliverImmediately
         )
 
+        // Pre-flight ping handler — answers within milliseconds so the
+        // keyboard can detect a force-killed app and prompt the user
+        // before they record.
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
+                listener.handlePing()
+            },
+            pingNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+
         NSLog("[KeyboardTranscriptionListener] Started listening for keyboard transcription requests")
     }
 
@@ -55,6 +73,40 @@ import Foundation
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.processRequest()
         }
+    }
+
+    /// Reply to a keyboard pre-flight ping by writing the matching ID to
+    /// `pong.json` and posting the pong Darwin notification. Synchronous
+    /// and minimal — this needs to round-trip in <300ms.
+    private func handlePing() {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else { return }
+        let keyboardDir = containerURL.appendingPathComponent("keyboard", isDirectory: true)
+        let pingURL = keyboardDir.appendingPathComponent("ping.json")
+        let pongURL = keyboardDir.appendingPathComponent("pong.json")
+
+        guard FileManager.default.fileExists(atPath: pingURL.path),
+              let data = try? Data(contentsOf: pingURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pingID = json["id"] as? String else {
+            return
+        }
+
+        let pong: [String: Any] = [
+            "id": pingID,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        guard let pongData = try? JSONSerialization.data(withJSONObject: pong) else { return }
+        try? pongData.write(to: pongURL)
+        try? FileManager.default.removeItem(at: pingURL)
+
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterPostNotification(
+            center,
+            CFNotificationName(pongNotificationName as CFString),
+            nil, nil, true
+        )
     }
 
     private func processRequest() {

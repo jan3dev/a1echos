@@ -105,6 +105,7 @@ const getInitialState = () => ({
   isInitialized: false,
   initError: null,
   isEngineReady: false,
+  isEngineInitializing: false,
   isOperationLocked: false,
   activeOperations: new Set<string>(),
   lastOperationTime: null,
@@ -197,7 +198,22 @@ describe("transcriptionStore", () => {
       expect(state.transcriptions).toEqual([]);
       expect(state.isInitialized).toBe(false);
       expect(state.isEngineReady).toBe(false);
+      expect(state.isEngineInitializing).toBe(false);
       expect(state.isOperationLocked).toBe(false);
+    });
+  });
+
+  describe("setEngineInitializing", () => {
+    it("flips the flag and is a no-op when already at the requested value", () => {
+      const set = useTranscriptionStore.getState().setEngineInitializing;
+      set(true);
+      expect(useTranscriptionStore.getState().isEngineInitializing).toBe(true);
+      // Calling with the same value should not trigger another set, but
+      // observably the value stays the same.
+      set(true);
+      expect(useTranscriptionStore.getState().isEngineInitializing).toBe(true);
+      set(false);
+      expect(useTranscriptionStore.getState().isEngineInitializing).toBe(false);
     });
   });
 
@@ -227,8 +243,13 @@ describe("transcriptionStore", () => {
       );
     });
 
-    it("READY -> RECORDING is valid", () => {
+    it("READY -> RECORDING_STARTING -> RECORDING is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      expect(
+        useTranscriptionStore
+          .getState()
+          .transitionTo(TranscriptionState.RECORDING_STARTING),
+      ).toBe(true);
       expect(
         useTranscriptionStore
           .getState()
@@ -236,8 +257,42 @@ describe("transcriptionStore", () => {
       ).toBe(true);
     });
 
+    it("READY -> RECORDING (skipping RECORDING_STARTING) is not valid", () => {
+      useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      expect(
+        useTranscriptionStore
+          .getState()
+          .transitionTo(TranscriptionState.RECORDING),
+      ).toBe(false);
+    });
+
+    it("RECORDING_STARTING -> READY is valid (graceful cancel)", () => {
+      useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      expect(
+        useTranscriptionStore.getState().transitionTo(TranscriptionState.READY),
+      ).toBe(true);
+    });
+
+    it("RECORDING_STARTING -> ERROR is valid", () => {
+      useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      expect(
+        useTranscriptionStore
+          .getState()
+          .transitionTo(TranscriptionState.ERROR, "init failed"),
+      ).toBe(true);
+    });
+
     it("RECORDING -> TRANSCRIBING is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);
@@ -252,6 +307,9 @@ describe("transcriptionStore", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
       useTranscriptionStore
         .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      useTranscriptionStore
+        .getState()
         .transitionTo(TranscriptionState.RECORDING);
       expect(
         useTranscriptionStore
@@ -262,6 +320,9 @@ describe("transcriptionStore", () => {
 
     it("STREAMING -> TRANSCRIBING is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);
@@ -782,6 +843,64 @@ describe("transcriptionStore", () => {
       expect(result).toBe(false);
       expect(useTranscriptionStore.getState().state).toBe(
         TranscriptionState.ERROR,
+      );
+    });
+
+    it("transitions through RECORDING_STARTING while sherpa init is in flight", async () => {
+      let resolveInit!: (value: boolean) => void;
+      const initPromise = new Promise<boolean>((resolve) => {
+        resolveInit = resolve;
+      });
+      (
+        sherpaTranscriptionService.initialize as jest.Mock
+      ).mockImplementationOnce(() => initPromise);
+
+      const promise = useTranscriptionStore.getState().startRecording();
+      // Let the synchronous portion run up to the await on initialize().
+      await Promise.resolve();
+      expect(useTranscriptionStore.getState().state).toBe(
+        TranscriptionState.RECORDING_STARTING,
+      );
+
+      resolveInit(true);
+      const result = await promise;
+      expect(result).toBe(true);
+      expect(useTranscriptionStore.getState().state).toBe(
+        TranscriptionState.RECORDING,
+      );
+    });
+
+    it("recovers to READY when post-init RECORDING transition is blocked", async () => {
+      const realTransitionTo = useTranscriptionStore.getState().transitionTo;
+      let blocked = false;
+      useTranscriptionStore.setState({
+        transitionTo: (newState, errorMessage) => {
+          if (!blocked && newState === TranscriptionState.RECORDING) {
+            blocked = true;
+            return false;
+          }
+          return realTransitionTo(newState, errorMessage);
+        },
+      });
+
+      try {
+        const result = await useTranscriptionStore.getState().startRecording();
+        expect(result).toBe(false);
+        expect(useTranscriptionStore.getState().state).toBe(
+          TranscriptionState.READY,
+        );
+      } finally {
+        useTranscriptionStore.setState({ transitionTo: realTransitionTo });
+      }
+    });
+  });
+
+  describe("AUDIO_BUSY_STATES", () => {
+    it("includes RECORDING_STARTING so audio operations back off during init", () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AUDIO_BUSY_STATES } = require("./transcriptionStore");
+      expect(AUDIO_BUSY_STATES.has(TranscriptionState.RECORDING_STARTING)).toBe(
+        true,
       );
     });
   });
@@ -1964,6 +2083,9 @@ describe("transcriptionStore", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
       useTranscriptionStore
         .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      useTranscriptionStore
+        .getState()
         .transitionTo(TranscriptionState.RECORDING);
       useTranscriptionStore
         .getState()
@@ -1975,6 +2097,9 @@ describe("transcriptionStore", () => {
 
     it("STREAMING -> ERROR is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);
@@ -2001,6 +2126,9 @@ describe("transcriptionStore", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
       useTranscriptionStore
         .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      useTranscriptionStore
+        .getState()
         .transitionTo(TranscriptionState.RECORDING);
       expect(
         useTranscriptionStore.getState().transitionTo(TranscriptionState.READY),
@@ -2009,6 +2137,9 @@ describe("transcriptionStore", () => {
 
     it("RECORDING -> ERROR is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);
@@ -2021,6 +2152,9 @@ describe("transcriptionStore", () => {
 
     it("TRANSCRIBING -> ERROR is valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);
@@ -2240,6 +2374,9 @@ describe("transcriptionStore", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
       useTranscriptionStore
         .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
+      useTranscriptionStore
+        .getState()
         .transitionTo(TranscriptionState.RECORDING);
       useTranscriptionStore
         .getState()
@@ -2253,6 +2390,9 @@ describe("transcriptionStore", () => {
 
     it("TRANSCRIBING -> RECORDING is not valid", () => {
       useTranscriptionStore.getState().transitionTo(TranscriptionState.READY);
+      useTranscriptionStore
+        .getState()
+        .transitionTo(TranscriptionState.RECORDING_STARTING);
       useTranscriptionStore
         .getState()
         .transitionTo(TranscriptionState.RECORDING);

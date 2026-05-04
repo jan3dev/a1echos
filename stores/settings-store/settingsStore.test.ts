@@ -35,6 +35,15 @@ jest.mock("@/utils", () => ({
   logWarn: jest.fn(),
 }));
 
+jest.mock("../transcription-store/preWarmModel", () => ({
+  preWarmModel: jest.fn(),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { preWarmModel } = require("../transcription-store/preWarmModel") as {
+  preWarmModel: jest.Mock;
+};
+
 const initialState = {
   selectedTheme: AppTheme.AUTO,
   selectedModelType: ModelType.WHISPER_FILE,
@@ -483,6 +492,35 @@ describe("settingsStore", () => {
         useSettingsStore.getState().setModelId(ModelId.NEMO_PARAKEET_V3),
       ).rejects.toThrow("write fail");
       expect(useSettingsStore.getState().selectedModelId).toBe(before);
+    });
+
+    it("pre-warms the engine for the new model with the active language", async () => {
+      useSettingsStore.setState({
+        selectedLanguage: { code: "es", name: "Spanish" },
+      });
+      preWarmModel.mockClear();
+      await useSettingsStore.getState().setModelId(ModelId.NEMO_PARAKEET_V3);
+      expect(preWarmModel).toHaveBeenCalledWith(ModelId.NEMO_PARAKEET_V3, "es");
+    });
+
+    it("pre-warms with the reset language when the previous one is unsupported", async () => {
+      useSettingsStore.setState({
+        selectedLanguage: { code: "ja", name: "Japanese" },
+      });
+      preWarmModel.mockClear();
+      await useSettingsStore.getState().setModelId(ModelId.NEMO_PARAKEET_V3);
+      expect(preWarmModel).toHaveBeenCalledWith(ModelId.NEMO_PARAKEET_V3, "en");
+    });
+
+    it("does not pre-warm when persistence fails (rollback path)", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+      preWarmModel.mockClear();
+      await expect(
+        useSettingsStore.getState().setModelId(ModelId.NEMO_PARAKEET_V3),
+      ).rejects.toThrow("write fail");
+      expect(preWarmModel).not.toHaveBeenCalled();
     });
   });
 

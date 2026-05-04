@@ -37,6 +37,7 @@ class KeyboardView: UIInputView {
     private let topBar = KeyboardTopBar()
     private let keyPreview = KeyPreviewView()
     private let keyVariants = KeyVariantsView()
+    private let banner = KeyboardBannerView()
     private var rowStackView: UIStackView!
     private var emojiPickerView: EmojiPickerView?
     private var keyButtons: [[KeyButton]] = []
@@ -44,6 +45,7 @@ class KeyboardView: UIInputView {
     private var shiftState: KeyboardLayout.ShiftState = .off
     private var micState: MicState = .idle
     private var returnKeyType: UIReturnKeyType = .default
+    private var bannerHideTimer: Timer?
 
     // Delete key auto-repeat: matches native iOS cadence — char-rate after
     // a 0.4 s hold, escalating to word-rate after the press passes ~1.5 s.
@@ -81,6 +83,14 @@ class KeyboardView: UIInputView {
         rowStackView.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(rowStackView)
+        // Inline banner sits over the top bar and tells the user what to
+        // do when the keyboard can't reach the main app (force-killed,
+        // first-launch, etc.). Hidden by default; shown via
+        // `showOpenAppPrompt(_:)`. Added before the popups so accent /
+        // typewriter popovers always render above it.
+        banner.translatesAutoresizingMaskIntoConstraints = false
+        banner.isHidden = true
+        addSubview(banner)
         // Both popups sit above all other subviews. Variants is added last
         // so the accent popover renders above the typewriter balloon — in
         // practice only one is visible at a time.
@@ -96,6 +106,11 @@ class KeyboardView: UIInputView {
             rowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
             rowStackView.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 4),
             rowStackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+
+            banner.leadingAnchor.constraint(equalTo: leadingAnchor),
+            banner.trailingAnchor.constraint(equalTo: trailingAnchor),
+            banner.topAnchor.constraint(equalTo: topAnchor),
+            banner.heightAnchor.constraint(equalToConstant: KeyboardTopBar.preferredHeight),
         ])
 
         buildLayout()
@@ -230,6 +245,12 @@ class KeyboardView: UIInputView {
     // MARK: - Public API
 
     func updateReturnKeyType(_ type: UIReturnKeyType) {
+        // Skip the (full-keyboard) `updateKeyLabels` walk when the return
+        // type hasn't actually changed — `textDidChange` fires this on
+        // every keystroke, and the type only changes when the host swaps
+        // text fields. This single guard removes a per-keystroke iteration
+        // over every key in the layout.
+        guard type != returnKeyType else { return }
         returnKeyType = type
         updateKeyLabels()
     }
@@ -262,7 +283,44 @@ class KeyboardView: UIInputView {
 
     func showMicError(_ message: String) {
         UIAccessibility.post(notification: .announcement, argument: message)
-        // TODO: Show inline error banner
+        presentBanner(message: message)
+    }
+
+    /// Show a recoverable "open the main app" prompt over the top bar.
+    /// Used both for the pre-flight ping (before recording) and for the
+    /// post-record timeout case (when the main app went away mid-flight).
+    /// Stays visible longer than transient errors so the user actually
+    /// reads it before tabbing back to Echos.
+    func showOpenAppPrompt(_ message: String) {
+        UIAccessibility.post(notification: .announcement, argument: message)
+        presentBanner(message: message, autoHideAfter: 5.0)
+    }
+
+    private func presentBanner(
+        message: String, autoHideAfter seconds: TimeInterval = 3.0
+    ) {
+        bannerHideTimer?.invalidate()
+        banner.setMessage(message)
+        if banner.isHidden {
+            banner.alpha = 0
+            banner.isHidden = false
+            UIView.animate(withDuration: 0.18) { self.banner.alpha = 1 }
+        }
+        bannerHideTimer = Timer.scheduledTimer(
+            withTimeInterval: seconds, repeats: false
+        ) { [weak self] _ in
+            self?.dismissBanner()
+        }
+    }
+
+    private func dismissBanner() {
+        bannerHideTimer?.invalidate()
+        bannerHideTimer = nil
+        UIView.animate(
+            withDuration: 0.18,
+            animations: { self.banner.alpha = 0 },
+            completion: { _ in self.banner.isHidden = true }
+        )
     }
 
     func switchToLayout(_ mode: KeyboardLayout.LayoutMode) {
@@ -509,5 +567,69 @@ extension KeyboardView: EmojiPickerViewDelegate {
             action: #selector(keyTouchCancel(_:)),
             for: [.touchUpOutside, .touchCancel]
         )
+    }
+}
+
+// MARK: - Banner
+
+/// Inline status banner shown over the top bar when the keyboard needs
+/// to relay a recoverable error or instruction to the user — typically
+/// "Open Echos to enable voice typing" when the main app isn't running.
+/// Keyboard extensions can't open URLs reliably, so the banner is
+/// informational only.
+final class KeyboardBannerView: UIView {
+
+    private let label = UILabel()
+    private let pill = UIView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+
+    private func setup() {
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
+
+        pill.translatesAutoresizingMaskIntoConstraints = false
+        pill.backgroundColor = UIColor(hex: 0x707171)
+        pill.layer.cornerRadius = 14
+        pill.layer.cornerCurve = .continuous
+        addSubview(pill)
+
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = UIColor(hex: 0xF5F5F8)
+        label.textAlignment = .center
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.85
+        label.numberOfLines = 1
+        pill.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            pill.centerXAnchor.constraint(equalTo: centerXAnchor),
+            pill.centerYAnchor.constraint(equalTo: centerYAnchor),
+            pill.heightAnchor.constraint(equalToConstant: 28),
+            pill.leadingAnchor.constraint(
+                greaterThanOrEqualTo: leadingAnchor, constant: 16
+            ),
+            pill.trailingAnchor.constraint(
+                lessThanOrEqualTo: trailingAnchor, constant: -16
+            ),
+
+            label.leadingAnchor.constraint(equalTo: pill.leadingAnchor, constant: 14),
+            label.trailingAnchor.constraint(equalTo: pill.trailingAnchor, constant: -14),
+            label.topAnchor.constraint(equalTo: pill.topAnchor),
+            label.bottomAnchor.constraint(equalTo: pill.bottomAnchor),
+        ])
+    }
+
+    func setMessage(_ text: String) {
+        label.text = text
     }
 }
