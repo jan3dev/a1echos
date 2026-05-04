@@ -1,4 +1,12 @@
-import { Canvas, Path, usePathValue } from "@shopify/react-native-skia";
+import {
+  BlurMask,
+  Canvas,
+  Group,
+  LinearGradient,
+  Path,
+  usePathValue,
+  vec,
+} from "@shopify/react-native-skia";
 import { useEffect, useMemo, useRef } from "react";
 import { AppState, AppStateStatus, StyleSheet, View } from "react-native";
 import {
@@ -49,7 +57,7 @@ const WAVE_PROFILES: WaveProfile[] = [
     frequency: 3.1,
     verticalOffset: 0.0,
     amplitudeMultiplier: 0.55,
-    strokeWidth: 2.8,
+    strokeWidth: 3.0,
     energyFloor: 0.05,
     audioAmplitudeReactivity: 1.0,
     transcribingAmplitude: 0.7,
@@ -61,7 +69,7 @@ const WAVE_PROFILES: WaveProfile[] = [
     frequency: 2.5,
     verticalOffset: 3.6,
     amplitudeMultiplier: 0.75,
-    strokeWidth: 2.5,
+    strokeWidth: 3.0,
     energyFloor: 0.04,
     audioAmplitudeReactivity: 0.55,
     transcribingAmplitude: 0.8,
@@ -94,6 +102,50 @@ const WAVE_COLORS = [
   "", // Will use accent color
   AquaPrimitiveColors.waveCyan,
 ];
+
+/// Per-wave horizontal gradient stops + visibility pattern controlling
+/// which segments of the wave render as a sharp 3pt stroke vs. a
+/// Gaussian-blurred stroke. Each wave has TWO blurred spots at
+/// distinctly different x positions so the three lines never all soften
+/// at the same place.
+///
+/// `sharpVisible[i] = 1` means the sharp pass is opaque at `positions[i]`
+/// (and the blurred pass is transparent there). `0` means the inverse.
+/// Wave 1 uses an inverted pattern so its first blur lands on the
+/// far-left, where the others stay crisp.
+///
+/// Approximate blur centers:
+///   Wave 0 (orange): ~32%, ~92%
+///   Wave 1 (blue) : ~10%, ~70%  (inverted pattern)
+///   Wave 2 (cyan) : ~51%, ~88%
+interface WaveGradient {
+  positions: number[];
+  sharpVisible: number[];
+}
+
+const WAVE_GRADIENTS: WaveGradient[] = [
+  {
+    positions: [0, 0.18, 0.25, 0.4, 0.55, 0.75, 0.85, 1.0],
+    sharpVisible: [1, 1, 0, 0, 1, 1, 0, 0],
+  },
+  {
+    positions: [0, 0.2, 0.3, 0.5, 0.62, 0.78, 0.85, 1.0],
+    sharpVisible: [0, 0, 1, 1, 0, 0, 1, 1],
+  },
+  {
+    positions: [0, 0.32, 0.45, 0.58, 0.65, 0.72, 0.8, 0.92],
+    sharpVisible: [1, 1, 0, 0, 1, 1, 0, 0],
+  },
+];
+
+const buildGradientColors = (
+  rgb: { r: number; g: number; b: number },
+  alphas: number[],
+): string[] => {
+  const opaque = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  const clear = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`;
+  return alphas.map((a) => (a === 1 ? opaque : clear));
+};
 
 const stateToNum = (state: TranscriptionState): number => {
   "worklet";
@@ -228,12 +280,12 @@ const useAnimatedWave = (
     if (currentState === STATE_NUM.READY) {
       targetBaseEnergy = 0.5;
       targetAmplitudeMultiplier = profile.amplitudeMultiplier * 1.5;
-      targetOpacity = 0.75;
+      targetOpacity = 0.8;
       targetPositionWeight = 0;
     } else if (isTranscribingOrLoading) {
       targetBaseEnergy = 1.0;
       targetAmplitudeMultiplier = profile.transcribingAmplitude;
-      targetOpacity = 0.5;
+      targetOpacity = 0.4;
       targetPositionWeight = 0;
     } else {
       const dl = displayLevel.value;
@@ -248,8 +300,7 @@ const useAnimatedWave = (
         voiceBoost;
       if (targetBaseEnergy > 1.2) targetBaseEnergy = 1.2;
       targetAmplitudeMultiplier = profile.amplitudeMultiplier;
-      targetOpacity = 0.75 + dl * profile.audioOpacityReactivity;
-      if (targetOpacity > 1) targetOpacity = 1;
+      targetOpacity = 0.8;
       targetPositionWeight = 1;
     }
 
@@ -402,7 +453,12 @@ const useAnimatedWave = (
     return `rgba(${colorRgb.r}, ${colorRgb.g}, ${colorRgb.b}, ${opacity})`;
   });
 
-  return { path, color, strokeWidth: profile.strokeWidth };
+  // Group-level opacity drives the entire wave's alpha so the static
+  // gradient stops below can stay at full alpha and still scale with
+  // recording state via this single multiplier.
+  const groupOpacity = useDerivedValue(() => smoothedOpacity.value);
+
+  return { path, color, groupOpacity, strokeWidth: profile.strokeWidth };
 };
 
 export const ThreeWaveLines = ({
@@ -470,6 +526,52 @@ export const ThreeWaveLines = ({
   );
   const color2Rgb = useMemo(() => hexToRgb(WAVE_COLORS[2]), []);
 
+  // Static color stops per wave for the sharp/blurred alpha gradient.
+  // Built once per color so the per-frame render stays allocation-free.
+  // Each wave gets its own visibility pattern so the two blurred spots
+  // land at distinctly different x positions across the three lines.
+  const wave0SharpColors = useMemo(
+    () => buildGradientColors(color0Rgb, WAVE_GRADIENTS[0].sharpVisible),
+    [color0Rgb],
+  );
+  const wave0BlurredColors = useMemo(
+    () =>
+      buildGradientColors(
+        color0Rgb,
+        WAVE_GRADIENTS[0].sharpVisible.map((a) => 1 - a),
+      ),
+    [color0Rgb],
+  );
+  const wave1SharpColors = useMemo(
+    () => buildGradientColors(color1Rgb, WAVE_GRADIENTS[1].sharpVisible),
+    [color1Rgb],
+  );
+  const wave1BlurredColors = useMemo(
+    () =>
+      buildGradientColors(
+        color1Rgb,
+        WAVE_GRADIENTS[1].sharpVisible.map((a) => 1 - a),
+      ),
+    [color1Rgb],
+  );
+  const wave2SharpColors = useMemo(
+    () => buildGradientColors(color2Rgb, WAVE_GRADIENTS[2].sharpVisible),
+    [color2Rgb],
+  );
+  const wave2BlurredColors = useMemo(
+    () =>
+      buildGradientColors(
+        color2Rgb,
+        WAVE_GRADIENTS[2].sharpVisible.map((a) => 1 - a),
+      ),
+    [color2Rgb],
+  );
+
+  // Gradient end follows the canvas width so the alternation pattern
+  // scales with the container instead of being clipped at a fixed pixel.
+  const gradientStart = useMemo(() => vec(0, 0), []);
+  const gradientEnd = useDerivedValue(() => vec(containerWidth.value, 0));
+
   const wave0 = useAnimatedWave(
     0,
     audioLevel,
@@ -518,30 +620,104 @@ export const ThreeWaveLines = ({
       }}
     >
       <Canvas style={styles.canvas}>
-        <Path
-          path={wave0.path}
-          color={wave0.color}
-          style="stroke"
-          strokeWidth={wave0.strokeWidth}
-          strokeCap="round"
-          strokeJoin="round"
-        />
-        <Path
-          path={wave1.path}
-          color={wave1.color}
-          style="stroke"
-          strokeWidth={wave1.strokeWidth}
-          strokeCap="round"
-          strokeJoin="round"
-        />
-        <Path
-          path={wave2.path}
-          color={wave2.color}
-          style="stroke"
-          strokeWidth={wave2.strokeWidth}
-          strokeCap="round"
-          strokeJoin="round"
-        />
+        {/* Each wave renders two stroked passes — one sharp, one with
+            `BlurMask blur={2.5}` — masked by opposing horizontal alpha
+            gradients. Where the sharp gradient is opaque the blurred one
+            is transparent (and vice versa), so the same wave alternates
+            between crisp segments and blurred segments along its length. */}
+        <Group opacity={wave0.groupOpacity}>
+          <Path
+            path={wave0.path}
+            style="stroke"
+            strokeWidth={wave0.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave0SharpColors}
+              positions={WAVE_GRADIENTS[0].positions}
+            />
+          </Path>
+          <Path
+            path={wave0.path}
+            style="stroke"
+            strokeWidth={wave0.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave0BlurredColors}
+              positions={WAVE_GRADIENTS[0].positions}
+            />
+            <BlurMask blur={2.5} style="normal" />
+          </Path>
+        </Group>
+        <Group opacity={wave1.groupOpacity}>
+          <Path
+            path={wave1.path}
+            style="stroke"
+            strokeWidth={wave1.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave1SharpColors}
+              positions={WAVE_GRADIENTS[1].positions}
+            />
+          </Path>
+          <Path
+            path={wave1.path}
+            style="stroke"
+            strokeWidth={wave1.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave1BlurredColors}
+              positions={WAVE_GRADIENTS[1].positions}
+            />
+            <BlurMask blur={2.5} style="normal" />
+          </Path>
+        </Group>
+        <Group opacity={wave2.groupOpacity}>
+          <Path
+            path={wave2.path}
+            style="stroke"
+            strokeWidth={wave2.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave2SharpColors}
+              positions={WAVE_GRADIENTS[2].positions}
+            />
+          </Path>
+          <Path
+            path={wave2.path}
+            style="stroke"
+            strokeWidth={wave2.strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={gradientStart}
+              end={gradientEnd}
+              colors={wave2BlurredColors}
+              positions={WAVE_GRADIENTS[2].positions}
+            />
+            <BlurMask blur={2.5} style="normal" />
+          </Path>
+        </Group>
       </Canvas>
     </View>
   );

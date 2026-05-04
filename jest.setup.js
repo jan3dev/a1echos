@@ -483,6 +483,7 @@ jest.mock("@supersami/rn-foreground-service", () => ({
 jest.mock("@shopify/react-native-skia", () => ({
   Canvas: "Canvas",
   Path: "SkiaPath",
+  BlurMask: "SkiaBlurMask",
   Skia: {
     Path: { Make: jest.fn() },
     Color: jest.fn(),
@@ -492,6 +493,7 @@ jest.mock("@shopify/react-native-skia", () => ({
   useComputedValue: jest.fn(() => ({ current: 0 })),
   useClockValue: jest.fn(() => ({ current: 0 })),
   useDerivedValue: jest.fn(() => ({ current: 0 })),
+  usePathValue: jest.fn(() => ({ current: 0 })),
 }));
 
 // ---------------------------------------------------------------------------

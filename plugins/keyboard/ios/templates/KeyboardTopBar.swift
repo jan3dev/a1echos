@@ -1,3 +1,4 @@
+import CoreImage
 import UIKit
 
 /// Top bar pinned above the key rows. Shows the Echos logo on the left and a
@@ -68,7 +69,11 @@ final class KeyboardTopBar: UIView {
         waveform.translatesAutoresizingMaskIntoConstraints = false
         waveform.isUserInteractionEnabled = false
         waveform.isHidden = true
-        addSubview(waveform)
+        // Insert the waveform behind the logo and record button so it can
+        // span the full width of the header while the foreground controls
+        // sit on top of its faded edges.
+        insertSubview(waveform, at: 0)
+        waveform.installEdgeFadeMask()
 
         NSLayoutConstraint.activate([
             logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
@@ -89,8 +94,8 @@ final class KeyboardTopBar: UIView {
             recordIcon.widthAnchor.constraint(equalToConstant: 24),
             recordIcon.heightAnchor.constraint(equalToConstant: 24),
 
-            waveform.leadingAnchor.constraint(equalTo: logoLabel.trailingAnchor, constant: 8),
-            waveform.trailingAnchor.constraint(equalTo: recordButton.leadingAnchor, constant: -8),
+            waveform.leadingAnchor.constraint(equalTo: leadingAnchor),
+            waveform.trailingAnchor.constraint(equalTo: trailingAnchor),
             waveform.centerYAnchor.constraint(equalTo: centerYAnchor),
             waveform.heightAnchor.constraint(equalToConstant: RecordingWaveformView.preferredHeight),
         ])
@@ -447,8 +452,16 @@ final class RecordButtonIconView: UIView {
 /// reacting to voice input via the recorder's metering loop. Mirrors the
 /// main app's `ThreeWaveLines.tsx` (same per-wave profiles, smoothing and
 /// color identity) so the brand visualizer reads identically inside the
-/// keyboard. Each wave is a `CAShapeLayer` whose `path` is rebuilt every
-/// frame from a `CADisplayLink` tick.
+/// keyboard.
+///
+/// Per-frame pipeline: build the three curves, stroke them into an
+/// off-screen `UIGraphicsImageRenderer` context, apply `CIGaussianBlur`
+/// with sigma 2.5, and assign the resulting `UIImage` to a single
+/// `UIImageView`. This gives the same uniform Gaussian falloff the
+/// Figma SVG defines (`feGaussianBlur stdDeviation=2.5`) — `CALayer`
+/// has no first-class blur for animated stroke content, so a sharp
+/// CAShapeLayer + `shadowRadius` halo would render a bright core that
+/// the design explicitly does not have.
 final class RecordingWaveformView: UIView {
 
     /// Active animation mode — `.recording` is the audio-reactive default
@@ -481,12 +494,12 @@ final class RecordingWaveformView: UIView {
                     transcribingAmplitude: 0.6, transcribingPhaseOffset: 0.0,
                     color: UIColor(hex: 0xF7931A)), // waveOrange
         WaveProfile(basePhaseSpeed: 0.07, frequency: 3.1, verticalOffset: 0.0,
-                    amplitudeMultiplier: 0.55, strokeWidth: 2.8,
+                    amplitudeMultiplier: 0.55, strokeWidth: 3.0,
                     energyFloor: 0.05, audioAmplitudeReactivity: 1.0,
                     transcribingAmplitude: 0.7, transcribingPhaseOffset: .pi,
                     color: UIColor(hex: 0x5773EF)), // accentBrand
         WaveProfile(basePhaseSpeed: 0.09, frequency: 2.5, verticalOffset: 3.6,
-                    amplitudeMultiplier: 0.75, strokeWidth: 2.5,
+                    amplitudeMultiplier: 0.75, strokeWidth: 3.0,
                     energyFloor: 0.04, audioAmplitudeReactivity: 0.55,
                     transcribingAmplitude: 0.8,
                     transcribingPhaseOffset: 2 * .pi / 3,
@@ -519,11 +532,31 @@ final class RecordingWaveformView: UIView {
     }
 
     private var states: [WaveState]
-    private var shapeLayers: [CAShapeLayer] = []
+    private let imageView = UIImageView()
+    /// Reused across frames — `CIContext` is expensive to construct.
+    private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+    /// Reused renderer keyed on bounds; recreated only when the view is
+    /// laid out at a new size.
+    private var imageRenderer: UIGraphicsImageRenderer?
+    private var rendererSize: CGSize = .zero
     private var displayLink: CADisplayLink?
     private var lastFrameTime: CFTimeInterval = 0
     private var audioLevel: Double = 0
     private var mode: Mode = .recording
+    /// Horizontal alpha gradient masking the wave so it fades to transparent
+    /// at both edges of the keyboard header. Installed by the parent top bar
+    /// once full-bleed layout is in use.
+    private var edgeFadeMask: CAGradientLayer?
+
+    /// `feGaussianBlur stdDeviation=2.5` carries an `opacity=0.8` group
+    /// modifier in the Figma source — this is the matching ceiling so the
+    /// keyboard waveform reads identically to the main app's Skia version.
+    private static let figmaOpacityCeiling: Double = 0.8
+
+    /// Sigma for the per-frame `CIGaussianBlur` — matches the
+    /// `feGaussianBlur stdDeviation=2.5` filter on every wave group in
+    /// the Figma SVG export.
+    private static let blurSigma: Double = 2.5
 
     override init(frame: CGRect) {
         // Seed phases with offsets of 0, π, 2π so the three waves start
@@ -537,16 +570,10 @@ final class RecordingWaveformView: UIView {
         super.init(frame: frame)
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        for profile in Self.profiles {
-            let layer = CAShapeLayer()
-            layer.fillColor = nil
-            layer.strokeColor = profile.color.cgColor
-            layer.lineWidth = profile.strokeWidth
-            layer.lineCap = .round
-            layer.lineJoin = .round
-            self.layer.addSublayer(layer)
-            shapeLayers.append(layer)
-        }
+        imageView.frame = bounds
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        imageView.isUserInteractionEnabled = false
+        addSubview(imageView)
     }
 
     required init?(coder: NSCoder) {
@@ -561,9 +588,44 @@ final class RecordingWaveformView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        for layer in shapeLayers {
-            layer.frame = bounds
+        if rendererSize != bounds.size {
+            rendererSize = bounds.size
+            // `UIGraphicsImageRendererFormat.preferred()` honors the screen
+            // scale automatically, so the off-screen canvas matches retina
+            // resolution without explicit scale math.
+            imageRenderer = UIGraphicsImageRenderer(
+                size: bounds.size,
+                format: UIGraphicsImageRendererFormat.preferred()
+            )
         }
+        updateMaskFrame()
+    }
+
+    /// Install a horizontal alpha gradient that fades the wave to
+    /// transparent at the left/right edges. Used when the waveform spans
+    /// the full header width so the wave reads cleanly behind the logo
+    /// and record button.
+    func installEdgeFadeMask(insetFraction: CGFloat = 0.32) {
+        guard edgeFadeMask == nil else { return }
+        let mask = CAGradientLayer()
+        mask.startPoint = CGPoint(x: 0, y: 0.5)
+        mask.endPoint = CGPoint(x: 1, y: 0.5)
+        mask.colors = [
+            UIColor(white: 1, alpha: 0).cgColor,
+            UIColor(white: 1, alpha: 1).cgColor,
+            UIColor(white: 1, alpha: 1).cgColor,
+            UIColor(white: 1, alpha: 0).cgColor,
+        ]
+        let inset = NSNumber(value: Double(insetFraction))
+        let outset = NSNumber(value: 1.0 - Double(insetFraction))
+        mask.locations = [0.0, inset, outset, 1.0]
+        mask.frame = bounds
+        layer.mask = mask
+        edgeFadeMask = mask
+    }
+
+    private func updateMaskFrame() {
+        edgeFadeMask?.frame = bounds
     }
 
     /// Latest input amplitude (0…1) from the recorder's metering loop.
@@ -606,13 +668,7 @@ final class RecordingWaveformView: UIView {
             states[i].transcribingTime = 0
             states[i].oscillationStrength = 0
         }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        for layer in shapeLayers {
-            layer.path = nil
-            layer.opacity = 1.0
-        }
-        CATransaction.commit()
+        imageView.image = nil
     }
 
     @objc private func tick(_ link: CADisplayLink) {
@@ -634,6 +690,11 @@ final class RecordingWaveformView: UIView {
         let recordingRange = Self.recordingMaxAmplitude - Self.minAmplitude
 
         let isTranscribing = mode == .transcribing
+
+        // Per-frame paths + matching colors that we'll stroke into the
+        // off-screen canvas after the simulation step finishes.
+        var paths: [(UIBezierPath, UIColor, CGFloat)] = []
+        paths.reserveCapacity(Self.profiles.count)
 
         for (i, profile) in Self.profiles.enumerated() {
             var state = states[i]
@@ -668,7 +729,7 @@ final class RecordingWaveformView: UIView {
             if isTranscribing {
                 targetEnergy = 1.0
                 targetAmpMult = profile.transcribingAmplitude
-                targetOpacity = 0.5
+                targetOpacity = 0.4
             } else {
                 let voiceBoost = dl > Self.voiceThreshold
                     ? (dl - Self.voiceThreshold) * 0.5 * profile.audioAmplitudeReactivity
@@ -679,7 +740,7 @@ final class RecordingWaveformView: UIView {
                     + audioReactiveEnergy * profile.audioAmplitudeReactivity
                     + voiceBoost)
                 targetAmpMult = profile.amplitudeMultiplier
-                targetOpacity = 1.0
+                targetOpacity = Self.figmaOpacityCeiling
             }
             let smoothLerp = 0.08 * dtFactor
             state.smoothedBaseEnergy +=
@@ -767,11 +828,142 @@ final class RecordingWaveformView: UIView {
                 prevY = y
             }
 
-            CATransaction.begin()
-            CATransaction.setDisableActions(true)
-            shapeLayers[i].path = path.cgPath
-            shapeLayers[i].opacity = Float(state.smoothedOpacity)
-            CATransaction.commit()
+            let strokeColor = profile.color.withAlphaComponent(
+                CGFloat(state.smoothedOpacity)
+            )
+            paths.append((path, strokeColor, profile.strokeWidth))
+        }
+
+        renderBlurredImage(paths: paths)
+    }
+
+    /// Stroke each wave path into two off-screen canvases — one sharp,
+    /// one Gaussian-blurred — then composite them with opposing
+    /// horizontal alpha gradients so each wave alternates between crisp
+    /// and blurred segments along its length. Mirrors the Skia + Android
+    /// implementations and the Figma design's mixed blur pattern.
+    private func renderBlurredImage(
+        paths: [(UIBezierPath, UIColor, CGFloat)]
+    ) {
+        if rendererSize != bounds.size || imageRenderer == nil {
+            rendererSize = bounds.size
+            imageRenderer = UIGraphicsImageRenderer(
+                size: bounds.size,
+                format: UIGraphicsImageRendererFormat.preferred()
+            )
+        }
+        guard let renderer = imageRenderer, bounds.width > 0, bounds.height > 0
+        else { return }
+
+        // Build each wave's masked sharp + blurred images sequentially —
+        // `UIGraphicsImageRenderer.image` is not reentrant, so all
+        // intermediate images must be rendered before we open the final
+        // composite block.
+        var maskedImages: [UIImage] = []
+        for (i, item) in paths.enumerated() {
+            let (path, color, lineWidth) = item
+            guard i < Self.gradientPositions.count else { continue }
+            let stops = Self.gradientPositions[i]
+            let visibility = Self.sharpVisibility[i]
+
+            let strokeImage = renderer.image { ctx in
+                let cg = ctx.cgContext
+                cg.setLineCap(.round)
+                cg.setLineJoin(.round)
+                cg.setStrokeColor(color.cgColor)
+                cg.setLineWidth(lineWidth)
+                cg.addPath(path.cgPath)
+                cg.strokePath()
+            }
+            let blurredStroke = applyGaussianBlur(to: strokeImage)
+            maskedImages.append(
+                applyGradientMask(
+                    to: strokeImage, stops: stops,
+                    visibility: visibility, inverse: false
+                )
+            )
+            maskedImages.append(
+                applyGradientMask(
+                    to: blurredStroke, stops: stops,
+                    visibility: visibility, inverse: true
+                )
+            )
+        }
+
+        let composite = renderer.image { _ in
+            for img in maskedImages {
+                img.draw(in: bounds)
+            }
+        }
+        imageView.image = composite
+    }
+
+    private func applyGaussianBlur(to image: UIImage) -> UIImage {
+        guard let cg = image.cgImage else { return image }
+        let scale = image.scale
+        let ci = CIImage(cgImage: cg)
+        let blurred = ci.clampedToExtent()
+            .applyingGaussianBlur(sigma: Self.blurSigma * Double(scale))
+            .cropped(to: ci.extent)
+        guard let blurredCG = ciContext.createCGImage(
+            blurred, from: ci.extent
+        ) else {
+            return image
+        }
+        return UIImage(cgImage: blurredCG, scale: scale, orientation: .up)
+    }
+
+    /// Multiply the image's alpha by a horizontal gradient. `visibility`
+    /// is the per-stop visibility pattern (1 = sharp pass shows, 0 =
+    /// blurred pass shows); `inverse=true` flips it for the blurred
+    /// pass so the two passes mask out exactly the opposite regions.
+    private func applyGradientMask(
+        to image: UIImage,
+        stops: [CGFloat],
+        visibility: [Int],
+        inverse: Bool
+    ) -> UIImage {
+        guard let renderer = imageRenderer else { return image }
+        return renderer.image { ctx in
+            let cg = ctx.cgContext
+            // Draw the source image first.
+            image.draw(in: bounds)
+
+            let cgColors: [CGColor] = visibility.map { v in
+                let effective = inverse ? 1 - v : v
+                return UIColor(white: 1, alpha: CGFloat(effective)).cgColor
+            }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            guard let gradient = CGGradient(
+                colorsSpace: colorSpace,
+                colors: cgColors as CFArray,
+                locations: stops
+            ) else { return }
+            cg.setBlendMode(.destinationIn)
+            cg.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: bounds.minX, y: bounds.midY),
+                end: CGPoint(x: bounds.maxX, y: bounds.midY),
+                options: []
+            )
         }
     }
+
+    /// Per-wave gradient stops + sharp-pass visibility pattern, mirroring
+    /// `WAVE_GRADIENTS` in `ThreeWaveLines.tsx` and `GRADIENT_POSITIONS` /
+    /// `SHARP_VISIBILITY` in `EchosWaveformView.kt`. Each wave gets two
+    /// blurred spots at distinctly different x positions:
+    ///   Wave 0 (orange): ~32%, ~92%
+    ///   Wave 1 (blue) : ~10%, ~70%  (inverted pattern)
+    ///   Wave 2 (cyan) : ~51%, ~88%
+    private static let gradientPositions: [[CGFloat]] = [
+        [0, 0.18, 0.25, 0.40, 0.55, 0.75, 0.85, 1.0],
+        [0, 0.20, 0.30, 0.50, 0.62, 0.78, 0.85, 1.0],
+        [0, 0.32, 0.45, 0.58, 0.65, 0.72, 0.80, 0.92],
+    ]
+    private static let sharpVisibility: [[Int]] = [
+        [1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 0, 1, 1, 0, 0, 1, 1],
+        [1, 1, 0, 0, 1, 1, 0, 0],
+    ]
 }

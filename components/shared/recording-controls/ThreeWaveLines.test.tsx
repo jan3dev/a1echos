@@ -19,12 +19,23 @@ jest.mock("@shopify/react-native-skia", () => ({
       </View>
     );
   },
-  Path: ({ ...rest }: any) => {
+  Path: ({ children, ...rest }: any) => {
     const { View } = require("react-native");
     const { TestID: TID } = require("@/constants");
-    return <View testID={TID.SkiaPath} {...rest} />;
+    return (
+      <View testID={TID.SkiaPath} {...rest}>
+        {children}
+      </View>
+    );
   },
+  BlurMask: () => null,
+  Group: ({ children }: any) => {
+    const { View } = require("react-native");
+    return <View>{children}</View>;
+  },
+  LinearGradient: () => null,
   usePathValue: jest.fn(() => ({ current: null })),
+  vec: (x: number, y: number) => ({ x, y }),
   Skia: {
     Path: { Make: jest.fn() },
     Color: jest.fn(),
@@ -79,11 +90,11 @@ describe("ThreeWaveLines", () => {
     expect(getByTestId(TestID.SkiaCanvas)).toBeTruthy();
   });
 
-  it("renders 3 Path elements", () => {
+  it("renders 6 Path elements (3 sharp + 3 blurred)", () => {
     const { getAllByTestId } = render(
       <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
     );
-    expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(3);
+    expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(6);
   });
 
   it("subscribes to transcriptionStore audio level changes", () => {

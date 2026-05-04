@@ -1,10 +1,15 @@
 package com.a1lab.echos.ime
 
 import android.content.Context
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.View
@@ -75,14 +80,14 @@ class EchosWaveformView @JvmOverloads constructor(
         ),
         WaveProfile(
             basePhaseSpeed = 0.07, frequency = 3.1, verticalOffset = 0.0f,
-            amplitudeMultiplier = 0.55, strokeWidthDp = 2.8f,
+            amplitudeMultiplier = 0.55, strokeWidthDp = 3.0f,
             energyFloor = 0.05, audioAmplitudeReactivity = 1.0,
             transcribingAmplitude = 0.7, transcribingPhaseOffset = Math.PI,
             color = Color.parseColor("#5773EF"), // accentBrand
         ),
         WaveProfile(
             basePhaseSpeed = 0.09, frequency = 2.5, verticalOffset = 3.6f,
-            amplitudeMultiplier = 0.75, strokeWidthDp = 2.5f,
+            amplitudeMultiplier = 0.75, strokeWidthDp = 3.0f,
             energyFloor = 0.04, audioAmplitudeReactivity = 0.55,
             transcribingAmplitude = 0.8,
             transcribingPhaseOffset = 2.0 * Math.PI / 3.0,
@@ -97,13 +102,35 @@ class EchosWaveformView @JvmOverloads constructor(
         )
     }.toMutableList()
 
-    private val paints = profiles.map { p ->
+    /// Sharp pass — never blurred. Visible only in the segments where the
+    /// per-wave horizontal alpha gradient (see `sharpGradientColors`) is
+    /// opaque. Combined with the blurred pass below, this produces the
+    /// alternating crisp/blurred segments the Figma design uses along
+    /// each wave.
+    private val sharpPaints = profiles.map { p ->
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = p.strokeWidthDp * density.toFloat()
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
             color = p.color
+        }
+    }
+
+    /// Blurred pass — Gaussian-blurred 3px stroke, the Android equivalent
+    /// of the Figma SVG's `feGaussianBlur stdDeviation=2.5`. Visible only
+    /// in the segments where the inverse gradient is opaque.
+    private val blurredPaints = profiles.map { p ->
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = p.strokeWidthDp * density.toFloat()
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            color = p.color
+            maskFilter = BlurMaskFilter(
+                BLUR_RADIUS_DP * density.toFloat(),
+                BlurMaskFilter.Blur.NORMAL,
+            )
         }
     }
 
@@ -129,6 +156,12 @@ class EchosWaveformView @JvmOverloads constructor(
         isClickable = false
         isFocusable = false
         setWillNotDraw(false)
+        // `BlurMaskFilter` is unsupported on hardware-accelerated layers
+        // before API 28 and silently degrades. Render this view via the
+        // software pipeline so the halo looks identical on every device;
+        // the cost (60Hz software paths × 3 strokes × 60 points) is well
+        // within budget.
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
     /** Latest input amplitude (0…1) from the recorder's metering loop.
@@ -166,7 +199,8 @@ class EchosWaveformView @JvmOverloads constructor(
                 smoothedAmplitudeMultiplier = p.amplitudeMultiplier,
             )
             paths[i].reset()
-            paints[i].alpha = 255
+            sharpPaints[i].alpha = 255
+            blurredPaints[i].alpha = 255
         }
         invalidate()
     }
@@ -231,7 +265,7 @@ class EchosWaveformView @JvmOverloads constructor(
             if (isTranscribing) {
                 targetEnergy = 1.0
                 targetAmpMult = profile.transcribingAmplitude
-                targetOpacity = 0.5
+                targetOpacity = 0.4
             } else {
                 val voiceBoost = if (dl > VOICE_THRESHOLD)
                     (dl - VOICE_THRESHOLD) * 0.5 * profile.audioAmplitudeReactivity
@@ -241,7 +275,7 @@ class EchosWaveformView @JvmOverloads constructor(
                     + audioReactiveEnergy * profile.audioAmplitudeReactivity
                     + voiceBoost).coerceAtMost(1.2)
                 targetAmpMult = profile.amplitudeMultiplier
-                targetOpacity = 1.0
+                targetOpacity = FIGMA_OPACITY_CEILING
             }
             val smoothLerp = 0.08 * dtFactor
             state.smoothedBaseEnergy += (targetEnergy - state.smoothedBaseEnergy) * smoothLerp
@@ -271,7 +305,7 @@ class EchosWaveformView @JvmOverloads constructor(
             val baseEnergy = state.smoothedBaseEnergy
             val ampMult = state.smoothedAmplitudeMultiplier
             val phase = state.phase
-            val edgePadding = max(2.0 * density, paints[i].strokeWidth.toDouble())
+            val edgePadding = max(2.0 * density, sharpPaints[i].strokeWidth.toDouble())
             val adjustedCenterY = centerY + profile.verticalOffset * density
             val maxAmp = max(0.0, min(
                 adjustedCenterY - edgePadding,
@@ -325,16 +359,106 @@ class EchosWaveformView @JvmOverloads constructor(
                 prevY = y
             }
 
-            paints[i].alpha = (state.smoothedOpacity.coerceIn(0.0, 1.0) * 255.0).toInt()
+            val alpha =
+                (state.smoothedOpacity.coerceIn(0.0, FIGMA_OPACITY_CEILING) * 255.0).toInt()
+            sharpPaints[i].alpha = alpha
+            blurredPaints[i].alpha = alpha
         }
 
         invalidate()
     }
 
+    /// When non-zero, fades the waveform's alpha from 0 at each horizontal
+    /// edge to fully opaque at `edgeFadeFraction` from the edge. Used when
+    /// the wave spans the full keyboard header so the logo and record
+    /// button sit on a transparent fall-off behind them.
+    private var edgeFadeFraction: Float = 0f
+    private val maskPaint = Paint().apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+    }
+
+    /** Enable a horizontal alpha gradient that fades the wave to
+     *  transparent at both edges. `fraction` is the portion of the view
+     *  width consumed by the fade on each side (e.g. 0.18 → wave is fully
+     *  opaque between 18% and 82% of the width). Pass 0 to disable. */
+    fun setEdgeFadeFraction(fraction: Float) {
+        edgeFadeFraction = fraction.coerceIn(0f, 0.5f)
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
-        for (i in paths.indices) {
-            canvas.drawPath(paths[i], paints[i])
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+
+        // Wrap the entire wave drawing in a single saveLayer when the edge
+        // fade is enabled so the horizontal fade applies uniformly across
+        // both the sharp and blurred passes.
+        val outerLayer = if (edgeFadeFraction > 0f) {
+            canvas.saveLayer(0f, 0f, w, h, null)
+        } else {
+            -1
         }
+
+        for (i in paths.indices) {
+            // Each wave gets its own off-screen layer so the per-pass
+            // horizontal alpha gradient (sharp vs blurred) only masks
+            // that wave's strokes, not the previously drawn ones.
+            val sharpLayer = canvas.saveLayer(0f, 0f, w, h, null)
+            canvas.drawPath(paths[i], sharpPaints[i])
+            applyHorizontalGradientMask(
+                canvas, w, h,
+                GRADIENT_POSITIONS[i], SHARP_VISIBILITY[i],
+                inverse = false,
+            )
+            canvas.restoreToCount(sharpLayer)
+
+            val blurredLayer = canvas.saveLayer(0f, 0f, w, h, null)
+            canvas.drawPath(paths[i], blurredPaints[i])
+            applyHorizontalGradientMask(
+                canvas, w, h,
+                GRADIENT_POSITIONS[i], SHARP_VISIBILITY[i],
+                inverse = true,
+            )
+            canvas.restoreToCount(blurredLayer)
+        }
+
+        if (outerLayer >= 0) {
+            // Apply the edge fade across the composed wave image.
+            maskPaint.shader = LinearGradient(
+                0f, 0f, w, 0f,
+                intArrayOf(Color.TRANSPARENT, Color.WHITE, Color.WHITE, Color.TRANSPARENT),
+                floatArrayOf(0f, edgeFadeFraction, 1f - edgeFadeFraction, 1f),
+                Shader.TileMode.CLAMP,
+            )
+            canvas.drawRect(0f, 0f, w, h, maskPaint)
+            canvas.restoreToCount(outerLayer)
+        }
+    }
+
+    /** Punch the previously drawn wave with a horizontal alpha gradient
+     *  so it's only visible where `visibility` matches the requested
+     *  pass (sharp or its inverse for the blurred pass). The visibility
+     *  pattern carries the wave's two blurred-spot positions per
+     *  `SHARP_VISIBILITY[i]`. */
+    private fun applyHorizontalGradientMask(
+        canvas: Canvas,
+        w: Float,
+        h: Float,
+        positions: FloatArray,
+        visibility: IntArray,
+        inverse: Boolean,
+    ) {
+        val opaque = Color.WHITE
+        val clear = Color.TRANSPARENT
+        val colors = IntArray(visibility.size) { i ->
+            val v = if (inverse) 1 - visibility[i] else visibility[i]
+            if (v == 1) opaque else clear
+        }
+        maskPaint.shader = LinearGradient(
+            0f, 0f, w, 0f, colors, positions, Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, w, h, maskPaint)
     }
 
     companion object {
@@ -343,5 +467,32 @@ class EchosWaveformView @JvmOverloads constructor(
         private const val RECORDING_MAX_AMPLITUDE = 32.0
         private const val MIN_AMPLITUDE = 2.0
         private const val VOICE_THRESHOLD = 0.38
+        /// Matches `BlurMask blur={2.5}` in `ThreeWaveLines.tsx` and the
+        /// `feGaussianBlur stdDeviation=2.5` filter in the Figma source.
+        private const val BLUR_RADIUS_DP = 2.5f
+        /// Mirrors `opacity="0.8"` on the Figma group definition.
+        private const val FIGMA_OPACITY_CEILING = 0.8
+
+        /// Per-wave horizontal gradient stops + visibility pattern that
+        /// drives which segments of the wave render as a sharp 3pt
+        /// stroke vs. a Gaussian-blurred stroke. Each wave has TWO
+        /// blurred spots at distinctly different x positions so the
+        /// three lines never all soften at the same place. Mirrors
+        /// `WAVE_GRADIENTS` in `ThreeWaveLines.tsx`.
+        ///
+        /// Approximate blur centers:
+        ///   Wave 0 (orange): ~32%, ~92%
+        ///   Wave 1 (blue) : ~10%, ~70%  (inverted pattern)
+        ///   Wave 2 (cyan) : ~51%, ~88%
+        private val GRADIENT_POSITIONS = arrayOf(
+            floatArrayOf(0f, 0.18f, 0.25f, 0.40f, 0.55f, 0.75f, 0.85f, 1f),
+            floatArrayOf(0f, 0.20f, 0.30f, 0.50f, 0.62f, 0.78f, 0.85f, 1f),
+            floatArrayOf(0f, 0.32f, 0.45f, 0.58f, 0.65f, 0.72f, 0.80f, 0.92f),
+        )
+        private val SHARP_VISIBILITY = arrayOf(
+            intArrayOf(1, 1, 0, 0, 1, 1, 0, 0),
+            intArrayOf(0, 0, 1, 1, 0, 0, 1, 1),
+            intArrayOf(1, 1, 0, 0, 1, 1, 0, 0),
+        )
     }
 }
