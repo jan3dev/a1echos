@@ -4,6 +4,12 @@ import { FeatureFlag, logError } from "@/utils";
 
 import { AUDIO_BUSY_STATES, useTranscriptionStore } from "./transcriptionStore";
 
+// Tracks the most recent pre-warm. If the user changes models mid-warmup the
+// service re-enters its in-flight init promise and starts a second cycle; we
+// must only clear `isEngineInitializing` when the *latest* call settles, or
+// the spinner will flip off while the second init is still loading.
+let preWarmGeneration = 0;
+
 /**
  * Eagerly load the sherpa-onnx engine for `modelId` so that subsequent
  * `startRecording` calls don't pay the multi-second init cost. Fire-and-forget;
@@ -20,6 +26,7 @@ export const preWarmModel = (modelId: ModelId, language: string): void => {
     return;
   }
 
+  const generation = ++preWarmGeneration;
   store.setEngineInitializing(true);
   void sherpaTranscriptionService
     .initialize(modelId, language)
@@ -30,6 +37,7 @@ export const preWarmModel = (modelId: ModelId, language: string): void => {
       });
     })
     .finally(() => {
+      if (generation !== preWarmGeneration) return;
       useTranscriptionStore.getState().setEngineInitializing(false);
     });
 };

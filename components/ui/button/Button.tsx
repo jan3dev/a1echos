@@ -310,6 +310,6 @@ const styles = StyleSheet.create({
   },
   primaryInsetHighlight: {
     borderTopWidth: 2,
-    borderTopColor: "#7A92F3",
+    borderTopColor: AquaPrimitiveColors.neonBlue300,
   },
 });

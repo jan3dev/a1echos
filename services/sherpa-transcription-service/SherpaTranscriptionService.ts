@@ -804,30 +804,6 @@ const createSherpaTranscriptionService = () => {
     });
   };
 
-  const switchModel = async (modelId: ModelId): Promise<boolean> => {
-    if (state.activeModelId === modelId && state.isInitialized) {
-      return true;
-    }
-
-    if (state.isRealtimeRecording) {
-      await stopRealtimeTranscription();
-    }
-
-    const previousModelId = state.activeModelId;
-    const previousLanguage = state.activeLanguage;
-
-    await dispose();
-    const ok = await initialize(modelId);
-    if (ok || !previousModelId) return ok;
-
-    // Init failed — try to restore the previous model so the app isn't wedged.
-    logWarn(`Model switch to ${modelId} failed; restoring ${previousModelId}`, {
-      flag: FeatureFlag.model,
-    });
-    await initialize(previousModelId, previousLanguage ?? "en");
-    return false;
-  };
-
   const subscribeToChunk = (
     callback: (event: ChunkEvent) => void,
   ): (() => void) => {
@@ -886,7 +862,6 @@ const createSherpaTranscriptionService = () => {
     stopRealtimeTranscription,
     subscribeToChunk,
     subscribeToAudioLevel,
-    switchModel,
     dispose,
     get initializationStatus() {
       return state.initializationStatus;

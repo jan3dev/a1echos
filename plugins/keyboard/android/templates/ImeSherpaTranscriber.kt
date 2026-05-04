@@ -41,7 +41,13 @@ class ImeSherpaTranscriber(private val context: Context) {
     private val isRecording = AtomicBoolean(false)
     private var audioRecord: AudioRecord? = null
     private var recordingThread: Thread? = null
-    private val pcmBuffer = mutableListOf<Short>()
+    // Pre-allocated primitive buffer sized for the full recording cap. A
+    // boxed ArrayList<Short> would allocate ~24 bytes per sample × 30s ×
+    // 16 kHz ≈ 11 MB of GC garbage inside the IME process; a primitive
+    // ShortArray is one upfront allocation and zero per-sample objects.
+    private val pcmBuffer = ShortArray(MAX_RECORDING_SECONDS * SAMPLE_RATE)
+    private val pcmBufferLock = Object()
+    @Volatile private var pcmBufferLength: Int = 0
 
     @Volatile private var recognizer: OfflineRecognizer? = null
     @Volatile private var loadedSignature: String? = null
@@ -95,7 +101,7 @@ class ImeSherpaTranscriber(private val context: Context) {
         }
 
         isRecording.set(true)
-        pcmBuffer.clear()
+        synchronized(pcmBufferLock) { pcmBufferLength = 0 }
         audioRecord?.startRecording()
 
         recordingThread = thread(name = "EchosIME-AudioCapture") {
@@ -113,7 +119,7 @@ class ImeSherpaTranscriber(private val context: Context) {
             audioRecord?.stop()
             audioRecord?.release()
             audioRecord = null
-            pcmBuffer.clear()
+            synchronized(pcmBufferLock) { pcmBufferLength = 0 }
         }
     }
 
@@ -137,12 +143,15 @@ class ImeSherpaTranscriber(private val context: Context) {
         var hasReceivedSpeech = false
 
         try {
-            while (isRecording.get() && pcmBuffer.size < maxSamples) {
+            while (isRecording.get() && pcmBufferLength < maxSamples) {
                 val read = audioRecord?.read(buffer, 0, buffer.size) ?: break
                 if (read > 0) {
-                    synchronized(pcmBuffer) {
-                        for (i in 0 until read) {
-                            pcmBuffer.add(buffer[i])
+                    synchronized(pcmBufferLock) {
+                        val remaining = pcmBuffer.size - pcmBufferLength
+                        val toCopy = if (read <= remaining) read else remaining
+                        if (toCopy > 0) {
+                            System.arraycopy(buffer, 0, pcmBuffer, pcmBufferLength, toCopy)
+                            pcmBufferLength += toCopy
                         }
                     }
 
@@ -187,13 +196,14 @@ class ImeSherpaTranscriber(private val context: Context) {
         onTranscribing?.invoke()
 
         val samples: FloatArray
-        synchronized(pcmBuffer) {
-            if (pcmBuffer.isEmpty()) {
+        synchronized(pcmBufferLock) {
+            val length = pcmBufferLength
+            if (length == 0) {
                 onError?.invoke("No audio recorded")
                 return
             }
-            samples = FloatArray(pcmBuffer.size) { pcmBuffer[it].toFloat() / 32768f }
-            pcmBuffer.clear()
+            samples = FloatArray(length) { pcmBuffer[it].toFloat() / 32768f }
+            pcmBufferLength = 0
         }
 
         val rec = try {

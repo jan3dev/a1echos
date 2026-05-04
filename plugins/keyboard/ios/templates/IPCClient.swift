@@ -42,6 +42,14 @@ class IPCClient {
     deinit {
         pollTimer?.invalidate()
         pingTimeoutTimer?.invalidate()
+        // The Darwin observers were registered with `passUnretained(self)` —
+        // if a notification fires after dealloc the callback dereferences
+        // freed memory. Remove every observer keyed to this instance.
+        let observer = Unmanaged.passUnretained(self).toOpaque()
+        CFNotificationCenterRemoveEveryObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            observer
+        )
     }
 
     // MARK: - Shared Container Paths
@@ -50,11 +58,17 @@ class IPCClient {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
     }
 
-    static func keyboardDirectory() -> URL? {
-        guard let container = sharedContainerURL() else { return nil }
+    private static let cachedKeyboardDirectory: URL? = {
+        guard let container = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)
+        else { return nil }
         let dir = container.appendingPathComponent("keyboard", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
+    }()
+
+    static func keyboardDirectory() -> URL? {
+        cachedKeyboardDirectory
     }
 
     static func audioFileURL() -> URL {

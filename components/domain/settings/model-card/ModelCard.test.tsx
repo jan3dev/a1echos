@@ -32,6 +32,10 @@ jest.mock("@/theme", () => ({
     },
   })),
   getShadow: jest.fn(() => ({})),
+  AquaPrimitiveColors: new Proxy(
+    {},
+    { get: (_, key) => `mock-${String(key)}` },
+  ),
 }));
 
 jest.mock("@/utils", () => ({

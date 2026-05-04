@@ -540,6 +540,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     updateAudioLevel: (level: number) => {
+      if (get().audioLevel === level) return;
       set({ audioLevel: level });
     },
 
@@ -1048,12 +1049,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         get().clearLivePreview();
         get().clearLoadingPreview();
 
-        // Try to recover to ready state
-        try {
-          get().transitionTo(TranscriptionState.READY);
-        } catch {
-          // Already in error state
-        }
+        get().transitionTo(TranscriptionState.READY);
       } finally {
         try {
           await backgroundRecordingService.stopBackgroundService();

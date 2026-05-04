@@ -66,6 +66,8 @@ export enum TestID {
   SettingsSmartSplitToggle = "settings-smart-split-toggle",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
   KeyboardPromptModal = "keyboard-prompt-modal",
+  KeyboardPromptImageIos = "keyboard-prompt-image-ios",
+  KeyboardPromptImageAndroid = "keyboard-prompt-image-android",
 
   // --- Theme Settings ---
   ThemeAuto = "theme-auto",

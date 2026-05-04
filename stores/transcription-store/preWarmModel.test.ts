@@ -102,6 +102,36 @@ describe("preWarmModel", () => {
     expect(sherpaTranscriptionService.initialize).not.toHaveBeenCalled();
   });
 
+  it("only the latest racing pre-warm clears isEngineInitializing", async () => {
+    let resolveFirst!: (value: boolean) => void;
+    let resolveSecond!: (value: boolean) => void;
+    const firstPromise = new Promise<boolean>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondPromise = new Promise<boolean>((resolve) => {
+      resolveSecond = resolve;
+    });
+    (sherpaTranscriptionService.initialize as jest.Mock)
+      .mockReturnValueOnce(firstPromise)
+      .mockReturnValueOnce(secondPromise);
+
+    preWarmModel(ModelId.NEMO_PARAKEET_V3, "en");
+    preWarmModel(ModelId.WHISPER_TINY, "en");
+    expect(useTranscriptionStore.getState().isEngineInitializing).toBe(true);
+
+    resolveFirst(true);
+    await flushMicrotasks();
+    await flushMicrotasks();
+    // First pre-warm settled but the second is still in-flight, so the flag
+    // must stay on.
+    expect(useTranscriptionStore.getState().isEngineInitializing).toBe(true);
+
+    resolveSecond(true);
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(useTranscriptionStore.getState().isEngineInitializing).toBe(false);
+  });
+
   it("swallows errors from sherpa initialize so callers can fire-and-forget", async () => {
     (sherpaTranscriptionService.initialize as jest.Mock).mockRejectedValueOnce(
       new Error("init blew up"),

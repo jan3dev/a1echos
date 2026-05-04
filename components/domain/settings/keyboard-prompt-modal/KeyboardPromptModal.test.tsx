@@ -136,7 +136,7 @@ describe("KeyboardPromptModal", () => {
         onCancel={onCancel}
       />,
     );
-    expect(getByTestId("keyboard-prompt-image-ios")).toBeTruthy();
+    expect(getByTestId(TestID.KeyboardPromptImageIos)).toBeTruthy();
   });
 
   it("renders the Android keyboard image on Android", () => {
@@ -148,7 +148,7 @@ describe("KeyboardPromptModal", () => {
         onCancel={onCancel}
       />,
     );
-    expect(getByTestId("keyboard-prompt-image-android")).toBeTruthy();
+    expect(getByTestId(TestID.KeyboardPromptImageAndroid)).toBeTruthy();
   });
 
   it("shows the iOS disclaimer on iOS", () => {
