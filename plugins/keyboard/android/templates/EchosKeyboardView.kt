@@ -15,7 +15,10 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.AttributeSet
+import android.util.Log
+import android.util.SparseArray
 import android.util.TypedValue
+import android.view.Choreographer
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -55,18 +58,50 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var layoutMode: LayoutMode = LayoutMode.LETTERS
     private var shiftState: ShiftState = ShiftState.OFF
     private var micState: MicState = MicState.IDLE
-    private var pressedKeyIndex: Pair<Int, Int>? = null // (row, col)
     private var returnLabel: String = "\u23CE"
+
+    /// Per-pointer state. Each finger touching the keyboard gets its own
+    /// entry keyed by Android's stable `pointerId`, which is what unlocks
+    /// roll-typing: when finger B lands while finger A is still down, B's
+    /// `ACTION_POINTER_DOWN` lands its own row/col here without disturbing
+    /// A's existing entry, and either pointer's release commits its own
+    /// character. Without this map, only the gesture-leader pointer was
+    /// tracked and every overlapping press was silently dropped.
+    private data class PointerState(
+        val rowIdx: Int,
+        val colIdx: Int,
+        var touchDownNs: Long,
+        var longPressRunnable: Runnable?,
+        var longPressFired: Boolean,
+        var ownsVariants: Boolean,
+        var ownsDeleteRepeat: Boolean,
+    )
+    private val pointers = SparseArray<PointerState>()
 
     // Computed key rects for hit testing
     private val keyRects = mutableListOf<List<RectF>>()
 
-    // Paints
+    // Paints. Three pre-configured text paints \u2014 one per text size \u2014 so
+    // `drawKey` never mutates `textSize` mid-frame. Mutating textSize forces
+    // Skia to recompute font metrics and invalidates the glyph cache; with
+    // ~30 keys redrawn per frame the cost adds up. Each paint also caches
+    // its baseline offset so we don't re-call `descent + ascent` per
+    // `drawText`.
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val keyTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val keyTextPaintRegular = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT
     }
+    private val keyTextPaintSpecial = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT
+    }
+    private val keyTextPaintNumber = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT
+    }
+    private var regularBaselineOffset = 0f
+    private var specialBaselineOffset = 0f
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     // Dimensions (loaded from resources)
@@ -78,6 +113,26 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var keyTextSizeSpecial = 0f
     private var paddingH = 0f
     private var paddingBottom = 0f
+
+    // Pre-computed dp-converted constants used inside the per-frame draw
+    // loop. Computing them via `dpPx()` for every key on every redraw is
+    // wasteful — at ~30 character keys × 60Hz mic-pulse-driven redraws
+    // that's thousands of needless `applyDimension` calls per second.
+    private var numberLabelTextSize = 0f
+    private var numberLabelOffsetRight = 0f
+    private var numberLabelOffsetTop = 0f
+    private var iconSizePx = 0
+
+    // Caches that turn per-frame work in `drawKey` into one-time map
+    // lookups: avoids re-allocating uppercase strings and re-resolving
+    // accent-number lookups for every redraw.
+    private val uppercaseLabelCache = mutableMapOf<String, String>()
+    private val numberLabelCache = mutableMapOf<String, String?>()
+
+    /// Whether `keyRects` is up-to-date for the current `width` / `currentRows`.
+    /// Set false on size or layout-mode changes; recomputed lazily on the
+    /// next draw. Avoids re-allocating ~30 `RectF` instances per frame.
+    private var keyRectsValid = false
 
     // Colors
     private val theme = KeyTheme(context)
@@ -95,18 +150,46 @@ class EchosKeyboardView @JvmOverloads constructor(
     // popups themselves render in `KeyOverlayView` (a sibling on top of the
     // IME's FrameLayout) so they can extend above the keyboard's row area
     // into the top-bar's vertical band — top-row keys would otherwise have
-    // nowhere visible to put their preview balloon.
+    // nowhere visible to put their preview balloon. Each pointer schedules
+    // its own runnable on this shared handler; only one popup can be on
+    // screen at a time, owned by whichever pointer fired its long-press
+    // first (`PointerState.ownsVariants`).
     private val longPressHandler = Handler(Looper.getMainLooper())
-    private var longPressRunnable: Runnable? = null
-    /// True after the long-press timer fires for any key — lets ACTION_UP
-    /// suppress the trailing single-tap action (e.g. globe long-press shows
-    /// the IME picker; the release shouldn't also switch keyboards).
-    private var longPressDidFire = false
     private var overlay: KeyOverlayView? = null
 
     private companion object {
         private const val LONG_PRESS_THRESHOLD_MS = 400L
+
+        /// Tag used by the optional perf logger. Toggle on a connected
+        /// device with `adb shell setprop log.tag.EchosImePerf DEBUG`.
+        /// Off by default — `Log.isLoggable` is a fast check.
+        private const val PERF_TAG = "EchosImePerf"
+
+        /// 24ms ≈ 1.5× a 60Hz vsync interval. Frames longer than this are
+        /// what the user perceives as jank when typing.
+        private const val SLOW_FRAME_NS = 24_000_000L
     }
+
+    /// Frame-drop logger. Re-posts itself while attached and the perf tag
+    /// is enabled. Logs whenever the gap between consecutive frames
+    /// exceeds `SLOW_FRAME_NS`.
+    private var lastFrameNs: Long = 0L
+    private val perfFrameCallback: Choreographer.FrameCallback =
+        Choreographer.FrameCallback { frameTimeNs ->
+            val prev = lastFrameNs
+            lastFrameNs = frameTimeNs
+            if (prev != 0L) {
+                val delta = frameTimeNs - prev
+                if (delta > SLOW_FRAME_NS) {
+                    Log.d(PERF_TAG, "slow frame: ${delta / 1_000_000}ms")
+                }
+            }
+            if (isAttachedToWindow && Log.isLoggable(PERF_TAG, Log.DEBUG)) {
+                Choreographer.getInstance().postFrameCallback(perfFrameCallback)
+            } else {
+                lastFrameNs = 0L
+            }
+        }
 
     // Delete-key auto-repeat: matches the iOS keyboard's cadence — char-rate
     // after a 0.4 s hold, escalating to word-rate past ~1.5 s. Suppresses the
@@ -137,6 +220,48 @@ class EchosKeyboardView @JvmOverloads constructor(
         keyTextSizeSpecial = res.getDimension(res.getIdentifier("key_text_size_special", "dimen", context.packageName))
         paddingH = res.getDimension(res.getIdentifier("keyboard_padding_horizontal", "dimen", context.packageName))
         paddingBottom = res.getDimension(res.getIdentifier("keyboard_padding_bottom", "dimen", context.packageName))
+
+        // Constants the draw loop uses for the small number label drawn in
+        // the corner of each top-row letter key. Computed once here so the
+        // per-frame loop is allocation-free.
+        numberLabelTextSize = dpPx(10f)
+        numberLabelOffsetRight = dpPx(7f)
+        numberLabelOffsetTop = dpPx(12f)
+        iconSizePx = dpPx(22f).toInt()
+
+        // Pre-configure the three text paints with their final text sizes.
+        // Setting `textSize` triggers font-metric recomputation, so we want
+        // to do it exactly once per paint at init rather than every draw.
+        keyTextPaintRegular.textSize = keyTextSize
+        keyTextPaintSpecial.textSize = keyTextSizeSpecial
+        keyTextPaintNumber.textSize = numberLabelTextSize
+        regularBaselineOffset =
+            -(keyTextPaintRegular.descent() + keyTextPaintRegular.ascent()) / 2
+        specialBaselineOffset =
+            -(keyTextPaintSpecial.descent() + keyTextPaintSpecial.ascent()) / 2
+
+        prewarmLabelCaches()
+    }
+
+    /// Pre-fill the uppercase / accent-number caches by walking every layout
+    /// once. The set of unique key labels across LETTERS / NUMBERS / SYMBOLS
+    /// is ~50, so this is trivial work — and it pays back every draw of
+    /// every shifted character key.
+    private fun prewarmLabelCaches() {
+        val allRows = EchosKeyboardLayout.LETTER_ROWS +
+            EchosKeyboardLayout.NUMBER_ROWS +
+            EchosKeyboardLayout.SYMBOL_ROWS
+        for (row in allRows) {
+            for (key in row.keys) {
+                if (key.type != EchosKeyboardLayout.KeyType.CHARACTER) continue
+                if (!uppercaseLabelCache.containsKey(key.label)) {
+                    uppercaseLabelCache[key.label] = key.label.uppercase()
+                }
+                if (!numberLabelCache.containsKey(key.label)) {
+                    numberLabelCache[key.label] = AccentVariants.numberFor(key.label)
+                }
+            }
+        }
     }
 
     fun setKeyboardActionListener(listener: KeyboardActionListener) {
@@ -151,12 +276,14 @@ class EchosKeyboardView @JvmOverloads constructor(
         layoutMode = LayoutMode.LETTERS
         currentRows = EchosKeyboardLayout.LETTER_ROWS
         shiftState = ShiftState.OFF
+        keyRectsValid = false
         invalidate()
     }
 
     fun showNumberLayout() {
         layoutMode = LayoutMode.NUMBERS
         currentRows = EchosKeyboardLayout.NUMBER_ROWS
+        keyRectsValid = false
         invalidate()
     }
 
@@ -195,6 +322,11 @@ class EchosKeyboardView @JvmOverloads constructor(
         setMeasuredDimension(width, totalHeight)
     }
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        keyRectsValid = false
+    }
+
     // -- Drawing --
 
     override fun onDraw(canvas: Canvas) {
@@ -204,19 +336,32 @@ class EchosKeyboardView @JvmOverloads constructor(
         backgroundPaint.color = theme.keyboardBackground
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
-        computeKeyRects()
+        if (!keyRectsValid) {
+            computeKeyRects()
+            keyRectsValid = true
+        }
 
         for (rowIdx in currentRows.indices) {
             val row = currentRows[rowIdx]
             for (colIdx in row.keys.indices) {
                 val key = row.keys[colIdx]
                 val rect = keyRects[rowIdx][colIdx]
-                val isPressed = pressedKeyIndex?.first == rowIdx && pressedKeyIndex?.second == colIdx
-                drawKey(canvas, key, rect, isPressed)
+                drawKey(canvas, key, rect, isKeyPressed(rowIdx, colIdx))
             }
         }
         // Popups (preview balloon + accent variants) draw in `KeyOverlayView`,
         // not here — see `setOverlay` for the wiring.
+    }
+
+    /// True if any active pointer is currently down on this row/col. Linear
+    /// scan, but `pointers` rarely holds more than 2-3 entries during real
+    /// typing, so this is faster than a secondary index.
+    private fun isKeyPressed(rowIdx: Int, colIdx: Int): Boolean {
+        for (i in 0 until pointers.size()) {
+            val state = pointers.valueAt(i)
+            if (state.rowIdx == rowIdx && state.colIdx == colIdx) return true
+        }
+        return false
     }
 
     private fun computeKeyRects() {
@@ -301,37 +446,35 @@ class EchosKeyboardView @JvmOverloads constructor(
             return
         }
 
-        keyTextPaint.color = textColor
-        keyTextPaint.textSize = when (key.type) {
-            EchosKeyboardLayout.KeyType.MODE_SWITCH,
-            EchosKeyboardLayout.KeyType.SYMBOL_SWITCH -> keyTextSizeSpecial
-            else -> keyTextSize
-        }
+        val isSpecial = key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
+            key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH
+        val labelPaint = if (isSpecial) keyTextPaintSpecial else keyTextPaintRegular
+        val labelBaselineOffset = if (isSpecial) specialBaselineOffset else regularBaselineOffset
+        labelPaint.color = textColor
 
         val displayLabel = when {
             key.type == EchosKeyboardLayout.KeyType.RETURN -> returnLabel
             key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState != ShiftState.OFF ->
-                key.label.uppercase()
+                uppercaseLabelCache[key.label] ?: key.label.uppercase()
             else -> key.label
         }
 
         val textX = rect.centerX()
-        val textY = rect.centerY() - (keyTextPaint.descent() + keyTextPaint.ascent()) / 2
-        canvas.drawText(displayLabel, textX, textY, keyTextPaint)
+        val textY = rect.centerY() + labelBaselineOffset
+        canvas.drawText(displayLabel, textX, textY, labelPaint)
 
         // Top-row letters carry a small number in the top-right corner so the
         // user knows long-pressing types it (Gboard convention). Skip when
         // shift is engaged because the character is already shown in caps.
         if (key.type == EchosKeyboardLayout.KeyType.CHARACTER) {
-            val number = AccentVariants.numberFor(key.label)
+            val number = numberLabelCache[key.label]
             if (number != null) {
-                keyTextPaint.color = theme.keyTextSecondary
-                keyTextPaint.textSize = dpPx(10f)
+                keyTextPaintNumber.color = theme.keyTextSecondary
                 canvas.drawText(
                     number,
-                    rect.right - dpPx(7f),
-                    rect.top + dpPx(12f),
-                    keyTextPaint,
+                    rect.right - numberLabelOffsetRight,
+                    rect.top + numberLabelOffsetTop,
+                    keyTextPaintNumber,
                 )
             }
         }
@@ -346,97 +489,52 @@ class EchosKeyboardView @JvmOverloads constructor(
     }
 
     private fun drawIcon(canvas: Canvas, drawable: Drawable, rect: RectF, tint: Int) {
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            22f,
-            resources.displayMetrics,
-        ).toInt()
         val cx = rect.centerX().toInt()
         val cy = rect.centerY().toInt()
-        drawable.setBounds(cx - sizePx / 2, cy - sizePx / 2, cx + sizePx / 2, cy + sizePx / 2)
+        drawable.setBounds(
+            cx - iconSizePx / 2,
+            cy - iconSizePx / 2,
+            cx + iconSizePx / 2,
+            cy + iconSizePx / 2,
+        )
         drawable.setTint(tint)
         drawable.draw(canvas)
     }
 
     // -- Touch Handling --
 
+    /// Multi-touch dispatch. Each `MotionEvent` carries up to N pointers,
+    /// and Android assigns each finger a stable `pointerId` for the duration
+    /// of its press. Routing every pointer through the same per-pointer
+    /// path is what makes roll-typing work — touch B's `ACTION_POINTER_DOWN`
+    /// commits B independently of A's still-held `ACTION_DOWN`. Single-touch
+    /// dispatch (which is what this view used to do) silently drops the
+    /// `POINTER_DOWN/UP` events, which is exactly the "skipped key" the
+    /// user feels when typing fast.
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                val hit = findKey(event.x, event.y)
-                pressedKeyIndex = hit
-                if (hit != null) {
-                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    val key = currentRows[hit.first].keys[hit.second]
-                    val keyRect = keyRects[hit.first][hit.second]
-                    when {
-                        key.type == EchosKeyboardLayout.KeyType.MIC -> listener?.onMicPress()
-                        key.type == EchosKeyboardLayout.KeyType.DELETE -> deleteRepeater.start()
-                        key.type == EchosKeyboardLayout.KeyType.GLOBE -> scheduleGlobeLongPress()
-                        key.type == EchosKeyboardLayout.KeyType.CHARACTER -> {
-                            val ch = if (shiftState != ShiftState.OFF) key.label.uppercase() else key.label
-                            overlay?.showPreview(ch, keyRect)
-                            if (AccentVariants.hasVariants(key.label)) {
-                                scheduleAccentLongPress(keyRect, key)
-                            }
-                        }
-                    }
-                }
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val pIdx = event.actionIndex
+                handlePointerDown(
+                    event.getPointerId(pIdx),
+                    event.getX(pIdx),
+                    event.getY(pIdx),
+                )
                 invalidate()
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                overlay?.takeIf { it.hasVariants() }?.updateVariantsHighlight(event.x, event.y)
+                routeVariantsDrag(event)
                 return true
             }
-            MotionEvent.ACTION_UP -> {
-                cancelAccentLongPress()
-                overlay?.clearPreview()
-                val overlay = this.overlay
-                if (overlay != null && overlay.hasVariants()) {
-                    val selected = overlay.selectedVariant()
-                    overlay.clearVariants()
-                    pressedKeyIndex = null
-                    longPressDidFire = false
-                    if (selected != null) {
-                        listener?.onKeyPress(selected)
-                        if (shiftState == ShiftState.ON) {
-                            shiftState = ShiftState.OFF
-                        }
-                    }
-                    invalidate()
-                    return true
-                }
-                val hit = pressedKeyIndex
-                pressedKeyIndex = null
-                val didFireLongPress = longPressDidFire
-                longPressDidFire = false
-                if (hit != null) {
-                    val key = currentRows[hit.first].keys[hit.second]
-                    when {
-                        key.type == EchosKeyboardLayout.KeyType.DELETE -> {
-                            // If the hold timer fired one or more repeats, treat
-                            // this as the release of an auto-repeat — skip the
-                            // trailing single-tap delete so we don't double up.
-                            val didRepeat = deleteRepeater.didRepeat
-                            deleteRepeater.cancel()
-                            if (!didRepeat) listener?.onDeletePress()
-                        }
-                        // Long-press already triggered (globe picker shown):
-                        // skip the regular tap action.
-                        didFireLongPress -> Unit
-                        else -> handleKeyAction(key)
-                    }
-                }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val pIdx = event.actionIndex
+                handlePointerUp(event.getPointerId(pIdx))
                 invalidate()
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                cancelAccentLongPress()
-                longPressDidFire = false
-                overlay?.clearAll()
-                pressedKeyIndex = null
-                deleteRepeater.cancel()
+                cancelAllPointers()
                 invalidate()
                 return true
             }
@@ -444,11 +542,167 @@ class EchosKeyboardView @JvmOverloads constructor(
         return false
     }
 
+    private fun handlePointerDown(pointerId: Int, x: Float, y: Float) {
+        val packed = findKey(x, y)
+        if (packed < 0) return
+        val rowIdx = packed ushr 16
+        val colIdx = packed and 0xFFFF
+        val key = currentRows[rowIdx].keys[colIdx]
+        val keyRect = keyRects[rowIdx][colIdx]
+
+        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+
+        val state = PointerState(
+            rowIdx = rowIdx,
+            colIdx = colIdx,
+            touchDownNs = if (Log.isLoggable(PERF_TAG, Log.DEBUG)) System.nanoTime() else 0L,
+            longPressRunnable = null,
+            longPressFired = false,
+            ownsVariants = false,
+            ownsDeleteRepeat = false,
+        )
+        pointers.put(pointerId, state)
+
+        when (key.type) {
+            EchosKeyboardLayout.KeyType.MIC -> listener?.onMicPress()
+            EchosKeyboardLayout.KeyType.DELETE -> {
+                // Only the first delete-pointer drives the auto-repeat. A
+                // second finger tapping delete while the first is still held
+                // commits a single delete on its release (handled in
+                // `handlePointerUp`), matching Gboard.
+                if (!anyPointerOwnsDeleteRepeat()) {
+                    state.ownsDeleteRepeat = true
+                    deleteRepeater.start()
+                }
+            }
+            EchosKeyboardLayout.KeyType.GLOBE -> scheduleGlobeLongPress(state)
+            EchosKeyboardLayout.KeyType.CHARACTER -> {
+                val ch = if (shiftState != ShiftState.OFF) {
+                    uppercaseLabelCache[key.label] ?: key.label.uppercase()
+                } else {
+                    key.label
+                }
+                // Latest pointer wins the preview balloon (overlay shows
+                // only one at a time). The variants popup is exclusive too:
+                // if another pointer already owns it, don't schedule a
+                // competing long-press.
+                overlay?.showPreview(ch, keyRect)
+                if (AccentVariants.hasVariants(key.label) && !anyPointerOwnsVariants()) {
+                    scheduleAccentLongPress(state, keyRect, key)
+                }
+            }
+            else -> Unit
+        }
+    }
+
+    private fun handlePointerUp(pointerId: Int) {
+        val state = pointers.get(pointerId) ?: return
+        pointers.remove(pointerId)
+
+        // Cancel this pointer's pending long-press runnable, if any.
+        state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+        state.longPressRunnable = null
+
+        val key = currentRows[state.rowIdx].keys[state.colIdx]
+
+        // Hide the preview balloon once the last pointer lifts. Earlier
+        // releases keep it up so the user still sees feedback for whatever
+        // finger is still on the keyboard.
+        if (pointers.size() == 0) {
+            overlay?.clearPreview()
+        }
+
+        // Variants popup release: only the owning pointer commits the
+        // selected variant. Other pointers' releases ignore the popup.
+        if (state.ownsVariants) {
+            val ov = overlay
+            val selected = ov?.selectedVariant()
+            ov?.clearVariants()
+            if (selected != null) {
+                listener?.onKeyPress(selected)
+                if (shiftState == ShiftState.ON) {
+                    shiftState = ShiftState.OFF
+                }
+            }
+            logTouchLatency(state, key.type)
+            return
+        }
+
+        when {
+            state.ownsDeleteRepeat -> {
+                // If the hold timer fired one or more repeats, treat this
+                // as the release of an auto-repeat — skip the trailing
+                // single-tap delete so we don't double up.
+                val didRepeat = deleteRepeater.didRepeat
+                deleteRepeater.cancel()
+                state.ownsDeleteRepeat = false
+                if (!didRepeat) listener?.onDeletePress()
+            }
+            // Long-press already triggered (globe picker shown): skip
+            // the regular tap action.
+            state.longPressFired -> Unit
+            else -> handleKeyAction(key)
+        }
+
+        logTouchLatency(state, key.type)
+    }
+
+    private fun cancelAllPointers() {
+        for (i in 0 until pointers.size()) {
+            val state = pointers.valueAt(i)
+            state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+        }
+        pointers.clear()
+        overlay?.clearAll()
+        deleteRepeater.cancel()
+    }
+
+    /// Forwards horizontal drag from the variants-owning pointer into the
+    /// overlay, so the user can slide-pick a variant after the popup
+    /// appears. Looks up the owning pointer's coordinates explicitly via
+    /// `findPointerIndex` — `event.x/y` would only return the gesture
+    /// leader's position.
+    private fun routeVariantsDrag(event: MotionEvent) {
+        val ov = overlay ?: return
+        if (!ov.hasVariants()) return
+        for (i in 0 until pointers.size()) {
+            val state = pointers.valueAt(i)
+            if (!state.ownsVariants) continue
+            val pointerId = pointers.keyAt(i)
+            val pIdx = event.findPointerIndex(pointerId)
+            if (pIdx >= 0) {
+                ov.updateVariantsHighlight(event.getX(pIdx), event.getY(pIdx))
+            }
+            return
+        }
+    }
+
+    private fun anyPointerOwnsVariants(): Boolean {
+        for (i in 0 until pointers.size()) {
+            if (pointers.valueAt(i).ownsVariants) return true
+        }
+        return false
+    }
+
+    private fun anyPointerOwnsDeleteRepeat(): Boolean {
+        for (i in 0 until pointers.size()) {
+            if (pointers.valueAt(i).ownsDeleteRepeat) return true
+        }
+        return false
+    }
+
+    private fun logTouchLatency(state: PointerState, keyType: EchosKeyboardLayout.KeyType) {
+        if (state.touchDownNs == 0L) return
+        if (!Log.isLoggable(PERF_TAG, Log.DEBUG)) return
+        val latencyMs = (System.nanoTime() - state.touchDownNs) / 1_000_000
+        Log.d(PERF_TAG, "touch→commit: ${latencyMs}ms ($keyType)")
+    }
+
     private fun scheduleAccentLongPress(
+        state: PointerState,
         keyRect: RectF,
         key: EchosKeyboardLayout.Key,
     ) {
-        cancelAccentLongPress()
         val anchorRect = RectF(keyRect)
         val runnable = Runnable {
             val variants = AccentVariants.variants(
@@ -457,30 +711,25 @@ class EchosKeyboardView @JvmOverloads constructor(
             )
             if (variants.isNotEmpty()) {
                 // The popup takes over visual feedback for the rest of the
-                // press, so suppress the pressed-state highlight.
-                longPressDidFire = true
-                pressedKeyIndex = null
+                // press, so this pointer claims the variants slot and
+                // releases its pressed-state highlight.
+                state.longPressFired = true
+                state.ownsVariants = true
                 overlay?.showVariants(anchorRect, variants)
                 invalidate()
             }
         }
-        longPressRunnable = runnable
+        state.longPressRunnable = runnable
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
     }
 
-    private fun scheduleGlobeLongPress() {
-        cancelAccentLongPress()
+    private fun scheduleGlobeLongPress(state: PointerState) {
         val runnable = Runnable {
-            longPressDidFire = true
+            state.longPressFired = true
             listener?.onShowKeyboardPicker()
         }
-        longPressRunnable = runnable
+        state.longPressRunnable = runnable
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
-    }
-
-    private fun cancelAccentLongPress() {
-        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-        longPressRunnable = null
     }
 
     private fun dpPx(value: Float): Float =
@@ -490,15 +739,18 @@ class EchosKeyboardView @JvmOverloads constructor(
             resources.displayMetrics,
         )
 
-    private fun findKey(x: Float, y: Float): Pair<Int, Int>? {
+    /// Returns `(rowIdx shl 16) or colIdx`, or `-1` if no key contains the
+    /// point. Packed into a primitive Int so that hit-testing on every
+    /// pointer down doesn't allocate a `Pair<Int, Int>`.
+    private fun findKey(x: Float, y: Float): Int {
         for (rowIdx in keyRects.indices) {
             for (colIdx in keyRects[rowIdx].indices) {
                 if (keyRects[rowIdx][colIdx].contains(x, y)) {
-                    return Pair(rowIdx, colIdx)
+                    return (rowIdx shl 16) or colIdx
                 }
             }
         }
-        return null
+        return -1
     }
 
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
@@ -538,6 +790,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                         currentRows = EchosKeyboardLayout.LETTER_ROWS
                     }
                 }
+                keyRectsValid = false
                 requestLayout()
                 invalidate()
             }
@@ -553,10 +806,27 @@ class EchosKeyboardView @JvmOverloads constructor(
                     }
                     else -> {}
                 }
+                keyRectsValid = false
                 requestLayout()
                 invalidate()
             }
         }
+    }
+
+    // -- Lifecycle --
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (Log.isLoggable(PERF_TAG, Log.DEBUG)) {
+            lastFrameNs = 0L
+            Choreographer.getInstance().postFrameCallback(perfFrameCallback)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        Choreographer.getInstance().removeFrameCallback(perfFrameCallback)
+        lastFrameNs = 0L
     }
 
     // -- Mic Pulse Animation --

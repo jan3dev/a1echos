@@ -49,18 +49,41 @@ object SherpaModelManager {
 
     @Volatile
     private var cached: SherpaModelFiles? = null
+    /// `lastModified()` of the config file at the time `cached` was parsed.
+    /// When the main app rewrites the JSON (e.g. after the user changes the
+    /// spoken language), the mtime advances and we drop the cache so the
+    /// next call re-reads. The caller's recognizer signature already
+    /// includes `language`, so a recognizer rebuild follows naturally on
+    /// the next mic press — no extra plumbing needed in
+    /// `ImeSherpaTranscriber`.
+    @Volatile
+    private var cachedMtime: Long = 0L
 
     /**
      * Returns the active model descriptor, or null if none is configured or
      * the files on disk are missing. Call this before starting a recognizer.
+     *
+     * Race note: if the user changes language mid-recording, the
+     * `SherpaModelFiles` instance captured at `startTranscription` is the
+     * one used by the in-flight `transcribe` call. That's the desired
+     * behavior — we don't swap models mid-utterance.
      */
     fun getModelFiles(context: Context): SherpaModelFiles? {
-        cached?.let { if (it.isValid()) return it else cached = null }
-
         val configFile = File(context.applicationContext.filesDir, CONFIG_FILENAME)
         if (!configFile.exists()) {
             Log.w(TAG, "No sherpa model config at ${configFile.absolutePath}. Open Echos app first.")
+            cached = null
+            cachedMtime = 0L
             return null
+        }
+
+        // Single stat is cheap. If the mtime matches what we cached and the
+        // referenced files are still on disk, return the cached parse.
+        val currentMtime = configFile.lastModified()
+        cached?.let { hit ->
+            if (currentMtime == cachedMtime && hit.isValid()) {
+                return hit
+            }
         }
 
         return try {
@@ -76,9 +99,12 @@ object SherpaModelManager {
             )
             if (!files.isValid()) {
                 Log.w(TAG, "Saved model config points to missing files: ${files.modelDir}")
+                cached = null
+                cachedMtime = 0L
                 return null
             }
             cached = files
+            cachedMtime = currentMtime
             files
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse saved model config", e)

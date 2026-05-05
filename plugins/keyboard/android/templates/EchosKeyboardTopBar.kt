@@ -1,19 +1,21 @@
 package com.a1lab.echos.ime
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 
 /**
@@ -35,7 +37,11 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val labelView: TextView
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
-    private val recordSpinner: ProgressBar
+    private val recordSpinner: ImageView
+    /// Continuous rotation that drives the loading-spinner glyph while
+    /// transcribing. Started/stopped with the view's visibility so the
+    /// keyboard isn't paying for an animator while idle.
+    private var spinnerAnimator: ObjectAnimator? = null
     private val recordBackground: GradientDrawable
     private val theme = KeyTheme(context)
     private var listener: Listener? = null
@@ -159,21 +165,20 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         recordContainer.addView(recordButton)
 
-        // Indeterminate spinner shown while transcribing — replaces the
-        // heavy waveform animation in that state. Built-in `ProgressBar`
-        // is GPU-accelerated and effectively free compared to the
-        // per-frame `BlurMaskFilter` + `LinearGradient` masking the
-        // waveform runs.
+        // Loading spinner shown while transcribing — replaces the heavy
+        // waveform animation in that state. Uses the design system's
+        // `ic_spinner_loading` glyph rotated continuously by an
+        // `ObjectAnimator`, so the visual matches the iOS keyboard and
+        // the rest of the Echos app exactly.
         val spinnerSize = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, 20f, resources.displayMetrics,
         ).toInt()
-        recordSpinner = ProgressBar(context).apply {
-            isIndeterminate = true
+        recordSpinner = ImageView(context).apply {
+            setImageResource(drawable("ic_spinner_loading"))
+            imageTintList = ColorStateList.valueOf(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
             layoutParams = FrameLayout.LayoutParams(
                 spinnerSize, spinnerSize, Gravity.CENTER,
-            )
-            indeterminateDrawable?.setColorFilter(
-                Color.WHITE, PorterDuff.Mode.SRC_IN,
             )
             visibility = INVISIBLE
         }
@@ -196,6 +201,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.imageAlpha = 0xFF
                 recordButton.visibility = VISIBLE
                 recordSpinner.visibility = INVISIBLE
+                stopSpinnerAnimation()
                 recordButton.contentDescription = "Start recording"
                 recordButton.isEnabled = true
                 waveform.stopAnimating()
@@ -206,6 +212,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.imageAlpha = 0xFF
                 recordButton.visibility = VISIBLE
                 recordSpinner.visibility = INVISIBLE
+                stopSpinnerAnimation()
                 recordButton.contentDescription = "Stop recording"
                 recordButton.isEnabled = true
                 waveform.setMode(EchosWaveformView.Mode.RECORDING)
@@ -213,12 +220,14 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 waveform.startAnimating()
             }
             MicState.TRANSCRIBING -> {
-                // Swap the mic glyph for an indeterminate spinner and
-                // stop the waveform entirely. The waveform's per-frame
-                // `BlurMaskFilter` + `LinearGradient` masking is the
-                // heaviest thing the keyboard runs; the spinner is both
-                // cheaper and a clearer signal that we're waiting.
+                // Swap the mic glyph for the design-system spinner glyph
+                // (rotating) and stop the waveform entirely. The
+                // waveform's per-frame `BlurMaskFilter` + `LinearGradient`
+                // masking is the heaviest thing the keyboard runs; a
+                // simple rotated vector drawable is far cheaper and a
+                // clearer signal that we're waiting.
                 recordSpinner.visibility = VISIBLE
+                startSpinnerAnimation()
                 recordButton.setImageDrawable(null)
                 recordButton.imageAlpha = 0x80
                 recordButton.contentDescription = "Transcribing"
@@ -236,6 +245,23 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     }
 
     // --- helpers ---
+
+    private fun startSpinnerAnimation() {
+        if (spinnerAnimator?.isRunning == true) return
+        spinnerAnimator?.cancel()
+        spinnerAnimator = ObjectAnimator.ofFloat(recordSpinner, View.ROTATION, 0f, 360f).apply {
+            duration = 1000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            start()
+        }
+    }
+
+    private fun stopSpinnerAnimation() {
+        spinnerAnimator?.cancel()
+        spinnerAnimator = null
+        recordSpinner.rotation = 0f
+    }
 
     private fun dim(name: String, fallbackDp: Int): Int {
         val id = context.resources.getIdentifier(name, "dimen", context.packageName)

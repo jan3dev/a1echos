@@ -220,19 +220,11 @@ function GlobalRecordingControls() {
         }
         pointerEvents="none"
       >
-        {Platform.OS === "ios" ? (
-          <BlurView
-            intensity={20}
-            tint={blurTint}
-            style={StyleSheet.absoluteFill}
-          />
-        ) : (
-          <BlurView
-            intensity={10}
-            tint={blurTint}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
+        <BlurView
+          intensity={20}
+          tint={blurTint}
+          style={StyleSheet.absoluteFill}
+        />
         <View
           style={[
             StyleSheet.absoluteFill,

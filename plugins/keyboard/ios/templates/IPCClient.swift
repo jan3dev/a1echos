@@ -153,11 +153,14 @@ class IPCClient {
         let requestID = UUID().uuidString
         currentRequestID = requestID
 
-        // Write request file
+        // Write request file. Note: we deliberately omit `language` —
+        // `KeyboardTranscriptionListener` falls through to the language
+        // recorded in `keyboard-sherpa-model.json`, which the main app
+        // rewrites whenever the user changes the spoken-language setting.
+        // A hardcoded value here would override that fresh config.
         let request: [String: Any] = [
             "id": requestID,
             "status": "pending",
-            "language": "en",
             "timestamp": Date().timeIntervalSince1970,
         ]
 

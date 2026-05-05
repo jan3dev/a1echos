@@ -21,11 +21,12 @@ final class KeyboardTopBar: UIView {
     private let logoLabel = UILabel()
     private let recordButton = UIButton(type: .system)
     private let recordIcon = RecordButtonIconView()
-    /// Replaces the waveform animation while transcribing — a built-in
-    /// `UIActivityIndicatorView` is far cheaper than the per-frame
+    /// Replaces the waveform animation while transcribing. Renders the
+    /// design system's `spinner_loading` glyph and rotates it via a
+    /// `CABasicAnimation` on the layer — far cheaper than the per-frame
     /// `UIGraphicsImageRenderer` + `CIGaussianBlur` pipeline that the
-    /// wave runs at 30fps.
-    private let recordSpinner = UIActivityIndicatorView(style: .medium)
+    /// wave runs at 30fps, and visually identical to the Android keyboard.
+    private let recordSpinner = LoadingSpinnerIconView()
     private let waveform = RecordingWaveformView()
     private var micState: MicState = .idle
 
@@ -73,8 +74,7 @@ final class KeyboardTopBar: UIView {
 
         recordSpinner.translatesAutoresizingMaskIntoConstraints = false
         recordSpinner.isUserInteractionEnabled = false
-        recordSpinner.color = UIColor(hex: 0xF5F5F8) // matches mic glyph
-        recordSpinner.hidesWhenStopped = true
+        recordSpinner.isHidden = true
         recordButton.addSubview(recordSpinner)
 
         waveform.translatesAutoresizingMaskIntoConstraints = false
@@ -107,6 +107,8 @@ final class KeyboardTopBar: UIView {
 
             recordSpinner.centerXAnchor.constraint(equalTo: recordButton.centerXAnchor),
             recordSpinner.centerYAnchor.constraint(equalTo: recordButton.centerYAnchor),
+            recordSpinner.widthAnchor.constraint(equalToConstant: 20),
+            recordSpinner.heightAnchor.constraint(equalToConstant: 20),
 
             waveform.leadingAnchor.constraint(equalTo: leadingAnchor),
             waveform.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -145,7 +147,8 @@ final class KeyboardTopBar: UIView {
             recordIcon.state = .microphone
             recordIcon.alpha = 1
             recordIcon.isHidden = false
-            recordSpinner.stopAnimating()
+            recordSpinner.stopSpinning()
+            recordSpinner.isHidden = true
             recordButton.isEnabled = true
             waveform.stopAnimating()
             waveform.isHidden = true
@@ -154,22 +157,24 @@ final class KeyboardTopBar: UIView {
             recordIcon.state = .stop
             recordIcon.alpha = 1
             recordIcon.isHidden = false
-            recordSpinner.stopAnimating()
+            recordSpinner.stopSpinning()
+            recordSpinner.isHidden = true
             recordButton.isEnabled = true
             waveform.setMode(.recording)
             waveform.isHidden = false
             waveform.startAnimating()
             recordButton.accessibilityLabel = "Stop recording"
         case .transcribing:
-            // Swap the mic glyph for a spinner and stop the waveform
-            // entirely. The waveform's per-frame `CIGaussianBlur`
-            // pipeline is the heaviest thing in the keyboard, and
-            // there's no audio to react to once recording stops, so
-            // the spinner is both cheaper and a clearer signal that
-            // the keyboard is waiting for the main app.
+            // Swap the mic glyph for the design-system spinner glyph
+            // (rotating) and stop the waveform entirely. The waveform's
+            // per-frame `CIGaussianBlur` pipeline is the heaviest thing
+            // in the keyboard, and there's no audio to react to once
+            // recording stops, so the rotating glyph is both cheaper
+            // and a clearer signal that we're waiting for the main app.
             recordIcon.isHidden = true
             recordButton.isEnabled = false
-            recordSpinner.startAnimating()
+            recordSpinner.isHidden = false
+            recordSpinner.startSpinning()
             waveform.stopAnimating()
             waveform.isHidden = true
             recordButton.accessibilityLabel = "Transcribing"
@@ -462,6 +467,88 @@ final class RecordButtonIconView: UIView {
 
         head.usesEvenOddFillRule = true
         head.fill()
+    }
+}
+
+// MARK: - Loading Spinner Icon
+
+/// Animated loading glyph shown inside the record-button pill while the
+/// keyboard waits for a transcription result. Mirrors the design system's
+/// `assets/icons/spinner_loading.svg` — eight rounded pill rays at 45°
+/// intervals around center — and keeps it visually identical to the
+/// Android keyboard's `ic_spinner_loading` vector drawable.
+///
+/// Caller is responsible for calling `startSpinning()` / `stopSpinning()`
+/// alongside show/hide. Rotation is driven by a `CABasicAnimation` on
+/// `transform.rotation.z` so it doesn't run on the main thread once
+/// installed and costs nothing while hidden.
+final class LoadingSpinnerIconView: UIView {
+
+    /// Glyph fill — same off-white the mic / stop glyphs use, so the
+    /// transition between states doesn't cause a perceptible color shift.
+    private let glyphColor = UIColor(hex: 0xF5F5F8)
+
+    private static let spinAnimationKey = "echos.spin"
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        isOpaque = false
+        contentMode = .redraw
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not implemented")
+    }
+
+    func startSpinning() {
+        guard layer.animation(forKey: Self.spinAnimationKey) == nil else { return }
+        let anim = CABasicAnimation(keyPath: "transform.rotation.z")
+        anim.fromValue = 0
+        anim.toValue = 2 * Double.pi
+        anim.duration = 1.0
+        anim.repeatCount = .infinity
+        // Linear feel matches the Android `LinearInterpolator` rotation —
+        // any easing here would make the two platforms look subtly off.
+        anim.timingFunction = CAMediaTimingFunction(name: .linear)
+        anim.isRemovedOnCompletion = false
+        layer.add(anim, forKey: Self.spinAnimationKey)
+    }
+
+    func stopSpinning() {
+        layer.removeAnimation(forKey: Self.spinAnimationKey)
+    }
+
+    override func draw(_ rect: CGRect) {
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        ctx.saveGState()
+
+        // Fit the 24×24 design space into `rect` preserving aspect.
+        let scale = min(rect.width / 24.0, rect.height / 24.0)
+        let tx = (rect.width - 24.0 * scale) / 2
+        let ty = (rect.height - 24.0 * scale) / 2
+        ctx.translateBy(x: tx, y: ty)
+        ctx.scaleBy(x: scale, y: scale)
+
+        glyphColor.setFill()
+
+        // Eight rounded pill rays at 45° intervals around (12, 12). Each
+        // pill is 4×2 with full corner radius, outer edge at radius 10
+        // and inner edge at radius 6 — the same geometry the SVG's
+        // hand-drawn cubic Béziers describe.
+        for i in 0..<8 {
+            ctx.saveGState()
+            ctx.translateBy(x: 12, y: 12)
+            ctx.rotate(by: CGFloat(i) * .pi / 4)
+            let pill = UIBezierPath(
+                roundedRect: CGRect(x: 6, y: -1, width: 4, height: 2),
+                cornerRadius: 1
+            )
+            pill.fill()
+            ctx.restoreGState()
+        }
+
+        ctx.restoreGState()
     }
 }
 

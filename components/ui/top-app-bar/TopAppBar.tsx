@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { Fragment, ReactNode } from "react";
-import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants, TestID } from "@/constants";
@@ -163,19 +163,11 @@ export const TopAppBar = ({
 
   return (
     <View testID={TestID.TopAppBar} style={containerStyles}>
-      {Platform.OS === "ios" ? (
-        <BlurView
-          intensity={20}
-          tint={blurTint}
-          style={[StyleSheet.absoluteFill, { backgroundColor }]}
-        />
-      ) : (
-        <BlurView
-          intensity={50}
-          tint={blurTint}
-          style={[StyleSheet.absoluteFill, { backgroundColor }]}
-        />
-      )}
+      <BlurView
+        intensity={20}
+        tint={blurTint}
+        style={[StyleSheet.absoluteFill, { backgroundColor }]}
+      />
       {renderContent()}
     </View>
   );

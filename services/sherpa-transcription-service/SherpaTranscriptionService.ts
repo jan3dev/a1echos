@@ -137,6 +137,15 @@ const configureAudioSession = async (delayMs: number = 0): Promise<void> => {
 const getDownloadedModelDir = (modelId: ModelId): string =>
   `${Paths.document.uri}/models/${modelId}`;
 
+/**
+ * Get the directory URI for a bundled model — same path that
+ * `prepareBundledModel` writes to. Used by the keyboard-config refresh path
+ * which can run before the engine has been initialized in the current
+ * session and must point at the cached files on disk.
+ */
+const getBundledModelDir = (modelId: ModelId): string =>
+  `${Paths.cache.uri}/models/${modelId}`;
+
 /** Strip the `file://` scheme for native code that wants a plain filesystem path. */
 const toNativePath = (uri: string): string => uri.replace(/^file:\/\//, "");
 
@@ -207,14 +216,33 @@ const writeKeyboardModelConfig = (
       config.language = whisperLanguage ?? languageCode;
     }
 
+    // Atomic write: stage to a sibling tmp file and move it into place so
+    // the IME never reads a half-written JSON. The IME's
+    // `SherpaModelManager` parses with `JSONObject(readText())`, which would
+    // throw on a truncated payload.
+    const tmpFile = new File(Paths.document, `${KEYBOARD_CONFIG_FILENAME}.tmp`);
+    if (tmpFile.exists) tmpFile.delete();
+    tmpFile.write(JSON.stringify(config));
+
     const configFile = new File(Paths.document, KEYBOARD_CONFIG_FILENAME);
-    configFile.write(JSON.stringify(config));
+    if (configFile.exists) configFile.delete();
+    tmpFile.move(configFile);
   } catch (error) {
     logWarn(`Failed to write keyboard model config: ${error}`, {
       flag: FeatureFlag.model,
     });
   }
 };
+
+/**
+ * Resolves the on-disk model directory for a given model id, regardless of
+ * whether the engine is currently initialized. Bundled models live under
+ * `Paths.cache/models/<id>`; downloaded models under `Paths.document/models/<id>`.
+ */
+const resolveModelDir = (modelInfo: ModelInfo): string =>
+  modelInfo.isBundled
+    ? getBundledModelDir(modelInfo.id)
+    : getDownloadedModelDir(modelInfo.id);
 
 /**
  * Prepare bundled model assets: download to local cache, then move into a
@@ -569,6 +597,35 @@ const createSherpaTranscriptionService = () => {
     }
   };
 
+  /**
+   * Rewrites `keyboard-sherpa-model.json` so the IME (Android) and the
+   * keyboard transcription listener (iOS) pick up the user's current
+   * model/language without needing the engine to re-initialize. Call after
+   * `setLanguage`/`setModelId` in the settings store. No-op if the model
+   * directory hasn't been materialized yet.
+   */
+  const refreshKeyboardConfig = (
+    modelId: ModelId,
+    languageCode: string,
+  ): void => {
+    try {
+      const modelInfo = getModelInfo(modelId);
+      const modelDir = resolveModelDir(modelInfo);
+      // If the model dir doesn't exist yet (bundled assets not yet
+      // unpacked, or a downloadable model not yet downloaded), the
+      // keyboard would point at missing files. Bail and let the next
+      // `initialize()` write the config when the dir actually exists.
+      if (!new Directory(modelDir).exists) {
+        return;
+      }
+      writeKeyboardModelConfig(modelInfo, modelDir, languageCode);
+    } catch (error) {
+      logWarn(`Failed to refresh keyboard model config: ${error}`, {
+        flag: FeatureFlag.model,
+      });
+    }
+  };
+
   const initialize = async (
     modelId?: ModelId,
     languageCode: string = "en",
@@ -857,6 +914,7 @@ const createSherpaTranscriptionService = () => {
 
   return {
     initialize,
+    refreshKeyboardConfig,
     transcribeFile,
     startRealtimeTranscription,
     stopRealtimeTranscription,

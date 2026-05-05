@@ -11,6 +11,7 @@ import {
   SupportedLanguages,
   TranscriptionMode,
 } from "@/models";
+import { sherpaTranscriptionService } from "@/services";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
 import { preWarmModel } from "../transcription-store/preWarmModel";
@@ -296,6 +297,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         await get().setLanguage(SupportedLanguages.defaultLanguage);
       }
 
+      // Refresh the keyboard's model config so the IME / iOS extension see
+      // the new model without waiting for the next recording. preWarmModel
+      // would also write this via `initialize()`, but it skips during
+      // recording or when the model isn't yet downloaded — refresh covers
+      // those cases too.
+      sherpaTranscriptionService.refreshKeyboardConfig(
+        modelId,
+        get().selectedLanguage.code,
+      );
+
       // Pre-warm the engine so the next record tap doesn't pay the multi-second
       // sherpa-onnx init cost. Use the language *after* the auto-reset above.
       preWarmModel(modelId, get().selectedLanguage.code);
@@ -358,6 +369,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ selectedLanguage: language });
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, language.code);
+      // Update the keyboard's model config so the IME / iOS extension
+      // pick up the new spoken language on the next mic press without
+      // waiting for the next in-app recording (which is what otherwise
+      // triggers `sherpaTranscriptionService.initialize`).
+      sherpaTranscriptionService.refreshKeyboardConfig(
+        get().selectedModelId,
+        language.code,
+      );
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
