@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "buildNumber": "2",
+      "buildNumber": "3",
       "supportsTablet": true,
       "deploymentTarget": "16.0",
       "infoPlist": {
