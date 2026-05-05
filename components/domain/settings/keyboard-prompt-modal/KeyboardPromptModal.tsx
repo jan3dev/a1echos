@@ -75,6 +75,7 @@ export const KeyboardPromptModal = ({
   const modalWidth = Math.min(width - 32, maxWidth ?? Infinity);
   const imageWidth = modalWidth - 32;
   const imageAspectRatio = Platform.OS === "ios" ? 750 / 610 : 750 / 588;
+  const imageHeight = imageWidth / imageAspectRatio;
 
   return (
     <Dimmer visible={visible} onDismiss={onCancel}>
@@ -110,7 +111,7 @@ export const KeyboardPromptModal = ({
                     : TestID.KeyboardPromptImageAndroid
                 }
                 source={keyboardImage}
-                style={{ width: imageWidth, aspectRatio: imageAspectRatio }}
+                style={{ width: imageWidth, height: imageHeight }}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
