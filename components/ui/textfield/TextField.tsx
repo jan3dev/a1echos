@@ -291,6 +291,7 @@ export const TextField = ({
                 cursorColor={colors.accentBrand}
                 underlineColorAndroid="transparent"
                 textAlignVertical="top"
+                disableFullscreenUI
               />
             </View>
 

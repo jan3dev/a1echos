@@ -243,6 +243,7 @@ export const TranscriptionItem = ({
               onBlur={handleSaveEdit}
               multiline
               autoFocus
+              disableFullscreenUI
               style={[
                 styles.input,
                 {
