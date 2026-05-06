@@ -4,6 +4,7 @@ import {
   Image,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -79,91 +80,102 @@ export const KeyboardPromptModal = ({
 
   return (
     <Dimmer visible={visible} onDismiss={onCancel}>
-      <View style={styles.contentWrapper}>
+      <View
+        style={[
+          styles.contentWrapper,
+          { paddingBottom: bottomInset + 32, paddingTop: 16 },
+        ]}
+      >
         <Animated.View
           testID={TestID.KeyboardPromptModal}
           style={[
             styles.container,
             {
+              width: modalWidth,
               transform: [{ translateY }],
               opacity,
-              maxWidth,
-              marginBottom: bottomInset + 32,
               backgroundColor: colors.surfacePrimary,
             },
           ]}
         >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <View style={styles.dragHandleContainer}>
-              <View
-                style={[
-                  styles.dragHandle,
-                  { backgroundColor: colors.systemBackgroundColor },
-                ]}
-              />
-            </View>
+          <ScrollView
+            style={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <View style={styles.dragHandleContainer}>
+                <View
+                  style={[
+                    styles.dragHandle,
+                    { backgroundColor: colors.systemBackgroundColor },
+                  ]}
+                />
+              </View>
 
-            <View style={styles.heroContainer}>
-              <Image
-                testID={
-                  Platform.OS === "ios"
-                    ? TestID.KeyboardPromptImageIos
-                    : TestID.KeyboardPromptImageAndroid
-                }
-                source={keyboardImage}
-                style={{ width: imageWidth, height: imageHeight }}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
-            </View>
+              <View style={styles.heroContainer}>
+                <Image
+                  testID={
+                    Platform.OS === "ios"
+                      ? TestID.KeyboardPromptImageIos
+                      : TestID.KeyboardPromptImageAndroid
+                  }
+                  source={keyboardImage}
+                  style={{ width: imageWidth, height: imageHeight }}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </View>
 
-            <View style={styles.textContainer}>
-              <Text
-                variant="h4"
-                weight="medium"
-                size={24}
-                color={colors.textPrimary}
-                align="center"
-              >
-                {loc.keyboardPromptTitle}
-              </Text>
-              <View style={styles.titleSpacing} />
-              <Text
-                variant="body1"
-                weight="regular"
-                color={colors.textSecondary}
-                align="center"
-                style={styles.bodyText}
-              >
-                {loc.keyboardPromptBody}
-              </Text>
-              {Platform.OS === "ios" && (
-                <>
-                  <View style={styles.disclaimerSpacing} />
-                  <Text
-                    variant="caption1"
-                    weight="regular"
-                    color={colors.textTertiary}
-                    align="center"
-                  >
-                    {loc.keyboardPromptIosDisclaimer}
-                  </Text>
-                </>
-              )}
-            </View>
+              <View style={styles.textContainer}>
+                <Text
+                  variant="h4"
+                  weight="medium"
+                  size={24}
+                  color={colors.textPrimary}
+                  align="center"
+                >
+                  {loc.keyboardPromptTitle}
+                </Text>
+                <View style={styles.titleSpacing} />
+                <Text
+                  variant="body1"
+                  weight="regular"
+                  color={colors.textSecondary}
+                  align="center"
+                  style={styles.bodyText}
+                >
+                  {loc.keyboardPromptBody}
+                </Text>
+                {Platform.OS === "ios" && (
+                  <>
+                    <View style={styles.disclaimerSpacing} />
+                    <Text
+                      variant="caption1"
+                      weight="regular"
+                      color={colors.textTertiary}
+                      align="center"
+                    >
+                      {loc.keyboardPromptIosDisclaimer}
+                    </Text>
+                  </>
+                )}
+              </View>
 
-            <View style={styles.ctas}>
-              <Button.primary
-                text={loc.keyboardPromptCta}
-                onPress={onConfirm}
-              />
-              <View style={styles.ctaSpacing} />
-              <Button.secondary
-                text={loc.keyboardPromptDismiss}
-                onPress={onCancel}
-              />
-            </View>
-          </Pressable>
+              <View style={styles.ctas}>
+                <Button.primary
+                  text={loc.keyboardPromptCta}
+                  onPress={onConfirm}
+                />
+                <View style={styles.ctaSpacing} />
+                <Button.secondary
+                  text={loc.keyboardPromptDismiss}
+                  onPress={onCancel}
+                />
+              </View>
+            </Pressable>
+          </ScrollView>
         </Animated.View>
       </View>
     </Dimmer>
@@ -177,11 +189,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   container: {
-    marginHorizontal: 16,
     borderRadius: 24,
     overflow: "hidden",
-    alignSelf: "stretch",
+    maxHeight: "100%",
     ...getShadow("modal"),
+  },
+  scroll: {
+    flexGrow: 0,
   },
   dragHandleContainer: {
     paddingTop: 8,

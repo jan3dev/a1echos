@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -111,54 +112,64 @@ export const SessionInputModal = ({
               {
                 backgroundColor: theme.colors.surfacePrimary,
                 width: containerWidth,
-                paddingBottom: bottomInset + 32,
                 transform: [{ translateY: slideAnim }],
               },
             ]}
           >
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <View style={styles.header}>
-                <Text
-                  variant="subtitle"
-                  weight="semibold"
-                  color={theme.colors.textPrimary}
-                  align="center"
-                  style={styles.title}
-                >
-                  {title}
-                </Text>
-                <Pressable
-                  onPress={onCancel || (() => {})}
-                  hitSlop={10}
-                  style={styles.closeButton}
-                >
-                  <Icon
-                    name="close"
-                    size={24}
-                    color={theme.colors.textSecondary}
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: bottomInset + 32 },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <Pressable onPress={(e) => e.stopPropagation()}>
+                <View style={styles.header}>
+                  <Text
+                    variant="subtitle"
+                    weight="semibold"
+                    color={theme.colors.textPrimary}
+                    align="center"
+                    style={styles.title}
+                  >
+                    {title}
+                  </Text>
+                  <Pressable
+                    onPress={onCancel || (() => {})}
+                    hitSlop={10}
+                    style={styles.closeButton}
+                  >
+                    <Icon
+                      name="close"
+                      size={24}
+                      color={theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                </View>
+
+                <View style={styles.content}>
+                  <TextField
+                    label={loc.sessionNameLabel}
+                    value={text}
+                    onChangeText={setText}
+                    maxLength={AppConstants.SESSION_NAME_MAX_LENGTH || 50}
+                    assistiveText={loc.sessionNameMaxLengthHelper}
+                    showClearIcon
+                    onClear={() => setText("")}
+                    transparentBorder={true}
+                    forceFocus={visible}
+                    debounceTime={0}
                   />
-                </Pressable>
-              </View>
 
-              <View style={styles.content}>
-                <TextField
-                  label={loc.sessionNameLabel}
-                  value={text}
-                  onChangeText={setText}
-                  maxLength={AppConstants.SESSION_NAME_MAX_LENGTH || 50}
-                  assistiveText={loc.sessionNameMaxLengthHelper}
-                  showClearIcon
-                  onClear={() => setText("")}
-                  transparentBorder={true}
-                  forceFocus={visible}
-                  debounceTime={0}
-                />
+                  <View style={styles.spacer} />
 
-                <View style={styles.spacer} />
-
-                <Button.primary text={buttonText} onPress={handleSubmit} />
-              </View>
-            </Pressable>
+                  <Button.primary text={buttonText} onPress={handleSubmit} />
+                </View>
+              </Pressable>
+            </ScrollView>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -180,15 +191,20 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
+    maxHeight: "100%",
+  },
+  scroll: {
+    flexGrow: 0,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 24,
-    paddingBottom: 0,
   },
   header: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 48,
+    marginBottom: 32,
     position: "relative",
     minHeight: 24,
   },
@@ -204,6 +220,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   spacer: {
-    height: 48,
+    height: 32,
   },
 });

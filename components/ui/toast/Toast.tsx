@@ -112,6 +112,7 @@ export const Toast = ({
       animationType="none"
       onRequestClose={onDismiss}
       statusBarTranslucent
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
       <Pressable style={styles.modalOverlay} onPress={onDismiss}>
         <Animated.View

@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef } from "react";
 import {
   Animated,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -121,125 +122,142 @@ export const Modal = ({
   });
 
   const maxWidth = width >= 768 ? 343 : undefined;
+  const modalWidth = Math.min(width - 32, maxWidth ?? Infinity);
 
   return (
     <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
-      <View style={styles.contentWrapper}>
+      <View
+        style={[
+          styles.contentWrapper,
+          { paddingBottom: bottomInset + 32, paddingTop: 16 },
+        ]}
+      >
         <Animated.View
           testID={testID ?? dynamicTestID.modal(title)}
           style={[
             styles.container,
             {
+              width: modalWidth,
               transform: [{ translateY }],
               opacity,
-              maxWidth,
-              marginBottom: bottomInset + 32,
               backgroundColor: colors.surfacePrimary,
               borderRadius: 24,
             },
           ]}
         >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <View
-              style={[styles.card, { backgroundColor: colors.surfacePrimary }]}
-            >
-              {/* Drag handle */}
+          <ScrollView
+            style={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
               <View
                 style={[
-                  styles.dragHandle,
-                  { backgroundColor: colors.systemBackgroundColor },
+                  styles.card,
+                  { backgroundColor: colors.surfacePrimary },
                 ]}
-              />
-
-              {/* Icon or Illustration */}
-              {icon && (
+              >
+                {/* Drag handle */}
                 <View
                   style={[
-                    styles.iconOuterContainer,
-                    { backgroundColor: getIconBackgroundColor() },
+                    styles.dragHandle,
+                    { backgroundColor: colors.systemBackgroundColor },
                   ]}
-                >
+                />
+
+                {/* Icon or Illustration */}
+                {icon && (
                   <View
                     style={[
-                      styles.iconInnerContainer,
-                      { backgroundColor: getIconInnerBackgroundColor() },
+                      styles.iconOuterContainer,
+                      { backgroundColor: getIconBackgroundColor() },
                     ]}
                   >
-                    {icon}
+                    <View
+                      style={[
+                        styles.iconInnerContainer,
+                        { backgroundColor: getIconInnerBackgroundColor() },
+                      ]}
+                    >
+                      {icon}
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
 
-              {illustration && (
-                <View style={styles.illustrationContainer}>{illustration}</View>
-              )}
+                {illustration && (
+                  <View style={styles.illustrationContainer}>
+                    {illustration}
+                  </View>
+                )}
 
-              {/* Title */}
-              <Text
-                variant="h4"
-                weight="medium"
-                size={24}
-                color={colors.textPrimary}
-                numberOfLines={titleMaxLines}
-                align="center"
-              >
-                {title}
-              </Text>
+                {/* Title */}
+                <Text
+                  variant="h4"
+                  weight="medium"
+                  size={24}
+                  color={colors.textPrimary}
+                  numberOfLines={titleMaxLines}
+                  align="center"
+                >
+                  {title}
+                </Text>
 
-              {/* Message */}
-              <View style={styles.messageSpacing} />
-              <Text
-                variant="body1"
-                weight="regular"
-                color={colors.textSecondary}
-                numberOfLines={messageMaxLines}
-                align="center"
-                style={styles.messageText}
-              >
-                {message}
-              </Text>
+                {/* Message */}
+                <View style={styles.messageSpacing} />
+                <Text
+                  variant="body1"
+                  weight="regular"
+                  color={colors.textSecondary}
+                  numberOfLines={messageMaxLines}
+                  align="center"
+                  style={styles.messageText}
+                >
+                  {message}
+                </Text>
 
-              {/* Tertiary Message */}
-              {messageTertiary && (
-                <>
-                  <View style={styles.tertiarySpacing} />
-                  <Text
-                    variant="body1"
-                    weight="semibold"
-                    color={colors.accentDanger}
-                    numberOfLines={5}
-                    align="center"
-                    style={styles.tertiaryText}
-                  >
-                    {messageTertiary}
-                  </Text>
-                </>
-              )}
+                {/* Tertiary Message */}
+                {messageTertiary && (
+                  <>
+                    <View style={styles.tertiarySpacing} />
+                    <Text
+                      variant="body1"
+                      weight="semibold"
+                      color={colors.accentDanger}
+                      numberOfLines={5}
+                      align="center"
+                      style={styles.tertiaryText}
+                    >
+                      {messageTertiary}
+                    </Text>
+                  </>
+                )}
 
-              <View style={styles.buttonsSpacing} />
+                <View style={styles.buttonsSpacing} />
 
-              {/* Primary Button */}
-              <Button.primary
-                text={primaryButton.text}
-                variant={primaryButton.variant || "normal"}
-                onPress={primaryButton.onTap}
-              />
+                {/* Primary Button */}
+                <Button.primary
+                  text={primaryButton.text}
+                  variant={primaryButton.variant || "normal"}
+                  onPress={primaryButton.onTap}
+                />
 
-              {/* Secondary Button */}
-              {secondaryButton && (
-                <>
-                  <View style={styles.secondaryButtonSpacing} />
-                  <Button.secondary
-                    text={secondaryButton.text}
-                    variant={secondaryButton.variant || "normal"}
-                    onPress={secondaryButton.onTap}
-                  />
-                </>
-              )}
+                {/* Secondary Button */}
+                {secondaryButton && (
+                  <>
+                    <View style={styles.secondaryButtonSpacing} />
+                    <Button.secondary
+                      text={secondaryButton.text}
+                      variant={secondaryButton.variant || "normal"}
+                      onPress={secondaryButton.onTap}
+                    />
+                  </>
+                )}
 
-              <View style={styles.bottomSpacing} />
-            </View>
-          </Pressable>
+                <View style={styles.bottomSpacing} />
+              </View>
+            </Pressable>
+          </ScrollView>
         </Animated.View>
       </View>
     </Dimmer>
@@ -253,8 +271,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   container: {
-    marginHorizontal: 16,
+    maxHeight: "100%",
     ...getShadow("modal"),
+  },
+  scroll: {
+    flexGrow: 0,
   },
   card: {
     borderRadius: 24,

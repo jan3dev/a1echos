@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Dimensions, Modal, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TestID } from "@/constants";
 import { useLocalization, useSessionOperations } from "@/hooks";
@@ -32,6 +33,7 @@ interface SessionMoreMenuProps {
 export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
+  const { top: topInset } = useSafeAreaInsets();
   const [menuVisible, setMenuVisible] = useState(false);
   const [renameVisible, setRenameVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{
@@ -100,9 +102,13 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
       const proposedTop = y + height + menuGap;
       const menuHeight = measuredMenuHeight ?? MENU_HEIGHT_FALLBACK;
 
-      const wouldOverflow =
-        proposedTop + menuHeight > screenHeight - BOTTOM_SAFE_AREA;
-      const top = wouldOverflow ? y - menuHeight - menuGap : proposedTop;
+      const minTop = topInset + 8;
+      const maxTop = screenHeight - menuHeight - BOTTOM_SAFE_AREA;
+      const wouldOverflow = proposedTop > maxTop;
+      const candidateTop = wouldOverflow
+        ? y - menuHeight - menuGap
+        : proposedTop;
+      const top = Math.max(minTop, Math.min(candidateTop, maxTop));
 
       setMenuPosition({ top, right });
       setMenuVisible(true);
@@ -129,6 +135,11 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
         transparent
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+        ]}
       >
         <Pressable style={styles.overlay} onPress={() => setMenuVisible(false)}>
           <View

@@ -3,7 +3,7 @@
     "name": "Echos",
     "slug": "echos",
     "version": "0.4.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon-dark.png",
     "scheme": "echos",
     "userInterfaceStyle": "automatic",

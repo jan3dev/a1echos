@@ -24,6 +24,7 @@ export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
       animationType="fade"
       onRequestClose={onDismiss}
       statusBarTranslucent
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
       <Pressable style={styles.container} onPress={onDismiss}>
         <BlurView
