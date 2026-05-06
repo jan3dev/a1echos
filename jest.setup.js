@@ -172,8 +172,8 @@ jest.mock("expo-clipboard", () => ({
   getStringAsync: jest.fn(async () => ""),
 }));
 
-jest.mock("expo-status-bar", () => ({
-  StatusBar: "StatusBar",
+jest.mock("react-native-edge-to-edge", () => ({
+  SystemBars: "SystemBars",
 }));
 
 // ---------------------------------------------------------------------------

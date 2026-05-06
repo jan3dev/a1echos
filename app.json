@@ -66,6 +66,15 @@
             "minSdkVersion": 26
           }
         }
+      ],
+      [
+        "react-native-edge-to-edge",
+        {
+          "android": {
+            "parentTheme": "Material3",
+            "enforceNavigationBarContrast": false
+          }
+        }
       ]
     ],
     "experiments": {

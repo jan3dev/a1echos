@@ -5,7 +5,7 @@ import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { StatusBar } from "expo-status-bar";
+import { SystemBars } from "react-native-edge-to-edge";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -329,7 +329,7 @@ export default function RootLayout() {
         style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
         onLayout={onLayoutRootView}
       >
-        <StatusBar style={isDark ? "light" : "dark"} />
+        <SystemBars style={isDark ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(storybook)/index" />
         </Stack>
@@ -343,7 +343,7 @@ export default function RootLayout() {
         style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
         onLayout={onLayoutRootView}
       >
-        <StatusBar style={isDark ? "light" : "dark"} />
+        <SystemBars style={isDark ? "light" : "dark"} />
         <Stack screenOptions={{ headerShown: false, animation: "none" }}>
           <Stack.Screen name="(pages)/index" />
         </Stack>
