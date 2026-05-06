@@ -23,6 +23,10 @@
       "versionCode": 10,
       "minSdkVersion": 26,
       "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon-dark.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE",
