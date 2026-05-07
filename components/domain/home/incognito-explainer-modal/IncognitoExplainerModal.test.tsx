@@ -118,17 +118,6 @@ describe("IncognitoExplainerModal", () => {
     expect(capturedModalProps.visible).toBe(true);
   });
 
-  it("passes iconVariant as info", () => {
-    render(
-      <IncognitoExplainerModal
-        visible={true}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />,
-    );
-    expect(capturedModalProps.iconVariant).toBe("info");
-  });
-
   it("passes ghost icon", () => {
     render(
       <IncognitoExplainerModal

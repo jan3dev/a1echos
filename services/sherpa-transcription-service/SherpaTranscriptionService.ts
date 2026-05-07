@@ -18,9 +18,9 @@ import {
 
 import { audioSessionService } from "../audio-session-service/AudioSessionService";
 
-// Lazy-loaded sherpa-onnx native bindings. Deferred so Storybook (which runs
-// without a native bridge) can evaluate this module without hitting
-// TurboModuleRegistry.getEnforcing at import time.
+// Lazy require: eager imports trigger TurboModuleRegistry.getEnforcing at
+// module evaluation, which crashes contexts where the native bridge isn't
+// ready (e.g. the design-system gallery boot path).
 type CreatePcmLiveStream =
   typeof import("react-native-sherpa-onnx/audio").createPcmLiveStream;
 type CreateSTT = typeof import("react-native-sherpa-onnx/stt").createSTT;

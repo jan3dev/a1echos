@@ -17,13 +17,10 @@ import { Text } from "../text/Text";
 
 import { Dimmer } from "./Dimmer";
 
-export type ModalVariant = "normal" | "success" | "danger" | "warning" | "info";
-
 export interface ModalProps {
   visible: boolean;
   title: string;
   message: string;
-  messageTertiary?: string;
   primaryButton: {
     text: string;
     onTap: () => void;
@@ -35,8 +32,6 @@ export interface ModalProps {
     variant?: ButtonVariant;
   };
   icon?: ReactNode;
-  illustration?: ReactNode;
-  iconVariant?: ModalVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;
   onDismiss?: () => void;
@@ -47,12 +42,9 @@ export const Modal = ({
   visible,
   title,
   message,
-  messageTertiary,
   primaryButton,
   secondaryButton,
   icon,
-  illustration,
-  iconVariant = "normal",
   titleMaxLines = 3,
   messageMaxLines = 5,
   onDismiss,
@@ -81,36 +73,6 @@ export const Modal = ({
     }
   }, [visible, slideAnim]);
 
-  const getIconBackgroundColor = () => {
-    switch (iconVariant) {
-      case "success":
-        return colors.accentSuccessTransparent;
-      case "danger":
-        return colors.accentDangerTransparent;
-      case "warning":
-        return colors.accentWarningTransparent;
-      case "info":
-        return colors.accentBrandTransparent;
-      default:
-        return colors.surfaceTertiary;
-    }
-  };
-
-  const getIconInnerBackgroundColor = () => {
-    switch (iconVariant) {
-      case "success":
-        return colors.accentSuccess;
-      case "danger":
-        return colors.accentDanger;
-      case "warning":
-        return colors.accentWarning;
-      case "info":
-        return colors.accentBrand;
-      default:
-        return colors.surfaceSecondary;
-    }
-  };
-
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [300, 0],
@@ -121,8 +83,7 @@ export const Modal = ({
     outputRange: [0, 1],
   });
 
-  const maxWidth = width >= 768 ? 343 : undefined;
-  const modalWidth = Math.min(width - 32, maxWidth ?? Infinity);
+  const modalWidth = width >= 768 ? 343 : width - 32;
 
   return (
     <Dimmer visible={visible} onDismiss={onDismiss || (() => {})}>
@@ -158,7 +119,6 @@ export const Modal = ({
                   { backgroundColor: colors.surfacePrimary },
                 ]}
               >
-                {/* Drag handle */}
                 <View
                   style={[
                     styles.dragHandle,
@@ -166,18 +126,17 @@ export const Modal = ({
                   ]}
                 />
 
-                {/* Icon or Illustration */}
                 {icon && (
                   <View
                     style={[
                       styles.iconOuterContainer,
-                      { backgroundColor: getIconBackgroundColor() },
+                      { backgroundColor: colors.surfaceTertiary },
                     ]}
                   >
                     <View
                       style={[
                         styles.iconInnerContainer,
-                        { backgroundColor: getIconInnerBackgroundColor() },
+                        { backgroundColor: colors.surfaceSecondary },
                       ]}
                     >
                       {icon}
@@ -185,13 +144,6 @@ export const Modal = ({
                   </View>
                 )}
 
-                {illustration && (
-                  <View style={styles.illustrationContainer}>
-                    {illustration}
-                  </View>
-                )}
-
-                {/* Title */}
                 <Text
                   variant="h4"
                   weight="medium"
@@ -203,7 +155,6 @@ export const Modal = ({
                   {title}
                 </Text>
 
-                {/* Message */}
                 <View style={styles.messageSpacing} />
                 <Text
                   variant="body1"
@@ -216,33 +167,14 @@ export const Modal = ({
                   {message}
                 </Text>
 
-                {/* Tertiary Message */}
-                {messageTertiary && (
-                  <>
-                    <View style={styles.tertiarySpacing} />
-                    <Text
-                      variant="body1"
-                      weight="semibold"
-                      color={colors.accentDanger}
-                      numberOfLines={5}
-                      align="center"
-                      style={styles.tertiaryText}
-                    >
-                      {messageTertiary}
-                    </Text>
-                  </>
-                )}
-
                 <View style={styles.buttonsSpacing} />
 
-                {/* Primary Button */}
                 <Button.primary
                   text={primaryButton.text}
                   variant={primaryButton.variant || "normal"}
                   onPress={primaryButton.onTap}
                 />
 
-                {/* Secondary Button */}
                 {secondaryButton && (
                   <>
                     <View style={styles.secondaryButtonSpacing} />
@@ -290,40 +222,23 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   iconOuterContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
     alignSelf: "center",
     marginTop: 32,
     marginBottom: 24,
     padding: 16,
+    borderRadius: 999,
   },
   iconInnerContainer: {
-    flex: 1,
-    borderRadius: 28,
     padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  illustrationContainer: {
-    width: 88,
-    height: 88,
-    alignSelf: "center",
-    marginTop: 32,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
   messageSpacing: {
-    height: 6,
+    height: 8,
   },
   messageText: {
     lineHeight: 19.2,
-  },
-  tertiarySpacing: {
-    height: 32,
-  },
-  tertiaryText: {
-    lineHeight: 16,
   },
   buttonsSpacing: {
     height: 32,
@@ -332,6 +247,6 @@ const styles = StyleSheet.create({
     height: 16,
   },
   bottomSpacing: {
-    height: 32,
+    height: 24,
   },
 });

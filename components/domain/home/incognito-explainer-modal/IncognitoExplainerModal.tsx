@@ -29,7 +29,6 @@ export const IncognitoExplainerModal = ({
         onTap: onConfirm,
       }}
       icon={<Icon name="ghost" size={24} color={lightColors.textInverse} />}
-      iconVariant="info"
       onDismiss={onCancel}
     />
   );

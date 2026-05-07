@@ -42,13 +42,14 @@ import {
 import { useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
 
-const StorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK_ENABLED === "true";
+const DesignSystemEnabled =
+  process.env.EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED === "true";
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
 
 // Register Android foreground service early (async, fire-and-forget)
-if (Platform.OS === "android" && !StorybookEnabled) {
+if (Platform.OS === "android" && !DesignSystemEnabled) {
   registerForegroundService();
 }
 
@@ -78,7 +79,9 @@ function installGlobalErrorHandler() {
 }
 
 export const unstable_settings = {
-  initialRouteName: StorybookEnabled ? "(storybook)/index" : "(pages)/index",
+  initialRouteName: DesignSystemEnabled
+    ? "(design-system)/index"
+    : "(pages)/index",
 };
 
 function GlobalTooltipRenderer() {
@@ -250,9 +253,9 @@ export default function RootLayout() {
     Manrope: require("@/assets/fonts/Manrope-Regular.ttf"),
     "Manrope-Medium": require("@/assets/fonts/Manrope-Medium.ttf"),
     "Manrope-SemiBold": require("@/assets/fonts/Manrope-SemiBold.ttf"),
-    PublicSans: require("@/assets/fonts/PublicSans-Regular.ttf"),
-    "PublicSans-Medium": require("@/assets/fonts/PublicSans-Medium.ttf"),
-    "PublicSans-SemiBold": require("@/assets/fonts/PublicSans-SemiBold.ttf"),
+    Inter: require("@/assets/fonts/Inter-Regular.ttf"),
+    "Inter-Medium": require("@/assets/fonts/Inter-Medium.ttf"),
+    "Inter-SemiBold": require("@/assets/fonts/Inter-SemiBold.ttf"),
   });
 
   const initTheme = useThemeStore((state) => state.initTheme);
@@ -269,7 +272,7 @@ export default function RootLayout() {
       try {
         await initTheme();
 
-        if (!StorybookEnabled) {
+        if (!DesignSystemEnabled) {
           await Promise.all([
             initializeSettingsStore(),
             initializeSessionStore(),
@@ -323,15 +326,18 @@ export default function RootLayout() {
     return null;
   }
 
-  if (StorybookEnabled) {
+  if (DesignSystemEnabled) {
     return (
       <GestureHandlerRootView
         style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
         onLayout={onLayoutRootView}
       >
         <SystemBars style={isDark ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
-          <Stack.Screen name="(storybook)/index" />
+        <Stack screenOptions={{ animation: "none" }}>
+          <Stack.Screen
+            name="(design-system)"
+            options={{ headerShown: false }}
+          />
         </Stack>
       </GestureHandlerRootView>
     );

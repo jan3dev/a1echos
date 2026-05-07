@@ -28,11 +28,13 @@ npm run ios
 npm run android
 ```
 
-## Storybook
+## Design System Gallery
 
 ```bash
-EXPO_PUBLIC_STORYBOOK_ENABLED=true npm start
+EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start
 ```
+
+Boots the app directly into the in-app component gallery.
 
 ## Testing
 

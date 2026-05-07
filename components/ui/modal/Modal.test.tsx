@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import { View } from "react-native";
 
 import { Modal } from "./Modal";
 
@@ -101,33 +102,11 @@ describe("Modal", () => {
     expect(queryByText("Confirm Action")).toBeNull();
   });
 
-  it("renders icon with default iconVariant", () => {
-    const { getByText } = render(<Modal {...defaultProps} icon={<></>} />);
-    expect(getByText("Confirm Action")).toBeTruthy();
-  });
-
-  it.each(["success", "danger", "warning", "info", "normal"] as const)(
-    "renders icon with iconVariant=%s",
-    (variant) => {
-      const { getByText } = render(
-        <Modal {...defaultProps} icon={<></>} iconVariant={variant} />,
-      );
-      expect(getByText("Confirm Action")).toBeTruthy();
-    },
-  );
-
-  it("renders illustration when provided", () => {
-    const { getByText } = render(
-      <Modal {...defaultProps} illustration={<></>} />,
+  it("renders icon when provided", () => {
+    const { getByTestId } = render(
+      <Modal {...defaultProps} icon={<View testID="modal-icon" />} />,
     );
-    expect(getByText("Confirm Action")).toBeTruthy();
-  });
-
-  it("renders messageTertiary when provided", () => {
-    const { getByText } = render(
-      <Modal {...defaultProps} messageTertiary="Warning details" />,
-    );
-    expect(getByText("Warning details")).toBeTruthy();
+    expect(getByTestId("modal-icon")).toBeTruthy();
   });
 
   it("renders without onDismiss (uses default noop)", () => {

@@ -55,7 +55,6 @@ describe("useModal", () => {
         makeOptions({
           title: "Delete",
           message: "This cannot be undone.",
-          messageTertiary: "All data will be lost.",
           primaryButton: {
             text: "Delete",
             onTap: primaryOnTap,
@@ -73,7 +72,6 @@ describe("useModal", () => {
     const { modalState } = result.current;
     expect(modalState.title).toBe("Delete");
     expect(modalState.message).toBe("This cannot be undone.");
-    expect(modalState.messageTertiary).toBe("All data will be lost.");
     expect(modalState.primaryButton.text).toBe("Delete");
     expect(modalState.primaryButton.variant).toBe("error");
     expect(modalState.secondaryButton).toBeDefined();

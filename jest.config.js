@@ -22,7 +22,6 @@ module.exports = {
     "stores/**/*.{ts,tsx}",
     "theme/**/*.{ts,tsx}",
     "utils/**/*.{ts,tsx}",
-    "!**/*.stories.{ts,tsx}",
     "!**/*.test.{ts,tsx}",
     "!**/index.{ts,tsx}",
     "!**/__mocks__/**",

@@ -19,11 +19,13 @@ npm run android       # Run Android development build (recommended)
 
 **Important**: This app uses native modules and **requires a development build**. Standard Expo Go will not work.
 
-### Storybook
+### Design System Gallery
 
 ```bash
-EXPO_PUBLIC_STORYBOOK_ENABLED=true npm start
+EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start
 ```
+
+Boots the app directly into the in-app component gallery. Each component has a sibling `*.gallery.tsx` file co-located with its source; entries are wired into `app/(design-system)/manifest.ts`.
 
 ### Linting
 
@@ -86,7 +88,7 @@ The project uses TypeScript path aliases (configured in tsconfig.json):
 #### `/app` - Expo Router Pages
 
 - `(pages)/` - Main app screens (home, session detail)
-- `(storybook)/` - Storybook UI dev environment
+- `(design-system)/` - In-app component gallery (replaces Storybook)
 - `_layout.tsx` - Root layout with app initialization, theme, global components
 
 #### `/components` - Three-tier Component Architecture
@@ -251,12 +253,12 @@ DocumentDirectory/
 
 ### Development Notes
 
-#### Storybook Integration
+#### Design System Gallery
 
-- Storybook is conditionally loaded via route in \_layout.tsx
-- Use `EXPO_PUBLIC_STORYBOOK_ENABLED=true` to enable
-- Stories defined in `.rnstorybook/` directory
-- `npm run storybook-generate` generates story index
+- In-app component gallery at `app/(design-system)/` (no Storybook dependency).
+- `EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start` boots the gallery as initial route.
+- Each component has a co-located `*.gallery.tsx` file exporting a `GalleryEntry` (`{ slug, title, group, demos }`).
+- Add new components to the gallery by importing the file and adding it to `DESIGN_SYSTEM_MANIFEST` in `app/(design-system)/manifest.ts`.
 
 #### Native Modules
 

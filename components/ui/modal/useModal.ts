@@ -2,12 +2,9 @@ import { ReactNode, useCallback, useState } from "react";
 
 import { ButtonVariant } from "../button/Button";
 
-import { ModalVariant } from "./Modal";
-
 export interface ModalOptions {
   title: string;
   message: string;
-  messageTertiary?: string;
   primaryButton: {
     text: string;
     onTap: () => void;
@@ -19,8 +16,6 @@ export interface ModalOptions {
     variant?: ButtonVariant;
   };
   icon?: ReactNode;
-  illustration?: ReactNode;
-  iconVariant?: ModalVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;
 }
@@ -35,11 +30,6 @@ export const useModal = () => {
     title: "",
     message: "",
     primaryButton: {
-      text: "",
-      onTap: () => {},
-      variant: "normal",
-    },
-    secondaryButton: {
       text: "",
       onTap: () => {},
       variant: "normal",

@@ -1,0 +1,72 @@
+import { ComponentProps } from "react";
+
+import { RecordingButton } from "@/components";
+import { TranscriptionState } from "@/models";
+import { useTheme } from "@/theme";
+import type { GalleryEntry } from "@/app/(design-system)/manifest";
+
+const DynamicRecordingButton = (
+  props: Omit<ComponentProps<typeof RecordingButton>, "colors">,
+) => {
+  const { theme } = useTheme();
+  return <RecordingButton {...props} colors={theme.colors} />;
+};
+
+export const Ready = () => (
+  <DynamicRecordingButton
+    state={TranscriptionState.READY}
+    enabled={true}
+    onRecordingStart={() => console.log("Recording started")}
+  />
+);
+
+export const Recording = () => (
+  <DynamicRecordingButton
+    state={TranscriptionState.RECORDING}
+    enabled={true}
+    onRecordingStop={() => console.log("Recording stopped")}
+  />
+);
+
+export const Transcribing = () => (
+  <DynamicRecordingButton
+    state={TranscriptionState.TRANSCRIBING}
+    enabled={false}
+  />
+);
+
+export const Loading = () => (
+  <DynamicRecordingButton state={TranscriptionState.LOADING} enabled={false} />
+);
+
+export const LargeSize = () => (
+  <DynamicRecordingButton
+    state={TranscriptionState.READY}
+    enabled={true}
+    size={96}
+  />
+);
+
+export const SmallSize = () => (
+  <DynamicRecordingButton
+    state={TranscriptionState.READY}
+    enabled={true}
+    size={48}
+  />
+);
+
+const gallery: GalleryEntry = {
+  slug: "recording-button",
+  title: "Recording Button",
+  group: "Shared",
+  demos: [
+    { name: "Ready", render: Ready },
+    { name: "Recording", render: Recording },
+    { name: "Transcribing", render: Transcribing },
+    { name: "Loading", render: Loading },
+    { name: "LargeSize", render: LargeSize },
+    { name: "SmallSize", render: SmallSize },
+  ],
+};
+
+export default gallery;

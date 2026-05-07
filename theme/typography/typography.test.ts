@@ -79,9 +79,9 @@ describe("AquaTypography", () => {
     }
   });
 
-  it("h1-subtitle use Manrope, body1-caption2 use PublicSans", () => {
+  it("h1-subtitle use Manrope, body1-caption2 use Inter", () => {
     const manropeKeys = ["h1", "h2", "h3", "h4", "h5", "subtitle"] as const;
-    const publicSansKeys = ["body1", "body2", "caption1", "caption2"] as const;
+    const interKeys = ["body1", "body2", "caption1", "caption2"] as const;
 
     for (const key of manropeKeys) {
       expect(AquaTypography[key].fontFamily).toBe("Manrope");
@@ -95,16 +95,16 @@ describe("AquaTypography", () => {
       ).toBe("Manrope-SemiBold");
     }
 
-    for (const key of publicSansKeys) {
-      expect(AquaTypography[key].fontFamily).toBe("PublicSans");
+    for (const key of interKeys) {
+      expect(AquaTypography[key].fontFamily).toBe("Inter");
       expect(
         AquaTypography[`${key}Medium` as keyof typeof AquaTypography]
           .fontFamily,
-      ).toBe("PublicSans-Medium");
+      ).toBe("Inter-Medium");
       expect(
         AquaTypography[`${key}SemiBold` as keyof typeof AquaTypography]
           .fontFamily,
-      ).toBe("PublicSans-SemiBold");
+      ).toBe("Inter-SemiBold");
     }
   });
 
