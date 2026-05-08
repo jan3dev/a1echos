@@ -54,7 +54,6 @@ describe("useLocalization", () => {
       "light",
       "dark",
       "description",
-      "spokenLanguageDescription",
       "recordingTooShort",
       "transcriptionFailed",
       "failedToInitializeEngine",

@@ -69,7 +69,6 @@
   "couldNotOpenLink": "Could not open link",
   "createdPrefix": "Created",
   "spokenLanguageTitle": "Spoken Language",
-  "spokenLanguageDescription": "Choose which language the model should detect. For best results, select the language you mainly speak.",
   "microphoneAccessRequiredTitle": "Microphone access required",
   "microphoneAccessRequiredMessageAndroid": "Echos needs access to your microphone to record audio. Please grant permission to continue.",
   "microphoneAccessDeniedMessage": "You have permanently denied microphone access. Please enable it in Settings to use recording features.",

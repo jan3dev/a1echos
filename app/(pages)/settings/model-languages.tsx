@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FlagIcon, Screen, Text, TopAppBar } from "@/components";
+import { Chip, FlagIcon, Screen, Text, TopAppBar } from "@/components";
 import { AppConstants } from "@/constants";
 import { useLocalization } from "@/hooks";
 import type { ModelId } from "@/models";
@@ -63,26 +63,15 @@ export default function ModelLanguagesScreen() {
 
         <View style={styles.chipsGrid}>
           {languages.map((language) => (
-            <View
+            <Chip
               key={language.code}
               testID={`language-chip-${language.code}`}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: theme.colors.surfacePrimary,
-                  borderColor: theme.colors.surfaceBorderPrimary,
-                },
-              ]}
-            >
-              <FlagIcon name={getCountryCode(language)} size={16} />
-              <Text
-                variant="body2"
-                weight="medium"
-                color={theme.colors.textSecondary}
-              >
-                {language.name}
-              </Text>
-            </View>
+              size="large"
+              label={language.name}
+              iconLeading={
+                <FlagIcon name={getCountryCode(language)} size={16} />
+              }
+            />
           ))}
         </View>
       </ScrollView>
@@ -102,14 +91,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
   },
 });

@@ -1,16 +1,9 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  Card,
-  Divider,
-  ListItem,
-  Radio,
-  Screen,
-  TopAppBar,
-} from "@/components";
+import { ListItem, Radio, Screen, TopAppBar } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { AppTheme } from "@/models";
@@ -20,7 +13,7 @@ import { delay, FeatureFlag, logError } from "@/utils";
 
 export default function ThemeSettingsScreen() {
   const router = useRouter();
-  const { theme, selectedTheme, setTheme } = useTheme();
+  const { selectedTheme, setTheme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
 
@@ -70,13 +63,14 @@ export default function ThemeSettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card>
+        <View style={styles.list}>
           <ListItem
             testID={TestID.ThemeAuto}
             title={loc.auto}
             iconTrailing={
               <Radio<AppTheme>
                 value={AppTheme.AUTO}
+                size="small"
                 groupValue={effectiveTheme}
                 onValueChange={
                   isSaving ? undefined : () => handleSelect(AppTheme.AUTO)
@@ -85,10 +79,7 @@ export default function ThemeSettingsScreen() {
               />
             }
             onPress={isSaving ? undefined : () => handleSelect(AppTheme.AUTO)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-
-          <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
             testID={TestID.ThemeLight}
@@ -96,6 +87,7 @@ export default function ThemeSettingsScreen() {
             iconTrailing={
               <Radio<AppTheme>
                 value={AppTheme.LIGHT}
+                size="small"
                 groupValue={effectiveTheme}
                 onValueChange={
                   isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)
@@ -104,10 +96,7 @@ export default function ThemeSettingsScreen() {
               />
             }
             onPress={isSaving ? undefined : () => handleSelect(AppTheme.LIGHT)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-
-          <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
             testID={TestID.ThemeDark}
@@ -115,6 +104,7 @@ export default function ThemeSettingsScreen() {
             iconTrailing={
               <Radio<AppTheme>
                 value={AppTheme.DARK}
+                size="small"
                 groupValue={effectiveTheme}
                 onValueChange={
                   isSaving ? undefined : () => handleSelect(AppTheme.DARK)
@@ -123,9 +113,8 @@ export default function ThemeSettingsScreen() {
               />
             }
             onPress={isSaving ? undefined : () => handleSelect(AppTheme.DARK)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-        </Card>
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -134,5 +123,8 @@ export default function ThemeSettingsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
+  },
+  list: {
+    gap: 8,
   },
 });

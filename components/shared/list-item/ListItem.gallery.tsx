@@ -4,81 +4,197 @@ import type { GalleryEntry } from "@/app/(design-system)/manifest";
 import { Icon, ListItem, Text } from "@/components";
 import { useTheme } from "@/theme";
 
-export const Default = () => (
-  <ListItem title="List Item Title" onPress={() => console.log("Pressed")} />
+const PRIMARY_LEFT = "Primary Left";
+const PRIMARY_RIGHT = "Primary Right";
+const SECONDARY_LEFT = "Secondary Left";
+const SECONDARY_RIGHT = "Secondary Right";
+const FIRST_RIGHT = "1st Right";
+const SECOND_RIGHT = "2nd Right";
+
+const Chevron = () => {
+  const { theme } = useTheme();
+  return (
+    <Icon name="chevron_right" size={20} color={theme.colors.textSecondary} />
+  );
+};
+
+const LeadingIcon = () => {
+  const { theme } = useTheme();
+  return <Icon name="settings" size={24} color={theme.colors.textPrimary} />;
+};
+
+export const PrimaryOnly = () => (
+  <ListItem title={PRIMARY_LEFT} onPress={() => {}} />
 );
 
-export const WithSubtitle = () => (
+export const PrimaryWithChevron = () => (
   <ListItem
-    title="Transaction Sent"
-    subtitle="Yesterday, 10:30 AM"
-    onPress={() => console.log("Pressed")}
+    title={PRIMARY_LEFT}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
   />
 );
 
-const WithLeadingIconContent = () => {
-  const { theme } = useTheme();
-  return (
-    <ListItem
-      title="Security"
-      subtitle="Manage your security settings"
-      iconLeading={
-        <Icon name="settings" size={24} color={theme.colors.accentBrand} />
-      }
-      onPress={() => console.log("Pressed")}
-    />
-  );
-};
+export const PrimaryWithRightText = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    onPress={() => {}}
+  />
+);
 
-export const WithLeadingIcon = () => <WithLeadingIconContent />;
+export const PrimaryWithRightTextAndChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
 
-const WithTrailingIconContent = () => {
-  const { theme } = useTheme();
-  return (
-    <ListItem
-      title="Language"
-      subtitle="English"
-      iconLeading={
-        <Icon name="language" size={24} color={theme.colors.textPrimary} />
-      }
-      iconTrailing={
-        <Icon
-          name="chevron_right"
-          size={20}
-          color={theme.colors.textSecondary}
-        />
-      }
-      onPress={() => console.log("Pressed")}
-    />
-  );
-};
+export const PrimaryWithStackedRightText = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={FIRST_RIGHT}
+    subtitleTrailing={SECOND_RIGHT}
+    onPress={() => {}}
+  />
+);
 
-export const WithTrailingIcon = () => <WithTrailingIconContent />;
+export const PrimaryWithStackedRightTextAndChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={FIRST_RIGHT}
+    subtitleTrailing={SECOND_RIGHT}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
 
-const WithTrailingTextContent = () => {
-  const { theme } = useTheme();
-  return (
-    <ListItem
-      title="Ghost"
-      subtitle="Ghost Mode"
-      onPress={() => console.log("Pressed")}
-      iconLeading={
-        <Icon name="ghost" size={24} color={theme.colors.textPrimary} />
-      }
-      iconTrailing={
-        <Icon
-          name="chevron_right"
-          size={20}
-          color={theme.colors.textSecondary}
-        />
-      }
-    />
-  );
-};
+export const StackedLeft = () => (
+  <ListItem title={PRIMARY_LEFT} subtitle={SECONDARY_LEFT} onPress={() => {}} />
+);
 
-export const WithTrailingText = () => <WithTrailingTextContent />;
+export const StackedLeftWithChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
 
-const WithCustomContentContent = () => {
+export const StackedBothSides = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    subtitleTrailing={SECONDARY_RIGHT}
+    onPress={() => {}}
+  />
+);
+
+export const StackedBothSidesWithChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    subtitleTrailing={SECONDARY_RIGHT}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
+
+export const IconPrimaryOnly = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    iconLeading={<LeadingIcon />}
+    onPress={() => {}}
+  />
+);
+
+export const IconPrimaryWithChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
+
+export const IconPrimaryWithRightText = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    iconLeading={<LeadingIcon />}
+    onPress={() => {}}
+  />
+);
+
+export const IconPrimaryWithRightTextAndChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
+
+export const IconStackedLeft = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    iconLeading={<LeadingIcon />}
+    onPress={() => {}}
+  />
+);
+
+export const IconStackedLeftWithChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
+
+export const IconStackedBothSides = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    subtitleTrailing={SECONDARY_RIGHT}
+    iconLeading={<LeadingIcon />}
+    onPress={() => {}}
+  />
+);
+
+export const IconStackedBothSidesWithChevron = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    subtitleTrailing={SECONDARY_RIGHT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    onPress={() => {}}
+  />
+);
+
+export const Selected = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    subtitle={SECONDARY_LEFT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    selected
+    onPress={() => {}}
+  />
+);
+
+export const WithCustomContent = () => {
   const { theme } = useTheme();
   return (
     <ListItem
@@ -86,7 +202,7 @@ const WithCustomContentContent = () => {
       iconLeading={
         <Icon name="warning" size={24} color={theme.colors.accentDanger} />
       }
-      onPress={() => console.log("Pressed")}
+      onPress={() => {}}
       contentWidget={
         <View style={{ flexDirection: "row", marginTop: 4 }}>
           <View
@@ -117,18 +233,48 @@ const WithCustomContentContent = () => {
   );
 };
 
-export const WithCustomContent = () => <WithCustomContentContent />;
-
 const gallery: GalleryEntry = {
   slug: "list-item",
   title: "List Item",
   group: "Shared",
   demos: [
-    { name: "Default", render: Default },
-    { name: "WithSubtitle", render: WithSubtitle },
-    { name: "WithLeadingIcon", render: WithLeadingIcon },
-    { name: "WithTrailingIcon", render: WithTrailingIcon },
-    { name: "WithTrailingText", render: WithTrailingText },
+    { name: "PrimaryOnly", render: PrimaryOnly },
+    { name: "PrimaryWithChevron", render: PrimaryWithChevron },
+    { name: "PrimaryWithRightText", render: PrimaryWithRightText },
+    {
+      name: "PrimaryWithRightTextAndChevron",
+      render: PrimaryWithRightTextAndChevron,
+    },
+    {
+      name: "PrimaryWithStackedRightText",
+      render: PrimaryWithStackedRightText,
+    },
+    {
+      name: "PrimaryWithStackedRightTextAndChevron",
+      render: PrimaryWithStackedRightTextAndChevron,
+    },
+    { name: "StackedLeft", render: StackedLeft },
+    { name: "StackedLeftWithChevron", render: StackedLeftWithChevron },
+    { name: "StackedBothSides", render: StackedBothSides },
+    {
+      name: "StackedBothSidesWithChevron",
+      render: StackedBothSidesWithChevron,
+    },
+    { name: "IconPrimaryOnly", render: IconPrimaryOnly },
+    { name: "IconPrimaryWithChevron", render: IconPrimaryWithChevron },
+    { name: "IconPrimaryWithRightText", render: IconPrimaryWithRightText },
+    {
+      name: "IconPrimaryWithRightTextAndChevron",
+      render: IconPrimaryWithRightTextAndChevron,
+    },
+    { name: "IconStackedLeft", render: IconStackedLeft },
+    { name: "IconStackedLeftWithChevron", render: IconStackedLeftWithChevron },
+    { name: "IconStackedBothSides", render: IconStackedBothSides },
+    {
+      name: "IconStackedBothSidesWithChevron",
+      render: IconStackedBothSidesWithChevron,
+    },
+    { name: "Selected", render: Selected },
     { name: "WithCustomContent", render: WithCustomContent },
   ],
 };

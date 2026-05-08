@@ -15,6 +15,23 @@ import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Skeleton } from "../../../ui/skeleton/Skeleton";
 import { Text } from "../../../ui/text/Text";
 
+const DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
+
+const DATE_FORMAT_WITH_YEAR = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "numeric",
+  hour12: true,
+});
+
 interface TranscriptionItemProps {
   transcription: Transcription;
   selectionMode?: boolean;
@@ -111,21 +128,12 @@ export const TranscriptionItem = ({
     }
   };
 
-  const now = new Date();
   const isOlderThanCurrentYear =
-    transcription.timestamp.getFullYear() < now.getFullYear();
+    transcription.timestamp.getFullYear() < new Date().getFullYear();
 
-  const dateFormat = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: isOlderThanCurrentYear ? "numeric" : undefined,
-  });
-
-  const timeFormat = new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  });
+  const dateFormat = isOlderThanCurrentYear
+    ? DATE_FORMAT_WITH_YEAR
+    : DATE_FORMAT;
 
   const showSkeleton = isLoadingWhisperResult || isWhisperRecording;
 
@@ -135,10 +143,17 @@ export const TranscriptionItem = ({
   const showCheckbox = selectionMode && !isLivePreviewItem;
   const disableIcons = showSkeleton || (isAnyEditing && !isEditing);
 
-  const backgroundColor =
-    selectionMode && isSelected
-      ? theme.colors.surfaceSelected
-      : theme.colors.surfacePrimary;
+  const isSelectedItem = selectionMode && isSelected;
+
+  const backgroundColor = isSelectedItem
+    ? theme.colors.surfaceSelected
+    : theme.colors.surfacePrimary;
+
+  const borderColor = isEditing
+    ? theme.colors.accentBrand
+    : isSelectedItem
+      ? theme.colors.surfaceBorderSelected
+      : theme.colors.surfaceBorderPrimary;
 
   return (
     <View
@@ -166,8 +181,8 @@ export const TranscriptionItem = ({
           styles.container,
           {
             backgroundColor,
-            borderColor: isEditing ? theme.colors.accentBrand : "transparent",
-            borderWidth: isEditing ? 1 : 0,
+            borderColor,
+            borderWidth: 1,
             opacity: enableInteractions ? iosPressed(pressed) : 1,
           },
         ]}
@@ -180,7 +195,7 @@ export const TranscriptionItem = ({
                 {dateFormat.format(transcription.timestamp)}
                 {"  "}
                 <Text variant="caption1" color={theme.colors.textTertiary}>
-                  {timeFormat.format(transcription.timestamp)}
+                  {TIME_FORMAT.format(transcription.timestamp)}
                 </Text>
               </Text>
             )}
@@ -275,11 +290,11 @@ export const TranscriptionItem = ({
 
 const styles = StyleSheet.create({
   shadowContainer: {
-    borderRadius: 8,
+    borderRadius: 16,
     marginBottom: 16,
   },
   container: {
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 16,
   },
   headerRow: {

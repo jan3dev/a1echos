@@ -73,6 +73,12 @@ jest.mock("@/stores", () => ({
 jest.mock("@/components", () => {
   const { View, Text } = require("react-native");
   return {
+    Chip: ({ label, iconLeading, testID }: any) => (
+      <View testID={testID}>
+        {iconLeading}
+        <Text>{String(label)}</Text>
+      </View>
+    ),
     FlagIcon: ({ name }: any) => <View testID={`flag-icon-${name}`} />,
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,

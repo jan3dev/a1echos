@@ -150,7 +150,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
                 top: menuPosition.top,
                 right: menuPosition.right,
                 backgroundColor: theme.colors.surfacePrimary,
-                borderRadius: 12,
+                borderRadius: 16,
               },
             ]}
             onLayout={(e) => setMeasuredMenuHeight(e.nativeEvent.layout.height)}
@@ -161,8 +161,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
                 { backgroundColor: theme.colors.surfacePrimary },
               ]}
             >
-              {/* Rename */}
               <ListItem
+                bordered={false}
                 testID={TestID.SessionRename}
                 title={loc.sessionRenameTitle}
                 iconLeading={
@@ -183,11 +183,10 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
                   setMenuVisible(false);
                   setRenameVisible(true);
                 }}
-                backgroundColor="transparent"
               />
 
-              {/* Delete */}
               <ListItem
+                bordered={false}
                 testID={TestID.SessionDelete}
                 title={loc.delete}
                 iconLeading={
@@ -205,10 +204,8 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
                   />
                 }
                 onPress={confirmDelete}
-                backgroundColor="transparent"
               />
 
-              {/* Info */}
               <View style={styles.infoContainer}>
                 <Text
                   variant="caption1"
@@ -261,9 +258,9 @@ const styles = StyleSheet.create({
     width: 240,
   },
   menuInner: {
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 8,
-    overflow: "hidden",
+    gap: 8,
   },
   infoContainer: {
     paddingHorizontal: 16,

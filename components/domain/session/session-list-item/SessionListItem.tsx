@@ -45,7 +45,6 @@ export const SessionListItem = ({
           <SessionMoreMenu session={session} />
         )
       }
-      backgroundColor={theme.colors.surfacePrimary}
       titleColor={theme.colors.textPrimary}
       subtitleColor={theme.colors.textSecondary}
       onPress={onTap}

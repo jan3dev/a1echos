@@ -85,7 +85,6 @@ export const useLocalization = () => {
       tryAgain: t("tryAgain"),
       languagesTitle: t("languagesTitle"),
       languagesSupported: (count: number) => t("languagesSupported", { count }),
-      spokenLanguageDescription: t("spokenLanguageDescription"),
       recordingTooShort: t("recordingTooShort"),
       transcriptionFailed: t("transcriptionFailed"),
       failedToInitializeEngine: t("failedToInitializeEngine"),

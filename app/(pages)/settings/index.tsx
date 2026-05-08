@@ -4,8 +4,6 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  Card,
-  Divider,
   Icon,
   InAppBanner,
   ListItem,
@@ -65,7 +63,7 @@ export default function SettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card>
+        <View style={styles.list}>
           <ListItem
             testID={TestID.SettingsModel}
             title={loc.title}
@@ -86,10 +84,7 @@ export default function SettingsScreen() {
               />
             }
             onPress={() => router.push(Routes.settingsModel)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-
-          <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
             testID={TestID.SettingsTheme}
@@ -107,10 +102,7 @@ export default function SettingsScreen() {
               />
             }
             onPress={() => router.push(Routes.settingsTheme)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-
-          <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
             testID={TestID.SettingsLanguage}
@@ -132,10 +124,7 @@ export default function SettingsScreen() {
               />
             }
             onPress={() => router.push(Routes.settingsLanguage)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-
-          <Divider color={theme.colors.surfaceBorderPrimary} />
 
           <ListItem
             testID={TestID.SettingsAdvanced}
@@ -155,11 +144,10 @@ export default function SettingsScreen() {
               />
             }
             onPress={() => router.push(Routes.settingsAdvanced)}
-            backgroundColor={theme.colors.surfacePrimary}
           />
-        </Card>
+        </View>
 
-        <Card style={{ marginTop: 16 }}>
+        <View style={styles.contactSupport}>
           <ListItem
             testID={TestID.SettingsContactSupport}
             title={loc.contactSupport}
@@ -180,9 +168,8 @@ export default function SettingsScreen() {
             onPress={() =>
               Linking.openURL("https://a1lab.zendesk.com/hc/en-us/requests/new")
             }
-            backgroundColor={theme.colors.surfacePrimary}
           />
-        </Card>
+        </View>
 
         <View style={styles.bannerContainer}>
           <InAppBanner />
@@ -197,6 +184,12 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
+  },
+  list: {
+    gap: 8,
+  },
+  contactSupport: {
+    marginTop: 8,
   },
   bannerContainer: {
     paddingTop: 24,

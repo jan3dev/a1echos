@@ -50,12 +50,12 @@ export const lightColors: AquaColors = {
 
   surfacePrimary: AquaPrimitiveColors.white,
   surfaceBorderPrimary: AquaPrimitiveColors.gray50,
-  surfaceSecondary: AquaPrimitiveColors.gray50,
+  surfaceSecondary: AquaPrimitiveColors.gray100,
   surfaceBorderSecondary: AquaPrimitiveColors.gray100,
   surfaceTertiary: AquaPrimitiveColors.gray100,
   surfaceInverse: AquaPrimitiveColors.gray50,
   surfaceBackground: AquaPrimitiveColors.gray50,
-  surfaceSelected: AquaPrimitiveColors.gray100,
+  surfaceSelected: AquaPrimitiveColors.neonBlue8,
   surfaceBorderSelected: AquaPrimitiveColors.neonBlue400,
 
   glassSurface: AquaPrimitiveColors.glassSurfaceLight,
@@ -97,7 +97,7 @@ export const darkColors: AquaColors = {
   surfaceTertiary: AquaPrimitiveColors.gray850,
   surfaceInverse: AquaPrimitiveColors.gray50,
   surfaceBackground: AquaPrimitiveColors.gray1000,
-  surfaceSelected: AquaPrimitiveColors.gray850,
+  surfaceSelected: AquaPrimitiveColors.neonBlue8,
   surfaceBorderSelected: AquaPrimitiveColors.neonBlue800,
 
   glassSurface: AquaPrimitiveColors.glassSurfaceDark,

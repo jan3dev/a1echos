@@ -1,15 +1,7 @@
 import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  Card,
-  Icon,
-  ListItem,
-  Screen,
-  Text,
-  Toggle,
-  TopAppBar,
-} from "@/components";
+import { Icon, ListItem, Screen, Text, Toggle, TopAppBar } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
@@ -46,21 +38,18 @@ export default function AdvancedSettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card>
-          <ListItem
-            testID={TestID.SettingsSmartSplitToggle}
-            title={loc.smartSplitTitle}
-            iconTrailing={
-              <Toggle
-                value={smartSplitEnabled}
-                onValueChange={handleToggle}
-                accessibilityLabel={loc.smartSplitTitle}
-              />
-            }
-            onPress={() => handleToggle(!smartSplitEnabled)}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
-        </Card>
+        <ListItem
+          testID={TestID.SettingsSmartSplitToggle}
+          title={loc.smartSplitTitle}
+          iconTrailing={
+            <Toggle
+              value={smartSplitEnabled}
+              onValueChange={handleToggle}
+              accessibilityLabel={loc.smartSplitTitle}
+            />
+          }
+          onPress={() => handleToggle(!smartSplitEnabled)}
+        />
         <Text
           variant="caption1"
           color={theme.colors.textSecondary}
@@ -69,21 +58,19 @@ export default function AdvancedSettingsScreen() {
           {loc.smartSplitDescription}
         </Text>
 
-        <Card style={styles.cardSpacing}>
-          <ListItem
-            testID={TestID.SettingsAddKeyboardRow}
-            title={loc.advancedSettingsAddKeyboardTitle}
-            iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
-            }
-            onPress={showKeyboardPrompt}
-            backgroundColor={theme.colors.surfacePrimary}
-          />
-        </Card>
+        <ListItem
+          testID={TestID.SettingsAddKeyboardRow}
+          style={styles.keyboardRow}
+          title={loc.advancedSettingsAddKeyboardTitle}
+          iconTrailing={
+            <Icon
+              name="chevron_right"
+              size={24}
+              color={theme.colors.textSecondary}
+            />
+          }
+          onPress={showKeyboardPrompt}
+        />
         <Text
           variant="caption1"
           color={theme.colors.textSecondary}
@@ -104,7 +91,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginHorizontal: 12,
   },
-  cardSpacing: {
+  keyboardRow: {
     marginTop: 24,
   },
 });

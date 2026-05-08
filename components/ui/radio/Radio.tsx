@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { useTheme } from "@/theme";
+import { AquaPrimitiveColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
@@ -69,7 +69,7 @@ export const Radio = <T,>({
               {
                 width: dotSize,
                 height: dotSize,
-                backgroundColor: colors.surfaceTertiary,
+                backgroundColor: AquaPrimitiveColors.white,
               },
             ]}
           />

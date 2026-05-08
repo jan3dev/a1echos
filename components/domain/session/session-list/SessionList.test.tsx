@@ -2,7 +2,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { TestID, dynamicTestID } from "@/constants";
+import { dynamicTestID } from "@/constants";
 import { Session } from "@/models";
 import { useSessions } from "@/stores";
 
@@ -24,22 +24,6 @@ jest.mock("../session-list-item/SessionListItem", () => ({
         <Text>{props.session.name}</Text>
       </Pressable>
     );
-  },
-}));
-
-jest.mock("../../../ui/card/Card", () => ({
-  Card: ({ children }: any) => {
-    const { View } = require("react-native");
-    const { TestID: TID } = require("@/constants");
-    return <View testID={TID.Card}>{children}</View>;
-  },
-}));
-
-jest.mock("../../../ui/divider/Divider", () => ({
-  Divider: () => {
-    const { View } = require("react-native");
-    const { TestID: TID } = require("@/constants");
-    return <View testID={TID.Divider} />;
   },
 }));
 
@@ -88,19 +72,9 @@ describe("SessionList", () => {
     expect(getByTestId(dynamicTestID.sessionItem("s3"))).toBeTruthy();
   });
 
-  it("renders dividers between items (not after last)", () => {
-    (useSessions as jest.Mock).mockReturnValue(mockSessions);
-    const { getAllByTestId } = render(<SessionList {...defaultProps} />);
-    const dividers = getAllByTestId(TestID.Divider);
-    expect(dividers).toHaveLength(2);
-  });
-
-  it("empty sessions renders empty Card", () => {
+  it("renders nothing for empty sessions", () => {
     (useSessions as jest.Mock).mockReturnValue([]);
-    const { getByTestId, queryByTestId } = render(
-      <SessionList {...defaultProps} />,
-    );
-    expect(getByTestId(TestID.Card)).toBeTruthy();
+    const { queryByTestId } = render(<SessionList {...defaultProps} />);
     expect(queryByTestId(dynamicTestID.sessionItem("s1"))).toBeNull();
   });
 

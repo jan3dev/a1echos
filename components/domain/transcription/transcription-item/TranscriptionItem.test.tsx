@@ -407,13 +407,12 @@ describe("TranscriptionItem", () => {
     expect(json).toContain('"borderWidth":1');
   });
 
-  it("no editing border when not editing", () => {
+  it("border is always 1px (default state uses surfaceBorderPrimary)", () => {
     const { toJSON } = render(
       <TranscriptionItem {...defaultProps} isEditing={false} />,
     );
     const json = JSON.stringify(toJSON());
-    // Border width is 0 when not editing
-    expect(json).toContain('"borderWidth":0');
+    expect(json).toContain('"borderWidth":1');
   });
 
   it("timestamp shows year for older transcriptions", () => {

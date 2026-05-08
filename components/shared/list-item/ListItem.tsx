@@ -21,6 +21,7 @@ export interface ListItemProps {
   iconLeading?: ReactNode;
   iconTrailing?: ReactNode;
   selected?: boolean;
+  bordered?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
   titleMaxLines?: number;
@@ -43,6 +44,7 @@ export const ListItem = ({
   iconLeading,
   iconTrailing,
   selected,
+  bordered = true,
   onPress,
   onLongPress,
   titleMaxLines = 2,
@@ -52,23 +54,26 @@ export const ListItem = ({
 }: ListItemProps) => {
   const { theme } = useTheme();
 
-  const containerStyle: ViewStyle = {
-    backgroundColor: backgroundColor ?? theme.colors.surfacePrimary,
-  };
-
   const innerStyle: ViewStyle = {
-    backgroundColor: selected ? theme.colors.surfaceSelected : undefined,
-    borderColor: selected ? theme.colors.surfaceBorderSelected : "transparent",
+    backgroundColor: selected
+      ? theme.colors.surfaceSelected
+      : (backgroundColor ?? theme.colors.surfacePrimary),
+    borderColor: !bordered
+      ? "transparent"
+      : selected
+        ? theme.colors.surfaceBorderSelected
+        : theme.colors.surfaceBorderPrimary,
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 15,
     flexDirection: "row",
     alignItems: "center",
+    overflow: "hidden",
   };
 
   return (
-    <View testID={testID} style={[styles.card, containerStyle, style]}>
+    <View testID={testID} style={style}>
       <RipplePressable
         onPress={onPress}
         onLongPress={onLongPress}
@@ -81,65 +86,63 @@ export const ListItem = ({
           opacity: !selected ? iosPressed(pressed) : 1,
         })}
       >
-        <View style={styles.paddingWrapper}>
-          <View style={innerStyle}>
-            {iconLeading && (
-              <View style={styles.leadingContainer}>{iconLeading}</View>
-            )}
+        <View style={innerStyle}>
+          {iconLeading && (
+            <View style={styles.leadingContainer}>{iconLeading}</View>
+          )}
 
-            <View style={styles.contentContainer}>
+          <View style={styles.contentContainer}>
+            <Text
+              variant="body1"
+              weight="semibold"
+              color={titleColor}
+              numberOfLines={titleMaxLines}
+            >
+              {title}
+            </Text>
+
+            {contentWidget ? (
+              contentWidget
+            ) : subtitle ? (
+              <Text
+                variant="body2"
+                weight="medium"
+                color={subtitleColor ?? theme.colors.textSecondary}
+                numberOfLines={subtitleMaxLines}
+                style={styles.subtitle}
+              >
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.trailingTextContainer}>
+            {titleTrailing && (
               <Text
                 variant="body1"
                 weight="semibold"
-                color={titleColor}
-                numberOfLines={titleMaxLines}
+                color={titleTrailingColor}
+                align="right"
               >
-                {title}
+                {titleTrailing}
               </Text>
-
-              {contentWidget ? (
-                contentWidget
-              ) : subtitle ? (
-                <Text
-                  variant="body2"
-                  weight="medium"
-                  color={subtitleColor ?? theme.colors.textSecondary}
-                  numberOfLines={subtitleMaxLines}
-                  style={styles.subtitle}
-                >
-                  {subtitle}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={styles.trailingTextContainer}>
-              {titleTrailing && (
-                <Text
-                  variant="body1"
-                  weight="semibold"
-                  color={titleTrailingColor}
-                  align="right"
-                >
-                  {titleTrailing}
-                </Text>
-              )}
-              {subtitleTrailing && (
-                <Text
-                  variant="body2"
-                  weight="medium"
-                  color={subtitleTrailingColor ?? theme.colors.textSecondary}
-                  align="right"
-                  style={styles.subtitle}
-                >
-                  {subtitleTrailing}
-                </Text>
-              )}
-            </View>
-
-            {iconTrailing && (
-              <View style={styles.trailingIconContainer}>{iconTrailing}</View>
+            )}
+            {subtitleTrailing && (
+              <Text
+                variant="body2"
+                weight="medium"
+                color={subtitleTrailingColor ?? theme.colors.textSecondary}
+                align="right"
+                style={styles.subtitle}
+              >
+                {subtitleTrailing}
+              </Text>
             )}
           </View>
+
+          {iconTrailing && (
+            <View style={styles.trailingIconContainer}>{iconTrailing}</View>
+          )}
         </View>
       </RipplePressable>
     </View>
@@ -147,10 +150,6 @@ export const ListItem = ({
 };
 
 const styles = StyleSheet.create({
-  card: {},
-  paddingWrapper: {
-    padding: 4,
-  },
   leadingContainer: {
     marginRight: 16,
   },

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { Icon, IconName, Radio, Text } from "@/components/ui";
+import { Chip, Icon, IconName, Radio, Text } from "@/components/ui";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { useLocalization } from "@/hooks";
 import { TranscriptionMode } from "@/models";
@@ -93,7 +93,7 @@ export const ModelCard = ({
             >
               {name}
             </Text>
-            {isBundled && <IncludedChip label={loc.included} />}
+            {isBundled && <Chip size="small" label={loc.included} />}
           </View>
           <Text
             variant="body2"
@@ -112,7 +112,7 @@ export const ModelCard = ({
               groupValue={isSelected}
               onValueChange={canSelect ? onSelect : undefined}
               enabled={canSelect}
-              size="large"
+              size="small"
             />
           </View>
         )}
@@ -632,23 +632,6 @@ function LanguagesChip({
   );
 }
 
-function IncludedChip({ label }: { label: string }) {
-  const { theme } = useTheme();
-  const { colors } = theme;
-  return (
-    <View
-      style={[
-        styles.includedChip,
-        { backgroundColor: colors.accentBrandTransparent },
-      ]}
-    >
-      <Text variant="caption1" weight="medium" color={colors.accentBrand}>
-        {label}
-      </Text>
-    </View>
-  );
-}
-
 function PressableCluster({
   onPress,
   rippleColor,
@@ -707,11 +690,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  includedChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 300,
   },
   radioWrapper: {
     marginTop: 2,

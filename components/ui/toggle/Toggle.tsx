@@ -51,7 +51,7 @@ export const Toggle = ({
 
   const activeColorValue = activeColor || colors.accentBrand;
   const trackColorValue = trackColor || colors.surfaceBorderSecondary;
-  const thumbColorValue = thumbColor || colors.textInverse;
+  const thumbColorValue = thumbColor || AquaPrimitiveColors.white;
 
   const backgroundColor = animation.interpolate({
     inputRange: [0, 1],
@@ -60,7 +60,7 @@ export const Toggle = ({
 
   const thumbPosition = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [2, 18],
+    outputRange: [1, 17],
   });
 
   const shadowOffsetY = animation.interpolate({
@@ -80,7 +80,15 @@ export const Toggle = ({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
     >
-      <Animated.View style={[styles.track, { backgroundColor }]}>
+      <Animated.View
+        style={[
+          styles.track,
+          {
+            backgroundColor,
+            borderColor: trackColor ?? colors.surfaceBorderPrimary,
+          },
+        ]}
+      >
         <Animated.View
           style={[
             styles.thumb,
@@ -92,9 +100,9 @@ export const Toggle = ({
                 width: 0,
                 height: Platform.OS === "android" ? 2 : shadowOffsetY,
               },
-              shadowOpacity: 1,
-              shadowRadius: 4,
-              elevation: 4,
+              shadowOpacity: 0.25,
+              shadowRadius: 3,
+              elevation: 3,
             },
           ]}
         />
@@ -108,6 +116,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 24,
     borderRadius: 12,
+    borderWidth: 1,
     justifyContent: "center",
   },
   thumb: {

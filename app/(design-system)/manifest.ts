@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import buttonGallery from "@/components/ui/button/Button.gallery";
 import checkboxGallery from "@/components/ui/checkbox/Checkbox.gallery";
+import chipGallery from "@/components/ui/chip/Chip.gallery";
 import dimmerGallery from "@/components/ui/modal/Dimmer.gallery";
 import dividerGallery from "@/components/ui/divider/Divider.gallery";
 import flagIconGallery from "@/components/ui/icon/FlagIcon.gallery";
@@ -41,6 +42,7 @@ export interface GalleryEntry {
 export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   buttonGallery,
   checkboxGallery,
+  chipGallery,
   dimmerGallery,
   dividerGallery,
   flagIconGallery,

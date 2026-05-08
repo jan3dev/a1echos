@@ -224,7 +224,7 @@ export default function ModelSettingsScreen() {
 
   return (
     <Screen>
-      <TopAppBar title="" />
+      <TopAppBar title={loc.title} />
 
       <ScrollView
         contentContainerStyle={[
@@ -236,18 +236,13 @@ export default function ModelSettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text variant="h4" weight="semibold" color={theme.colors.textPrimary}>
-            {loc.title}
-          </Text>
-          <Text
-            variant="body1"
-            weight="medium"
-            color={theme.colors.textSecondary}
-          >
-            {loc.description}
-          </Text>
-        </View>
+        <Text
+          variant="body1"
+          weight="medium"
+          color={theme.colors.textSecondary}
+        >
+          {loc.description}
+        </Text>
 
         {downloadedSection.length > 0 && (
           <View style={styles.section}>
@@ -289,9 +284,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     gap: 24,
-  },
-  header: {
-    gap: 8,
   },
   section: {
     gap: 8,

@@ -33,7 +33,9 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../../test-utils/mock-localization/mockLocalization");
+const {
+  mockMakeLoc,
+} = require("../../../test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
@@ -195,13 +197,6 @@ describe("LanguageSettingsScreen", () => {
         name: "Spanish",
       });
     });
-  });
-
-  it("renders dividers between language items", () => {
-    const { getAllByTestId } = render(<LanguageSettingsScreen />);
-    // 3 languages, dividers between them = 2 dividers
-    const dividers = getAllByTestId("divider");
-    expect(dividers).toHaveLength(2);
   });
 
   it("Radio onValueChange triggers handleSelect for Spanish", async () => {
