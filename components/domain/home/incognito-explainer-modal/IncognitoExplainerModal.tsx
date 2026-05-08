@@ -1,6 +1,6 @@
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { lightColors } from "@/theme";
+import { useTheme } from "@/theme";
 
 import { Icon } from "../../../ui/icon/Icon";
 import { Modal } from "../../../ui/modal/Modal";
@@ -17,7 +17,7 @@ export const IncognitoExplainerModal = ({
   onCancel,
 }: IncognitoExplainerModalProps) => {
   const { loc } = useLocalization();
-
+  const { theme } = useTheme();
   return (
     <Modal
       testID={TestID.IncognitoModal}
@@ -28,7 +28,7 @@ export const IncognitoExplainerModal = ({
         text: loc.incognitoExplainerCta,
         onTap: onConfirm,
       }}
-      icon={<Icon name="ghost" size={24} color={lightColors.textInverse} />}
+      icon={<Icon name="ghost" size={24} color={theme.colors.textPrimary} />}
       onDismiss={onCancel}
     />
   );

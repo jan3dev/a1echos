@@ -1,4 +1,4 @@
-export { Tooltip } from "./Tooltip";
+export { Tooltip, TOOLTIP_FADE_DURATION_MS } from "./Tooltip";
 export type {
   TooltipPointerPosition,
   TooltipProps,

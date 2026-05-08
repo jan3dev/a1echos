@@ -78,7 +78,7 @@ export default function ModelSettingsScreen() {
             formatBytes(diskCheck.required),
             formatBytes(diskCheck.available),
           ),
-          "warning",
+          "error",
           5000,
         );
         return;

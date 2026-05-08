@@ -280,7 +280,7 @@ describe("ModelSettingsScreen", () => {
     await waitFor(() => {
       expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
         expect.stringContaining("insufficientSpace"),
-        "warning",
+        "error",
         5000,
       );
     });

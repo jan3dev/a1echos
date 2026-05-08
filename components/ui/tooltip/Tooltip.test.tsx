@@ -34,33 +34,6 @@ describe("Tooltip", () => {
     expect(getByText("This is a tooltip")).toBeTruthy();
   });
 
-  it("applies variant background color for success variant", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="success" />);
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    // Success variant uses accentSuccessTransparent as background color
-    expect(json).toContain(lightColors.accentSuccessTransparent);
-  });
-
-  it("renders SVG pointer when pointerPosition is top", () => {
-    const { toJSON } = render(
-      <Tooltip {...defaultProps} pointerPosition="top" />,
-    );
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    // The pointer renders an Svg (mocked as "Svg" string) and a Path
-    // (mocked as "Path" string). The pointer container has marginBottom: -1
-    // for top position.
-    expect(json).toContain("Svg");
-    expect(json).toContain("Path");
-    // Top pointer has marginBottom: -1
-    expect(json).toContain('"marginBottom":-1');
-  });
-
   it("renders SVG pointer when pointerPosition is bottom", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} pointerPosition="bottom" />,
@@ -71,8 +44,6 @@ describe("Tooltip", () => {
     const json = JSON.stringify(toJSON());
     expect(json).toContain("Svg");
     expect(json).toContain("Path");
-    // Bottom pointer has marginTop: -1
-    expect(json).toContain('"marginTop":-1');
   });
 
   it("dismissible tooltip has pointerEvents auto", () => {
@@ -83,7 +54,6 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    // The outermost Animated.View has pointerEvents="auto" when isDismissible
     expect(json).toContain('"pointerEvents":"auto"');
   });
 
@@ -93,22 +63,11 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    // Info mode renders an Icon component (warning icon by default, size 18).
-    // The Icon has a container View with width: 18 and height: 18.
     expect(json).toContain('"width":18');
     expect(json).toContain('"height":18');
   });
 
-  it("applies warning variant background color", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="warning" />);
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.accentWarningTransparent);
-  });
-
-  it("applies error variant background color", () => {
+  it("error variant uses accentDangerTransparent background", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
@@ -126,14 +85,13 @@ describe("Tooltip", () => {
     expect(json).toContain("BlurView");
   });
 
-  it("non-normal variant uses plain View wrapper", () => {
+  it("error variant does not use BlurView wrapper", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    // Non-normal variants don't use BlurView for the bubble
-    expect(json).toContain(lightColors.accentDangerTransparent);
+    expect(json).not.toContain("BlurView");
   });
 
   it("dismissible tooltip renders close icon", () => {
@@ -145,7 +103,6 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    // Dismissible renders a trailing close icon (size 18)
     expect(json).toContain('"pointerEvents":"auto"');
   });
 
@@ -181,7 +138,6 @@ describe("Tooltip", () => {
     act(() => {
       jest.runAllTimers();
     });
-    // Component still renders, just with opacity animated to 0
     expect(toJSON()).toBeTruthy();
   });
 
@@ -198,7 +154,6 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    // Should render leading icon within a pressable wrapper
     expect(json).toContain('"width":18');
   });
 
@@ -241,24 +196,6 @@ describe("Tooltip", () => {
     expect(json).toContain('"margin":32');
   });
 
-  it("success variant text color uses accentSuccess", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="success" />);
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.accentSuccess);
-  });
-
-  it("warning variant text color uses accentWarning", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="warning" />);
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.accentWarning);
-  });
-
   it("error variant text/icon color uses accentDanger", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
@@ -282,7 +219,6 @@ describe("Tooltip", () => {
     act(() => {
       jest.runAllTimers();
     });
-    // Should render without error
     expect(toJSON()).toBeTruthy();
   });
 
@@ -307,7 +243,7 @@ describe("Tooltip", () => {
 
   it("custom pointerSize renders correctly", () => {
     const { toJSON } = render(
-      <Tooltip {...defaultProps} pointerPosition="top" pointerSize={12} />,
+      <Tooltip {...defaultProps} pointerPosition="bottom" pointerSize={12} />,
     );
     act(() => {
       jest.runAllTimers();
@@ -317,7 +253,7 @@ describe("Tooltip", () => {
     expect(json).toContain("0 0 24 12");
   });
 
-  it("dismissible tooltip with normal variant uses textTertiary for close icon color", () => {
+  it("dismissible tooltip with normal variant uses textInverse for close icon color in light theme", () => {
     const { toJSON } = render(
       <Tooltip {...defaultProps} isDismissible={true} variant="normal" />,
     );
@@ -325,6 +261,6 @@ describe("Tooltip", () => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.textTertiary);
+    expect(json).toContain(lightColors.textInverse);
   });
 });

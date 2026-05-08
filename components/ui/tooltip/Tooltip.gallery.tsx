@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
 import {
@@ -9,149 +8,80 @@ import {
 } from "@/components";
 import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
-const TooltipDemo = ({
-  variant,
-  pointerPosition,
-  isDismissible,
-  isInfo,
-}: {
-  variant: TooltipVariant;
-  pointerPosition?: TooltipPointerPosition;
-  isDismissible?: boolean;
-  isInfo?: boolean;
-}) => {
-  const { show, tooltipState } = useTooltip();
+interface MatrixRow {
+  isInfo: boolean;
+  isDismissible: boolean;
+  pointerPosition: TooltipPointerPosition;
+}
 
-  const handleShow = () => {
-    show({
-      message: "This is a tooltip message",
-      variant,
-      pointerPosition,
-      isDismissible,
-      isInfo,
-    });
-  };
+const MATRIX: MatrixRow[] = [
+  { isInfo: false, isDismissible: false, pointerPosition: "none" },
+  { isInfo: true, isDismissible: false, pointerPosition: "none" },
+  { isInfo: false, isDismissible: true, pointerPosition: "none" },
+  { isInfo: true, isDismissible: true, pointerPosition: "none" },
+  { isInfo: false, isDismissible: false, pointerPosition: "bottom" },
+  { isInfo: true, isDismissible: false, pointerPosition: "bottom" },
+  { isInfo: false, isDismissible: true, pointerPosition: "bottom" },
+  { isInfo: true, isDismissible: true, pointerPosition: "bottom" },
+];
 
-  return (
-    <View style={styles.container}>
-      <RNButton title="Show Tooltip" onPress={handleShow} />
-      <View style={styles.tooltipContainer}>
-        <Tooltip {...tooltipState} />
-      </View>
-    </View>
-  );
-};
-
-export const Normal = () => <TooltipDemo variant="normal" />;
-
-export const Success = () => <TooltipDemo variant="success" />;
-
-export const Warning = () => <TooltipDemo variant="warning" />;
-
-export const Error = () => <TooltipDemo variant="error" />;
-
-export const WithTopPointer = () => (
-  <TooltipDemo variant="normal" pointerPosition="top" />
-);
-
-export const WithBottomPointer = () => (
-  <TooltipDemo variant="normal" pointerPosition="bottom" />
-);
-
-export const Dismissible = () => (
-  <TooltipDemo variant="warning" isDismissible />
-);
-
-export const InfoMode = () => (
-  <TooltipDemo variant="normal" isInfo isDismissible />
-);
-
-export const InfoModeWithVariants = () => {
-  const { show, tooltipState } = useTooltip();
-
-  const variants: TooltipVariant[] = ["success", "warning", "error"];
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handleShow = () => {
-    const variant = variants[currentIndex];
-    show({
-      message: `This is a ${variant} info tooltip`,
-      variant,
-      isInfo: true,
-      isDismissible: true,
-    });
-    setCurrentIndex((currentIndex + 1) % variants.length);
-  };
-
-  return (
-    <View style={styles.container}>
-      <RNButton
-        title="Show Info Tooltip (Cycle Variants)"
-        onPress={handleShow}
+const VariantMatrix = ({ variant }: { variant: TooltipVariant }) => (
+  <View style={styles.matrix}>
+    {MATRIX.map((row, index) => (
+      <Tooltip
+        key={index}
+        visible
+        message="Tooltip Title"
+        variant={variant}
+        isInfo={row.isInfo}
+        isDismissible={row.isDismissible}
+        pointerPosition={row.pointerPosition}
+        margin={0}
       />
-      <View style={styles.tooltipContainer}>
-        <Tooltip {...tooltipState} />
-      </View>
-    </View>
-  );
-};
+    ))}
+  </View>
+);
 
-export const LongMessage = () => {
-  const { show, tooltipState } = useTooltip();
-
-  const handleShow = () => {
-    show({
-      message:
-        "This is a very long tooltip message that will wrap to multiple lines to demonstrate the layout behavior.",
-      variant: "normal",
-      isDismissible: true,
-    });
-  };
-
-  return (
-    <View style={styles.container}>
-      <RNButton title="Show Long Tooltip" onPress={handleShow} />
-      <View style={styles.tooltipContainer}>
-        <Tooltip {...tooltipState} />
-      </View>
-    </View>
-  );
-};
+export const Normal = () => <VariantMatrix variant="normal" />;
+export const Error = () => <VariantMatrix variant="error" />;
 
 export const AutoDismiss = () => {
   const { show, tooltipState } = useTooltip();
 
-  const handleShow = () => {
-    show({
-      message: "This tooltip will auto-dismiss in 2 seconds",
-      variant: "success",
-      duration: 2000,
-    });
-  };
-
   return (
-    <View style={styles.container}>
-      <RNButton title="Show Auto-Dismiss Tooltip" onPress={handleShow} />
-      <View style={styles.tooltipContainer}>
-        <Tooltip {...tooltipState} />
+    <View style={styles.interactive}>
+      <RNButton
+        title="Show Auto-Dismiss Tooltip"
+        onPress={() =>
+          show({
+            message: "Auto-dismisses in 2 seconds",
+            variant: "normal",
+            duration: 2000,
+          })
+        }
+      />
+      <View style={styles.inlineTooltip}>
+        <Tooltip {...tooltipState} margin={0} />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
+  matrix: {
+    gap: 12,
+    alignSelf: "stretch",
     alignItems: "center",
-    padding: 20,
   },
-  tooltipContainer: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
+  interactive: {
+    alignSelf: "stretch",
     alignItems: "center",
+    gap: 16,
+  },
+  inlineTooltip: {
+    minHeight: 34,
+    alignItems: "center",
+    alignSelf: "stretch",
   },
 });
 
@@ -161,15 +91,7 @@ const gallery: GalleryEntry = {
   group: "UI",
   demos: [
     { name: "Normal", render: Normal },
-    { name: "Success", render: Success },
-    { name: "Warning", render: Warning },
     { name: "Error", render: Error },
-    { name: "WithTopPointer", render: WithTopPointer },
-    { name: "WithBottomPointer", render: WithBottomPointer },
-    { name: "Dismissible", render: Dismissible },
-    { name: "InfoMode", render: InfoMode },
-    { name: "InfoModeWithVariants", render: InfoModeWithVariants },
-    { name: "LongMessage", render: LongMessage },
     { name: "AutoDismiss", render: AutoDismiss },
   ],
 };

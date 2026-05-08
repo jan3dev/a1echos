@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
 export type ToastVariant = "info" | "success" | "warning" | "error";
-export type GlobalTooltipVariant = "normal" | "success" | "warning" | "error";
+export type GlobalTooltipVariant = "normal" | "error";
 
 export interface Toast {
   id: string;

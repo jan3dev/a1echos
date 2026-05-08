@@ -198,10 +198,10 @@ describe("uiStore", () => {
       const action = { iconName: "close", onPress: jest.fn() };
       useUIStore
         .getState()
-        .showGlobalTooltip("Warning", "warning", 5000, true, true, action);
+        .showGlobalTooltip("Error", "error", 5000, true, true, action);
 
       const tooltip = useUIStore.getState().globalTooltip!;
-      expect(tooltip.variant).toBe("warning");
+      expect(tooltip.variant).toBe("error");
       expect(tooltip.duration).toBe(5000);
       expect(tooltip.isInfo).toBe(true);
       expect(tooltip.isDismissible).toBe(true);

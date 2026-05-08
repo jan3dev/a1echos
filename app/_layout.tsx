@@ -16,8 +16,10 @@ import {
   Icon,
   KeyboardPromptModal,
   RecordingControlsView,
+  TOOLTIP_FADE_DURATION_MS,
   Tooltip,
 } from "@/components";
+import { AppConstants } from "@/constants";
 import { AppTheme } from "@/models";
 import { registerForegroundService, storageService } from "@/services";
 import {
@@ -84,59 +86,103 @@ export const unstable_settings = {
     : "(pages)/index",
 };
 
+const TOOLTIP_GAP_ABOVE_RECORDING_CONTROLS = 8;
+const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
+
 function GlobalTooltipRenderer() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const tooltip = useGlobalTooltip();
   const hideTooltip = useHideGlobalTooltip();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recordingControlsVisible = useRecordingControlsVisible();
+  const pathname = usePathname();
+  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearDisplayedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  // Keep displayed tooltip mounted with its content stable during fade-out, so
+  // the bubble doesn't collapse to an empty pill while opacity animates to 0.
+  const [displayedTooltip, setDisplayedTooltip] = useState(tooltip);
+
+  useEffect(() => {
+    if (tooltip) {
+      if (clearDisplayedTimeoutRef.current) {
+        clearTimeout(clearDisplayedTimeoutRef.current);
+        clearDisplayedTimeoutRef.current = null;
+      }
+      setDisplayedTooltip(tooltip);
+      return;
+    }
+
+    clearDisplayedTimeoutRef.current = setTimeout(() => {
+      setDisplayedTooltip(null);
+      clearDisplayedTimeoutRef.current = null;
+    }, TOOLTIP_FADE_DURATION_MS);
+
+    return () => {
+      if (clearDisplayedTimeoutRef.current) {
+        clearTimeout(clearDisplayedTimeoutRef.current);
+        clearDisplayedTimeoutRef.current = null;
+      }
+    };
+  }, [tooltip]);
 
   useEffect(() => {
     if (tooltip && !tooltip.isDismissible) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
       }
 
-      timeoutRef.current = setTimeout(() => {
+      dismissTimeoutRef.current = setTimeout(() => {
         hideTooltip();
       }, tooltip.duration);
     }
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
       }
     };
   }, [tooltip, hideTooltip]);
 
-  const isDismissible = tooltip?.isDismissible ?? false;
-  const hasAction = !!tooltip?.action;
+  const isDismissible = displayedTooltip?.isDismissible ?? false;
+  const hasAction = !!displayedTooltip?.action;
 
   const handleActionPress = useCallback(() => {
-    if (tooltip?.action) {
+    if (displayedTooltip?.action) {
       hideTooltip();
-      tooltip.action.onPress();
+      displayedTooltip.action.onPress();
     }
-  }, [tooltip, hideTooltip]);
+  }, [displayedTooltip, hideTooltip]);
+
+  const isOnRecordingScreen =
+    pathname === "/" || pathname.startsWith("/session/");
+  const liftAboveControls = recordingControlsVisible && isOnRecordingScreen;
+  const bottomOffset = liftAboveControls
+    ? insets.bottom +
+      AppConstants.RECORDING_CONTROLS_HEIGHT +
+      TOOLTIP_GAP_ABOVE_RECORDING_CONTROLS
+    : insets.bottom + TOOLTIP_GAP_ABOVE_SAFE_AREA;
 
   return (
     <View
-      style={[styles.globalTooltipContainer, { bottom: insets.bottom }]}
+      style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
       pointerEvents={isDismissible || hasAction ? "auto" : "none"}
     >
       <Tooltip
         visible={!!tooltip}
-        message={tooltip?.message ?? ""}
-        variant={tooltip?.variant ?? "normal"}
+        message={displayedTooltip?.message ?? ""}
+        variant={displayedTooltip?.variant ?? "normal"}
         pointerPosition="none"
-        isInfo={tooltip?.isInfo ?? false}
+        isInfo={displayedTooltip?.isInfo ?? false}
         isDismissible={isDismissible}
         onDismiss={hideTooltip}
-        margin={32}
+        margin={0}
         leadingIcon={
           hasAction ? (
             <Icon
-              name={tooltip?.action?.iconName ?? "settings"}
+              name={displayedTooltip?.action?.iconName ?? "settings"}
               size={18}
               color={theme.colors.textInverse}
             />

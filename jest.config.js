@@ -12,8 +12,13 @@ module.exports = {
     "\\.(txt|wav)$": "<rootDir>/__mocks__/binMock.js",
     "^@/(.*)$": "<rootDir>/$1",
   },
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/app/\\(design-system\\)/",
+  ],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
+    "!app/\\(design-system\\)/**",
     "components/**/*.{ts,tsx}",
     "constants/**/*.{ts,tsx}",
     "hooks/**/*.{ts,tsx}",

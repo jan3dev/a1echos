@@ -1,3 +1,4 @@
+import MaskedView from "@react-native-masked-view/masked-view";
 import { BlurView } from "expo-blur";
 import { ReactNode, useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
@@ -9,8 +10,8 @@ import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
 
-export type TooltipVariant = "normal" | "success" | "warning" | "error";
-export type TooltipPointerPosition = "none" | "top" | "bottom";
+export type TooltipVariant = "normal" | "error";
+export type TooltipPointerPosition = "none" | "bottom";
 
 export interface TooltipProps {
   visible: boolean;
@@ -30,6 +31,7 @@ export interface TooltipProps {
 
 const DEFAULT_POINTER_SIZE = 8;
 const DEFAULT_BORDER_RADIUS = 32;
+export const TOOLTIP_FADE_DURATION_MS = 200;
 
 export const Tooltip = ({
   visible,
@@ -46,64 +48,27 @@ export const Tooltip = ({
   margin = 16,
   onDismiss,
 }: TooltipProps) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const colors = theme.colors;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
+    Animated.timing(fadeAnim, {
+      toValue: visible ? 1 : 0,
+      duration: TOOLTIP_FADE_DURATION_MS,
+      useNativeDriver: true,
+    }).start();
   }, [visible, fadeAnim]);
 
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case "success":
-        return colors.accentSuccessTransparent;
-      case "warning":
-        return colors.accentWarningTransparent;
-      case "error":
-        return colors.accentDangerTransparent;
-      default:
-        return colors.glassInverse;
-    }
-  };
+  const normalBackground = isDark
+    ? colors.glassSurfaceSecondary
+    : colors.glassInverse;
+  const normalForeground = isDark ? colors.textPrimary : colors.textInverse;
 
-  const getTextColor = () => {
-    switch (variant) {
-      case "success":
-        return colors.accentSuccess;
-      case "warning":
-        return colors.accentWarning;
-      case "error":
-        return colors.accentDanger;
-      default:
-        return colors.textInverse;
-    }
-  };
-
-  const getIconColor = () => {
-    switch (variant) {
-      case "success":
-        return colors.accentSuccess;
-      case "warning":
-        return colors.accentWarning;
-      case "error":
-        return colors.accentDanger;
-      default:
-        return colors.textInverse;
-    }
-  };
+  const backgroundColor =
+    variant === "error" ? colors.accentDangerTransparent : normalBackground;
+  const foregroundColor =
+    variant === "error" ? colors.accentDanger : normalForeground;
 
   const contentPadding = {
     paddingLeft: 16,
@@ -112,37 +77,40 @@ export const Tooltip = ({
     paddingBottom: 8,
   };
 
+  const leadingIconNode = leadingIcon || (
+    <Icon name="info_circle" size={18} color={foregroundColor} />
+  );
+
   const renderPointer = () => {
     if (pointerPosition === "none") return null;
 
-    const pointerColor = getBackgroundColor();
-    const isTop = pointerPosition === "top";
+    const triangleSvg = (
+      <Svg
+        width={pointerSize * 2}
+        height={pointerSize}
+        viewBox={`0 0 ${pointerSize * 2} ${pointerSize}`}
+      >
+        <Path
+          d={`M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`}
+          fill={variant === "normal" ? "white" : backgroundColor}
+        />
+      </Svg>
+    );
+
+    if (variant !== "normal") {
+      return <View style={styles.pointerContainer}>{triangleSvg}</View>;
+    }
 
     return (
-      <View
-        style={[
-          styles.pointerContainer,
-          isTop ? { marginBottom: -1 } : { marginTop: -1 },
-        ]}
-      >
-        <Svg
-          width={pointerSize * 2}
-          height={pointerSize}
-          viewBox={`0 0 ${pointerSize * 2} ${pointerSize}`}
+      <View style={styles.pointerContainer}>
+        <MaskedView
+          style={{ width: pointerSize * 2, height: pointerSize }}
+          maskElement={triangleSvg}
         >
-          <Path
-            d={
-              isTop
-                ? `M 0 ${pointerSize} L ${pointerSize} 0 L ${
-                    pointerSize * 2
-                  } ${pointerSize} Z`
-                : `M 0 0 L ${pointerSize} ${pointerSize} L ${
-                    pointerSize * 2
-                  } 0 Z`
-            }
-            fill={pointerColor}
-          />
-        </Svg>
+          <BlurView intensity={20} style={StyleSheet.absoluteFill}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor }]} />
+          </BlurView>
+        </MaskedView>
       </View>
     );
   };
@@ -154,7 +122,7 @@ export const Tooltip = ({
         contentPadding,
         {
           backgroundColor:
-            variant === "normal" ? getBackgroundColor() : "transparent",
+            variant === "normal" ? backgroundColor : "transparent",
         },
       ]}
     >
@@ -167,14 +135,10 @@ export const Tooltip = ({
               rippleColor={colors.ripple}
               borderless
             >
-              {leadingIcon || (
-                <Icon name="warning" size={18} color={getIconColor()} />
-              )}
+              {leadingIconNode}
             </RipplePressable>
           ) : (
-            leadingIcon || (
-              <Icon name="warning" size={18} color={getIconColor()} />
-            )
+            leadingIconNode
           )}
           <View style={styles.iconSpacing} />
         </>
@@ -182,7 +146,7 @@ export const Tooltip = ({
       <Text
         variant="body2"
         weight="medium"
-        color={getTextColor()}
+        color={foregroundColor}
         style={styles.messageText}
         numberOfLines={0}
       >
@@ -198,13 +162,7 @@ export const Tooltip = ({
             borderless
           >
             {trailingIcon || (
-              <Icon
-                name="close"
-                size={18}
-                color={
-                  variant === "normal" ? colors.textTertiary : getIconColor()
-                }
-              />
+              <Icon name="close" size={18} color={foregroundColor} />
             )}
           </RipplePressable>
         </>
@@ -212,22 +170,18 @@ export const Tooltip = ({
     </View>
   );
 
+  const content = renderContent();
   const bubble =
     variant === "normal" ? (
       <BlurView
         intensity={20}
         style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" }}
       >
-        {renderContent()}
+        {content}
       </BlurView>
     ) : (
-      <View
-        style={{
-          borderRadius: DEFAULT_BORDER_RADIUS,
-          backgroundColor: getBackgroundColor(),
-        }}
-      >
-        {renderContent()}
+      <View style={{ borderRadius: DEFAULT_BORDER_RADIUS, backgroundColor }}>
+        {content}
       </View>
     );
 
@@ -243,7 +197,6 @@ export const Tooltip = ({
       pointerEvents={isDismissible ? "auto" : "none"}
     >
       <View style={styles.contentWrapper}>
-        {pointerPosition === "top" && renderPointer()}
         {bubble}
         {pointerPosition === "bottom" && renderPointer()}
       </View>

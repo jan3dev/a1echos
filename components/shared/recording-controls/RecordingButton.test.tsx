@@ -2,15 +2,15 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { TranscriptionState } from "@/models";
+
+import { RecordingButton } from "./RecordingButton";
+
 const advance = (ms: number) => {
   act(() => {
     jest.advanceTimersByTime(ms);
   });
 };
-
-import { TranscriptionState } from "@/models";
-
-import { RecordingButton } from "./RecordingButton";
 
 jest.mock("../../ui/icon/Icon", () => ({
   Icon: ({ name, ...rest }: { name: string; [key: string]: unknown }) => {
