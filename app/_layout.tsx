@@ -5,9 +5,9 @@ import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { SystemBars } from "react-native-edge-to-edge";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -196,10 +196,7 @@ function GlobalRecordingControls() {
 
   const isOnRecordingScreen =
     pathname === "/" || pathname.startsWith("/session/");
-
-  if (!visible || !isOnRecordingScreen) {
-    return null;
-  }
+  const isVisible = visible && isOnRecordingScreen;
 
   const FADE_HEIGHT = 32;
   const CONTROLS_HEIGHT = 96;
@@ -208,8 +205,11 @@ function GlobalRecordingControls() {
 
   return (
     <View
-      style={[styles.recordingControls, { paddingBottom: insets.bottom }]}
-      pointerEvents="box-none"
+      style={[
+        styles.recordingControls,
+        { paddingBottom: insets.bottom, opacity: isVisible ? 1 : 0 },
+      ]}
+      pointerEvents={isVisible ? "box-none" : "none"}
     >
       <MaskedView
         style={StyleSheet.absoluteFill}
@@ -235,14 +235,16 @@ function GlobalRecordingControls() {
           ]}
         />
       </MaskedView>
-      <RecordingControlsView
-        state={transcriptionState}
-        isInitializing={isEngineInitializing}
-        onRecordingStart={handleRecordingStart}
-        onRecordingStop={handleRecordingStop}
-        enabled={enabled}
-        colors={theme.colors}
-      />
+      {isVisible && (
+        <RecordingControlsView
+          state={transcriptionState}
+          isInitializing={isEngineInitializing}
+          onRecordingStart={handleRecordingStart}
+          onRecordingStop={handleRecordingStop}
+          enabled={enabled}
+          colors={theme.colors}
+        />
+      )}
     </View>
   );
 }
@@ -350,9 +352,16 @@ export default function RootLayout() {
         onLayout={onLayoutRootView}
       >
         <SystemBars style={isDark ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false, animation: "none" }}>
-          <Stack.Screen name="(pages)/index" />
-        </Stack>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "default",
+            gestureEnabled: true,
+            contentStyle: {
+              backgroundColor: theme.colors.surfaceBackground,
+            },
+          }}
+        />
         <GlobalRecordingControls />
         <GlobalTooltipRenderer />
         <GlobalKeyboardPromptRenderer />
