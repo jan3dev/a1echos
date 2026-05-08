@@ -23,6 +23,7 @@ module.exports = {
     "theme/**/*.{ts,tsx}",
     "utils/**/*.{ts,tsx}",
     "!**/*.test.{ts,tsx}",
+    "!**/*.gallery.{ts,tsx}",
     "!**/index.{ts,tsx}",
     "!**/__mocks__/**",
     "!**/node_modules/**",

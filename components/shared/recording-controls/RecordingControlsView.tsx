@@ -31,7 +31,8 @@ export const RecordingControlsView = ({
     <View style={[styles.container, { height: controlsHeight }]}>
       <View style={[styles.contentContainer, { paddingVertical: spacing }]}>
         <View style={styles.waveContainer} pointerEvents="none">
-          <ThreeWaveLines state={state} />
+          {(state === TranscriptionState.RECORDING ||
+            state === TranscriptionState.STREAMING) && <ThreeWaveLines />}
         </View>
         <View style={styles.buttonContainer}>
           <RecordingButton

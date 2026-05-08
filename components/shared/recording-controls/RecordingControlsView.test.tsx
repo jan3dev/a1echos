@@ -45,14 +45,57 @@ describe("RecordingControlsView", () => {
     expect(getByTestId(TestID.RecordingButton)).toBeTruthy();
   });
 
-  it("renders ThreeWaveLines", () => {
+  it("renders ThreeWaveLines while RECORDING", () => {
     const { getByTestId } = render(
-      <RecordingControlsView colors={mockColors} />,
+      <RecordingControlsView
+        state={TranscriptionState.RECORDING}
+        colors={mockColors}
+      />,
     );
     expect(getByTestId(TestID.ThreeWaveLines)).toBeTruthy();
   });
 
-  it("passes state prop to child components", () => {
+  it("renders ThreeWaveLines while STREAMING", () => {
+    const { getByTestId } = render(
+      <RecordingControlsView
+        state={TranscriptionState.STREAMING}
+        colors={mockColors}
+      />,
+    );
+    expect(getByTestId(TestID.ThreeWaveLines)).toBeTruthy();
+  });
+
+  it("does not render ThreeWaveLines in READY state", () => {
+    const { queryByTestId } = render(
+      <RecordingControlsView
+        state={TranscriptionState.READY}
+        colors={mockColors}
+      />,
+    );
+    expect(queryByTestId(TestID.ThreeWaveLines)).toBeNull();
+  });
+
+  it("does not render ThreeWaveLines in TRANSCRIBING state", () => {
+    const { queryByTestId } = render(
+      <RecordingControlsView
+        state={TranscriptionState.TRANSCRIBING}
+        colors={mockColors}
+      />,
+    );
+    expect(queryByTestId(TestID.ThreeWaveLines)).toBeNull();
+  });
+
+  it("does not render ThreeWaveLines in LOADING state", () => {
+    const { queryByTestId } = render(
+      <RecordingControlsView
+        state={TranscriptionState.LOADING}
+        colors={mockColors}
+      />,
+    );
+    expect(queryByTestId(TestID.ThreeWaveLines)).toBeNull();
+  });
+
+  it("passes state prop to RecordingButton", () => {
     const { getByTestId } = render(
       <RecordingControlsView
         state={TranscriptionState.RECORDING}
@@ -60,9 +103,6 @@ describe("RecordingControlsView", () => {
       />,
     );
     expect(getByTestId(TestID.RecordingButton).props.state).toBe(
-      TranscriptionState.RECORDING,
-    );
-    expect(getByTestId(TestID.ThreeWaveLines).props.state).toBe(
       TranscriptionState.RECORDING,
     );
   });

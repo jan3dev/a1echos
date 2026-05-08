@@ -2,6 +2,12 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+const advance = (ms: number) => {
+  act(() => {
+    jest.advanceTimersByTime(ms);
+  });
+};
+
 import { TranscriptionState } from "@/models";
 
 import { RecordingButton } from "./RecordingButton";
@@ -55,20 +61,25 @@ describe("RecordingButton", () => {
   });
 
   it("pressing start triggers onRecordingStart callback and haptic feedback", () => {
+    jest.useFakeTimers();
     const Haptics = require("expo-haptics");
     const onRecordingStart = jest.fn();
     const { getByLabelText } = render(
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         colors={mockColors}
       />,
     );
     fireEvent.press(getByLabelText("Start Recording"));
-    expect(onRecordingStart).toHaveBeenCalledTimes(1);
+    // Haptic fires synchronously; callback fires after the shrink phase.
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
       Haptics.ImpactFeedbackStyle.Medium,
     );
+    advance(100);
+    expect(onRecordingStart).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 
   it("pressing stop triggers haptic feedback", () => {
@@ -171,18 +182,23 @@ describe("RecordingButton", () => {
   });
 
   it("debouncing prevents multiple start presses", () => {
+    jest.useFakeTimers();
     const onRecordingStart = jest.fn();
     const { getByLabelText } = render(
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         colors={mockColors}
       />,
     );
     fireEvent.press(getByLabelText("Start Recording"));
     fireEvent.press(getByLabelText("Start Recording"));
-    // Second press should be ignored due to debouncing
+    // Both presses scheduled before timers advance — only the first one
+    // gets through because the second is blocked by debouncing.
+    advance(100);
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 
   it("renders mic icon in READY state", () => {
@@ -202,14 +218,24 @@ describe("RecordingButton", () => {
     expect(getByTestId("icon-rectangle")).toBeTruthy();
   });
 
-  it("renders mic icon in TRANSCRIBING state", () => {
-    const { getByTestId } = render(
+  it("does not render mic icon in TRANSCRIBING state (spinner only)", () => {
+    const { queryByTestId } = render(
       <RecordingButton
         state={TranscriptionState.TRANSCRIBING}
         colors={mockColors}
       />,
     );
-    expect(getByTestId("icon-mic")).toBeTruthy();
+    expect(queryByTestId("icon-mic")).toBeNull();
+  });
+
+  it("renders rectangle icon in RECORDING state with danger color", () => {
+    const { getByTestId } = render(
+      <RecordingButton
+        state={TranscriptionState.RECORDING}
+        colors={{ ...mockColors, accentDanger: "#FF3B13" }}
+      />,
+    );
+    expect(getByTestId("icon-rectangle").props.color).toBe("#FF3B13");
   });
 
   it("transcribing button is disabled", () => {
@@ -247,7 +273,7 @@ describe("RecordingButton", () => {
     expect(() => unmount()).not.toThrow();
   });
 
-  it("stop button calls onRecordingStop after pulse animation delay", async () => {
+  it("stop button calls onRecordingStop after press-down phase", async () => {
     jest.useFakeTimers();
     const onRecordingStop = jest.fn();
     const { getByLabelText } = render(
@@ -260,40 +286,9 @@ describe("RecordingButton", () => {
       />,
     );
     fireEvent.press(getByLabelText("Stop Recording"));
-    // onRecordingStop is called after pulseDuration (scaleAnimationDuration * 2)
     expect(onRecordingStop).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(200);
+    advance(100);
     expect(onRecordingStop).toHaveBeenCalledTimes(1);
-    jest.useRealTimers();
-  });
-
-  it("state transition from RECORDING to READY resets animation", () => {
-    const { rerender } = render(
-      <RecordingButton
-        state={TranscriptionState.RECORDING}
-        colors={mockColors}
-      />,
-    );
-    rerender(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
-    );
-    // Should not crash; animation should reset
-  });
-
-  it("state transition from READY to RECORDING triggers scale animation", () => {
-    jest.useFakeTimers();
-    const { rerender } = render(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
-    );
-    rerender(
-      <RecordingButton
-        state={TranscriptionState.RECORDING}
-        colors={mockColors}
-      />,
-    );
-    // Advance past SCALE_ANIMATION_DELAY (300ms)
-    jest.advanceTimersByTime(300);
-    // Should not crash; delayed scale animation fires
     jest.useRealTimers();
   });
 
@@ -312,8 +307,7 @@ describe("RecordingButton", () => {
     rerender(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
-    jest.advanceTimersByTime(500);
-    // Should not crash
+    advance(500);
     jest.useRealTimers();
   });
 
@@ -359,22 +353,24 @@ describe("RecordingButton", () => {
     jest.useRealTimers();
   });
 
-  it("uses dark blur tint for light theme", () => {
-    const { useThemeStore } = require("@/theme");
-    useThemeStore.setState({ currentTheme: "light" });
-    const { getByLabelText } = render(
+  it("renders rotating LinearGradient in READY state", () => {
+    const { UNSAFE_root } = render(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    const { LinearGradient } = require("expo-linear-gradient");
+    const gradients = UNSAFE_root.findAllByType(LinearGradient);
+    expect(gradients.length).toBeGreaterThan(0);
   });
 
-  it("uses light blur tint for dark theme", () => {
-    const { useThemeStore } = require("@/theme");
-    useThemeStore.setState({ currentTheme: "dark" });
-    const { getByLabelText } = render(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
+  it("does not render LinearGradient in RECORDING state", () => {
+    const { UNSAFE_root } = render(
+      <RecordingButton
+        state={TranscriptionState.RECORDING}
+        colors={mockColors}
+      />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    const { LinearGradient } = require("expo-linear-gradient");
+    expect(UNSAFE_root.findAllByType(LinearGradient).length).toBe(0);
   });
 
   it("stop recording while already debouncing is ignored", async () => {
@@ -408,11 +404,15 @@ describe("RecordingButton", () => {
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         debounceDuration={100}
         colors={mockColors}
       />,
     );
     fireEvent.press(getByLabelText("Start Recording"));
+    await act(async () => {
+      jest.advanceTimersByTime(100); // past press-down → action fires
+    });
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
 
     // Advance past both debounce (100ms) and gesture isolation (2000ms)
@@ -425,6 +425,7 @@ describe("RecordingButton", () => {
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         debounceDuration={100}
         colors={mockColors}
       />,
@@ -432,63 +433,41 @@ describe("RecordingButton", () => {
 
     // Should be able to press again
     fireEvent.press(getByLabelText("Start Recording"));
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
     expect(onRecordingStart).toHaveBeenCalledTimes(2);
     jest.useRealTimers();
   });
 
-  it("gesture isolation prevents start recording during isolation period", async () => {
+  it("gesture isolation blocks repeated start presses within the isolation window", async () => {
     jest.useFakeTimers();
     const onRecordingStart = jest.fn();
-    const { getByLabelText, unmount } = render(
+    const { getByLabelText } = render(
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         debounceDuration={50}
         colors={mockColors}
       />,
     );
-    // First press
     fireEvent.press(getByLabelText("Start Recording"));
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
 
-    // Advance past debounce but NOT past gesture isolation (2000ms)
+    // Advance past debounce but stay inside the 2000ms isolation window.
     await act(async () => {
       jest.advanceTimersByTime(100);
     });
 
-    // Should be blocked by gesture isolation (still active at 2000ms)
     fireEvent.press(getByLabelText("Start Recording"));
-    // The second press goes through because debouncing cleared,
-    // but gesture isolation only affects stop→start, not start→start
-    // So we just verify no crash and unmount cleanly
-    unmount();
-    jest.useRealTimers();
-  });
-
-  it("triggerDelayedScaleAnimation clears existing timeout on re-trigger", () => {
-    jest.useFakeTimers();
-    const { rerender } = render(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
-    );
-    // Transition to recording
-    rerender(
-      <RecordingButton
-        state={TranscriptionState.RECORDING}
-        colors={mockColors}
-      />,
-    );
-    // Quick transition back and forth should clear previous timeout
-    rerender(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
-    );
-    rerender(
-      <RecordingButton
-        state={TranscriptionState.RECORDING}
-        colors={mockColors}
-      />,
-    );
-    jest.advanceTimersByTime(400);
-    // Should not crash - the delayed animation fired only once
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(onRecordingStart).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 
@@ -552,6 +531,7 @@ describe("RecordingButton", () => {
       <RecordingButton
         state={TranscriptionState.RECORDING}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         colors={mockColors}
       />,
     );
@@ -560,13 +540,15 @@ describe("RecordingButton", () => {
       <RecordingButton
         state={TranscriptionState.READY}
         onRecordingStart={onRecordingStart}
+        scaleAnimationDuration={100}
         debounceDuration={50}
         colors={mockColors}
       />,
     );
-    jest.advanceTimersByTime(100); // past any debounce
+    advance(100); // past any debounce
 
     fireEvent.press(getByLabelText("Start Recording"));
+    advance(100); // past press-down → action fires
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });

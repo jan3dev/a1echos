@@ -39,22 +39,6 @@ export const Loading = () => (
   <DynamicRecordingButton state={TranscriptionState.LOADING} enabled={false} />
 );
 
-export const LargeSize = () => (
-  <DynamicRecordingButton
-    state={TranscriptionState.READY}
-    enabled={true}
-    size={96}
-  />
-);
-
-export const SmallSize = () => (
-  <DynamicRecordingButton
-    state={TranscriptionState.READY}
-    enabled={true}
-    size={48}
-  />
-);
-
 const gallery: GalleryEntry = {
   slug: "recording-button",
   title: "Recording Button",
@@ -64,8 +48,6 @@ const gallery: GalleryEntry = {
     { name: "Recording", render: Recording },
     { name: "Transcribing", render: Transcribing },
     { name: "Loading", render: Loading },
-    { name: "LargeSize", render: LargeSize },
-    { name: "SmallSize", render: SmallSize },
   ],
 };
 

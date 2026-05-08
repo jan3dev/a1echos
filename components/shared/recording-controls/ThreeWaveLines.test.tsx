@@ -4,7 +4,6 @@ import React from "react";
 import { AppState } from "react-native";
 
 import { TestID } from "@/constants";
-import { TranscriptionState } from "@/models";
 
 import { ThreeWaveLines } from "./ThreeWaveLines";
 
@@ -63,15 +62,6 @@ jest.mock("@/stores", () => ({
   }),
 }));
 
-const mockColors = {
-  accentBrand: "#6366F1",
-  glassInverse: "rgba(0,0,0,0.1)",
-  textInverse: "#FFFFFF",
-  textPrimary: "#000000",
-  textTertiary: "#999999",
-  surfacePrimary: "#FFFFFF",
-} as any;
-
 describe("ThreeWaveLines", () => {
   beforeEach(() => {
     const { useTranscriptionStore } = require("@/stores");
@@ -82,42 +72,29 @@ describe("ThreeWaveLines", () => {
   });
 
   it("renders without crashing", () => {
-    const { toJSON } = render(
-      <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
-    );
+    const { toJSON } = render(<ThreeWaveLines />);
     expect(toJSON()).toBeTruthy();
   });
 
   it("renders Canvas component", () => {
-    const { getByTestId } = render(
-      <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
-    );
+    const { getByTestId } = render(<ThreeWaveLines />);
     expect(getByTestId(TestID.SkiaCanvas)).toBeTruthy();
   });
 
   it("renders 6 Path elements (3 sharp + 3 blurred)", () => {
-    const { getAllByTestId } = render(
-      <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
-    );
+    const { getAllByTestId } = render(<ThreeWaveLines />);
     expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(6);
   });
 
   it("subscribes to transcriptionStore audio level changes", () => {
     const { useTranscriptionStore } = require("@/stores");
-    render(
-      <ThreeWaveLines colors={mockColors} state={TranscriptionState.READY} />,
-    );
+    render(<ThreeWaveLines />);
     expect(useTranscriptionStore.subscribe).toHaveBeenCalled();
   });
 
   it("responds to AppState changes", () => {
     const addEventListenerSpy = jest.spyOn(AppState, "addEventListener");
-    render(
-      <ThreeWaveLines
-        colors={mockColors}
-        state={TranscriptionState.RECORDING}
-      />,
-    );
+    render(<ThreeWaveLines />);
     expect(addEventListenerSpy).toHaveBeenCalledWith(
       "change",
       expect.any(Function),

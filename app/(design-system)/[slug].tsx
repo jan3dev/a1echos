@@ -46,7 +46,7 @@ export default function DesignSystemDetail() {
           <View
             style={[
               styles.demoBody,
-              { backgroundColor: theme.colors.surfacePrimary },
+              { backgroundColor: theme.colors.surfaceSecondary },
             ]}
           >
             {demo.render()}
@@ -77,5 +77,6 @@ const styles = StyleSheet.create({
   demoBody: {
     borderRadius: 12,
     padding: 16,
+    alignItems: "center",
   },
 });

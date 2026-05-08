@@ -1,6 +1,8 @@
 export { AquaPrimitiveColors } from "./colors/colors";
 export type { AquaPrimitiveColor } from "./colors/colors";
 
+export { recordingGradient } from "./gradients/gradients";
+
 export { darkColors, lightColors } from "./theme-colors/themeColors";
 export type { AquaColors } from "./theme-colors/themeColors";
 

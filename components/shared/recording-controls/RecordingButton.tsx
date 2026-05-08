@@ -1,22 +1,28 @@
-import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  AppState,
+  AppStateStatus,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
-  cancelAnimation,
   useAnimatedStyle,
+  useFrameCallback,
   useSharedValue,
-  withRepeat,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
 
 import { TestID } from "@/constants";
-import { AppTheme, TranscriptionState } from "@/models";
-import { AquaColors, getShadow, useThemeStore } from "@/theme";
+import { TranscriptionState } from "@/models";
+import { AquaColors, getShadow, lightColors, recordingGradient } from "@/theme";
 
 import { Icon } from "../../ui/icon/Icon";
+import { ProgressIndicator } from "../../ui/progress/ProgressIndicator";
 
 interface RecordingButtonProps {
   state?: TranscriptionState;
@@ -26,10 +32,89 @@ interface RecordingButtonProps {
   enabled?: boolean;
   size?: number;
   scaleAnimationDuration?: number;
-  glowAnimationDuration?: number;
   debounceDuration?: number;
   colors: AquaColors;
 }
+
+const GRADIENT_ROTATION_PERIOD_MS = 6000;
+const PRESS_DOWN_SCALE = 0.9;
+const GESTURE_ISOLATION_DURATION = 2000;
+const EASE_OUT = Easing.out(Easing.ease);
+
+// Oversized so the gradient corners never expose the underlying surface as
+// the layer rotates inside the circular clip.
+const GRADIENT_OVERSIZE_FACTOR = 1.5;
+
+const RotatingGradientCircle = ({ size }: { size: number }) => {
+  const rotation = useSharedValue(0);
+
+  const frameCallback = useFrameCallback((frameInfo) => {
+    "worklet";
+    const dt = Math.min(frameInfo.timeSincePreviousFrame ?? 16, 50);
+    rotation.value =
+      (rotation.value + (dt / GRADIENT_ROTATION_PERIOD_MS) * 360) % 360;
+  });
+
+  useEffect(() => {
+    const handleChange = (next: AppStateStatus) => {
+      frameCallback.setActive(next === "active");
+    };
+    frameCallback.setActive(AppState.currentState === "active");
+    const sub = AppState.addEventListener("change", handleChange);
+    return () => sub.remove();
+  }, [frameCallback]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const oversize = size * GRADIENT_OVERSIZE_FACTOR;
+  const offset = (oversize - size) / 2;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: size / 2,
+        overflow: "hidden",
+      }}
+    >
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            width: oversize,
+            height: oversize,
+            top: -offset,
+            left: -offset,
+          },
+          animatedStyle,
+        ]}
+      >
+        <LinearGradient
+          colors={
+            recordingGradient.colors as unknown as readonly [
+              string,
+              string,
+              ...string[],
+            ]
+          }
+          locations={
+            recordingGradient.locations as unknown as readonly [
+              number,
+              number,
+              ...number[],
+            ]
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </Animated.View>
+    </View>
+  );
+};
 
 export const RecordingButton = ({
   state = TranscriptionState.READY,
@@ -37,120 +122,70 @@ export const RecordingButton = ({
   onRecordingStart,
   onRecordingStop,
   enabled = true,
-  size = 64,
+  size = 80,
   scaleAnimationDuration = 250,
-  glowAnimationDuration = 2000,
   debounceDuration = 800,
   colors,
 }: RecordingButtonProps) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
 
-  const { currentTheme } = useThemeStore();
-  const blurTint = currentTheme === AppTheme.DARK ? "light" : "dark";
-
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gestureIsolationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const scaleAnimationDelayTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const pulseAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+  const pressActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
   const scale = useSharedValue(1);
-  const glowProgress = useSharedValue(0);
-  const isPulseAnimating = useRef(false);
-
-  const SCALE_ANIMATION_DELAY = 300;
-  const GESTURE_ISOLATION_DURATION = 2000;
 
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       if (gestureIsolationTimerRef.current)
         clearTimeout(gestureIsolationTimerRef.current);
-      if (scaleAnimationDelayTimerRef.current)
-        clearTimeout(scaleAnimationDelayTimerRef.current);
-      if (pulseAnimationTimerRef.current)
-        clearTimeout(pulseAnimationTimerRef.current);
+      if (pressActionTimerRef.current)
+        clearTimeout(pressActionTimerRef.current);
     };
   }, []);
 
-  const triggerDelayedScaleAnimation = useCallback(() => {
-    if (scaleAnimationDelayTimerRef.current) {
-      clearTimeout(scaleAnimationDelayTimerRef.current);
-    }
-    scaleAnimationDelayTimerRef.current = setTimeout(() => {
-      scale.value = withTiming(1.15, {
-        duration: scaleAnimationDuration,
-        easing: Easing.out(Easing.ease),
-      });
-    }, SCALE_ANIMATION_DELAY);
-  }, [scale, scaleAnimationDuration]);
-
   useEffect(() => {
     if (state === TranscriptionState.READY) {
+      if (gestureIsolationTimerRef.current) {
+        clearTimeout(gestureIsolationTimerRef.current);
+        gestureIsolationTimerRef.current = null;
+      }
       setGestureIsolationActive(false);
     }
+  }, [state]);
 
-    if (state === TranscriptionState.RECORDING) {
-      triggerDelayedScaleAnimation();
-      glowProgress.value = withRepeat(
-        withTiming(1, {
-          duration: glowAnimationDuration,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1,
-        true,
-      );
-    } else {
-      if (scaleAnimationDelayTimerRef.current) {
-        clearTimeout(scaleAnimationDelayTimerRef.current);
-      }
-      if (!isPulseAnimating.current) {
-        scale.value = withTiming(1, {
-          duration: scaleAnimationDuration,
-          easing: Easing.out(Easing.ease),
-        });
-      }
-      cancelAnimation(glowProgress);
-      glowProgress.value = 0;
-    }
-  }, [
-    state,
-    glowAnimationDuration,
-    glowProgress,
-    scale,
-    scaleAnimationDuration,
-    triggerDelayedScaleAnimation,
-  ]);
-
-  const triggerScaleAnimation = () => {
+  const triggerPressTransition = (action: () => void) => {
     scale.value = withSequence(
-      withTiming(1.15, {
+      withTiming(PRESS_DOWN_SCALE, {
         duration: scaleAnimationDuration,
-        easing: Easing.out(Easing.ease),
+        easing: EASE_OUT,
       }),
-      withTiming(1, {
-        duration: scaleAnimationDuration,
-        easing: Easing.out(Easing.ease),
-      }),
+      withTiming(1, { duration: scaleAnimationDuration, easing: EASE_OUT }),
     );
+
+    if (pressActionTimerRef.current) {
+      clearTimeout(pressActionTimerRef.current);
+    }
+    pressActionTimerRef.current = setTimeout(action, scaleAnimationDuration);
   };
 
-  const handleRecordingAction = async (action: () => void) => {
-    if (gestureIsolationActive || isDebouncing) {
+  const handleStartRecording = () => {
+    if (!onRecordingStart || gestureIsolationActive || isDebouncing) {
       return;
     }
 
     setIsDebouncing(true);
     setGestureIsolationActive(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      action();
+      triggerPressTransition(onRecordingStart);
 
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
@@ -168,34 +203,22 @@ export const RecordingButton = ({
     }
   };
 
-  const handleStartRecording = () => {
-    if (onRecordingStart) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      handleRecordingAction(onRecordingStart);
-    }
-  };
-
   const handleStopRecording = () => {
-    if (onRecordingStop && !isDebouncing) {
-      setIsDebouncing(true);
-      isPulseAnimating.current = true;
-      triggerScaleAnimation();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      const pulseDuration = scaleAnimationDuration * 2;
-      if (pulseAnimationTimerRef.current) {
-        clearTimeout(pulseAnimationTimerRef.current);
-      }
-      pulseAnimationTimerRef.current = setTimeout(() => {
-        isPulseAnimating.current = false;
-        onRecordingStop();
-
-        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = setTimeout(() => {
-          setIsDebouncing(false);
-        }, debounceDuration);
-      }, pulseDuration);
+    if (!onRecordingStop || isDebouncing) {
+      return;
     }
+
+    setIsDebouncing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    triggerPressTransition(() => {
+      onRecordingStop();
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        setIsDebouncing(false);
+      }, debounceDuration);
+    });
   };
 
   const scaleAnimatedStyle = useAnimatedStyle(() => ({
@@ -204,20 +227,27 @@ export const RecordingButton = ({
 
   const renderButton = () => {
     if (state === TranscriptionState.RECORDING_STARTING) {
-      return renderStartingButton();
+      return renderSpinnerButton(
+        TestID.RecordingButtonStarting,
+        "Preparing recording",
+      );
     }
-    // Background pre-warm shows the same spinner — but only when we're not
-    // already mid-record/transcribe (engine init shouldn't preempt those).
     if (
       isInitializing &&
       (state === TranscriptionState.READY || state === TranscriptionState.ERROR)
     ) {
-      return renderStartingButton();
+      return renderSpinnerButton(
+        TestID.RecordingButtonStarting,
+        "Preparing recording",
+      );
     }
     switch (state) {
       case TranscriptionState.LOADING:
       case TranscriptionState.TRANSCRIBING:
-        return renderTranscribingButton();
+        return renderSpinnerButton(
+          TestID.RecordingButtonTranscribing,
+          "Transcribing",
+        );
       case TranscriptionState.RECORDING:
         return renderRecordingButton();
       case TranscriptionState.READY:
@@ -226,128 +256,82 @@ export const RecordingButton = ({
     }
   };
 
-  const renderStartingButton = () => (
-    <Animated.View
-      style={[
-        styles.buttonContainer,
-        { width: size, height: size },
-        styles.transcribingButton,
-        { backgroundColor: colors.glassInverse },
-      ]}
-    >
-      <BlurView
-        intensity={80}
-        tint={blurTint}
-        style={[StyleSheet.absoluteFill, styles.blurContainer]}
-      >
-        <TouchableOpacity
-          testID={TestID.RecordingButtonStarting}
-          style={styles.buttonTouchable}
-          disabled={true}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Preparing recording"
-          accessibilityState={{ disabled: true, busy: true }}
-        >
-          <ActivityIndicator size="small" color={colors.textInverse} />
-        </TouchableOpacity>
-      </BlurView>
-    </Animated.View>
-  );
-
-  const renderTranscribingButton = () => (
-    <Animated.View
-      style={[
-        styles.buttonContainer,
-        { width: size, height: size },
-        styles.transcribingButton,
-        { backgroundColor: colors.glassInverse },
-      ]}
-    >
-      <BlurView
-        intensity={80}
-        tint={blurTint}
-        style={[StyleSheet.absoluteFill, styles.blurContainer]}
-      >
-        <TouchableOpacity
-          testID={TestID.RecordingButtonTranscribing}
-          style={styles.buttonTouchable}
-          disabled={true}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Transcribing"
-        >
-          <Icon name="mic" size={24} color={colors.textInverse} />
-        </TouchableOpacity>
-      </BlurView>
-    </Animated.View>
-  );
-
-  const glowAnimatedStyle = useAnimatedStyle(() => {
-    const glowOpacity = 0.3 + glowProgress.value * 0.4;
-    const glowRadius = 24 + glowProgress.value * 16;
-
-    return {
-      shadowColor: colors.accentBrand,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: glowOpacity,
-      shadowRadius: glowRadius,
-      elevation: 10,
-    };
-  });
-
-  const renderRecordingButton = () => {
-    return (
-      <Animated.View
-        style={[
-          styles.buttonContainer,
-          { width: size, height: size },
-          { backgroundColor: colors.accentBrand },
-          glowAnimatedStyle,
-        ]}
-      >
-        <TouchableOpacity
-          testID={TestID.RecordingButtonStop}
-          style={styles.buttonTouchable}
-          onPress={handleStopRecording}
-          disabled={isDebouncing || gestureIsolationActive || !enabled}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Stop Recording"
-        >
-          <Icon name="rectangle" size={14} color={colors.textInverse} />
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
+  const circleSize = { width: size, height: size };
+  const surfaceFill = { backgroundColor: colors.surfacePrimary };
 
   const renderReadyButton = () => (
-    <Animated.View
+    <View
+      style={[styles.buttonContainer, circleSize, getShadow("recordingButton")]}
+    >
+      <RotatingGradientCircle size={size} />
+      <TouchableOpacity
+        testID={TestID.RecordingButtonStart}
+        style={styles.buttonTouchable}
+        onPress={handleStartRecording}
+        disabled={isDebouncing || gestureIsolationActive || !enabled}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Start Recording"
+      >
+        <Icon name="mic" size={24} color={lightColors.textInverse} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderRecordingButton = () => (
+    <View
       style={[
         styles.buttonContainer,
-        { width: size, height: size },
-        styles.readyButton,
-        { backgroundColor: colors.glassInverse },
+        circleSize,
+        surfaceFill,
+        getShadow("recordingButton"),
       ]}
     >
-      <BlurView
-        intensity={80}
-        tint={blurTint}
-        style={[StyleSheet.absoluteFill, styles.blurContainer]}
+      <TouchableOpacity
+        testID={TestID.RecordingButtonStop}
+        style={styles.buttonTouchable}
+        onPress={handleStopRecording}
+        disabled={isDebouncing || gestureIsolationActive || !enabled}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Stop Recording"
       >
-        <TouchableOpacity
-          testID={TestID.RecordingButtonStart}
-          style={styles.buttonTouchable}
-          onPress={handleStartRecording}
-          disabled={isDebouncing || gestureIsolationActive || !enabled}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Start Recording"
+        <View
+          style={{
+            shadowColor: colors.accentDanger,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 24,
+            elevation: 12,
+          }}
         >
-          <Icon name="mic" size={24} color={colors.textInverse} />
-        </TouchableOpacity>
-      </BlurView>
-    </Animated.View>
+          <Icon name="rectangle" size={24} color={colors.accentDanger} />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderSpinnerButton = (testID: string, label: string) => (
+    <View
+      style={[
+        styles.buttonContainer,
+        circleSize,
+        surfaceFill,
+        getShadow("recordingButton"),
+      ]}
+    >
+      <TouchableOpacity
+        testID={testID}
+        style={styles.buttonTouchable}
+        disabled={true}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: true, busy: true }}
+      >
+        <ProgressIndicator color={colors.textTertiary} size={24} />
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -358,24 +342,16 @@ export const RecordingButton = ({
 const styles = StyleSheet.create({
   buttonContainer: {
     borderRadius: 1000,
-  },
-  blurContainer: {
-    borderRadius: 1000,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.04)",
   },
   buttonTouchable: {
     width: "100%",
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-  },
-  transcribingButton: {
-    ...getShadow("recordingButton"),
-    opacity: 0.5,
-  },
-  readyButton: {
-    ...getShadow("recordingButton"),
   },
 });
