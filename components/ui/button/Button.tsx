@@ -1,12 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
 import {
   AquaPrimitiveColors,
   AquaTypography,
   getShadow,
-  lightColors,
   useTheme,
 } from "@/theme";
 import { iosPressed } from "@/utils";
@@ -14,17 +13,19 @@ import { iosPressed } from "@/utils";
 import { ProgressIndicator } from "../progress/ProgressIndicator";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
-export type ButtonSize = "large" | "small";
-export type ButtonVariant = "normal" | "error" | "success" | "warning";
+export type UtilityButtonSize = "large" | "small";
 
-type ButtonType =
-  | "primary"
-  | "secondary"
-  | "tertiary"
-  | "utility"
-  | "utilitySecondary";
+type ButtonType = "primary" | "secondary" | "tertiary" | "utility";
 
-interface BaseButtonProps {
+type ButtonState =
+  | "default"
+  | "hover"
+  | "active"
+  | "focus"
+  | "disabled"
+  | "loading";
+
+export interface ButtonProps {
   text: string;
   onPress?: () => void;
   icon?: ReactNode;
@@ -33,21 +34,17 @@ interface BaseButtonProps {
   testID?: string;
 }
 
-interface PrimarySecondaryButtonProps extends BaseButtonProps {
-  size?: ButtonSize;
-  variant?: ButtonVariant;
+interface UtilityButtonProps extends ButtonProps {
+  size?: UtilityButtonSize;
 }
 
-interface TertiaryButtonProps extends BaseButtonProps {
-  size?: ButtonSize;
-}
-
-type UtilityButtonProps = BaseButtonProps;
-
-const BUTTON_HEIGHT_LARGE = 56;
-const BUTTON_HEIGHT_SMALL = 34;
+const PRIMARY_BUTTON_HEIGHT = 56;
+const UTILITY_HEIGHT_LARGE = 34;
+const UTILITY_HEIGHT_SMALL = 28;
 const PILL_BORDER_RADIUS = 80;
 const UTILITY_BORDER_RADIUS = 8;
+const FOCUS_RING_OFFSET = 3;
+const FOCUS_RING_WIDTH = 2;
 
 const ButtonBase = ({
   text,
@@ -57,228 +54,208 @@ const ButtonBase = ({
   enabled = true,
   testID,
   size = "large",
-  variant = "normal",
   type,
-}: BaseButtonProps & {
-  size?: ButtonSize;
-  variant?: ButtonVariant;
+}: ButtonProps & {
+  size?: UtilityButtonSize;
   type: ButtonType;
 }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  const isSmall =
-    size === "small" || type === "utility" || type === "utilitySecondary";
-  const height = isSmall ? BUTTON_HEIGHT_SMALL : BUTTON_HEIGHT_LARGE;
-  const isUtility = type === "utility" || type === "utilitySecondary";
-  const isPill = !isUtility;
-  const borderRadius = isPill ? PILL_BORDER_RADIUS : UTILITY_BORDER_RADIUS;
+  const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
 
-  const getVariantColor = () =>
-    ({
-      error: colors.accentDanger,
-      success: colors.accentSuccess,
-      warning: colors.accentWarning,
-      normal: colors.accentBrand,
-    })[variant];
-
-  const showsPrimaryGradient = type === "primary" && variant === "normal";
-
-  const getBackgroundColor = (pressed: boolean) => {
-    if (!enabled) {
-      if (type === "primary") {
-        // Disabled primary: handled via opacity for the gradient case;
-        // for non-normal variants we show a translucent flat fill.
-        return showsPrimaryGradient ? "transparent" : `${getVariantColor()}80`;
-      }
-      if (type === "secondary") {
-        return colors.surfaceSecondary;
-      }
-      if (type === "utility") {
-        return `${colors.surfacePrimary}80`;
-      }
-      if (type === "utilitySecondary") {
-        return `${colors.surfaceTertiary}80`;
-      }
-      return "transparent";
-    }
-
-    if (type === "primary") {
-      return showsPrimaryGradient ? "transparent" : getVariantColor();
-    }
-
-    if (type === "secondary") {
-      return colors.surfaceSecondary;
-    }
-
-    if (type === "tertiary") {
-      return pressed ? `${colors.surfaceTertiary}80` : "transparent";
-    }
-
-    if (type === "utility") {
-      return colors.surfacePrimary;
-    }
-
-    if (type === "utilitySecondary") {
-      return colors.surfaceTertiary;
-    }
-
-    return "transparent";
-  };
-
-  const getTextColor = () => {
-    if (type === "primary") {
-      return lightColors.textInverse;
-    }
-    if (type === "secondary") {
-      return variant === "normal" ? colors.textSecondary : getVariantColor();
-    }
-    if (type === "tertiary") {
-      return colors.textSecondary;
-    }
-    return colors.textPrimary;
-  };
-
-  const getSpinnerColor = () => {
-    if (type === "primary") {
-      return lightColors.textInverse;
-    }
-    if (type === "secondary") {
-      return variant === "normal" ? colors.textSecondary : getVariantColor();
-    }
-    if (type === "tertiary") {
-      return colors.textSecondary;
-    }
-    return colors.textPrimary;
-  };
-
-  const textStyle = isSmall
+  const isUtility = type === "utility";
+  const borderRadius = isUtility ? UTILITY_BORDER_RADIUS : PILL_BORDER_RADIUS;
+  const height = isUtility
+    ? size === "small"
+      ? UTILITY_HEIGHT_SMALL
+      : UTILITY_HEIGHT_LARGE
+    : PRIMARY_BUTTON_HEIGHT;
+  const textStyle = isUtility
     ? AquaTypography.body2SemiBold
     : AquaTypography.body1SemiBold;
-
   const horizontalPadding = isUtility ? 14 : 32;
+
+  const state = deriveState({ enabled, isLoading, pressed, focused, hovered });
+  const interactive = enabled && !isLoading;
+
+  const backgroundColor = getBackgroundColor(type, state, colors);
+  const textColor =
+    type === "secondary" || type === "tertiary"
+      ? colors.textSecondary
+      : AquaPrimitiveColors.white;
+
+  const showsPrimaryGradient =
+    type === "primary" && state !== "active" && state !== "hover";
+
+  const opacity = !enabled
+    ? 0.5
+    : type === "primary" && (state === "active" || state === "hover")
+      ? 1
+      : iosPressed(pressed, 0.9);
 
   const shadowStyle: ViewStyle | undefined =
     type === "utility" ? getShadow("button") : undefined;
 
-  const buttonContent = (
-    <RipplePressable
-      testID={testID}
-      onPress={enabled ? onPress : undefined}
-      disabled={!enabled}
-      accessibilityRole="button"
-      accessibilityLabel={text}
-      accessibilityState={{ disabled: !enabled }}
-      rippleColor={type === "primary" ? colors.rippleOnPrimary : colors.ripple}
-      style={({ pressed }) => [
-        styles.button,
-        {
-          height,
-          backgroundColor: getBackgroundColor(pressed),
-          opacity: enabled ? iosPressed(pressed, 0.9) : 0.5,
-          paddingHorizontal: isSmall ? horizontalPadding : 0,
-          borderRadius,
-        },
-      ]}
-    >
-      {showsPrimaryGradient && (
-        <LinearGradient
-          colors={[
-            AquaPrimitiveColors.neonBlue400,
-            AquaPrimitiveColors.neonBlue500,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius }]}
-        />
-      )}
-      {showsPrimaryGradient && (
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            styles.primaryInsetHighlight,
-            { borderRadius },
-          ]}
-        />
-      )}
-      <View style={styles.content}>
-        {isLoading ? (
-          <View
-            style={[
-              styles.loadingContainer,
-              isUtility && styles.utilityPadding,
-            ]}
-          >
-            <ProgressIndicator color={getSpinnerColor()} size={24} />
-          </View>
-        ) : (
-          <>
-            {icon && (
-              <>
-                {isUtility && <View style={styles.utilityIconSpacing} />}
-                {icon}
-                <View style={styles.iconSpacing} />
-              </>
-            )}
-            <Text
-              style={[
-                textStyle,
-                { color: getTextColor() },
-                isUtility && styles.utilityTextPadding,
-              ]}
-            >
-              {text}
-            </Text>
-          </>
-        )}
-      </View>
-    </RipplePressable>
-  );
+  const showFocusRing = state === "focus";
 
-  if (shadowStyle) {
-    return (
-      <View
+  return (
+    <View style={[shadowStyle, styles.outerWrap]}>
+      <RipplePressable
+        testID={testID}
+        onPress={interactive ? onPress : undefined}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        disabled={!interactive}
+        accessibilityRole="button"
+        accessibilityLabel={text}
+        accessibilityState={{ disabled: !enabled, busy: isLoading }}
+        rippleColor={
+          type === "primary" || type === "utility"
+            ? colors.rippleOnPrimary
+            : colors.ripple
+        }
         style={[
-          shadowStyle,
+          styles.button,
           {
+            height,
+            backgroundColor,
+            opacity,
+            paddingHorizontal: horizontalPadding,
             borderRadius,
-            alignSelf: "stretch",
           },
         ]}
       >
-        {buttonContent}
-      </View>
-    );
-  }
+        {showsPrimaryGradient && (
+          <>
+            <LinearGradient
+              colors={[
+                AquaPrimitiveColors.neonBlue400,
+                AquaPrimitiveColors.neonBlue500,
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius }]}
+              pointerEvents="none"
+            />
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                styles.primaryInsetHighlight,
+                { borderRadius },
+              ]}
+            />
+          </>
+        )}
+        <View style={styles.content}>
+          {isLoading ? (
+            <View
+              style={[
+                styles.loadingContainer,
+                isUtility && styles.utilityPadding,
+              ]}
+            >
+              <ProgressIndicator color={textColor} size={24} />
+            </View>
+          ) : (
+            <>
+              {icon && (
+                <>
+                  {isUtility && <View style={styles.utilityIconSpacing} />}
+                  {icon}
+                  <View style={styles.iconSpacing} />
+                </>
+              )}
+              <Text
+                style={[
+                  textStyle,
+                  { color: textColor },
+                  isUtility && styles.utilityTextPadding,
+                ]}
+              >
+                {text}
+              </Text>
+            </>
+          )}
+        </View>
+      </RipplePressable>
+      {showFocusRing && (
+        <View
+          testID={testID ? `${testID}-focus-ring` : undefined}
+          pointerEvents="none"
+          style={[
+            styles.focusRing,
+            {
+              borderRadius: borderRadius + FOCUS_RING_OFFSET,
+              borderColor: colors.buttonFocusRing,
+            },
+          ]}
+        />
+      )}
+    </View>
+  );
+};
 
-  return buttonContent;
+const deriveState = ({
+  enabled,
+  isLoading,
+  pressed,
+  focused,
+  hovered,
+}: {
+  enabled: boolean;
+  isLoading: boolean | undefined;
+  pressed: boolean;
+  focused: boolean;
+  hovered: boolean;
+}): ButtonState => {
+  if (!enabled) return "disabled";
+  if (isLoading) return "loading";
+  if (pressed) return "active";
+  if (focused) return "focus";
+  if (hovered) return "hover";
+  return "default";
+};
+
+const getBackgroundColor = (
+  type: ButtonType,
+  state: ButtonState,
+  colors: ReturnType<typeof useTheme>["theme"]["colors"],
+): string => {
+  if (type === "primary") {
+    if (state === "active" || state === "hover")
+      return colors.buttonPrimaryBackgroundFlat;
+    return "transparent";
+  }
+  if (type === "secondary") return colors.surfaceSecondary;
+  if (type === "tertiary") {
+    if (state === "focus") return colors.surfacePrimary;
+    if (state === "active" || state === "hover") return colors.surfaceTertiary;
+    return "transparent";
+  }
+  return colors.buttonUtilityBackground;
 };
 
 export const Button = {
-  primary: (props: PrimarySecondaryButtonProps) => (
-    <ButtonBase {...props} type="primary" />
-  ),
-  secondary: (props: PrimarySecondaryButtonProps) => (
-    <ButtonBase {...props} type="secondary" />
-  ),
-  tertiary: (props: TertiaryButtonProps) => (
-    <ButtonBase {...props} type="tertiary" variant="normal" />
-  ),
+  primary: (props: ButtonProps) => <ButtonBase {...props} type="primary" />,
+  secondary: (props: ButtonProps) => <ButtonBase {...props} type="secondary" />,
+  tertiary: (props: ButtonProps) => <ButtonBase {...props} type="tertiary" />,
   utility: (props: UtilityButtonProps) => (
-    <ButtonBase {...props} type="utility" size="small" variant="normal" />
-  ),
-  utilitySecondary: (props: UtilityButtonProps) => (
-    <ButtonBase
-      {...props}
-      type="utilitySecondary"
-      size="small"
-      variant="normal"
-    />
+    <ButtonBase {...props} type="utility" />
   ),
 };
 
 const styles = StyleSheet.create({
+  outerWrap: {
+    alignSelf: "stretch",
+  },
   button: {
     alignSelf: "stretch",
     justifyContent: "center",
@@ -311,5 +288,13 @@ const styles = StyleSheet.create({
   primaryInsetHighlight: {
     borderTopWidth: 2,
     borderTopColor: AquaPrimitiveColors.neonBlue300,
+  },
+  focusRing: {
+    position: "absolute",
+    top: -FOCUS_RING_OFFSET,
+    left: -FOCUS_RING_OFFSET,
+    right: -FOCUS_RING_OFFSET,
+    bottom: -FOCUS_RING_OFFSET,
+    borderWidth: FOCUS_RING_WIDTH,
   },
 });

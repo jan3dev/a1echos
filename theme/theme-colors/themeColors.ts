@@ -39,6 +39,10 @@ export interface AquaColors {
   ripple: string;
   rippleOnPrimary: string;
 
+  buttonPrimaryBackgroundFlat: string;
+  buttonUtilityBackground: string;
+  buttonFocusRing: string;
+
   systemBackgroundColor: string;
 }
 
@@ -81,9 +85,15 @@ export const lightColors: AquaColors = {
   ripple: AquaPrimitiveColors.rippleLight,
   rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
 
+  buttonPrimaryBackgroundFlat: AquaPrimitiveColors.neonBlue400,
+  buttonUtilityBackground: AquaPrimitiveColors.gray950,
+  buttonFocusRing: AquaPrimitiveColors.neonBlue400,
+
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };
 
+// In dark mode, buttonUtilityBackground uses gray850 instead of gray950 so
+// the utility button stays visible against surfacePrimary (also gray950).
 export const darkColors: AquaColors = {
   textPrimary: AquaPrimitiveColors.gray50,
   textSecondary: AquaPrimitiveColors.gray500,
@@ -122,6 +132,10 @@ export const darkColors: AquaColors = {
 
   ripple: AquaPrimitiveColors.rippleDark,
   rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
+
+  buttonPrimaryBackgroundFlat: AquaPrimitiveColors.neonBlue400,
+  buttonUtilityBackground: AquaPrimitiveColors.gray850,
+  buttonFocusRing: AquaPrimitiveColors.neonBlue400,
 
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };

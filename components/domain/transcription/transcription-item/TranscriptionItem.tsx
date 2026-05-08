@@ -145,7 +145,7 @@ export const TranscriptionItem = ({
 
   const isSelectedItem = selectionMode && isSelected;
 
-  const backgroundColor = isSelectedItem
+  const innerBackgroundColor = isSelectedItem
     ? theme.colors.surfaceSelected
     : theme.colors.surfacePrimary;
 
@@ -160,7 +160,7 @@ export const TranscriptionItem = ({
       style={[
         styles.shadowContainer,
         getShadow("cardElevated"),
-        { backgroundColor },
+        { backgroundColor: theme.colors.surfacePrimary },
         style,
       ]}
     >
@@ -180,7 +180,7 @@ export const TranscriptionItem = ({
         style={({ pressed }) => [
           styles.container,
           {
-            backgroundColor,
+            backgroundColor: innerBackgroundColor,
             borderColor,
             borderWidth: 1,
             opacity: enableInteractions ? iosPressed(pressed) : 1,
@@ -296,6 +296,7 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 16,
     padding: 16,
+    overflow: "hidden",
   },
   headerRow: {
     flexDirection: "row",

@@ -260,7 +260,6 @@ const styles = StyleSheet.create({
   menuInner: {
     borderRadius: 16,
     paddingVertical: 8,
-    gap: 8,
   },
   infoContainer: {
     paddingHorizontal: 16,

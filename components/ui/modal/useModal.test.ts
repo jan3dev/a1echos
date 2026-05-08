@@ -58,12 +58,10 @@ describe("useModal", () => {
           primaryButton: {
             text: "Delete",
             onTap: primaryOnTap,
-            variant: "error",
           },
           secondaryButton: {
             text: "Cancel",
             onTap: secondaryOnTap,
-            variant: "normal",
           },
         }),
       );
@@ -73,10 +71,8 @@ describe("useModal", () => {
     expect(modalState.title).toBe("Delete");
     expect(modalState.message).toBe("This cannot be undone.");
     expect(modalState.primaryButton.text).toBe("Delete");
-    expect(modalState.primaryButton.variant).toBe("error");
     expect(modalState.secondaryButton).toBeDefined();
     expect(modalState.secondaryButton!.text).toBe("Cancel");
-    expect(modalState.secondaryButton!.variant).toBe("normal");
     expect(typeof modalState.onDismiss).toBe("function");
   });
 

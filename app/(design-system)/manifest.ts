@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import buttonGallery from "@/components/ui/button/Button.gallery";
 import checkboxGallery from "@/components/ui/checkbox/Checkbox.gallery";
 import chipGallery from "@/components/ui/chip/Chip.gallery";
+import ctaModuleGallery from "@/components/ui/cta-module/CTAModule.gallery";
 import dimmerGallery from "@/components/ui/modal/Dimmer.gallery";
 import dividerGallery from "@/components/ui/divider/Divider.gallery";
 import flagIconGallery from "@/components/ui/icon/FlagIcon.gallery";
@@ -43,6 +44,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   buttonGallery,
   checkboxGallery,
   chipGallery,
+  ctaModuleGallery,
   dimmerGallery,
   dividerGallery,
   flagIconGallery,

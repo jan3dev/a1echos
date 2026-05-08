@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { dynamicTestID } from "@/constants";
 import { getShadow, useTheme } from "@/theme";
 
-import { Button, ButtonVariant } from "../button/Button";
+import { Button } from "../button/Button";
 import { Text } from "../text/Text";
 
 import { Dimmer } from "./Dimmer";
@@ -24,12 +24,10 @@ export interface ModalProps {
   primaryButton: {
     text: string;
     onTap: () => void;
-    variant?: ButtonVariant;
   };
   secondaryButton?: {
     text: string;
     onTap: () => void;
-    variant?: ButtonVariant;
   };
   icon?: ReactNode;
   titleMaxLines?: number;
@@ -171,7 +169,6 @@ export const Modal = ({
 
                 <Button.primary
                   text={primaryButton.text}
-                  variant={primaryButton.variant || "normal"}
                   onPress={primaryButton.onTap}
                 />
 
@@ -180,7 +177,6 @@ export const Modal = ({
                     <View style={styles.secondaryButtonSpacing} />
                     <Button.secondary
                       text={secondaryButton.text}
-                      variant={secondaryButton.variant || "normal"}
                       onPress={secondaryButton.onTap}
                     />
                   </>

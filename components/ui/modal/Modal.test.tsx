@@ -121,16 +121,12 @@ describe("Modal", () => {
     expect(getByText("Confirm Action")).toBeTruthy();
   });
 
-  it("renders with button variants", () => {
+  it("renders with primary and secondary buttons", () => {
     const { getByText } = render(
       <Modal
         {...defaultProps}
-        primaryButton={{ text: "Delete", onTap: jest.fn(), variant: "error" }}
-        secondaryButton={{
-          text: "Cancel",
-          onTap: jest.fn(),
-          variant: "normal",
-        }}
+        primaryButton={{ text: "Delete", onTap: jest.fn() }}
+        secondaryButton={{ text: "Cancel", onTap: jest.fn() }}
       />,
     );
     expect(getByText("Delete")).toBeTruthy();

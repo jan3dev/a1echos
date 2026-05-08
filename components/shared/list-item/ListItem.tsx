@@ -84,6 +84,8 @@ export const ListItem = ({
         accessibilityState={{ selected: !!selected, disabled: !onPress }}
         style={({ pressed }) => ({
           opacity: !selected ? iosPressed(pressed) : 1,
+          borderRadius: 16,
+          overflow: "hidden",
         })}
       >
         <View style={innerStyle}>

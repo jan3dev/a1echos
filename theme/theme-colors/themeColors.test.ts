@@ -4,9 +4,9 @@ describe("themeColors", () => {
   const lightKeys = Object.keys(lightColors);
   const darkKeys = Object.keys(darkColors);
 
-  it("lightColors and darkColors each have 33 properties", () => {
-    expect(lightKeys).toHaveLength(33);
-    expect(darkKeys).toHaveLength(33);
+  it("lightColors and darkColors each have 36 properties", () => {
+    expect(lightKeys).toHaveLength(36);
+    expect(darkKeys).toHaveLength(36);
   });
 
   it("all values are strings", () => {
@@ -53,6 +53,11 @@ describe("themeColors", () => {
         "chipErrorForegroundColor",
       ],
       ripple: ["ripple", "rippleOnPrimary"],
+      button: [
+        "buttonPrimaryBackgroundFlat",
+        "buttonUtilityBackground",
+        "buttonFocusRing",
+      ],
       system: ["systemBackgroundColor"],
     };
 

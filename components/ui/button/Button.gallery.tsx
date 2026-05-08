@@ -23,200 +23,157 @@ const StorySection = ({
   );
 };
 
-const PrimaryContent = () => {
+const StateLabel = ({ children }: { children: string }) => {
   const { theme } = useTheme();
   return (
+    <Text style={[styles.stateLabel, { color: theme.colors.textSecondary }]}>
+      {children}
+    </Text>
+  );
+};
+
+const PrimaryStatesContent = () => {
+  const { theme } = useTheme();
+  const iconColor = theme.colors.textInverse;
+  return (
     <View style={styles.column}>
+      <StateLabel>Default</StateLabel>
+      <Button.primary text="Primary" onPress={() => console.log("Pressed")} />
+
+      <StateLabel>With icon</StateLabel>
       <Button.primary
-        text="Primary Button"
+        text="Primary"
+        icon={<Icon name="check" size={20} color={iconColor} />}
         onPress={() => console.log("Pressed")}
       />
-      <Button.primary
-        text="With Icon"
-        icon={<Icon name="check" size={20} color={theme.colors.textInverse} />}
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.primary text="Loading" isLoading={true} />
-      <Button.primary text="Disabled" enabled={false} />
+
+      <StateLabel>Disabled</StateLabel>
+      <Button.primary text="Primary" enabled={false} />
+
+      <StateLabel>Loading</StateLabel>
+      <Button.primary text="Primary" isLoading={true} />
+
+      <StateLabel>
+        Hover / focus / active are interactive — press or tab in.
+      </StateLabel>
     </View>
   );
 };
 
-export const Primary = () => <PrimaryContent />;
+export const PrimaryStates = () => <PrimaryStatesContent />;
 
-const PrimarySmallContent = () => {
+const SecondaryStatesContent = () => {
   const { theme } = useTheme();
+  const iconColor = theme.colors.textSecondary;
   return (
     <View style={styles.column}>
-      <Button.primary
-        text="Small Primary"
-        size="small"
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.primary
-        text="Small with Icon"
-        size="small"
-        icon={<Icon name="check" size={16} color={theme.colors.textInverse} />}
-        onPress={() => console.log("Pressed")}
-      />
-    </View>
-  );
-};
-
-export const PrimarySmall = () => <PrimarySmallContent />;
-
-const PrimaryVariantsContent = () => (
-  <View style={styles.column}>
-    <Button.primary
-      text="Normal"
-      variant="normal"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.primary
-      text="Error"
-      variant="error"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.primary
-      text="Success"
-      variant="success"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.primary
-      text="Warning"
-      variant="warning"
-      onPress={() => console.log("Pressed")}
-    />
-  </View>
-);
-
-export const PrimaryVariants = () => <PrimaryVariantsContent />;
-
-const SecondaryContent = () => {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.column}>
+      <StateLabel>Default</StateLabel>
       <Button.secondary
-        text="Secondary Button"
+        text="Secondary"
         onPress={() => console.log("Pressed")}
       />
+
+      <StateLabel>With icon</StateLabel>
       <Button.secondary
-        text="With Icon"
-        icon={
-          <Icon name="settings" size={20} color={theme.colors.accentBrand} />
-        }
+        text="Secondary"
+        icon={<Icon name="settings" size={20} color={iconColor} />}
         onPress={() => console.log("Pressed")}
       />
-      <Button.secondary text="Loading" isLoading={true} />
-      <Button.secondary text="Disabled" enabled={false} />
+
+      <StateLabel>Disabled</StateLabel>
+      <Button.secondary text="Secondary" enabled={false} />
+
+      <StateLabel>Loading</StateLabel>
+      <Button.secondary text="Secondary" isLoading={true} />
     </View>
   );
 };
 
-export const Secondary = () => <SecondaryContent />;
+export const SecondaryStates = () => <SecondaryStatesContent />;
 
-const SecondaryVariantsContent = () => (
-  <View style={styles.column}>
-    <Button.secondary
-      text="Normal"
-      variant="normal"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.secondary
-      text="Error"
-      variant="error"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.secondary
-      text="Success"
-      variant="success"
-      onPress={() => console.log("Pressed")}
-    />
-    <Button.secondary
-      text="Warning"
-      variant="warning"
-      onPress={() => console.log("Pressed")}
-    />
-  </View>
-);
-
-export const SecondaryVariants = () => <SecondaryVariantsContent />;
-
-const TertiaryContent = () => {
+const TertiaryStatesContent = () => {
   const { theme } = useTheme();
+  const iconColor = theme.colors.textSecondary;
   return (
     <View style={styles.column}>
+      <StateLabel>Default</StateLabel>
+      <Button.tertiary text="Tertiary" onPress={() => console.log("Pressed")} />
+
+      <StateLabel>With icon</StateLabel>
       <Button.tertiary
-        text="Tertiary Button"
+        text="Tertiary"
+        icon={<Icon name="settings" size={20} color={iconColor} />}
         onPress={() => console.log("Pressed")}
       />
-      <Button.tertiary
-        text="With Icon"
-        icon={
-          <Icon name="settings" size={20} color={theme.colors.textPrimary} />
-        }
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.tertiary text="Loading" isLoading={true} />
-      <Button.tertiary text="Disabled" enabled={false} />
+
+      <StateLabel>Disabled</StateLabel>
+      <Button.tertiary text="Tertiary" enabled={false} />
+
+      <StateLabel>Loading</StateLabel>
+      <Button.tertiary text="Tertiary" isLoading={true} />
     </View>
   );
 };
 
-export const Tertiary = () => <TertiaryContent />;
+export const TertiaryStates = () => <TertiaryStatesContent />;
 
-const UtilityContent = () => {
+const UtilityStatesContent = () => {
   const { theme } = useTheme();
+  const iconColor = theme.colors.textInverse;
   return (
-    <View style={styles.row}>
-      <Button.utility text="Utility" onPress={() => console.log("Pressed")} />
-      <Button.utility
-        text="With Icon"
-        icon={
-          <Icon name="settings" size={16} color={theme.colors.textPrimary} />
-        }
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.utility text="Loading" isLoading={true} />
-      <Button.utility text="Disabled" enabled={false} />
+    <View style={styles.column}>
+      <StateLabel>Default (large)</StateLabel>
+      <View style={styles.row}>
+        <Button.utility text="Utility" onPress={() => console.log("Pressed")} />
+        <Button.utility
+          text="Utility"
+          icon={<Icon name="settings" size={16} color={iconColor} />}
+          onPress={() => console.log("Pressed")}
+        />
+      </View>
+
+      <StateLabel>Small size</StateLabel>
+      <View style={styles.row}>
+        <Button.utility
+          text="Utility"
+          size="small"
+          onPress={() => console.log("Pressed")}
+        />
+        <Button.utility
+          text="Utility"
+          size="small"
+          icon={<Icon name="settings" size={16} color={iconColor} />}
+          onPress={() => console.log("Pressed")}
+        />
+      </View>
+
+      <StateLabel>Disabled</StateLabel>
+      <View style={styles.row}>
+        <Button.utility text="Utility" enabled={false} />
+        <Button.utility text="Utility" size="small" enabled={false} />
+      </View>
+
+      <StateLabel>Loading</StateLabel>
+      <View style={styles.row}>
+        <Button.utility text="Utility" isLoading={true} />
+        <Button.utility text="Utility" size="small" isLoading={true} />
+      </View>
     </View>
   );
 };
 
-export const Utility = () => <UtilityContent />;
-
-const UtilitySecondaryContent = () => {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.row}>
-      <Button.utilitySecondary
-        text="Utility 2"
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.utilitySecondary
-        text="With Icon"
-        icon={
-          <Icon name="settings" size={16} color={theme.colors.textPrimary} />
-        }
-        onPress={() => console.log("Pressed")}
-      />
-      <Button.utilitySecondary text="Loading" isLoading={true} />
-      <Button.utilitySecondary text="Disabled" enabled={false} />
-    </View>
-  );
-};
-
-export const UtilitySecondary = () => <UtilitySecondaryContent />;
+export const UtilityStates = () => <UtilityStatesContent />;
 
 const AllVariantsContent = () => {
   const { theme } = useTheme();
+  const iconColor = theme.colors.textInverse;
   return (
     <View style={styles.column}>
       <StorySection title="Primary">
         <Button.primary text="Primary" onPress={() => console.log("Pressed")} />
         <Button.primary
-          text="Primary Error"
-          variant="error"
+          text="With icon"
+          icon={<Icon name="check" size={20} color={iconColor} />}
           onPress={() => console.log("Pressed")}
         />
       </StorySection>
@@ -224,11 +181,6 @@ const AllVariantsContent = () => {
       <StorySection title="Secondary">
         <Button.secondary
           text="Secondary"
-          onPress={() => console.log("Pressed")}
-        />
-        <Button.secondary
-          text="Secondary Success"
-          variant="success"
           onPress={() => console.log("Pressed")}
         />
       </StorySection>
@@ -246,40 +198,14 @@ const AllVariantsContent = () => {
             text="Utility"
             onPress={() => console.log("Pressed")}
           />
-          <Button.utilitySecondary
-            text="Utility 2"
+          <Button.utility
+            text="Utility"
+            size="small"
             onPress={() => console.log("Pressed")}
           />
           <Button.utility
             text="Utility"
-            isLoading={true}
-            onPress={() => console.log("Pressed")}
-          />
-          <Button.utilitySecondary
-            text="Utility 2"
-            isLoading={true}
-            onPress={() => console.log("Pressed")}
-          />
-          <Button.utility
-            text="Utility"
-            icon={
-              <Icon
-                name="settings"
-                size={16}
-                color={theme.colors.textPrimary}
-              />
-            }
-            onPress={() => console.log("Pressed")}
-          />
-          <Button.utilitySecondary
-            text="Utility 2"
-            icon={
-              <Icon
-                name="settings"
-                size={16}
-                color={theme.colors.textPrimary}
-              />
-            }
+            icon={<Icon name="settings" size={16} color={iconColor} />}
             onPress={() => console.log("Pressed")}
           />
         </View>
@@ -306,6 +232,10 @@ const styles = StyleSheet.create({
     ...AquaTypography.h5SemiBold,
     marginTop: 8,
   },
+  stateLabel: {
+    ...AquaTypography.body2,
+    marginTop: 4,
+  },
   row: {
     flexDirection: "row",
     gap: 16,
@@ -318,14 +248,10 @@ const gallery: GalleryEntry = {
   title: "Button",
   group: "UI",
   demos: [
-    { name: "Primary", render: Primary },
-    { name: "PrimarySmall", render: PrimarySmall },
-    { name: "PrimaryVariants", render: PrimaryVariants },
-    { name: "Secondary", render: Secondary },
-    { name: "SecondaryVariants", render: SecondaryVariants },
-    { name: "Tertiary", render: Tertiary },
-    { name: "Utility", render: Utility },
-    { name: "UtilitySecondary", render: UtilitySecondary },
+    { name: "PrimaryStates", render: PrimaryStates },
+    { name: "SecondaryStates", render: SecondaryStates },
+    { name: "TertiaryStates", render: TertiaryStates },
+    { name: "UtilityStates", render: UtilityStates },
     { name: "AllVariants", render: AllVariants },
   ],
 };
