@@ -1,11 +1,13 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 
-import { Routes, TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { useSettingsStore } from "@/stores";
-import { useTheme } from "@/theme";
+import { AquaPrimitiveColors, useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
-import { Icon } from "../../../ui/icon/Icon";
+import { Icon, IconName } from "../../../ui/icon/Icon";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { TopAppBar } from "../../../ui/top-app-bar/TopAppBar";
 import { IncognitoExplainerModal } from "../incognito-explainer-modal/IncognitoExplainerModal";
@@ -15,6 +17,43 @@ interface HomeAppBarProps {
   onDeleteSelected?: () => void;
   onExitSelectionMode?: () => void;
 }
+
+interface SurfaceIconButtonProps {
+  iconName: IconName;
+  iconColor: string;
+  onPress: () => void;
+  testID?: string;
+}
+
+const SurfaceIconButton = ({
+  iconName,
+  iconColor,
+  onPress,
+  testID,
+}: SurfaceIconButtonProps) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.iconButton,
+        { backgroundColor: theme.colors.surfaceSecondary },
+      ]}
+    >
+      <RipplePressable
+        testID={testID}
+        onPress={onPress}
+        rippleColor={theme.colors.ripple}
+        hitSlop={10}
+        style={({ pressed }) => [
+          styles.iconButtonInner,
+          { opacity: iosPressed(pressed) },
+        ]}
+      >
+        <Icon name={iconName} size={24} color={iconColor} />
+      </RipplePressable>
+    </View>
+  );
+};
 
 export const HomeAppBar = ({
   selectionMode,
@@ -51,20 +90,25 @@ export const HomeAppBar = ({
   const renderLeading = () => {
     if (selectionMode) {
       return (
-        <RipplePressable
+        <SurfaceIconButton
+          iconName="chevron_left"
+          iconColor={theme.colors.textPrimary}
           onPress={() => onExitSelectionMode?.()}
-          hitSlop={10}
-          rippleColor={theme.colors.ripple}
-          borderless
-        >
-          <Icon
-            name="chevron_left"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
-        </RipplePressable>
+        />
       );
     }
+    return (
+      <SurfaceIconButton
+        iconName="menu"
+        iconColor={theme.colors.textPrimary}
+        onPress={() => router.push(Routes.settings)}
+        testID={TestID.HomeSettingsButton}
+      />
+    );
+  };
+
+  const renderTitleWidget = () => {
+    if (selectionMode) return undefined;
     return (
       <Icon
         name="echos_logo"
@@ -78,46 +122,24 @@ export const HomeAppBar = ({
   const renderActions = () => {
     if (selectionMode) {
       return [
-        <RipplePressable
+        <SurfaceIconButton
           key="trash"
+          iconName="trash"
+          iconColor={theme.colors.textPrimary}
           onPress={() => onDeleteSelected?.()}
-          hitSlop={10}
-          rippleColor={theme.colors.ripple}
-          borderless
-        >
-          <Icon name="trash" size={24} color={theme.colors.textPrimary} />
-        </RipplePressable>,
+        />,
       ];
     }
 
     return [
-      <RipplePressable
+      <SurfaceIconButton
         key="ghost"
+        iconName="ghost"
+        iconColor={
+          isIncognitoMode ? theme.colors.accentBrand : theme.colors.textPrimary
+        }
         onPress={handleIncognitoToggle}
-        hitSlop={10}
-        rippleColor={theme.colors.ripple}
-        borderless
-      >
-        <Icon
-          name="ghost"
-          size={24}
-          color={
-            isIncognitoMode
-              ? theme.colors.accentBrand
-              : theme.colors.textPrimary
-          }
-        />
-      </RipplePressable>,
-      <RipplePressable
-        key="settings"
-        testID={TestID.HomeSettingsButton}
-        onPress={() => router.push(Routes.settings)}
-        hitSlop={10}
-        rippleColor={theme.colors.ripple}
-        borderless
-      >
-        <Icon name="hamburger" size={24} color={theme.colors.textPrimary} />
-      </RipplePressable>,
+      />,
     ];
   };
 
@@ -126,6 +148,7 @@ export const HomeAppBar = ({
       <TopAppBar
         showBackButton={false}
         leading={renderLeading()}
+        titleWidget={renderTitleWidget()}
         actions={renderActions()}
         transparent={false}
       />
@@ -137,3 +160,25 @@ export const HomeAppBar = ({
     </>
   );
 };
+
+const styles = StyleSheet.create({
+  iconButton: {
+    width: AppConstants.APP_BAR_ICON_BUTTON_SIZE,
+    height: AppConstants.APP_BAR_ICON_BUTTON_SIZE,
+    borderRadius: AppConstants.APP_BAR_ICON_BUTTON_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    shadowColor: AquaPrimitiveColors.black,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  iconButtonInner: {
+    width: AppConstants.APP_BAR_ICON_BUTTON_SIZE,
+    height: AppConstants.APP_BAR_ICON_BUTTON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

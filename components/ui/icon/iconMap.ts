@@ -60,7 +60,6 @@ import Ghost from "@/assets/icons/ghost.svg";
 import Gift from "@/assets/icons/gift.svg";
 import Globe from "@/assets/icons/globe.svg";
 import Grab from "@/assets/icons/grab.svg";
-import Hamburger from "@/assets/icons/hamburger.svg";
 import HardwareWallet from "@/assets/icons/hardware_wallet.svg";
 import Heart from "@/assets/icons/heart.svg";
 import HeartFilled from "@/assets/icons/heart_filled.svg";
@@ -84,6 +83,7 @@ import Lock from "@/assets/icons/lock.svg";
 import Logout from "@/assets/icons/logout.svg";
 import Map from "@/assets/icons/map.svg";
 import Marketplace from "@/assets/icons/marketplace.svg";
+import Menu from "@/assets/icons/menu.svg";
 import Mic from "@/assets/icons/mic.svg";
 import Minus from "@/assets/icons/minus.svg";
 import More from "@/assets/icons/more.svg";
@@ -199,7 +199,6 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   gift: Gift,
   globe: Globe,
   grab: Grab,
-  hamburger: Hamburger,
   hardware_wallet: HardwareWallet,
   heart: Heart,
   heart_filled: HeartFilled,
@@ -223,6 +222,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   logout: Logout,
   map: Map,
   marketplace: Marketplace,
+  menu: Menu,
   mic: Mic,
   minus: Minus,
   more: More,

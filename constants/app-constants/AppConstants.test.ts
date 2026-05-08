@@ -21,6 +21,10 @@ describe("AppConstants", () => {
     expect(AppConstants.SENTENCES_PER_PARAGRAPH).toBe(3);
   });
 
+  it("APP_BAR_ICON_BUTTON_SIZE = 40", () => {
+    expect(AppConstants.APP_BAR_ICON_BUTTON_SIZE).toBe(40);
+  });
+
   it("SMART_SPLIT_LONG_PAUSE_MS = 3000", () => {
     expect(AppConstants.SMART_SPLIT_LONG_PAUSE_MS).toBe(3000);
   });

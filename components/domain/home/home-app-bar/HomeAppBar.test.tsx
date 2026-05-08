@@ -39,6 +39,7 @@ jest.mock("../../../ui/top-app-bar/TopAppBar", () => {
       return (
         <View testID={TID.TopAppBar}>
           {props.leading}
+          {props.titleWidget}
           {props.actions}
         </View>
       );
@@ -78,7 +79,7 @@ describe("HomeAppBar", () => {
 
   it("renders settings icon button in normal mode", () => {
     const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
-    expect(getByTestId("icon-hamburger")).toBeTruthy();
+    expect(getByTestId("icon-menu")).toBeTruthy();
   });
 
   it("settings button navigates to /settings", () => {
@@ -86,7 +87,7 @@ describe("HomeAppBar", () => {
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
 
     const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
-    const settingsIcon = getByTestId("icon-hamburger");
+    const settingsIcon = getByTestId("icon-menu");
     fireEvent.press(settingsIcon.parent!);
     expect(mockRouter.push).toHaveBeenCalledWith("/settings");
   });
@@ -141,9 +142,9 @@ describe("HomeAppBar", () => {
     });
 
     // Override IncognitoExplainerModal to expose visible prop
-    jest.requireMock("../incognito-explainer-modal/IncognitoExplainerModal").IncognitoExplainerModal = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../incognito-explainer-modal/IncognitoExplainerModal",
+    ).IncognitoExplainerModal = (props: any) => {
       const { View } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
@@ -163,9 +164,9 @@ describe("HomeAppBar", () => {
       hasSeenIncognitoExplainer: true,
     });
 
-    jest.requireMock("../incognito-explainer-modal/IncognitoExplainerModal").IncognitoExplainerModal = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../incognito-explainer-modal/IncognitoExplainerModal",
+    ).IncognitoExplainerModal = (props: any) => {
       const { View } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
@@ -185,9 +186,9 @@ describe("HomeAppBar", () => {
       hasSeenIncognitoExplainer: false,
     });
 
-    jest.requireMock("../incognito-explainer-modal/IncognitoExplainerModal").IncognitoExplainerModal = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../incognito-explainer-modal/IncognitoExplainerModal",
+    ).IncognitoExplainerModal = (props: any) => {
       const { View } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return props.visible ? <View testID={TID.IncognitoModalVisible} /> : null;
@@ -205,7 +206,7 @@ describe("HomeAppBar", () => {
   it("in selection mode: hides ghost and settings icons", () => {
     const { queryByTestId } = render(<HomeAppBar selectionMode={true} />);
     expect(queryByTestId("icon-ghost")).toBeNull();
-    expect(queryByTestId("icon-hamburger")).toBeNull();
+    expect(queryByTestId("icon-menu")).toBeNull();
   });
 
   it("in normal mode: hides trash and back icons", () => {
@@ -238,9 +239,9 @@ describe("HomeAppBar", () => {
     });
 
     // Override IncognitoExplainerModal to expose onConfirm
-    jest.requireMock("../incognito-explainer-modal/IncognitoExplainerModal").IncognitoExplainerModal = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../incognito-explainer-modal/IncognitoExplainerModal",
+    ).IncognitoExplainerModal = (props: any) => {
       const { View, Pressable } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return props.visible ? (
@@ -279,9 +280,9 @@ describe("HomeAppBar", () => {
       hasSeenIncognitoExplainer: false,
     });
 
-    jest.requireMock("../incognito-explainer-modal/IncognitoExplainerModal").IncognitoExplainerModal = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../incognito-explainer-modal/IncognitoExplainerModal",
+    ).IncognitoExplainerModal = (props: any) => {
       const { View, Pressable } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return props.visible ? (
