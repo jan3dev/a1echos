@@ -84,6 +84,13 @@ export const Tooltip = ({
   const renderPointer = () => {
     if (pointerPosition === "none") return null;
 
+    // Dark theme bubble bg is rgba(255,255,255,0.16) — too translucent for the
+    // BlurView+MaskedView pointer to track the bubble's blur context, so the
+    // pointer drifts lighter. Fall back to a solid color approximating the
+    // bubble's perceived gray (16% white over a blurred dark surface).
+    const useSolidFill = variant !== "normal" || isDark;
+    const solidFill = variant === "normal" ? "#3A3D41" : backgroundColor;
+
     const triangleSvg = (
       <Svg
         width={pointerSize * 2}
@@ -92,12 +99,12 @@ export const Tooltip = ({
       >
         <Path
           d={`M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`}
-          fill={variant === "normal" ? "white" : backgroundColor}
+          fill={useSolidFill ? solidFill : "white"}
         />
       </Svg>
     );
 
-    if (variant !== "normal") {
+    if (useSolidFill) {
       return <View style={styles.pointerContainer}>{triangleSvg}</View>;
     }
 

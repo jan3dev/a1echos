@@ -197,7 +197,7 @@ describe("HomeAppBar", () => {
     const { queryByTestId, getByTestId } = render(
       <HomeAppBar selectionMode={false} />,
     );
-    await fireEvent.press(getByTestId("icon-ghost").parent!);
+    await fireEvent.press(getByTestId("icon-ghost_on").parent!);
     // Disabling incognito mode (newValue=false), so modal should not show
     expect(mockSettingsStore.setIncognitoMode).toHaveBeenCalledWith(false);
     expect(queryByTestId(TestID.IncognitoModalVisible)).toBeNull();

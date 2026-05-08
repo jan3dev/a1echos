@@ -134,10 +134,8 @@ export const HomeAppBar = ({
     return [
       <SurfaceIconButton
         key="ghost"
-        iconName="ghost"
-        iconColor={
-          isIncognitoMode ? theme.colors.accentBrand : theme.colors.textPrimary
-        }
+        iconName={isIncognitoMode ? "ghost_on" : "ghost"}
+        iconColor={theme.colors.textPrimary}
         onPress={handleIncognitoToggle}
       />,
     ];

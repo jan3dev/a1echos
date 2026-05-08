@@ -1,6 +1,6 @@
+import type { GalleryEntry } from "@/app/(design-system)/manifest";
 import { Icon, TopAppBar } from "@/components";
 import { useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 export const Default = () => (
   <TopAppBar title="Page Title" showBackButton={true} />
@@ -19,7 +19,7 @@ const WithActionsContent = () => {
       actions={[
         <Icon
           key="1"
-          name="search"
+          name="close"
           size={24}
           color={theme.colors.textPrimary}
         />,

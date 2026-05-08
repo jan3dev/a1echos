@@ -1,8 +1,8 @@
 import { View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(design-system)/manifest";
 import { Icon, ListItem, Text } from "@/components";
 import { useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 export const Default = () => (
   <ListItem title="List Item Title" onPress={() => console.log("Pressed")} />
@@ -23,7 +23,7 @@ const WithLeadingIconContent = () => {
       title="Security"
       subtitle="Manage your security settings"
       iconLeading={
-        <Icon name="shield" size={24} color={theme.colors.accentBrand} />
+        <Icon name="settings" size={24} color={theme.colors.accentBrand} />
       }
       onPress={() => console.log("Pressed")}
     />
@@ -59,35 +59,24 @@ const WithTrailingTextContent = () => {
   const { theme } = useTheme();
   return (
     <ListItem
-      title="Bitcoin"
-      subtitle="BTC"
-      titleTrailing="$45,230.50"
-      subtitleTrailing="+2.5%"
-      subtitleTrailingColor={theme.colors.accentSuccess}
-      iconLeading={<Icon name="bitcoin_generic" size={32} color="#F7931A" />}
+      title="Ghost"
+      subtitle="Ghost Mode"
       onPress={() => console.log("Pressed")}
+      iconLeading={
+        <Icon name="ghost" size={24} color={theme.colors.textPrimary} />
+      }
+      iconTrailing={
+        <Icon
+          name="chevron_right"
+          size={20}
+          color={theme.colors.textSecondary}
+        />
+      }
     />
   );
 };
 
 export const WithTrailingText = () => <WithTrailingTextContent />;
-
-const SelectedContent = () => {
-  const { theme } = useTheme();
-  return (
-    <ListItem
-      title="Selected Item"
-      subtitle="This item is currently selected"
-      selected={true}
-      iconLeading={
-        <Icon name="check_circle" size={24} color={theme.colors.accentBrand} />
-      }
-      onPress={() => console.log("Pressed")}
-    />
-  );
-};
-
-export const Selected = () => <SelectedContent />;
 
 const WithCustomContentContent = () => {
   const { theme } = useTheme();
@@ -140,7 +129,6 @@ const gallery: GalleryEntry = {
     { name: "WithLeadingIcon", render: WithLeadingIcon },
     { name: "WithTrailingIcon", render: WithTrailingIcon },
     { name: "WithTrailingText", render: WithTrailingText },
-    { name: "Selected", render: Selected },
     { name: "WithCustomContent", render: WithCustomContent },
   ],
 };

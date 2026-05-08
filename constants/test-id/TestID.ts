@@ -117,7 +117,6 @@ export enum TestID {
   CustomIconPressable = "custom-icon-pressable",
   LeadingIcon = "leading-icon",
   TrailingIcon = "trailing-icon",
-  SearchIcon = "search-icon",
   TestIcon = "test-icon",
   UtilIcon = "util-icon",
   SkiaCanvas = "skia-canvas",
