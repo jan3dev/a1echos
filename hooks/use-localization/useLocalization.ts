@@ -32,11 +32,15 @@ export const useLocalization = () => {
       recordingPrefix: t("recordingPrefix"),
       retry: t("retry"),
       emptySessionsMessage: t("emptySessionsMessage"),
-      homeMicrophoneDenied: t("microphoneAccessRequiredMessageAndroid"),
-      homeMicrophonePermissionRequired: t("microphoneAccessDeniedMessage"),
+      microphoneAccessRequiredTitle: t("microphoneAccessRequiredTitle"),
+      microphoneAccessNeededMessage: t(
+        "microphoneAccessRequiredMessageAndroid",
+      ),
+      microphoneAccessDeniedMessage: t("microphoneAccessDeniedMessage"),
+      openSettings: t("openSettings"),
       homeFailedStartRecording: t("homeFailedStartRecording"),
-      homeErrorCreatingSession: (error: string) =>
-        t("homeErrorCreatingSession", { error }),
+      errorCreatingSessionTitle: t("errorCreatingSessionTitle"),
+      copyFailedTitle: t("copyFailedTitle"),
       sessionDeleteTranscriptionsTitle: t("sessionDeleteTranscriptionsTitle"),
       sessionDeleteTranscriptionsMessage: (count: number) =>
         t("sessionDeleteTranscriptionsMessage", { count }),

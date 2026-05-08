@@ -68,6 +68,7 @@ export const formatBytes = (bytes: number): string => {
 };
 
 export { delay } from "./delay/delay";
+export { getErrorMessage } from "./get-error-message/getErrorMessage";
 export {
   FeatureFlag,
   LOG,

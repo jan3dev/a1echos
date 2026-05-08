@@ -35,10 +35,14 @@ export const AquaPrimitiveColors = {
   glassSurfaceLight: "rgba(255, 255, 255, 0.5)",
   glassInverseLight: "rgba(0, 0, 0, 0.85)",
   glassBackgroundLight: "rgba(244, 245, 246, 0.3)",
+  glassSurfaceSecondaryLight: "rgba(0, 0, 0, 0.16)",
+  glassSurfaceBorderLight: "rgba(0, 0, 0, 0.04)",
 
   glassSurfaceDark: "rgba(39, 41, 44, 0.5)",
   glassInverseDark: "rgba(255, 255, 255, 0.85)",
   glassBackgroundDark: "rgba(19, 21, 22, 0.4)",
+  glassSurfaceSecondaryDark: "rgba(255, 255, 255, 0.16)",
+  glassSurfaceBorderDark: "rgba(255, 255, 255, 0.04)",
 
   rippleLight: "rgba(9, 10, 11, 0.10)",
   rippleDark: "rgba(244, 245, 246, 0.10)",

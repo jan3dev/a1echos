@@ -4,9 +4,9 @@ describe("themeColors", () => {
   const lightKeys = Object.keys(lightColors);
   const darkKeys = Object.keys(darkColors);
 
-  it("lightColors and darkColors each have 31 properties", () => {
-    expect(lightKeys).toHaveLength(31);
-    expect(darkKeys).toHaveLength(31);
+  it("lightColors and darkColors each have 33 properties", () => {
+    expect(lightKeys).toHaveLength(33);
+    expect(darkKeys).toHaveLength(33);
   });
 
   it("all values are strings", () => {
@@ -33,7 +33,13 @@ describe("themeColors", () => {
         "surfaceBackground",
         "surfaceSelected",
       ],
-      glass: ["glassSurface", "glassInverse", "glassBackground"],
+      glass: [
+        "glassSurface",
+        "glassSurfaceSecondary",
+        "glassSurfaceBorder",
+        "glassInverse",
+        "glassBackground",
+      ],
       accent: [
         "accentBrand",
         "accentBrandTransparent",

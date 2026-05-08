@@ -32,10 +32,13 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../test-utils/mock-localization/mockLocalization");
+const {
+  mockMakeLoc,
+} = require("../../test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useMicPermission: jest.fn(() => jest.fn(async () => true)),
   usePermissions: jest.fn(() => ({
     hasPermission: true,
     requestPermission: jest.fn(),
@@ -208,8 +211,8 @@ describe("HomeScreen", () => {
     expect(mockShowDeleteToast).not.toHaveBeenCalled();
   });
 
-  it("renders Toast component", () => {
-    const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId(TestID.DeleteToast)).toBeTruthy();
+  it("renders Toast components for delete confirmation and alerts", () => {
+    const { getAllByTestId } = render(<HomeScreen />);
+    expect(getAllByTestId(TestID.DeleteToast)).toHaveLength(2);
   });
 });

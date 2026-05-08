@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import React from "react";
 
 import { Toast } from "./Toast";
@@ -30,10 +30,8 @@ describe("Toast", () => {
     expect(getByText("Something went wrong. Please try again.")).toBeTruthy();
   });
 
-  it("renders correct icon for danger variant", () => {
-    const { getByTestId } = render(
-      <Toast {...defaultProps} variant="danger" />,
-    );
+  it("renders correct icon for error variant", () => {
+    const { getByTestId } = render(<Toast {...defaultProps} variant="error" />);
     expect(getByTestId("icon-danger")).toBeTruthy();
   });
 
@@ -42,6 +40,11 @@ describe("Toast", () => {
       <Toast {...defaultProps} variant="warning" />,
     );
     expect(getByTestId("icon-warning")).toBeTruthy();
+  });
+
+  it("renders info_circle icon for info variant", () => {
+    const { getByTestId } = render(<Toast {...defaultProps} variant="info" />);
+    expect(getByTestId("icon-info_circle")).toBeTruthy();
   });
 
   it("renders primary button when provided", () => {
@@ -79,5 +82,30 @@ describe("Toast", () => {
     );
     expect(getByText("Retry")).toBeTruthy();
     expect(getByText("Dismiss")).toBeTruthy();
+  });
+
+  it("auto-dismisses after durationMs elapses", () => {
+    jest.useFakeTimers();
+    const onDismiss = jest.fn();
+    render(<Toast {...defaultProps} onDismiss={onDismiss} durationMs={3000} />);
+
+    expect(onDismiss).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
+
+  it("does not auto-dismiss without durationMs", () => {
+    jest.useFakeTimers();
+    const onDismiss = jest.fn();
+    render(<Toast {...defaultProps} onDismiss={onDismiss} />);
+
+    act(() => {
+      jest.advanceTimersByTime(10000);
+    });
+    expect(onDismiss).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 });

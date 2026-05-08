@@ -31,7 +31,11 @@ import {
   useToast,
 } from "@/components";
 import { Routes, TestID } from "@/constants";
-import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
+import {
+  useLocalization,
+  useMicPermission,
+  useSessionOperations,
+} from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
 import { shareService } from "@/services";
 import {
@@ -44,8 +48,8 @@ import {
   useLivePreview,
   useRenameSession,
   useSelectAllTranscriptions,
-  useSelectedTranscriptionMode,
   useSelectedTranscriptionIdsSet,
+  useSelectedTranscriptionMode,
   useSessionStore,
   useSessionTranscriptions,
   useSetRecordingCallbacks,
@@ -58,7 +62,7 @@ import {
   useSwitchSession,
   useToggleTranscriptionSelection,
 } from "@/stores";
-import { FeatureFlag, logError } from "@/utils";
+import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -204,7 +208,13 @@ export default function SessionScreen() {
     toastState: deleteToastState,
   } = useToast();
 
-  const { hasPermission, requestPermission, openSettings } = usePermissions();
+  const {
+    show: showAlertToast,
+    hide: hideAlertToast,
+    toastState: alertToastState,
+  } = useToast();
+
+  const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
 
   // Initialize session
   useEffect(() => {
@@ -402,26 +412,30 @@ export default function SessionScreen() {
           showGlobalTooltip(loc.allTranscriptionsCopied);
         }
       } else {
-        showGlobalTooltip(
-          loc.copyFailed("Unknown error"),
-          "normal",
-          undefined,
-          true,
-        );
+        showAlertToast({
+          title: loc.copyFailedTitle,
+          message: "Unknown error",
+          variant: "error",
+        });
       }
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
         message: "Failed to copy all transcriptions",
       });
-      showGlobalTooltip(
-        loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        "normal",
-        undefined,
-        true,
-      );
+      showAlertToast({
+        title: loc.copyFailedTitle,
+        message: getErrorMessage(error),
+        variant: "error",
+      });
     }
-  }, [transcriptions.length, copyAllTranscriptions, showGlobalTooltip, loc]);
+  }, [
+    transcriptions.length,
+    copyAllTranscriptions,
+    showGlobalTooltip,
+    showAlertToast,
+    loc,
+  ]);
 
   const handleLanguageFlagPressed = useCallback(() => {
     router.push(Routes.settingsLanguage);
@@ -448,7 +462,7 @@ export default function SessionScreen() {
       },
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: "informative",
+      variant: "info",
     });
   }, [
     hasSelectedItems,
@@ -515,30 +529,7 @@ export default function SessionScreen() {
 
   useEffect(() => {
     handleRecordingStartRef.current = async () => {
-      if (!hasPermission) {
-        const result = await requestPermission();
-        if (!result.granted) {
-          if (!result.canAskAgain) {
-            showGlobalTooltip(
-              loc.homeMicrophonePermissionRequired,
-              "normal",
-              undefined,
-              true,
-              true,
-              { iconName: "settings", onPress: openSettings },
-            );
-          } else {
-            showGlobalTooltip(
-              loc.homeMicrophoneDenied,
-              "normal",
-              undefined,
-              true,
-              true,
-            );
-          }
-          return;
-        }
-      }
+      if (!(await ensureMicPermission())) return;
 
       const success = await startRecording();
       if (!success) {
@@ -550,14 +541,7 @@ export default function SessionScreen() {
         );
       }
     };
-  }, [
-    hasPermission,
-    loc,
-    openSettings,
-    requestPermission,
-    showGlobalTooltip,
-    startRecording,
-  ]);
+  }, [loc, ensureMicPermission, showGlobalTooltip, startRecording]);
 
   useEffect(() => {
     handleRecordingStopRef.current = async () => {
@@ -647,6 +631,7 @@ export default function SessionScreen() {
       />
 
       <Toast {...deleteToastState} />
+      <Toast {...alertToastState} />
     </Screen>
   );
 }

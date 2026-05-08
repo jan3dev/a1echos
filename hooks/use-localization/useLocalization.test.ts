@@ -34,9 +34,13 @@ describe("useLocalization", () => {
       "recordingPrefix",
       "retry",
       "emptySessionsMessage",
-      "homeMicrophoneDenied",
-      "homeMicrophonePermissionRequired",
+      "microphoneAccessRequiredTitle",
+      "microphoneAccessNeededMessage",
+      "microphoneAccessDeniedMessage",
+      "openSettings",
       "homeFailedStartRecording",
+      "errorCreatingSessionTitle",
+      "copyFailedTitle",
       "sessionDeleteTranscriptionsTitle",
       "allTranscriptionsCopied",
       "noTranscriptionsToCopy",
@@ -100,14 +104,18 @@ describe("useLocalization", () => {
     });
   });
 
-  it("homeErrorCreatingSession passes error string", () => {
+  it("exposes new toast title strings", () => {
     const { result } = renderHook(() => useLocalization());
     const { loc, t } = result.current;
 
-    loc.homeErrorCreatingSession("timeout");
-    expect(t).toHaveBeenCalledWith("homeErrorCreatingSession", {
-      error: "timeout",
-    });
+    expect(loc.errorCreatingSessionTitle).toBeDefined();
+    expect(t).toHaveBeenCalledWith("errorCreatingSessionTitle");
+    expect(loc.copyFailedTitle).toBeDefined();
+    expect(t).toHaveBeenCalledWith("copyFailedTitle");
+    expect(loc.microphoneAccessRequiredTitle).toBeDefined();
+    expect(t).toHaveBeenCalledWith("microphoneAccessRequiredTitle");
+    expect(loc.openSettings).toBeDefined();
+    expect(t).toHaveBeenCalledWith("openSettings");
   });
 
   it("copyFailed and shareFailed pass error string", () => {

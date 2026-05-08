@@ -14,7 +14,11 @@ import {
   useToast,
 } from "@/components";
 import { Routes } from "@/constants";
-import { useLocalization, usePermissions, useSessionOperations } from "@/hooks";
+import {
+  useLocalization,
+  useMicPermission,
+  useSessionOperations,
+} from "@/hooks";
 import { Session } from "@/models";
 import {
   useCreateSession,
@@ -32,7 +36,7 @@ import {
   useStopRecordingAndSave,
   useToggleSessionSelection,
 } from "@/stores";
-import { FeatureFlag, logError } from "@/utils";
+import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -55,13 +59,19 @@ export default function HomeScreen() {
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
-  const { hasPermission, requestPermission, openSettings } = usePermissions();
-
   const {
     show: showDeleteToast,
     hide: hideDeleteToast,
     toastState: deleteToastState,
   } = useToast();
+
+  const {
+    show: showAlertToast,
+    hide: hideAlertToast,
+    toastState: alertToastState,
+  } = useToast();
+
+  const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
 
   const [tooltipShouldDisappear, setTooltipShouldDisappear] = useState(false);
 
@@ -125,30 +135,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     handleRecordingStartRef.current = async () => {
-      if (!hasPermission) {
-        const result = await requestPermission();
-        if (!result.granted) {
-          if (!result.canAskAgain) {
-            showGlobalTooltip(
-              loc.homeMicrophonePermissionRequired,
-              "normal",
-              undefined,
-              true,
-              true,
-              { iconName: "settings", onPress: openSettings },
-            );
-          } else {
-            showGlobalTooltip(
-              loc.homeMicrophoneDenied,
-              "normal",
-              undefined,
-              true,
-              true,
-            );
-          }
-          return;
-        }
-      }
+      if (!(await ensureMicPermission())) return;
 
       if (effectivelyEmpty) {
         setTooltipShouldDisappear(true);
@@ -186,27 +173,23 @@ export default function HomeScreen() {
           flag: FeatureFlag.recording,
           message: "Failed to start recording",
         });
-        showGlobalTooltip(
-          loc.homeErrorCreatingSession(
-            error instanceof Error ? error.message : String(error),
-          ),
-          "normal",
-          undefined,
-          true,
-        );
+        showAlertToast({
+          title: loc.errorCreatingSessionTitle,
+          message: getErrorMessage(error),
+          variant: "error",
+        });
       } finally {
         setTooltipShouldDisappear(false);
       }
     };
   }, [
-    hasPermission,
     effectivelyEmpty,
     isIncognitoMode,
     loc,
     router,
-    requestPermission,
+    ensureMicPermission,
     showGlobalTooltip,
-    openSettings,
+    showAlertToast,
     createSession,
     startTranscriptionRecording,
     scrollToTop,
@@ -263,7 +246,7 @@ export default function HomeScreen() {
       onPrimaryButtonTap: performDelete,
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: "informative",
+      variant: "info",
     });
   }, [
     selectedSessionIds.length,
@@ -303,6 +286,7 @@ export default function HomeScreen() {
       )}
 
       <Toast {...deleteToastState} />
+      <Toast {...alertToastState} />
     </Screen>
   );
 }

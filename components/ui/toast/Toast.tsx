@@ -15,7 +15,7 @@ import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
 
-export type ToastVariant = "informative" | "warning" | "danger";
+export type ToastVariant = "info" | "warning" | "error";
 
 export interface ToastProps {
   visible: boolean;
@@ -28,8 +28,12 @@ export interface ToastProps {
   variant?: ToastVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;
+  durationMs?: number;
   onDismiss: () => void;
 }
+
+const BORDER_RADIUS = 8;
+const COUNTDOWN_BAR_HEIGHT = 4;
 
 export const Toast = ({
   visible,
@@ -39,15 +43,19 @@ export const Toast = ({
   onPrimaryButtonTap,
   secondaryButtonText,
   onSecondaryButtonTap,
-  variant = "informative",
+  variant = "info",
   titleMaxLines = 1,
   messageMaxLines = 2,
+  durationMs,
   onDismiss,
 }: ToastProps) => {
   const { width } = useWindowDimensions();
   const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const countdownAnim = useRef(new Animated.Value(1)).current;
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   useEffect(() => {
     if (visible) {
@@ -70,27 +78,47 @@ export const Toast = ({
     }
   }, [visible, slideAnim]);
 
-  const getIconName = () => {
-    switch (variant) {
-      case "danger":
-        return "danger" as const;
-      case "warning":
-        return "warning" as const;
-      default:
-        return "warning" as const;
+  useEffect(() => {
+    if (!visible || !durationMs || durationMs <= 0) {
+      countdownAnim.stopAnimation();
+      return;
     }
-  };
 
-  const getIconColor = () => {
+    countdownAnim.setValue(1);
+    const animation = Animated.timing(countdownAnim, {
+      toValue: 0,
+      duration: durationMs,
+      useNativeDriver: false,
+    });
+    animation.start(({ finished }) => {
+      if (finished) {
+        onDismissRef.current();
+      }
+    });
+
+    return () => {
+      animation.stop();
+    };
+    // countdownAnim is from useRef and is referentially stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, durationMs]);
+
+  const variantConfig = (() => {
     switch (variant) {
-      case "danger":
-        return colors.accentDanger;
+      case "error":
+        return { iconName: "danger" as const, iconColor: colors.accentDanger };
       case "warning":
-        return colors.accentWarning;
+        return {
+          iconName: "warning" as const,
+          iconColor: colors.accentWarning,
+        };
       default:
-        return colors.textPrimary;
+        return {
+          iconName: "info_circle" as const,
+          iconColor: colors.textPrimary,
+        };
     }
-  };
+  })();
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -103,6 +131,7 @@ export const Toast = ({
   });
 
   const hasButtons = primaryButtonText !== undefined;
+  const showCountdown = durationMs !== undefined && durationMs > 0;
   const maxWidth = width >= 768 ? 343 : undefined;
 
   return (
@@ -124,30 +153,62 @@ export const Toast = ({
               opacity,
               maxWidth,
               backgroundColor: colors.surfacePrimary,
-              borderRadius: 8,
+              borderRadius: BORDER_RADIUS,
             },
           ]}
         >
           <Pressable>
             <BlurView
               intensity={32}
-              style={[styles.card, { backgroundColor: colors.glassSurface }]}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.glassSurface,
+                  borderColor: colors.glassSurfaceBorder,
+                },
+              ]}
             >
-              {/* Main content */}
+              {showCountdown && (
+                <View
+                  style={[
+                    styles.countdownTrack,
+                    { backgroundColor: colors.surfaceBorderSecondary },
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.countdownFill,
+                      {
+                        backgroundColor: colors.surfaceInverse,
+                        width: countdownAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ["0%", "100%"],
+                        }),
+                      },
+                    ]}
+                  />
+                </View>
+              )}
               <View
                 style={[
                   styles.contentContainer,
                   {
-                    backgroundColor: colors.surfacePrimary,
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                    borderBottomLeftRadius: hasButtons ? 0 : 8,
-                    borderBottomRightRadius: hasButtons ? 0 : 8,
+                    backgroundColor: hasButtons
+                      ? colors.surfacePrimary
+                      : colors.glassSurfaceSecondary,
+                    borderTopLeftRadius: showCountdown ? 0 : BORDER_RADIUS,
+                    borderTopRightRadius: showCountdown ? 0 : BORDER_RADIUS,
+                    borderBottomLeftRadius: hasButtons ? 0 : BORDER_RADIUS,
+                    borderBottomRightRadius: hasButtons ? 0 : BORDER_RADIUS,
                   },
                 ]}
               >
                 <View style={styles.row}>
-                  <Icon name={getIconName()} size={18} color={getIconColor()} />
+                  <Icon
+                    name={variantConfig.iconName}
+                    size={18}
+                    color={variantConfig.iconColor}
+                  />
                   <View style={styles.textColumn}>
                     <Text
                       variant="body1"
@@ -182,7 +243,6 @@ export const Toast = ({
                 </View>
               </View>
 
-              {/* Buttons section */}
               {hasButtons && (
                 <View
                   style={[
@@ -268,7 +328,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   card: {
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS,
+    borderWidth: 1,
     overflow: "hidden",
   },
   contentContainer: {
@@ -286,8 +347,8 @@ const styles = StyleSheet.create({
     height: 4,
   },
   buttonsContainer: {
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    borderBottomLeftRadius: BORDER_RADIUS,
+    borderBottomRightRadius: BORDER_RADIUS,
     overflow: "hidden",
     paddingTop: 1,
   },
@@ -302,14 +363,24 @@ const styles = StyleSheet.create({
   },
   leftButton: {
     flex: 1,
-    borderBottomLeftRadius: 8,
+    borderBottomLeftRadius: BORDER_RADIUS,
   },
   rightButton: {
     flex: 1,
-    borderBottomRightRadius: 8,
+    borderBottomRightRadius: BORDER_RADIUS,
   },
   singleButton: {
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
+    borderBottomLeftRadius: BORDER_RADIUS,
+    borderBottomRightRadius: BORDER_RADIUS,
+  },
+  countdownTrack: {
+    height: COUNTDOWN_BAR_HEIGHT,
+    width: "100%",
+    overflow: "hidden",
+  },
+  countdownFill: {
+    height: COUNTDOWN_BAR_HEIGHT,
+    borderTopRightRadius: BORDER_RADIUS,
+    borderBottomRightRadius: BORDER_RADIUS,
   },
 });

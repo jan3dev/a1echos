@@ -7,10 +7,12 @@ const ToastDemo = ({
   variant,
   withPrimaryButton,
   withSecondaryButton,
+  durationMs,
 }: {
   variant: ToastVariant;
   withPrimaryButton?: boolean;
   withSecondaryButton?: boolean;
+  durationMs?: number;
 }) => {
   const { show, toastState } = useToast();
 
@@ -19,6 +21,7 @@ const ToastDemo = ({
       title: "Toast Title",
       message: "This is a toast message with some descriptive text.",
       variant,
+      durationMs,
       primaryButtonText: withPrimaryButton ? "Primary" : undefined,
       onPrimaryButtonTap: withPrimaryButton
         ? () => console.log("Primary tapped")
@@ -38,18 +41,28 @@ const ToastDemo = ({
   );
 };
 
-export const Informative = () => <ToastDemo variant="informative" />;
+export const Info = () => <ToastDemo variant="info" />;
 
 export const Warning = () => <ToastDemo variant="warning" />;
 
-export const Danger = () => <ToastDemo variant="danger" />;
+export const Error = () => <ToastDemo variant="error" />;
+
+export const NoActions = () => <ToastDemo variant="warning" />;
 
 export const WithPrimaryButton = () => (
-  <ToastDemo variant="informative" withPrimaryButton />
+  <ToastDemo variant="info" withPrimaryButton />
 );
 
 export const WithBothButtons = () => (
   <ToastDemo variant="warning" withPrimaryButton withSecondaryButton />
+);
+
+export const WithCountdown = () => (
+  <ToastDemo variant="info" withPrimaryButton durationMs={4000} />
+);
+
+export const WithCountdownNoActions = () => (
+  <ToastDemo variant="warning" durationMs={3000} />
 );
 
 export const LongText = () => {
@@ -60,7 +73,7 @@ export const LongText = () => {
       title: "This is a very long title that might wrap to multiple lines",
       message:
         "This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to test the layout.",
-      variant: "danger",
+      variant: "error",
       titleMaxLines: 3,
       messageMaxLines: 5,
       primaryButtonText: "Got it",
@@ -90,11 +103,14 @@ const gallery: GalleryEntry = {
   title: "Toast",
   group: "UI",
   demos: [
-    { name: "Informative", render: Informative },
+    { name: "Info", render: Info },
     { name: "Warning", render: Warning },
-    { name: "Danger", render: Danger },
+    { name: "Error", render: Error },
+    { name: "NoActions", render: NoActions },
     { name: "WithPrimaryButton", render: WithPrimaryButton },
     { name: "WithBothButtons", render: WithBothButtons },
+    { name: "WithCountdown", render: WithCountdown },
+    { name: "WithCountdownNoActions", render: WithCountdownNoActions },
     { name: "LongText", render: LongText },
   ],
 };

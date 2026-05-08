@@ -17,6 +17,8 @@ export interface AquaColors {
   surfaceBorderSelected: string;
 
   glassSurface: string;
+  glassSurfaceSecondary: string;
+  glassSurfaceBorder: string;
   glassInverse: string;
   glassBackground: string;
 
@@ -57,6 +59,8 @@ export const lightColors: AquaColors = {
   surfaceBorderSelected: AquaPrimitiveColors.neonBlue400,
 
   glassSurface: AquaPrimitiveColors.glassSurfaceLight,
+  glassSurfaceSecondary: AquaPrimitiveColors.glassSurfaceSecondaryLight,
+  glassSurfaceBorder: AquaPrimitiveColors.glassSurfaceBorderLight,
   glassInverse: AquaPrimitiveColors.glassInverseLight,
   glassBackground: AquaPrimitiveColors.glassBackgroundLight,
 
@@ -97,6 +101,8 @@ export const darkColors: AquaColors = {
   surfaceBorderSelected: AquaPrimitiveColors.neonBlue800,
 
   glassSurface: AquaPrimitiveColors.glassSurfaceDark,
+  glassSurfaceSecondary: AquaPrimitiveColors.glassSurfaceSecondaryDark,
+  glassSurfaceBorder: AquaPrimitiveColors.glassSurfaceBorderDark,
   glassInverse: AquaPrimitiveColors.glassInverseDark,
   glassBackground: AquaPrimitiveColors.glassBackgroundDark,
 

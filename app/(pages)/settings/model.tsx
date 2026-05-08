@@ -165,7 +165,7 @@ export default function ModelSettingsScreen() {
         },
         secondaryButtonText: loc.cancel,
         onSecondaryButtonTap: hideDeleteToast,
-        variant: "informative",
+        variant: "info",
       });
     },
     [

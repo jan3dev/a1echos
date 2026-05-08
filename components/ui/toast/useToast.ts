@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { ToastVariant } from "./Toast";
 
@@ -12,6 +12,7 @@ export interface ToastOptions {
   variant?: ToastVariant;
   titleMaxLines?: number;
   messageMaxLines?: number;
+  durationMs?: number;
 }
 
 interface ToastState extends ToastOptions {
@@ -25,13 +26,6 @@ export const useToast = () => {
     message: "",
   });
 
-  const primaryCallbackRef = useRef<(() => void) | undefined>(undefined);
-  const secondaryCallbackRef = useRef<(() => void) | undefined>(undefined);
-
-  // Update refs when state changes
-  primaryCallbackRef.current = toastState.onPrimaryButtonTap;
-  secondaryCallbackRef.current = toastState.onSecondaryButtonTap;
-
   const show = useCallback((options: ToastOptions) => {
     setToastState({
       ...options,
@@ -43,15 +37,17 @@ export const useToast = () => {
     setToastState((prev) => ({ ...prev, visible: false }));
   }, []);
 
+  const { onPrimaryButtonTap, onSecondaryButtonTap } = toastState;
+
   const handlePrimaryButtonTap = useCallback(() => {
-    primaryCallbackRef.current?.();
+    onPrimaryButtonTap?.();
     hide();
-  }, [hide]);
+  }, [onPrimaryButtonTap, hide]);
 
   const handleSecondaryButtonTap = useCallback(() => {
-    secondaryCallbackRef.current?.();
+    onSecondaryButtonTap?.();
     hide();
-  }, [hide]);
+  }, [onSecondaryButtonTap, hide]);
 
   return {
     show,

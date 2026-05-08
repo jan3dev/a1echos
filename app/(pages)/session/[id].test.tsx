@@ -58,10 +58,13 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../../test-utils/mock-localization/mockLocalization");
+const {
+  mockMakeLoc,
+} = require("../../../test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useMicPermission: jest.fn(() => jest.fn(async () => true)),
   usePermissions: jest.fn(() => ({
     hasPermission: true,
     requestPermission: jest.fn(),
@@ -614,12 +617,7 @@ describe("SessionScreen", () => {
       }
     });
 
-    it("failure: shows error tooltip", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
+    it("failure: shows error toast", async () => {
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
         { id: "t1", text: "Hello" },
       ]);
@@ -635,12 +633,11 @@ describe("SessionScreen", () => {
       });
 
       await waitFor(() => {
-        expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-          expect.anything(),
-          "normal",
-          undefined,
-          true,
+        const errorCall = mockShowDeleteToast.mock.calls.find(
+          (call) => call[0]?.variant === "error",
         );
+        expect(errorCall).toBeDefined();
+        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
       });
     });
   });
@@ -712,7 +709,7 @@ describe("SessionScreen", () => {
         expect.objectContaining({
           primaryButtonText: expect.anything(),
           secondaryButtonText: expect.anything(),
-          variant: "informative",
+          variant: "info",
         }),
       );
     });
@@ -1071,11 +1068,6 @@ describe("SessionScreen", () => {
     });
 
     it("copyAllTranscriptions returns false when clipboard fails (inside handleCopyAllPressed)", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
         { id: "t1", text: "Hello" },
       ]);
@@ -1095,12 +1087,11 @@ describe("SessionScreen", () => {
 
       // The error from copyAllTranscriptions is caught in handleCopyAllPressed's catch block
       await waitFor(() => {
-        expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-          expect.anything(),
-          "normal",
-          undefined,
-          true,
+        const errorCall = mockShowDeleteToast.mock.calls.find(
+          (call) => call[0]?.variant === "error",
         );
+        expect(errorCall).toBeDefined();
+        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
       });
     });
   });
@@ -1579,12 +1570,7 @@ describe("SessionScreen", () => {
   });
 
   describe("handleCopyAllPressed - copyAllTranscriptions returns false", () => {
-    it("shows copyFailed tooltip when copyAllTranscriptions returns false", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
+    it("shows copyFailed toast when copyAllTranscriptions returns false", async () => {
       (useSessionTranscriptions as jest.Mock).mockReturnValue([
         { id: "t1", text: "Hello" },
       ]);
@@ -1597,15 +1583,19 @@ describe("SessionScreen", () => {
       await act(async () => {});
 
       // Clear spy since it could be called during render
-      mockShowGlobalTooltip.mockClear();
+      mockShowDeleteToast.mockClear();
 
       await act(async () => {
         mockOnCopyAllPressed!();
       });
 
       await waitFor(() => {
-        // handleCopyAllPressed catch block shows copyFailed tooltip
-        expect(mockShowGlobalTooltip).toHaveBeenCalled();
+        // handleCopyAllPressed catch block shows copyFailed toast
+        const errorCall = mockShowDeleteToast.mock.calls.find(
+          (call) => call[0]?.variant === "error",
+        );
+        expect(errorCall).toBeDefined();
+        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
       });
     });
   });

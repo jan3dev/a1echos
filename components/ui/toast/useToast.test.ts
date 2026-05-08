@@ -25,8 +25,9 @@ describe("useToast", () => {
         makeOptions({
           title: "Saved",
           message: "Your session has been saved.",
-          variant: "informative",
+          variant: "info",
           primaryButtonText: "Undo",
+          durationMs: 4000,
         }),
       );
     });
@@ -36,8 +37,9 @@ describe("useToast", () => {
     expect(result.current.toastState.message).toBe(
       "Your session has been saved.",
     );
-    expect(result.current.toastState.variant).toBe("informative");
+    expect(result.current.toastState.variant).toBe("info");
     expect(result.current.toastState.primaryButtonText).toBe("Undo");
+    expect(result.current.toastState.durationMs).toBe(4000);
   });
 
   it("hide() sets visible=false", () => {

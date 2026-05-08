@@ -76,7 +76,7 @@ export const SessionMoreMenu = ({ session }: SessionMoreMenuProps) => {
       onPrimaryButtonTap: performDelete,
       secondaryButtonText: loc.cancel,
       onSecondaryButtonTap: hideDeleteToast,
-      variant: "informative",
+      variant: "info",
     });
   };
 
