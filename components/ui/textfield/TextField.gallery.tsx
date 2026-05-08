@@ -1,7 +1,7 @@
 import { ComponentProps, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { Icon, TextField } from "@/components";
+import { TextField } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
 import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
@@ -12,181 +12,110 @@ const TextFieldWithState = (
   return <TextField {...props} value={value} onChangeText={setValue} />;
 };
 
-export const Basic = () => <TextFieldWithState label="Email" />;
-
-export const WithValue = () => (
-  <TextFieldWithState label="Email" value="user@example.com" />
-);
-
-export const WithAssistiveText = () => (
+export const Default = () => (
   <TextFieldWithState
-    label="Password"
-    assistiveText="Must be at least 8 characters"
-    secureTextEntry
+    label="Label"
+    value="Input Text"
+    showClearIcon
+    showPasteIcon
+    assistiveText="Assistive text"
   />
 );
 
-export const WithError = () => (
+export const Brand = () => (
   <TextFieldWithState
-    label="Email"
-    value="invalid-email"
-    error={true}
-    assistiveText="Please enter a valid email address"
+    label="Label"
+    value="Input Text"
+    variant="brand"
+    showClearIcon
+    showPasteIcon
+    assistiveText="Assistive text"
   />
 );
 
-export const WithCounter = () => (
+export const ErrorState = () => (
   <TextFieldWithState
-    label="Bio"
-    maxLength={100}
-    showCounter={true}
-    assistiveText="Tell us about yourself"
+    label="Label"
+    value="Input Text"
+    error
+    showClearIcon
+    showPasteIcon
+    assistiveText="Assistive text"
   />
-);
-
-export const WithClearIcon = () => (
-  <TextFieldWithState
-    label="Search"
-    value="Search query"
-    showClearIcon={true}
-  />
-);
-
-const WithTrailingIconContent = () => {
-  const { theme } = useTheme();
-  return (
-    <TextFieldWithState
-      label="Settings"
-      trailingIcon={
-        <Icon name="settings" size={20} color={theme.colors.textSecondary} />
-      }
-      onTrailingPress={() => console.log("Settings clicked")}
-    />
-  );
-};
-
-export const WithTrailingIcon = () => <WithTrailingIconContent />;
-
-const WithBothIconsContent = () => {
-  const { theme } = useTheme();
-  return (
-    <TextFieldWithState
-      label="Password"
-      value="password123"
-      showClearIcon={true}
-      trailingIcon={
-        <Icon name="settings" size={20} color={theme.colors.textSecondary} />
-      }
-      secureTextEntry
-    />
-  );
-};
-
-export const WithBothIcons = () => <WithBothIconsContent />;
-
-export const Multiline = () => (
-  <TextFieldWithState
-    label="Description"
-    multiline={true}
-    maxLength={200}
-    showCounter={true}
-  />
-);
-
-export const WithTransparentBorder = () => (
-  <TextFieldWithState label="Description" transparentBorder={true} />
 );
 
 export const Disabled = () => (
   <TextFieldWithState
-    label="Disabled Field"
-    value="Cannot edit this"
+    label="Label"
+    value="Input Text"
     enabled={false}
+    showClearIcon
+    showPasteIcon
+    assistiveText="Assistive text"
   />
 );
 
 const AllVariantsContent = () => {
   const { theme } = useTheme();
+  const sectionStyle = [styles.heading, { color: theme.colors.textPrimary }];
+
   return (
     <View style={styles.column}>
       <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          Basic
-        </Text>
-        <TextFieldWithState label="Email" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          With Value
-        </Text>
-        <TextFieldWithState label="Name" value="John Doe" />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          With Assistive Text
-        </Text>
+        <Text style={sectionStyle}>Default</Text>
+        <TextFieldWithState label="Label" />
+        <TextFieldWithState label="Label" value="Input Text" showClearIcon />
+        <TextFieldWithState label="Label" showPasteIcon />
         <TextFieldWithState
-          label="Password"
-          assistiveText="Must be at least 8 characters"
-          secureTextEntry
+          label="Label"
+          value="Input Text"
+          showClearIcon
+          showPasteIcon
+          assistiveText="Assistive text"
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          Error State
-        </Text>
+        <Text style={sectionStyle}>Brand</Text>
+        <TextFieldWithState label="Label" variant="brand" />
         <TextFieldWithState
-          label="Email"
-          value="invalid"
-          error={true}
-          assistiveText="Please enter a valid email"
+          label="Label"
+          value="Input Text"
+          variant="brand"
+          showClearIcon
+          showPasteIcon
+        />
+        <TextFieldWithState
+          label="Label"
+          variant="brand"
+          showPasteIcon
+          assistiveText="Assistive text"
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          With Counter
-        </Text>
-        <TextFieldWithState label="Bio" maxLength={100} showCounter={true} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          With Clear Icon
-        </Text>
-        <TextFieldWithState label="Search" value="Query" showClearIcon={true} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          With Transparent Border
-        </Text>
-        <TextFieldWithState label="Description" transparentBorder={true} />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          Multiline
-        </Text>
+        <Text style={sectionStyle}>Error</Text>
+        <TextFieldWithState label="Label" error />
         <TextFieldWithState
-          label="Notes"
-          multiline={true}
-          maxLength={200}
-          showCounter={true}
+          label="Label"
+          value="Input Text"
+          error
+          showClearIcon
+          showPasteIcon
+          assistiveText="Assistive text"
         />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>
-          Disabled
-        </Text>
+        <Text style={sectionStyle}>Disabled</Text>
+        <TextFieldWithState label="Label" enabled={false} />
         <TextFieldWithState
-          label="Disabled"
-          value="Cannot edit"
+          label="Label"
+          value="Input Text"
           enabled={false}
+          showClearIcon
+          showPasteIcon
+          assistiveText="Assistive text"
         />
       </View>
     </View>
@@ -212,16 +141,9 @@ const gallery: GalleryEntry = {
   title: "TextField",
   group: "UI",
   demos: [
-    { name: "Basic", render: Basic },
-    { name: "WithValue", render: WithValue },
-    { name: "WithAssistiveText", render: WithAssistiveText },
-    { name: "WithError", render: WithError },
-    { name: "WithCounter", render: WithCounter },
-    { name: "WithClearIcon", render: WithClearIcon },
-    { name: "WithTrailingIcon", render: WithTrailingIcon },
-    { name: "WithBothIcons", render: WithBothIcons },
-    { name: "Multiline", render: Multiline },
-    { name: "WithTransparentBorder", render: WithTransparentBorder },
+    { name: "Default", render: Default },
+    { name: "Brand", render: Brand },
+    { name: "Error", render: ErrorState },
     { name: "Disabled", render: Disabled },
     { name: "AllVariants", render: AllVariants },
   ],

@@ -155,11 +155,11 @@ export const SessionInputModal = ({
                     label={loc.sessionNameLabel}
                     value={text}
                     onChangeText={setText}
+                    variant="brand"
                     maxLength={AppConstants.SESSION_NAME_MAX_LENGTH || 50}
                     assistiveText={loc.sessionNameMaxLengthHelper}
                     showClearIcon
                     onClear={() => setText("")}
-                    transparentBorder={true}
                     forceFocus={visible}
                     debounceTime={0}
                   />

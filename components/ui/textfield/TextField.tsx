@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import * as Clipboard from "expo-clipboard";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -6,35 +7,32 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TextInputContentSizeChangeEvent,
   View,
 } from "react-native";
 
 import { AquaTypography, getShadow, useTheme } from "@/theme";
+import { FeatureFlag, logError } from "@/utils";
 
 import { Icon } from "../icon/Icon";
+
+export type TextFieldVariant = "default" | "brand";
 
 interface TextFieldProps {
   label?: string;
   value?: string;
   onChangeText?: (text: string) => void;
-  trailingIcon?: ReactNode;
-  onTrailingPress?: () => void;
-  secureTextEntry?: boolean;
+  variant?: TextFieldVariant;
   keyboardType?: RNTextInputProps["keyboardType"];
   assistiveText?: string;
   error?: boolean;
   enabled?: boolean;
-  multiline?: boolean;
-  minLines?: number;
-  maxLines?: number;
   maxLength?: number;
-  showCounter?: boolean;
   showClearIcon?: boolean;
   onClear?: () => void;
+  showPasteIcon?: boolean;
+  onPaste?: (text: string) => void;
   debounceTime?: number;
   forceFocus?: boolean;
-  transparentBorder?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
@@ -49,34 +47,30 @@ const LABEL_OFFSET_ACTIVE = 16;
 const TRAILING_ICON_RIGHT = 16;
 const CONTENT_HORIZONTAL_PADDING = 16;
 const CONTENT_VERTICAL_PADDING = 8;
-const TRAILING_ICON_PADDING = 40;
 const CONTENT_TRAILING_PADDING = 12;
+const ICON_SIZE = 18;
+const ICON_SPACING = 16;
 const ASSISTIVE_TEXT_TOP_PADDING = 4;
-const CLEAR_ICON_SPACING = 16;
 const BORDER_RADIUS = 8;
 const DEFAULT_DEBOUNCE = 500;
+const FORCE_FOCUS_DELAY = 100;
 
 export const TextField = ({
   label,
   value = "",
   onChangeText,
-  trailingIcon,
-  onTrailingPress,
-  secureTextEntry = false,
+  variant = "default",
   keyboardType,
   assistiveText,
   error = false,
   enabled = true,
-  multiline = false,
-  minLines = 1,
-  maxLines = 1,
   maxLength,
-  showCounter = false,
   showClearIcon = false,
   onClear,
+  showPasteIcon = false,
+  onPaste,
   debounceTime = DEFAULT_DEBOUNCE,
   forceFocus = false,
-  transparentBorder = false,
   accessibilityLabel,
   accessibilityHint,
 }: TextFieldProps) => {
@@ -87,19 +81,20 @@ export const TextField = ({
   const isFocused = forceFocus || internalFocus;
 
   const [text, setText] = useState(value);
-  const [contentHeight, setContentHeight] = useState(LINE_HEIGHT * minLines);
   const inputRef = useRef<TextInput>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const labelAnimation = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   const hasText = text.length > 0;
   const isLabelActive = isFocused || hasText;
-  const isMultiline = multiline || minLines > 1 || maxLines > 1;
 
   useEffect(() => {
     if (forceFocus) {
-      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      const timer = setTimeout(
+        () => inputRef.current?.focus(),
+        FORCE_FOCUS_DELAY,
+      );
       return () => clearTimeout(timer);
     }
   }, [forceFocus]);
@@ -145,17 +140,32 @@ export const TextField = ({
     onClear?.();
   };
 
-  const handleContentSizeChange = (e: TextInputContentSizeChangeEvent) => {
-    if (isMultiline) {
-      const newHeight = e.nativeEvent.contentSize.height;
-      setContentHeight(newHeight);
+  const handlePaste = async () => {
+    let clipboardText: string;
+    try {
+      clipboardText = await Clipboard.getStringAsync();
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.ui,
+        message: "Failed to read clipboard",
+      });
+      return;
     }
+    if (!clipboardText) return;
+    const next =
+      maxLength != null ? clipboardText.slice(0, maxLength) : clipboardText;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    setText(next);
+    onChangeText?.(next);
+    onPaste?.(next);
   };
 
   const labelTop = labelAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [
-      isMultiline ? PADDING : (TEXTFIELD_HEIGHT - LINE_HEIGHT) / 2,
+      (TEXTFIELD_HEIGHT - LINE_HEIGHT) / 2,
       LABEL_TOP_POSITION_ACTIVE,
     ],
   });
@@ -168,51 +178,33 @@ export const TextField = ({
     ],
   });
 
-  // Calculate container height based on content and min/max lines
-  const effectiveMaxLines = Math.max(maxLines, minLines);
-  const minContentHeight = minLines * LINE_HEIGHT;
-  const maxContentHeight = effectiveMaxLines * LINE_HEIGHT;
-
-  let calculatedHeight = contentHeight;
-  if (calculatedHeight < minContentHeight) calculatedHeight = minContentHeight;
-  if (maxLines > 1 && calculatedHeight > maxContentHeight)
-    calculatedHeight = maxContentHeight;
-
-  const containerHeight = isMultiline
-    ? Math.max(
-        minLines * LINE_HEIGHT + PADDING * 2,
-        calculatedHeight + PADDING + (isLabelActive ? LABEL_OFFSET_ACTIVE : 0),
-      )
-    : TEXTFIELD_HEIGHT;
+  const showClear = showClearIcon && hasText;
+  const trailingIconCount = (showClear ? 1 : 0) + (showPasteIcon ? 1 : 0);
 
   const calculateTrailingPadding = () => {
-    const hasClearIcon = showClearIcon && hasText;
-    const hasTrailing = trailingIcon !== undefined;
-
-    if (hasClearIcon && hasTrailing) {
-      return TRAILING_ICON_PADDING + 18 + CLEAR_ICON_SPACING;
-    } else if (hasClearIcon || hasTrailing) {
-      return TRAILING_ICON_PADDING;
-    }
-    return CONTENT_TRAILING_PADDING;
+    if (trailingIconCount === 0) return CONTENT_TRAILING_PADDING;
+    const iconsWidth =
+      trailingIconCount * ICON_SIZE + (trailingIconCount - 1) * ICON_SPACING;
+    return TRAILING_ICON_RIGHT + iconsWidth + ICON_SPACING;
   };
 
-  const borderColor = error
-    ? colors.accentDanger
-    : isFocused
-      ? transparentBorder
-        ? "transparent"
-        : colors.accentBrand
-      : "transparent";
-
-  const labelColor =
-    error && !isMultiline
+  const borderColor = !enabled
+    ? "transparent"
+    : error
       ? colors.accentDanger
-      : enabled
-        ? colors.textSecondary
-        : colors.textTertiary;
+      : variant === "brand"
+        ? colors.accentBrand
+        : "transparent";
+
+  const labelColor = enabled ? colors.textSecondary : colors.textTertiary;
 
   const textColor = enabled ? colors.textPrimary : colors.textTertiary;
+  const iconColor = colors.textSecondary;
+
+  const pasteIconRight = TRAILING_ICON_RIGHT;
+  const clearIconRight = showPasteIcon
+    ? TRAILING_ICON_RIGHT + ICON_SIZE + ICON_SPACING
+    : TRAILING_ICON_RIGHT;
 
   return (
     <View style={[styles.wrapper, { opacity: enabled ? 1 : 0.5 }]}>
@@ -222,19 +214,11 @@ export const TextField = ({
           getShadow("input"),
           {
             backgroundColor: colors.surfacePrimary,
-            height: containerHeight,
+            height: TEXTFIELD_HEIGHT,
           },
         ]}
       >
-        <View
-          style={[
-            styles.container,
-            {
-              borderColor,
-              borderWidth: 1,
-            },
-          ]}
-        >
+        <View style={[styles.container, { borderColor, borderWidth: 1 }]}>
           <Pressable
             onPress={() => enabled && inputRef.current?.focus()}
             style={styles.pressableContainer}
@@ -282,12 +266,9 @@ export const TextField = ({
                 onChangeText={handleChangeText}
                 onFocus={() => setInternalFocus(true)}
                 onBlur={() => setInternalFocus(false)}
-                secureTextEntry={secureTextEntry}
                 keyboardType={keyboardType}
                 editable={enabled}
-                multiline={isMultiline}
                 maxLength={maxLength}
-                onContentSizeChange={handleContentSizeChange}
                 cursorColor={colors.accentBrand}
                 underlineColorAndroid="transparent"
                 textAlignVertical="top"
@@ -295,19 +276,14 @@ export const TextField = ({
               />
             </View>
 
-            {((showClearIcon && hasText) || trailingIcon) && (
+            {trailingIconCount > 0 && (
               <View style={styles.trailingContainer}>
-                {showClearIcon && hasText && (
+                {showClear && (
                   <Pressable
                     onPress={enabled ? handleClear : undefined}
-                    style={[
-                      styles.clearIcon,
-                      {
-                        right: trailingIcon
-                          ? TRAILING_ICON_RIGHT + CLEAR_ICON_SPACING + 18
-                          : TRAILING_ICON_RIGHT,
-                      },
-                    ]}
+                    style={[styles.iconButton, { right: clearIconRight }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear text"
                   >
                     <View
                       style={[
@@ -315,23 +291,18 @@ export const TextField = ({
                         { backgroundColor: colors.surfaceTertiary },
                       ]}
                     >
-                      <Icon
-                        name="close"
-                        size={14}
-                        color={colors.textSecondary}
-                      />
+                      <Icon name="close" size={14} color={iconColor} />
                     </View>
                   </Pressable>
                 )}
-                {trailingIcon && (
+                {showPasteIcon && (
                   <Pressable
-                    onPress={enabled ? onTrailingPress : undefined}
-                    style={[
-                      styles.trailingIcon,
-                      { right: TRAILING_ICON_RIGHT },
-                    ]}
+                    onPress={enabled ? handlePaste : undefined}
+                    style={[styles.iconButton, { right: pasteIconRight }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Paste from clipboard"
                   >
-                    {trailingIcon}
+                    <Icon name="paste" size={ICON_SIZE} color={iconColor} />
                   </Pressable>
                 )}
               </View>
@@ -340,36 +311,24 @@ export const TextField = ({
         </View>
       </View>
 
-      {(assistiveText || showCounter) && (
+      {assistiveText && (
         <View
           style={[
             styles.assistiveRow,
             { marginTop: ASSISTIVE_TEXT_TOP_PADDING },
           ]}
         >
-          {assistiveText && (
-            <Text
-              style={[
-                AquaTypography.caption1Medium,
-                {
-                  color: error ? colors.accentDanger : colors.textSecondary,
-                  flex: 1,
-                },
-              ]}
-            >
-              {assistiveText}
-            </Text>
-          )}
-          {showCounter && maxLength && (
-            <Text
-              style={[
-                AquaTypography.caption1Medium,
-                { color: colors.textTertiary },
-              ]}
-            >
-              {text.length}/{maxLength}
-            </Text>
-          )}
+          <Text
+            style={[
+              AquaTypography.caption1Medium,
+              {
+                color: error ? colors.accentDanger : colors.textSecondary,
+                flex: 1,
+              },
+            ]}
+          >
+            {assistiveText}
+          </Text>
         </View>
       )}
     </View>
@@ -409,20 +368,15 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: "center",
   },
-  clearIcon: {
+  iconButton: {
     position: "absolute",
     justifyContent: "center",
     alignItems: "center",
   },
   clearIconBackground: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  trailingIcon: {
-    position: "absolute",
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: ICON_SIZE / 2,
     justifyContent: "center",
     alignItems: "center",
   },
