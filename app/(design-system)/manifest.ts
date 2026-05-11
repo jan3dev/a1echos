@@ -11,7 +11,6 @@ import iconGallery from "@/components/ui/icon/Icon.gallery";
 import modalGallery from "@/components/ui/modal/Modal.gallery";
 import progressGallery from "@/components/ui/progress/ProgressIndicator.gallery";
 import radioGallery from "@/components/ui/radio/Radio.gallery";
-import surfaceGallery from "@/components/ui/surface/Surface.gallery";
 import textGallery from "@/components/ui/text/Text.gallery";
 import textFieldGallery from "@/components/ui/textfield/TextField.gallery";
 import toastGallery from "@/components/ui/toast/Toast.gallery";
@@ -52,7 +51,6 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   modalGallery,
   progressGallery,
   radioGallery,
-  surfaceGallery,
   textGallery,
   textFieldGallery,
   toastGallery,

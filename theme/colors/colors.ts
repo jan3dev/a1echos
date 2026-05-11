@@ -40,7 +40,7 @@ export const AquaPrimitiveColors = {
 
   glassSurfaceDark: "rgba(39, 41, 44, 0.5)",
   glassInverseDark: "rgba(255, 255, 255, 0.85)",
-  glassBackgroundDark: "rgba(19, 21, 22, 0.4)",
+  glassBackgroundDark: "rgba(9, 10, 11, 0.3)",
   glassSurfaceSecondaryDark: "rgba(255, 255, 255, 0.16)",
   glassSurfaceBorderDark: "rgba(255, 255, 255, 0.04)",
 

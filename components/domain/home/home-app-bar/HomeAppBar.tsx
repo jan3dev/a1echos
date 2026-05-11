@@ -148,7 +148,6 @@ export const HomeAppBar = ({
         leading={renderLeading()}
         titleWidget={renderTitleWidget()}
         actions={renderActions()}
-        transparent={false}
       />
       <IncognitoExplainerModal
         visible={showIncognitoModal}

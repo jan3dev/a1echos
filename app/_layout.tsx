@@ -1,8 +1,6 @@
 import "@/localization";
-import MaskedView from "@react-native-masked-view/masked-view";
-import { BlurView } from "expo-blur";
+import { ProgressiveBlurView } from "@sbaiahmed1/react-native-blur";
 import { useFonts } from "expo-font";
-import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -10,6 +8,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { enableFreeze } from "react-native-screens";
 
 import {
   AppErrorBoundary,
@@ -20,7 +19,6 @@ import {
   Tooltip,
 } from "@/components";
 import { AppConstants } from "@/constants";
-import { AppTheme } from "@/models";
 import { registerForegroundService, storageService } from "@/services";
 import {
   initializeModelDownloadStore,
@@ -43,6 +41,11 @@ import {
 } from "@/stores";
 import { useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
+
+// Freezes inactive screens so their React tree pauses while off-screen — prevents
+// the outgoing screen from briefly repainting on top of the new one after the
+// slide animation completes on Android.
+enableFreeze(true);
 
 const DesignSystemEnabled =
   process.env.EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED === "true";
@@ -221,8 +224,7 @@ function GlobalKeyboardPromptRenderer() {
 
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const { currentTheme } = useThemeStore();
+  const { theme, isDark } = useTheme();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
   const isEngineInitializing = useIsEngineInitializing();
@@ -230,7 +232,6 @@ function GlobalRecordingControls() {
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
   const visible = useRecordingControlsVisible();
-  const blurTint = currentTheme === AppTheme.DARK ? "dark" : "light";
 
   const handleRecordingStart = useCallback(() => {
     onRecordingStart?.();
@@ -244,11 +245,6 @@ function GlobalRecordingControls() {
     pathname === "/" || pathname.startsWith("/session/");
   const isVisible = visible && isOnRecordingScreen;
 
-  const FADE_HEIGHT = 32;
-  const CONTROLS_HEIGHT = 96;
-  const totalHeight = CONTROLS_HEIGHT + insets.bottom;
-  const fadeStop = FADE_HEIGHT / totalHeight;
-
   return (
     <View
       style={[
@@ -257,30 +253,13 @@ function GlobalRecordingControls() {
       ]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
-      <MaskedView
+      <ProgressiveBlurView
+        blurAmount={20}
+        blurRounds={3}
+        blurType={isDark ? "dark" : "light"}
+        direction="blurredBottomClearTop"
         style={StyleSheet.absoluteFill}
-        androidRenderingMode="software"
-        maskElement={
-          <LinearGradient
-            colors={["transparent", "black", "black"]}
-            locations={[0, fadeStop, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-        }
-        pointerEvents="none"
-      >
-        <BlurView
-          intensity={20}
-          tint={blurTint}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: theme.colors.glassBackground },
-          ]}
-        />
-      </MaskedView>
+      />
       {isVisible && (
         <RecordingControlsView
           state={transcriptionState}
@@ -401,7 +380,10 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            animation: "default",
+            // Android (Fabric + new arch) flashes the outgoing screen on top
+            // of the new one for any non-"none" animation. Native iOS slide
+            // is unaffected.
+            animation: Platform.OS === "android" ? "none" : "default",
             gestureEnabled: true,
             contentStyle: {
               backgroundColor: theme.colors.surfaceBackground,

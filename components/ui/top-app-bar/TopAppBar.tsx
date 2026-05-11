@@ -1,12 +1,11 @@
-import { BlurView } from "expo-blur";
+import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { useRouter } from "expo-router";
 import { Fragment, ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants, TestID } from "@/constants";
-import { AppTheme } from "@/models";
-import { useTheme, useThemeStore } from "@/theme";
+import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { Icon } from "../icon/Icon";
@@ -40,11 +39,9 @@ export const TopAppBar = ({
   transparent = false,
   style,
 }: TopAppBarProps) => {
-  const { theme } = useTheme();
-  const { currentTheme } = useThemeStore();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const blurTint = currentTheme === AppTheme.DARK ? "dark" : "light";
 
   const handleBack = () => {
     if (onBackPressed) {
@@ -57,10 +54,6 @@ export const TopAppBar = ({
   const topPadding = insets.top;
   const totalHeight = AppConstants.APP_BAR_HEIGHT + topPadding;
 
-  const backgroundColor = transparent
-    ? "transparent"
-    : theme.colors.glassBackground;
-
   const renderContent = () => (
     <View
       style={[
@@ -68,7 +61,9 @@ export const TopAppBar = ({
         {
           paddingTop: topPadding + 16,
           height: totalHeight,
-          backgroundColor: transparent ? "transparent" : undefined,
+          backgroundColor: transparent
+            ? "transparent"
+            : theme.colors.glassBackground,
         },
       ]}
     >
@@ -164,11 +159,13 @@ export const TopAppBar = ({
   return (
     <View testID={TestID.TopAppBar} style={containerStyles}>
       <BlurView
-        intensity={20}
-        tint={blurTint}
-        style={[StyleSheet.absoluteFill, { backgroundColor }]}
-      />
-      {renderContent()}
+        blurAmount={20}
+        blurRounds={3}
+        blurType={isDark ? "dark" : "light"}
+        style={[{ backgroundColor: theme.colors.glassBackground }]}
+      >
+        {renderContent()}
+      </BlurView>
     </View>
   );
 };

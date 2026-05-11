@@ -1,5 +1,5 @@
 import MaskedView from "@react-native-masked-view/masked-view";
-import { BlurView } from "expo-blur";
+import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { ReactNode, useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -114,7 +114,12 @@ export const Tooltip = ({
           style={{ width: pointerSize * 2, height: pointerSize }}
           maskElement={triangleSvg}
         >
-          <BlurView intensity={20} style={StyleSheet.absoluteFill}>
+          <BlurView
+            blurAmount={20}
+            blurRounds={3}
+            blurType={isDark ? "dark" : "light"}
+            style={StyleSheet.absoluteFill}
+          >
             <View style={[StyleSheet.absoluteFill, { backgroundColor }]} />
           </BlurView>
         </MaskedView>
@@ -181,7 +186,9 @@ export const Tooltip = ({
   const bubble =
     variant === "normal" ? (
       <BlurView
-        intensity={20}
+        blurAmount={20}
+        blurRounds={3}
+        blurType={isDark ? "dark" : "light"}
         style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" }}
       >
         {content}

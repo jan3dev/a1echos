@@ -1,4 +1,4 @@
-import { BlurView } from "expo-blur";
+import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet } from "react-native";
 
@@ -28,8 +28,9 @@ export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
     >
       <Pressable style={styles.container} onPress={onDismiss}>
         <BlurView
-          intensity={24}
-          tint={isDark ? "light" : "dark"}
+          blurAmount={20}
+          blurRounds={3}
+          blurType={isDark ? "dark" : "light"}
           style={styles.blurContainer}
         >
           <Pressable
