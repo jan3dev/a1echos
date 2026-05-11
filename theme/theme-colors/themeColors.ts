@@ -54,7 +54,7 @@ export const lightColors: AquaColors = {
 
   surfacePrimary: AquaPrimitiveColors.white,
   surfaceBorderPrimary: AquaPrimitiveColors.gray50,
-  surfaceSecondary: AquaPrimitiveColors.gray100,
+  surfaceSecondary: AquaPrimitiveColors.gray50,
   surfaceBorderSecondary: AquaPrimitiveColors.gray100,
   surfaceTertiary: AquaPrimitiveColors.gray100,
   surfaceInverse: AquaPrimitiveColors.gray50,

@@ -107,11 +107,26 @@ describe("ModelCard", () => {
     expect(onDelete).toHaveBeenCalled();
   });
 
-  it("hides Delete when the non-bundled downloaded model is selected", () => {
-    const { queryByText } = render(
+  it("shows Delete when the non-bundled downloaded model is selected", () => {
+    const onDelete = jest.fn();
+    const { getByText } = render(
       <ModelCard
         {...baseProps}
         isBundled={false}
+        isSelected
+        isDownloaded
+        onDelete={onDelete}
+      />,
+    );
+    fireEvent.press(getByText("Delete"));
+    expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("hides Delete for the bundled selected model", () => {
+    const { queryByText } = render(
+      <ModelCard
+        {...baseProps}
+        isBundled
         isSelected
         isDownloaded
         onDelete={jest.fn()}

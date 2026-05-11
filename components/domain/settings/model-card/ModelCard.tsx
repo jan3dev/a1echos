@@ -187,7 +187,7 @@ function DownloadedBody({
   const { loc } = useLocalization();
   const { colors } = theme;
 
-  const showDelete = !isBundled && !isSelected;
+  const showDelete = !isBundled;
 
   return (
     <>

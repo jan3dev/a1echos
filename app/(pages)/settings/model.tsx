@@ -155,10 +155,10 @@ export default function ModelSettingsScreen() {
         primaryButtonText: loc.delete,
         onPrimaryButtonTap: async () => {
           hideDeleteToast();
-          const success = await downloadStore.deleteModel(modelId);
           if (selectedModelId === modelId) {
             await setModelId(ModelId.WHISPER_TINY);
           }
+          const success = await downloadStore.deleteModel(modelId);
           if (success) {
             showGlobalTooltip(loc.deletedToast, "normal", 3000);
           }
