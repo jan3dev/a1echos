@@ -198,6 +198,12 @@ class EchosInputMethodService : InputMethodService(),
      */
     private fun deleteOneGrapheme() {
         val ic: InputConnection = currentInputConnection ?: return
+        // If a selection is active, ⌫ should clear it in one tap (matches AOSP LatinIME).
+        val selected = ic.getSelectedText(0)
+        if (!selected.isNullOrEmpty()) {
+            ic.commitText("", 1)
+            return
+        }
         // 32 chars is enough for the longest standard ZWJ family sequences.
         val before = ic.getTextBeforeCursor(32, 0)?.toString().orEmpty()
         if (before.isEmpty()) return
@@ -307,6 +313,11 @@ class EchosInputMethodService : InputMethodService(),
 
     private fun deleteWordBackward() {
         val ic = currentInputConnection ?: return
+        val selected = ic.getSelectedText(0)
+        if (!selected.isNullOrEmpty()) {
+            ic.commitText("", 1)
+            return
+        }
         val before = ic.getTextBeforeCursor(256, 0)?.toString().orEmpty()
         if (before.isEmpty()) return
         var idx = before.length - 1

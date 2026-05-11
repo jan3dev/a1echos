@@ -161,8 +161,7 @@ export const TopAppBar = ({
       <BlurView
         blurAmount={20}
         blurRounds={3}
-        blurType={isDark ? "dark" : "light"}
-        style={[{ backgroundColor: theme.colors.glassBackground }]}
+        blurType={isDark ? "regular" : "light"}
       >
         {renderContent()}
       </BlurView>
