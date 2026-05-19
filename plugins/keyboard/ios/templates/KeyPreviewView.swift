@@ -28,13 +28,9 @@ final class KeyPreviewView: UIView {
     private static let widthRatio: CGFloat = 1.8
     private static let keyCornerRadius: CGFloat = 8
     private static let headCornerRadius: CGFloat = 14
-    /// Default vertical extent of the smooth curve that connects head
-    /// sides to shaft sides. Bigger = softer, more drawn-out flow into
-    /// the key. Shrinks toward `minTransitionHeight` when the balloon is
-    /// clamped at the top of the keyboard.
+    /// Vertical extent of the smooth curve that connects head sides to
+    /// shaft sides. Bigger = softer, more drawn-out flow into the key.
     private static let transitionHeight: CGFloat = 22
-    private static let minTransitionHeight: CGFloat = 12
-    private static let minHeadHeight: CGFloat = 30
     private static let maxLabelFontSize: CGFloat = 32
     private static let minLabelFontSize: CGFloat = 20
 
@@ -96,40 +92,19 @@ final class KeyPreviewView: UIView {
         let shaftH = keyFrame.height
         let desiredHeadH = max(keyFrame.height * 1.1, 50)
         let desiredTransitionH = Self.transitionHeight
-        let desiredTotalH = desiredHeadH + desiredTransitionH + shaftH
+        let totalH = desiredHeadH + desiredTransitionH + shaftH
+        let actualHeadH = desiredHeadH
+        let actualTransitionH = desiredTransitionH
 
-        var minY = keyFrame.maxY - desiredTotalH
-        var totalH = desiredTotalH
-        var actualHeadH = desiredHeadH
-        var actualTransitionH = desiredTransitionH
-
-        if minY < 0 {
-            // Top-row clamp: the balloon can't extend above the keyboard,
-            // so distribute whatever vertical room is left between head
-            // and transition. Shrink transition first (bottom curve gets
-            // tighter) before eating into the head, since the head holds
-            // the visible label.
-            minY = 0
-            totalH = keyFrame.maxY
-            let availableForHeadAndTransition = totalH - shaftH
-
-            if availableForHeadAndTransition >= Self.minHeadHeight + Self.minTransitionHeight {
-                let needToShrink = desiredHeadH + desiredTransitionH - availableForHeadAndTransition
-                let transitionShrink = min(
-                    needToShrink,
-                    desiredTransitionH - Self.minTransitionHeight
-                )
-                actualTransitionH = desiredTransitionH - transitionShrink
-                let headShrink = needToShrink - transitionShrink
-                actualHeadH = max(Self.minHeadHeight, desiredHeadH - headShrink)
-            } else {
-                // Even mins don't fit — pin transition at its floor and let
-                // the head shrink as far as needed. The path's own fallback
-                // kicks in if the head can't host the top corner radius.
-                actualTransitionH = Self.minTransitionHeight
-                actualHeadH = max(0, availableForHeadAndTransition - actualTransitionH)
-            }
-        }
+        // Native iPhone keyboards let the press balloon extend above the
+        // QWERTY area — it overlaps the suggestion bar / top bar instead of
+        // shrinking. We previously clamped the head height for top-row keys
+        // to keep the balloon inside the keyboard, which made those balloons
+        // visibly smaller than middle/bottom rows. Now we always keep the
+        // head full-size and let `minY` go negative; `KeyboardView` sets
+        // `clipsToBounds = false` and brings the balloon to the front so it
+        // draws over the top bar's record button while a top-row key is held.
+        let minY = keyFrame.maxY - totalH
 
         // Decide horizontal placement. If natural-centered placement would
         // overflow either side, lock the balloon's outer edge to the key's

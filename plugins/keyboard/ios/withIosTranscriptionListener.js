@@ -1,6 +1,7 @@
-const { withDangerousMod, withAppDelegate } = require("expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
+
+const { withDangerousMod, withAppDelegate } = require("expo/config-plugins");
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 

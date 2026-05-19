@@ -2,34 +2,46 @@ package com.a1lab.echos.ime
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.util.AttributeSet
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AbsListView
-import android.widget.BaseAdapter
-import android.widget.GridView
+import android.widget.GridLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * In-IME emoji picker. Shown when the user taps the smiley key — Android
- * doesn't expose any way for a third-party IME to programmatically jump to
- * the system Emoji panel, so we render our own (the same approach Gboard /
- * SwiftKey take).
+ * In-IME emoji picker styled after the native iPhone emoji keyboard
+ * (which Android Gboard mostly mirrors, modulo small visual deltas):
  *
- * Layout (vertical):
- *   - Category strip (HorizontalScrollView, one icon per category)
- *   - Emoji grid (`GridView`, 9 columns) — uses the built-in recycling
- *     adapter so we avoid pulling in a new compile dependency
- *   - Bottom bar (ABC | space | delete) with width ratios mirroring the
- *     regular keyboard's bottom row (1.5 : 5 : 1.5).
+ *   ┌─────────────────────────────────────────┐
+ *   │ 🔍  Search Emoji                        │  ← search bar (top, tap → search mode)
+ *   ├─────────────────────────────────────────┤
+ *   │  FREQUENTLY     SMILEYS & PEOPLE …     │
+ *   │  😀 😃 😄  →    😀 😃 😄 😁 …            │  ← horizontal-scrolling
+ *   │  😅 🤣 😂        😅 🤣 😂 🙂 …            │     section blocks, 5
+ *   │  🙂 🙃 😉        🙂 🙃 😉 😊 …            │     emojis tall
+ *   │  😊 😇 🥰        😊 😇 🥰 😍 …            │
+ *   │  😍 🤩 😘        😍 🤩 😘 …               │
+ *   ├─────────────────────────────────────────┤
+ *   │ ABC ⏰ 😀 🐾 🍔 ⚽ ✈️ 💡 ❤️ 🏁  ⌫        │  ← bottom strip
+ *   └─────────────────────────────────────────┘
+ *
+ * Shown when the user taps the smiley key — Android doesn't expose any way
+ * for a third-party IME to programmatically open the system emoji panel,
+ * so we render our own (same approach Gboard / SwiftKey take).
+ *
+ * Each section's emojis are laid out vertically in a `GridLayout` with
+ * `rowCount=5` and `orientation=VERTICAL` — items flow top-to-bottom within
+ * a column, then wrap to the next column. Sections sit side-by-side inside
+ * a single `HorizontalScrollView`.
  */
 class EchosEmojiPickerView @JvmOverloads constructor(
     context: Context,
@@ -39,137 +51,150 @@ class EchosEmojiPickerView @JvmOverloads constructor(
     interface Listener {
         fun onEmojiSelected(emoji: String)
         fun onBackToLetters()
-        fun onSpacePressed()
         fun onDeleteCharacter()
         fun onDeleteWord()
+        /// Tap on the search bar — host should enter the IME's emoji-search
+        /// mode (shows the search overlay above QWERTY and routes character
+        /// input into the search query).
+        fun onActivateSearch()
     }
 
     private val theme = KeyTheme(context)
     private var listener: Listener? = null
 
-    private val categoryStripScroll: HorizontalScrollView
-    private val categoryStripStack: LinearLayout
-    private val gridView: GridView
+    private val searchPill: LinearLayout
+    private val sectionsScroll: HorizontalScrollView
+    private val sectionsRow: LinearLayout
+    private val bottomStrip: LinearLayout
     private val abcButton: TextView
-    private val spaceButton: TextView
     private val deleteButton: TextView
-
     private val categoryButtons = mutableListOf<TextView>()
+
     private val visibleCategories = mutableListOf<EmojiCategory>()
-    /** Snapshot per category, captured at refresh time so taps never race
-     *  recents reordering. */
-    private val sectionData = mutableListOf<List<String>>()
-    /** Position in the flattened emoji list where each category begins. */
-    private val sectionStartPositions = mutableListOf<Int>()
-    private val flatEmojis = mutableListOf<String>()
+    /** Per-section start position within `sectionsRow`'s child indices, so
+     *  category taps can scroll the matching block into view. */
+    private val sectionViews = mutableListOf<View>()
     private var currentCategoryIndex = 0
-    private var suppressScrollUpdates = false
+    private var suppressScrollSync = false
 
     private val deleteRepeater = KeyDeleteRepeater(
         onCharDelete = { listener?.onDeleteCharacter() },
         onWordDelete = { listener?.onDeleteWord() },
     )
 
-    private val adapter = EmojiAdapter()
-
     init {
         orientation = VERTICAL
         setBackgroundColor(theme.keyboardBackground)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
 
-        categoryStripScroll = HorizontalScrollView(context).apply {
+        // ── Top: search bar ──
+        searchPill = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable().apply {
+                cornerRadius = dp(9f)
+                setColor(theme.specialKeyBackground)
+            }
+            val ph = dp(10f).toInt()
+            setPadding(ph, 0, ph, 0)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                listener?.onActivateSearch()
+            }
+            val lp = LayoutParams(LayoutParams.MATCH_PARENT, dp(SEARCH_BAR_HEIGHT_DP).toInt())
+            val pm = dp(8f).toInt()
+            lp.setMargins(pm, dp(4f).toInt(), pm, dp(4f).toInt())
+            layoutParams = lp
+        }
+        val magnifier = TextView(context).apply {
+            text = "🔍" // 🔍 magnifying glass
+            textSize = 14f
+            setTextColor(theme.keyTextSecondary)
+        }
+        val placeholder = TextView(context).apply {
+            text = "Search Emoji"
+            textSize = 15f
+            setTextColor(theme.keyTextSecondary)
+            val pl = dp(8f).toInt()
+            setPadding(pl, 0, 0, 0)
+        }
+        searchPill.addView(magnifier)
+        searchPill.addView(placeholder)
+        addView(searchPill)
+
+        // ── Middle: horizontal-scrolling section blocks ──
+        sectionsScroll = HorizontalScrollView(context).apply {
             isHorizontalScrollBarEnabled = false
             overScrollMode = OVER_SCROLL_NEVER
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT,
-                dp(36f).toInt(),
+                dp(GRID_HEIGHT_DP).toInt(),
             )
         }
-        categoryStripStack = LinearLayout(context).apply {
+        sectionsRow = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+        }
+        sectionsScroll.addView(sectionsRow)
+        addView(sectionsScroll)
+
+        attachScrollListener()
+
+        // ── Bottom: category strip with ABC + categories + delete ──
+        bottomStrip = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
+            val ps = dp(4f).toInt()
+            setPadding(ps, dp(2f).toInt(), ps, dp(4f).toInt())
+            layoutParams = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                dp(STRIP_HEIGHT_DP).toInt(),
             )
         }
-        categoryStripScroll.addView(categoryStripStack)
-        addView(categoryStripScroll)
 
-        gridView = GridView(context).apply {
-            numColumns = GRID_COLUMNS
-            verticalSpacing = dp(2f).toInt()
-            horizontalSpacing = dp(2f).toInt()
-            stretchMode = GridView.STRETCH_COLUMN_WIDTH
-            isVerticalScrollBarEnabled = false
-            overScrollMode = OVER_SCROLL_NEVER
-            adapter = this@EchosEmojiPickerView.adapter
-            setPadding(dp(4f).toInt(), dp(2f).toInt(), dp(4f).toInt(), dp(2f).toInt())
-            // Picker total height matches the regular keyboard's 4-row layout
-            // (224dp = 4 × 46dp + 3 × 8dp + 8dp top + 8dp bottom). After
-            // subtracting categoryStrip (36dp), bottom bar (48dp), and the
-            // bar's 6dp padding, the grid gets 134dp — exactly 3 rows of
-            // 40dp cells with 2dp vertical spacing.
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(134f).toInt())
-            setOnItemClickListener { _, _, position, _ ->
-                if (position !in flatEmojis.indices) return@setOnItemClickListener
-                val emoji = flatEmojis[position]
+        abcButton = TextView(context).apply {
+            text = "ABC"
+            textSize = 14f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(theme.keyText)
+            gravity = Gravity.CENTER
+            background = pressableTransparent()
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                RecentEmojis.record(this@EchosEmojiPickerView.context, emoji)
-                listener?.onEmojiSelected(emoji)
+                listener?.onBackToLetters()
             }
-            setOnScrollListener(object : AbsListView.OnScrollListener {
-                override fun onScrollStateChanged(view: AbsListView?, scrollState: Int) = Unit
-                override fun onScroll(
-                    view: AbsListView?,
-                    firstVisibleItem: Int,
-                    visibleItemCount: Int,
-                    totalItemCount: Int,
-                ) {
-                    if (suppressScrollUpdates) return
-                    if (firstVisibleItem < 0) return
-                    updateCategoryFromPosition(firstVisibleItem)
-                }
-            })
+            val pad = dp(10f).toInt()
+            setPadding(pad, 0, pad, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+            )
         }
-        addView(gridView)
+        bottomStrip.addView(abcButton)
 
-        // Bottom bar — width ratios match the regular keyboard's bottom row
-        // (ABC : space : delete = 1.5 : 5 : 1.5) so the spacebar fills the
-        // gap between the two pill keys.
-        val bottomBar = LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            weightSum = 8f
-            val padH = dp(4f).toInt()
-            setPadding(padH, dp(2f).toInt(), padH, dp(4f).toInt())
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(48f).toInt())
+        // Category icon buttons are added in `rebuild()`.
+
+        deleteButton = TextView(context).apply {
+            text = "⌫"
+            textSize = 18f
+            setTextColor(theme.keyText)
+            gravity = Gravity.CENTER
+            background = pressableTransparent()
+            isClickable = true
+            isFocusable = true
+            val pad = dp(10f).toInt()
+            setPadding(pad, 0, pad, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+            )
         }
-        abcButton = makeKeyButton(
-            text = "ABC",
-            textSize = 14f,
-            contentDesc = "Letters",
-            weight = 1.5f,
-        )
-        spaceButton = makeKeyButton(
-            text = "space",
-            textSize = 14f,
-            contentDesc = "Space",
-            weight = 5f,
-        )
-        deleteButton = makeKeyButton(
-            text = "⌫",
-            textSize = 18f,
-            contentDesc = "Delete",
-            weight = 1.5f,
-        )
-        bottomBar.addView(abcButton)
-        bottomBar.addView(spacer())
-        bottomBar.addView(spaceButton)
-        bottomBar.addView(spacer())
-        bottomBar.addView(deleteButton)
-        addView(bottomBar)
+        addView(bottomStrip)
+        wireDeleteRepeat()
 
-        wireBottomBar()
         rebuild()
     }
 
@@ -185,94 +210,181 @@ class EchosEmojiPickerView @JvmOverloads constructor(
     // MARK: - Build
 
     private fun rebuild() {
-        // Recents is always pinned as the first tab — even when empty — so
-        // users see where their picks will land. The grid for that section
-        // stays empty until they tap their first emoji and reopen the picker.
+        // Always pin recents as the first tab — even when empty — so users
+        // see where their picks will land. The grid for that section stays
+        // empty until the first emoji is picked and the picker reopens.
         visibleCategories.clear()
         visibleCategories.add(EmojiCategory.RECENTS)
-        visibleCategories.addAll(EmojiCategory.values().filter { it != EmojiCategory.RECENTS })
+        visibleCategories.addAll(
+            EmojiCategory.values().filter { it != EmojiCategory.RECENTS }
+        )
 
-        sectionData.clear()
-        sectionStartPositions.clear()
-        flatEmojis.clear()
+        // Rebuild grid.
+        sectionsRow.removeAllViews()
+        sectionViews.clear()
         for (cat in visibleCategories) {
-            val list = EmojiData.emojis(cat, context)
-            sectionData.add(list)
-            sectionStartPositions.add(flatEmojis.size)
-            flatEmojis.addAll(list)
+            val emojis = EmojiData.emojis(cat, context)
+            val block = buildSectionBlock(cat.displayName, emojis)
+            sectionViews.add(block)
+            sectionsRow.addView(block)
         }
 
+        // Rebuild bottom strip.
         rebuildCategoryButtons()
-        adapter.notifyDataSetChanged()
+
         currentCategoryIndex = 0
         updateCategorySelection()
     }
 
+    private fun buildSectionBlock(title: String, emojis: List<String>): View {
+        val block = LinearLayout(context).apply {
+            orientation = VERTICAL
+            // Pad each section so they read as distinct horizontally-tiled
+            // blocks rather than one continuous emoji stripe.
+            val padH = dp(8f).toInt()
+            setPadding(padH, 0, padH, 0)
+        }
+        val header = TextView(context).apply {
+            text = title.uppercase()
+            textSize = 11f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(theme.keyTextSecondary)
+            val pad = dp(2f).toInt()
+            setPadding(pad, 0, pad, dp(2f).toInt())
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(SECTION_HEADER_HEIGHT_DP).toInt(),
+            )
+        }
+        block.addView(header)
+
+        val grid = GridLayout(context).apply {
+            rowCount = 5
+            orientation = GridLayout.VERTICAL
+        }
+        // Slot = cell content + inter-cell margin. Cells get a small margin
+        // so they don't bleed into each other; the visible emoji glyph
+        // remains centred in the slot.
+        val cellSidePx = dp(CELL_SIDE_DP).toInt()
+        val cellMarginPx = dp(CELL_MARGIN_DP).toInt()
+        for (emoji in emojis) {
+            val cell = TextView(context).apply {
+                text = emoji
+                textSize = 24f
+                gravity = Gravity.CENTER
+                background = pressableTransparent()
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    RecentEmojis.record(context, emoji)
+                    listener?.onEmojiSelected(emoji)
+                }
+                val lp = GridLayout.LayoutParams().apply {
+                    width = cellSidePx
+                    height = cellSidePx
+                    setMargins(cellMarginPx, cellMarginPx, cellMarginPx, cellMarginPx)
+                }
+                layoutParams = lp
+            }
+            grid.addView(cell)
+        }
+        block.addView(grid)
+        return block
+    }
+
     private fun rebuildCategoryButtons() {
-        categoryStripStack.removeAllViews()
+        // Tear down only the category buttons (preserve ABC at start and
+        // delete at end, but we'll add delete last after rebuilding).
+        while (bottomStrip.childCount > 1) {
+            bottomStrip.removeViewAt(1)
+        }
         categoryButtons.clear()
+
         for ((idx, cat) in visibleCategories.withIndex()) {
             val btn = TextView(context).apply {
                 text = cat.symbolGlyph
-                textSize = 18f
+                textSize = 16f
                 gravity = Gravity.CENTER
                 contentDescription = cat.displayName
-                setPadding(dp(10f).toInt(), 0, dp(10f).toInt(), 0)
+                background = categoryButtonBg()
                 isClickable = true
                 isFocusable = true
-                background = pressableTransparent()
                 setOnClickListener { scrollToCategory(idx) }
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    0,
                     LinearLayout.LayoutParams.MATCH_PARENT,
+                    1f,
                 )
             }
-            categoryStripStack.addView(btn)
+            bottomStrip.addView(btn)
             categoryButtons.add(btn)
+        }
+        bottomStrip.addView(deleteButton)
+    }
+
+    /** Pill background drawable that lights up when the button is selected. */
+    private fun categoryButtonBg(): StateListDrawable {
+        val corner = dp(10f)
+        val pressed = GradientDrawable().apply {
+            cornerRadius = corner
+            setColor(theme.keyBackgroundPressed)
+        }
+        val selected = GradientDrawable().apply {
+            cornerRadius = corner
+            setColor(theme.specialKeyBackground)
+        }
+        val transparent = GradientDrawable().apply {
+            cornerRadius = corner
+            setColor(Color.TRANSPARENT)
+        }
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), pressed)
+            addState(intArrayOf(android.R.attr.state_selected), selected)
+            addState(intArrayOf(), transparent)
         }
     }
 
     private fun updateCategorySelection() {
         for ((idx, btn) in categoryButtons.withIndex()) {
-            btn.alpha = if (idx == currentCategoryIndex) 1f else 0.5f
+            btn.isSelected = (idx == currentCategoryIndex)
+            btn.alpha = if (btn.isSelected) 1f else 0.6f
         }
     }
 
     private fun scrollToCategory(idx: Int) {
-        if (idx >= sectionStartPositions.size) return
+        if (idx !in sectionViews.indices) return
         currentCategoryIndex = idx
         updateCategorySelection()
-        suppressScrollUpdates = true
-        gridView.setSelection(sectionStartPositions[idx])
-        gridView.post { suppressScrollUpdates = false }
+        suppressScrollSync = true
+        val target = sectionViews[idx]
+        sectionsScroll.post {
+            sectionsScroll.smoothScrollTo(target.left, 0)
+        }
+        sectionsScroll.postDelayed({ suppressScrollSync = false }, 250)
     }
 
-    private fun updateCategoryFromPosition(position: Int) {
-        var idx = 0
-        for ((i, start) in sectionStartPositions.withIndex()) {
-            if (position >= start) idx = i else break
-        }
-        if (idx != currentCategoryIndex) {
-            currentCategoryIndex = idx
-            updateCategorySelection()
+    /** Picks the active category by finding the leftmost section that's at
+     *  least half-visible inside the scroll view. */
+    private fun attachScrollListener() {
+        sectionsScroll.viewTreeObserver.addOnScrollChangedListener {
+            if (suppressScrollSync) return@addOnScrollChangedListener
+            val scrollX = sectionsScroll.scrollX
+            val midX = scrollX + sectionsScroll.width / 4
+            var picked = 0
+            for ((idx, view) in sectionViews.withIndex()) {
+                if (view.left <= midX) picked = idx else break
+            }
+            if (picked != currentCategoryIndex) {
+                currentCategoryIndex = picked
+                updateCategorySelection()
+            }
         }
     }
-
-    // MARK: - Bottom bar wiring
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun wireBottomBar() {
-        abcButton.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            listener?.onBackToLetters()
-        }
-        spaceButton.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            listener?.onSpacePressed()
-        }
-        // Delete: support tap (single char) AND hold-to-repeat that escalates
-        // to word-deletion past the threshold. We can't use OnClickListener
-        // alone because the touch lifecycle drives the repeat timer.
+    private fun wireDeleteRepeat() {
         deleteButton.setOnTouchListener { view, ev ->
             when (ev.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -298,95 +410,22 @@ class EchosEmojiPickerView @JvmOverloads constructor(
         }
     }
 
-    // MARK: - Adapter
+    private fun pressableTransparent(): StateListDrawable =
+        pressableBackground(theme.keyBackgroundPressed)
 
-    private inner class EmojiAdapter : BaseAdapter() {
-        override fun getCount(): Int = flatEmojis.size
-        override fun getItem(position: Int): Any = flatEmojis[position]
-        override fun getItemId(position: Int): Long = position.toLong()
-
-        override fun getView(
-            position: Int,
-            convertView: View?,
-            parent: ViewGroup,
-        ): View {
-            val tv = (convertView as? TextView) ?: TextView(parent.context).apply {
-                gravity = Gravity.CENTER
-                textSize = 24f
-                background = pressableTransparent()
-                layoutParams = AbsListView.LayoutParams(
-                    AbsListView.LayoutParams.MATCH_PARENT,
-                    dp(40f).toInt(),
-                )
-            }
-            tv.text = flatEmojis[position]
-            return tv
-        }
-    }
-
-    // MARK: - Helpers
-
-    private fun spacer(): View {
-        val v = View(context)
-        v.layoutParams = LinearLayout.LayoutParams(dp(6f).toInt(), LayoutParams.MATCH_PARENT)
-        return v
-    }
-
-    private fun makeKeyButton(
-        text: String,
-        textSize: Float,
-        contentDesc: String,
-        weight: Float,
-    ): TextView {
-        return TextView(context).apply {
-            this.text = text
-            this.textSize = textSize
-            gravity = Gravity.CENTER
-            setTextColor(theme.keyText)
-            background = keyBackgroundDrawable()
-            contentDescription = contentDesc
-            isClickable = true
-            isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, weight)
-        }
-    }
-
-    private fun keyBackgroundDrawable(): StateListDrawable {
-        val cornerPx = dp(8f)
-        val pressed = GradientDrawable().apply {
-            cornerRadius = cornerPx
-            setColor(theme.specialKeyBackgroundPressed)
-        }
-        val normal = GradientDrawable().apply {
-            cornerRadius = cornerPx
-            setColor(theme.specialKeyBackground)
-        }
-        return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_pressed), pressed)
-            addState(intArrayOf(), normal)
-        }
-    }
-
-    private fun pressableTransparent(): StateListDrawable {
-        val cornerPx = dp(6f)
-        val pressed = GradientDrawable().apply {
-            cornerRadius = cornerPx
-            setColor(theme.keyBackgroundPressed)
-        }
-        return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_pressed), pressed)
-            addState(intArrayOf(), GradientDrawable().apply { cornerRadius = cornerPx })
-        }
-    }
-
-    private fun dp(value: Float): Float =
-        TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value,
-            resources.displayMetrics,
-        )
+    private fun dp(value: Float): Float = dpPx(value)
 
     companion object {
-        private const val GRID_COLUMNS = 9
+        private const val SEARCH_BAR_HEIGHT_DP: Float = 36f
+        private const val STRIP_HEIGHT_DP: Float = 36f
+        private const val SECTION_HEADER_HEIGHT_DP: Float = 16f
+        // Cell content + a 2dp margin on each side = ~40dp slot, which
+        // matches stock Gboard. 5 rows × 40dp slot + 16dp header = 216dp
+        // grid height. Bumped from the original 31dp/174dp combo where
+        // cells looked cramped and only ~3 visible columns read as
+        // distinct on iPhone-narrow viewports.
+        private const val CELL_SIDE_DP: Float = 36f
+        private const val CELL_MARGIN_DP: Float = 2f
+        private const val GRID_HEIGHT_DP: Float = 216f
     }
 }

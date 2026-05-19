@@ -12,10 +12,18 @@
     <dimen name="keyboard_top_bar_record_height">40dp</dimen>
     <dimen name="keyboard_top_bar_record_corner_radius">20dp</dimen>
     <dimen name="keyboard_top_bar_record_icon_size">18dp</dimen>
-    <dimen name="key_height">46dp</dimen>
+    <!-- Slightly tighter than 46dp to land on the native Gboard portrait
+         key height. Combined with the bigger gaps below, the rows now have
+         the same visual rhythm as stock Android. -->
+    <dimen name="key_height">42dp</dimen>
     <dimen name="key_min_touch_target">48dp</dimen>
-    <dimen name="key_horizontal_gap">4dp</dimen>
-    <dimen name="key_vertical_gap">8dp</dimen>
+    <!-- Bumped from 4dp / 8dp. AOSP Gboard portrait keys have ~6dp
+         horizontal and ~11dp vertical gap between keys; with the smaller
+         key_height this restores the airier feel. The nearest-key fallback
+         in findKey() means the wider horizontal gap doesn't reintroduce
+         the inter-key dead zone. -->
+    <dimen name="key_horizontal_gap">6dp</dimen>
+    <dimen name="key_vertical_gap">11dp</dimen>
     <dimen name="key_corner_radius">8dp</dimen>
     <dimen name="key_text_size">22sp</dimen>
     <dimen name="key_text_size_special">14sp</dimen>

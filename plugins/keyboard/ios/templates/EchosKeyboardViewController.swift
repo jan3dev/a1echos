@@ -19,6 +19,20 @@ class EchosKeyboardViewController: UIInputViewController {
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
         keyboardView.delegate = self
 
+        // Resize the keyboard whenever the layout mode changes — emoji
+        // modes need extra vertical space so the picker's 5 native rows
+        // fit. Applied without animation: opening/closing the emoji
+        // picker, switching to emoji-search, and toggling 123/symbols
+        // all snap into place instantly. Wrapping in `UIView.animate`
+        // makes the chrome (topBar / search overlay / rowStack) slide
+        // between anchors, which reads as a noisy in/out flicker
+        // especially on the emoji ↔ QWERTY transition.
+        keyboardView.onLayoutModeChange = { [weak self] _ in
+            guard let self = self else { return }
+            self.applyPreferredKeyboardHeight()
+            self.view.layoutIfNeeded()
+        }
+
         view.addSubview(keyboardView)
         NSLayoutConstraint.activate([
             keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -63,14 +77,19 @@ class EchosKeyboardViewController: UIInputViewController {
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
-        // Keyboard = rows + top bar (Echos logo + record button).
-        // Row heights chosen so portrait keys land near 57pt and landscape
-        // keys near 40pt, matching the iPhone iOS 26 stock keyboard.
-        let isLandscape = view.bounds.width > view.bounds.height
-        let rowsHeight: CGFloat = isLandscape ? 204 : 272
-        let height = rowsHeight + KeyboardTopBar.preferredHeight
-        keyboardView.heightConstraint?.constant = height
-        if keyboardView.heightConstraint == nil {
+        applyPreferredKeyboardHeight()
+    }
+
+    /// Pulls the keyboard's preferred height from `KeyboardView`. Computed
+    /// over there because the per-mode budget (taller in emoji, tighter in
+    /// QWERTY) needs to know `currentLayout`. Portrait/landscape ratios:
+    /// QWERTY ≈ 44pt key / ~32pt key; emoji modes ≈ 32pt cells × 5 rows +
+    /// search + strip.
+    private func applyPreferredKeyboardHeight() {
+        let height = keyboardView.preferredHeight
+        if let constraint = keyboardView.heightConstraint {
+            constraint.constant = height
+        } else {
             let constraint = keyboardView.heightAnchor.constraint(equalToConstant: height)
             constraint.priority = .defaultHigh
             constraint.isActive = true

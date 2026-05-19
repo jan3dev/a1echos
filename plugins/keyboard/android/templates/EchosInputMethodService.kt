@@ -40,6 +40,12 @@ class EchosInputMethodService : InputMethodService(),
     private lateinit var keyboardView: EchosKeyboardView
     private lateinit var keyOverlay: KeyOverlayView
     private var emojiPickerView: EchosEmojiPickerView? = null
+    private var emojiSearchOverlay: EchosEmojiSearchOverlayView? = null
+    private var emojiSearchIndex: EmojiSearchIndex? = null
+    private var emojiSearchQuery: String = ""
+    // True while keystroke / delete actions are intercepted into
+    // emojiSearchQuery instead of the host's InputConnection.
+    private var emojiSearchActive: Boolean = false
     private lateinit var transcriber: ImeSherpaTranscriber
     private var currentEditorAction: Int = EditorInfo.IME_ACTION_NONE
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -50,14 +56,10 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     override fun onCreateInputView(): View {
-        // The root frame stacks a transparent overlay (`keyOverlay`) on top
-        // of the topBar+keyboard column. The overlay hosts the typewriter
-        // preview balloon and the long-press accent popup so those can
-        // extend above the keyboard's row area into the topBar's vertical
-        // band — otherwise top-row keys would have nowhere visible to put
-        // their preview. We use a custom FrameLayout subclass that sizes
-        // itself by the column's measured height (instead of letting a
-        // MATCH_PARENT overlay child blow the IME window up to full screen).
+        // keyOverlay is a transparent FrameLayout child that hosts the
+        // preview balloon + long-press popup. ColumnSizedFrameLayout sizes
+        // itself by its first child so a MATCH_PARENT overlay doesn't blow
+        // the IME window up to full screen.
         rootFrame = ColumnSizedFrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -172,39 +174,51 @@ class EchosInputMethodService : InputMethodService(),
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Theme and orientation changes are handled by recreating the view
     }
 
     // -- KeyboardActionListener --
 
     override fun onKeyPress(char: String) {
+        if (emojiSearchActive) {
+            emojiSearchQuery += char.lowercase()
+            refreshEmojiSearchOverlay()
+            return
+        }
         currentInputConnection?.commitText(char, 1)
     }
 
     override fun onDeletePress() {
+        if (emojiSearchActive) {
+            if (emojiSearchQuery.isNotEmpty()) {
+                emojiSearchQuery = emojiSearchQuery.dropLast(1)
+                refreshEmojiSearchOverlay()
+            }
+            return
+        }
         deleteOneGrapheme()
     }
 
     override fun onDeleteWord() {
+        if (emojiSearchActive) {
+            if (emojiSearchQuery.isNotEmpty()) {
+                emojiSearchQuery = ""
+                refreshEmojiSearchOverlay()
+            }
+            return
+        }
         deleteWordBackward()
     }
 
-    /**
-     * Deletes one grapheme cluster — covers surrogate pairs (most emojis),
-     * skin-tone modifiers, regional-indicator flags, and ZWJ sequences.
-     * `deleteSurroundingText(1, 0)` only drops a single Java char, which
-     * leaves the trailing half of a surrogate pair behind and renders as a
-     * "?" replacement until the user taps delete a second time.
-     */
+    // Grapheme-cluster delete — deleteSurroundingText(1, 0) drops half a
+    // surrogate pair for emoji/ZWJ sequences and leaves "?" until the user
+    // taps delete again.
     private fun deleteOneGrapheme() {
         val ic: InputConnection = currentInputConnection ?: return
-        // If a selection is active, ⌫ should clear it in one tap (matches AOSP LatinIME).
         val selected = ic.getSelectedText(0)
         if (!selected.isNullOrEmpty()) {
             ic.commitText("", 1)
             return
         }
-        // 32 chars is enough for the longest standard ZWJ family sequences.
         val before = ic.getTextBeforeCursor(32, 0)?.toString().orEmpty()
         if (before.isEmpty()) return
         val bi = BreakIterator.getCharacterInstance()
@@ -216,10 +230,24 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     override fun onSpacePress() {
+        if (emojiSearchActive) {
+            emojiSearchQuery += " "
+            refreshEmojiSearchOverlay()
+            return
+        }
         currentInputConnection?.commitText(" ", 1)
     }
 
     override fun onReturnPress() {
+        if (emojiSearchActive) {
+            val first = emojiSearchIndex?.search(emojiSearchQuery)?.firstOrNull()
+            if (first != null) {
+                currentInputConnection?.commitText(first, 1)
+                RecentEmojis.record(this, first)
+            }
+            exitEmojiSearchMode()
+            return
+        }
         val ic = currentInputConnection ?: return
         if (currentEditorAction != EditorInfo.IME_ACTION_NONE) {
             ic.performEditorAction(currentEditorAction)
@@ -228,15 +256,14 @@ class EchosInputMethodService : InputMethodService(),
         }
     }
 
-    /** Legacy bottom-row mic — the button is gone from the layout, but keep
-     *  the hooks so a stale layout doesn't crash. */
     override fun onMicPress() = toggleRecording()
-    override fun onMicRelease() { /* toggle on press, no action on release */ }
+    override fun onMicRelease() {}
 
     override fun onEmojiPress() {
-        // Android doesn't expose a direct "open emoji keyboard" API to third-
-        // party IMEs, so we render our own picker inside the keyboard area
-        // (same approach as Gboard / SwiftKey).
+        if (emojiSearchActive) {
+            exitEmojiSearchMode()
+            return
+        }
         showEmojiPicker()
     }
 
@@ -282,12 +309,12 @@ class EchosInputMethodService : InputMethodService(),
         showKeyboardLayout()
     }
 
-    override fun onSpacePressed() {
-        currentInputConnection?.commitText(" ", 1)
-    }
-
     override fun onDeleteCharacter() {
         deleteOneGrapheme()
+    }
+
+    override fun onActivateSearch() {
+        enterEmojiSearchMode()
     }
 
     // -- View swapping --
@@ -304,11 +331,77 @@ class EchosInputMethodService : InputMethodService(),
         keyboardView.visibility = View.GONE
         picker.visibility = View.VISIBLE
         picker.refresh()
+        topBar.visibility = View.VISIBLE
     }
 
     private fun showKeyboardLayout() {
         emojiPickerView?.visibility = View.GONE
         keyboardView.visibility = View.VISIBLE
+        exitEmojiSearchMode(suppressViewSwap = true)
+        topBar.visibility = View.VISIBLE
+    }
+
+    private fun enterEmojiSearchMode() {
+        emojiSearchActive = true
+        emojiSearchQuery = ""
+        if (emojiSearchIndex == null) {
+            emojiSearchIndex = EmojiSearchIndex(this)
+        }
+        installSearchOverlayIfNeeded()
+        emojiSearchOverlay?.visibility = View.VISIBLE
+        topBar.visibility = View.GONE
+        emojiPickerView?.visibility = View.GONE
+        keyboardView.visibility = View.VISIBLE
+        keyboardView.showLetterLayout()
+        keyboardView.updateReturnKeyType(currentEditorAction)
+        keyboardView.setReturnAsCheckmark(true)
+        refreshEmojiSearchOverlay()
+    }
+
+    private fun exitEmojiSearchMode(suppressViewSwap: Boolean = false) {
+        if (!emojiSearchActive) return
+        emojiSearchActive = false
+        emojiSearchQuery = ""
+        emojiSearchOverlay?.visibility = View.GONE
+        keyboardView.setReturnAsCheckmark(false)
+        if (!suppressViewSwap) {
+            showEmojiPicker()
+        }
+    }
+
+    private fun installSearchOverlayIfNeeded() {
+        if (emojiSearchOverlay != null) return
+        val overlay = EchosEmojiSearchOverlayView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            setListener(object : EchosEmojiSearchOverlayView.Listener {
+                override fun onClearQuery() {
+                    emojiSearchQuery = ""
+                    refreshEmojiSearchOverlay()
+                }
+                override fun onEmojiSelected(emoji: String) {
+                    currentInputConnection?.commitText(emoji, 1)
+                    RecentEmojis.record(this@EchosInputMethodService, emoji)
+                    exitEmojiSearchMode()
+                }
+            })
+        }
+        container.addView(overlay, container.indexOfChild(topBar) + 1)
+        emojiSearchOverlay = overlay
+    }
+
+    private fun refreshEmojiSearchOverlay() {
+        val overlay = emojiSearchOverlay ?: return
+        val results: List<String> = if (emojiSearchQuery.isEmpty()) {
+            val recents = EmojiData.emojis(EmojiCategory.RECENTS, this)
+            if (recents.isNotEmpty()) recents
+            else EmojiData.emojis(EmojiCategory.SMILEYS, this).take(40)
+        } else {
+            emojiSearchIndex?.search(emojiSearchQuery).orEmpty()
+        }
+        overlay.setQuery(emojiSearchQuery, results)
     }
 
     private fun deleteWordBackward() {
@@ -361,12 +454,8 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     private fun startTranscription() {
-        // Check the runtime mic permission first — on modern Android the
-        // `AudioRecord` constructor doesn't throw when RECORD_AUDIO is
-        // missing, it just returns an instance with `STATE_UNINITIALIZED`,
-        // which is exactly what was being seen in the IME (`state=0`).
-        // Catch it here so we can guide the user to the main app rather
-        // than silently failing.
+        // AudioRecord doesn't throw without RECORD_AUDIO — it just returns
+        // STATE_UNINITIALIZED. Check the permission up front instead.
         if (
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED

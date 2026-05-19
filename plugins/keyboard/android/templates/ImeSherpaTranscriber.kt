@@ -22,8 +22,9 @@ import kotlin.concurrent.thread
  * `com.k2fsa.sherpa.onnx` JNI wrappers shipped with `react-native-sherpa-onnx`
  * directly — no IPC needed.
  *
- * Flow: start recording → accumulate PCM → stop on silence/release → decode →
- * callback with text.
+ * Flow: start recording → accumulate PCM → stop on user release / max
+ * duration → decode → callback with text. There is no silence-based
+ * auto-stop; the user owns the start/stop boundaries.
  */
 class ImeSherpaTranscriber(private val context: Context) {
 
@@ -33,8 +34,6 @@ class ImeSherpaTranscriber(private val context: Context) {
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val MAX_RECORDING_SECONDS = 30
-        private const val SILENCE_THRESHOLD_RMS = 500
-        private const val SILENCE_DURATION_MS = 1500
         private const val NUM_THREADS = 2
     }
 
@@ -133,14 +132,11 @@ class ImeSherpaTranscriber(private val context: Context) {
 
     private fun captureAudio(bufferSize: Int, files: SherpaModelFiles) {
         val buffer = ShortArray(bufferSize / 2)
-        var silentFrames = 0
-        val silentFrameThreshold = (SILENCE_DURATION_MS * SAMPLE_RATE) / (1000 * buffer.size)
+        // Hard cap matches Whisper's 30s context window and keeps the
+        // pre-allocated `pcmBuffer` from overflowing. The user controls
+        // start/stop; this loop only exits early when they release or
+        // the buffer hits its cap.
         val maxSamples = MAX_RECORDING_SECONDS * SAMPLE_RATE
-        // The auto-stop on silence should only kick in *after* the user has
-        // actually started speaking. Otherwise the recording terminates a
-        // moment after the user taps record (since the mic is silent during
-        // their reaction time) and they never get a chance to dictate.
-        var hasReceivedSpeech = false
 
         try {
             while (isRecording.get() && pcmBufferLength < maxSamples) {
@@ -155,22 +151,18 @@ class ImeSherpaTranscriber(private val context: Context) {
                         }
                     }
 
-                    val rms = calculateRMS(buffer, read)
-                    if (rms >= SILENCE_THRESHOLD_RMS) {
-                        hasReceivedSpeech = true
-                        silentFrames = 0
-                    } else if (hasReceivedSpeech) {
-                        silentFrames++
-                        if (silentFrames >= silentFrameThreshold) {
-                            isRecording.set(false)
-                        }
-                    }
                     // Push a normalised 0…1 level to the visualizer. ~3000
                     // RMS is roughly normal-volume speech in 16-bit PCM —
                     // tuned to give the wave expressive motion without
                     // pegging at full amplitude on conversational input.
+                    val rms = calculateRMS(buffer, read)
                     onAudioLevel?.invoke((rms / 3000.0).coerceIn(0.0, 1.0))
                 }
+            }
+            // Reaching the buffer cap counts as a user-initiated stop —
+            // flush the recorder so the next branch transcribes.
+            if (pcmBufferLength >= maxSamples) {
+                isRecording.set(false)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error during audio capture", e)

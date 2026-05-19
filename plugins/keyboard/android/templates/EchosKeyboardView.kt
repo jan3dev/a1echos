@@ -59,6 +59,11 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var shiftState: ShiftState = ShiftState.OFF
     private var micState: MicState = MicState.IDLE
     private var returnLabel: String = "\u23CE"
+    /// When true, the RETURN key renders as a checkmark \u2014 the IME flips
+    /// this on while in emoji-search mode so the return key reads as
+    /// "done / dismiss search" (matching native iOS). The blue accent
+    /// background stays on because the return-key already uses it.
+    private var returnAsCheckmark: Boolean = false
 
     /// Per-pointer state. Each finger touching the keyboard gets its own
     /// entry keyed by Android's stable `pointerId`, which is what unlocks
@@ -67,9 +72,16 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// A's existing entry, and either pointer's release commits its own
     /// character. Without this map, only the gesture-leader pointer was
     /// tracked and every overlapping press was silently dropped.
+    ///
+    /// `rowIdx` / `colIdx` are mutable — `ACTION_MOVE` re-detects the key
+    /// under each pointer with hysteresis (LatinIME's
+    /// `isMajorEnoughMoveToBeOnNewKey`) so a slightly-mis-aimed press can
+    /// slide onto the intended key before release. Without this drag-to-
+    /// correct, fast typing on the QWERTY-row boundary still loses keys
+    /// even with per-pointer tracking.
     private data class PointerState(
-        val rowIdx: Int,
-        val colIdx: Int,
+        var rowIdx: Int,
+        var colIdx: Int,
         var touchDownNs: Long,
         var longPressRunnable: Runnable?,
         var longPressFired: Boolean,
@@ -228,6 +240,10 @@ class EchosKeyboardView @JvmOverloads constructor(
         numberLabelOffsetRight = dpPx(7f)
         numberLabelOffsetTop = dpPx(12f)
         iconSizePx = dpPx(22f).toInt()
+        // ~10dp is roughly LatinIME's default hysteresis on phone-sized
+        // keys — small enough that the user can drift mid-press, large
+        // enough that boundary jitter doesn't constantly re-detect.
+        keyHysteresisPx = dpPx(10f)
 
         // Pre-configure the three text paints with their final text sizes.
         // Setting `textSize` triggers font-metric recomputation, so we want
@@ -284,6 +300,15 @@ class EchosKeyboardView @JvmOverloads constructor(
         layoutMode = LayoutMode.NUMBERS
         currentRows = EchosKeyboardLayout.NUMBER_ROWS
         keyRectsValid = false
+        invalidate()
+    }
+
+    /// Toggle the visual checkmark/return glyph on the RETURN key. Used by
+    /// the IME service to flag emoji-search dismiss behaviour without
+    /// adding a new key type or repurposing `updateReturnKeyType`.
+    fun setReturnAsCheckmark(enabled: Boolean) {
+        if (returnAsCheckmark == enabled) return
+        returnAsCheckmark = enabled
         invalidate()
     }
 
@@ -453,7 +478,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         labelPaint.color = textColor
 
         val displayLabel = when {
-            key.type == EchosKeyboardLayout.KeyType.RETURN -> returnLabel
+            key.type == EchosKeyboardLayout.KeyType.RETURN ->
+                if (returnAsCheckmark) "✓" else returnLabel
             key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState != ShiftState.OFF ->
                 uppercaseLabelCache[key.label] ?: key.label.uppercase()
             else -> key.label
@@ -524,7 +550,15 @@ class EchosKeyboardView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                routeVariantsDrag(event)
+                // Demux every active pointer (LatinIME pattern: see
+                // `PointerTracker.processMotionEvent` ACTION_MOVE branch).
+                // A single MotionEvent carries up-to-N pointer positions —
+                // missing the non-actionIndex pointers here is what makes
+                // a slow drag on one finger feel "stuck" when another finger
+                // is also down. The variants-drag routing was the only
+                // ACTION_MOVE handling before; now every pointer gets its
+                // own re-detection pass.
+                handleMoveEvent(event)
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
@@ -542,7 +576,115 @@ class EchosKeyboardView @JvmOverloads constructor(
         return false
     }
 
+    /// Drag-to-correct hysteresis (LatinIME's
+    /// `getKeyHysteresisDistanceSquared`). The finger has to leave the
+    /// pressed key's frame by at least this many pixels before we transfer
+    /// the press — otherwise tiny jitter on the boundary would cause a
+    /// constant ping-pong between adjacent keys. Computed lazily in
+    /// `loadDimensions` once dp scale is known.
+    private var keyHysteresisPx = 0f
+
+    private fun handleMoveEvent(event: MotionEvent) {
+        val ov = overlay
+        val variantsActive = ov?.hasVariants() == true
+        var needsRedraw = false
+
+        val pointerCount = event.pointerCount
+        for (i in 0 until pointerCount) {
+            val pointerId = event.getPointerId(i)
+            val state = pointers.get(pointerId) ?: continue
+            val x = event.getX(i)
+            val y = event.getY(i)
+
+            // Variants popover takes over the drag for its owning pointer —
+            // forward and skip everything else (no row/col re-detection,
+            // no drag-correct).
+            if (state.ownsVariants && variantsActive) {
+                ov?.updateVariantsHighlight(x, y)
+                continue
+            }
+
+            // Long-press already fired (e.g. globe picker shown): drift is
+            // just noise — don't re-target.
+            if (state.longPressFired) continue
+            // Delete keeps repeating regardless of where the finger drifts.
+            if (state.ownsDeleteRepeat) continue
+
+            val currentRect = keyRectAtOrNull(state.rowIdx, state.colIdx)
+                ?: continue
+            // Inflate the current key's rect by the hysteresis margin —
+            // a pointer still inside this inflated rect is considered to
+            // remain on its original key. Cheap proxy for LatinIME's
+            // `squaredDistanceToEdge >= keyHysteresisDistanceSquared`.
+            if (x >= currentRect.left - keyHysteresisPx &&
+                x <= currentRect.right + keyHysteresisPx &&
+                y >= currentRect.top - keyHysteresisPx &&
+                y <= currentRect.bottom + keyHysteresisPx
+            ) continue
+
+            val packed = findKey(x, y)
+            if (packed < 0) continue
+            val newRow = packed ushr 16
+            val newCol = packed and 0xFFFF
+            if (newRow == state.rowIdx && newCol == state.colIdx) continue
+
+            val newKey = currentRows[newRow].keys[newCol]
+            val oldKey = currentRows[state.rowIdx].keys[state.colIdx]
+
+            // Only slide between character-ish keys. Sliding from `q` onto
+            // shift / delete / return would do more harm than good — and
+            // sliding off shift was never the user's intent.
+            if (!isSlideable(oldKey.type) || !isSlideable(newKey.type)) continue
+
+            // Cancel any pending long-press for the old key — the drag-
+            // correct is a fresh press, not a held one.
+            state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+            state.longPressRunnable = null
+
+            state.rowIdx = newRow
+            state.colIdx = newCol
+            needsRedraw = true
+
+            val newKeyRect = keyRects[newRow][newCol]
+            val displayLabel = if (shiftState != ShiftState.OFF) {
+                uppercaseLabelCache[newKey.label] ?: newKey.label.uppercase()
+            } else newKey.label
+            overlay?.showPreview(displayLabel, newKeyRect)
+
+            if (newKey.type == EchosKeyboardLayout.KeyType.CHARACTER &&
+                AccentVariants.hasVariants(newKey.label) &&
+                !anyPointerOwnsVariants()
+            ) {
+                scheduleAccentLongPress(state, newKeyRect, newKey)
+            }
+        }
+
+        if (needsRedraw) invalidate()
+    }
+
+    private fun isSlideable(type: EchosKeyboardLayout.KeyType): Boolean =
+        type == EchosKeyboardLayout.KeyType.CHARACTER ||
+            type == EchosKeyboardLayout.KeyType.COMMA ||
+            type == EchosKeyboardLayout.KeyType.PERIOD
+
+    private fun keyRectAtOrNull(rowIdx: Int, colIdx: Int): RectF? {
+        if (rowIdx < 0 || rowIdx >= keyRects.size) return null
+        val row = keyRects[rowIdx]
+        if (colIdx < 0 || colIdx >= row.size) return null
+        return row[colIdx]
+    }
+
     private fun handlePointerDown(pointerId: Int, x: Float, y: Float) {
+        // keyRects are normally computed lazily inside onDraw, but a touch
+        // can arrive in the narrow window between layout and the first
+        // frame — in which case `keyRects` may be empty or stale, and
+        // findKey would return -1 even on a perfectly aimed press. Force a
+        // recompute here so the first touch after every layout swap is
+        // reliable.
+        if (!keyRectsValid) {
+            computeKeyRects()
+            keyRectsValid = true
+        }
         val packed = findKey(x, y)
         if (packed < 0) return
         val rowIdx = packed ushr 16
@@ -657,24 +799,20 @@ class EchosKeyboardView @JvmOverloads constructor(
         deleteRepeater.cancel()
     }
 
-    /// Forwards horizontal drag from the variants-owning pointer into the
-    /// overlay, so the user can slide-pick a variant after the popup
-    /// appears. Looks up the owning pointer's coordinates explicitly via
-    /// `findPointerIndex` — `event.x/y` would only return the gesture
-    /// leader's position.
-    private fun routeVariantsDrag(event: MotionEvent) {
-        val ov = overlay ?: return
-        if (!ov.hasVariants()) return
+    /// Drops every pointer state without firing release actions. Used right
+    /// before swapping `currentRows` on mode/symbol switch, since any held
+    /// pointer's `rowIdx`/`colIdx` indexes into the old layout's rows. The
+    /// "other" in the name: by the time this fires from `handleKeyAction`,
+    /// the pointer that triggered the switch is already out of the map.
+    private fun cancelOtherActivePointers() {
+        if (pointers.size() == 0) return
         for (i in 0 until pointers.size()) {
             val state = pointers.valueAt(i)
-            if (!state.ownsVariants) continue
-            val pointerId = pointers.keyAt(i)
-            val pIdx = event.findPointerIndex(pointerId)
-            if (pIdx >= 0) {
-                ov.updateVariantsHighlight(event.getX(pIdx), event.getY(pIdx))
-            }
-            return
+            state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
         }
+        pointers.clear()
+        overlay?.clearAll()
+        deleteRepeater.cancel()
     }
 
     private fun anyPointerOwnsVariants(): Boolean {
@@ -739,10 +877,22 @@ class EchosKeyboardView @JvmOverloads constructor(
             resources.displayMetrics,
         )
 
-    /// Returns `(rowIdx shl 16) or colIdx`, or `-1` if no key contains the
-    /// point. Packed into a primitive Int so that hit-testing on every
-    /// pointer down doesn't allocate a `Pair<Int, Int>`.
+    /// Returns `(rowIdx shl 16) or colIdx` for the key whose rect contains
+    /// the touch, or — when the touch lands in the inter-key gap — the
+    /// nearest key in the row that vertically contains the touch. Returns
+    /// `-1` only when no row is close enough.
+    ///
+    /// Without this fallback the ~6dp horizontal gap between keys is a
+    /// literal dead zone: `contains(x, y)` misses, `handlePointerDown`
+    /// returns early, and the entire press is lost — which the user feels
+    /// as "the keyboard skipped a key" especially after a few words of
+    /// fast roll-typing where gap-landings statistically accumulate.
+    ///
+    /// Constraining the nearest search to the touch's row keeps a slightly
+    /// low thumb from snapping up to the row above. This mirrors the iOS
+    /// `hitTestKeyButton` fix and Archagon's `ForwardingView.findNearestView`.
     private fun findKey(x: Float, y: Float): Int {
+        // Fast path: direct hit.
         for (rowIdx in keyRects.indices) {
             for (colIdx in keyRects[rowIdx].indices) {
                 if (keyRects[rowIdx][colIdx].contains(x, y)) {
@@ -750,7 +900,64 @@ class EchosKeyboardView @JvmOverloads constructor(
                 }
             }
         }
-        return -1
+
+        // Pick the row whose vertical band the touch lies in, or the row
+        // with the nearest vertical edge if the touch is between rows.
+        val candidateRow = nearestRowIndex(y)
+        if (candidateRow < 0) return -1
+
+        // Find the nearest key in that row by squared distance-to-rect.
+        var bestCol = -1
+        var bestDistSq = Float.MAX_VALUE
+        val row = keyRects[candidateRow]
+        for (colIdx in row.indices) {
+            val r = row[colIdx]
+            val dx = when {
+                x < r.left -> r.left - x
+                x > r.right -> x - r.right
+                else -> 0f
+            }
+            val dy = when {
+                y < r.top -> r.top - y
+                y > r.bottom -> y - r.bottom
+                else -> 0f
+            }
+            val d = dx * dx + dy * dy
+            if (d < bestDistSq) {
+                bestDistSq = d
+                bestCol = colIdx
+            }
+        }
+        if (bestCol < 0) return -1
+
+        // Cap the snap distance so far-off touches still fall through
+        // (e.g. a thumb that scrolled past the keyboard onto the suggestion
+        // bar). ~1.5 × the key's smaller side, in squared form.
+        val cap = row[bestCol].height() * 1.5f
+        if (bestDistSq > cap * cap) return -1
+
+        return (candidateRow shl 16) or bestCol
+    }
+
+    /// Index of the row whose vertical span best matches `y`; falls back to
+    /// the row with the nearest vertical edge if the touch is between rows.
+    /// Returns -1 only when `keyRects` is empty.
+    private fun nearestRowIndex(y: Float): Int {
+        if (keyRects.isEmpty()) return -1
+        var bestRow = -1
+        var bestDist = Float.MAX_VALUE
+        for (rowIdx in keyRects.indices) {
+            val rowRects = keyRects[rowIdx]
+            if (rowRects.isEmpty()) continue
+            val ref = rowRects[0]
+            if (y in ref.top..ref.bottom) return rowIdx
+            val d = minOf(kotlin.math.abs(y - ref.top), kotlin.math.abs(y - ref.bottom))
+            if (d < bestDist) {
+                bestDist = d
+                bestRow = rowIdx
+            }
+        }
+        return bestRow
     }
 
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
@@ -780,6 +987,10 @@ class EchosKeyboardView @JvmOverloads constructor(
                 invalidate()
             }
             EchosKeyboardLayout.KeyType.MODE_SWITCH -> {
+                // Any still-held pointers' rowIdx/colIdx index into the old
+                // layout — drop them before swapping `currentRows` so we
+                // don't commit a stale (and probably wrong) key on release.
+                cancelOtherActivePointers()
                 when (layoutMode) {
                     LayoutMode.LETTERS -> {
                         layoutMode = LayoutMode.NUMBERS
@@ -795,6 +1006,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 invalidate()
             }
             EchosKeyboardLayout.KeyType.SYMBOL_SWITCH -> {
+                cancelOtherActivePointers()
                 when (layoutMode) {
                     LayoutMode.NUMBERS -> {
                         layoutMode = LayoutMode.SYMBOLS

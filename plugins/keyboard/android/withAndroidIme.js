@@ -1,19 +1,13 @@
+const fs = require("fs");
+const path = require("path");
+
 const {
   withAndroidManifest,
   withAppBuildGradle,
   withDangerousMod,
 } = require("expo/config-plugins");
-const fs = require("fs");
-const path = require("path");
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
-
-/**
- * Reads a template file from the android templates directory.
- */
-function readTemplate(relativePath) {
-  return fs.readFileSync(path.join(TEMPLATES_DIR, relativePath), "utf8");
-}
 
 /**
  * Ensures a directory exists, creating it recursively if needed.
@@ -134,7 +128,9 @@ function withImeSources(config) {
         "KeyTheme.kt",
         "KeyDeleteRepeater.kt",
         "EmojiData.kt",
+        "EmojiSearchIndex.kt",
         "EchosEmojiPickerView.kt",
+        "EchosEmojiSearchOverlayView.kt",
         "AccentVariants.kt",
         "KeyOverlayView.kt",
         "ImeSettingsActivity.kt",

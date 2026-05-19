@@ -54,10 +54,69 @@ struct KeyboardTheme {
     let micButtonIcon: UIColor = .white
 
     /// Drop-shadow color used on each key to match stock iOS's subtle elevation.
+    /// Dark-mode was previously 0.45α which crushed the floating-key look in
+    /// low-light; KeyboardKit / stock iOS use a much lighter shadow (~0.25α)
+    /// so the keys read as raised, not glued.
     let keyShadow: UIColor = UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor.black.withAlphaComponent(0.45)
+            ? UIColor.black.withAlphaComponent(0.25)
             : UIColor.black.withAlphaComponent(0.15)
+    }
+
+    // MARK: - Geometry tokens
+
+    /// Corner radius for the character (alphanumeric) keys. Slightly tighter
+    /// than the system keys so the QWERTY rows read as a continuous band of
+    /// pill cells — matches the visual hierarchy KeyboardKit and stock iOS 26
+    /// use to separate "letter" from "function" affordances.
+    let cornerRadiusCharacter: CGFloat = 8
+
+    /// Corner radius for system keys (shift / delete / 123 / return / mic).
+    /// A touch larger than `cornerRadiusCharacter` so the rounder shape reads
+    /// as the action affordance.
+    let cornerRadiusSystem: CGFloat = 10
+
+    // MARK: - Emoji picker tokens
+
+    /// Background fill behind the active category icon in the emoji picker's
+    /// category strip. Mirrors KeyboardKit's pill-highlighted active tab.
+    let emojiCategorySelectedFill: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.12)
+        }
+        return UIColor.black.withAlphaComponent(0.08)
+    }
+
+    /// Search-pill fill in the emoji picker. Native iOS 26 renders the
+    /// search field as a tone *lighter* than the keyboard backdrop in
+    /// both appearances — a near-white pill on the light grey backdrop,
+    /// and a subtle lift over the dark backdrop. Using a black overlay
+    /// in light mode makes the field read as recessed/darker, which
+    /// breaks parity with the system emoji keyboard.
+    let emojiSearchBarFill: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.18)
+        }
+        return UIColor.white.withAlphaComponent(0.7)
+    }
+
+    /// Tint for inactive category icons. Active ones use `keyText`.
+    let emojiCategoryInactiveTint: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.55)
+        }
+        return UIColor.black.withAlphaComponent(0.40)
+    }
+
+    /// Caption color above each section block in the emoji scroll view.
+    let emojiSectionHeaderText: UIColor = .secondaryLabel
+
+    /// Background flash drawn behind an emoji cell while it's pressed.
+    let emojiCellPressedFill: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.10)
+        }
+        return UIColor.black.withAlphaComponent(0.06)
     }
 }
 

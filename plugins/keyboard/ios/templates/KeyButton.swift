@@ -2,18 +2,23 @@ import UIKit
 
 /// A single keyboard key. Renders text labels for character keys and SF
 /// Symbols (matching iOS's native keyboard glyphs) for modifier keys.
+///
+/// QWERTY keys run in `passiveHitTesting` mode (`isUserInteractionEnabled =
+/// false`): touches pass through to `KeyboardView`'s multi-touch pipeline,
+/// which routes each finger independently to fix the key-skipping that
+/// `UIControl`'s single-touch model causes during fast roll-typing. The
+/// button stays around as a pure visual cell — label, symbol, pressed state.
+/// The emoji picker's bottom-bar buttons still use the legacy `UIControl`
+/// target/action path because they're widely spaced and don't share a parent
+/// with the QWERTY rows.
 class KeyButton: UIControl {
 
     /// Called when a long-press begins on the key. Used by the emoji key to
     /// invoke the system keyboard picker (`handleInputModeList(from:with:)`),
-    /// since the iOS layout no longer has a dedicated globe key.
+    /// since the iOS layout no longer has a dedicated globe key. Only fires
+    /// in legacy `UIControl` mode — in passive mode, `KeyboardView` schedules
+    /// the long-press itself via the per-pointer timer.
     var onLongPress: ((KeyButton) -> Void)?
-
-    /// Drives the accent-variants popover for letter keys with an entry in
-    /// `AccentVariants`. Forwards the recognizer's full lifecycle so the
-    /// keyboard view can show the popover, track drag-to-select, and
-    /// commit on release.
-    var onAccentLongPress: ((KeyButton, UILongPressGestureRecognizer) -> Void)?
 
     let keyDefinition: KeyboardLayout.KeyDefinition
     var widthMultiplier: CGFloat = 1.0
@@ -26,10 +31,34 @@ class KeyButton: UIControl {
     private var theme = KeyboardTheme()
     private var micState: MicState = .idle
     private var shiftState: KeyboardLayout.ShiftState = .off
+    /// When true, the key renders with the accent (blue) fill and white
+    /// glyph — used by the return key while we're in emoji-search mode so
+    /// it reads as the "done / dismiss search" affordance.
+    private var isPrimaryAction: Bool = false
 
-    init(keyDefinition: KeyboardLayout.KeyDefinition, theme: KeyboardTheme) {
+    /// When true, the button doesn't participate in hit-testing: `KeyboardView`
+    /// owns the touch pipeline and drives `setPressed` / commits directly.
+    /// QWERTY keys use this; the emoji picker's bottom-bar keys don't.
+    let passiveHitTesting: Bool
+
+    /// True for character / comma / period keys — they get the tighter
+    /// `cornerRadiusCharacter`. Everything else (modifiers, space, return)
+    /// gets `cornerRadiusSystem`.
+    private var isCharacterLike: Bool {
+        switch keyDefinition.type {
+        case .character, .comma, .period: return true
+        default: return false
+        }
+    }
+
+    init(
+        keyDefinition: KeyboardLayout.KeyDefinition,
+        theme: KeyboardTheme,
+        passiveHitTesting: Bool = false
+    ) {
         self.keyDefinition = keyDefinition
         self.theme = theme
+        self.passiveHitTesting = passiveHitTesting
         super.init(frame: .zero)
         setupView()
     }
@@ -43,12 +72,21 @@ class KeyButton: UIControl {
         // shadow, matching the stock iOS keyboard's floating-key look.
         // `masksToBounds` stays false so the shadow can render outside the
         // bounds; the background color is clipped by `cornerRadius`.
-        backgroundView.layer.cornerRadius = 8
+        //
+        // Character keys get a slightly tighter radius than system keys so
+        // the QWERTY rows read as a continuous band — KeyboardKit splits
+        // these two via `KeyboardViewStyle`'s rounded-corner properties for
+        // the same reason.
+        backgroundView.layer.cornerRadius = isCharacterLike
+            ? theme.cornerRadiusCharacter
+            : theme.cornerRadiusSystem
         backgroundView.layer.cornerCurve = .continuous
-        backgroundView.layer.shadowColor = theme.keyShadow.cgColor
-        backgroundView.layer.shadowOpacity = 1.0 // alpha already baked into keyShadow
-        backgroundView.layer.shadowOffset = CGSize(width: 0, height: 1)
-        backgroundView.layer.shadowRadius = 0
+        // Shadow disabled — flat keys read cleaner against the
+        // translucent UIInputView backdrop. (The drop-shadow attempt
+        // produced a faint visual seam on dark mode and looked dated
+        // in light mode.) Keeping the masksToBounds = false line so
+        // future popups / overlays can still render outside bounds.
+        backgroundView.layer.shadowOpacity = 0
         backgroundView.layer.masksToBounds = false
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         backgroundView.isUserInteractionEnabled = false
@@ -95,26 +133,21 @@ class KeyButton: UIControl {
         accessibilityLabel = keyDefinition.accessibilityLabel
         accessibilityTraits = .keyboardKey
 
-        // Long-press recognizers are attached conditionally so they don't
-        // interfere with regular tap handling on keys that don't need
-        // them. The emoji key surfaces the system keyboard picker; letter
-        // keys with accent variants surface the variants popover.
-        if keyDefinition.type == .emoji {
+        // Passive keys disable their own touch handling so `KeyboardView`'s
+        // multi-touch pipeline can receive every finger. Long-press handling
+        // for emoji / accent variants is scheduled by the parent's per-pointer
+        // timer instead of a per-button `UILongPressGestureRecognizer`.
+        if passiveHitTesting {
+            isUserInteractionEnabled = false
+        } else if keyDefinition.type == .emoji {
+            // Legacy path used only by the emoji picker's bottom bar — those
+            // keys don't share a parent with the QWERTY rows, so they keep the
+            // simpler single-touch UIControl flow.
             let lp = UILongPressGestureRecognizer(
                 target: self, action: #selector(handleEmojiLongPress(_:))
             )
             lp.minimumPressDuration = 0.35
             lp.cancelsTouchesInView = false
-            addGestureRecognizer(lp)
-        } else if keyDefinition.type == .character,
-                  AccentVariants.hasVariants(for: keyDefinition.label) {
-            let lp = UILongPressGestureRecognizer(
-                target: self, action: #selector(handleAccentLongPress(_:))
-            )
-            lp.minimumPressDuration = 0.4
-            // Cancel the underlying touch when the popover takes over so
-            // the tap won't also commit the original character.
-            lp.cancelsTouchesInView = true
             addGestureRecognizer(lp)
         }
 
@@ -125,10 +158,6 @@ class KeyButton: UIControl {
         if gr.state == .began {
             onLongPress?(self)
         }
-    }
-
-    @objc private func handleAccentLongPress(_ gr: UILongPressGestureRecognizer) {
-        onAccentLongPress?(self, gr)
     }
 
     override func layoutSubviews() {
@@ -164,6 +193,17 @@ class KeyButton: UIControl {
         label.isHidden = true
     }
 
+    /// Toggle accent (blue, white-glyph) styling on this key. Used by
+    /// `KeyboardView` for the return key while in `.emojiSearch`.
+    func setPrimaryAction(_ primary: Bool) {
+        guard isPrimaryAction != primary else { return }
+        isPrimaryAction = primary
+        let glyphTint: UIColor = primary ? theme.micButtonIcon : theme.keyText
+        label.textColor = glyphTint
+        symbolView.tintColor = glyphTint
+        applyBackgroundColor(pressed: false)
+    }
+
     func setPressed(_ pressed: Bool) {
         // Match the native keyboard's "fill flash" rather than a transform.
         UIView.animate(withDuration: pressed ? 0.02 : 0.12, delay: 0, options: .curveEaseOut) {
@@ -180,12 +220,24 @@ class KeyButton: UIControl {
         self.micState = micState
         self.shiftState = shiftState
 
+        // Landscape uses smaller character glyphs (matches native iOS)
+        // and bigger SF Symbol icons (shift / delete / return / emoji —
+        // they read as undersized at the portrait 20 pt pointSize when
+        // the keys themselves shrink to 28.75 pt landscape height).
+        let isLandscape = traitCollection.verticalSizeClass == .compact
+        let characterFontSize: CGFloat = isLandscape ? 22 : 25
+        let symbolPointSize: CGFloat = isLandscape ? 24 : 20
+        symbolView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
+            pointSize: symbolPointSize, weight: .regular
+        )
+
         let textColor: UIColor
         let tintColor: UIColor
         let fontSize: CGFloat
 
         // Sizes sampled against iPhone 17 Pro stock keyboard — character
-        // keys ~25pt, modifier text (123/ABC) ~17pt, return ~17pt semibold.
+        // keys ~25pt portrait / 22 landscape, modifier text (123/ABC)
+        // ~17pt, return ~17pt semibold.
         let weight: UIFont.Weight
         switch keyDefinition.type {
         case .mic:
@@ -195,8 +247,13 @@ class KeyButton: UIControl {
             weight = .regular
 
         case .returnKey:
-            textColor = theme.keyText
-            tintColor = theme.keyText
+            // The blue accent-fill variant (used in `.emojiSearch`) needs
+            // a white glyph for contrast. `setPrimaryAction` already set
+            // this earlier, but `updateAppearance` runs right after and
+            // would otherwise reset the tint back to `theme.keyText`,
+            // turning the check black against the blue pill.
+            textColor = isPrimaryAction ? theme.micButtonIcon : theme.keyText
+            tintColor = isPrimaryAction ? theme.micButtonIcon : theme.keyText
             fontSize = 17
             weight = .semibold
 
@@ -229,7 +286,7 @@ class KeyButton: UIControl {
         default:
             textColor = theme.keyText
             tintColor = theme.keyText
-            fontSize = 25
+            fontSize = characterFontSize
             weight = .regular
         }
 
@@ -246,6 +303,12 @@ class KeyButton: UIControl {
     }
 
     private func resolvedBackgroundColor(pressed: Bool) -> UIColor {
+        if isPrimaryAction {
+            // Accent-fill action button (return key during emoji search).
+            return pressed
+                ? theme.micButtonBackground.withAlphaComponent(0.85)
+                : theme.micButtonBackground
+        }
         switch keyDefinition.type {
         case .mic:
             switch micState {
@@ -266,6 +329,12 @@ class KeyButton: UIControl {
             // Letter / punctuation keys never flash — the popup balloon
             // provides the visual feedback for their press.
             return theme.keyBackground
+        case .spacer:
+            // Never reached — `buildLayout` filters spacers out before
+            // constructing a KeyButton — but Swift's exhaustive switch
+            // demands the case. Return transparent so a stray render
+            // wouldn't introduce a visible artifact.
+            return .clear
         }
     }
 }

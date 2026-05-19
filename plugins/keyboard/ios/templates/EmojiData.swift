@@ -13,17 +13,24 @@ enum EmojiCategory: String, CaseIterable {
     case symbols
     case flags
 
-    /// SF Symbol shown in the category strip.
+    /// SF Symbol shown in the category strip. Tracks the native iOS 18+
+    /// emoji keyboard: bear for animals, buildings for travel/places, etc.
+    /// All outline variants — the native bottom strip uses the lighter
+    /// stroke style, not the filled glyph. Falls back to the pre-iOS-18
+    /// symbol where the newer one isn't available so the strip still
+    /// renders on iOS 16/17.
     var symbolName: String {
         switch self {
         case .recents: return "clock"
         case .smileys: return "face.smiling"
-        case .animals: return "pawprint"
+        case .animals:
+            if #available(iOS 18.0, *) { return "teddybear" }
+            return "pawprint"
         case .food: return "fork.knife"
         case .activity: return "soccerball"
-        case .travel: return "airplane"
+        case .travel: return "building.2"
         case .objects: return "lightbulb"
-        case .symbols: return "heart"
+        case .symbols: return "music.note"
         case .flags: return "flag"
         }
     }

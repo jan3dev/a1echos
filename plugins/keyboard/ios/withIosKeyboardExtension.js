@@ -1,12 +1,13 @@
+const fs = require("fs");
+const path = require("path");
+
 const {
   withXcodeProject,
   withEntitlementsPlist,
   withDangerousMod,
-  withInfoPlist,
 } = require("expo/config-plugins");
-const fs = require("fs");
-const path = require("path");
 const plist = require("@expo/plist").default;
+
 const {
   setupListenerInXcodeProject,
 } = require("./withIosTranscriptionListener");
@@ -15,13 +16,6 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
 const EXTENSION_NAME = "EchosKeyboard";
 const EXTENSION_BUNDLE_ID = "com.a1lab.echos.EchosKeyboard";
 const APP_GROUP = "group.com.a1lab.echos.shared";
-
-/**
- * Reads a Swift template file.
- */
-function readTemplate(filename) {
-  return fs.readFileSync(path.join(TEMPLATES_DIR, filename), "utf8");
-}
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -62,8 +56,11 @@ function withKeyboardXcodeTarget(config) {
       "KeyVariantsView.swift",
       "MicButton.swift",
       "KeyboardTheme.swift",
+      "DeleteRepeater.swift",
       "EmojiData.swift",
       "EmojiPickerView.swift",
+      "EmojiSearchIndex.swift",
+      "EmojiSearchOverlayView.swift",
       "AudioRecorder.swift",
       "IPCClient.swift",
       "HapticManager.swift",
@@ -284,8 +281,11 @@ function withKeyboardExtensionFiles(config) {
         "KeyVariantsView.swift",
         "MicButton.swift",
         "KeyboardTheme.swift",
+        "DeleteRepeater.swift",
         "EmojiData.swift",
         "EmojiPickerView.swift",
+        "EmojiSearchIndex.swift",
+        "EmojiSearchOverlayView.swift",
         "AudioRecorder.swift",
         "IPCClient.swift",
         "HapticManager.swift",
