@@ -12,12 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppConstants } from "@/constants";
+import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { getShadow, useTheme } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
-import { Icon } from "../../../ui/icon/Icon";
 import { Dimmer } from "../../../ui/modal/Dimmer";
 import { Text } from "../../../ui/text/Text";
 import { TextField } from "../../../ui/textfield/TextField";
@@ -95,8 +94,6 @@ export const SessionInputModal = ({
     }
   };
 
-  const containerWidth = "100%";
-
   return (
     <Dimmer visible={visible} onDismiss={handleDismiss}>
       <KeyboardAvoidingView
@@ -110,24 +107,34 @@ export const SessionInputModal = ({
               styles.container,
               getShadow("modal"),
               {
-                backgroundColor: theme.colors.surfacePrimary,
-                width: containerWidth,
+                backgroundColor: theme.colors.surfaceBackground,
+                borderColor: theme.colors.surfaceBorderPrimary,
                 transform: [{ translateY: slideAnim }],
               },
             ]}
           >
             <ScrollView
               style={styles.scroll}
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: bottomInset + 32 },
-              ]}
+              contentContainerStyle={{ paddingBottom: bottomInset + 32 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               bounces={false}
             >
-              <Pressable onPress={(e) => e.stopPropagation()}>
-                <View style={styles.header}>
+              <Pressable
+                testID={TestID.SessionInputModal}
+                onPress={(e) => e.stopPropagation()}
+              >
+                <View style={styles.grabberSlot}>
+                  <View
+                    testID={TestID.SessionInputModalGrabber}
+                    style={[
+                      styles.grabber,
+                      { backgroundColor: theme.colors.systemBackgroundColor },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.content}>
                   <Text
                     variant="subtitle"
                     weight="semibold"
@@ -137,20 +144,7 @@ export const SessionInputModal = ({
                   >
                     {title}
                   </Text>
-                  <Pressable
-                    onPress={onCancel || (() => {})}
-                    hitSlop={10}
-                    style={styles.closeButton}
-                  >
-                    <Icon
-                      name="close"
-                      size={24}
-                      color={theme.colors.textSecondary}
-                    />
-                  </Pressable>
-                </View>
 
-                <View style={styles.content}>
                   <TextField
                     label={loc.sessionNameLabel}
                     value={text}
@@ -189,35 +183,27 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderWidth: 1,
     maxHeight: "100%",
   },
   scroll: {
     flexGrow: 0,
   },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "center",
+  grabberSlot: {
+    paddingTop: 8,
+    paddingBottom: 32,
     alignItems: "center",
-    marginBottom: 32,
-    position: "relative",
-    minHeight: 24,
   },
-  title: {
-    flex: 1,
-  },
-  closeButton: {
-    position: "absolute",
-    right: 0,
-    top: 0,
+  grabber: {
+    width: 48,
+    height: 5,
+    borderRadius: 100,
   },
   content: {
-    width: "100%",
+    paddingHorizontal: 16,
+  },
+  title: {
+    marginBottom: 32,
   },
   spacer: {
     height: 32,

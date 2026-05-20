@@ -2,7 +2,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { TestID, dynamicTestID } from "@/constants";
+import { TestID } from "@/constants";
 
 import { SessionInputModal } from "./SessionInputModal";
 
@@ -53,14 +53,6 @@ jest.mock("../../../ui/button/Button", () => ({
   },
 }));
 
-jest.mock("../../../ui/icon/Icon", () => ({
-  Icon: (props: any) => {
-    const { View } = require("react-native");
-    const { dynamicTestID: dTID } = require("@/constants");
-    return <View testID={dTID.icon(props.name)} />;
-  },
-}));
-
 const defaultProps = {
   visible: true,
   title: "Rename Session",
@@ -95,11 +87,9 @@ describe("SessionInputModal", () => {
     expect(defaultProps.onSubmit).toHaveBeenCalledWith("New Name");
   });
 
-  it("close button calls onCancel", () => {
+  it("renders the drag bar grabber", () => {
     const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const closeIcon = getByTestId(dynamicTestID.icon("close"));
-    fireEvent.press(closeIcon.parent!);
-    expect(defaultProps.onCancel).toHaveBeenCalledTimes(1);
+    expect(getByTestId(TestID.SessionInputModalGrabber)).toBeTruthy();
   });
 
   it("validates max length", () => {
@@ -206,26 +196,11 @@ describe("SessionInputModal", () => {
       visible: true,
       title: "Rename",
       buttonText: "Save",
-      initialValue: "",
       onSubmit: jest.fn(),
     };
     expect(() => {
       render(<SessionInputModal {...propsWithoutCancel} />);
     }).not.toThrow();
-  });
-
-  it("renders close icon button", () => {
-    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    expect(getByTestId(dynamicTestID.icon("close"))).toBeTruthy();
-  });
-
-  it("close button is accessible via parent pressable", () => {
-    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const closeIcon = getByTestId(dynamicTestID.icon("close"));
-    // Verify the close icon exists and its parent can be pressed
-    expect(closeIcon.parent).toBeTruthy();
-    fireEvent.press(closeIcon.parent!);
-    expect(defaultProps.onCancel).toHaveBeenCalled();
   });
 
   it("text field shows correct maxLength from AppConstants", () => {
@@ -310,11 +285,48 @@ describe("SessionInputModal", () => {
   });
 
   it("inner pressable stops event propagation", () => {
-    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    // The inner Pressable with stopPropagation should exist
-    // and pressing content should not dismiss
-    const dimmer = getByTestId(TestID.Dimmer);
-    expect(dimmer).toBeTruthy();
+    const onCancel = jest.fn();
+    const { getByTestId } = render(
+      <SessionInputModal {...defaultProps} onCancel={onCancel} />,
+    );
+    const inner = getByTestId(TestID.SessionInputModal);
+    fireEvent.press(inner, { stopPropagation: jest.fn() });
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("hides keyboard-visible flag when keyboard dismisses", () => {
+    const { Keyboard } = require("react-native");
+    const onCancel = jest.fn();
+    const mockRemove = jest.fn();
+    const originalAddListener = Keyboard.addListener;
+    const originalDismiss = Keyboard.dismiss;
+    const mockDismiss = jest.fn();
+    Keyboard.dismiss = mockDismiss;
+
+    let showCb: (() => void) | null = null;
+    let hideCb: (() => void) | null = null;
+    Keyboard.addListener = jest.fn((event: string, cb: () => void) => {
+      if (event === "keyboardDidShow") showCb = cb;
+      if (event === "keyboardDidHide") hideCb = cb;
+      return { remove: mockRemove };
+    });
+
+    const { getByTestId } = render(
+      <SessionInputModal {...defaultProps} onCancel={onCancel} />,
+    );
+
+    // @ts-expect-error - showCb is captured above
+    showCb?.();
+    // @ts-expect-error - hideCb is captured above
+    hideCb?.();
+
+    // After hide, backdrop press should call onCancel (not Keyboard.dismiss)
+    fireEvent.press(getByTestId(TestID.DimmerBackdrop));
+    expect(onCancel).toHaveBeenCalled();
+    expect(mockDismiss).not.toHaveBeenCalled();
+
+    Keyboard.addListener = originalAddListener;
+    Keyboard.dismiss = originalDismiss;
   });
 
   it("handleDismiss calls onCancel when keyboard is not visible and onCancel is undefined", () => {
@@ -333,22 +345,6 @@ describe("SessionInputModal", () => {
     expect(() =>
       fireEvent.press(getByTestId(TestID.DimmerBackdrop)),
     ).not.toThrow();
-  });
-
-  it("close button with undefined onCancel calls empty function", () => {
-    const propsWithoutCancel = {
-      visible: true,
-      title: "Rename",
-      buttonText: "Save",
-      initialValue: "",
-      onSubmit: jest.fn(),
-    };
-    const { getByTestId } = render(
-      <SessionInputModal {...propsWithoutCancel} />,
-    );
-    const closeIcon = getByTestId(dynamicTestID.icon("close"));
-    // Should not throw - close button calls onCancel || (() => {})
-    expect(() => fireEvent.press(closeIcon.parent!)).not.toThrow();
   });
 
   it("slide animation fires when visibility changes from false to true", () => {
