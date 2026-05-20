@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Icon, ListItem, Screen, Text, Toggle, TopAppBar } from "@/components";
+import { Icon, ListItem, Screen, Toggle, TopAppBar } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
@@ -41,6 +41,7 @@ export default function AdvancedSettingsScreen() {
         <ListItem
           testID={TestID.SettingsSmartSplitToggle}
           title={loc.smartSplitTitle}
+          subtitle={loc.smartSplitDescription}
           iconTrailing={
             <Toggle
               value={smartSplitEnabled}
@@ -50,18 +51,10 @@ export default function AdvancedSettingsScreen() {
           }
           onPress={() => handleToggle(!smartSplitEnabled)}
         />
-        <Text
-          variant="caption1"
-          color={theme.colors.textSecondary}
-          style={styles.caption}
-        >
-          {loc.smartSplitDescription}
-        </Text>
-
         <ListItem
           testID={TestID.SettingsAddKeyboardRow}
-          style={styles.keyboardRow}
           title={loc.advancedSettingsAddKeyboardTitle}
+          subtitle={loc.advancedSettingsAddKeyboardDescription}
           iconTrailing={
             <Icon
               name="chevron_right"
@@ -71,13 +64,6 @@ export default function AdvancedSettingsScreen() {
           }
           onPress={showKeyboardPrompt}
         />
-        <Text
-          variant="caption1"
-          color={theme.colors.textSecondary}
-          style={styles.caption}
-        >
-          {loc.advancedSettingsAddKeyboardDescription}
-        </Text>
       </ScrollView>
     </Screen>
   );
@@ -86,12 +72,6 @@ export default function AdvancedSettingsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
-  },
-  caption: {
-    marginTop: 8,
-    marginHorizontal: 12,
-  },
-  keyboardRow: {
-    marginTop: 24,
+    gap: 8,
   },
 });

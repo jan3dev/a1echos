@@ -57,7 +57,7 @@ export default function SettingsScreen() {
           styles.scrollContent,
           {
             paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-            paddingBottom: insets.bottom + 16,
+            paddingBottom: insets.bottom,
             flexGrow: 1,
           },
         ]}
