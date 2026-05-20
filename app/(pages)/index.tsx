@@ -10,10 +10,12 @@ import {
   HomeAppBar,
   HomeContent,
   Screen,
+  SessionActionsSheet,
+  SessionInputModal,
   Toast,
   useToast,
 } from "@/components";
-import { Routes } from "@/constants";
+import { Routes, TestID } from "@/constants";
 import {
   useLocalization,
   useMicPermission,
@@ -26,6 +28,7 @@ import {
   useIncognitoSession,
   useIsIncognitoMode,
   useIsSessionSelectionMode,
+  useRenameSession,
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
   useSessions,
@@ -48,6 +51,7 @@ export default function HomeScreen() {
   const incognitoSession = useIncognitoSession();
   const createSession = useCreateSession();
   const { deleteSession } = useSessionOperations();
+  const renameSession = useRenameSession();
   const isIncognitoMode = useIsIncognitoMode();
   const startTranscriptionRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
@@ -64,6 +68,11 @@ export default function HomeScreen() {
     hide: hideDeleteToast,
     toastState: deleteToastState,
   } = useToast();
+
+  const [actionsSession, setActionsSession] = useState<Session | null>(null);
+  const [actionsSheetVisible, setActionsSheetVisible] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<Session | null>(null);
+  const [renameVisible, setRenameVisible] = useState(false);
 
   const {
     show: showAlertToast,
@@ -212,50 +221,89 @@ export default function HomeScreen() {
     }, [setRecordingCallbacks, setRecordingControlsEnabled]),
   );
 
-  const performDelete = useCallback(async () => {
-    const count = selectedSessionIds.length;
-    hideDeleteToast();
+  const performDelete = useCallback(
+    async (sessionIds: string[]) => {
+      const count = sessionIds.length;
+      hideDeleteToast();
 
-    try {
-      await Promise.all(
-        selectedSessionIds.map((sessionId) => deleteSession(sessionId)),
-      );
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.session,
-        message: "Error during bulk delete",
+      try {
+        await Promise.all(
+          sessionIds.map((sessionId) => deleteSession(sessionId)),
+        );
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.session,
+          message: "Failed to delete sessions",
+        });
+      }
+
+      exitSessionSelection();
+      showGlobalTooltip(loc.homeSessionsDeleted(count));
+    },
+    [
+      deleteSession,
+      exitSessionSelection,
+      hideDeleteToast,
+      showGlobalTooltip,
+      loc,
+    ],
+  );
+
+  const confirmDelete = useCallback(
+    (sessionIds: string[]) => {
+      if (sessionIds.length === 0) return;
+      showDeleteToast({
+        title: loc.homeDeleteSelectedSessionsTitle,
+        message: loc.homeDeleteSelectedSessionsMessage(sessionIds.length),
+        primaryButtonText: loc.delete,
+        onPrimaryButtonTap: () => performDelete(sessionIds),
+        secondaryButtonText: loc.cancel,
+        onSecondaryButtonTap: hideDeleteToast,
+        variant: "info",
       });
-    }
-
-    exitSessionSelection();
-    showGlobalTooltip(loc.homeSessionsDeleted(count));
-  }, [
-    selectedSessionIds,
-    deleteSession,
-    exitSessionSelection,
-    hideDeleteToast,
-    showGlobalTooltip,
-    loc,
-  ]);
+    },
+    [showDeleteToast, hideDeleteToast, performDelete, loc],
+  );
 
   const handleDeleteSelected = useCallback(() => {
-    if (selectedSessionIds.length === 0) return;
-    showDeleteToast({
-      title: loc.homeDeleteSelectedSessionsTitle,
-      message: loc.homeDeleteSelectedSessionsMessage(selectedSessionIds.length),
-      primaryButtonText: loc.delete,
-      onPrimaryButtonTap: performDelete,
-      secondaryButtonText: loc.cancel,
-      onSecondaryButtonTap: hideDeleteToast,
-      variant: "info",
-    });
-  }, [
-    selectedSessionIds.length,
-    showDeleteToast,
-    hideDeleteToast,
-    performDelete,
-    loc,
-  ]);
+    confirmDelete(selectedSessionIds);
+  }, [confirmDelete, selectedSessionIds]);
+
+  const handleSessionMorePress = useCallback((session: Session) => {
+    setActionsSession(session);
+    setActionsSheetVisible(true);
+  }, []);
+
+  const handleActionsRename = useCallback(() => {
+    if (!actionsSession) return;
+    const target = actionsSession;
+    setActionsSheetVisible(false);
+    setRenameTarget(target);
+    setRenameVisible(true);
+  }, [actionsSession]);
+
+  const handleActionsDelete = useCallback(() => {
+    if (!actionsSession) return;
+    const targetId = actionsSession.id;
+    setActionsSheetVisible(false);
+    confirmDelete([targetId]);
+  }, [actionsSession, confirmDelete]);
+
+  const handleRenameSubmit = useCallback(
+    async (newName: string) => {
+      if (!renameTarget) return;
+      try {
+        await renameSession(renameTarget.id, newName);
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.session,
+          message: "Failed to rename session",
+        });
+      }
+      setRenameVisible(false);
+    },
+    [renameTarget, renameSession],
+  );
 
   return (
     <Screen>
@@ -271,6 +319,7 @@ export default function HomeScreen() {
         onSessionLongPress={handleSessionLongPress}
         onSessionTap={handleSessionTap}
         onSelectionToggle={toggleSessionSelection}
+        onSessionMorePress={handleSessionMorePress}
         scrollRef={scrollRef}
       />
 
@@ -284,6 +333,30 @@ export default function HomeScreen() {
             onDisappearComplete={handleTooltipDisappearComplete}
           />
         </View>
+      )}
+
+      {actionsSession && (
+        <SessionActionsSheet
+          testID={TestID.SessionActionsSheet}
+          visible={actionsSheetVisible}
+          title={actionsSession.name}
+          createdAt={actionsSession.timestamp}
+          modifiedAt={actionsSession.lastModified}
+          onRename={handleActionsRename}
+          onDelete={handleActionsDelete}
+          onDismiss={() => setActionsSheetVisible(false)}
+        />
+      )}
+
+      {renameTarget && (
+        <SessionInputModal
+          visible={renameVisible}
+          title={loc.sessionRenameTitle}
+          buttonText={loc.save}
+          initialValue={renameTarget.name}
+          onSubmit={handleRenameSubmit}
+          onCancel={() => setRenameVisible(false)}
+        />
       )}
 
       <Toast {...deleteToastState} />

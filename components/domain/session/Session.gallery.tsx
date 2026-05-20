@@ -1,7 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 
-import { SessionAppBar, SessionList, SessionListItem } from "@/components";
+import {
+  SessionActionsSheet,
+  SessionAppBar,
+  SessionList,
+  SessionListItem,
+} from "@/components";
+import { Button } from "@/components/ui/button/Button";
 import { Session } from "@/models";
 import { useSessionStore, useTranscriptionStore } from "@/stores";
 import type { GalleryEntry } from "@/app/(design-system)/manifest";
@@ -61,6 +67,7 @@ export const ListItem = () => {
       session={dummySession}
       onTap={() => console.log("Tapped")}
       onLongPress={() => console.log("Long Pressed")}
+      onMorePress={(s) => console.log("More", s.name)}
     />
   );
 };
@@ -102,6 +109,7 @@ export const List = () => {
       onSessionTap={(id) => console.log("Tap", id)}
       onSessionLongPress={(s) => console.log("Long Press", s.name)}
       onSelectionToggle={(id) => console.log("Toggle", id)}
+      onSessionMorePress={(s) => console.log("More", s.name)}
     />
   );
 };
@@ -115,6 +123,7 @@ export const ListSelectionMode = () => {
       onSessionTap={(id) => console.log("Tap", id)}
       onSessionLongPress={(s) => console.log("Long Press", s.name)}
       onSelectionToggle={(id) => console.log("Toggle", id)}
+      onSessionMorePress={(s) => console.log("More", s.name)}
     />
   );
 };
@@ -182,6 +191,72 @@ export const AppBarEditMode = () => {
   );
 };
 
+// --- SessionActionsSheet ---
+
+export const ActionsSheetDefault = () => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      <Button.primary
+        text="Open actions sheet"
+        onPress={() => setVisible(true)}
+      />
+      <SessionActionsSheet
+        visible={visible}
+        title="Morning Meeting"
+        createdAt={new Date(2024, 3, 18, 10, 0, 0)}
+        modifiedAt={new Date(2024, 3, 19, 7, 18, 0)}
+        onRename={() => setVisible(false)}
+        onDelete={() => setVisible(false)}
+        onDismiss={() => setVisible(false)}
+      />
+    </View>
+  );
+};
+
+export const ActionsSheetNeverModified = () => {
+  const [visible, setVisible] = useState(false);
+  const created = new Date(2024, 3, 18, 10, 0, 0);
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      <Button.primary
+        text="Open (created == modified)"
+        onPress={() => setVisible(true)}
+      />
+      <SessionActionsSheet
+        visible={visible}
+        title="Fresh session"
+        createdAt={created}
+        modifiedAt={created}
+        onRename={() => setVisible(false)}
+        onDelete={() => setVisible(false)}
+        onDismiss={() => setVisible(false)}
+      />
+    </View>
+  );
+};
+
+export const ActionsSheetLongTitle = () => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      <Button.primary
+        text="Open with long title"
+        onPress={() => setVisible(true)}
+      />
+      <SessionActionsSheet
+        visible={visible}
+        title="A particularly long session title that should ellipsize gracefully"
+        createdAt={new Date(2024, 3, 18, 10, 0, 0)}
+        modifiedAt={new Date(2024, 3, 19, 7, 18, 0)}
+        onRename={() => setVisible(false)}
+        onDelete={() => setVisible(false)}
+        onDismiss={() => setVisible(false)}
+      />
+    </View>
+  );
+};
+
 const gallery: GalleryEntry = {
   slug: "session",
   title: "Session",
@@ -196,6 +271,9 @@ const gallery: GalleryEntry = {
     { name: "AppBarIncognito", render: AppBarIncognito },
     { name: "AppBarSelectionMode", render: AppBarSelectionMode },
     { name: "AppBarEditMode", render: AppBarEditMode },
+    { name: "ActionsSheetDefault", render: ActionsSheetDefault },
+    { name: "ActionsSheetNeverModified", render: ActionsSheetNeverModified },
+    { name: "ActionsSheetLongTitle", render: ActionsSheetLongTitle },
   ],
 };
 

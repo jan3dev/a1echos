@@ -15,6 +15,7 @@ interface HomeContentProps {
   onSessionLongPress: (session: Session) => void;
   onSessionTap: (sessionId: string) => void;
   onSelectionToggle: (sessionId: string) => void;
+  onSessionMorePress: (session: Session) => void;
   scrollRef?: RefObject<ScrollView | null>;
 }
 
@@ -24,6 +25,7 @@ export const HomeContent = ({
   onSessionLongPress,
   onSessionTap,
   onSelectionToggle,
+  onSessionMorePress,
   scrollRef,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
@@ -49,6 +51,7 @@ export const HomeContent = ({
           onSessionLongPress={onSessionLongPress}
           onSessionTap={onSessionTap}
           onSelectionToggle={onSelectionToggle}
+          onSessionMorePress={onSessionMorePress}
         />
       )}
     </ScrollView>

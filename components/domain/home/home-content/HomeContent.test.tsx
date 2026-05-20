@@ -29,6 +29,7 @@ const defaultProps = {
   onSessionLongPress: jest.fn(),
   onSessionTap: jest.fn(),
   onSelectionToggle: jest.fn(),
+  onSessionMorePress: jest.fn(),
 };
 
 describe("HomeContent", () => {

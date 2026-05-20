@@ -12,16 +12,6 @@ jest.mock("@/stores", () => ({
   useSessionTranscriptions: jest.fn(() => []),
 }));
 
-jest.mock("../session-more-menu/SessionMoreMenu", () => {
-  const { TestID: TID } = require("@/constants");
-  return {
-    SessionMoreMenu: () => {
-      const { View } = require("react-native");
-      return <View testID={TID.SessionMoreMenu} />;
-    },
-  };
-});
-
 jest.mock("../../../shared/list-item/ListItem", () => ({
   ListItem: (props: any) => {
     const { Pressable, Text, View } = require("react-native");
@@ -42,10 +32,28 @@ jest.mock("../../../shared/list-item/ListItem", () => ({
 }));
 
 jest.mock("../../../ui/checkbox/Checkbox", () => ({
-  Checkbox: (props: any) => {
+  Checkbox: () => {
     const { View } = require("react-native");
     const { TestID: TID } = require("@/constants");
     return <View testID={TID.Checkbox} />;
+  },
+}));
+
+jest.mock("../../../ui/icon/Icon", () => ({
+  Icon: (props: any) => {
+    const { View } = require("react-native");
+    return <View testID={`icon-${props.name}`} />;
+  },
+}));
+
+jest.mock("../../../ui/ripple-pressable/RipplePressable", () => ({
+  RipplePressable: ({ children, onPress, testID }: any) => {
+    const { Pressable } = require("react-native");
+    return (
+      <Pressable testID={testID} onPress={onPress}>
+        {children}
+      </Pressable>
+    );
   },
 }));
 
@@ -61,6 +69,7 @@ const defaultProps = {
   session: mockSession,
   onTap: jest.fn(),
   onLongPress: jest.fn(),
+  onMorePress: jest.fn(),
 };
 
 describe("SessionListItem", () => {
@@ -79,8 +88,6 @@ describe("SessionListItem", () => {
 
   it("renders transcription count subtitle", () => {
     const { getByTestId } = render(<SessionListItem {...defaultProps} />);
-    // useLocalization.loc.transcriptionCount calls t('transcriptionCount', { count: 2 })
-    // which returns the key as string
     expect(getByTestId(TestID.ListItemSubtitle).props.children).toBeTruthy();
   });
 
@@ -96,7 +103,29 @@ describe("SessionListItem", () => {
     expect(defaultProps.onLongPress).toHaveBeenCalledTimes(1);
   });
 
-  it("selection mode shows checkbox, not SessionMoreMenu", () => {
+  it("renders the more trigger when not in selection mode", () => {
+    const { getByTestId } = render(<SessionListItem {...defaultProps} />);
+    expect(getByTestId(TestID.SessionMoreMenu)).toBeTruthy();
+  });
+
+  it("more trigger calls onMorePress with the session", () => {
+    const { getByTestId } = render(<SessionListItem {...defaultProps} />);
+    fireEvent.press(getByTestId(TestID.SessionMoreMenu));
+    expect(defaultProps.onMorePress).toHaveBeenCalledWith(mockSession);
+  });
+
+  it("does not render the more trigger when onMorePress is omitted", () => {
+    const { queryByTestId } = render(
+      <SessionListItem
+        session={mockSession}
+        onTap={jest.fn()}
+        onLongPress={jest.fn()}
+      />,
+    );
+    expect(queryByTestId(TestID.SessionMoreMenu)).toBeNull();
+  });
+
+  it("selection mode shows checkbox, not the more trigger", () => {
     const { getByTestId, queryByTestId } = render(
       <SessionListItem
         {...defaultProps}

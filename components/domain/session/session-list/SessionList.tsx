@@ -11,6 +11,7 @@ interface SessionListProps {
   onSessionLongPress: (session: Session) => void;
   onSessionTap: (sessionId: string) => void;
   onSelectionToggle: (sessionId: string) => void;
+  onSessionMorePress: (session: Session) => void;
 }
 
 export const SessionList = ({
@@ -19,6 +20,7 @@ export const SessionList = ({
   onSessionLongPress,
   onSessionTap,
   onSelectionToggle,
+  onSessionMorePress,
 }: SessionListProps) => {
   const sessions = useSessions();
 
@@ -36,6 +38,7 @@ export const SessionList = ({
               : onSessionTap(session.id)
           }
           onLongPress={() => onSessionLongPress(session)}
+          onMorePress={onSessionMorePress}
         />
       ))}
     </View>

@@ -40,6 +40,7 @@ export enum TestID {
   SessionAppBar = "session-app-bar",
   SessionName = "session-name",
   SessionMoreMenu = "session-more-menu",
+  SessionActionsSheet = "session-actions-sheet",
   SessionRename = "session-rename",
   SessionDelete = "session-delete",
   SessionShare = "session-share",

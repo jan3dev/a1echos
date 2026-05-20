@@ -71,6 +71,7 @@ jest.mock("@/stores", () => ({
   useCreateSession: jest.fn(() => jest.fn()),
   useIsIncognitoMode: jest.fn(() => false),
   useIsSessionSelectionMode: jest.fn(() => false),
+  useRenameSession: jest.fn(() => jest.fn()),
   useSelectedSessionIds: jest.fn(() => []),
   useSelectedSessionIdsSet: jest.fn(() => mockEmptySet),
   useToggleSessionSelection: jest.fn(() => mockToggleSessionSelection),
@@ -117,6 +118,12 @@ jest.mock("@/components", () => {
       </View>
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
+    SessionActionsSheet: (props: any) =>
+      props.visible ? (
+        <View testID={TID.SessionActionsSheet} {...props} />
+      ) : null,
+    SessionInputModal: (props: any) =>
+      props.visible ? <View testID={TID.SessionInputModal} {...props} /> : null,
     Toast: (props: any) => <View testID={TID.DeleteToast} {...props} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,
