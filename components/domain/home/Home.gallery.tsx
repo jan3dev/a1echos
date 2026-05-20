@@ -1,7 +1,12 @@
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { EmptyStateView, HomeAppBar, HomeContent } from "@/components";
+import {
+  EmptyStateView,
+  HomeAppBar,
+  HomeContent,
+  IncognitoEmptyState,
+} from "@/components";
 import { Session } from "@/models";
 import { useSessionStore, useSettingsStore } from "@/stores";
 import type { GalleryEntry } from "@/app/(design-system)/manifest";
@@ -31,7 +36,6 @@ const useSeedStore = () => {
     });
     useSettingsStore.setState({
       isIncognitoMode: false,
-      hasSeenIncognitoExplainer: false,
     });
   }, []);
 };
@@ -111,6 +115,17 @@ export const EmptyStateDisappearing = () => {
   );
 };
 
+// --- IncognitoEmptyState ---
+
+export const IncognitoEmpty = () => {
+  useSeedStore();
+  return (
+    <View style={styles.fillContainer}>
+      <IncognitoEmptyState />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   centerContainer: {
     position: "absolute",
@@ -118,6 +133,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
+  },
+  fillContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 64,
   },
 });
 
@@ -130,6 +151,7 @@ const gallery: GalleryEntry = {
     { name: "AppBarSelectionMode", render: AppBarSelectionMode },
     { name: "EmptyState", render: EmptyState },
     { name: "EmptyStateDisappearing", render: EmptyStateDisappearing },
+    { name: "IncognitoEmpty", render: IncognitoEmpty },
   ],
 };
 

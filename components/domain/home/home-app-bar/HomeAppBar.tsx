@@ -1,16 +1,14 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AppConstants, Routes, TestID } from "@/constants";
-import { useSettingsStore } from "@/stores";
+import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
 import { AquaPrimitiveColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { Icon, IconName } from "../../../ui/icon/Icon";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { TopAppBar } from "../../../ui/top-app-bar/TopAppBar";
-import { IncognitoExplainerModal } from "../incognito-explainer-modal/IncognitoExplainerModal";
 
 interface HomeAppBarProps {
   selectionMode: boolean;
@@ -62,29 +60,11 @@ export const HomeAppBar = ({
 }: HomeAppBarProps) => {
   const { theme } = useTheme();
   const router = useRouter();
-  const {
-    isIncognitoMode,
-    hasSeenIncognitoExplainer,
-    setIncognitoMode,
-    markIncognitoExplainerSeen,
-  } = useSettingsStore();
-
-  const [showIncognitoModal, setShowIncognitoModal] = useState(false);
+  const isIncognitoMode = useIsIncognitoMode();
+  const setIncognitoMode = useSetIncognitoMode();
 
   const handleIncognitoToggle = async () => {
-    const newValue = !isIncognitoMode;
-    const shouldShowModal = newValue && !hasSeenIncognitoExplainer;
-
-    await setIncognitoMode(newValue);
-
-    if (shouldShowModal) {
-      setShowIncognitoModal(true);
-    }
-  };
-
-  const handleIncognitoDismiss = async () => {
-    await markIncognitoExplainerSeen();
-    setShowIncognitoModal(false);
+    await setIncognitoMode(!isIncognitoMode);
   };
 
   const renderLeading = () => {
@@ -142,19 +122,12 @@ export const HomeAppBar = ({
   };
 
   return (
-    <>
-      <TopAppBar
-        showBackButton={false}
-        leading={renderLeading()}
-        titleWidget={renderTitleWidget()}
-        actions={renderActions()}
-      />
-      <IncognitoExplainerModal
-        visible={showIncognitoModal}
-        onConfirm={handleIncognitoDismiss}
-        onCancel={() => setShowIncognitoModal(false)}
-      />
-    </>
+    <TopAppBar
+      showBackButton={false}
+      leading={renderLeading()}
+      titleWidget={renderTitleWidget()}
+      actions={renderActions()}
+    />
   );
 };
 

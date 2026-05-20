@@ -11,6 +11,7 @@ export {
 export {
   initializeSettingsStore,
   useIsIncognitoMode,
+  useSetIncognitoMode,
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,

@@ -3,6 +3,7 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 
 import { TestID } from "@/constants";
+import { useSettingsStore } from "@/stores";
 
 import { HomeContent } from "./HomeContent";
 
@@ -11,6 +12,14 @@ jest.mock("../../session/session-list/SessionList", () => ({
     const { View } = require("react-native");
     const { TestID: TID } = require("@/constants");
     return <View testID={TID.SessionList} {...props} />;
+  },
+}));
+
+jest.mock("../incognito-empty-state/IncognitoEmptyState", () => ({
+  IncognitoEmptyState: () => {
+    const { View } = require("react-native");
+    const { TestID: TID } = require("@/constants");
+    return <View testID={TID.IncognitoEmptyState} />;
   },
 }));
 
@@ -25,11 +34,15 @@ const defaultProps = {
 describe("HomeContent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useSettingsStore.setState({ isIncognitoMode: false });
   });
 
-  it("renders SessionList component", () => {
-    const { getByTestId } = render(<HomeContent {...defaultProps} />);
+  it("renders SessionList component when incognito mode is off", () => {
+    const { getByTestId, queryByTestId } = render(
+      <HomeContent {...defaultProps} />,
+    );
     expect(getByTestId(TestID.SessionList)).toBeTruthy();
+    expect(queryByTestId(TestID.IncognitoEmptyState)).toBeNull();
   });
 
   it("passes selection props to SessionList", () => {
@@ -46,9 +59,12 @@ describe("HomeContent", () => {
     expect(list.props.selectedSessionIds).toBe(selectedIds);
   });
 
-  it("wraps content in a scrollable container", () => {
-    const { getByTestId } = render(<HomeContent {...defaultProps} />);
-    // SessionList is rendered inside a ScrollView — verify it exists within the tree
-    expect(getByTestId(TestID.SessionList).parent).toBeTruthy();
+  it("renders IncognitoEmptyState instead of SessionList when incognito mode is on", () => {
+    useSettingsStore.setState({ isIncognitoMode: true });
+    const { getByTestId, queryByTestId } = render(
+      <HomeContent {...defaultProps} />,
+    );
+    expect(getByTestId(TestID.IncognitoEmptyState)).toBeTruthy();
+    expect(queryByTestId(TestID.SessionList)).toBeNull();
   });
 });

@@ -34,8 +34,7 @@ export enum TestID {
   HomeContentSelection = "home-content-selection",
   HomeSettingsButton = "home-settings-button",
   EmptyStateView = "empty-state-view",
-  IncognitoModal = "incognito-modal",
-  IncognitoModalVisible = "incognito-modal-visible",
+  IncognitoEmptyState = "incognito-empty-state",
 
   // --- Session ---
   SessionAppBar = "session-app-bar",

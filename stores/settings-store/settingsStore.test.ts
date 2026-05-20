@@ -14,6 +14,7 @@ import {
   useHasSeenKeyboardPrompt,
   useIsIncognitoMode,
   useMarkKeyboardPromptSeen,
+  useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
   useSelectedModelType,
@@ -21,6 +22,7 @@ import {
   useSelectedTranscriptionMode,
   useSetLanguage,
   useSetModelId,
+  useSetModelMode,
   useSetModelType,
   useSetSmartSplitEnabled,
   useSetTheme,
@@ -52,7 +54,6 @@ const initialState = {
   modelModes: {},
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
-  hasSeenIncognitoExplainer: false,
   smartSplitEnabled: true,
 };
 
@@ -68,13 +69,12 @@ describe("settingsStore", () => {
       expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
-      expect(state.hasSeenIncognitoExplainer).toBe(false);
       expect(state.smartSplitEnabled).toBe(true);
     });
   });
 
   describe("initialize()", () => {
-    // Storage key read order: THEME, MODEL_TYPE, MODEL_ID, TRANSCRIPTION_MODE, MODEL_MODES, LANGUAGE, INCOGNITO_MODE, INCOGNITO_EXPLAINER_SEEN
+    // Storage key read order: THEME, MODEL_TYPE, MODEL_ID, TRANSCRIPTION_MODE, MODEL_MODES, LANGUAGE, INCOGNITO_MODE, SMART_SPLIT_ENABLED, KEYBOARD_PROMPT_SEEN
     it("loads all keys from storage in parallel", async () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(AppTheme.DARK)
@@ -83,7 +83,6 @@ describe("settingsStore", () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce("fr")
-        .mockResolvedValueOnce("true")
         .mockResolvedValueOnce("true");
 
       await useSettingsStore.getState().initialize();
@@ -93,7 +92,6 @@ describe("settingsStore", () => {
       expect(state.selectedModelType).toBe(ModelType.WHISPER_REALTIME);
       expect(state.selectedLanguage).toEqual({ code: "fr", name: "French" });
       expect(state.isIncognitoMode).toBe(true);
-      expect(state.hasSeenIncognitoExplainer).toBe(true);
     });
 
     it("loads and validates per-model modes from storage", async () => {
@@ -146,7 +144,6 @@ describe("settingsStore", () => {
       expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
-      expect(state.hasSeenIncognitoExplainer).toBe(false);
     });
 
     it("falls back to default for invalid model type", async () => {
@@ -366,7 +363,6 @@ describe("settingsStore", () => {
         null, // MODEL_MODES
         null, // LANGUAGE
         null, // INCOGNITO_MODE
-        null, // INCOGNITO_EXPLAINER_SEEN
         "false", // SMART_SPLIT_ENABLED
       ];
       const mock = AsyncStorage.getItem as jest.Mock;
@@ -374,31 +370,6 @@ describe("settingsStore", () => {
 
       await useSettingsStore.getState().initialize();
       expect(useSettingsStore.getState().smartSplitEnabled).toBe(false);
-    });
-  });
-
-  describe("markIncognitoExplainerSeen()", () => {
-    it("sets true and persists", async () => {
-      await useSettingsStore.getState().markIncognitoExplainerSeen();
-
-      expect(useSettingsStore.getState().hasSeenIncognitoExplainer).toBe(true);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "incognito_explainer_seen",
-        "true",
-      );
-    });
-
-    it("does NOT throw on persist failure (fire-and-forget)", async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
-        new Error("write fail"),
-      );
-
-      await expect(
-        useSettingsStore.getState().markIncognitoExplainerSeen(),
-      ).resolves.toBeUndefined();
-
-      // State is still set even though persist failed
-      expect(useSettingsStore.getState().hasSeenIncognitoExplainer).toBe(true);
     });
   });
 
@@ -701,6 +672,21 @@ describe("settingsStore", () => {
 
     it("useSetTranscriptionMode returns a function", () => {
       const { result } = renderHook(() => useSetTranscriptionMode());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useModelModes returns the modelModes record", () => {
+      useSettingsStore.setState({
+        modelModes: { [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME },
+      });
+      const { result } = renderHook(() => useModelModes());
+      expect(result.current).toEqual({
+        [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME,
+      });
+    });
+
+    it("useSetModelMode returns a function", () => {
+      const { result } = renderHook(() => useSetModelMode());
       expect(typeof result.current).toBe("function");
     });
   });

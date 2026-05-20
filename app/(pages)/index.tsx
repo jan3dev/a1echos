@@ -75,10 +75,11 @@ export default function HomeScreen() {
 
   const [tooltipShouldDisappear, setTooltipShouldDisappear] = useState(false);
 
-  // Incognito sessions live outside the sessions array; treat them as non-empty
-  // so the empty-state tooltip unmounts (instead of animating back in) between
-  // pressing record and the navigation to the session screen.
-  const effectivelyEmpty = sessions.length === 0 && !incognitoSession;
+  // Incognito sessions live outside `sessions`; treat them as non-empty so the
+  // tooltip unmounts during the record→session-screen transition. In incognito
+  // mode, IncognitoEmptyState owns the empty-state messaging instead.
+  const effectivelyEmpty =
+    sessions.length === 0 && !incognitoSession && !isIncognitoMode;
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

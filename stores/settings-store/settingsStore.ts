@@ -24,7 +24,6 @@ const STORAGE_KEYS = {
   MODEL_MODES: "model_modes",
   LANGUAGE: "spoken_language",
   INCOGNITO_MODE: "incognito_mode",
-  INCOGNITO_EXPLAINER_SEEN: "incognito_explainer_seen",
   SMART_SPLIT_ENABLED: "smart_split_enabled",
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
 };
@@ -41,7 +40,6 @@ interface SettingsStore {
   modelModes: ModelModes;
   selectedLanguage: SpokenLanguage;
   isIncognitoMode: boolean;
-  hasSeenIncognitoExplainer: boolean;
   smartSplitEnabled: boolean;
   hasSeenKeyboardPrompt: boolean;
 
@@ -54,7 +52,6 @@ interface SettingsStore {
   setModelMode: (modelId: ModelId, mode: TranscriptionMode) => Promise<void>;
   setLanguage: (language: SpokenLanguage) => Promise<void>;
   setIncognitoMode: (enabled: boolean) => Promise<void>;
-  markIncognitoExplainerSeen: () => Promise<void>;
   setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
   markKeyboardPromptSeen: () => Promise<void>;
 }
@@ -106,7 +103,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   modelModes: {},
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
-  hasSeenIncognitoExplainer: false,
   smartSplitEnabled: true,
   hasSeenKeyboardPrompt: false,
 
@@ -120,7 +116,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         modelModesValue,
         languageValue,
         incognitoModeValue,
-        incognitoExplainerValue,
         smartSplitValue,
         keyboardPromptValue,
       ] = await Promise.all([
@@ -131,7 +126,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_MODES),
         AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE),
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
-        AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.SMART_SPLIT_ENABLED),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
       ]);
@@ -190,7 +184,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           SupportedLanguages.defaultLanguage)
         : SupportedLanguages.defaultLanguage;
       const isIncognitoMode = incognitoModeValue === "true";
-      const hasSeenIncognitoExplainer = incognitoExplainerValue === "true";
       // Default true — only the explicit string "false" disables.
       const smartSplitEnabled =
         smartSplitValue === null || smartSplitValue === "true";
@@ -204,7 +197,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         modelModes,
         selectedLanguage,
         isIncognitoMode,
-        hasSeenIncognitoExplainer,
         smartSplitEnabled,
         hasSeenKeyboardPrompt,
       });
@@ -221,7 +213,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         modelModes: {},
         selectedLanguage: SupportedLanguages.defaultLanguage,
         isIncognitoMode: false,
-        hasSeenIncognitoExplainer: false,
         smartSplitEnabled: true,
         hasSeenKeyboardPrompt: false,
       });
@@ -389,6 +380,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setIncognitoMode: async (enabled: boolean) => {
     const previousValue = get().isIncognitoMode;
+    if (previousValue === enabled) return;
     set({ isIncognitoMode: enabled });
     try {
       await AsyncStorage.setItem(
@@ -402,18 +394,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
       set({ isIncognitoMode: previousValue });
       throw error;
-    }
-  },
-
-  markIncognitoExplainerSeen: async () => {
-    set({ hasSeenIncognitoExplainer: true });
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.INCOGNITO_EXPLAINER_SEEN, "true");
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save incognito explainer flag",
-      });
     }
   },
 
@@ -459,6 +439,8 @@ export const useSelectedLanguage = () =>
   useSettingsStore((s) => s.selectedLanguage);
 export const useIsIncognitoMode = () =>
   useSettingsStore((s) => s.isIncognitoMode);
+export const useSetIncognitoMode = () =>
+  useSettingsStore((s) => s.setIncognitoMode);
 export const useSetLanguage = () => useSettingsStore((s) => s.setLanguage);
 export const useSetModelType = () => useSettingsStore((s) => s.setModelType);
 export const useSetModelId = () => useSettingsStore((s) => s.setModelId);
