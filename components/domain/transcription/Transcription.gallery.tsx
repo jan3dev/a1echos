@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
   Toast,
   ToastVariant,
@@ -14,7 +15,6 @@ import {
   useTranscriptionStore,
   useUIStore,
 } from "@/stores";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 const dummyTranscriptions: Transcription[] = [
   {
@@ -92,6 +92,7 @@ const ToastOverlay = () => {
         <Toast
           key={toast.id}
           visible={true}
+          title={""}
           message={toast.message}
           variant={toast.variant as ToastVariant}
           onDismiss={() => hideToast(toast.id)}

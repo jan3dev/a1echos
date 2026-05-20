@@ -21,9 +21,10 @@ export const Routes = {
       pathname: "/settings/model-languages",
       params: { modelId },
     }) as unknown as Href,
+  designSystem: "/(dev)/design-system" as Href,
   designSystemDetail: (slug: string): Href =>
     ({
-      pathname: "/[slug]",
+      pathname: "/(dev)/design-system/[slug]",
       params: { slug },
     }) as unknown as Href,
 } as const;

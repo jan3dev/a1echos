@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Radio } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 const RadioGroup = ({ size = "large" }: { size?: "large" | "small" }) => {
   const [selected, setSelected] = useState("option1");

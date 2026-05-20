@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
@@ -90,12 +90,19 @@ export const HomeAppBar = ({
   const renderTitleWidget = () => {
     if (selectionMode) return undefined;
     return (
-      <Icon
-        name="echos_logo"
-        size={75}
-        style={{ width: 75, height: 24 }}
-        color={theme.colors.textPrimary}
-      />
+      <Pressable
+        onLongPress={() => {
+          if (__DEV__) router.push(Routes.designSystem);
+        }}
+        delayLongPress={600}
+      >
+        <Icon
+          name="echos_logo"
+          size={75}
+          style={{ width: 75, height: 24 }}
+          color={theme.colors.textPrimary}
+        />
+      </Pressable>
     );
   };
 

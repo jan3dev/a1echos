@@ -1,8 +1,8 @@
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, Modal, useModal } from "@/components";
 import { useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 const ModalDemo = ({
   withIcon,
@@ -21,13 +21,11 @@ const ModalDemo = ({
       primaryButton: {
         text: "Primary Action",
         onTap: () => console.log("Primary tapped"),
-        variant: "normal",
       },
       secondaryButton: withSecondaryButton
         ? {
             text: "Secondary Action",
             onTap: () => console.log("Secondary tapped"),
-            variant: "normal",
           }
         : undefined,
       icon: withIcon ? (
@@ -62,12 +60,10 @@ export const LongText = () => {
       primaryButton: {
         text: "Got it",
         onTap: () => console.log("Got it"),
-        variant: "normal",
       },
       secondaryButton: {
         text: "Cancel",
         onTap: () => console.log("Cancel"),
-        variant: "normal",
       },
       icon: <Icon name="warning" size={24} color={theme.colors.textPrimary} />,
       titleMaxLines: 5,

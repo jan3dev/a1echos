@@ -47,14 +47,11 @@ import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
 // slide animation completes on Android.
 enableFreeze(true);
 
-const DesignSystemEnabled =
-  process.env.EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED === "true";
-
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
 
 // Register Android foreground service early (async, fire-and-forget)
-if (Platform.OS === "android" && !DesignSystemEnabled) {
+if (Platform.OS === "android") {
   registerForegroundService();
 }
 
@@ -84,9 +81,7 @@ function installGlobalErrorHandler() {
 }
 
 export const unstable_settings = {
-  initialRouteName: DesignSystemEnabled
-    ? "(design-system)/index"
-    : "(pages)/index",
+  initialRouteName: "(pages)/index",
 };
 
 const TOOLTIP_GAP_ABOVE_RECORDING_CONTROLS = 8;
@@ -299,25 +294,20 @@ export default function RootLayout() {
       try {
         await initTheme();
 
-        if (!DesignSystemEnabled) {
-          await Promise.all([
-            initializeSettingsStore(),
-            initializeSessionStore(),
-            storageService.processPendingDeletes(),
-          ]);
-          initializeModelDownloadStore();
-          await initializeTranscriptionStore();
+        await Promise.all([
+          initializeSettingsStore(),
+          initializeSessionStore(),
+          storageService.processPendingDeletes(),
+        ]);
+        initializeModelDownloadStore();
+        await initializeTranscriptionStore();
 
-          // Pre-warm the user's selected model so the first record tap doesn't
-          // pay the multi-second sherpa-onnx init cost. Fire-and-forget — the
-          // helper short-circuits if the model isn't downloaded or recording
-          // is in progress.
-          const settings = useSettingsStore.getState();
-          preWarmModel(
-            settings.selectedModelId,
-            settings.selectedLanguage.code,
-          );
-        }
+        // Pre-warm the user's selected model so the first record tap doesn't
+        // pay the multi-second sherpa-onnx init cost. Fire-and-forget — the
+        // helper short-circuits if the model isn't downloaded or recording
+        // is in progress.
+        const settings = useSettingsStore.getState();
+        preWarmModel(settings.selectedModelId, settings.selectedLanguage.code);
 
         setAppReady(true);
       } catch (error) {
@@ -351,23 +341,6 @@ export default function RootLayout() {
   // Don't render until fonts and initialization are complete
   if (!fontsLoaded || !appReady) {
     return null;
-  }
-
-  if (DesignSystemEnabled) {
-    return (
-      <GestureHandlerRootView
-        style={{ flex: 1, backgroundColor: theme.colors.surfaceBackground }}
-        onLayout={onLayoutRootView}
-      >
-        <SystemBars style={isDark ? "light" : "dark"} />
-        <Stack screenOptions={{ animation: "none" }}>
-          <Stack.Screen
-            name="(design-system)"
-            options={{ headerShown: false }}
-          />
-        </Stack>
-      </GestureHandlerRootView>
-    );
   }
 
   return (

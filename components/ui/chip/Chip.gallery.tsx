@@ -1,4 +1,4 @@
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Chip, FlagIcon, Icon } from "@/components";
 import { useTheme } from "@/theme";
 

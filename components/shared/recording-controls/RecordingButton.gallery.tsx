@@ -1,9 +1,9 @@
 import { ComponentProps } from "react";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { RecordingButton } from "@/components";
 import { TranscriptionState } from "@/models";
 import { useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 const DynamicRecordingButton = (
   props: Omit<ComponentProps<typeof RecordingButton>, "colors">,

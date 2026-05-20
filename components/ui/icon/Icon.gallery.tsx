@@ -1,11 +1,10 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, Text } from "@/components";
 import { useTheme } from "@/theme";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 import { iconMap, IconName } from "./iconMap";
-
 
 export const AllIcons = () => {
   const { theme } = useTheme();

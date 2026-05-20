@@ -1,7 +1,7 @@
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Toast, ToastVariant, useToast } from "@/components";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 const ToastDemo = ({
   variant,

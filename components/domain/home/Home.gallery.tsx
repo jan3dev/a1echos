@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
   EmptyStateView,
   HomeAppBar,
@@ -9,7 +10,6 @@ import {
 } from "@/components";
 import { Session } from "@/models";
 import { useSessionStore, useSettingsStore } from "@/stores";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 // Mock Data
 const dummySessions: Session[] = [

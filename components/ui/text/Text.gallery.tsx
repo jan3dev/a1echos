@@ -1,7 +1,7 @@
 import { View } from "react-native";
 
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Text } from "@/components";
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
 
 export const Default = () => (
   <Text>The quick brown fox jumps over the lazy dog</Text>

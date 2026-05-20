@@ -19,7 +19,14 @@ export default function DesignSystemDetail() {
           { backgroundColor: theme.colors.surfaceBackground },
         ]}
       >
-        <Stack.Screen options={{ title: "Not found" }} />
+        <Stack.Screen
+          options={{
+            title: "Not found",
+            headerShown: true,
+            headerStyle: { backgroundColor: theme.colors.surfaceBackground },
+            headerTintColor: theme.colors.textPrimary,
+          }}
+        />
         <Text variant="body1" color={theme.colors.textSecondary}>
           {`No gallery for slug "${slug}".`}
         </Text>
@@ -32,7 +39,15 @@ export default function DesignSystemDetail() {
       style={{ backgroundColor: theme.colors.surfaceBackground }}
       contentContainerStyle={styles.container}
     >
-      <Stack.Screen options={{ title: entry.title }} />
+      <Stack.Screen
+        options={{
+          title: entry.title,
+          headerShown: true,
+          headerStyle: { backgroundColor: theme.colors.surfaceBackground },
+          headerTintColor: theme.colors.textPrimary,
+          headerTitleStyle: { color: theme.colors.textPrimary },
+        }}
+      />
       {entry.demos.map((demo) => (
         <View key={demo.name} style={styles.demo}>
           <Text

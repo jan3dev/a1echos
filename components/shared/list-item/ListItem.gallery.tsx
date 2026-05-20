@@ -1,6 +1,6 @@
 import { View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(design-system)/manifest";
+import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, ListItem, Text } from "@/components";
 import { useTheme } from "@/theme";
 
