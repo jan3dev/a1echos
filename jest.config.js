@@ -15,11 +15,11 @@ module.exports = {
   },
   testPathIgnorePatterns: [
     "/node_modules/",
-    "<rootDir>/app/\\(design-system\\)/",
+    "<rootDir>/app/\\(dev\\)/design-system/",
   ],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
-    "!app/\\(design-system\\)/**",
+    "!app/\\(dev\\)/**",
     "src/components/**/*.{ts,tsx}",
     "src/constants/**/*.{ts,tsx}",
     "src/hooks/**/*.{ts,tsx}",

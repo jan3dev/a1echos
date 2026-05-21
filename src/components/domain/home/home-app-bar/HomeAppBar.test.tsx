@@ -20,8 +20,8 @@ jest.mock("../../../ui/icon/Icon", () => ({
   },
 }));
 
-jest.mock("../../../ui/ripple-pressable/RipplePressable", () => ({
-  RipplePressable: ({ children, onPress, ...props }: any) => {
+jest.mock("../../../ui/glass-icon-button/GlassIconButton", () => ({
+  GlassIconButton: ({ children, onPress, ...props }: any) => {
     const { Pressable } = require("react-native");
     return (
       <Pressable onPress={onPress} {...props}>
@@ -56,13 +56,13 @@ describe("HomeAppBar", () => {
     (useSetIncognitoMode as jest.Mock).mockReturnValue(mockSetIncognitoMode);
   });
 
-  it("renders echos logo in normal mode", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+  it("renders echos logo", () => {
+    const { getByTestId } = render(<HomeAppBar />);
     expect(getByTestId("icon-echos_logo")).toBeTruthy();
   });
 
-  it("renders settings icon button in normal mode", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+  it("renders settings icon button", () => {
+    const { getByTestId } = render(<HomeAppBar />);
     expect(getByTestId("icon-menu")).toBeTruthy();
   });
 
@@ -70,90 +70,96 @@ describe("HomeAppBar", () => {
     const mockRouter = (useRouter as jest.Mock)();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
 
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+    const { getByTestId } = render(<HomeAppBar />);
     const settingsIcon = getByTestId("icon-menu");
     fireEvent.press(settingsIcon.parent!);
     expect(mockRouter.push).toHaveBeenCalledWith("/settings");
   });
 
   it("renders ghost icon when incognito mode is off", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+    const { getByTestId } = render(<HomeAppBar />);
     expect(getByTestId("icon-ghost")).toBeTruthy();
   });
 
   it("renders ghost_on icon when incognito mode is on", () => {
     (useIsIncognitoMode as jest.Mock).mockReturnValue(true);
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+    const { getByTestId } = render(<HomeAppBar />);
     expect(getByTestId("icon-ghost_on")).toBeTruthy();
   });
 
-  it("in selection mode: renders back chevron (not logo)", () => {
-    const { getByTestId, queryByTestId } = render(
-      <HomeAppBar selectionMode={true} />,
-    );
-    expect(getByTestId("icon-chevron_left")).toBeTruthy();
-    expect(queryByTestId("icon-echos_logo")).toBeNull();
-  });
-
-  it("in selection mode: renders trash icon", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={true} />);
-    expect(getByTestId("icon-trash")).toBeTruthy();
-  });
-
-  it("trash press calls onDeleteSelected", () => {
-    const onDeleteSelected = jest.fn();
-    const { getByTestId } = render(
-      <HomeAppBar selectionMode={true} onDeleteSelected={onDeleteSelected} />,
-    );
-    fireEvent.press(getByTestId("icon-trash").parent!);
-    expect(onDeleteSelected).toHaveBeenCalledTimes(1);
-  });
-
-  it("back chevron press calls onExitSelectionMode", () => {
-    const onExit = jest.fn();
-    const { getByTestId } = render(
-      <HomeAppBar selectionMode={true} onExitSelectionMode={onExit} />,
-    );
-    fireEvent.press(getByTestId("icon-chevron_left").parent!);
-    expect(onExit).toHaveBeenCalledTimes(1);
-  });
-
   it("ghost press toggles incognito mode on", async () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+    const { getByTestId } = render(<HomeAppBar />);
     await fireEvent.press(getByTestId("icon-ghost").parent!);
     expect(mockSetIncognitoMode).toHaveBeenCalledWith(true);
   });
 
   it("ghost_on press toggles incognito mode off", async () => {
     (useIsIncognitoMode as jest.Mock).mockReturnValue(true);
-    const { getByTestId } = render(<HomeAppBar selectionMode={false} />);
+    const { getByTestId } = render(<HomeAppBar />);
     await fireEvent.press(getByTestId("icon-ghost_on").parent!);
     expect(mockSetIncognitoMode).toHaveBeenCalledWith(false);
   });
 
-  it("in selection mode: hides ghost and settings icons", () => {
-    const { queryByTestId } = render(<HomeAppBar selectionMode={true} />);
-    expect(queryByTestId("icon-ghost")).toBeNull();
-    expect(queryByTestId("icon-menu")).toBeNull();
-  });
-
-  it("in normal mode: hides trash and back icons", () => {
-    const { queryByTestId } = render(<HomeAppBar selectionMode={false} />);
+  it("does not render trash or back chevron", () => {
+    const { queryByTestId } = render(<HomeAppBar />);
     expect(queryByTestId("icon-trash")).toBeNull();
     expect(queryByTestId("icon-chevron_left")).toBeNull();
   });
 
-  it("onDeleteSelected not called when not provided", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={true} />);
-    expect(() =>
-      fireEvent.press(getByTestId("icon-trash").parent!),
-    ).not.toThrow();
+  it("long-pressing the echos logo navigates to design-system in __DEV__", () => {
+    const mockRouter = (useRouter as jest.Mock)();
+    (useRouter as jest.Mock).mockReturnValue(mockRouter);
+
+    const { getByTestId } = render(<HomeAppBar />);
+    const logo = getByTestId("icon-echos_logo");
+    fireEvent(logo.parent!, "longPress");
+    expect(mockRouter.push).toHaveBeenCalledWith("/(dev)/design-system");
   });
 
-  it("onExitSelectionMode not called when not provided", () => {
-    const { getByTestId } = render(<HomeAppBar selectionMode={true} />);
-    expect(() =>
-      fireEvent.press(getByTestId("icon-chevron_left").parent!),
-    ).not.toThrow();
+  it("selection mode: renders back chevron and close icon, hides logo/menu/ghost", () => {
+    const { getByTestId, queryByTestId } = render(
+      <HomeAppBar selectionMode selectionTitle="2 selected" />,
+    );
+    expect(getByTestId("icon-chevron_left")).toBeTruthy();
+    expect(getByTestId("icon-close")).toBeTruthy();
+    expect(queryByTestId("icon-echos_logo")).toBeNull();
+    expect(queryByTestId("icon-menu")).toBeNull();
+    expect(queryByTestId("icon-ghost")).toBeNull();
+  });
+
+  it("selection mode: back chevron press calls onExitSelectionPressed", () => {
+    const onExit = jest.fn();
+    const { getByTestId } = render(
+      <HomeAppBar
+        selectionMode
+        selectionTitle="1 selected"
+        onExitSelectionPressed={onExit}
+      />,
+    );
+    fireEvent.press(getByTestId("icon-chevron_left").parent!);
+    expect(onExit).toHaveBeenCalled();
+  });
+
+  it("selection mode: close icon press calls onExitSelectionPressed", () => {
+    const onExit = jest.fn();
+    const { getByTestId } = render(
+      <HomeAppBar
+        selectionMode
+        selectionTitle="1 selected"
+        onExitSelectionPressed={onExit}
+      />,
+    );
+    fireEvent.press(getByTestId("icon-close").parent!);
+    expect(onExit).toHaveBeenCalled();
+  });
+
+  it("selection mode: chevron and close press are no-ops without callback", () => {
+    const { getByTestId } = render(
+      <HomeAppBar selectionMode selectionTitle="1 selected" />,
+    );
+    expect(() => {
+      fireEvent.press(getByTestId("icon-chevron_left").parent!);
+      fireEvent.press(getByTestId("icon-close").parent!);
+    }).not.toThrow();
   });
 });

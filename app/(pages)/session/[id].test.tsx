@@ -130,24 +130,27 @@ jest.mock("@/stores", () => ({
   useIsTranscriptionSelectionMode: jest.fn(() => false),
   useSelectedTranscriptionIdsSet: jest.fn(() => mockEmptySet),
   useToggleTranscriptionSelection: jest.fn(() => jest.fn()),
-  useSelectAllTranscriptions: jest.fn(() => jest.fn()),
+  useEnterTranscriptionSelection: jest.fn(() => jest.fn()),
   useExitTranscriptionSelection: jest.fn(() => mockExitSelectionMode),
   useDeleteTranscriptions: jest.fn(() => jest.fn()),
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
 let mockOnBackPressed: (() => void) | null = null;
-let mockOnCopyAllPressed: (() => void) | null = null;
-let mockOnSelectAllPressed: (() => void) | null = null;
-let mockOnDeleteSelectedPressed: (() => void) | null = null;
+let mockOnMorePressed: (() => void) | null = null;
 let mockOnCancelEditPressed: (() => void) | null = null;
 let mockOnSaveEditPressed: (() => void) | null = null;
 let mockOnLanguageFlagPressed: (() => void) | null = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
+let mockOnRenameCancel: (() => void) | null = null;
 let mockOnTranscriptionTap: ((id: string) => void) | null = null;
 let mockOnTranscriptionLongPress: ((id: string) => void) | null = null;
 let mockOnEditStart: (() => void) | null = null;
 let mockOnEditEnd: (() => void) | null = null;
+const navbarActions: Record<string, () => void> = {};
+const navbarActionDisabled: Record<string, boolean> = {};
+const mockOnDeleteSelectedPressed = () => navbarActions.delete?.();
+const mockOnCopySelectedPressed = () => navbarActions.copy?.();
 const mockShowDeleteToast = jest.fn();
 const mockHideDeleteToast = jest.fn();
 
@@ -158,18 +161,13 @@ jest.mock("@/components", () => {
     SessionAppBar: (props: any) => {
       mockOnTitlePressed = props.onTitlePressed;
       mockOnBackPressed = props.onBackPressed;
-      mockOnCopyAllPressed = props.onCopyAllPressed;
-      mockOnSelectAllPressed = props.onSelectAllPressed;
-      mockOnDeleteSelectedPressed = props.onDeleteSelectedPressed;
+      mockOnMorePressed = props.onMorePressed;
       mockOnCancelEditPressed = props.onCancelEditPressed;
       mockOnSaveEditPressed = props.onSaveEditPressed;
       mockOnLanguageFlagPressed = props.onLanguageFlagPressed;
       return (
         <View testID={TID.SessionAppBar}>
           <Text testID={TID.SessionName}>{props.sessionName}</Text>
-          <Text testID={TID.SelectionMode}>
-            {props.selectionMode ? "selection" : "normal"}
-          </Text>
           <Text testID={TID.EditMode}>
             {props.editMode ? "editing" : "not-editing"}
           </Text>
@@ -178,6 +176,7 @@ jest.mock("@/components", () => {
     },
     SessionInputModal: (props: any) => {
       mockOnRenameSubmit = props.onSubmit;
+      mockOnRenameCancel = props.onCancel;
       return props.visible ? (
         <View testID={TID.RenameModal}>
           <Text>{String(props.title)}</Text>
@@ -191,12 +190,30 @@ jest.mock("@/components", () => {
       mockOnEditEnd = props.onEditEnd;
       return <View testID={TID.TranscriptionContent} />;
     },
-    Button: {
-      primary: (props: any) => (
-        <TouchableOpacity testID={TID.ShareButton} onPress={props.onPress}>
-          <Text>{String(props.text)}</Text>
-        </TouchableOpacity>
-      ),
+    SubScreenNavbar: (props: any) => {
+      Object.keys(navbarActions).forEach((k) => delete navbarActions[k]);
+      Object.keys(navbarActionDisabled).forEach(
+        (k) => delete navbarActionDisabled[k],
+      );
+      (props.actions ?? []).forEach((a: any) => {
+        navbarActions[a.key] = a.onPress;
+        navbarActionDisabled[a.key] = !!a.disabled;
+      });
+      if (!props.visible) return null;
+      return (
+        <View testID={TID.SelectionMode}>
+          {(props.actions ?? []).map((a: any) => (
+            <TouchableOpacity
+              key={a.key}
+              testID={a.key === "share" ? TID.ShareButton : `navbar-${a.key}`}
+              onPress={a.disabled ? undefined : a.onPress}
+              disabled={a.disabled}
+            >
+              <Text>{String(a.label)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
     },
     Screen: ({ children }: any) => <View>{children}</View>,
     Toast: (props: any) => <View testID={TID.Toast} />,
@@ -217,13 +234,12 @@ beforeEach(() => {
   };
   mockOnTitlePressed = null;
   mockOnBackPressed = null;
-  mockOnCopyAllPressed = null;
-  mockOnSelectAllPressed = null;
-  mockOnDeleteSelectedPressed = null;
+  mockOnMorePressed = null;
   mockOnCancelEditPressed = null;
   mockOnSaveEditPressed = null;
   mockOnLanguageFlagPressed = null;
   mockOnRenameSubmit = null;
+  mockOnRenameCancel = null;
   mockOnTranscriptionTap = null;
   mockOnTranscriptionLongPress = null;
   mockOnEditStart = null;
@@ -266,7 +282,9 @@ beforeEach(() => {
   (stores.useToggleTranscriptionSelection as jest.Mock).mockReturnValue(
     jest.fn(),
   );
-  (stores.useSelectAllTranscriptions as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useEnterTranscriptionSelection as jest.Mock).mockReturnValue(
+    jest.fn(),
+  );
   (stores.useExitTranscriptionSelection as jest.Mock).mockReturnValue(
     mockExitSelectionMode,
   );
@@ -327,12 +345,27 @@ describe("SessionScreen", () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it("selection mode shows share button", async () => {
+  it("selection mode shows sub-screen navbar with share action", async () => {
     (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
     const { getByTestId } = render(<SessionScreen />);
+    expect(getByTestId(TestID.SelectionMode)).toBeTruthy();
     expect(getByTestId(TestID.ShareButton)).toBeTruthy();
-    expect(getByTestId(TestID.SelectionMode)).toHaveTextContent("selection");
     await act(async () => {});
+  });
+
+  it("more icon press enters selection mode via store", async () => {
+    const mockEnter = jest.fn();
+    const { useEnterTranscriptionSelection } = jest.requireMock("@/stores");
+    (useEnterTranscriptionSelection as jest.Mock).mockReturnValue(mockEnter);
+
+    render(<SessionScreen />);
+    await act(async () => {});
+
+    await act(async () => {
+      mockOnMorePressed!();
+    });
+
+    expect(mockEnter).toHaveBeenCalled();
   });
 
   it("title press opens rename modal for non-incognito", async () => {
@@ -364,6 +397,22 @@ describe("SessionScreen", () => {
       mockOnTitlePressed!();
     });
 
+    expect(queryByTestId(TestID.RenameModal)).toBeNull();
+  });
+
+  it("rename modal cancel closes the modal", async () => {
+    const { queryByTestId } = render(<SessionScreen />);
+
+    await act(async () => {
+      mockOnTitlePressed!();
+    });
+    await waitFor(() => {
+      expect(queryByTestId(TestID.RenameModal)).toBeTruthy();
+    });
+
+    await act(async () => {
+      mockOnRenameCancel!();
+    });
     expect(queryByTestId(TestID.RenameModal)).toBeNull();
   });
 
@@ -542,121 +591,18 @@ describe("SessionScreen", () => {
     });
   });
 
-  // --- D. handleCopyAllPressed ---
-
-  describe("handleCopyAllPressed", () => {
-    it("with empty transcriptions: shows no transcriptions tooltip", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([]);
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        expect.anything(),
-        "normal",
-        undefined,
-        true,
-      );
-      expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
-    });
-
-    it("success: copies text and shows tooltip on iOS", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello world" },
-        { id: "t2", text: "Second transcription" },
-      ]);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
-
-      const originalPlatform = Object.getOwnPropertyDescriptor(
-        require("react-native").Platform,
-        "OS",
-      );
-      Object.defineProperty(require("react-native").Platform, "OS", {
-        value: "ios",
-        configurable: true,
-      });
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      await waitFor(() => {
-        expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
-          "Hello world\n\nSecond transcription",
-        );
-      });
-
-      expect(Haptics.notificationAsync).toHaveBeenCalledWith(
-        Haptics.NotificationFeedbackType.Success,
-      );
-
-      // Restore
-      if (originalPlatform) {
-        Object.defineProperty(
-          require("react-native").Platform,
-          "OS",
-          originalPlatform,
-        );
-      }
-    });
-
-    it("failure: shows error toast", async () => {
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello" },
-      ]);
-      (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error("Clipboard error"),
-      );
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      await waitFor(() => {
-        const errorCall = mockShowDeleteToast.mock.calls.find(
-          (call) => call[0]?.variant === "error",
-        );
-        expect(errorCall).toBeDefined();
-        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
-      });
-    });
-  });
-
   // --- E. handleSharePressed ---
 
   describe("handleSharePressed", () => {
-    it("with no selected items: shows warning toast", async () => {
+    it("with no selected items: share action is disabled", async () => {
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
       (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
 
-      const { getByTestId } = render(<SessionScreen />);
+      render(<SessionScreen />);
       await act(async () => {});
 
-      await act(async () => {
-        fireEvent.press(getByTestId(TestID.ShareButton));
-      });
-
-      expect(mockShowToast).toHaveBeenCalledWith(expect.anything(), "warning");
+      expect(navbarActionDisabled.share).toBe(true);
+      expect(shareService.shareTranscriptions).not.toHaveBeenCalled();
     });
 
     it("success: calls shareService.shareTranscriptions", async () => {
@@ -751,6 +697,211 @@ describe("SessionScreen", () => {
     });
   });
 
+  // --- F2. handleCopySelectedPressed ---
+
+  describe("handleCopySelectedPressed", () => {
+    it("with no selected items: copy action is disabled and no-op", async () => {
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      expect(navbarActionDisabled.copy).toBe(true);
+
+      await act(async () => {
+        mockOnCopySelectedPressed();
+      });
+
+      expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
+    });
+
+    it("success: copies selected text, fires haptics, exits selection", async () => {
+      const { Platform } = require("react-native");
+      const originalOS = Platform.OS;
+      Platform.OS = "ios";
+
+      const selectedIds = new Set(["t1"]);
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        selectedIds,
+      );
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Selected text" },
+        { id: "t2", text: "Other text" },
+      ]);
+      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        mockOnCopySelectedPressed();
+      });
+
+      await waitFor(() => {
+        expect(Clipboard.setStringAsync).toHaveBeenCalledWith("Selected text");
+      });
+      expect(mockExitSelectionMode).toHaveBeenCalled();
+
+      Platform.OS = originalOS;
+    });
+
+    it("success on Android API >= 31: does not show tooltip", async () => {
+      const { Platform } = require("react-native");
+      const originalOS = Platform.OS;
+      const originalVersion = Platform.Version;
+      Platform.OS = "android";
+      Platform.Version = 31;
+
+      const selectedIds = new Set(["t1"]);
+      const mockShowGlobalTooltip = jest.fn();
+      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
+      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
+        mockShowGlobalTooltip,
+      );
+
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        selectedIds,
+      );
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Hello" },
+      ]);
+      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        mockOnCopySelectedPressed();
+      });
+
+      await waitFor(() => {
+        expect(Clipboard.setStringAsync).toHaveBeenCalled();
+      });
+      expect(mockShowGlobalTooltip).not.toHaveBeenCalled();
+
+      Platform.OS = originalOS;
+      Platform.Version = originalVersion;
+    });
+
+    it("clipboard rejection: shows error toast", async () => {
+      const selectedIds = new Set(["t1"]);
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        selectedIds,
+      );
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Hello" },
+      ]);
+      (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
+        new Error("Clipboard denied"),
+      );
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        mockOnCopySelectedPressed();
+      });
+
+      await waitFor(() => {
+        const errorCall = mockShowDeleteToast.mock.calls.find(
+          (c) => c[0]?.variant === "error",
+        );
+        expect(errorCall).toBeDefined();
+      });
+    });
+
+    it("no matching transcriptions: shows 'Unknown error' alert", async () => {
+      const selectedIds = new Set(["missing-id"]);
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        selectedIds,
+      );
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Hello" },
+      ]);
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        mockOnCopySelectedPressed();
+      });
+
+      await waitFor(() => {
+        const errorCall = mockShowDeleteToast.mock.calls.find(
+          (c) => c[0]?.variant === "error",
+        );
+        expect(errorCall).toBeDefined();
+        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
+      });
+      expect(Clipboard.setStringAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- F3. BackHandler ---
+
+  describe("BackHandler hardwareBackPress", () => {
+    const captureHandler = () => {
+      const { BackHandler } = require("react-native");
+      const spy = jest.spyOn(BackHandler, "addEventListener");
+      return {
+        spy,
+        getHandler: () => spy.mock.calls[0]?.[1] as () => boolean,
+      };
+    };
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("returns true and stops recording when isRecording", async () => {
+      const mockStop = jest.fn();
+      (useIsRecording as jest.Mock).mockReturnValue(true);
+      (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStop);
+      const { getHandler } = captureHandler();
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const handler = getHandler();
+      expect(handler).toBeDefined();
+      const result = handler!();
+      expect(result).toBe(true);
+      expect(mockStop).toHaveBeenCalled();
+    });
+
+    it("returns true and exits selection mode when in selection mode", async () => {
+      (useIsRecording as jest.Mock).mockReturnValue(false);
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      const { getHandler } = captureHandler();
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const handler = getHandler();
+      const result = handler!();
+      expect(result).toBe(true);
+      expect(mockExitSelectionMode).toHaveBeenCalled();
+    });
+
+    it("returns false when not recording, editing, or in selection mode", async () => {
+      (useIsRecording as jest.Mock).mockReturnValue(false);
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(false);
+      const { getHandler } = captureHandler();
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const handler = getHandler();
+      const result = handler!();
+      expect(result).toBe(false);
+    });
+  });
+
   // --- G. Recording callbacks ---
 
   describe("recording callbacks", () => {
@@ -762,6 +913,55 @@ describe("SessionScreen", () => {
         expect.any(Function),
         expect.any(Function),
       );
+    });
+
+    it("recording start callback starts recording when mic permission granted", async () => {
+      const mockStart = jest.fn().mockResolvedValue(true);
+      const { useStartRecording } = jest.requireMock("@/stores");
+      (useStartRecording as jest.Mock).mockReturnValue(mockStart);
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const [onStart] = mockSetRecordingCallbacks.mock.calls[0];
+      await act(async () => {
+        await onStart();
+      });
+      expect(mockStart).toHaveBeenCalled();
+    });
+
+    it("recording start callback shows tooltip when startRecording returns false", async () => {
+      const mockStart = jest.fn().mockResolvedValue(false);
+      const mockShowGlobalTooltip = jest.fn();
+      const { useStartRecording, useShowGlobalTooltip } =
+        jest.requireMock("@/stores");
+      (useStartRecording as jest.Mock).mockReturnValue(mockStart);
+      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
+        mockShowGlobalTooltip,
+      );
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const [onStart] = mockSetRecordingCallbacks.mock.calls[0];
+      await act(async () => {
+        await onStart();
+      });
+      expect(mockShowGlobalTooltip).toHaveBeenCalled();
+    });
+
+    it("recording stop callback calls stopRecordingAndSave", async () => {
+      const mockStop = jest.fn().mockResolvedValue(undefined);
+      (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStop);
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      const [, onStop] = mockSetRecordingCallbacks.mock.calls[0];
+      await act(async () => {
+        await onStop();
+      });
+      expect(mockStop).toHaveBeenCalled();
     });
 
     it("sets recording controls enabled based on initialization state", async () => {
@@ -945,154 +1145,6 @@ describe("SessionScreen", () => {
 
       expect(keyboardDismissSpy).toHaveBeenCalled();
       keyboardDismissSpy.mockRestore();
-    });
-  });
-
-  // --- Additional coverage tests ---
-
-  describe("copyAllTranscriptions", () => {
-    it("clipboard success on Android < 12 shows tooltip", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello world" },
-      ]);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
-
-      const originalOS = Object.getOwnPropertyDescriptor(
-        require("react-native").Platform,
-        "OS",
-      );
-      const originalVersion = Object.getOwnPropertyDescriptor(
-        require("react-native").Platform,
-        "Version",
-      );
-      Object.defineProperty(require("react-native").Platform, "OS", {
-        value: "android",
-        configurable: true,
-      });
-      Object.defineProperty(require("react-native").Platform, "Version", {
-        value: 30,
-        configurable: true,
-      });
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      await waitFor(() => {
-        expect(Clipboard.setStringAsync).toHaveBeenCalled();
-        expect(mockShowGlobalTooltip).toHaveBeenCalledWith(expect.anything());
-      });
-
-      // Restore
-      if (originalOS) {
-        Object.defineProperty(
-          require("react-native").Platform,
-          "OS",
-          originalOS,
-        );
-      }
-      if (originalVersion) {
-        Object.defineProperty(
-          require("react-native").Platform,
-          "Version",
-          originalVersion,
-        );
-      }
-    });
-
-    it("clipboard success on Android >= 12 does NOT show tooltip", async () => {
-      const mockShowGlobalTooltip = jest.fn();
-      const { useShowGlobalTooltip } = jest.requireMock("@/stores");
-      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
-        mockShowGlobalTooltip,
-      );
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello world" },
-      ]);
-      (Clipboard.setStringAsync as jest.Mock).mockResolvedValue(undefined);
-
-      const originalOS = Object.getOwnPropertyDescriptor(
-        require("react-native").Platform,
-        "OS",
-      );
-      const originalVersion = Object.getOwnPropertyDescriptor(
-        require("react-native").Platform,
-        "Version",
-      );
-      Object.defineProperty(require("react-native").Platform, "OS", {
-        value: "android",
-        configurable: true,
-      });
-      Object.defineProperty(require("react-native").Platform, "Version", {
-        value: 31,
-        configurable: true,
-      });
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      await waitFor(() => {
-        expect(Clipboard.setStringAsync).toHaveBeenCalled();
-      });
-
-      // On Android 12+ (API 31+), no tooltip should be shown for clipboard
-      expect(mockShowGlobalTooltip).not.toHaveBeenCalled();
-
-      // Restore
-      if (originalOS) {
-        Object.defineProperty(
-          require("react-native").Platform,
-          "OS",
-          originalOS,
-        );
-      }
-      if (originalVersion) {
-        Object.defineProperty(
-          require("react-native").Platform,
-          "Version",
-          originalVersion,
-        );
-      }
-    });
-
-    it("copyAllTranscriptions returns false when clipboard fails (inside handleCopyAllPressed)", async () => {
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello" },
-      ]);
-      // Make clipboard fail but NOT throw (resolved)
-      // This exercises the copyAllTranscriptions catch → return false path
-      // and then handleCopyAllPressed success===false branch
-      (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error("Clipboard write error"),
-      );
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      // The error from copyAllTranscriptions is caught in handleCopyAllPressed's catch block
-      await waitFor(() => {
-        const errorCall = mockShowDeleteToast.mock.calls.find(
-          (call) => call[0]?.variant === "error",
-        );
-        expect(errorCall).toBeDefined();
-        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
-      });
     });
   });
 
@@ -1520,83 +1572,6 @@ describe("SessionScreen", () => {
       });
 
       expect(getByTestId(TestID.EditMode)).toHaveTextContent("not-editing");
-    });
-  });
-
-  describe("selectAllTranscriptions", () => {
-    it("selects all transcriptions when none are selected", async () => {
-      const mockSelectAll = jest.fn();
-      const { useSelectAllTranscriptions } = jest.requireMock("@/stores");
-      (useSelectAllTranscriptions as jest.Mock).mockReturnValue(mockSelectAll);
-      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
-      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(new Set());
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello" },
-        { id: "t2", text: "World" },
-      ]);
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnSelectAllPressed!();
-      });
-
-      expect(mockSelectAll).toHaveBeenCalledWith(["t1", "t2"]);
-    });
-
-    it("deselects all transcriptions when all are already selected", async () => {
-      const mockSelectAll = jest.fn();
-      const { useSelectAllTranscriptions } = jest.requireMock("@/stores");
-      (useSelectAllTranscriptions as jest.Mock).mockReturnValue(mockSelectAll);
-      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
-      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
-        new Set(["t1", "t2"]),
-      );
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello" },
-        { id: "t2", text: "World" },
-      ]);
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnSelectAllPressed!();
-      });
-
-      expect(mockSelectAll).toHaveBeenCalledWith([]);
-    });
-  });
-
-  describe("handleCopyAllPressed - copyAllTranscriptions returns false", () => {
-    it("shows copyFailed toast when copyAllTranscriptions returns false", async () => {
-      (useSessionTranscriptions as jest.Mock).mockReturnValue([
-        { id: "t1", text: "Hello" },
-      ]);
-      // Make clipboard fail silently (returns false from copyAllTranscriptions)
-      (Clipboard.setStringAsync as jest.Mock).mockRejectedValue(
-        new Error("fail"),
-      );
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Clear spy since it could be called during render
-      mockShowDeleteToast.mockClear();
-
-      await act(async () => {
-        mockOnCopyAllPressed!();
-      });
-
-      await waitFor(() => {
-        // handleCopyAllPressed catch block shows copyFailed toast
-        const errorCall = mockShowDeleteToast.mock.calls.find(
-          (call) => call[0]?.variant === "error",
-        );
-        expect(errorCall).toBeDefined();
-        expect(String(errorCall![0].title)).toBe("copyFailedTitle");
-      });
     });
   });
 });

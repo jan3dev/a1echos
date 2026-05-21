@@ -1,13 +1,9 @@
-import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, TextInput, View, ViewStyle } from "react-native";
+import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
-import { useLocalization } from "@/hooks";
 import { Transcription } from "@/models";
-import { useUIStore } from "@/stores";
 import { getShadow, useTheme } from "@/theme";
-import { FeatureFlag, iosPressed, logError } from "@/utils";
+import { iosPressed } from "@/utils";
 
 import { Checkbox } from "../../../ui/checkbox/Checkbox";
 import { Icon } from "../../../ui/icon/Icon";
@@ -68,8 +64,6 @@ export const TranscriptionItem = ({
   style,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
-  const { loc } = useLocalization();
-  const showGlobalTooltip = useUIStore((state) => state.showGlobalTooltip);
   const [editText, setEditText] = useState(transcription.text);
   const inputRef = useRef<TextInput>(null);
 
@@ -102,32 +96,6 @@ export const TranscriptionItem = ({
     onEndEdit?.();
   };
 
-  const handleCopyToClipboard = async () => {
-    try {
-      await Clipboard.setStringAsync(transcription.text);
-      await Haptics.selectionAsync();
-
-      // Show tooltip on iOS or Android < 12 (API 31 has native clipboard feedback)
-      if (
-        Platform.OS === "ios" ||
-        (Platform.OS === "android" && Number(Platform.Version) < 31)
-      ) {
-        showGlobalTooltip(loc.copiedToClipboard);
-      }
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.transcription,
-        message: "Failed to copy to clipboard",
-      });
-      showGlobalTooltip(
-        loc.copyFailed(error instanceof Error ? error.message : String(error)),
-        "normal",
-        undefined,
-        true,
-      );
-    }
-  };
-
   const isOlderThanCurrentYear =
     transcription.timestamp.getFullYear() < new Date().getFullYear();
 
@@ -138,7 +106,6 @@ export const TranscriptionItem = ({
   const showSkeleton = isLoadingWhisperResult || isWhisperRecording;
 
   const enableInteractions = !isLivePreviewItem && !showSkeleton;
-  const showCopyIcon = !isLivePreviewItem && !selectionMode;
   const showEditIcon = !isLivePreviewItem && !selectionMode;
   const showCheckbox = selectionMode && !isLivePreviewItem;
   const disableIcons = showSkeleton || (isAnyEditing && !isEditing);
@@ -222,25 +189,6 @@ export const TranscriptionItem = ({
               >
                 <Icon
                   name="edit"
-                  size={18}
-                  color={theme.colors.textSecondary}
-                />
-              </RipplePressable>
-            )}
-
-            {showEditIcon && showCopyIcon && <View style={{ width: 16 }} />}
-
-            {showCopyIcon && (
-              <RipplePressable
-                onPress={handleCopyToClipboard}
-                disabled={disableIcons}
-                hitSlop={10}
-                rippleColor={theme.colors.ripple}
-                borderless
-                style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
-              >
-                <Icon
-                  name="copy"
                   size={18}
                   color={theme.colors.textSecondary}
                 />

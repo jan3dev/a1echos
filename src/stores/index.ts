@@ -52,6 +52,8 @@ export {
   useModelDownloadStore,
 } from "./model-download-store/modelDownloadStore";
 export {
+  useEnterSessionSelection,
+  useEnterTranscriptionSelection,
   useExitSessionSelection,
   useExitTranscriptionSelection,
   useGlobalTooltip,

@@ -10,32 +10,30 @@ import { TopAppBar } from "../../../ui/top-app-bar/TopAppBar";
 
 interface SessionAppBarProps {
   sessionName: string;
-  selectionMode: boolean;
+  selectionMode?: boolean;
+  selectionTitle?: string;
   editMode?: boolean;
   isIncognitoSession: boolean;
-  copyAllEnabled?: boolean;
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
-  onCopyAllPressed?: () => void;
   onLanguageFlagPressed?: () => void;
-  onSelectAllPressed?: () => void;
-  onDeleteSelectedPressed?: () => void;
+  onMorePressed?: () => void;
+  onExitSelectionPressed?: () => void;
   onCancelEditPressed?: () => void;
   onSaveEditPressed?: () => void;
 }
 
 export const SessionAppBar = ({
   sessionName,
-  selectionMode,
+  selectionMode = false,
+  selectionTitle,
   editMode = false,
   isIncognitoSession,
-  copyAllEnabled = true,
   onBackPressed,
   onTitlePressed,
-  onCopyAllPressed,
   onLanguageFlagPressed,
-  onSelectAllPressed,
-  onDeleteSelectedPressed,
+  onMorePressed,
+  onExitSelectionPressed,
   onCancelEditPressed,
   onSaveEditPressed,
 }: SessionAppBarProps) => {
@@ -73,44 +71,18 @@ export const SessionAppBar = ({
     );
   }
 
-  if (selectionMode) {
-    return (
-      <TopAppBar
-        title={sessionName}
-        onBackPressed={onBackPressed}
-        actions={[
-          <RipplePressable
-            key="select_all"
-            onPress={onSelectAllPressed}
-            hitSlop={10}
-            rippleColor={theme.colors.ripple}
-            borderless
-          >
-            <Icon
-              name="select_all"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
-          </RipplePressable>,
-          <RipplePressable
-            key="delete"
-            onPress={onDeleteSelectedPressed}
-            hitSlop={10}
-            rippleColor={theme.colors.ripple}
-            borderless
-          >
-            <Icon name="trash" size={24} color={theme.colors.textPrimary} />
-          </RipplePressable>,
-        ]}
-      />
-    );
-  }
+  const trailingAction = selectionMode ? "close" : "more";
+  const onTrailingActionPressed = selectionMode
+    ? onExitSelectionPressed
+    : onMorePressed;
 
   return (
     <TopAppBar
-      title={sessionName}
+      title={selectionMode ? (selectionTitle ?? "") : sessionName}
       onBackPressed={onBackPressed}
-      onTitlePressed={!isIncognitoSession ? onTitlePressed : undefined}
+      onTitlePressed={
+        !isIncognitoSession && !selectionMode ? onTitlePressed : undefined
+      }
       actions={[
         <RipplePressable
           key="language"
@@ -122,14 +94,17 @@ export const SessionAppBar = ({
           <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
         </RipplePressable>,
         <RipplePressable
-          key="copy"
-          onPress={onCopyAllPressed}
+          key={trailingAction}
+          onPress={onTrailingActionPressed}
           hitSlop={10}
           rippleColor={theme.colors.ripple}
           borderless
-          style={{ opacity: copyAllEnabled ? 1 : 0.5 }}
         >
-          <Icon name="copy" size={24} color={theme.colors.textPrimary} />
+          <Icon
+            name={trailingAction}
+            size={24}
+            color={theme.colors.textPrimary}
+          />
         </RipplePressable>,
       ]}
     />

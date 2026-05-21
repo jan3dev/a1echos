@@ -1,13 +1,8 @@
 import { useEffect } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
-import {
-  Toast,
-  ToastVariant,
-  TranscriptionItem,
-  TranscriptionList,
-} from "@/components";
+import { Toast, ToastVariant, TranscriptionItem } from "@/components";
 import { ModelType, Transcription, TranscriptionState } from "@/models";
 import {
   useSessionStore,
@@ -102,13 +97,35 @@ const ToastOverlay = () => {
   );
 };
 
+// The real TranscriptionList wraps a FlatList. Nesting it inside the gallery's
+// outer ScrollView triggers the "VirtualizedLists should never be nested" warning,
+// so the list demos render TranscriptionItem rows directly in a static View.
+const StaticTranscriptionList = ({
+  selectionMode,
+  selectedTranscriptionIds,
+}: {
+  selectionMode: boolean;
+  selectedTranscriptionIds: Set<string>;
+}) => (
+  <View style={styles.staticList}>
+    {dummyTranscriptions.map((t) => (
+      <TranscriptionItem
+        key={t.id}
+        transcription={t}
+        selectionMode={selectionMode}
+        isSelected={selectedTranscriptionIds.has(t.id)}
+        onTap={() => console.log("Tap", t.id)}
+        onLongPress={() => console.log("Long Press", t.id)}
+      />
+    ))}
+  </View>
+);
+
 export const Default = () => {
   useSeedStore();
   return (
-    <View style={{ flex: 1 }}>
-      <TranscriptionList
-        onTranscriptionTap={(id) => console.log("Tap", id)}
-        onTranscriptionLongPress={(id) => console.log("Long Press", id)}
+    <View style={styles.fullWidth}>
+      <StaticTranscriptionList
         selectionMode={false}
         selectedTranscriptionIds={new Set()}
       />
@@ -120,10 +137,8 @@ export const Default = () => {
 export const SelectionMode = () => {
   useSeedStore();
   return (
-    <View style={{ flex: 1 }}>
-      <TranscriptionList
-        onTranscriptionTap={(id) => console.log("Tap", id)}
-        onTranscriptionLongPress={(id) => console.log("Long Press", id)}
+    <View style={styles.fullWidth}>
+      <StaticTranscriptionList
         selectionMode={true}
         selectedTranscriptionIds={new Set(["t1", "t3"])}
       />
@@ -133,11 +148,7 @@ export const SelectionMode = () => {
 };
 
 const LivePreviewSingleItemContent = () => (
-  <View
-    style={{
-      padding: 16,
-    }}
-  >
+  <View style={[styles.fullWidth, styles.singleItemStage]}>
     <TranscriptionItem
       transcription={makeLivePreviewTranscription()}
       isLivePreviewItem={true}
@@ -153,11 +164,7 @@ export const LivePreviewSingleItem = () => {
 };
 
 const WithSkeletonLoadingContent = () => (
-  <View
-    style={{
-      padding: 16,
-    }}
-  >
+  <View style={[styles.fullWidth, styles.singleItemStage]}>
     <TranscriptionItem
       transcription={makeSkeletonTranscription()}
       isLoadingWhisperResult={true}
@@ -171,6 +178,19 @@ export const WithSkeletonLoading = () => {
   useSeedStore();
   return <WithSkeletonLoadingContent />;
 };
+
+const styles = StyleSheet.create({
+  fullWidth: {
+    width: "100%",
+  },
+  staticList: {
+    padding: 16,
+    gap: 12,
+  },
+  singleItemStage: {
+    padding: 16,
+  },
+});
 
 const gallery: GalleryEntry = {
   slug: "transcription",

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Button as RNButton, StyleSheet, View } from "react-native";
 
 import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
@@ -45,12 +45,12 @@ const useSeedStore = () => {
 export const AppBarDefault = () => {
   useSeedStore();
   return (
-    <View>
+    <View style={styles.homeStage}>
       <View style={{ zIndex: 1 }}>
-        <HomeAppBar selectionMode={false} />
+        <HomeAppBar />
       </View>
 
-      <View>
+      <View style={styles.contentFill}>
         <HomeContent
           selectionMode={false}
           selectedSessionIds={new Set()}
@@ -64,19 +64,15 @@ export const AppBarDefault = () => {
   );
 };
 
-export const AppBarSelectionMode = () => {
+export const AppBarSelectionState = () => {
   useSeedStore();
   return (
-    <View>
+    <View style={styles.homeStage}>
       <View style={{ zIndex: 1 }}>
-        <HomeAppBar
-          selectionMode={true}
-          onDeleteSelected={() => console.log("Delete selected")}
-          onExitSelectionMode={() => console.log("Exit selection mode")}
-        />
+        <HomeAppBar />
       </View>
 
-      <View>
+      <View style={styles.contentFill}>
         <HomeContent
           selectionMode={true}
           selectedSessionIds={new Set(["1"])}
@@ -95,7 +91,7 @@ export const AppBarSelectionMode = () => {
 export const EmptyState = () => {
   useSeedStore();
   return (
-    <View style={styles.centerContainer}>
+    <View style={styles.emptyStateStage}>
       <EmptyStateView
         message="Hit the record button to start transcribing"
         shouldDisappear={false}
@@ -106,11 +102,18 @@ export const EmptyState = () => {
 
 export const EmptyStateDisappearing = () => {
   useSeedStore();
+  const [shouldDisappear, setShouldDisappear] = useState(false);
   return (
-    <View style={styles.centerContainer}>
+    <View style={styles.emptyStateStage}>
+      <View style={styles.triggerButton}>
+        <RNButton
+          title={shouldDisappear ? "Reset" : "Trigger disappear"}
+          onPress={() => setShouldDisappear((v) => !v)}
+        />
+      </View>
       <EmptyStateView
         message="Hit the record button to start transcribing"
-        shouldDisappear={true}
+        shouldDisappear={shouldDisappear}
         onDisappearComplete={() => console.log("Disappear complete")}
       />
     </View>
@@ -129,11 +132,22 @@ export const IncognitoEmpty = () => {
 };
 
 const styles = StyleSheet.create({
-  centerContainer: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
+  homeStage: {
+    width: "100%",
+    height: 320,
+    overflow: "hidden",
+  },
+  contentFill: {
+    flex: 1,
+  },
+  emptyStateStage: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 16,
+  },
+  triggerButton: {
+    alignSelf: "stretch",
     alignItems: "center",
   },
   fillContainer: {
@@ -150,7 +164,7 @@ const gallery: GalleryEntry = {
   group: "Domain",
   demos: [
     { name: "AppBarDefault", render: AppBarDefault },
-    { name: "AppBarSelectionMode", render: AppBarSelectionMode },
+    { name: "AppBarSelectionState", render: AppBarSelectionState },
     { name: "EmptyState", render: EmptyState },
     { name: "EmptyStateDisappearing", render: EmptyStateDisappearing },
     { name: "IncognitoEmpty", render: IncognitoEmpty },

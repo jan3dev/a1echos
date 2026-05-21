@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,6 +12,8 @@ import {
   Screen,
   SessionActionsSheet,
   SessionInputModal,
+  SubScreenNavbar,
+  type SubScreenNavbarAction,
   Toast,
   useToast,
 } from "@/components";
@@ -34,16 +36,19 @@ import {
   useSessions,
   useSetRecordingCallbacks,
   useSetRecordingControlsEnabled,
+  useSetRecordingControlsVisible,
   useShowGlobalTooltip,
   useStartRecording,
   useStopRecordingAndSave,
   useToggleSessionSelection,
 } from "@/stores";
+import { useTheme } from "@/theme";
 import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { loc } = useLocalization();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -63,6 +68,7 @@ export default function HomeScreen() {
   const showGlobalTooltip = useShowGlobalTooltip();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
+  const setRecordingControlsVisible = useSetRecordingControlsVisible();
   const {
     show: showDeleteToast,
     hide: hideDeleteToast,
@@ -269,6 +275,14 @@ export default function HomeScreen() {
     confirmDelete(selectedSessionIds);
   }, [confirmDelete, selectedSessionIds]);
 
+  const handleRenameSelected = useCallback(() => {
+    if (selectedSessionIds.length !== 1) return;
+    const target = sessions.find((s) => s.id === selectedSessionIds[0]);
+    if (!target) return;
+    setRenameTarget(target);
+    setRenameVisible(true);
+  }, [selectedSessionIds, sessions]);
+
   const handleSessionMorePress = useCallback((session: Session) => {
     setActionsSession(session);
     setActionsSheetVisible(true);
@@ -301,16 +315,51 @@ export default function HomeScreen() {
         });
       }
       setRenameVisible(false);
+      if (isSessionSelectionMode) {
+        exitSessionSelection();
+      }
     },
-    [renameTarget, renameSession],
+    [renameTarget, renameSession, isSessionSelectionMode, exitSessionSelection],
   );
+
+  const navbarActions = useMemo<SubScreenNavbarAction[]>(
+    () => [
+      {
+        key: "delete",
+        icon: "trash",
+        label: loc.delete,
+        color: theme.colors.accentDanger,
+        disabled: selectedSessionIds.length === 0,
+        onPress: handleDeleteSelected,
+      },
+      {
+        key: "rename",
+        icon: "edit",
+        label: loc.rename,
+        disabled: selectedSessionIds.length !== 1,
+        onPress: handleRenameSelected,
+      },
+    ],
+    [
+      handleDeleteSelected,
+      handleRenameSelected,
+      loc.delete,
+      loc.rename,
+      selectedSessionIds.length,
+      theme.colors.accentDanger,
+    ],
+  );
+
+  useEffect(() => {
+    setRecordingControlsVisible(!isSessionSelectionMode);
+  }, [isSessionSelectionMode, setRecordingControlsVisible]);
 
   return (
     <Screen>
       <HomeAppBar
         selectionMode={isSessionSelectionMode}
-        onDeleteSelected={handleDeleteSelected}
-        onExitSelectionMode={exitSessionSelection}
+        selectionTitle={loc.selectedCount(selectedSessionIds.length)}
+        onExitSelectionPressed={exitSessionSelection}
       />
 
       <HomeContent
@@ -358,6 +407,11 @@ export default function HomeScreen() {
           onCancel={() => setRenameVisible(false)}
         />
       )}
+
+      <SubScreenNavbar
+        visible={isSessionSelectionMode}
+        actions={navbarActions}
+      />
 
       <Toast {...deleteToastState} />
       <Toast {...alertToastState} />

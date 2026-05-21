@@ -53,9 +53,11 @@ interface UIStore {
 
   toggleTranscriptionSelection: (id: string) => void;
   selectAllTranscriptions: (ids: string[]) => void;
+  enterTranscriptionSelection: () => void;
   exitTranscriptionSelection: () => void;
 
   toggleSessionSelection: (id: string) => void;
+  enterSessionSelection: () => void;
   exitSessionSelection: () => void;
 
   showToast: (
@@ -79,7 +81,7 @@ interface UIStore {
 const toggleIdInSet = (
   currentSet: Set<string>,
   id: string,
-): { newSet: Set<string>; isSelectionMode: boolean } => {
+): { newSet: Set<string> } => {
   const newSet = new Set(currentSet);
 
   if (newSet.has(id)) {
@@ -88,10 +90,7 @@ const toggleIdInSet = (
     newSet.add(id);
   }
 
-  return {
-    newSet,
-    isSelectionMode: newSet.size > 0,
-  };
+  return { newSet };
 };
 
 const DEFAULT_GLOBAL_TOOLTIP_DURATION = 3000;
@@ -136,22 +135,25 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   toggleTranscriptionSelection: (id: string) => {
     const state = get();
-    const { newSet, isSelectionMode } = toggleIdInSet(
-      state.selectedTranscriptionIds,
-      id,
-    );
-
+    const { newSet } = toggleIdInSet(state.selectedTranscriptionIds, id);
     set({
       selectedTranscriptionIds: newSet,
-      isTranscriptionSelectionMode: isSelectionMode,
+      isTranscriptionSelectionMode:
+        state.isTranscriptionSelectionMode || newSet.size > 0,
     });
   },
 
   selectAllTranscriptions: (ids: string[]) => {
+    const state = get();
     set({
       selectedTranscriptionIds: new Set(ids),
-      isTranscriptionSelectionMode: ids.length > 0,
+      isTranscriptionSelectionMode:
+        state.isTranscriptionSelectionMode || ids.length > 0,
     });
+  },
+
+  enterTranscriptionSelection: () => {
+    set({ isTranscriptionSelectionMode: true });
   },
 
   exitTranscriptionSelection: () => {
@@ -163,15 +165,15 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   toggleSessionSelection: (id: string) => {
     const state = get();
-    const { newSet, isSelectionMode } = toggleIdInSet(
-      state.selectedSessionIds,
-      id,
-    );
-
+    const { newSet } = toggleIdInSet(state.selectedSessionIds, id);
     set({
       selectedSessionIds: newSet,
-      isSessionSelectionMode: isSelectionMode,
+      isSessionSelectionMode: state.isSessionSelectionMode || newSet.size > 0,
     });
+  },
+
+  enterSessionSelection: () => {
+    set({ isSessionSelectionMode: true });
   },
 
   exitSessionSelection: () => {
@@ -248,6 +250,8 @@ export const useSelectedSessionIds = () =>
 
 export const useToggleSessionSelection = () =>
   useUIStore((s) => s.toggleSessionSelection);
+export const useEnterSessionSelection = () =>
+  useUIStore((s) => s.enterSessionSelection);
 export const useExitSessionSelection = () =>
   useUIStore((s) => s.exitSessionSelection);
 
@@ -255,6 +259,8 @@ export const useToggleTranscriptionSelection = () =>
   useUIStore((s) => s.toggleTranscriptionSelection);
 export const useSelectAllTranscriptions = () =>
   useUIStore((s) => s.selectAllTranscriptions);
+export const useEnterTranscriptionSelection = () =>
+  useUIStore((s) => s.enterTranscriptionSelection);
 export const useExitTranscriptionSelection = () =>
   useUIStore((s) => s.exitTranscriptionSelection);
 

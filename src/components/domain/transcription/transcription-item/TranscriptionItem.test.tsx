@@ -1,22 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
+import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
 import { TestID } from "@/constants";
 import { Transcription } from "@/models";
 
 import { TranscriptionItem } from "./TranscriptionItem";
-
-jest.mock("@/stores", () => ({
-  useUIStore: jest.fn((selector) => {
-    if (typeof selector === "function") {
-      return selector({ showGlobalTooltip: jest.fn() });
-    }
-    return { showGlobalTooltip: jest.fn() };
-  }),
-}));
 
 jest.mock("../../../ui/icon/Icon", () => ({
   Icon: (props: any) => {
@@ -94,21 +83,12 @@ describe("TranscriptionItem", () => {
     expect(getByText(/Jun/)).toBeTruthy();
   });
 
-  it("shows edit and copy icons in normal mode", () => {
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
+  it("shows edit icon in normal mode and no copy icon", () => {
+    const { getByTestId, queryByTestId } = render(
+      <TranscriptionItem {...defaultProps} />,
+    );
     expect(getByTestId("icon-edit")).toBeTruthy();
-    expect(getByTestId("icon-copy")).toBeTruthy();
-  });
-
-  it("copy icon copies text to clipboard and triggers haptics", async () => {
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
-    fireEvent.press(getByTestId("icon-copy").parent!);
-    await waitFor(() => {
-      expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
-        "Hello world transcription",
-      );
-    });
-    expect(Haptics.selectionAsync).toHaveBeenCalled();
+    expect(queryByTestId("icon-copy")).toBeNull();
   });
 
   it("edit mode shows TextInput", () => {
@@ -119,7 +99,7 @@ describe("TranscriptionItem", () => {
     expect(UNSAFE_getByType(TextInput)).toBeTruthy();
   });
 
-  it("selection mode shows checkbox", () => {
+  it("selection mode shows checkbox and hides edit icon", () => {
     const { getByTestId, queryByTestId } = render(
       <TranscriptionItem
         {...defaultProps}
@@ -129,15 +109,13 @@ describe("TranscriptionItem", () => {
     );
     expect(getByTestId(TestID.Checkbox)).toBeTruthy();
     expect(queryByTestId("icon-edit")).toBeNull();
-    expect(queryByTestId("icon-copy")).toBeNull();
   });
 
-  it("live preview mode hides edit/copy icons", () => {
+  it("live preview mode hides edit icon", () => {
     const { queryByTestId } = render(
       <TranscriptionItem {...defaultProps} isLivePreviewItem={true} />,
     );
     expect(queryByTestId("icon-edit")).toBeNull();
-    expect(queryByTestId("icon-copy")).toBeNull();
   });
 
   it("loading state shows skeleton", () => {
@@ -199,7 +177,6 @@ describe("TranscriptionItem", () => {
     );
     const { TextInput } = require("react-native");
     const input = UNSAFE_getByType(TextInput);
-    // Text is unchanged (still "Hello world transcription")
     fireEvent(input, "blur");
     expect(onTranscriptionUpdate).not.toHaveBeenCalled();
     expect(onEndEdit).toHaveBeenCalled();
@@ -277,7 +254,6 @@ describe("TranscriptionItem", () => {
       <TranscriptionItem {...defaultProps} isEditing={true} onTap={onTap} />,
     );
     const { TextInput } = require("react-native");
-    // In edit mode, pressing the container should not call onTap
     const input = UNSAFE_getByType(TextInput);
     fireEvent.press(input.parent!);
     expect(onTap).not.toHaveBeenCalled();
@@ -294,8 +270,6 @@ describe("TranscriptionItem", () => {
 
   it("interactions disabled when loading prevents onTap", () => {
     const onTap = jest.fn();
-    // The RipplePressable is disabled, so press is not forwarded
-    // But skeleton is shown instead of text
     expect(onTap).not.toHaveBeenCalled();
   });
 
@@ -307,7 +281,6 @@ describe("TranscriptionItem", () => {
         isSelected={true}
       />,
     );
-    // Renders without error; the selected background is applied
     expect(toJSON()).toBeTruthy();
   });
 
@@ -329,7 +302,6 @@ describe("TranscriptionItem", () => {
       />,
     );
     const json = JSON.stringify(toJSON());
-    // Icons should have 0.5 opacity when disabled
     expect(json).toContain('"opacity":0.5');
   });
 
@@ -341,8 +313,6 @@ describe("TranscriptionItem", () => {
         isEditing={true}
       />,
     );
-    // TextInput should be present (edit mode), and icon opacity should be 1
-    // In edit mode, the edit/copy icons still render but the content is TextInput
     expect(toJSON()).toBeTruthy();
   });
 
@@ -357,37 +327,7 @@ describe("TranscriptionItem", () => {
         isLivePreviewItem={true}
       />,
     );
-    // When isLivePreviewItem is true and text is empty, timestamp should be hidden
-    // The condition: (showSkeleton || !(isLivePreviewItem && transcription.text === ''))
-    // When isLivePreviewItem=true and text='', the inner condition is true, so !(true) = false
-    // and showSkeleton is false, so the whole condition is false => timestamp hidden
     expect(queryByText(/Jun/)).toBeNull();
-  });
-
-  it("copy failure shows error tooltip", async () => {
-    const mockShowGlobalTooltip = jest.fn();
-    const { useUIStore } = require("@/stores");
-    (useUIStore as jest.Mock).mockImplementation((selector: any) => {
-      if (typeof selector === "function") {
-        return selector({ showGlobalTooltip: mockShowGlobalTooltip });
-      }
-      return { showGlobalTooltip: mockShowGlobalTooltip };
-    });
-
-    (Clipboard.setStringAsync as jest.Mock).mockRejectedValueOnce(
-      new Error("Copy failed"),
-    );
-
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
-    fireEvent.press(getByTestId("icon-copy").parent!);
-    await waitFor(() => {
-      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        expect.any(String),
-        "normal",
-        undefined,
-        true,
-      );
-    });
   });
 
   it("custom style prop is applied", () => {
@@ -403,7 +343,6 @@ describe("TranscriptionItem", () => {
       <TranscriptionItem {...defaultProps} isEditing={true} />,
     );
     const json = JSON.stringify(toJSON());
-    // Border width is 1 when editing
     expect(json).toContain('"borderWidth":1');
   });
 
@@ -423,88 +362,7 @@ describe("TranscriptionItem", () => {
     const { getByText } = render(
       <TranscriptionItem transcription={oldTranscription} />,
     );
-    // Should contain year since it's older than current year
     expect(getByText(/2020/)).toBeTruthy();
-  });
-
-  it("copy on Android API >= 31 does not show tooltip", async () => {
-    const { Platform } = require("react-native");
-    const originalOS = Platform.OS;
-    const originalVersion = Platform.Version;
-    Platform.OS = "android";
-    Platform.Version = 31;
-
-    const mockShowGlobalTooltip = jest.fn();
-    const { useUIStore } = require("@/stores");
-    (useUIStore as jest.Mock).mockImplementation((selector: any) => {
-      if (typeof selector === "function") {
-        return selector({ showGlobalTooltip: mockShowGlobalTooltip });
-      }
-      return { showGlobalTooltip: mockShowGlobalTooltip };
-    });
-
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
-    fireEvent.press(getByTestId("icon-copy").parent!);
-    await waitFor(() => {
-      expect(Clipboard.setStringAsync).toHaveBeenCalled();
-    });
-    // Tooltip should NOT be shown on Android API >= 31
-    expect(mockShowGlobalTooltip).not.toHaveBeenCalled();
-
-    Platform.OS = originalOS;
-    Platform.Version = originalVersion;
-  });
-
-  it("copy on iOS shows tooltip", async () => {
-    const { Platform } = require("react-native");
-    const originalOS = Platform.OS;
-    Platform.OS = "ios";
-
-    const mockShowGlobalTooltip = jest.fn();
-    const { useUIStore } = require("@/stores");
-    (useUIStore as jest.Mock).mockImplementation((selector: any) => {
-      if (typeof selector === "function") {
-        return selector({ showGlobalTooltip: mockShowGlobalTooltip });
-      }
-      return { showGlobalTooltip: mockShowGlobalTooltip };
-    });
-
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
-    fireEvent.press(getByTestId("icon-copy").parent!);
-    await waitFor(() => {
-      expect(Clipboard.setStringAsync).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(mockShowGlobalTooltip).toHaveBeenCalled();
-    });
-
-    Platform.OS = originalOS;
-  });
-
-  it("copy failure with non-Error object uses String conversion", async () => {
-    const mockShowGlobalTooltip = jest.fn();
-    const { useUIStore } = require("@/stores");
-    (useUIStore as jest.Mock).mockImplementation((selector: any) => {
-      if (typeof selector === "function") {
-        return selector({ showGlobalTooltip: mockShowGlobalTooltip });
-      }
-      return { showGlobalTooltip: mockShowGlobalTooltip };
-    });
-
-    (Clipboard.setStringAsync as jest.Mock).mockRejectedValueOnce(
-      "string error",
-    );
-
-    const { getByTestId } = render(<TranscriptionItem {...defaultProps} />);
-    fireEvent.press(getByTestId("icon-copy").parent!);
-    await waitFor(() => {
-      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        expect.any(String),
-        "normal",
-        undefined,
-        true,
-      );
-    });
   });
 
   it("onLongPress is not called when interactions are disabled (live preview)", () => {
@@ -516,7 +374,6 @@ describe("TranscriptionItem", () => {
         onLongPress={onLongPress}
       />,
     );
-    // Just verify the component renders without interaction
     expect(toJSON()).toBeTruthy();
     expect(onLongPress).not.toHaveBeenCalled();
   });

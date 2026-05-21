@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
@@ -63,38 +63,44 @@ const useSeedStore = () => {
 export const ListItem = () => {
   useSeedStore();
   return (
-    <SessionListItem
-      session={dummySession}
-      onTap={() => console.log("Tapped")}
-      onLongPress={() => console.log("Long Pressed")}
-      onMorePress={(s) => console.log("More", s.name)}
-    />
+    <View style={styles.fullWidth}>
+      <SessionListItem
+        session={dummySession}
+        onTap={() => console.log("Tapped")}
+        onLongPress={() => console.log("Long Pressed")}
+        onMorePress={(s) => console.log("More", s.name)}
+      />
+    </View>
   );
 };
 
 export const ListItemSelectionMode = () => {
   useSeedStore();
   return (
-    <SessionListItem
-      session={dummySession}
-      onTap={() => console.log("Tapped")}
-      onLongPress={() => console.log("Long Pressed")}
-      selectionMode={true}
-      isSelected={true}
-    />
+    <View style={styles.fullWidth}>
+      <SessionListItem
+        session={dummySession}
+        onTap={() => console.log("Tapped")}
+        onLongPress={() => console.log("Long Pressed")}
+        selectionMode={true}
+        isSelected={true}
+      />
+    </View>
   );
 };
 
 export const ListItemUnselected = () => {
   useSeedStore();
   return (
-    <SessionListItem
-      session={dummySession2}
-      onTap={() => console.log("Tapped")}
-      onLongPress={() => console.log("Long Pressed")}
-      selectionMode={true}
-      isSelected={false}
-    />
+    <View style={styles.fullWidth}>
+      <SessionListItem
+        session={dummySession2}
+        onTap={() => console.log("Tapped")}
+        onLongPress={() => console.log("Long Pressed")}
+        selectionMode={true}
+        isSelected={false}
+      />
+    </View>
   );
 };
 
@@ -103,28 +109,32 @@ export const ListItemUnselected = () => {
 export const List = () => {
   useSeedStore();
   return (
-    <SessionList
-      selectionMode={false}
-      selectedSessionIds={new Set()}
-      onSessionTap={(id) => console.log("Tap", id)}
-      onSessionLongPress={(s) => console.log("Long Press", s.name)}
-      onSelectionToggle={(id) => console.log("Toggle", id)}
-      onSessionMorePress={(s) => console.log("More", s.name)}
-    />
+    <View style={styles.listStage}>
+      <SessionList
+        selectionMode={false}
+        selectedSessionIds={new Set()}
+        onSessionTap={(id) => console.log("Tap", id)}
+        onSessionLongPress={(s) => console.log("Long Press", s.name)}
+        onSelectionToggle={(id) => console.log("Toggle", id)}
+        onSessionMorePress={(s) => console.log("More", s.name)}
+      />
+    </View>
   );
 };
 
 export const ListSelectionMode = () => {
   useSeedStore();
   return (
-    <SessionList
-      selectionMode={true}
-      selectedSessionIds={new Set(["session-1"])}
-      onSessionTap={(id) => console.log("Tap", id)}
-      onSessionLongPress={(s) => console.log("Long Press", s.name)}
-      onSelectionToggle={(id) => console.log("Toggle", id)}
-      onSessionMorePress={(s) => console.log("More", s.name)}
-    />
+    <View style={styles.listStage}>
+      <SessionList
+        selectionMode={true}
+        selectedSessionIds={new Set(["session-1"])}
+        onSessionTap={(id) => console.log("Tap", id)}
+        onSessionLongPress={(s) => console.log("Long Press", s.name)}
+        onSelectionToggle={(id) => console.log("Toggle", id)}
+        onSessionMorePress={(s) => console.log("More", s.name)}
+      />
+    </View>
   );
 };
 
@@ -133,10 +143,9 @@ export const ListSelectionMode = () => {
 export const AppBarDefault = () => {
   useSeedStore();
   return (
-    <View style={{ height: 100 }}>
+    <View style={{ width: "100%", height: 100 }}>
       <SessionAppBar
         sessionName="Morning Meeting"
-        selectionMode={false}
         isIncognitoSession={false}
         onBackPressed={() => console.log("Back")}
         onTitlePressed={() => console.log("Title")}
@@ -148,28 +157,11 @@ export const AppBarDefault = () => {
 export const AppBarIncognito = () => {
   useSeedStore();
   return (
-    <View style={{ height: 100 }}>
+    <View style={{ width: "100%", height: 100 }}>
       <SessionAppBar
         sessionName="Incognito Session"
-        selectionMode={false}
         isIncognitoSession={true}
         onBackPressed={() => console.log("Back")}
-      />
-    </View>
-  );
-};
-
-export const AppBarSelectionMode = () => {
-  useSeedStore();
-  return (
-    <View style={{ height: 100 }}>
-      <SessionAppBar
-        sessionName="Morning Meeting"
-        selectionMode={true}
-        isIncognitoSession={false}
-        onBackPressed={() => console.log("Back")}
-        onSelectAllPressed={() => console.log("Select All")}
-        onDeleteSelectedPressed={() => console.log("Delete Selected")}
       />
     </View>
   );
@@ -178,10 +170,9 @@ export const AppBarSelectionMode = () => {
 export const AppBarEditMode = () => {
   useSeedStore();
   return (
-    <View style={{ height: 100 }}>
+    <View style={{ width: "100%", height: 100 }}>
       <SessionAppBar
         sessionName="Morning Meeting"
-        selectionMode={false}
         editMode={true}
         isIncognitoSession={false}
         onCancelEditPressed={() => console.log("Cancel Edit")}
@@ -257,6 +248,17 @@ export const ActionsSheetLongTitle = () => {
   );
 };
 
+const styles = StyleSheet.create({
+  fullWidth: {
+    width: "100%",
+  },
+  listStage: {
+    width: "100%",
+    height: 240,
+    overflow: "hidden",
+  },
+});
+
 const gallery: GalleryEntry = {
   slug: "session",
   title: "Session",
@@ -269,7 +271,6 @@ const gallery: GalleryEntry = {
     { name: "ListSelectionMode", render: ListSelectionMode },
     { name: "AppBarDefault", render: AppBarDefault },
     { name: "AppBarIncognito", render: AppBarIncognito },
-    { name: "AppBarSelectionMode", render: AppBarSelectionMode },
     { name: "AppBarEditMode", render: AppBarEditMode },
     { name: "ActionsSheetDefault", render: ActionsSheetDefault },
     { name: "ActionsSheetNeverModified", render: ActionsSheetNeverModified },

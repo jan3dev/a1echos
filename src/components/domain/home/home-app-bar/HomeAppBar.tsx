@@ -4,7 +4,6 @@ import { Pressable } from "react-native";
 import { Routes, TestID } from "@/constants";
 import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
 import { useTheme } from "@/theme";
-import { iosPressed } from "@/utils";
 
 import { GlassIconButton } from "../../../ui/glass-icon-button/GlassIconButton";
 import { Icon } from "../../../ui/icon/Icon";
@@ -12,15 +11,15 @@ import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { TopAppBar } from "../../../ui/top-app-bar/TopAppBar";
 
 interface HomeAppBarProps {
-  selectionMode: boolean;
-  onDeleteSelected?: () => void;
-  onExitSelectionMode?: () => void;
+  selectionMode?: boolean;
+  selectionTitle?: string;
+  onExitSelectionPressed?: () => void;
 }
 
 export const HomeAppBar = ({
-  selectionMode,
-  onDeleteSelected,
-  onExitSelectionMode,
+  selectionMode = false,
+  selectionTitle,
+  onExitSelectionPressed,
 }: HomeAppBarProps) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -31,93 +30,93 @@ export const HomeAppBar = ({
     await setIncognitoMode(!isIncognitoMode);
   };
 
-  const renderLeading = () => {
-    if (selectionMode) {
-      return (
-        <RipplePressable
-          onPress={() => onExitSelectionMode?.()}
-          hitSlop={10}
-          rippleColor={theme.colors.ripple}
-          borderless
-          accessibilityRole="button"
-          accessibilityLabel="Exit selection mode"
-          style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
-        >
-          <Icon
-            name="chevron_left"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
-        </RipplePressable>
-      );
-    }
+  if (selectionMode) {
     return (
-      <GlassIconButton
-        onPress={() => router.push(Routes.settings)}
-        accessibilityLabel="Settings"
-        testID={TestID.HomeSettingsButton}
-      >
-        <Icon name="menu" size={24} color={theme.colors.textPrimary} />
-      </GlassIconButton>
-    );
-  };
-
-  const renderTitleWidget = () => {
-    if (selectionMode) return undefined;
-    return (
-      <Pressable
-        onLongPress={() => {
-          if (__DEV__) router.push(Routes.designSystem);
-        }}
-        delayLongPress={600}
-      >
-        <Icon
-          name="echos_logo"
-          size={75}
-          style={{ width: 75, height: 24 }}
-          color={theme.colors.textPrimary}
-        />
-      </Pressable>
-    );
-  };
-
-  const renderActions = () => {
-    if (selectionMode) {
-      return [
-        <GlassIconButton
-          key="trash"
-          onPress={() => onDeleteSelected?.()}
-          accessibilityLabel="Delete selected"
-        >
-          <Icon name="trash" size={24} color={theme.colors.textPrimary} />
-        </GlassIconButton>,
-      ];
-    }
-
-    return [
-      <GlassIconButton
-        key="ghost"
-        onPress={handleIncognitoToggle}
-        accessibilityLabel={
-          isIncognitoMode ? "Disable incognito mode" : "Enable incognito mode"
+      <TopAppBar
+        title={selectionTitle ?? ""}
+        showBackButton={false}
+        leading={
+          <RipplePressable
+            onPress={() => onExitSelectionPressed?.()}
+            hitSlop={10}
+            rippleColor={theme.colors.ripple}
+            borderless
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Icon
+              name="chevron_left"
+              size={24}
+              color={theme.colors.textPrimary}
+            />
+          </RipplePressable>
         }
-        accessibilityState={{ selected: isIncognitoMode }}
-      >
-        <Icon
-          name={isIncognitoMode ? "ghost_on" : "ghost"}
-          size={24}
-          color={theme.colors.textPrimary}
-        />
-      </GlassIconButton>,
-    ];
-  };
+        actions={[
+          <RipplePressable
+            key="close"
+            onPress={() => onExitSelectionPressed?.()}
+            hitSlop={10}
+            rippleColor={theme.colors.ripple}
+            borderless
+            accessibilityRole="button"
+            accessibilityLabel="Exit selection mode"
+          >
+            <Icon name="close" size={24} color={theme.colors.textPrimary} />
+          </RipplePressable>,
+        ]}
+      />
+    );
+  }
+
+  const leading = (
+    <GlassIconButton
+      onPress={() => router.push(Routes.settings)}
+      accessibilityLabel="Settings"
+      testID={TestID.HomeSettingsButton}
+    >
+      <Icon name="menu" size={24} color={theme.colors.textPrimary} />
+    </GlassIconButton>
+  );
+
+  const titleWidget = (
+    <Pressable
+      onLongPress={() => {
+        if (__DEV__) router.push(Routes.designSystem);
+      }}
+      delayLongPress={600}
+    >
+      <Icon
+        name="echos_logo"
+        size={75}
+        style={{ width: 75, height: 24 }}
+        color={theme.colors.textPrimary}
+      />
+    </Pressable>
+  );
+
+  const actions = [
+    <GlassIconButton
+      key="ghost"
+      onPress={handleIncognitoToggle}
+      accessibilityLabel={
+        isIncognitoMode ? "Disable incognito mode" : "Enable incognito mode"
+      }
+      accessibilityState={{ selected: isIncognitoMode }}
+    >
+      <Icon
+        name={isIncognitoMode ? "ghost_on" : "ghost"}
+        size={24}
+        color={theme.colors.textPrimary}
+      />
+    </GlassIconButton>,
+  ];
 
   return (
     <TopAppBar
       showBackButton={false}
-      leading={renderLeading()}
-      titleWidget={renderTitleWidget()}
-      actions={renderActions()}
+      leading={leading}
+      titleWidget={titleWidget}
+      actions={actions}
     />
   );
 };

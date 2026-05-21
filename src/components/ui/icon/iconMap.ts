@@ -12,6 +12,7 @@ import Danger from "@/assets/icons/danger.svg";
 import Download from "@/assets/icons/download.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
 import Edit from "@/assets/icons/edit.svg";
+import Export from "@/assets/icons/export.svg";
 import Flash from "@/assets/icons/flash.svg";
 import FooterLogo from "@/assets/icons/footer_logo.svg";
 import Ghost from "@/assets/icons/ghost.svg";
@@ -46,6 +47,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   download: Download,
   echos_logo: EchosLogo,
   edit: Edit,
+  export: Export,
   flash: Flash,
   footer_logo: FooterLogo,
   ghost: Ghost,

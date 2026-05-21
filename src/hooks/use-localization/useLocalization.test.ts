@@ -43,7 +43,6 @@ describe("useLocalization", () => {
       "sessionDeleteTranscriptionsTitle",
       "allTranscriptionsCopied",
       "noTranscriptionsToCopy",
-      "noTranscriptionsSelectedToShare",
       "sessionNotFound",
       "settingsTitle",
       "title",

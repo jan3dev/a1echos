@@ -9,9 +9,11 @@ import {
   useSelectedSessionIdsSet,
   useSelectedSessionIds,
   useToggleSessionSelection,
+  useEnterSessionSelection,
   useExitSessionSelection,
   useToggleTranscriptionSelection,
   useSelectAllTranscriptions,
+  useEnterTranscriptionSelection,
   useExitTranscriptionSelection,
   useShowToast,
   useGlobalTooltip,
@@ -75,21 +77,21 @@ describe("uiStore", () => {
       expect(state.isTranscriptionSelectionMode).toBe(true);
     });
 
-    it("toggle removes an existing ID", () => {
+    it("toggle removes an existing ID but keeps mode on once entered", () => {
       useUIStore.getState().toggleTranscriptionSelection("t1");
       useUIStore.getState().toggleTranscriptionSelection("t1");
       const state = useUIStore.getState();
       expect(state.selectedTranscriptionIds.has("t1")).toBe(false);
-      expect(state.isTranscriptionSelectionMode).toBe(false);
+      expect(state.isTranscriptionSelectionMode).toBe(true);
     });
 
-    it("removing last ID disables selection mode", () => {
+    it("removing last ID keeps selection mode on (explicit exit only)", () => {
       useUIStore.getState().toggleTranscriptionSelection("t1");
       useUIStore.getState().toggleTranscriptionSelection("t2");
       useUIStore.getState().toggleTranscriptionSelection("t1");
       useUIStore.getState().toggleTranscriptionSelection("t2");
 
-      expect(useUIStore.getState().isTranscriptionSelectionMode).toBe(false);
+      expect(useUIStore.getState().isTranscriptionSelectionMode).toBe(true);
     });
 
     it("selectAll sets all IDs and enables mode", () => {
@@ -99,12 +101,19 @@ describe("uiStore", () => {
       expect(state.isTranscriptionSelectionMode).toBe(true);
     });
 
-    it("selectAll with empty array disables mode", () => {
+    it("selectAll with empty array keeps mode on once entered", () => {
       useUIStore.getState().selectAllTranscriptions(["t1"]);
       useUIStore.getState().selectAllTranscriptions([]);
       const state = useUIStore.getState();
       expect(state.selectedTranscriptionIds.size).toBe(0);
-      expect(state.isTranscriptionSelectionMode).toBe(false);
+      expect(state.isTranscriptionSelectionMode).toBe(true);
+    });
+
+    it("enterTranscriptionSelection sets mode true without touching IDs", () => {
+      useUIStore.getState().enterTranscriptionSelection();
+      const state = useUIStore.getState();
+      expect(state.isTranscriptionSelectionMode).toBe(true);
+      expect(state.selectedTranscriptionIds.size).toBe(0);
     });
 
     it("exitTranscriptionSelection clears everything", () => {
@@ -124,12 +133,19 @@ describe("uiStore", () => {
       expect(state.isSessionSelectionMode).toBe(true);
     });
 
-    it("toggle removes an existing ID and disables mode when empty", () => {
+    it("toggle removes an existing ID but keeps mode on once entered", () => {
       useUIStore.getState().toggleSessionSelection("s1");
       useUIStore.getState().toggleSessionSelection("s1");
       const state = useUIStore.getState();
       expect(state.selectedSessionIds.has("s1")).toBe(false);
-      expect(state.isSessionSelectionMode).toBe(false);
+      expect(state.isSessionSelectionMode).toBe(true);
+    });
+
+    it("enterSessionSelection sets mode true without touching IDs", () => {
+      useUIStore.getState().enterSessionSelection();
+      const state = useUIStore.getState();
+      expect(state.isSessionSelectionMode).toBe(true);
+      expect(state.selectedSessionIds.size).toBe(0);
     });
 
     it("exitSessionSelection clears everything", () => {
@@ -285,6 +301,11 @@ describe("uiStore", () => {
       expect(typeof result.current).toBe("function");
     });
 
+    it("useEnterSessionSelection returns a function", () => {
+      const { result } = renderHook(() => useEnterSessionSelection());
+      expect(typeof result.current).toBe("function");
+    });
+
     it("useExitSessionSelection returns a function", () => {
       const { result } = renderHook(() => useExitSessionSelection());
       expect(typeof result.current).toBe("function");
@@ -297,6 +318,11 @@ describe("uiStore", () => {
 
     it("useSelectAllTranscriptions returns a function", () => {
       const { result } = renderHook(() => useSelectAllTranscriptions());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useEnterTranscriptionSelection returns a function", () => {
+      const { result } = renderHook(() => useEnterTranscriptionSelection());
       expect(typeof result.current).toBe("function");
     });
 

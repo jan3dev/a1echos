@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { render } from "@testing-library/react-native";
+import { act, render } from "@testing-library/react-native";
 import React from "react";
 
 import { TestID } from "@/constants";
@@ -81,27 +81,22 @@ jest.mock("@/stores", () => ({
   useSetRecordingControlsEnabled: jest.fn(
     () => mockSetRecordingControlsEnabled,
   ),
+  useSetRecordingControlsVisible: jest.fn(() => jest.fn()),
   useStartRecording: jest.fn(() => jest.fn()),
   useStopRecordingAndSave: jest.fn(() => jest.fn()),
 }));
 
 let mockOnSessionTap: ((id: string) => void) | null = null;
-let mockOnDeleteSelected: (() => void) | null = null;
+let mockOnRenameSubmit: ((name: string) => void) | null = null;
+let mockOnRenameCancel: (() => void) | null = null;
+const navbarActions: Record<string, () => void> = {};
+const navbarActionDisabled: Record<string, boolean> = {};
 
 jest.mock("@/components", () => {
-  const { View, Text } = require("react-native");
+  const { View, Text, TouchableOpacity } = require("react-native");
   const { TestID: TID } = require("@/constants");
   return {
-    HomeAppBar: (props: any) => {
-      mockOnDeleteSelected = props.onDeleteSelected;
-      return (
-        <View testID={TID.HomeAppBar}>
-          <Text testID={TID.HomeAppBarSelection}>
-            {props.selectionMode ? "selection" : "normal"}
-          </Text>
-        </View>
-      );
-    },
+    HomeAppBar: () => <View testID={TID.HomeAppBar} />,
     HomeContent: (props: any) => {
       mockOnSessionTap = props.onSessionTap;
       return (
@@ -122,8 +117,38 @@ jest.mock("@/components", () => {
       props.visible ? (
         <View testID={TID.SessionActionsSheet} {...props} />
       ) : null,
-    SessionInputModal: (props: any) =>
-      props.visible ? <View testID={TID.SessionInputModal} {...props} /> : null,
+    SessionInputModal: (props: any) => {
+      mockOnRenameSubmit = props.onSubmit;
+      mockOnRenameCancel = props.onCancel;
+      return props.visible ? (
+        <View testID={TID.SessionInputModal} {...props} />
+      ) : null;
+    },
+    SubScreenNavbar: (props: any) => {
+      Object.keys(navbarActions).forEach((k) => delete navbarActions[k]);
+      Object.keys(navbarActionDisabled).forEach(
+        (k) => delete navbarActionDisabled[k],
+      );
+      (props.actions ?? []).forEach((a: any) => {
+        navbarActions[a.key] = a.onPress;
+        navbarActionDisabled[a.key] = !!a.disabled;
+      });
+      if (!props.visible) return null;
+      return (
+        <View testID={TID.SelectionMode}>
+          {(props.actions ?? []).map((a: any) => (
+            <TouchableOpacity
+              key={a.key}
+              testID={`navbar-${a.key}`}
+              onPress={a.disabled ? undefined : a.onPress}
+              disabled={a.disabled}
+            >
+              <Text>{String(a.label)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      );
+    },
     Toast: (props: any) => <View testID={TID.DeleteToast} {...props} />,
     useToast: jest.fn(() => ({
       show: mockShowDeleteToast,
@@ -136,7 +161,8 @@ jest.mock("@/components", () => {
 beforeEach(() => {
   mockSessions = [];
   mockOnSessionTap = null;
-  mockOnDeleteSelected = null;
+  mockOnRenameSubmit = null;
+  mockOnRenameCancel = null;
 });
 
 describe("HomeScreen", () => {
@@ -169,12 +195,10 @@ describe("HomeScreen", () => {
     });
   });
 
-  it("passes selection mode props to HomeAppBar", () => {
+  it("shows sub-screen navbar in selection mode", () => {
     (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
     const { getByTestId } = render(<HomeScreen />);
-    expect(getByTestId(TestID.HomeAppBarSelection)).toHaveTextContent(
-      "selection",
-    );
+    expect(getByTestId(TestID.SelectionMode)).toBeTruthy();
     expect(getByTestId(TestID.HomeContentSelection)).toHaveTextContent(
       "selection",
     );
@@ -186,8 +210,8 @@ describe("HomeScreen", () => {
     (useSelectedSessionIds as jest.Mock).mockReturnValue(["s1", "s2"]);
 
     render(<HomeScreen />);
-    expect(mockOnDeleteSelected).toBeTruthy();
-    mockOnDeleteSelected!();
+    expect(navbarActions.delete).toBeTruthy();
+    navbarActions.delete!();
     expect(mockShowDeleteToast).toHaveBeenCalled();
   });
 
@@ -213,13 +237,130 @@ describe("HomeScreen", () => {
     (useIds as jest.Mock).mockReturnValue([]);
 
     render(<HomeScreen />);
-    expect(mockOnDeleteSelected).toBeTruthy();
-    mockOnDeleteSelected!();
+    expect(navbarActions.delete).toBeTruthy();
+    navbarActions.delete!();
     expect(mockShowDeleteToast).not.toHaveBeenCalled();
+  });
+
+  it("rename action is disabled when zero sessions selected", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue([]);
+
+    render(<HomeScreen />);
+    expect(navbarActionDisabled.rename).toBe(true);
+  });
+
+  it("rename action is disabled when multiple sessions selected", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue(["s1", "s2"]);
+
+    render(<HomeScreen />);
+    expect(navbarActionDisabled.rename).toBe(true);
+  });
+
+  it("rename action opens rename modal when exactly one session selected", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue(["s1"]);
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+
+    const { getByTestId, queryByTestId } = render(<HomeScreen />);
+    expect(queryByTestId(TestID.SessionInputModal)).toBeNull();
+    expect(navbarActionDisabled.rename).toBe(false);
+
+    act(() => {
+      navbarActions.rename!();
+    });
+
+    expect(getByTestId(TestID.SessionInputModal)).toBeTruthy();
+  });
+
+  it("rename action does nothing when selected session id is missing", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue(["missing"]);
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+
+    const { queryByTestId } = render(<HomeScreen />);
+    act(() => {
+      navbarActions.rename!();
+    });
+    expect(queryByTestId(TestID.SessionInputModal)).toBeNull();
+  });
+
+  it("rename modal cancel closes the modal", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue(["s1"]);
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+
+    const { getByTestId, queryByTestId } = render(<HomeScreen />);
+    act(() => {
+      navbarActions.rename!();
+    });
+    expect(getByTestId(TestID.SessionInputModal)).toBeTruthy();
+
+    act(() => {
+      mockOnRenameCancel!();
+    });
+    expect(queryByTestId(TestID.SessionInputModal)).toBeNull();
+  });
+
+  it("rename modal submit calls renameSession and exits selection", async () => {
+    const mockRename = jest.fn().mockResolvedValue(undefined);
+    const { useRenameSession } = require("@/stores");
+    (useRenameSession as jest.Mock).mockReturnValue(mockRename);
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds: useIds } = require("@/stores");
+    (useIds as jest.Mock).mockReturnValue(["s1"]);
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+
+    render(<HomeScreen />);
+    act(() => {
+      navbarActions.rename!();
+    });
+
+    await act(async () => {
+      await mockOnRenameSubmit!("New Name");
+    });
+
+    expect(mockRename).toHaveBeenCalledWith("s1", "New Name");
+    expect(mockExitSessionSelection).toHaveBeenCalled();
   });
 
   it("renders Toast components for delete confirmation and alerts", () => {
     const { getAllByTestId } = render(<HomeScreen />);
     expect(getAllByTestId(TestID.DeleteToast)).toHaveLength(2);
+  });
+
+  describe("BackHandler hardwareBackPress", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("returns true and exits selection mode when in selection mode", () => {
+      (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+      const { BackHandler } = require("react-native");
+      const spy = jest.spyOn(BackHandler, "addEventListener");
+
+      render(<HomeScreen />);
+      const handler = spy.mock.calls[0]?.[1] as () => boolean;
+      const result = handler();
+      expect(result).toBe(true);
+      expect(mockExitSessionSelection).toHaveBeenCalled();
+    });
+
+    it("returns false when not in selection mode", () => {
+      (useIsSessionSelectionMode as jest.Mock).mockReturnValue(false);
+      const { BackHandler } = require("react-native");
+      const spy = jest.spyOn(BackHandler, "addEventListener");
+
+      render(<HomeScreen />);
+      const handler = spy.mock.calls[0]?.[1] as () => boolean;
+      const result = handler();
+      expect(result).toBe(false);
+    });
   });
 });

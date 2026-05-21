@@ -17,20 +17,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  Button,
   Screen,
   SessionAppBar,
   SessionInputModal,
+  SubScreenNavbar,
+  type SubScreenNavbarAction,
   Toast,
   TranscriptionContentView,
   useToast,
 } from "@/components";
-import { Routes, TestID } from "@/constants";
+import { Routes } from "@/constants";
 import {
   useLocalization,
   useMicPermission,
@@ -40,6 +39,7 @@ import { Transcription, TranscriptionMode } from "@/models";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
+  useEnterTranscriptionSelection,
   useExitTranscriptionSelection,
   useFindSessionById,
   useIncognitoSession,
@@ -47,7 +47,6 @@ import {
   useIsTranscriptionSelectionMode,
   useLivePreview,
   useRenameSession,
-  useSelectAllTranscriptions,
   useSelectedTranscriptionIdsSet,
   useSelectedTranscriptionMode,
   useSessionStore,
@@ -62,6 +61,7 @@ import {
   useSwitchSession,
   useToggleTranscriptionSelection,
 } from "@/stores";
+import { useTheme } from "@/theme";
 import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 export default function SessionScreen() {
@@ -69,7 +69,7 @@ export default function SessionScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { loc } = useLocalization();
-  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   const listRef = useRef<FlatList<Transcription>>(null) as RefObject<
     FlatList<Transcription>
@@ -110,7 +110,7 @@ export default function SessionScreen() {
   const hasSelectedItems = selectedIds.size > 0;
 
   const toggleTranscriptionSelection = useToggleTranscriptionSelection();
-  const selectAllTranscriptionsAction = useSelectAllTranscriptions();
+  const enterSelectionMode = useEnterTranscriptionSelection();
   const exitSelectionMode = useExitTranscriptionSelection();
   const deleteTranscriptions = useDeleteTranscriptions();
 
@@ -129,13 +129,6 @@ export default function SessionScreen() {
     },
     [selectionMode, toggleTranscriptionSelection],
   );
-
-  const selectAllTranscriptions = useCallback(() => {
-    const ids = transcriptions.map((t) => t.id);
-    const allSelected =
-      ids.length > 0 && ids.every((id) => selectedIds.has(id));
-    selectAllTranscriptionsAction(allSelected ? [] : ids);
-  }, [transcriptions, selectAllTranscriptionsAction, selectedIds]);
 
   const deleteSelectedTranscriptions = useCallback(async () => {
     if (selectedIds.size === 0) {
@@ -157,12 +150,17 @@ export default function SessionScreen() {
     }
   }, [selectedIds, deleteTranscriptions, exitSelectionMode]);
 
-  const copyAllTranscriptions = useCallback(async () => {
-    if (transcriptions.length === 0) {
+  const copySelectedTranscriptions = useCallback(async () => {
+    if (selectedIds.size === 0) {
       return false;
     }
 
-    const text = transcriptions.map((t) => t.text).join("\n\n");
+    const text = transcriptions
+      .filter((t) => selectedIds.has(t.id))
+      .map((t) => t.text)
+      .join("\n\n");
+
+    if (!text) return false;
 
     try {
       await Clipboard.setStringAsync(text);
@@ -170,11 +168,11 @@ export default function SessionScreen() {
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.transcription,
-        message: "Failed to copy transcriptions",
+        message: "Failed to copy selected transcriptions",
       });
       return false;
     }
-  }, [transcriptions]);
+  }, [selectedIds, transcriptions]);
 
   const shareSelectedTranscriptions = useCallback(async () => {
     if (selectedIds.size === 0) {
@@ -307,6 +305,12 @@ export default function SessionScreen() {
     endIncognitoSession,
   ]);
 
+  const handleCancelEdit = useCallback(() => {
+    setIsCancellingEdit(true);
+    Keyboard.dismiss();
+    setIsEditing(false);
+  }, []);
+
   // Handle back button press
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -330,13 +334,14 @@ export default function SessionScreen() {
     );
 
     return () => backHandler.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isRecording,
     isEditing,
     selectionMode,
     exitSelectionMode,
     stopRecordingAndSave,
+    handleCancelEdit,
+    router,
   ]);
 
   const handleBackPressed = useCallback(() => {
@@ -353,7 +358,6 @@ export default function SessionScreen() {
       return;
     }
     router.back();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isRecording,
     isEditing,
@@ -361,13 +365,8 @@ export default function SessionScreen() {
     exitSelectionMode,
     router,
     stopRecordingAndSave,
+    handleCancelEdit,
   ]);
-
-  const handleCancelEdit = useCallback(() => {
-    setIsCancellingEdit(true);
-    Keyboard.dismiss();
-    setIsEditing(false);
-  }, []);
 
   const handleSaveEdit = useCallback(() => {
     Keyboard.dismiss();
@@ -390,60 +389,9 @@ export default function SessionScreen() {
     [id, renameSessionAction],
   );
 
-  const copyAllEnabled = transcriptions.length > 0;
-
-  const handleCopyAllPressed = useCallback(async () => {
-    if (transcriptions.length === 0) {
-      showGlobalTooltip(loc.noTranscriptionsToCopy, "normal", undefined, true);
-      return;
-    }
-
-    try {
-      const success = await copyAllTranscriptions();
-      if (success) {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
-        // Only show tooltip on iOS or Android < 12 (Android 12+ has native clipboard feedback)
-        if (
-          Platform.OS === "ios" ||
-          (Platform.OS === "android" && Number(Platform.Version) < 31)
-        ) {
-          showGlobalTooltip(loc.allTranscriptionsCopied);
-        }
-      } else {
-        showAlertToast({
-          title: loc.copyFailedTitle,
-          message: "Unknown error",
-          variant: "error",
-        });
-      }
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.transcription,
-        message: "Failed to copy all transcriptions",
-      });
-      showAlertToast({
-        title: loc.copyFailedTitle,
-        message: getErrorMessage(error),
-        variant: "error",
-      });
-    }
-  }, [
-    transcriptions.length,
-    copyAllTranscriptions,
-    showGlobalTooltip,
-    showAlertToast,
-    loc,
-  ]);
-
   const handleLanguageFlagPressed = useCallback(() => {
     router.push(Routes.settingsLanguage);
   }, [router]);
-
-  const handleSelectAllPressed = useCallback(() => {
-    selectAllTranscriptions();
-  }, [selectAllTranscriptions]);
 
   const handleDeleteSelectedPressed = useCallback(() => {
     if (!hasSelectedItems) return;
@@ -474,12 +422,50 @@ export default function SessionScreen() {
     loc,
   ]);
 
-  const handleSharePressed = useCallback(async () => {
-    if (!hasSelectedItems) {
-      showToast(loc.noTranscriptionsSelectedToShare, "warning");
-      return;
-    }
+  const handleCopySelectedPressed = useCallback(async () => {
+    if (!hasSelectedItems) return;
 
+    try {
+      const success = await copySelectedTranscriptions();
+      if (success) {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+        if (
+          Platform.OS === "ios" ||
+          (Platform.OS === "android" && Number(Platform.Version) < 31)
+        ) {
+          showGlobalTooltip(loc.allTranscriptionsCopied);
+        }
+        exitSelectionMode();
+      } else {
+        showAlertToast({
+          title: loc.copyFailedTitle,
+          message: "Unknown error",
+          variant: "error",
+        });
+      }
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: "Failed to copy selected transcriptions",
+      });
+      showAlertToast({
+        title: loc.copyFailedTitle,
+        message: getErrorMessage(error),
+        variant: "error",
+      });
+    }
+  }, [
+    hasSelectedItems,
+    copySelectedTranscriptions,
+    showGlobalTooltip,
+    showAlertToast,
+    exitSelectionMode,
+    loc,
+  ]);
+
+  const handleSharePressed = useCallback(async () => {
     try {
       const success = await shareSelectedTranscriptions();
       if (success) {
@@ -497,7 +483,7 @@ export default function SessionScreen() {
         "error",
       );
     }
-  }, [hasSelectedItems, shareSelectedTranscriptions, showToast, loc]);
+  }, [shareSelectedTranscriptions, showToast, loc]);
 
   const handleTranscriptionTap = useCallback(
     (transcriptionId: string) => {
@@ -568,6 +554,43 @@ export default function SessionScreen() {
     setRecordingControlsVisible(!selectionMode && !isEditing);
   }, [setRecordingControlsVisible, selectionMode, isEditing]);
 
+  const navbarActions = useMemo<SubScreenNavbarAction[]>(
+    () => [
+      {
+        key: "delete",
+        icon: "trash",
+        label: loc.delete,
+        color: theme.colors.accentDanger,
+        disabled: !hasSelectedItems,
+        onPress: handleDeleteSelectedPressed,
+      },
+      {
+        key: "copy",
+        icon: "copy",
+        label: loc.copy,
+        disabled: !hasSelectedItems,
+        onPress: handleCopySelectedPressed,
+      },
+      {
+        key: "share",
+        icon: "export",
+        label: loc.share,
+        disabled: !hasSelectedItems,
+        onPress: handleSharePressed,
+      },
+    ],
+    [
+      handleCopySelectedPressed,
+      handleDeleteSelectedPressed,
+      handleSharePressed,
+      hasSelectedItems,
+      loc.copy,
+      loc.delete,
+      loc.share,
+      theme.colors.accentDanger,
+    ],
+  );
+
   const sessionName = session?.name ?? "";
   const isIncognito = session?.isIncognito ?? false;
 
@@ -576,15 +599,14 @@ export default function SessionScreen() {
       <SessionAppBar
         sessionName={sessionName}
         selectionMode={selectionMode}
+        selectionTitle={loc.selectedCount(selectedIds.size)}
         editMode={isEditing}
         isIncognitoSession={isIncognito}
-        copyAllEnabled={copyAllEnabled}
         onBackPressed={handleBackPressed}
         onTitlePressed={handleTitlePressed}
-        onCopyAllPressed={handleCopyAllPressed}
         onLanguageFlagPressed={handleLanguageFlagPressed}
-        onSelectAllPressed={handleSelectAllPressed}
-        onDeleteSelectedPressed={handleDeleteSelectedPressed}
+        onMorePressed={enterSelectionMode}
+        onExitSelectionPressed={exitSelectionMode}
         onCancelEditPressed={handleCancelEdit}
         onSaveEditPressed={handleSaveEdit}
       />
@@ -608,18 +630,7 @@ export default function SessionScreen() {
         )}
       </KeyboardAvoidingView>
 
-      {selectionMode && (
-        <View
-          style={[styles.shareButtonContainer, { bottom: insets.bottom + 32 }]}
-        >
-          <Button.primary
-            testID={TestID.SessionShare}
-            text={loc.share}
-            onPress={handleSharePressed}
-            enabled={hasSelectedItems}
-          />
-        </View>
-      )}
+      <SubScreenNavbar visible={selectionMode} actions={navbarActions} />
 
       <SessionInputModal
         visible={showRenameModal}
@@ -639,10 +650,5 @@ export default function SessionScreen() {
 const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
-  },
-  shareButtonContainer: {
-    position: "absolute",
-    left: 16,
-    right: 16,
   },
 });

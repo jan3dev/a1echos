@@ -56,13 +56,19 @@ export const Toast = ({
   const countdownAnim = useRef(new Animated.Value(1)).current;
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
+  const prevVisibleRef = useRef(visible);
+
+  // Reset during render — before Animated.View commits — so the first frame
+  // after the modal mounts is off-screen. Resetting in useEffect runs after
+  // paint, so a stuck value (e.g. 1 from an interrupted hide) shows the toast
+  // at its final position for one frame before it jumps and slides in.
+  if (visible && !prevVisibleRef.current) {
+    slideAnim.setValue(0);
+  }
+  prevVisibleRef.current = visible;
 
   useEffect(() => {
     if (visible) {
-      // Modal detaches the native view on close before the hide animation's
-      // JS-side value settles, leaving slideAnim stuck at 1. Reset so the
-      // slide-in plays every time.
-      slideAnim.setValue(0);
       Animated.spring(slideAnim, {
         toValue: 1,
         useNativeDriver: true,

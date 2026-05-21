@@ -14,6 +14,16 @@ jest.mock("@/models", () => ({
   getCountryCode: jest.fn((lang: string) => lang),
 }));
 
+jest.mock("@/hooks", () => ({
+  useLocalization: jest.fn(() => ({
+    loc: {
+      edit: "edit",
+      selectedCount: (count: number) =>
+        count === 0 ? "Select items" : `${count} selected`,
+    },
+  })),
+}));
+
 jest.mock("../../../ui/icon/FlagIcon", () => ({
   FlagIcon: (props: any) => {
     const { View } = require("react-native");
@@ -76,14 +86,12 @@ jest.mock("../../../ui/top-app-bar/TopAppBar", () => {
 
 const defaultProps = {
   sessionName: "My Session",
-  selectionMode: false,
   isIncognitoSession: false,
   onBackPressed: jest.fn(),
   onTitlePressed: jest.fn(),
-  onCopyAllPressed: jest.fn(),
   onLanguageFlagPressed: jest.fn(),
-  onSelectAllPressed: jest.fn(),
-  onDeleteSelectedPressed: jest.fn(),
+  onMorePressed: jest.fn(),
+  onExitSelectionPressed: jest.fn(),
   onCancelEditPressed: jest.fn(),
   onSaveEditPressed: jest.fn(),
 };
@@ -104,9 +112,18 @@ describe("SessionAppBar", () => {
     expect(getByTestId(dynamicTestID.flag("en"))).toBeTruthy();
   });
 
-  it("normal mode: renders copy icon", () => {
+  it("normal mode: renders more icon (not copy)", () => {
+    const { getByTestId, queryByTestId } = render(
+      <SessionAppBar {...defaultProps} />,
+    );
+    expect(getByTestId(dynamicTestID.icon("more"))).toBeTruthy();
+    expect(queryByTestId(dynamicTestID.icon("copy"))).toBeNull();
+  });
+
+  it("normal mode: more icon press calls onMorePressed", () => {
     const { getByTestId } = render(<SessionAppBar {...defaultProps} />);
-    expect(getByTestId(dynamicTestID.icon("copy"))).toBeTruthy();
+    fireEvent.press(getByTestId(dynamicTestID.icon("more")).parent!);
+    expect(defaultProps.onMorePressed).toHaveBeenCalled();
   });
 
   it("normal mode: title press calls onTitlePressed (non-incognito)", () => {
@@ -129,20 +146,39 @@ describe("SessionAppBar", () => {
     expect(getByTestId(dynamicTestID.icon("check"))).toBeTruthy();
   });
 
-  it("selection mode: renders select-all and trash icons", () => {
-    const { getByTestId } = render(
-      <SessionAppBar {...defaultProps} selectionMode={true} />,
+  it("selection mode: shows selectionTitle and close icon (not more)", () => {
+    const { getByTestId, queryByTestId } = render(
+      <SessionAppBar
+        {...defaultProps}
+        selectionMode={true}
+        selectionTitle="3 selected"
+      />,
     );
-    expect(getByTestId(dynamicTestID.icon("select_all"))).toBeTruthy();
-    expect(getByTestId(dynamicTestID.icon("trash"))).toBeTruthy();
+    expect(getByTestId(TestID.TitleText).props.children).toBe("3 selected");
+    expect(getByTestId(dynamicTestID.icon("close"))).toBeTruthy();
+    expect(queryByTestId(dynamicTestID.icon("more"))).toBeNull();
   });
 
-  it("copy icon opacity = 0.5 when copyAllEnabled=false", () => {
-    render(<SessionAppBar {...defaultProps} copyAllEnabled={false} />);
-    // The RipplePressable wrapping copy icon receives style={{ opacity: 0.5 }}
-    // Verify via captured props — the TopAppBar receives actions array
-    const actions = capturedAppBarProps.actions;
-    const copyAction = actions?.find((a: any) => a?.key === "copy");
-    expect(copyAction?.props?.style).toEqual({ opacity: 0.5 });
+  it("selection mode: close icon press calls onExitSelectionPressed", () => {
+    const { getByTestId } = render(
+      <SessionAppBar
+        {...defaultProps}
+        selectionMode={true}
+        selectionTitle="1 selected"
+      />,
+    );
+    fireEvent.press(getByTestId(dynamicTestID.icon("close")).parent!);
+    expect(defaultProps.onExitSelectionPressed).toHaveBeenCalled();
+  });
+
+  it("selection mode: title press is disabled", () => {
+    render(
+      <SessionAppBar
+        {...defaultProps}
+        selectionMode={true}
+        selectionTitle="1 selected"
+      />,
+    );
+    expect(capturedAppBarProps.onTitlePressed).toBeUndefined();
   });
 });
