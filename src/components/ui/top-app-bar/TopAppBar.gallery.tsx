@@ -1,6 +1,7 @@
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, TopAppBar } from "@/components";
 import { useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Default = () => (
   <TopAppBar title="Page Title" showBackButton={true} />

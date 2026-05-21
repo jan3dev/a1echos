@@ -5,6 +5,7 @@ import React from "react";
 import { Text, View } from "react-native";
 
 import { TestID } from "@/constants";
+import { lightColors } from "@/theme";
 
 import { TopAppBar } from "./TopAppBar";
 
@@ -134,22 +135,20 @@ describe("TopAppBar", () => {
     expect(backBtn).toBeNull();
   });
 
-  it("renders transparent mode without blur", () => {
+  it("renders transparent mode without glass background", () => {
     const { getByTestId, toJSON } = render(
       <TopAppBar title="Transparent" transparent />,
     );
     expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
     const json = JSON.stringify(toJSON());
-    // Transparent mode should NOT have BlurView
-    expect(json).not.toContain("BlurView");
+    expect(json).not.toContain(lightColors.glassBackground);
   });
 
-  it("renders non-transparent mode (default)", () => {
+  it("renders non-transparent mode with glass background", () => {
     const { getByTestId, toJSON } = render(<TopAppBar title="Default" />);
     expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
     const json = JSON.stringify(toJSON());
-    // Non-transparent mode should have BlurView
-    expect(json).toContain("BlurView");
+    expect(json).toContain(lightColors.glassBackground);
   });
 
   it("renders titleWidget instead of title text when provided", () => {
@@ -177,14 +176,17 @@ describe("TopAppBar", () => {
     expect(getByText("Save")).toBeTruthy();
   });
 
-  it("renders with dark theme blur tint", () => {
+  it("renders with dark theme glass background", () => {
     const { useThemeStore } = require("@/theme");
+    const { darkColors } = require("@/theme");
     useThemeStore.setState({ currentTheme: "dark" });
-    const { getByTestId } = render(<TopAppBar title="Dark" />);
+    const { getByTestId, toJSON } = render(<TopAppBar title="Dark" />);
     expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+    const json = JSON.stringify(toJSON());
+    expect(json).toContain(darkColors.glassBackground);
   });
 
-  it("renders on Android platform without BlurView", () => {
+  it("renders on Android platform", () => {
     const { Platform } = require("react-native");
     const originalOS = Platform.OS;
     Platform.OS = "android";

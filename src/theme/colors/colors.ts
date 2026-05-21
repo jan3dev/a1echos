@@ -32,15 +32,15 @@ export const AquaPrimitiveColors = {
   scarlet: "#FF3B13",
   scarlet16: "rgba(255, 59, 19, 0.16)",
 
-  glassSurfaceLight: "rgba(255, 255, 255, 0.5)",
+  glassSurfaceLight: "rgba(255, 255, 255, 0.78)",
   glassInverseLight: "rgba(0, 0, 0, 0.85)",
-  glassBackgroundLight: "rgba(244, 245, 246, 0.7)",
+  glassBackgroundLight: "rgba(244, 245, 246, 0.88)",
   glassSurfaceSecondaryLight: "rgba(0, 0, 0, 0.16)",
   glassSurfaceBorderLight: "rgba(0, 0, 0, 0.04)",
 
-  glassSurfaceDark: "rgba(39, 41, 44, 0.5)",
+  glassSurfaceDark: "rgba(39, 41, 44, 0.78)",
   glassInverseDark: "rgba(255, 255, 255, 0.85)",
-  glassBackgroundDark: "rgba(9, 10, 11, 0.7)",
+  glassBackgroundDark: "rgba(9, 10, 11, 0.88)",
   glassSurfaceSecondaryDark: "rgba(255, 255, 255, 0.16)",
   glassSurfaceBorderDark: "rgba(255, 255, 255, 0.04)",
 

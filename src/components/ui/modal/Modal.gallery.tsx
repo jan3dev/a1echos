@@ -1,8 +1,9 @@
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, Modal, useModal } from "@/components";
 import { useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const ModalDemo = ({
   withIcon,

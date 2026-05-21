@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Dimmer, Text } from "@/components";
 import { useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Basic = () => {
   const [visible, setVisible] = useState(false);

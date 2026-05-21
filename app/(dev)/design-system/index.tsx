@@ -5,7 +5,7 @@ import { Text } from "@/components";
 import { Routes } from "@/constants";
 import { useTheme } from "@/theme";
 
-import { DESIGN_SYSTEM_MANIFEST, GalleryGroup } from "./manifest";
+import { DESIGN_SYSTEM_MANIFEST, GalleryGroup } from "@/design-system/manifest";
 
 const GROUP_ORDER: GalleryGroup[] = ["UI", "Shared", "Domain"];
 

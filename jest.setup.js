@@ -159,11 +159,6 @@ jest.mock("expo-localization", () => ({
   locale: "en-US",
 }));
 
-jest.mock("@sbaiahmed1/react-native-blur", () => ({
-  BlurView: "BlurView",
-  ProgressiveBlurView: "ProgressiveBlurView",
-}));
-
 jest.mock("expo-linear-gradient", () => ({
   LinearGradient: "LinearGradient",
 }));

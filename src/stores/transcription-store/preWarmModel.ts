@@ -2,7 +2,12 @@ import type { ModelId } from "@/models";
 import { modelDownloadService, sherpaTranscriptionService } from "@/services";
 import { FeatureFlag, logError } from "@/utils";
 
-import { AUDIO_BUSY_STATES, useTranscriptionStore } from "./transcriptionStore";
+// transcriptionStore is resolved lazily to break a Metro require cycle:
+// settingsStore → preWarmModel → transcriptionStore → settingsStore.
+// All references below are runtime, so deferring is safe.
+const lazyTranscriptionStore = () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require("./transcriptionStore") as typeof import("./transcriptionStore");
 
 // Tracks the most recent pre-warm. If the user changes models mid-warmup the
 // service re-enters its in-flight init promise and starts a second cycle; we
@@ -18,6 +23,7 @@ let preWarmGeneration = 0;
  * requested model + language is already active, so repeat calls are cheap.
  */
 export const preWarmModel = (modelId: ModelId, language: string): void => {
+  const { AUDIO_BUSY_STATES, useTranscriptionStore } = lazyTranscriptionStore();
   const store = useTranscriptionStore.getState();
   if (AUDIO_BUSY_STATES.has(store.state)) {
     return;

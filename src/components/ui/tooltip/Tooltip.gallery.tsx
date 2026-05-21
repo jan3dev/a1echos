@@ -1,12 +1,13 @@
 import { Button as RNButton, StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
   Tooltip,
   TooltipPointerPosition,
   TooltipVariant,
   useTooltip,
 } from "@/components";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 interface MatrixRow {
   isInfo: boolean;

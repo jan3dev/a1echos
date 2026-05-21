@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Toast, ToastVariant, TranscriptionItem } from "@/components";
 import { ModelType, Transcription, TranscriptionState } from "@/models";
 import {
@@ -10,6 +9,8 @@ import {
   useTranscriptionStore,
   useUIStore,
 } from "@/stores";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const dummyTranscriptions: Transcription[] = [
   {

@@ -1,7 +1,8 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { InAppBanner, SettingsFooter } from "@/components";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 // --- SettingsFooter ---
 

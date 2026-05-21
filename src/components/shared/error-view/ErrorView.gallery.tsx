@@ -1,5 +1,6 @@
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { ErrorView } from "@/components";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Default = () => <ErrorView errorMessage="Something went wrong" />;
 

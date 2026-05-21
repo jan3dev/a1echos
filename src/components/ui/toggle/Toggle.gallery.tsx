@@ -1,9 +1,10 @@
 import { ComponentProps, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Toggle } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const ToggleWithState = (props: ComponentProps<typeof Toggle>) => {
   const [value, setValue] = useState(props.value || false);

@@ -1,6 +1,7 @@
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Chip, FlagIcon, Icon } from "@/components";
 import { useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const LargeDefault = () => <Chip size="large" label="Label" />;
 

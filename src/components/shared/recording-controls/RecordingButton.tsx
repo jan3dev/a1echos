@@ -1,5 +1,5 @@
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
@@ -75,7 +75,7 @@ const RotatingGradientCircle = ({ size }: { size: number }) => {
     <View
       pointerEvents="none"
       style={{
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         borderRadius: size / 2,
         overflow: "hidden",
       }}

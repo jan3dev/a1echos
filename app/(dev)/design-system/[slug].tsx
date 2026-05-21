@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components";
 import { useTheme } from "@/theme";
 
-import { findGalleryBySlug } from "./manifest";
+import { findGalleryBySlug } from "@/design-system/manifest";
 
 export default function DesignSystemDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();

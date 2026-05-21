@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import {
   SessionActionsSheet,
   SessionAppBar,
@@ -11,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button/Button";
 import { Session } from "@/models";
 import { useSessionStore, useTranscriptionStore } from "@/stores";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 // Mock data
 const dummySession: Session = {

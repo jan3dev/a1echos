@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { ModelId, TranscriptionState } from "@/models";
 import { modelDownloadService, sherpaTranscriptionService } from "@/services";
 

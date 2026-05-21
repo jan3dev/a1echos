@@ -1,8 +1,9 @@
 import { View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon, ListItem, Text } from "@/components";
 import { useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const PRIMARY_LEFT = "Primary Left";
 const PRIMARY_RIGHT = "Primary Right";

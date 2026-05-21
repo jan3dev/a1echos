@@ -1,6 +1,6 @@
 import "@/localization";
-import { ProgressiveBlurView } from "@sbaiahmed1/react-native-blur";
 import { useFonts } from "expo-font";
+import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -248,11 +248,18 @@ function GlobalRecordingControls() {
       ]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
-      <ProgressiveBlurView
-        blurAmount={20}
-        blurRounds={3}
-        blurType={isDark ? "dark" : "light"}
-        direction="blurredBottomClearTop"
+      <LinearGradient
+        // Use the surfaceBackground RGB at both stops so the gradient only
+        // varies in alpha. "transparent" defaults to rgba(0,0,0,0), which
+        // smears through dark gray on the way to a light endpoint.
+        colors={
+          isDark
+            ? (["rgba(9, 10, 11, 0)", "rgba(9, 10, 11, 1)"] as const)
+            : (["rgba(244, 245, 246, 0)", "rgba(244, 245, 246, 1)"] as const)
+        }
+        locations={[0, 0.7]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       {isVisible && (

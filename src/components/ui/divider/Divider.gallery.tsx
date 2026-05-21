@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
 import { View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Divider, Text } from "@/components";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const DividerWrapper = ({ children }: { children: ReactNode }) => (
   <View>

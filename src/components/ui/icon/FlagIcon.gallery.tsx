@@ -1,7 +1,8 @@
 import { StyleSheet, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { FlagIcon, Text } from "@/components";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 export const CommonFlags = () => {
   const common = [

@@ -16,7 +16,6 @@
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-masked-view/masked-view": "^0.3.2",
     "@react-navigation/native": "^7.1.8",
-    "@sbaiahmed1/react-native-blur": "^4.6.2",
     "@shopify/react-native-skia": "2.4.18",
     "@supersami/rn-foreground-service": "^2.2.5",
     "expo": "55.0.9",

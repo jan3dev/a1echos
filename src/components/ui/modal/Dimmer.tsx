@@ -1,4 +1,3 @@
-import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet } from "react-native";
 
@@ -11,11 +10,13 @@ export interface DimmerProps {
 }
 
 export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
 
-  const overlayColor = isDark
-    ? "rgba(0, 0, 0, 0.04)"
-    : "rgba(255, 255, 255, 0.04)";
+  // Pinned to the original glassBackground-dark opacity (0.7) so the scrim stays
+  // dimmer-appropriate while glassBackground is bumped to ~0.88 for headers/panels.
+  const scrimColor = isDark
+    ? "rgba(9, 10, 11, 0.7)"
+    : theme.colors.glassInverse;
 
   return (
     <Modal
@@ -26,20 +27,11 @@ export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
       statusBarTranslucent
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
-      <Pressable style={styles.container} onPress={onDismiss}>
-        <BlurView
-          blurAmount={20}
-          blurRounds={3}
-          blurType={isDark ? "dark" : "light"}
-          style={styles.blurContainer}
-        >
-          <Pressable
-            style={[styles.overlay, { backgroundColor: overlayColor }]}
-            onPress={onDismiss}
-          >
-            {children}
-          </Pressable>
-        </BlurView>
+      <Pressable
+        style={[styles.container, { backgroundColor: scrimColor }]}
+        onPress={onDismiss}
+      >
+        {children}
       </Pressable>
     </Modal>
   );
@@ -47,12 +39,6 @@ export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  blurContainer: {
-    flex: 1,
-  },
-  overlay: {
     flex: 1,
   },
 });

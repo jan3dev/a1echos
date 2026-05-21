@@ -1,10 +1,11 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Icon } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
 
 import { CTAModule } from "./CTAModule";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const SectionLabel = ({ children }: { children: string }) => {
   const { theme } = useTheme();

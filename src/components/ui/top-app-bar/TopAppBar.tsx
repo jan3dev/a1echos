@@ -1,4 +1,3 @@
-import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { useRouter } from "expo-router";
 import { Fragment, ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
@@ -39,7 +38,7 @@ export const TopAppBar = ({
   transparent = false,
   style,
 }: TopAppBarProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -54,117 +53,100 @@ export const TopAppBar = ({
   const topPadding = insets.top;
   const totalHeight = AppConstants.APP_BAR_HEIGHT + topPadding;
 
-  const renderContent = () => (
+  return (
     <View
+      testID={TestID.TopAppBar}
       style={[
-        styles.contentContainer,
+        styles.container,
         {
-          paddingTop: topPadding + 16,
-          height: totalHeight,
-          backgroundColor: transparent
-            ? "transparent"
-            : theme.colors.glassBackground,
+          borderBottomLeftRadius: 8,
+          borderBottomRightRadius: 8,
+          overflow: "hidden",
         },
+        style,
       ]}
     >
-      <View style={styles.row}>
-        <View style={styles.leadingContainer}>
-          {showBackButton ? (
-            <RipplePressable
-              testID={TestID.TopAppBarBack}
-              onPress={handleBack}
-              hitSlop={10}
-              rippleColor={theme.colors.ripple}
-              borderless
-              style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
-            >
-              <Icon
-                name="chevron_left"
-                size={24}
-                color={
-                  transparent
-                    ? theme.colors.textInverse
-                    : theme.colors.textPrimary
-                }
-              />
-            </RipplePressable>
-          ) : leading ? (
-            leading
-          ) : null}
-        </View>
-
-        <View style={styles.titleContainer}>
-          <RipplePressable
-            onPress={onTitlePressed}
-            onLongPress={onTitleLongPressed}
-            disabled={!onTitlePressed && !onTitleLongPressed}
-            rippleColor={
-              onTitlePressed || onTitleLongPressed
-                ? theme.colors.ripple
-                : undefined
-            }
-            borderless
-            style={({ pressed }) => ({
-              opacity: iosPressed(pressed),
-            })}
-          >
-            {titleWidget ?? (
-              <Text
-                variant="subtitle"
-                weight="semibold"
-                align="center"
-                numberOfLines={1}
-                color={
-                  transparent
-                    ? theme.colors.textInverse
-                    : theme.colors.textPrimary
-                }
-              >
-                {title}
-              </Text>
-            )}
-          </RipplePressable>
-        </View>
-
-        <View style={styles.actionsContainer}>
-          {actions.map((action, index) => (
-            <Fragment key={index}>
-              {action}
-              {index < actions.length - 1 && <View style={{ width: 16 }} />}
-            </Fragment>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-
-  const containerStyles = [
-    styles.container,
-    {
-      borderBottomLeftRadius: 8,
-      borderBottomRightRadius: 8,
-      overflow: "hidden" as const,
-    },
-    style,
-  ];
-
-  if (transparent) {
-    return (
-      <View testID={TestID.TopAppBar} style={containerStyles}>
-        {renderContent()}
-      </View>
-    );
-  }
-
-  return (
-    <View testID={TestID.TopAppBar} style={containerStyles}>
-      <BlurView
-        blurAmount={20}
-        blurRounds={3}
-        blurType={isDark ? "regular" : "light"}
+      <View
+        style={[
+          styles.contentContainer,
+          {
+            paddingTop: topPadding + 16,
+            height: totalHeight,
+            backgroundColor: transparent
+              ? "transparent"
+              : theme.colors.glassBackground,
+          },
+        ]}
       >
-        {renderContent()}
-      </BlurView>
+        <View style={styles.row}>
+          <View style={styles.leadingContainer}>
+            {showBackButton ? (
+              <RipplePressable
+                testID={TestID.TopAppBarBack}
+                onPress={handleBack}
+                hitSlop={10}
+                rippleColor={theme.colors.ripple}
+                borderless
+                style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
+              >
+                <Icon
+                  name="chevron_left"
+                  size={24}
+                  color={
+                    transparent
+                      ? theme.colors.textInverse
+                      : theme.colors.textPrimary
+                  }
+                />
+              </RipplePressable>
+            ) : leading ? (
+              leading
+            ) : null}
+          </View>
+
+          <View style={styles.titleContainer}>
+            <RipplePressable
+              onPress={onTitlePressed}
+              onLongPress={onTitleLongPressed}
+              disabled={!onTitlePressed && !onTitleLongPressed}
+              rippleColor={
+                onTitlePressed || onTitleLongPressed
+                  ? theme.colors.ripple
+                  : undefined
+              }
+              borderless
+              style={({ pressed }) => ({
+                opacity: iosPressed(pressed),
+              })}
+            >
+              {titleWidget ?? (
+                <Text
+                  variant="subtitle"
+                  weight="semibold"
+                  align="center"
+                  numberOfLines={1}
+                  color={
+                    transparent
+                      ? theme.colors.textInverse
+                      : theme.colors.textPrimary
+                  }
+                >
+                  {title}
+                </Text>
+              )}
+            </RipplePressable>
+          </View>
+
+          <View style={styles.actionsContainer}>
+            {actions.map((action, index) => (
+              <Fragment key={index}>
+                {action}
+                {index < actions.length - 1 && <View style={{ width: 16 }} />}
+              </Fragment>
+            ))}
+          </View>
+        </View>
+      </View>
     </View>
   );
 };

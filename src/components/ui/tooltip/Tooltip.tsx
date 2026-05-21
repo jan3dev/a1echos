@@ -1,10 +1,8 @@
-import MaskedView from "@react-native-masked-view/masked-view";
-import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { ReactNode, useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { useTheme } from "@/theme";
+import { getShadow, useTheme } from "@/theme";
 
 import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
@@ -83,46 +81,18 @@ export const Tooltip = ({
 
   const renderPointer = () => {
     if (pointerPosition === "none") return null;
-
-    // Dark theme bubble bg is rgba(255,255,255,0.16) — too translucent for the
-    // BlurView+MaskedView pointer to track the bubble's blur context, so the
-    // pointer drifts lighter. Fall back to a solid color approximating the
-    // bubble's perceived gray (16% white over a blurred dark surface).
-    const useSolidFill = variant !== "normal" || isDark;
-    const solidFill = variant === "normal" ? "#3A3D41" : backgroundColor;
-
-    const triangleSvg = (
-      <Svg
-        width={pointerSize * 2}
-        height={pointerSize}
-        viewBox={`0 0 ${pointerSize * 2} ${pointerSize}`}
-      >
-        <Path
-          d={`M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`}
-          fill={useSolidFill ? solidFill : "white"}
-        />
-      </Svg>
-    );
-
-    if (useSolidFill) {
-      return <View style={styles.pointerContainer}>{triangleSvg}</View>;
-    }
-
     return (
       <View style={styles.pointerContainer}>
-        <MaskedView
-          style={{ width: pointerSize * 2, height: pointerSize }}
-          maskElement={triangleSvg}
+        <Svg
+          width={pointerSize * 2}
+          height={pointerSize}
+          viewBox={`0 0 ${pointerSize * 2} ${pointerSize}`}
         >
-          <BlurView
-            blurAmount={20}
-            blurRounds={3}
-            blurType={isDark ? "dark" : "light"}
-            style={StyleSheet.absoluteFill}
-          >
-            <View style={[StyleSheet.absoluteFill, { backgroundColor }]} />
-          </BlurView>
-        </MaskedView>
+          <Path
+            d={`M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`}
+            fill={backgroundColor}
+          />
+        </Svg>
       </View>
     );
   };
@@ -185,14 +155,14 @@ export const Tooltip = ({
   const content = renderContent();
   const bubble =
     variant === "normal" ? (
-      <BlurView
-        blurAmount={20}
-        blurRounds={3}
-        blurType={isDark ? "dark" : "light"}
-        style={{ borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" }}
+      <View
+        style={[
+          { borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" },
+          getShadow("menu"),
+        ]}
       >
         {content}
-      </BlurView>
+      </View>
     ) : (
       <View style={{ borderRadius: DEFAULT_BORDER_RADIUS, backgroundColor }}>
         {content}

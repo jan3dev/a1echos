@@ -1,9 +1,10 @@
 import { ComponentProps, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import type { GalleryEntry } from "@/app/(dev)/design-system/manifest";
 import { Checkbox } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
+
+import type { GalleryEntry } from "@/design-system/manifest";
 
 const CheckboxWithState = (props: ComponentProps<typeof Checkbox>) => {
   const [checked, setChecked] = useState(props.value ?? false);

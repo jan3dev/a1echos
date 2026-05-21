@@ -3,6 +3,8 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 import { Modal, Text } from "react-native";
 
+import { lightColors } from "@/theme";
+
 import { Dimmer } from "./Dimmer";
 
 describe("Dimmer", () => {
@@ -16,15 +18,16 @@ describe("Dimmer", () => {
     expect(rnModal.props.visible).toBe(true);
   });
 
-  it("renders BlurView", () => {
+  it("renders glass scrim background", () => {
+    const { useThemeStore } = require("@/theme");
+    useThemeStore.setState({ currentTheme: "light" });
     const { toJSON } = render(
       <Dimmer visible={true} onDismiss={jest.fn()}>
         <Text>Content</Text>
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    // BlurView is mocked as the string "BlurView" in jest.setup.js
-    expect(json).toContain("BlurView");
+    expect(json).toContain(lightColors.glassInverse);
   });
 
   it("calls onDismiss when backdrop pressed", () => {
@@ -52,7 +55,7 @@ describe("Dimmer", () => {
     expect(getByText("Child Content")).toBeTruthy();
   });
 
-  it("uses dark theme overlay color and light blur tint when isDark", () => {
+  it("uses pinned dark scrim color when isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "dark" });
     const { toJSON } = render(
@@ -61,11 +64,10 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    // Dark theme uses rgba(0, 0, 0, 0.04) overlay
-    expect(json).toContain("rgba(0, 0, 0, 0.04)");
+    expect(json).toContain("rgba(9, 10, 11, 0.7)");
   });
 
-  it("uses light theme overlay color and dark blur tint when not isDark", () => {
+  it("uses glassInverse scrim color when not isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "light" });
     const { toJSON } = render(
@@ -74,7 +76,6 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    // Light theme uses rgba(255, 255, 255, 0.04) overlay
-    expect(json).toContain("rgba(255, 255, 255, 0.04)");
+    expect(json).toContain(lightColors.glassInverse);
   });
 });

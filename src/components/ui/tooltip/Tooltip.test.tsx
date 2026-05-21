@@ -76,22 +76,23 @@ describe("Tooltip", () => {
     expect(json).toContain(lightColors.accentDangerTransparent);
   });
 
-  it("normal variant uses BlurView wrapper", () => {
+  it("normal variant uses glass background", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="normal" />);
     act(() => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("BlurView");
+    // light theme normal variant uses glassInverse (rgba(0,0,0,0.85))
+    expect(json).toContain(lightColors.glassInverse);
   });
 
-  it("error variant does not use BlurView wrapper", () => {
+  it("error variant does not use normal glass background", () => {
     const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
     act(() => {
       jest.runAllTimers();
     });
     const json = JSON.stringify(toJSON());
-    expect(json).not.toContain("BlurView");
+    expect(json).not.toContain(lightColors.glassInverse);
   });
 
   it("dismissible tooltip renders close icon", () => {

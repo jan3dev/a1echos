@@ -1,4 +1,3 @@
-import { BlurView } from "@sbaiahmed1/react-native-blur";
 import { useEffect, useRef } from "react";
 import {
   Animated,
@@ -50,7 +49,7 @@ export const Toast = ({
   onDismiss,
 }: ToastProps) => {
   const { width } = useWindowDimensions();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const countdownAnim = useRef(new Animated.Value(1)).current;
@@ -164,10 +163,7 @@ export const Toast = ({
           ]}
         >
           <Pressable>
-            <BlurView
-              blurAmount={20}
-              blurRounds={3}
-              blurType={isDark ? "dark" : "light"}
+            <View
               style={[
                 styles.card,
                 {
@@ -316,7 +312,7 @@ export const Toast = ({
                   ) : null}
                 </View>
               )}
-            </BlurView>
+            </View>
           </Pressable>
         </Animated.View>
       </Pressable>
