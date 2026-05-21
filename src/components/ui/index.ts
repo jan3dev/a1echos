@@ -4,6 +4,7 @@ export * from "./checkbox";
 export * from "./chip";
 export * from "./cta-module";
 export * from "./divider";
+export * from "./glass-icon-button";
 export * from "./icon";
 export * from "./modal";
 export * from "./progress";

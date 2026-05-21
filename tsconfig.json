@@ -3,17 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": ["./*"],
-      "@/components/*": ["./src/components/*"],
-      "@/services/*": ["./src/services/*"],
-      "@/stores/*": ["./src/stores/*"],
-      "@/models/*": ["./src/models/*"],
+      "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/constants/*": ["./src/constants/*"],
-      "@/theme/*": ["./src/theme/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/localization/*": ["./src/localization/*"]
+      "@/app/*": ["./app/*"]
     }
   },
   "include": [

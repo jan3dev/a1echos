@@ -7,6 +7,7 @@ import ctaModuleGallery from "@/components/ui/cta-module/CTAModule.gallery";
 import dimmerGallery from "@/components/ui/modal/Dimmer.gallery";
 import dividerGallery from "@/components/ui/divider/Divider.gallery";
 import flagIconGallery from "@/components/ui/icon/FlagIcon.gallery";
+import glassIconButtonGallery from "@/components/ui/glass-icon-button/GlassIconButton.gallery";
 import iconGallery from "@/components/ui/icon/Icon.gallery";
 import modalGallery from "@/components/ui/modal/Modal.gallery";
 import progressGallery from "@/components/ui/progress/ProgressIndicator.gallery";
@@ -47,6 +48,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   dimmerGallery,
   dividerGallery,
   flagIconGallery,
+  glassIconButtonGallery,
   iconGallery,
   modalGallery,
   progressGallery,
