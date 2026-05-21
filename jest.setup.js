@@ -12,7 +12,7 @@
 let mockAsyncStorageStore = {};
 let mockSecureStoreStore = {};
 
-const { useThemeStore } = require("./theme");
+const { useThemeStore } = require("./src/theme");
 
 // ---------------------------------------------------------------------------
 // Expo modules

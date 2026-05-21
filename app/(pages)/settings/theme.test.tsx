@@ -30,7 +30,9 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
-const { mockMakeLoc } = require("../../../test-utils/mock-localization/mockLocalization");
+const {
+  mockMakeLoc,
+} = require("../../../src/test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),

@@ -4,16 +4,16 @@
     "strict": true,
     "paths": {
       "@/*": ["./*"],
-      "@/components/*": ["./components/*"],
-      "@/services/*": ["./services/*"],
-      "@/stores/*": ["./stores/*"],
-      "@/models/*": ["./models/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/stores/*": ["./src/stores/*"],
+      "@/models/*": ["./src/models/*"],
       "@/assets/*": ["./assets/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/constants/*": ["./constants/*"],
-      "@/theme/*": ["./theme/*"],
-      "@/hooks/*": ["./hooks/*"],
-      "@/localization/*": ["./localization/*"]
+      "@/utils/*": ["./src/utils/*"],
+      "@/constants/*": ["./src/constants/*"],
+      "@/theme/*": ["./src/theme/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/localization/*": ["./src/localization/*"]
     }
   },
   "include": [

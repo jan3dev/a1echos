@@ -1,5 +1,5 @@
-import * as Crypto from "expo-crypto";
 import { renderHook } from "@testing-library/react-native";
+import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
 import {
@@ -10,23 +10,24 @@ import {
 } from "@/models";
 import {
   backgroundRecordingService,
-  storageService,
   sherpaTranscriptionService,
+  storageService,
 } from "@/services";
 
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
+
 import {
-  useTranscriptionStore,
-  useTranscriptionState,
-  useSessionTranscriptions,
-  useIsRecording,
+  initializeTranscriptionStore,
   useAudioLevel,
+  useDeleteTranscriptions,
+  useIsRecording,
+  useLivePreview,
+  useSessionTranscriptions,
   useStartRecording,
   useStopRecordingAndSave,
-  useDeleteTranscriptions,
-  useLivePreview,
-  initializeTranscriptionStore,
+  useTranscriptionState,
+  useTranscriptionStore,
 } from "./transcriptionStore";
 
 jest.mock("@/services", () => ({
