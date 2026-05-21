@@ -1,5 +1,5 @@
 import * as Localization from "expo-localization";
-import i18next from "i18next";
+import i18n, { use as i18nUse } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import enCommon from "../en/common.json";
@@ -18,7 +18,7 @@ const fallbackLng = supportedLanguages.includes(deviceLocale)
   ? deviceLocale
   : "en";
 
-i18next.use(initReactI18next).init({
+i18nUse(initReactI18next).init({
   resources,
   lng: fallbackLng,
   fallbackLng: "en",
@@ -33,4 +33,4 @@ i18next.use(initReactI18next).init({
   showSupportNotice: false,
 });
 
-export default i18next;
+export default i18n;
