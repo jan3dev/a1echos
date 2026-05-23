@@ -184,7 +184,7 @@ std::string JoinPath(NSString *dir, NSString *name) {
     NSString *text = [NSString stringWithUTF8String:result.text.c_str()];
     NSString *trimmed = [text stringByTrimmingCharactersInSet:
                          [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    NSLog(@"[SherpaBridge] Transcription result: %@", trimmed);
+    NSLog(@"[SherpaBridge] Transcription complete (%lu chars)", (unsigned long)trimmed.length);
     return trimmed.length > 0 ? trimmed : nil;
 }
 

@@ -10,8 +10,12 @@ module.exports = {
     "\\.bin$": "<rootDir>/__mocks__/binMock.js",
     "\\.onnx$": "<rootDir>/__mocks__/binMock.js",
     "\\.(txt|wav)$": "<rootDir>/__mocks__/binMock.js",
+    // .sql files are inlined via babel-plugin-inline-import in metro/builds;
+    // jest doesn't run that transform, so map them to a no-op string.
+    "\\.sql$": "<rootDir>/__mocks__/binMock.js",
     "^@/assets/(.*)$": "<rootDir>/assets/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@modules/(.*)$": "<rootDir>/modules/$1",
   },
   testPathIgnorePatterns: [
     "/node_modules/",
@@ -22,6 +26,7 @@ module.exports = {
     "!app/\\(dev\\)/**",
     "src/components/**/*.{ts,tsx}",
     "src/constants/**/*.{ts,tsx}",
+    "src/db/**/*.{ts,tsx}",
     "src/hooks/**/*.{ts,tsx}",
     "src/models/**/*.{ts,tsx}",
     "src/services/**/*.{ts,tsx}",
@@ -41,6 +46,8 @@ module.exports = {
     "!src/stores/model-download-store/modelDownloadStore.ts",
     "!src/models/model-type/ModelType.ts",
     "!src/models/transcription-state/TranscriptionState.ts",
+    "!src/db/migrations/**",
+    "!src/db/schema.ts",
   ],
   coverageThreshold: {
     global: {

@@ -1,30 +1,35 @@
-import * as Crypto from "expo-crypto";
 import { renderHook } from "@testing-library/react-native";
+import * as Crypto from "expo-crypto";
 
 import { Session } from "@/models";
-import { storageService } from "@/services";
+import { audioProtectionService, databaseService } from "@/services";
 
 import {
-  useSessionStore,
-  useSessions,
   useCreateSession,
-  useRenameSession,
   useFindSessionById,
-  useSwitchSession,
   useIncognitoSession,
+  useRenameSession,
+  useSessions,
+  useSessionStore,
+  useSwitchSession,
 } from "./sessionStore";
 
 jest.mock("@/services", () => ({
-  storageService: {
-    getSessions: jest.fn(async () => []),
-    saveSessions: jest.fn(async () => undefined),
+  databaseService: {
+    listSessions: jest.fn(async () => []),
+    upsertSession: jest.fn(async () => undefined),
+    deleteSession: jest.fn(async () => ({ deletedAudioPaths: [] })),
     getActiveSessionId: jest.fn(async () => null),
-    saveActiveSessionId: jest.fn(async () => undefined),
-    clearActiveSessionId: jest.fn(async () => undefined),
+    setActiveSessionId: jest.fn(async () => undefined),
+  },
+  audioProtectionService: {
+    deleteAudio: jest.fn(async () => undefined),
   },
 }));
 
 jest.mock("@/utils", () => ({
+  FeatureFlag: { session: "SESSION" },
+  logError: jest.fn(),
   logWarn: jest.fn(),
 }));
 
@@ -79,8 +84,11 @@ describe("sessionStore", () => {
 
   describe("loadSessions()", () => {
     it("loads sessions from storage and restores active ID", async () => {
-      (storageService.getSessions as jest.Mock).mockResolvedValueOnce([s1, s2]);
-      (storageService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
+      (databaseService.listSessions as jest.Mock).mockResolvedValueOnce([
+        s1,
+        s2,
+      ]);
+      (databaseService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
         "s2",
       );
 
@@ -93,19 +101,22 @@ describe("sessionStore", () => {
     });
 
     it("falls back to first session when stored active ID is missing", async () => {
-      (storageService.getSessions as jest.Mock).mockResolvedValueOnce([s1, s2]);
-      (storageService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
+      (databaseService.listSessions as jest.Mock).mockResolvedValueOnce([
+        s1,
+        s2,
+      ]);
+      (databaseService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
         "nonexistent",
       );
 
       await useSessionStore.getState().loadSessions();
       expect(useSessionStore.getState().activeSessionId).toBe("s1");
-      expect(storageService.saveActiveSessionId).toHaveBeenCalledWith("s1");
+      expect(databaseService.setActiveSessionId).toHaveBeenCalledWith("s1");
     });
 
     it("handles empty session list", async () => {
-      (storageService.getSessions as jest.Mock).mockResolvedValueOnce([]);
-      (storageService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
+      (databaseService.listSessions as jest.Mock).mockResolvedValueOnce([]);
+      (databaseService.getActiveSessionId as jest.Mock).mockResolvedValueOnce(
         null,
       );
 
@@ -140,7 +151,6 @@ describe("sessionStore", () => {
       useSessionStore.getState().getSessions();
       expect(useSessionStore.getState().needsSort).toBe(false);
 
-      // Second call should not re-sort
       const result = useSessionStore.getState().getSessions();
       expect(result[0].id).toBe("s1");
     });
@@ -205,7 +215,7 @@ describe("sessionStore", () => {
     });
 
     it("ignores sessions with non-matching prefix", () => {
-      useSessionStore.setState({ sessions: [s3] }); // "Other"
+      useSessionStore.setState({ sessions: [s3] });
       expect(useSessionStore.getState().getNewSessionName("Session")).toBe(
         "Session 1",
       );
@@ -221,8 +231,8 @@ describe("sessionStore", () => {
       expect(state.sessions).toHaveLength(1);
       expect(state.sessions[0].name).toBe("Session 1");
       expect(state.activeSessionId).toBe("new-uuid");
-      expect(storageService.saveSessions).toHaveBeenCalled();
-      expect(storageService.saveActiveSessionId).toHaveBeenCalledWith(
+      expect(databaseService.upsertSession).toHaveBeenCalled();
+      expect(databaseService.setActiveSessionId).toHaveBeenCalledWith(
         "new-uuid",
       );
     });
@@ -248,14 +258,14 @@ describe("sessionStore", () => {
       expect(state.incognitoSession!.name).toBe("Incognito");
       expect(state.incognitoSession!.isIncognito).toBe(true);
       expect(state.activeSessionId).toBe(id);
-      // Incognito sessions don't save to regular sessions storage
-      expect(storageService.saveSessions).not.toHaveBeenCalled();
+      // Incognito sessions don't write to the DB.
+      expect(databaseService.upsertSession).not.toHaveBeenCalled();
     });
 
     it("persists non-incognito session to storage", async () => {
       await useSessionStore.getState().createSession("Test");
-      expect(storageService.saveSessions).toHaveBeenCalled();
-      expect(storageService.saveActiveSessionId).toHaveBeenCalled();
+      expect(databaseService.upsertSession).toHaveBeenCalled();
+      expect(databaseService.setActiveSessionId).toHaveBeenCalled();
     });
   });
 
@@ -270,7 +280,7 @@ describe("sessionStore", () => {
         .getState()
         .sessions.find((s) => s.id === "s1")!;
       expect(session.name).toBe("New Name");
-      expect(storageService.saveSessions).toHaveBeenCalled();
+      expect(databaseService.upsertSession).toHaveBeenCalled();
     });
 
     it("truncates long names", async () => {
@@ -283,12 +293,12 @@ describe("sessionStore", () => {
 
     it("skips rename for not-found session", async () => {
       await useSessionStore.getState().renameSession("nonexistent", "Name");
-      expect(storageService.saveSessions).not.toHaveBeenCalled();
+      expect(databaseService.upsertSession).not.toHaveBeenCalled();
     });
 
     it("skips rename for empty name", async () => {
       await useSessionStore.getState().renameSession("s1", "   ");
-      expect(storageService.saveSessions).not.toHaveBeenCalled();
+      expect(databaseService.upsertSession).not.toHaveBeenCalled();
     });
   });
 
@@ -310,18 +320,18 @@ describe("sessionStore", () => {
 
       expect(state.activeSessionId).toBe("s2");
       expect(state.incognitoSession).toBeNull();
-      expect(storageService.saveActiveSessionId).toHaveBeenCalledWith("s2");
+      expect(databaseService.setActiveSessionId).toHaveBeenCalledWith("s2");
     });
 
     it("no-ops when switching to same session", async () => {
       await useSessionStore.getState().switchSession("s1");
-      expect(storageService.saveActiveSessionId).not.toHaveBeenCalled();
+      expect(databaseService.setActiveSessionId).not.toHaveBeenCalled();
     });
 
     it("no-ops when switching to nonexistent session", async () => {
       await useSessionStore.getState().switchSession("nonexistent");
       expect(useSessionStore.getState().activeSessionId).toBe("s1");
-      expect(storageService.saveActiveSessionId).not.toHaveBeenCalled();
+      expect(databaseService.setActiveSessionId).not.toHaveBeenCalled();
     });
   });
 
@@ -343,14 +353,17 @@ describe("sessionStore", () => {
 
       expect(state.incognitoSession).toBeNull();
       expect(state.activeSessionId).toBe("s1");
-      // Incognito deletion doesn't call saveSessions
-      expect(storageService.saveSessions).not.toHaveBeenCalled();
+      // Incognito sessions are never in the DB, so no cascade call.
+      expect(databaseService.deleteSession).not.toHaveBeenCalled();
     });
 
-    it("deletes active session and reassigns to next", async () => {
+    it("deletes active session and cascades audio cleanup", async () => {
       useSessionStore.setState({
         sessions: [s1, s2],
         activeSessionId: "s1",
+      });
+      (databaseService.deleteSession as jest.Mock).mockResolvedValueOnce({
+        deletedAudioPaths: ["/path/a.wav", "/path/b.wav"],
       });
 
       await useSessionStore.getState().deleteSession("s1");
@@ -358,7 +371,8 @@ describe("sessionStore", () => {
 
       expect(state.sessions).toHaveLength(1);
       expect(state.activeSessionId).toBe("s2");
-      expect(storageService.saveSessions).toHaveBeenCalled();
+      expect(databaseService.deleteSession).toHaveBeenCalledWith("s1");
+      expect(audioProtectionService.deleteAudio).toHaveBeenCalledTimes(2);
     });
 
     it("deletes non-active session without changing active", async () => {
@@ -403,7 +417,7 @@ describe("sessionStore", () => {
       expect(
         useSessionStore.getState().incognitoSession!.lastModified.getTime(),
       ).toBeGreaterThan(new Date("2024-01-01").getTime());
-      expect(storageService.saveSessions).not.toHaveBeenCalled();
+      expect(databaseService.upsertSession).not.toHaveBeenCalled();
     });
 
     it("updates regular session and persists", async () => {
@@ -411,7 +425,7 @@ describe("sessionStore", () => {
 
       await useSessionStore.getState().updateSessionModifiedTimestamp("s1");
 
-      expect(storageService.saveSessions).toHaveBeenCalled();
+      expect(databaseService.upsertSession).toHaveBeenCalled();
       expect(useSessionStore.getState().needsSort).toBe(true);
     });
   });
@@ -499,7 +513,6 @@ describe("sessionStore", () => {
   describe("notifySessionCreated()", () => {
     it("triggers store update without changing state", () => {
       useSessionStore.setState({ sessions: [s1], activeSessionId: "s1" });
-      // Should not throw
       useSessionStore.getState().notifySessionCreated();
       expect(useSessionStore.getState().sessions).toHaveLength(1);
     });

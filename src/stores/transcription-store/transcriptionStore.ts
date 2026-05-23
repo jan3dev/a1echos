@@ -10,9 +10,10 @@ import { AppConstants } from "@/constants";
 import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
 import type { ChunkEvent } from "@/services";
 import {
+  audioProtectionService,
   backgroundRecordingService,
+  databaseService,
   sherpaTranscriptionService,
-  storageService,
 } from "@/services";
 import {
   FeatureFlag,
@@ -202,18 +203,20 @@ const validateStateTransition = (
 export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
   const timeoutIds = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // Serializes storage writes triggered by chunk events so concurrent
-  // saveTranscription calls don't stomp on each other's read-modify-write.
-  let storageWriteQueue: Promise<void> = Promise.resolve();
-  const enqueueStorageWrite = (op: () => Promise<void>): void => {
-    storageWriteQueue = storageWriteQueue.then(op).catch((error) => {
+  // Tracks in-flight chunk-driven persistence so stopRecordingAndSave can
+  // await any straggling writes before flipping to READY. With SQLite the
+  // underlying connection serializes writes, so no read-modify-write queue
+  // is needed — we just track the in-flight Promise chain.
+  let pendingWrites: Promise<void> = Promise.resolve();
+  const trackPersistence = (op: () => Promise<void>): void => {
+    pendingWrites = pendingWrites.then(op).catch((error) => {
       logError(error, {
         flag: FeatureFlag.store,
-        message: "Queued transcription storage write failed",
+        message: "Background transcription persistence failed",
       });
     });
   };
-  const drainStorageWriteQueue = (): Promise<void> => storageWriteQueue;
+  const drainPendingWrites = (): Promise<void> => pendingWrites;
 
   const tearDownRealtimeSubscriptions = (): void => {
     const state = get();
@@ -231,7 +234,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     sessionId: string,
   ): Promise<void> => {
     if (items.length === 1 && recordedFileUri) {
-      const audioPath = await storageService.saveAudioFile(
+      const audioPath = await audioProtectionService.saveAudio(
         recordedFileUri,
         `audio_${Date.now()}.wav`,
       );
@@ -241,10 +244,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           t.id === updated.id ? updated : t,
         ),
       });
-      await storageService.saveTranscription(updated);
+      await databaseService.upsertTranscription(updated);
     } else {
       for (const t of items) {
-        await storageService.saveTranscription(t);
+        await databaseService.upsertTranscription(t);
       }
     }
     await useSessionStore.getState().updateSessionModifiedTimestamp(sessionId);
@@ -298,8 +301,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     if (split.deferPersist) return;
     if (useSessionStore.getState().isActiveSessionIncognito()) return;
 
-    enqueueStorageWrite(async () => {
-      await storageService.saveTranscription(transcription);
+    trackPersistence(async () => {
+      await databaseService.upsertTranscription(transcription);
       await useSessionStore
         .getState()
         .updateSessionModifiedTimestamp(sessionId);
@@ -364,8 +367,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     const newActiveOps = new Set(state.activeOperations);
     newActiveOps.delete(operationName);
 
+    // Derive the flag from the Set so releasing one op doesn't clear the
+    // lock while other concurrent ops are still in flight.
     set({
-      isOperationLocked: false,
+      isOperationLocked: newActiveOps.size > 0,
       activeOperations: newActiveOps,
     });
   };
@@ -565,10 +570,8 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     _loadTranscriptionsInternal: async () => {
-      const transcriptions = await storageService.getTranscriptions();
-      transcriptions.sort(
-        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-      );
+      const transcriptions = await databaseService.listTranscriptions();
+      // listTranscriptions already orders by timestampMs ASC.
 
       set({
         transcriptions,
@@ -620,7 +623,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       set({ transcriptions: newTranscriptions });
 
       try {
-        await storageService.saveTranscription(updated);
+        await databaseService.upsertTranscription(updated);
         await useSessionStore
           .getState()
           .updateSessionModifiedTimestamp(updated.sessionId);
@@ -650,7 +653,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         const sessionId = transcription.sessionId;
 
-        await storageService.deleteTranscription(id);
+        const { audioPath } = await databaseService.deleteTranscription(id);
+        if (audioPath) {
+          await audioProtectionService.deleteAudio(audioPath);
+        }
 
         const newTranscriptions = state.transcriptions.filter(
           (t) => t.id !== id,
@@ -673,14 +679,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       try {
         const state = get();
         const sessionIds = new Set<string>();
-
-        for (const id of ids) {
-          const transcription = state.transcriptions.find((t) => t.id === id);
-          if (transcription) {
-            sessionIds.add(transcription.sessionId);
-            await storageService.deleteTranscription(id);
-          }
+        for (const t of state.transcriptions) {
+          if (ids.has(t.id)) sessionIds.add(t.sessionId);
         }
+
+        const { audioPaths } = await databaseService.deleteTranscriptions([
+          ...ids,
+        ]);
+        await Promise.allSettled(
+          audioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+        );
 
         const newTranscriptions = state.transcriptions.filter(
           (t) => !ids.has(t.id),
@@ -703,7 +711,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
     clearTranscriptions: async () => {
       try {
-        await storageService.clearTranscriptions();
+        const { audioPaths } = await databaseService.clearAllTranscriptions();
+        await Promise.allSettled(
+          audioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+        );
         set({ transcriptions: [], isLoaded: true });
       } catch (error) {
         logError(error, {
@@ -759,53 +770,54 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     deleteAllTranscriptionsForSession: async (sessionId: string) => {
-      try {
-        const state = get();
-        const newTranscriptions = state.transcriptions.filter(
-          (t) => t.sessionId !== sessionId,
-        );
+      // FK ON DELETE CASCADE means session deletion drops transcription rows
+      // automatically. This method now just trims the in-memory mirror — it's
+      // still callable explicitly without deleting the parent session.
+      const state = get();
+      const toDelete = state.transcriptions.filter(
+        (t) => t.sessionId === sessionId,
+      );
+      const ids = toDelete.map((t) => t.id);
 
-        await storageService.deleteTranscriptionsForSession(sessionId);
-
-        set({ transcriptions: newTranscriptions });
-
-        await useSessionStore
-          .getState()
-          .updateSessionModifiedTimestamp(sessionId);
-      } catch (error) {
-        logError(error, {
-          flag: FeatureFlag.store,
-          message: "Failed to delete all transcriptions for session",
-        });
-        throw new Error(
-          `Failed to delete transcriptions for session: ${error}`,
-        );
+      if (ids.length > 0) {
+        try {
+          const { audioPaths } =
+            await databaseService.deleteTranscriptions(ids);
+          await Promise.allSettled(
+            audioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+          );
+        } catch (error) {
+          logError(error, {
+            flag: FeatureFlag.store,
+            message: "Failed to delete transcriptions for session",
+          });
+          throw new Error(
+            `Failed to delete transcriptions for session: ${error}`,
+          );
+        }
       }
+
+      set({
+        transcriptions: state.transcriptions.filter(
+          (t) => t.sessionId !== sessionId,
+        ),
+      });
+
+      await useSessionStore
+        .getState()
+        .updateSessionModifiedTimestamp(sessionId);
     },
 
     cleanupDeletedSessions: async (validSessionIds: Set<string>) => {
+      // FK cascade handles cross-session cleanup in the DB. Here we only
+      // prune the in-memory mirror so the UI stops showing orphan rows.
       const state = get();
-      const inMemorySessionIds = new Set(
-        state.transcriptions.map((t) => t.sessionId),
-      );
-      const sessionsToDelete = [...inMemorySessionIds].filter(
-        (id) => !validSessionIds.has(id),
-      );
-
-      if (sessionsToDelete.length === 0) {
-        return;
-      }
-
-      for (const sessionId of sessionsToDelete) {
-        if (sessionId.trim() === "") continue;
-        await storageService.deleteTranscriptionsForSession(sessionId);
-      }
-
       const newTranscriptions = state.transcriptions.filter((t) =>
         validSessionIds.has(t.sessionId),
       );
-
-      set({ transcriptions: newTranscriptions });
+      if (newTranscriptions.length !== state.transcriptions.length) {
+        set({ transcriptions: newTranscriptions });
+      }
     },
 
     startRecording: async () => {
@@ -999,7 +1011,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         let producedTranscription = false;
 
         if (isRealtime) {
-          await drainStorageWriteQueue();
+          await drainPendingWrites();
           producedTranscription =
             get().smartSplit.createdTranscriptions.length > 0;
         } else {

@@ -70,9 +70,19 @@ jest.mock("@/stores", () => ({
 
 jest.mock("@/services", () => ({
   registerForegroundService: jest.fn(),
-  storageService: {
-    processPendingDeletes: jest.fn().mockResolvedValue(undefined),
-  },
+}));
+
+jest.mock("@/db", () => ({
+  openAndPrepareDatabase: jest.fn().mockResolvedValue({}),
+}));
+
+// Note: @/db/migrations/migrations.js and drizzle-orm/expo-sqlite/migrator
+// are stubbed globally in jest.setup.js — only the runtime-migration
+// functions need a per-test override here.
+jest.mock("@/db/runtime-migration", () => ({
+  runLegacyMigrationIfNeeded: jest.fn().mockResolvedValue(undefined),
+  consolidateDefaultSessionIfNeeded: jest.fn().mockResolvedValue(undefined),
+  cleanupLegacyArtifactsIfPresent: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/hooks", () => ({}));

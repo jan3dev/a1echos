@@ -4,8 +4,8 @@ import { useShallow } from "zustand/shallow";
 
 import { AppConstants } from "@/constants";
 import { Session, createSession } from "@/models";
-import { storageService } from "@/services";
-import { logWarn } from "@/utils";
+import { audioProtectionService, databaseService } from "@/services";
+import { FeatureFlag, logError, logWarn } from "@/utils";
 
 interface SessionStore {
   sessions: Session[];
@@ -42,18 +42,9 @@ export const useSessionStore = create<SessionStore>((set, get) => {
     );
   };
 
-  const saveSessions = async () => {
-    const { sessions } = get();
-    await storageService.saveSessions(sessions);
-  };
-
   const saveActiveSession = async () => {
     const { activeSessionId } = get();
-    if (activeSessionId) {
-      await storageService.saveActiveSessionId(activeSessionId);
-    } else {
-      await storageService.clearActiveSessionId();
-    }
+    await databaseService.setActiveSessionId(activeSessionId || null);
   };
 
   return {
@@ -64,8 +55,8 @@ export const useSessionStore = create<SessionStore>((set, get) => {
     needsSort: true,
 
     loadSessions: async () => {
-      const sessions = await storageService.getSessions();
-      const storedActive = await storageService.getActiveSessionId();
+      const sessions = await databaseService.listSessions();
+      const storedActive = await databaseService.getActiveSessionId();
 
       let activeSessionId = "";
 
@@ -73,7 +64,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         activeSessionId = storedActive;
       } else if (sessions.length > 0) {
         activeSessionId = sessions[0].id;
-        await storageService.saveActiveSessionId(activeSessionId);
+        await databaseService.setActiveSessionId(activeSessionId);
       }
 
       set({
@@ -185,7 +176,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           activeSessionId: session.id,
           needsSort: true,
         });
-        await saveSessions();
+        await databaseService.upsertSession(session);
         await saveActiveSession();
       }
 
@@ -220,19 +211,20 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           );
         }
 
-        const updatedSessions = [...sessions];
-        updatedSessions[index] = {
-          ...updatedSessions[index],
+        const updated: Session = {
+          ...sessions[index],
           name: trimmedName,
           lastModified: new Date(),
         };
+        const updatedSessions = [...sessions];
+        updatedSessions[index] = updated;
 
         set({
           sessions: updatedSessions,
           needsSort: true,
         });
 
-        await saveSessions();
+        await databaseService.upsertSession(updated);
       }
     },
 
@@ -269,6 +261,21 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         return;
       }
 
+      // FK cascade deletes transcriptions; service returns audio paths whose
+      // file lifecycle is managed by audioProtectionService. Do the DB delete
+      // FIRST so a failure leaves the in-memory state and UI consistent
+      // instead of optimistically lying about a session that's still on disk.
+      let deletedAudioPaths: string[] = [];
+      try {
+        ({ deletedAudioPaths } = await databaseService.deleteSession(id));
+      } catch (error) {
+        logError(error, {
+          flag: FeatureFlag.session,
+          message: `Failed to delete session ${id} from database`,
+        });
+        throw new Error(`Failed to delete session: ${error}`);
+      }
+
       const updatedSessions = sessions.filter((s) => s.id !== id);
       let newActiveId = activeSessionId;
 
@@ -285,8 +292,11 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         needsSort: true,
       });
 
-      await saveSessions();
-      if (activeSessionId === id && newActiveId) {
+      await Promise.allSettled(
+        deletedAudioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+      );
+
+      if (activeSessionId === id) {
         await saveActiveSession();
       }
     },
@@ -306,18 +316,19 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 
       const index = sessions.findIndex((s) => s.id === sessionId);
       if (index >= 0) {
-        const updatedSessions = [...sessions];
-        updatedSessions[index] = {
-          ...updatedSessions[index],
+        const updated: Session = {
+          ...sessions[index],
           lastModified: new Date(),
         };
+        const updatedSessions = [...sessions];
+        updatedSessions[index] = updated;
 
         set({
           sessions: updatedSessions,
           needsSort: true,
         });
 
-        await saveSessions();
+        await databaseService.upsertSession(updated);
       }
     },
 

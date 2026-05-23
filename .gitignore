@@ -42,6 +42,9 @@ app-example
 /ios
 /android
 
+# local module build artifacts (gradle / kotlin caches)
+modules/*/android/build/
+
 # Cursor
 .cursor/
 

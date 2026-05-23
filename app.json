@@ -59,6 +59,8 @@
       "./plugins/withReactNativeFsFix",
       "./plugins/withNdkVersion",
       "./plugins/withEchosKeyboard",
+      "./plugins/withSqlcipher",
+      "./plugins/withFileProtection",
       [
         "expo-build-properties",
         {

@@ -98,16 +98,7 @@ export const Tooltip = ({
   };
 
   const renderContent = () => (
-    <View
-      style={[
-        styles.content,
-        contentPadding,
-        {
-          backgroundColor:
-            variant === "normal" ? backgroundColor : "transparent",
-        },
-      ]}
-    >
+    <View style={[styles.content, contentPadding]}>
       {isInfo && (
         <>
           {onLeadingIconTap ? (
@@ -153,21 +144,17 @@ export const Tooltip = ({
   );
 
   const content = renderContent();
-  const bubble =
-    variant === "normal" ? (
-      <View
-        style={[
-          { borderRadius: DEFAULT_BORDER_RADIUS, overflow: "hidden" },
-          getShadow("menu"),
-        ]}
-      >
-        {content}
-      </View>
-    ) : (
-      <View style={{ borderRadius: DEFAULT_BORDER_RADIUS, backgroundColor }}>
-        {content}
-      </View>
-    );
+
+  const bubble = (
+    <View
+      style={[
+        { borderRadius: DEFAULT_BORDER_RADIUS, backgroundColor },
+        variant === "normal" ? getShadow("menu") : null,
+      ]}
+    >
+      {content}
+    </View>
+  );
 
   return (
     <Animated.View

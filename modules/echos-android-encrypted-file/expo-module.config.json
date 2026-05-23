@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["com.a1lab.echos.encfile.EchosAndroidEncryptedFileModule"]
+  }
+}

@@ -1,12 +1,14 @@
+// EncryptionService remains in PR 1 only to decrypt legacy data inside the
+// one-shot migration runner. Removed in PR 2 once telemetry confirms the
+// migration has baked across the user base.
 export {
   encryptionService,
   default as encryptionServiceDefault,
 } from "./encryption-service/EncryptionService";
 
-export {
-  storageService,
-  default as storageServiceDefault,
-} from "./storage-service/StorageService";
+export { databaseService } from "./database-service";
+
+export { audioProtectionService } from "./audio-protection-service";
 
 export {
   backgroundRecordingService,

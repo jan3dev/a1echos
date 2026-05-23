@@ -1,4 +1,5 @@
 import "@/localization";
+import { migrate } from "drizzle-orm/expo-sqlite/migrator";
 import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
@@ -19,7 +20,14 @@ import {
   Tooltip,
 } from "@/components";
 import { AppConstants } from "@/constants";
-import { registerForegroundService, storageService } from "@/services";
+import { openAndPrepareDatabase } from "@/db";
+import migrationsBundle from "@/db/migrations/migrations.js";
+import {
+  cleanupLegacyArtifactsIfPresent,
+  consolidateDefaultSessionIfNeeded,
+  runLegacyMigrationIfNeeded,
+} from "@/db/runtime-migration";
+import { registerForegroundService } from "@/services";
 import {
   initializeModelDownloadStore,
   initializeSessionStore,
@@ -301,10 +309,21 @@ export default function RootLayout() {
       try {
         await initTheme();
 
+        // 1. Open SQLCipher-encrypted DB (PRAGMA key from SecureStore).
+        const db = await openAndPrepareDatabase();
+        // 2. Apply drizzle schema migrations (no-op on already-current DB).
+        await migrate(db, migrationsBundle);
+        // 3. One-shot legacy JSON → SQLite migration (idempotent across launches).
+        await runLegacyMigrationIfNeeded();
+        // 4. Fold the synthetic "Imported" session into a real session if
+        //    one exists. Idempotent — no-op on clean installs.
+        await consolidateDefaultSessionIfNeeded();
+        // 5. Idempotent cleanup of stale legacy artifacts from prior crashes.
+        await cleanupLegacyArtifactsIfPresent();
+
         await Promise.all([
           initializeSettingsStore(),
           initializeSessionStore(),
-          storageService.processPendingDeletes(),
         ]);
         initializeModelDownloadStore();
         await initializeTranscriptionStore();

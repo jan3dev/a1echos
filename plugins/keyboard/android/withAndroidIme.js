@@ -126,6 +126,7 @@ function withImeSources(config) {
         "RecordingLock.kt",
         "KeyFeedback.kt",
         "KeyTheme.kt",
+        "KeyboardViewUtils.kt",
         "KeyDeleteRepeater.kt",
         "EmojiData.kt",
         "EmojiSearchIndex.kt",

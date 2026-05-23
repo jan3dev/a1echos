@@ -9,9 +9,10 @@ import {
   TranscriptionState,
 } from "@/models";
 import {
+  audioProtectionService,
   backgroundRecordingService,
+  databaseService,
   sherpaTranscriptionService,
-  storageService,
 } from "@/services";
 
 import { useSessionStore } from "../session-store/sessionStore";
@@ -31,21 +32,25 @@ import {
 } from "./transcriptionStore";
 
 jest.mock("@/services", () => ({
-  storageService: {
-    getTranscriptions: jest.fn(async () => []),
-    saveTranscription: jest.fn(async () => undefined),
-    deleteTranscription: jest.fn(async () => undefined),
-    deleteTranscriptionsForSession: jest.fn(async () => undefined),
-    clearTranscriptions: jest.fn(async () => undefined),
-    saveAudioFile: jest.fn(
-      async (_src: string, name: string) => `/audio/${name}`,
-    ),
-    // Also needed by sessionStore (cross-store calls from updateSessionModifiedTimestamp)
-    getSessions: jest.fn(async () => []),
-    saveSessions: jest.fn(async () => undefined),
+  databaseService: {
+    listSessions: jest.fn(async () => []),
+    upsertSession: jest.fn(async () => undefined),
+    deleteSession: jest.fn(async () => ({ deletedAudioPaths: [] })),
     getActiveSessionId: jest.fn(async () => null),
-    saveActiveSessionId: jest.fn(async () => undefined),
-    clearActiveSessionId: jest.fn(async () => undefined),
+    setActiveSessionId: jest.fn(async () => undefined),
+    listTranscriptions: jest.fn(async () => []),
+    listTranscriptionsForSession: jest.fn(async () => []),
+    upsertTranscription: jest.fn(async () => undefined),
+    deleteTranscription: jest.fn(async () => ({ audioPath: null })),
+    deleteTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
+    clearAllTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
+  },
+  audioProtectionService: {
+    saveAudio: jest.fn(async (_src: string, name: string) => `/audio/${name}`),
+    deleteAudio: jest.fn(async () => undefined),
+    decryptAudioToCache: jest.fn(async (p: string) => p),
+    applyToAudioDirectory: jest.fn(async () => undefined),
+    encryptExistingAudioFilesInPlace: jest.fn(async () => ({ migrated: 0 })),
   },
   sherpaTranscriptionService: {
     initialize: jest.fn(async () => true),
@@ -519,13 +524,12 @@ describe("transcriptionStore", () => {
     });
 
     describe("loadTranscriptions", () => {
-      it("loads and sorts by timestamp ascending", async () => {
-        (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([
-          tx2,
-          tx1,
-        ]);
+      it("loads sorted transcriptions from the DB", async () => {
+        // listTranscriptions returns rows already ordered by timestamp_ms ASC.
+        (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+          [tx1, tx2],
+        );
 
-        // Need READY state to operate, and operation lock needs to be available
         useTranscriptionStore.setState({
           state: TranscriptionState.READY,
           isOperationLocked: false,
@@ -551,6 +555,17 @@ describe("transcriptionStore", () => {
         expect(txs[0].id).toBe("tx1");
         expect(txs[1].id).toBe("tx2");
       });
+
+      it("re-sorts when a new item arrives with an out-of-order timestamp", () => {
+        useTranscriptionStore.setState({ transcriptions: [tx2] });
+        // tx1 has an earlier timestamp than the existing tail (tx2).
+        useTranscriptionStore.getState().addTranscription(tx1);
+
+        const txs = useTranscriptionStore.getState().transcriptions;
+        expect(txs).toHaveLength(2);
+        expect(txs[0].id).toBe("tx1");
+        expect(txs[1].id).toBe("tx2");
+      });
     });
 
     describe("updateTranscription", () => {
@@ -561,7 +576,9 @@ describe("transcriptionStore", () => {
 
         await useTranscriptionStore.getState().updateTranscription(updated);
 
-        expect(storageService.saveTranscription).toHaveBeenCalledWith(updated);
+        expect(databaseService.upsertTranscription).toHaveBeenCalledWith(
+          updated,
+        );
         expect(useTranscriptionStore.getState().transcriptions[0].text).toBe(
           "Updated text",
         );
@@ -569,9 +586,9 @@ describe("transcriptionStore", () => {
 
       it("rolls back on storage failure", async () => {
         useTranscriptionStore.setState({ transcriptions: [tx1] });
-        (storageService.saveTranscription as jest.Mock).mockRejectedValueOnce(
-          new Error("save fail"),
-        );
+        (
+          databaseService.upsertTranscription as jest.Mock
+        ).mockRejectedValueOnce(new Error("save fail"));
 
         const updated = { ...tx1, text: "Updated text" };
         await expect(
@@ -600,7 +617,7 @@ describe("transcriptionStore", () => {
 
         await useTranscriptionStore.getState().deleteTranscription("tx1");
 
-        expect(storageService.deleteTranscription).toHaveBeenCalledWith("tx1");
+        expect(databaseService.deleteTranscription).toHaveBeenCalledWith("tx1");
         expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
         expect(useTranscriptionStore.getState().transcriptions[0].id).toBe(
           "tx2",
@@ -616,7 +633,7 @@ describe("transcriptionStore", () => {
     });
 
     describe("deleteTranscriptions (batch)", () => {
-      it("deletes multiple transcriptions", async () => {
+      it("deletes multiple transcriptions in one DB call", async () => {
         useSessionStore.setState({ sessions: [testSession] });
         useTranscriptionStore.setState({ transcriptions: [tx1, tx2, tx3] });
 
@@ -624,7 +641,10 @@ describe("transcriptionStore", () => {
           .getState()
           .deleteTranscriptions(new Set(["tx1", "tx2"]));
 
-        expect(storageService.deleteTranscription).toHaveBeenCalledTimes(2);
+        expect(databaseService.deleteTranscriptions).toHaveBeenCalledTimes(1);
+        const calledWith = (databaseService.deleteTranscriptions as jest.Mock)
+          .mock.calls[0][0];
+        expect(new Set(calledWith)).toEqual(new Set(["tx1", "tx2"]));
         expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
       });
     });
@@ -635,7 +655,7 @@ describe("transcriptionStore", () => {
 
         await useTranscriptionStore.getState().clearTranscriptions();
 
-        expect(storageService.clearTranscriptions).toHaveBeenCalled();
+        expect(databaseService.clearAllTranscriptions).toHaveBeenCalled();
         expect(useTranscriptionStore.getState().transcriptions).toEqual([]);
         expect(useTranscriptionStore.getState().isLoaded).toBe(true);
       });
@@ -669,7 +689,7 @@ describe("transcriptionStore", () => {
           .getState()
           .deleteParagraphFromTranscription("txs", 0);
 
-        expect(storageService.deleteTranscription).toHaveBeenCalledWith("txs");
+        expect(databaseService.deleteTranscription).toHaveBeenCalledWith("txs");
       });
     });
 
@@ -684,9 +704,10 @@ describe("transcriptionStore", () => {
           .getState()
           .deleteAllTranscriptionsForSession("session-1");
 
-        expect(
-          storageService.deleteTranscriptionsForSession,
-        ).toHaveBeenCalledWith("session-1");
+        expect(databaseService.deleteTranscriptions).toHaveBeenCalledWith([
+          "tx1",
+          "tx2",
+        ]);
         expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
         expect(useTranscriptionStore.getState().transcriptions[0].id).toBe(
           "tx3",
@@ -695,7 +716,9 @@ describe("transcriptionStore", () => {
     });
 
     describe("cleanupDeletedSessions", () => {
-      it("removes transcriptions for sessions not in valid set", async () => {
+      it("removes transcriptions for sessions not in valid set (in-memory only)", async () => {
+        // FK cascade now handles DB deletes — cleanupDeletedSessions just
+        // prunes the in-memory mirror.
         useTranscriptionStore.setState({
           transcriptions: [tx1, tx3],
         });
@@ -703,9 +726,7 @@ describe("transcriptionStore", () => {
         const validIds = new Set(["session-1"]);
         await useTranscriptionStore.getState().cleanupDeletedSessions(validIds);
 
-        expect(
-          storageService.deleteTranscriptionsForSession,
-        ).toHaveBeenCalledWith("session-2");
+        expect(databaseService.deleteTranscriptions).not.toHaveBeenCalled();
         expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
         expect(useTranscriptionStore.getState().transcriptions[0].id).toBe(
           "tx1",
@@ -719,16 +740,16 @@ describe("transcriptionStore", () => {
           .getState()
           .cleanupDeletedSessions(new Set(["session-1"]));
 
-        expect(
-          storageService.deleteTranscriptionsForSession,
-        ).not.toHaveBeenCalled();
+        expect(databaseService.deleteTranscriptions).not.toHaveBeenCalled();
       });
     });
   });
 
   describe("initialize()", () => {
     it("loads transcriptions, inits whisper, subscribes audio, transitions to READY", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
 
       await useTranscriptionStore.getState().initialize();
       const state = useTranscriptionStore.getState();
@@ -740,7 +761,9 @@ describe("transcriptionStore", () => {
     });
 
     it("whisper init failure is non-fatal", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
       (
         sherpaTranscriptionService.initialize as jest.Mock
       ).mockResolvedValueOnce(false);
@@ -762,7 +785,7 @@ describe("transcriptionStore", () => {
     });
 
     it("sets error on initialization failure", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockRejectedValueOnce(
+      (databaseService.listTranscriptions as jest.Mock).mockRejectedValueOnce(
         new Error("load fail"),
       );
 
@@ -1000,9 +1023,9 @@ describe("transcriptionStore", () => {
       expect(
         sherpaTranscriptionService.stopRealtimeTranscription,
       ).toHaveBeenCalled();
-      expect(storageService.saveTranscription).toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).toHaveBeenCalled();
       // Single-item file-mode runs still attach the WAV for playback.
-      expect(storageService.saveAudioFile).toHaveBeenCalled();
+      expect(audioProtectionService.saveAudio).toHaveBeenCalled();
       expect(
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
@@ -1030,8 +1053,8 @@ describe("transcriptionStore", () => {
 
       const state = useTranscriptionStore.getState();
       expect(state.transcriptions).toHaveLength(2);
-      expect(storageService.saveAudioFile).not.toHaveBeenCalled();
-      expect(storageService.saveTranscription).toHaveBeenCalledTimes(2);
+      expect(audioProtectionService.saveAudio).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).toHaveBeenCalledTimes(2);
       expect(state.transcriptions.every((t) => t.audioPath === "")).toBe(true);
     });
 
@@ -1061,7 +1084,7 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
     });
 
@@ -1096,8 +1119,8 @@ describe("transcriptionStore", () => {
       const state = useTranscriptionStore.getState();
       expect(state.transcriptions).toHaveLength(1);
       expect(state.transcriptions[0].audioPath).toBe("");
-      expect(storageService.saveAudioFile).not.toHaveBeenCalled();
-      expect(storageService.saveTranscription).toHaveBeenCalled();
+      expect(audioProtectionService.saveAudio).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).toHaveBeenCalled();
     });
   });
 
@@ -1630,7 +1653,7 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(storageService.saveAudioFile).toHaveBeenCalledWith(
+      expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
         "/tmp/rec_123.wav",
         expect.stringMatching(/^audio_\d+\.wav$/),
       );
@@ -1656,7 +1679,7 @@ describe("transcriptionStore", () => {
       const txs = useTranscriptionStore.getState().transcriptions;
       expect(txs).toHaveLength(1);
       expect(txs[0].audioPath).toBe("");
-      expect(storageService.saveTranscription).toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).toHaveBeenCalled();
     });
 
     it("skips persist for incognito session in realtime mode", async () => {
@@ -1687,7 +1710,7 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().stopRecordingAndSave();
 
-      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
     });
 
@@ -1759,7 +1782,7 @@ describe("transcriptionStore", () => {
       jest.clearAllMocks();
     });
 
-    it("skips empty session IDs during cleanup", async () => {
+    it("prunes empty-sessionId transcriptions in memory (no DB call)", async () => {
       const txEmpty = makeTx({ id: "txe", sessionId: "" });
       const txValid = makeTx({ id: "txv", sessionId: "session-1" });
       useTranscriptionStore.setState({
@@ -1770,9 +1793,7 @@ describe("transcriptionStore", () => {
         .getState()
         .cleanupDeletedSessions(new Set(["session-1"]));
 
-      expect(
-        storageService.deleteTranscriptionsForSession,
-      ).not.toHaveBeenCalledWith("");
+      expect(databaseService.deleteTranscriptions).not.toHaveBeenCalled();
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
       expect(useTranscriptionStore.getState().transcriptions[0].id).toBe("txv");
     });
@@ -1910,7 +1931,9 @@ describe("transcriptionStore", () => {
 
   describe("initializeTranscriptionStore", () => {
     it("calls initialize on the store", async () => {
-      (storageService.getTranscriptions as jest.Mock).mockResolvedValueOnce([]);
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
 
       await initializeTranscriptionStore();
 
@@ -2035,7 +2058,7 @@ describe("transcriptionStore", () => {
         isOperationLocked: false,
         lastOperationTime: null,
       });
-      (storageService.getTranscriptions as jest.Mock).mockRejectedValueOnce(
+      (databaseService.listTranscriptions as jest.Mock).mockRejectedValueOnce(
         new Error("storage error"),
       );
 
@@ -2254,7 +2277,7 @@ describe("transcriptionStore", () => {
   });
 
   describe("deleteTranscriptions - edge cases", () => {
-    it("skips deletion for IDs not found in state", async () => {
+    it("passes all requested IDs through to the DB (FK / WHERE IN handles unknowns)", async () => {
       const tx1 = makeTx({ id: "tx1" });
       useSessionStore.setState({ sessions: [testSession] });
       useTranscriptionStore.setState({ transcriptions: [tx1] });
@@ -2263,16 +2286,17 @@ describe("transcriptionStore", () => {
         .getState()
         .deleteTranscriptions(new Set(["tx1", "nonexistent"]));
 
-      // Only tx1 should have been deleted from storage
-      expect(storageService.deleteTranscription).toHaveBeenCalledTimes(1);
-      expect(storageService.deleteTranscription).toHaveBeenCalledWith("tx1");
+      expect(databaseService.deleteTranscriptions).toHaveBeenCalledTimes(1);
+      const calledWith = (databaseService.deleteTranscriptions as jest.Mock)
+        .mock.calls[0][0];
+      expect(new Set(calledWith)).toEqual(new Set(["tx1", "nonexistent"]));
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
     });
 
     it("handles storage failure during batch delete", async () => {
       const tx1 = makeTx({ id: "tx1" });
       useTranscriptionStore.setState({ transcriptions: [tx1] });
-      (storageService.deleteTranscription as jest.Mock).mockRejectedValueOnce(
+      (databaseService.deleteTranscriptions as jest.Mock).mockRejectedValueOnce(
         new Error("delete fail"),
       );
 
@@ -2284,9 +2308,9 @@ describe("transcriptionStore", () => {
 
   describe("clearTranscriptions - error handling", () => {
     it("throws on storage failure", async () => {
-      (storageService.clearTranscriptions as jest.Mock).mockRejectedValueOnce(
-        new Error("clear fail"),
-      );
+      (
+        databaseService.clearAllTranscriptions as jest.Mock
+      ).mockRejectedValueOnce(new Error("clear fail"));
 
       await expect(
         useTranscriptionStore.getState().clearTranscriptions(),
@@ -2296,10 +2320,11 @@ describe("transcriptionStore", () => {
 
   describe("deleteAllTranscriptionsForSession - error handling", () => {
     it("throws on storage failure", async () => {
-      useTranscriptionStore.setState({ transcriptions: [] });
-      (
-        storageService.deleteTranscriptionsForSession as jest.Mock
-      ).mockRejectedValueOnce(new Error("delete fail"));
+      const tx = makeTx({ id: "tx-err", sessionId: "session-1" });
+      useTranscriptionStore.setState({ transcriptions: [tx] });
+      (databaseService.deleteTranscriptions as jest.Mock).mockRejectedValueOnce(
+        new Error("delete fail"),
+      );
 
       await expect(
         useTranscriptionStore
@@ -2349,7 +2374,7 @@ describe("transcriptionStore", () => {
       useTranscriptionStore.setState({ transcriptions: [tx1] });
 
       const updated = { ...tx1, text: "Updated" };
-      (storageService.saveTranscription as jest.Mock).mockImplementation(
+      (databaseService.upsertTranscription as jest.Mock).mockImplementation(
         async () => {
           // Simulate another operation modifying the store during the save
           const currentTxs = useTranscriptionStore.getState().transcriptions;
@@ -2536,7 +2561,7 @@ describe("transcriptionStore", () => {
       emitChunk({ text: "", boundary: "final" });
 
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(0);
-      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
     });
 
     it("final boundary on whitespace-only buffer resets state without persisting", async () => {
@@ -2548,7 +2573,7 @@ describe("transcriptionStore", () => {
       expect(state.transcriptions).toHaveLength(0);
       expect(state.smartSplit.currentItemId).toBeNull();
       expect(state.smartSplit.currentItemText).toBe("");
-      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
     });
 
     it("none boundary keeps accumulating text with a space separator", async () => {
@@ -2627,9 +2652,9 @@ describe("transcriptionStore", () => {
       // Flush the queued saves.
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(storageService.saveTranscription).toHaveBeenCalledTimes(3);
+      expect(databaseService.upsertTranscription).toHaveBeenCalledTimes(3);
       const calledIds = (
-        storageService.saveTranscription as jest.Mock
+        databaseService.upsertTranscription as jest.Mock
       ).mock.calls.map(([t]) => t.id);
       expect(calledIds).toEqual(["id-q1", "id-q2", "id-q3"]);
     });
@@ -2657,7 +2682,7 @@ describe("transcriptionStore", () => {
       emitChunk({ text: "Secret.", boundary: "final" });
 
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
-      expect(storageService.saveTranscription).not.toHaveBeenCalled();
+      expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
     });
   });
 });

@@ -5,7 +5,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"],
-      "@/app/*": ["./app/*"]
+      "@/app/*": ["./app/*"],
+      "@modules/*": ["./modules/*"]
     }
   },
   "include": [

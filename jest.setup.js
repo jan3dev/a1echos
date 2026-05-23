@@ -12,6 +12,34 @@
 let mockAsyncStorageStore = {};
 let mockSecureStoreStore = {};
 
+// ---------------------------------------------------------------------------
+// Local Expo modules (modules/echos-*)
+// ---------------------------------------------------------------------------
+jest.mock(
+  "@modules/echos-file-protection/src",
+  () => ({
+    EchosFileProtection: {
+      setFileProtection: jest.fn(async () => undefined),
+      getFileProtection: jest.fn(async () => "none"),
+      setBackupExcluded: jest.fn(async () => undefined),
+    },
+  }),
+  { virtual: true },
+);
+
+jest.mock(
+  "@modules/echos-android-encrypted-file/src",
+  () => ({
+    EchosAndroidEncryptedFile: {
+      copyToEncrypted: jest.fn(async () => undefined),
+      decryptToCacheFile: jest.fn(async (p) => p),
+      isEncrypted: jest.fn(async () => true),
+      deleteFile: jest.fn(async () => undefined),
+    },
+  }),
+  { virtual: true },
+);
+
 const { useThemeStore } = require("./src/theme");
 
 // ---------------------------------------------------------------------------
@@ -75,7 +103,8 @@ jest.mock("expo-file-system", () => {
     exists: true,
     create: jest.fn().mockResolvedValue(undefined),
     delete: jest.fn().mockResolvedValue(undefined),
-    list: jest.fn().mockResolvedValue([]),
+    // expo-file-system Directory.list() is synchronous; returns (File|Directory)[].
+    list: jest.fn(() => []),
   }));
   return {
     File: mockFile,
@@ -157,6 +186,64 @@ jest.mock("expo-splash-screen", () => ({
 jest.mock("expo-localization", () => ({
   getLocales: jest.fn(() => [{ languageCode: "en", regionCode: "US" }]),
   locale: "en-US",
+}));
+
+// expo-sqlite — mocked at the module level. Database tests should mock
+// `@/db` directly with a better-sqlite3-backed drizzle handle. Most other
+// tests just need the import to succeed.
+jest.mock("expo-sqlite", () => ({
+  openDatabaseSync: jest.fn(() => ({
+    execAsync: jest.fn(async () => undefined),
+    runAsync: jest.fn(async () => ({ changes: 0, lastInsertRowId: 0 })),
+    getAllAsync: jest.fn(async () => []),
+    getFirstAsync: jest.fn(async () => null),
+    closeAsync: jest.fn(async () => undefined),
+    deleteAsync: jest.fn(async () => undefined),
+  })),
+  deleteDatabaseAsync: jest.fn(async () => undefined),
+}));
+
+// drizzle-orm/expo-sqlite — return a stub by default; DB-touching tests
+// override this via jest.mock at the test-file level.
+jest.mock("drizzle-orm/expo-sqlite", () => {
+  const noopChain = {
+    from: jest.fn(() => noopChain),
+    where: jest.fn(() => noopChain),
+    orderBy: jest.fn(() => noopChain),
+    values: jest.fn(() => noopChain),
+    set: jest.fn(() => noopChain),
+    onConflictDoNothing: jest.fn(() => noopChain),
+    onConflictDoUpdate: jest.fn(() => noopChain),
+    all: jest.fn(async () => []),
+    get: jest.fn(async () => null),
+    run: jest.fn(async () => ({ rowsAffected: 0 })),
+  };
+  return {
+    drizzle: jest.fn(() => ({
+      select: jest.fn(() => noopChain),
+      insert: jest.fn(() => noopChain),
+      update: jest.fn(() => noopChain),
+      delete: jest.fn(() => noopChain),
+      transaction: jest.fn(async (fn) => fn(noopChain)),
+    })),
+  };
+});
+
+// drizzle-orm/expo-sqlite/migrator — imperative migrator stub.
+jest.mock(
+  "drizzle-orm/expo-sqlite/migrator",
+  () => ({
+    migrate: jest.fn(async () => undefined),
+  }),
+  { virtual: true },
+);
+
+// drizzle migrations bundle (the auto-generated migrations.js imports .sql
+// strings via babel-plugin-inline-import; jest doesn't run that transform,
+// so we stub the bundle and the underlying .sql modules via moduleNameMapper).
+jest.mock("@/db/migrations/migrations.js", () => ({
+  __esModule: true,
+  default: { journal: { entries: [] }, migrations: {} },
 }));
 
 jest.mock("expo-linear-gradient", () => ({
