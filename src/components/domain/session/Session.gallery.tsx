@@ -4,14 +4,12 @@ import { StyleSheet, View } from "react-native";
 import {
   SessionActionsSheet,
   SessionAppBar,
-  SessionList,
   SessionListItem,
 } from "@/components";
 import { Button } from "@/components/ui/button/Button";
+import type { GalleryEntry } from "@/design-system/manifest";
 import { Session } from "@/models";
 import { useSessionStore, useTranscriptionStore } from "@/stores";
-
-import type { GalleryEntry } from "@/design-system/manifest";
 
 // Mock data
 const dummySession: Session = {
@@ -100,40 +98,6 @@ export const ListItemUnselected = () => {
         onLongPress={() => console.log("Long Pressed")}
         selectionMode={true}
         isSelected={false}
-      />
-    </View>
-  );
-};
-
-// --- SessionList ---
-
-export const List = () => {
-  useSeedStore();
-  return (
-    <View style={styles.listStage}>
-      <SessionList
-        selectionMode={false}
-        selectedSessionIds={new Set()}
-        onSessionTap={(id) => console.log("Tap", id)}
-        onSessionLongPress={(s) => console.log("Long Press", s.name)}
-        onSelectionToggle={(id) => console.log("Toggle", id)}
-        onSessionMorePress={(s) => console.log("More", s.name)}
-      />
-    </View>
-  );
-};
-
-export const ListSelectionMode = () => {
-  useSeedStore();
-  return (
-    <View style={styles.listStage}>
-      <SessionList
-        selectionMode={true}
-        selectedSessionIds={new Set(["session-1"])}
-        onSessionTap={(id) => console.log("Tap", id)}
-        onSessionLongPress={(s) => console.log("Long Press", s.name)}
-        onSelectionToggle={(id) => console.log("Toggle", id)}
-        onSessionMorePress={(s) => console.log("More", s.name)}
       />
     </View>
   );
@@ -253,11 +217,6 @@ const styles = StyleSheet.create({
   fullWidth: {
     width: "100%",
   },
-  listStage: {
-    width: "100%",
-    height: 240,
-    overflow: "hidden",
-  },
 });
 
 const gallery: GalleryEntry = {
@@ -268,8 +227,6 @@ const gallery: GalleryEntry = {
     { name: "ListItem", render: ListItem },
     { name: "ListItemSelectionMode", render: ListItemSelectionMode },
     { name: "ListItemUnselected", render: ListItemUnselected },
-    { name: "List", render: List },
-    { name: "ListSelectionMode", render: ListSelectionMode },
     { name: "AppBarDefault", render: AppBarDefault },
     { name: "AppBarIncognito", render: AppBarIncognito },
     { name: "AppBarEditMode", render: AppBarEditMode },

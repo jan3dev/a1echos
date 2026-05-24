@@ -60,6 +60,8 @@
   "followUs": "Follow us on X",
   "recordingPrefix": "Session",
   "emptySessionsMessage": "Hit the record button to start transcribing",
+  "scrollToTop": "Scroll to top",
+  "scrollToLatest": "Scroll to latest",
   "modifiedPrefix": "Modified",
   "errorPrefix": "Error:",
   "sessionNameLabel": "Session Name",

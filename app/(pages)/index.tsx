@@ -2,7 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
+import { BackHandler, FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -50,7 +50,7 @@ export default function HomeScreen() {
   const { loc } = useLocalization();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<FlatList<Session>>(null);
 
   const sessions = useSessions();
   const incognitoSession = useIncognitoSession();
@@ -113,7 +113,7 @@ export default function HomeScreen() {
 
   const scrollToTop = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ y: 0, animated: true });
+      scrollRef.current.scrollToOffset({ offset: 0, animated: true });
     }
   }, []);
 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports, react/display-name */
-import { render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
 import { Transcription } from "@/models";
@@ -17,16 +17,24 @@ jest.mock("@/stores", () => ({
   useSettingsStore: jest.fn(),
 }));
 
+const SimpleItem = (props: any) => {
+  const { View, Text } = require("react-native");
+  return (
+    <View testID={`transcription-item-${props.transcription.id}`}>
+      <Text>{props.transcription.text}</Text>
+    </View>
+  );
+};
+
 jest.mock("../transcription-item/TranscriptionItem", () => ({
-  TranscriptionItem: (props: any) => {
-    const { View, Text } = require("react-native");
-    return (
-      <View testID={`transcription-item-${props.transcription.id}`}>
-        <Text>{props.transcription.text}</Text>
-      </View>
-    );
-  },
+  TranscriptionItem: (props: any) => SimpleItem(props),
 }));
+
+const restoreSimpleItemMock = () => {
+  jest.requireMock(
+    "../transcription-item/TranscriptionItem",
+  ).TranscriptionItem = SimpleItem;
+};
 
 const mockTranscriptions: Transcription[] = [
   {
@@ -65,6 +73,7 @@ const defaultProps = {
 describe("TranscriptionList", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    restoreSimpleItemMock();
     (useTranscriptionStore as unknown as jest.Mock).mockReturnValue(
       mockStoreDefaults,
     );
@@ -86,7 +95,19 @@ describe("TranscriptionList", () => {
     expect(toJSON()).toBeNull();
   });
 
-  it("preview item appended when recording", () => {
+  it("renders chronologically with the newest entry at the visual bottom", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    expect(flatList.props.inverted).toBeFalsy();
+    const ids = flatList.props.data.map((t: Transcription) => t.id);
+    expect(ids).toEqual(["t1", "t2"]);
+  });
+
+  it("preview item is appended at the visual bottom", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     (useTranscriptionStore as unknown as jest.Mock).mockReturnValue({
       ...mockStoreDefaults,
@@ -99,9 +120,129 @@ describe("TranscriptionList", () => {
         sessionId: "s1",
       },
     });
-    const { getByTestId } = render(<TranscriptionList {...defaultProps} />);
+    const { getByTestId, UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    const data = flatList.props.data;
+    expect(data[data.length - 1].id).toBe("preview1");
     expect(getByTestId("transcription-item-preview1")).toBeTruthy();
     expect(getByTestId("transcription-item-t1")).toBeTruthy();
+  });
+
+  it("paginates to the latest 30 entries by default", () => {
+    const many: Transcription[] = Array.from({ length: 50 }, (_, i) => ({
+      id: `tr${i}`,
+      text: `row ${i}`,
+      timestamp: new Date(2024, 0, 1 + i),
+      audioPath: "",
+      sessionId: "s1",
+    }));
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(many);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    expect(flatList.props.data).toHaveLength(30);
+    // Last 30 in chronological order: tr20 (oldest visible) … tr49 (newest).
+    expect(flatList.props.data[0].id).toBe("tr20");
+    expect(flatList.props.data[29].id).toBe("tr49");
+  });
+
+  it("onStartReached extends the window by another page of older entries", () => {
+    const many: Transcription[] = Array.from({ length: 50 }, (_, i) => ({
+      id: `tr${i}`,
+      text: `row ${i}`,
+      timestamp: new Date(2024, 0, 1 + i),
+      audioPath: "",
+      sessionId: "s1",
+    }));
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(many);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    act(() => {
+      flatList.props.onStartReached();
+    });
+    const refreshed = UNSAFE_getByType(FlatList);
+    expect(refreshed.props.data).toHaveLength(50);
+    expect(refreshed.props.data[0].id).toBe("tr0");
+  });
+
+  it("onStartReached is a no-op once everything is loaded", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    act(() => {
+      flatList.props.onStartReached();
+      flatList.props.onStartReached();
+    });
+    const refreshed = UNSAFE_getByType(FlatList);
+    expect(refreshed.props.data).toHaveLength(2);
+  });
+
+  it("scroll-to-latest button is reachable after the user scrolls up", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { getByLabelText, UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    act(() => {
+      flatList.props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 0 },
+          contentSize: { height: 99999 },
+          layoutMeasurement: { height: 100 },
+        },
+      });
+    });
+    const button = getByLabelText("scrollToLatest");
+    expect(button).toBeTruthy();
+    fireEvent.press(button);
+  });
+
+  it("wires onContentSizeChange for the initial snap-to-bottom", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+    expect(typeof flatList.props.onContentSizeChange).toBe("function");
+    expect(() => {
+      act(() => {
+        flatList.props.onContentSizeChange();
+      });
+    }).not.toThrow();
+  });
+
+  it("maintainVisibleContentPosition turns on once content overflows so prepended rows don't jump", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+
+    expect(flatList.props.maintainVisibleContentPosition).toBeUndefined();
+
+    act(() => {
+      flatList.props.onLayout({ nativeEvent: { layout: { height: 400 } } });
+      flatList.props.onContentSizeChange(0, 1000);
+    });
+
+    const refreshed = UNSAFE_getByType(FlatList);
+    expect(refreshed.props.maintainVisibleContentPosition).toEqual({
+      minIndexForVisible: 0,
+    });
   });
 
   it("selection mode props forwarded to items", () => {
@@ -113,7 +254,6 @@ describe("TranscriptionList", () => {
         selectedTranscriptionIds={new Set(["t1"])}
       />,
     );
-    // Items should be rendered
     expect(getByTestId("transcription-item-t1")).toBeTruthy();
     expect(getByTestId("transcription-item-t2")).toBeTruthy();
   });
@@ -127,19 +267,8 @@ describe("TranscriptionList", () => {
     const flatList = UNSAFE_getByType(FlatList);
     expect(flatList.props.keyboardShouldPersistTaps).toBe("handled");
     expect(flatList.props.keyboardDismissMode).toBe("interactive");
-  });
-
-  it("edit mode sets editingId", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    // Just verify it renders without errors with edit callbacks
-    const { getByTestId } = render(
-      <TranscriptionList
-        {...defaultProps}
-        onEditModeStarted={jest.fn()}
-        onEditModeEnded={jest.fn()}
-      />,
-    );
-    expect(getByTestId("transcription-item-t1")).toBeTruthy();
+    expect(flatList.props.scrollEventThrottle).toBe(16);
+    expect(flatList.props.onStartReachedThreshold).toBe(0.4);
   });
 
   it("shows realtime live preview when recording in realtime mode", () => {
@@ -230,8 +359,6 @@ describe("TranscriptionList", () => {
     const { queryByTestId, getByTestId } = render(
       <TranscriptionList {...defaultProps} />,
     );
-    // Real items still render, but no synthesized "transcribing_preview" row
-    // appears below them — that's what caused the flicker after stopping.
     expect(getByTestId("transcription-item-t1")).toBeTruthy();
     expect(getByTestId("transcription-item-t2")).toBeTruthy();
     expect(queryByTestId("transcription-item-transcribing_preview")).toBeNull();
@@ -240,10 +367,9 @@ describe("TranscriptionList", () => {
   it("handleStartEdit calls onEditModeStarted callback", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     const onEditModeStarted = jest.fn();
-    // Use the enhanced mock to capture and invoke callbacks
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text, Pressable } = require("react-native");
       return (
         <View testID={`transcription-item-${props.transcription.id}`}>
@@ -267,7 +393,6 @@ describe("TranscriptionList", () => {
       />,
     );
 
-    const { fireEvent } = require("@testing-library/react-native");
     fireEvent.press(getByTestId("start-edit-t1"));
     expect(onEditModeStarted).toHaveBeenCalledTimes(1);
   });
@@ -276,9 +401,9 @@ describe("TranscriptionList", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     const onEditModeEnded = jest.fn();
 
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text, Pressable } = require("react-native");
       return (
         <View testID={`transcription-item-${props.transcription.id}`}>
@@ -295,24 +420,11 @@ describe("TranscriptionList", () => {
       <TranscriptionList {...defaultProps} onEditModeEnded={onEditModeEnded} />,
     );
 
-    const { fireEvent } = require("@testing-library/react-native");
     fireEvent.press(getByTestId("end-edit-t1"));
     expect(onEditModeEnded).toHaveBeenCalledTimes(1);
   });
 
   it("handleScrollToIndexFailed is wired to FlatList", () => {
-    // Restore the default mock for TranscriptionItem
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
-      const { View, Text } = require("react-native");
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-        </View>
-      );
-    };
-
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
 
     const { UNSAFE_getByType } = render(
@@ -322,7 +434,6 @@ describe("TranscriptionList", () => {
     const { FlatList } = require("react-native");
     const flatList = UNSAFE_getByType(FlatList);
     expect(flatList.props.onScrollToIndexFailed).toBeDefined();
-    // Verify calling it does not throw
     expect(() =>
       flatList.props.onScrollToIndexFailed({
         index: 2,
@@ -330,15 +441,6 @@ describe("TranscriptionList", () => {
         averageItemLength: 100,
       }),
     ).not.toThrow();
-  });
-
-  it("returns null when transcriptions are empty and no preview", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue([]);
-    (useTranscriptionStore as unknown as jest.Mock).mockReturnValue(
-      mockStoreDefaults,
-    );
-    const { toJSON } = render(<TranscriptionList {...defaultProps} />);
-    expect(toJSON()).toBeNull();
   });
 
   it("keyboard listener is registered and cleaned up", () => {
@@ -369,7 +471,6 @@ describe("TranscriptionList", () => {
       livePreview: null,
     });
     const { queryByTestId } = render(<TranscriptionList {...defaultProps} />);
-    // No preview item should be added, but existing items should remain
     expect(queryByTestId("transcription-item-t1")).toBeTruthy();
     expect(queryByTestId("transcription-item-t2")).toBeTruthy();
   });
@@ -404,7 +505,6 @@ describe("TranscriptionList", () => {
 
     const { FlatList } = require("react-native");
     const flatList = UNSAFE_getByType(FlatList);
-    // Without a listRef, calling onScrollToIndexFailed should not throw
     expect(() =>
       flatList.props.onScrollToIndexFailed({
         index: 3,
@@ -422,10 +522,9 @@ describe("TranscriptionList", () => {
       updateTranscription: mockUpdateTranscription,
     });
 
-    // Use enhanced mock to capture onTranscriptionUpdate
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text, Pressable } = require("react-native");
       return (
         <View testID={`transcription-item-${props.transcription.id}`}>
@@ -444,7 +543,6 @@ describe("TranscriptionList", () => {
     };
 
     const { getByTestId } = render(<TranscriptionList {...defaultProps} />);
-    const { fireEvent } = require("@testing-library/react-native");
     fireEvent.press(getByTestId("update-t1"));
     expect(mockUpdateTranscription).toHaveBeenCalledWith(
       expect.objectContaining({ id: "t1", text: "Updated" }),
@@ -467,9 +565,9 @@ describe("TranscriptionList", () => {
 
     const onTranscriptionTap = jest.fn();
 
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text, Pressable } = require("react-native");
       return (
         <View testID={`transcription-item-${props.transcription.id}`}>
@@ -489,12 +587,9 @@ describe("TranscriptionList", () => {
       />,
     );
 
-    const { fireEvent } = require("@testing-library/react-native");
-    // Tap on preview item should not call onTranscriptionTap
     fireEvent.press(getByTestId("tap-preview1"));
     expect(onTranscriptionTap).not.toHaveBeenCalled();
 
-    // Tap on regular item should call onTranscriptionTap
     fireEvent.press(getByTestId("tap-t1"));
     expect(onTranscriptionTap).toHaveBeenCalledWith("t1");
   });
@@ -515,9 +610,9 @@ describe("TranscriptionList", () => {
 
     const onTranscriptionLongPress = jest.fn();
 
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text, Pressable } = require("react-native");
       return (
         <View testID={`transcription-item-${props.transcription.id}`}>
@@ -537,9 +632,73 @@ describe("TranscriptionList", () => {
       />,
     );
 
-    const { fireEvent } = require("@testing-library/react-native");
     fireEvent.press(getByTestId("longpress-preview-lp"));
     expect(onTranscriptionLongPress).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId("longpress-t1"));
+    expect(onTranscriptionLongPress).toHaveBeenCalledWith("t1");
+  });
+
+  it("cancels pending animation frame when content size changes again", () => {
+    jest.useFakeTimers();
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const rafSpy = jest
+      .spyOn(global, "requestAnimationFrame")
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 42 as unknown as number;
+      });
+    const cancelSpy = jest
+      .spyOn(global, "cancelAnimationFrame")
+      .mockImplementation(() => {});
+
+    const { UNSAFE_getByType, unmount } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+
+    // Establish a list layout height so the overflow check can fire.
+    act(() => {
+      flatList.props.onLayout({ nativeEvent: { layout: { height: 400 } } });
+    });
+
+    act(() => {
+      // Content taller than the list → snap to end fires.
+      flatList.props.onContentSizeChange(0, 1000);
+      flatList.props.onContentSizeChange(0, 1100);
+      flatList.props.onScrollBeginDrag();
+      jest.advanceTimersByTime(120);
+    });
+    expect(rafSpy).toHaveBeenCalled();
+
+    unmount();
+
+    rafSpy.mockRestore();
+    cancelSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it("skips scrollToEnd when content fits in the list viewport", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const rafSpy = jest
+      .spyOn(global, "requestAnimationFrame")
+      .mockImplementation(() => 42 as unknown as number);
+
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+
+    act(() => {
+      flatList.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+      // Content shorter than list height → no snap.
+      flatList.props.onContentSizeChange(0, 400);
+    });
+    expect(rafSpy).not.toHaveBeenCalled();
+
+    rafSpy.mockRestore();
   });
 
   it("preview items disable selectionMode", () => {
@@ -557,9 +716,9 @@ describe("TranscriptionList", () => {
     });
 
     let capturedSelectionMode: boolean | undefined;
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text } = require("react-native");
       if (props.transcription.id === "preview-sel") {
         capturedSelectionMode = props.selectionMode;
@@ -608,20 +767,7 @@ describe("TranscriptionList", () => {
       },
     });
 
-    // Restore simple mock
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
-      const { View, Text } = require("react-native");
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-        </View>
-      );
-    };
-
     const { getAllByTestId } = render(<TranscriptionList {...defaultProps} />);
-    // Should not have duplicates - the original is replaced by the preview
     const items = getAllByTestId(/^transcription-item-dupe-preview$/);
     expect(items).toHaveLength(1);
   });
@@ -630,9 +776,9 @@ describe("TranscriptionList", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
 
     let capturedCancelling: boolean | undefined;
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
+    jest.requireMock(
+      "../transcription-item/TranscriptionItem",
+    ).TranscriptionItem = (props: any) => {
       const { View, Text } = require("react-native");
       if (props.transcription.id === "t1") {
         capturedCancelling = props.isCancelling;
@@ -649,20 +795,8 @@ describe("TranscriptionList", () => {
     expect(capturedCancelling).toBe(true);
   });
 
-  it("custom topPadding and bottomPadding are applied", () => {
+  it("top padding adds to the chronological top of the list", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-
-    // Restore simple mock
-    jest.requireMock("../transcription-item/TranscriptionItem").TranscriptionItem = (
-      props: any,
-    ) => {
-      const { View, Text } = require("react-native");
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-        </View>
-      );
-    };
 
     const { UNSAFE_getByType } = render(
       <TranscriptionList

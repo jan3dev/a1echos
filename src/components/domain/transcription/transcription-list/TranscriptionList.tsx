@@ -1,6 +1,26 @@
-import { RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Keyboard, Platform, View } from "react-native";
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  FlatList,
+  Keyboard,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
+import { ScrollToEdgeButton } from "@/components/shared/scroll-to-edge-button";
+import { AppConstants } from "@/constants";
+import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
 import {
   useSessionTranscriptions,
@@ -50,15 +70,16 @@ export const TranscriptionList = ({
   listRef,
 }: TranscriptionListProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { loc } = useLocalization();
+  const { height: viewportHeight } = useWindowDimensions();
 
-  // Store access
   const transcriptions = useSessionTranscriptions();
   const transcriptionStore = useTranscriptionStore();
   const settingsStore = useSettingsStore();
 
   const activeSessionId = useRef(
     transcriptions[0]?.sessionId || "default_session",
-  ).current; // Just for fallback
+  ).current;
 
   const livePreview = transcriptionStore.livePreview;
   const loadingPreview = transcriptionStore.loadingPreview;
@@ -66,11 +87,9 @@ export const TranscriptionList = ({
   const isTranscribing = transcriptionStore.isTranscribing();
   const transcriptionMode = settingsStore.selectedTranscriptionMode;
 
-  // Determine active preview state
   const previewState = useMemo((): ActivePreviewState => {
     const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
 
-    // Handle Streaming/Realtime
     if (isRecording && isRealtime) {
       if (livePreview) {
         return {
@@ -82,7 +101,6 @@ export const TranscriptionList = ({
       }
     }
 
-    // Handle File-based Recording (non-realtime)
     if (isRecording && !isRealtime) {
       if (loadingPreview) {
         return {
@@ -93,7 +111,6 @@ export const TranscriptionList = ({
         };
       }
 
-      // Default recording preview if no loading preview yet
       return {
         item: {
           id: "whisper_recording_preview",
@@ -108,7 +125,6 @@ export const TranscriptionList = ({
       };
     }
 
-    // Handle Loading/Transcribing (both file-based and real-time finalization).
     if (isTranscribing) {
       const previewItem = loadingPreview || livePreview;
       if (previewItem) {
@@ -131,24 +147,38 @@ export const TranscriptionList = ({
     activeSessionId,
   ]);
 
-  // Merge items with preview
+  // Chronological: oldest first, preview appended at the end (visual bottom).
   const data = useMemo(() => {
-    let items = [...transcriptions];
     if (previewState.item) {
-      // Remove any existing item with same ID (unlikely but safe)
-      items = items.filter((t) => t.id !== previewState.item!.id);
-      items.push(previewState.item);
+      const filtered = transcriptions.filter(
+        (t) => t.id !== previewState.item!.id,
+      );
+      return [...filtered, previewState.item];
     }
-    return items;
+    return transcriptions;
   }, [transcriptions, previewState.item]);
+
+  const [limit, setLimit] = useState<number>(AppConstants.LIST_PAGE_SIZE);
+  const [showJumpButton, setShowJumpButton] = useState(false);
+  // Unlocks the next bump only after `limit` advances; otherwise duplicate
+  // onStartReached fires at the same window would double-bump.
+  const lastBumpedAtLimitRef = useRef<number | null>(null);
+  const scrollGuard = useProgrammaticScrollGuard();
+
+  // Show only the latest `limit` items; pagination loads older ones from the front.
+  const visibleData = useMemo(() => {
+    const start = Math.max(0, data.length - limit);
+    return data.slice(start);
+  }, [data, limit]);
+  const hasMore = data.length > limit;
 
   const editingIdRef = useRef<string | null>(null);
 
-  const scrollToEditingItem = () => {
+  const scrollToEditingItem = useCallback(() => {
     const currentEditingId = editingIdRef.current;
     if (!currentEditingId || !listRef?.current) return;
 
-    const index = data.findIndex((item) => item.id === currentEditingId);
+    const index = visibleData.findIndex((item) => item.id === currentEditingId);
     if (index === -1) return;
 
     listRef.current.scrollToIndex({
@@ -156,7 +186,7 @@ export const TranscriptionList = ({
       viewPosition: 0.2,
       animated: true,
     });
-  };
+  }, [listRef, visibleData]);
 
   useEffect(() => {
     const keyboardEvent =
@@ -167,92 +197,238 @@ export const TranscriptionList = ({
       }
     });
     return () => subscription.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [scrollToEditingItem]);
 
-  const handleStartEdit = (id: string) => {
-    setEditingId(id);
-    editingIdRef.current = id;
-    onEditModeStarted?.();
-    setTimeout(scrollToEditingItem, 100);
-  };
+  const handleStartEdit = useCallback(
+    (id: string) => {
+      setEditingId(id);
+      editingIdRef.current = id;
+      onEditModeStarted?.();
+      setTimeout(scrollToEditingItem, 100);
+    },
+    [onEditModeStarted, scrollToEditingItem],
+  );
 
-  const handleEndEdit = () => {
+  const handleEndEdit = useCallback(() => {
     setEditingId(null);
     editingIdRef.current = null;
     onEditModeEnded?.();
-  };
+  }, [onEditModeEnded]);
 
-  const handleScrollToIndexFailed = (info: {
-    index: number;
-    highestMeasuredFrameIndex: number;
-    averageItemLength: number;
-  }) => {
-    listRef?.current?.scrollToOffset({
-      offset: info.averageItemLength * info.index,
-      animated: true,
-    });
-  };
+  const handleScrollToIndexFailed = useCallback(
+    (info: {
+      index: number;
+      highestMeasuredFrameIndex: number;
+      averageItemLength: number;
+    }) => {
+      listRef?.current?.scrollToOffset({
+        offset: info.averageItemLength * info.index,
+        animated: true,
+      });
+    },
+    [listRef],
+  );
 
-  const handleUpdateTranscription = (updated: Transcription) => {
-    transcriptionStore.updateTranscription(updated);
-  };
+  const handleUpdateTranscription = useCallback(
+    (updated: Transcription) => {
+      transcriptionStore.updateTranscription(updated);
+    },
+    [transcriptionStore],
+  );
+
+  const handleStartReached = useCallback(() => {
+    if (!hasMore) return;
+    if (lastBumpedAtLimitRef.current === limit) return;
+    lastBumpedAtLimitRef.current = limit;
+    setLimit((prev) => prev + AppConstants.LIST_PAGE_SIZE);
+  }, [hasMore, limit]);
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (scrollGuard.isActive()) return;
+      const { contentOffset, contentSize, layoutMeasurement } =
+        event.nativeEvent;
+      const distanceFromBottom =
+        contentSize.height - layoutMeasurement.height - contentOffset.y;
+      setShowJumpButton(
+        distanceFromBottom >
+          viewportHeight * AppConstants.SCROLL_TO_EDGE_THRESHOLD_RATIO,
+      );
+    },
+    [scrollGuard, viewportHeight],
+  );
+
+  const handleScrollToLatest = useCallback(() => {
+    scrollGuard.begin();
+    setShowJumpButton(false);
+    listRef?.current?.scrollToEnd({ animated: true });
+  }, [listRef, scrollGuard]);
+
+  // Snap to newest on initial layout bursts, but only when content overflows.
+  // maintainVisibleContentPosition mis-anchors on iOS when content fits, so we
+  // also gate the mVCP prop on the same overflow signal.
+  const userHasDraggedRef = useRef(false);
+  const isReadyRef = useRef(false);
+  const [isReady, setIsReady] = useState(false);
+  const [contentOverflows, setContentOverflows] = useState(false);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingScrollFrameRef = useRef<number | null>(null);
+  const listLayoutHeightRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      if (pendingScrollFrameRef.current !== null) {
+        cancelAnimationFrame(pendingScrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    listLayoutHeightRef.current = event.nativeEvent.layout.height;
+  }, []);
+
+  const handleContentSizeChange = useCallback(
+    (_contentWidth: number, contentHeight: number) => {
+      if (visibleData.length === 0) return;
+
+      const layoutHeight = listLayoutHeightRef.current;
+      const overflows = layoutHeight > 0 && contentHeight > layoutHeight + 1;
+      setContentOverflows(overflows);
+
+      if (userHasDraggedRef.current && isReadyRef.current) return;
+
+      if (overflows) {
+        if (pendingScrollFrameRef.current !== null) {
+          cancelAnimationFrame(pendingScrollFrameRef.current);
+        }
+        pendingScrollFrameRef.current = requestAnimationFrame(() => {
+          pendingScrollFrameRef.current = null;
+          listRef?.current?.scrollToEnd({ animated: false });
+        });
+      }
+
+      if (!isReadyRef.current) {
+        if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+        revealTimerRef.current = setTimeout(() => {
+          isReadyRef.current = true;
+          setIsReady(true);
+        }, 60);
+      }
+    },
+    [listRef, visibleData.length],
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    userHasDraggedRef.current = true;
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Transcription }) => {
+      const isPreview = previewState.item?.id === item.id;
+      const itemState = isPreview ? previewState : EmptyPreviewState;
+      const isEditing = editingId === item.id;
+      const isAnyEditing = editingId !== null;
+
+      return (
+        <TranscriptionItem
+          transcription={item}
+          selectionMode={
+            itemState.isStreamingLive ||
+            itemState.isRecording ||
+            itemState.isLoadingResult
+              ? false
+              : selectionMode
+          }
+          isSelected={!isPreview && selectedTranscriptionIds.has(item.id)}
+          isLivePreviewItem={itemState.isStreamingLive}
+          isLoadingWhisperResult={itemState.isLoadingResult}
+          isWhisperRecording={itemState.isRecording}
+          isEditing={isEditing}
+          isAnyEditing={isAnyEditing}
+          isCancelling={isCancellingEdit}
+          onStartEdit={() => handleStartEdit(item.id)}
+          onEndEdit={handleEndEdit}
+          onTranscriptionUpdate={handleUpdateTranscription}
+          onTap={() => {
+            if (!isPreview) {
+              onTranscriptionTap(item.id);
+            }
+          }}
+          onLongPress={() => {
+            if (!isPreview) {
+              onTranscriptionLongPress(item.id);
+            }
+          }}
+        />
+      );
+    },
+    [
+      editingId,
+      handleEndEdit,
+      handleStartEdit,
+      handleUpdateTranscription,
+      isCancellingEdit,
+      onTranscriptionLongPress,
+      onTranscriptionTap,
+      previewState,
+      selectedTranscriptionIds,
+      selectionMode,
+    ],
+  );
 
   if (data.length === 0) return null;
 
   return (
-    <FlatList
-      ref={listRef}
-      data={data}
-      keyExtractor={(item) => item.id}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      onScrollToIndexFailed={handleScrollToIndexFailed}
-      contentContainerStyle={{
-        padding: 16,
-        paddingTop: topPadding + 16,
-        flexGrow: 1,
-      }}
-      ListFooterComponent={<View style={{ height: bottomPadding }} />}
-      renderItem={({ item }) => {
-        const isPreview = previewState.item?.id === item.id;
-        const itemState = isPreview ? previewState : EmptyPreviewState;
-        const isEditing = editingId === item.id;
-        const isAnyEditing = editingId !== null;
+    <View style={[styles.flex, { opacity: isReady ? 1 : 0 }]}>
+      <FlatList
+        ref={listRef}
+        data={visibleData}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        onScroll={handleScroll}
+        onScrollBeginDrag={handleScrollBeginDrag}
+        scrollEventThrottle={16}
+        onLayout={handleLayout}
+        onStartReached={handleStartReached}
+        onStartReachedThreshold={0.4}
+        onContentSizeChange={handleContentSizeChange}
+        maintainVisibleContentPosition={
+          contentOverflows ? { minIndexForVisible: 0 } : undefined
+        }
+        contentContainerStyle={{
+          padding: 16,
+          paddingTop: topPadding + 16,
+        }}
+        ListFooterComponent={<View style={{ height: bottomPadding }} />}
+        renderItem={renderItem}
+      />
 
-        return (
-          <TranscriptionItem
-            transcription={item}
-            selectionMode={
-              itemState.isStreamingLive ||
-              itemState.isRecording ||
-              itemState.isLoadingResult
-                ? false
-                : selectionMode
-            }
-            isSelected={!isPreview && selectedTranscriptionIds.has(item.id)}
-            isLivePreviewItem={itemState.isStreamingLive}
-            isLoadingWhisperResult={itemState.isLoadingResult}
-            isWhisperRecording={itemState.isRecording}
-            isEditing={isEditing}
-            isAnyEditing={isAnyEditing}
-            isCancelling={isCancellingEdit}
-            onStartEdit={() => handleStartEdit(item.id)}
-            onEndEdit={handleEndEdit}
-            onTranscriptionUpdate={handleUpdateTranscription}
-            onTap={() => {
-              if (!isPreview) {
-                onTranscriptionTap(item.id);
-              }
-            }}
-            onLongPress={() => {
-              if (!isPreview) {
-                onTranscriptionLongPress(item.id);
-              }
-            }}
-          />
-        );
-      }}
-    />
+      <View
+        pointerEvents="box-none"
+        style={[styles.jumpButtonOverlay, { bottom: bottomPadding + 16 }]}
+      >
+        <ScrollToEdgeButton
+          visible={showJumpButton && !selectionMode}
+          direction="down"
+          onPress={handleScrollToLatest}
+          accessibilityLabel={loc.scrollToLatest}
+        />
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  jumpButtonOverlay: {
+    position: "absolute",
+    right: 16,
+    zIndex: 200,
+    elevation: 200,
+  },
+});

@@ -34,6 +34,8 @@ export const useLocalization = () => {
       recordingPrefix: t("recordingPrefix"),
       retry: t("retry"),
       emptySessionsMessage: t("emptySessionsMessage"),
+      scrollToTop: t("scrollToTop"),
+      scrollToLatest: t("scrollToLatest"),
       microphoneAccessRequiredTitle: t("microphoneAccessRequiredTitle"),
       microphoneAccessNeededMessage: t(
         "microphoneAccessRequiredMessageAndroid",

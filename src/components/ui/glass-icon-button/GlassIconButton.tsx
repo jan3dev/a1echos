@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { AccessibilityState, Pressable, StyleSheet } from "react-native";
 
-import { getShadow, useTheme } from "@/theme";
+import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 export interface GlassIconButtonProps {
@@ -35,7 +35,6 @@ export const GlassIconButton = ({
       }}
       style={({ pressed }) => [
         styles.button,
-        getShadow("cardElevated"),
         {
           backgroundColor: theme.colors.glassSurface,
           opacity: iosPressed(pressed),
