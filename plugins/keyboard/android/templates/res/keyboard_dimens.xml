@@ -17,14 +17,13 @@
          the same visual rhythm as stock Android. -->
     <dimen name="key_height">42dp</dimen>
     <dimen name="key_min_touch_target">48dp</dimen>
-    <!-- Bumped from 4dp / 8dp. AOSP Gboard portrait keys have ~6dp
-         horizontal and ~11dp vertical gap between keys; with the smaller
-         key_height this restores the airier feel. The nearest-key fallback
-         in findKey() means the wider horizontal gap doesn't reintroduce
-         the inter-key dead zone. -->
-    <dimen name="key_horizontal_gap">6dp</dimen>
+    <!-- 4dp horizontal matches the tighter Gboard portrait grid; the
+         findKey() nearest-key fallback keeps the inter-key gap from
+         turning into a dead zone. Vertical gap stays at 11dp so the rows
+         still read as distinct bands. -->
+    <dimen name="key_horizontal_gap">4dp</dimen>
     <dimen name="key_vertical_gap">11dp</dimen>
-    <dimen name="key_corner_radius">8dp</dimen>
+    <dimen name="key_corner_radius">6dp</dimen>
     <dimen name="key_text_size">22sp</dimen>
     <dimen name="key_text_size_special">14sp</dimen>
     <dimen name="key_popup_text_size">32sp</dimen>

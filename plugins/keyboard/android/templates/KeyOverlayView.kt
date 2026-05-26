@@ -38,6 +38,10 @@ class KeyOverlayView @JvmOverloads constructor(
         val backgroundRect: RectF,
         val cellRects: List<RectF>,
         var selectedIndex: Int,
+        /// Pointer X (overlay coords) when the popup opened. Used to detect
+        /// the first "real" horizontal drag — see `updateVariantsHighlight`.
+        val openX: Float,
+        var userHasDragged: Boolean,
     )
 
     private data class PreviewState(
@@ -80,7 +84,13 @@ class KeyOverlayView @JvmOverloads constructor(
         invalidate()
     }
 
-    fun showVariants(keyRectInKeyboard: RectF, variants: List<String>) {
+    /// Opens the long-press variant popup. `pointerX` is the finger's X in
+    /// the keyboard view's coords; the popup uses it to detect the first
+    /// "real" horizontal drag (see [updateVariantsHighlight]). Until the
+    /// pointer moves more than `DRAG_THRESHOLD_DP`, [selectedIndex] stays
+    /// at 0 so the highlighted glyph matches what release will commit
+    /// (e.g. long-press-and-release on "u" lights up "7" and types "7").
+    fun showVariants(keyRectInKeyboard: RectF, variants: List<String>, pointerX: Float) {
         val key = translate(keyRectInKeyboard)
         val cellW = dpPx(40f)
         val cellH = dpPx(44f)
@@ -111,6 +121,8 @@ class KeyOverlayView @JvmOverloads constructor(
             // entry is the paired number, so a long-press + immediate
             // release types the number (Gboard convention).
             selectedIndex = 0,
+            openX = pointerX,
+            userHasDragged = false,
         )
         invalidate()
     }
@@ -124,6 +136,17 @@ class KeyOverlayView @JvmOverloads constructor(
         val x = xInKeyboard
         // y is unused — once the popup is up we only track horizontal drag,
         // matching Gboard.
+        // Hold the initial highlight (index 0) until the user actually moves
+        // their finger. Without this, the popup centers above the key and a
+        // single ACTION_MOVE event lands the finger over the *middle* cell —
+        // visually we paint index 0 for a frame, then snap to mid; release
+        // would commit the mid glyph even though the user perceived index 0
+        // as highlighted. Threshold ≈ one cell-half so a real drag still
+        // tracks responsively.
+        if (!state.userHasDragged) {
+            if (kotlin.math.abs(x - state.openX) < dpPx(VARIANT_DRAG_THRESHOLD_DP)) return
+            state.userHasDragged = true
+        }
         if (x < state.backgroundRect.left || x > state.backgroundRect.right) return
         for ((i, cellRect) in state.cellRects.withIndex()) {
             if (x >= cellRect.left && x <= cellRect.right) {
@@ -223,4 +246,11 @@ class KeyOverlayView @JvmOverloads constructor(
             value,
             resources.displayMetrics,
         )
+
+    companion object {
+        /// Minimum horizontal travel (dp) before the variants popup starts
+        /// snapping its highlight to whatever cell sits under the finger.
+        /// ~8dp matches Gboard's tolerance.
+        private const val VARIANT_DRAG_THRESHOLD_DP = 8f
+    }
 }

@@ -134,6 +134,8 @@ function withImeSources(config) {
         "EchosEmojiSearchOverlayView.kt",
         "AccentVariants.kt",
         "KeyOverlayView.kt",
+        "SkinTonePopupView.kt",
+        "EmojiCellTextView.kt",
         "ImeSettingsActivity.kt",
       ];
 

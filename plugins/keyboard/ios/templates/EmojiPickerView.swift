@@ -29,6 +29,11 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
     private var categoryButtons: [StripIconButton] = []
 
     private var visibleCategories: [EmojiCategory] = []
+    // Tracks the category set the bottom strip's buttons were built for,
+    // so refreshRecents() can skip the strip rebuild when the set hasn't
+    // actually changed (the common case — only the first ever emoji
+    // pick or wiping recents shifts the set).
+    private var lastBuiltStripCategories: [EmojiCategory] = []
     // Snapshot of the per-section emoji lists. Reading from the live
     // EmojiData.emojis(for:) between taps would race with RecentEmojis
     // reordering and insert a different emoji than the user tapped.
@@ -269,7 +274,10 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         cats.append(contentsOf: EmojiCategory.allCases.filter { $0 != .recents })
         visibleCategories = cats
         sectionData = cats.map { EmojiData.emojis(for: $0) }
-        rebuildCategoryStrip()
+        if cats != lastBuiltStripCategories {
+            rebuildCategoryStrip()
+            lastBuiltStripCategories = cats
+        }
         collectionView.reloadData()
         currentCategoryIndex = 0
         updateCategorySelection()

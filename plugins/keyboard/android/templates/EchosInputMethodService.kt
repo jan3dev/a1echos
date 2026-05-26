@@ -39,6 +39,7 @@ class EchosInputMethodService : InputMethodService(),
     private lateinit var topBar: EchosKeyboardTopBar
     private lateinit var keyboardView: EchosKeyboardView
     private lateinit var keyOverlay: KeyOverlayView
+    private var topBarHeightPx: Int = 0
     private var emojiPickerView: EchosEmojiPickerView? = null
     private var emojiSearchOverlay: EchosEmojiSearchOverlayView? = null
     private var emojiSearchIndex: EmojiSearchIndex? = null
@@ -75,7 +76,7 @@ class EchosInputMethodService : InputMethodService(),
             )
         }
 
-        val topBarHeightPx = resources.getIdentifier("keyboard_top_bar_height", "dimen", packageName)
+        topBarHeightPx = resources.getIdentifier("keyboard_top_bar_height", "dimen", packageName)
             .let { if (it != 0) resources.getDimensionPixelSize(it) else (48 * resources.displayMetrics.density).toInt() }
 
         topBar = EchosKeyboardTopBar(this).apply {
@@ -168,6 +169,10 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     override fun onDestroy() {
+        // Belt-and-braces: onFinishInputView usually releases the lock first,
+        // but a process-kill path skips it and would leak the lock until
+        // the main app restarts.
+        RecordingLock.release("ime")
         transcriber.release()
         super.onDestroy()
     }
@@ -309,10 +314,6 @@ class EchosInputMethodService : InputMethodService(),
         showKeyboardLayout()
     }
 
-    override fun onDeleteCharacter() {
-        deleteOneGrapheme()
-    }
-
     override fun onActivateSearch() {
         enterEmojiSearchMode()
     }
@@ -356,6 +357,15 @@ class EchosInputMethodService : InputMethodService(),
         keyboardView.updateReturnKeyType(currentEditorAction)
         keyboardView.setReturnAsCheckmark(true)
         refreshEmojiSearchOverlay()
+        // The long-press preview balloon translates rects from keyboard-
+        // view coords to overlay coords using `keyboardOffsetY`. With the
+        // top bar hidden and the search overlay sitting above the
+        // keyboard, the offset has to track the search overlay's height
+        // — otherwise the balloon floats far above the keys.
+        emojiSearchOverlay?.let { overlay ->
+            val overlayPx = (overlay.measuredOverlayHeightDp() * resources.displayMetrics.density).toInt()
+            keyOverlay.setKeyboardOffsetY(overlayPx.toFloat())
+        }
     }
 
     private fun exitEmojiSearchMode(suppressViewSwap: Boolean = false) {
@@ -364,6 +374,7 @@ class EchosInputMethodService : InputMethodService(),
         emojiSearchQuery = ""
         emojiSearchOverlay?.visibility = View.GONE
         keyboardView.setReturnAsCheckmark(false)
+        keyOverlay.setKeyboardOffsetY(topBarHeightPx.toFloat())
         if (!suppressViewSwap) {
             showEmojiPicker()
         }
@@ -382,8 +393,13 @@ class EchosInputMethodService : InputMethodService(),
                     refreshEmojiSearchOverlay()
                 }
                 override fun onEmojiSelected(emoji: String) {
+                    // Stay in search mode so the user can keep firing
+                    // matches — Gboard does the same. Only the back arrow
+                    // and the return-key checkmark leave search mode.
                     currentInputConnection?.commitText(emoji, 1)
                     RecentEmojis.record(this@EchosInputMethodService, emoji)
+                }
+                override fun onLeaveSearch() {
                     exitEmojiSearchMode()
                 }
             })

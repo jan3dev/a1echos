@@ -13,10 +13,11 @@ object EchosKeyboardLayout {
         RETURN,
         MIC,
         MODE_SWITCH,    // 123 / ABC toggle
-        GLOBE,          // Switch keyboard
-        EMOJI,          // Cycle to next keyboard (emoji if user has one installed)
-        SYMBOL_SWITCH,  // #+=  / 123 toggle
-        COMMA,
+        GLOBE,          // Switch IME (long-press surfaces system picker)
+        EMOJI_COMMA,    // Tap -> ","; long-press -> emoji picker. Smiley icon
+                        // sits above a small "," label, mirroring Gboard.
+        SYMBOL_SWITCH,  // =\<  / ?123 toggle (between NUMBERS <-> SYMBOLS)
+        NUMPAD_SWITCH,  // "1234" key — opens the calculator/numpad layout
         PERIOD,
     }
 
@@ -32,7 +33,19 @@ object EchosKeyboardLayout {
         val iconName: String? = null,
     )
 
-    data class Row(val keys: List<Key>)
+    /// A keyboard row. Rows are laid out on a fixed cell grid anchored to
+    /// the widest row (typically 10 cells) — `leadingPadCells` and
+    /// `trailingPadCells` shift the keys horizontally within the grid so
+    /// that, e.g., the "a" row indents half a cell on each side and "a"
+    /// lands centered between "q" and "w". `heightMultiplier` lets a row
+    /// claim more than the default key height (the NUMPAD layout uses 2.0
+    /// on its number rows so the digit keys read as a real calculator).
+    data class Row(
+        val keys: List<Key>,
+        val leadingPadCells: Float = 0f,
+        val trailingPadCells: Float = 0f,
+        val heightMultiplier: Float = 1f,
+    )
 
     // -- QWERTY Letter Layout --
 
@@ -43,9 +56,11 @@ object EchosKeyboardLayout {
     )
 
     val LETTERS_ROW_2 = Row(
-        listOf("a", "s", "d", "f", "g", "h", "j", "k", "l").map {
+        keys = listOf("a", "s", "d", "f", "g", "h", "j", "k", "l").map {
             Key(label = it)
-        }
+        },
+        leadingPadCells = 0.5f,
+        trailingPadCells = 0.5f,
     )
 
     val LETTERS_ROW_3 = Row(
@@ -58,19 +73,18 @@ object EchosKeyboardLayout {
             Key(label = "b"),
             Key(label = "n"),
             Key(label = "m"),
-            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace_outline"),
         )
     )
 
     val LETTERS_ROW_4 = Row(
         listOf(
-            Key(label = "123", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Numbers"),
-            Key(label = "", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji", iconName = "ic_emoji"),
+            Key(label = "?123", type = KeyType.MODE_SWITCH, widthWeight = 1.5f, contentDescription = "Numbers"),
+            Key(label = ",", type = KeyType.EMOJI_COMMA, widthWeight = 1f, contentDescription = "Emoji, comma", iconName = "ic_emoji"),
             Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
-            Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
-            Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
-            Key(label = "", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return", iconName = "ic_return"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.5f, contentDescription = "Return", iconName = "ic_return"),
         )
     )
 
@@ -85,32 +99,37 @@ object EchosKeyboardLayout {
     )
 
     val NUMBERS_ROW_2 = Row(
-        listOf("-", "/", ":", ";", "(", ")", "$", "&", "@", "\"").map {
+        listOf("@", "#", "$", "_", "&", "-", "+", "(", ")", "/").map {
             Key(label = it)
         }
     )
 
+    // 1.5 + 7*1.0 + 1.5 = 10 cells. =\< toggles into symbols, then the 7
+    // punctuation glyphs sit at standard width.
     val NUMBERS_ROW_3 = Row(
         listOf(
-            Key(label = "#+=", type = KeyType.SYMBOL_SWITCH, widthWeight = 1.5f, contentDescription = "Symbols"),
-            Key(label = "."),
-            Key(label = ","),
-            Key(label = "?"),
-            Key(label = "!"),
+            Key(label = "=\\<", type = KeyType.SYMBOL_SWITCH, widthWeight = 1.5f, contentDescription = "Symbols"),
+            Key(label = "*"),
+            Key(label = "\""),
             Key(label = "'"),
-            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
+            Key(label = ":"),
+            Key(label = ";"),
+            Key(label = "!"),
+            Key(label = "?"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace_outline"),
         )
     )
 
+    // Numbers row 4 drops the globe slot in favour of the NUMPAD key, the
+    // way Gboard does for non-letter layouts.
     val NUMBERS_ROW_4 = Row(
         listOf(
-            Key(label = "ABC", type = KeyType.MODE_SWITCH, widthWeight = 1.2f, contentDescription = "Letters"),
-            Key(label = "", type = KeyType.EMOJI, widthWeight = 1f, contentDescription = "Emoji", iconName = "ic_emoji"),
-            Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
-            Key(label = ",", type = KeyType.COMMA, widthWeight = 1f),
-            Key(label = " ", type = KeyType.SPACE, widthWeight = 3f, contentDescription = "Space"),
+            Key(label = "ABC", type = KeyType.MODE_SWITCH, widthWeight = 1.5f, contentDescription = "Letters"),
+            Key(label = ","),
+            Key(label = "1234", type = KeyType.NUMPAD_SWITCH, widthWeight = 1f, contentDescription = "Numeric pad"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
             Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
-            Key(label = "", type = KeyType.RETURN, widthWeight = 1.2f, contentDescription = "Return", iconName = "ic_return"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.5f, contentDescription = "Return", iconName = "ic_return"),
         )
     )
 
@@ -119,30 +138,154 @@ object EchosKeyboardLayout {
     // -- Symbol Layout --
 
     val SYMBOLS_ROW_1 = Row(
-        listOf("[", "]", "{", "}", "#", "%", "^", "*", "+", "=").map {
+        listOf("~", "`", "|", "•", "√", "π", "÷", "×", "§", "Δ").map {
             Key(label = it)
         }
     )
 
     val SYMBOLS_ROW_2 = Row(
-        listOf("_", "\\", "|", "~", "<", ">", "\u20AC", "\u00A3", "\u00A5", "\u2022").map {
+        listOf("£", "¢", "€", "¥", "^", "°", "=", "{", "}", "\\").map {
             Key(label = it)
         }
     )
 
     val SYMBOLS_ROW_3 = Row(
         listOf(
-            Key(label = "123", type = KeyType.SYMBOL_SWITCH, widthWeight = 1.5f, contentDescription = "Numbers"),
-            Key(label = "."),
-            Key(label = ","),
-            Key(label = "?"),
-            Key(label = "!"),
-            Key(label = "'"),
-            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace"),
+            Key(label = "?123", type = KeyType.SYMBOL_SWITCH, widthWeight = 1.5f, contentDescription = "Numbers"),
+            Key(label = "%"),
+            Key(label = "©"),
+            Key(label = "®"),
+            Key(label = "™"),
+            Key(label = "✓", iconName = "ic_check", contentDescription = "Check"),
+            Key(label = "["),
+            Key(label = "]"),
+            Key(label = "", type = KeyType.DELETE, widthWeight = 1.5f, contentDescription = "Delete", iconName = "ic_backspace_outline"),
         )
     )
 
-    val SYMBOLS_ROW_4 = NUMBERS_ROW_4 // Same bottom row
+    // Symbols row 4 swaps comma/period for < and >, but otherwise mirrors
+    // the numbers row 4 (ABC, NUMPAD, space, return).
+    val SYMBOLS_ROW_4 = Row(
+        listOf(
+            Key(label = "ABC", type = KeyType.MODE_SWITCH, widthWeight = 1.5f, contentDescription = "Letters"),
+            Key(label = "<"),
+            Key(label = "1234", type = KeyType.NUMPAD_SWITCH, widthWeight = 1f, contentDescription = "Numeric pad"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
+            Key(label = ">"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.5f, contentDescription = "Return", iconName = "ic_return"),
+        )
+    )
 
     val SYMBOL_ROWS = listOf(SYMBOLS_ROW_1, SYMBOLS_ROW_2, SYMBOLS_ROW_3, SYMBOLS_ROW_4)
+
+    // -- Numeric pad / calculator layout --
+    //
+    // NUMPAD is laid out cell-first: each cell occupies one or more
+    // fractional rectangles inside a 5-column × 4-row grid. Some cells
+    // contain a single Key; others host a vertical stack (the operator
+    // column) or a horizontal split (the bottom-row pairs). Rendering
+    // and pointer tracking treat each rendered key as one rect, so
+    // sub-divided cells produce multiple rects.
+    //
+    // Grid coordinates:
+    //   - col is the 5-col index (0-4)
+    //   - row is the 4-row index (0-3); rows 0-2 are full-height number
+    //     rows, row 3 is a shorter bottom-row.
+    //   - rowSpan = 3 makes the cell span the three number rows; the
+    //     operator column and utility column use this so a single cell
+    //     contains the full vertical stack.
+
+    enum class CellLayout { SINGLE, VERTICAL_STACK, HORIZONTAL_SPLIT }
+
+    data class NumpadCell(
+        val col: Int,
+        val row: Int,
+        val rowSpan: Int = 1,
+        val colSpan: Int = 1,
+        /// One key for SINGLE; multiple for VERTICAL_STACK or HORIZONTAL_SPLIT.
+        val keys: List<Key>,
+        val layout: CellLayout = CellLayout.SINGLE,
+        /// HORIZONTAL_SPLIT only: per-sub-key width weights so we can
+        /// render asymmetric splits (e.g. `comma` narrow + `!?#` wider).
+        /// Length must match [keys] when non-null.
+        val subWidthWeights: FloatArray? = null,
+    )
+
+    val NUMPAD_CELLS: List<NumpadCell> = listOf(
+        // Col 0 row 0-2: operator stack (connected, no inter-key gap).
+        // The stack itself is vertically scrollable — we list +, -, *, /
+        // plus the bracket overflow (, ) here, even though only four
+        // operators fit at once. The keyboard view applies a scroll
+        // offset so the user can drag to reveal the brackets.
+        NumpadCell(
+            col = 0, row = 0, rowSpan = 3,
+            keys = listOf(
+                Key("+"),
+                Key("-"),
+                Key("*"),
+                Key("/"),
+                Key("("),
+                Key(")"),
+            ),
+            layout = CellLayout.VERTICAL_STACK,
+        ),
+        NumpadCell(
+            col = 0, row = 3,
+            keys = listOf(Key("ABC", type = KeyType.MODE_SWITCH, contentDescription = "Letters")),
+        ),
+
+        // 3 x 3 digit grid (cols 1-3, rows 0-2).
+        NumpadCell(col = 1, row = 0, keys = listOf(Key("1"))),
+        NumpadCell(col = 2, row = 0, keys = listOf(Key("2"))),
+        NumpadCell(col = 3, row = 0, keys = listOf(Key("3"))),
+        NumpadCell(col = 1, row = 1, keys = listOf(Key("4"))),
+        NumpadCell(col = 2, row = 1, keys = listOf(Key("5"))),
+        NumpadCell(col = 3, row = 1, keys = listOf(Key("6"))),
+        NumpadCell(col = 1, row = 2, keys = listOf(Key("7"))),
+        NumpadCell(col = 2, row = 2, keys = listOf(Key("8"))),
+        NumpadCell(col = 3, row = 2, keys = listOf(Key("9"))),
+
+        // Bottom row (row 3): col 1 hosts `,` + `!?#`, col 3 hosts `=` +
+        // `.`. The "!?#" and "=" sub-cells are slightly wider than the
+        // punctuation ones (matches Gboard).
+        NumpadCell(
+            col = 1, row = 3,
+            keys = listOf(
+                Key(","),
+                Key("!?#", type = KeyType.SYMBOL_SWITCH, contentDescription = "Symbols"),
+            ),
+            layout = CellLayout.HORIZONTAL_SPLIT,
+            subWidthWeights = floatArrayOf(0.85f, 1.15f),
+        ),
+        NumpadCell(col = 2, row = 3, keys = listOf(Key("0"))),
+        NumpadCell(
+            col = 3, row = 3,
+            keys = listOf(
+                Key("="),
+                Key(".", type = KeyType.PERIOD),
+            ),
+            layout = CellLayout.HORIZONTAL_SPLIT,
+            subWidthWeights = floatArrayOf(1.15f, 0.85f),
+        ),
+
+        // Col 4: utility stack (rows 0-2) + return (row 3).
+        NumpadCell(col = 4, row = 0, keys = listOf(Key("%"))),
+        NumpadCell(col = 4, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space"))),
+        NumpadCell(
+            col = 4, row = 2,
+            keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),
+        ),
+        NumpadCell(
+            col = 4, row = 3,
+            keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Return", iconName = "ic_return")),
+        ),
+    )
+
+    /// Column width weights for the 5-col grid. Operator and utility
+    /// columns are narrower than the digit columns; digit cols 1-3 are
+    /// identical so the 3x3 grid keys all match exactly.
+    val NUMPAD_COL_WEIGHTS: FloatArray = floatArrayOf(1.3f, 1.9f, 1.9f, 1.9f, 1.5f)
+
+    // Row heights are computed directly in `EchosKeyboardView.computeCellKeyRects`
+    // — bottom row matches letter-key height, digit rows fill the rest.
 }

@@ -55,6 +55,19 @@ class EchosKeyboardView @JvmOverloads constructor(
 
     private var listener: KeyboardActionListener? = null
     private var currentRows: List<EchosKeyboardLayout.Row> = EchosKeyboardLayout.LETTER_ROWS
+    /// Set when [layoutMode] is NUMPAD — otherwise null. NUMPAD switches
+    /// the layout pipeline to a cell grid (operator stack + 3x3 digit
+    /// grid + utility column + bottom row); everything else continues
+    /// to use the row-based logic.
+    private var currentCells: List<EchosKeyboardLayout.NumpadCell>? = null
+    /// Per-cell visible band rect (untouched by scroll). Used for the
+    /// VERTICAL_STACK operator column: the shared background draws to
+    /// this rect, and rendering clips to this band so off-scroll
+    /// operators don't bleed into adjacent rows.
+    private val cellBounds = mutableListOf<RectF>()
+    /// NUMPAD operator-column scroll offset (px). 0 = stack at top
+    /// (`+ - * /` visible). Positive = scrolled down, revealing brackets.
+    private var opScrollY: Float = 0f
     private var layoutMode: LayoutMode = LayoutMode.LETTERS
     private var shiftState: ShiftState = ShiftState.OFF
     private var micState: MicState = MicState.IDLE
@@ -87,6 +100,19 @@ class EchosKeyboardView @JvmOverloads constructor(
         var longPressFired: Boolean,
         var ownsVariants: Boolean,
         var ownsDeleteRepeat: Boolean,
+        /// Most recent pointer X in keyboard-view coords. Updated in
+        /// `handlePointerDown` and `handleMoveEvent`. Read when the accent
+        /// long-press fires so the popup can seed its highlight to whatever
+        /// cell lies under the finger at that exact moment.
+        var lastX: Float,
+        /// NUMPAD operator-column scroll state. When the user presses on
+        /// the operator stack (cell 0) and drags vertically, this pointer
+        /// owns the scroll: `opScrollStartY` is the touch's Y at down,
+        /// `opScrollInitial` is `opScrollY` at down. Set non-null only
+        /// for the pointer that engaged the scroll.
+        var opScrollStartY: Float = 0f,
+        var opScrollInitial: Float = 0f,
+        var ownsOpScroll: Boolean = false,
     )
     private val pointers = SparseArray<PointerState>()
 
@@ -180,6 +206,11 @@ class EchosKeyboardView @JvmOverloads constructor(
         /// 24ms ≈ 1.5× a 60Hz vsync interval. Frames longer than this are
         /// what the user perceives as jank when typing.
         private const val SLOW_FRAME_NS = 24_000_000L
+
+        /// How many operator keys fit in the visible NUMPAD column at
+        /// once. The full key list is longer — the column scrolls
+        /// vertically to reveal the overflow (brackets).
+        private const val NUMPAD_OP_VISIBLE = 4
     }
 
     /// Frame-drop logger. Re-posts itself while attached and the perf tag
@@ -211,7 +242,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         onWordDelete = { listener?.onDeleteWord() },
     )
 
-    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS }
+    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD }
     enum class ShiftState { OFF, ON, CAPS_LOCK }
 
     init {
@@ -291,15 +322,31 @@ class EchosKeyboardView @JvmOverloads constructor(
     fun showLetterLayout() {
         layoutMode = LayoutMode.LETTERS
         currentRows = EchosKeyboardLayout.LETTER_ROWS
+        currentCells = null
+        opScrollY = 0f
         shiftState = ShiftState.OFF
         keyRectsValid = false
+        requestLayout()
         invalidate()
     }
 
     fun showNumberLayout() {
         layoutMode = LayoutMode.NUMBERS
         currentRows = EchosKeyboardLayout.NUMBER_ROWS
+        currentCells = null
+        opScrollY = 0f
         keyRectsValid = false
+        requestLayout()
+        invalidate()
+    }
+
+    fun showNumpadLayout() {
+        layoutMode = LayoutMode.NUMPAD
+        currentCells = EchosKeyboardLayout.NUMPAD_CELLS
+        opScrollY = 0f
+        // currentRows is left as-is; the cell pipeline owns layout.
+        keyRectsValid = false
+        requestLayout()
         invalidate()
     }
 
@@ -342,8 +389,16 @@ class EchosKeyboardView @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val rowCount = currentRows.size
-        val totalHeight = (rowCount * keyHeight + (rowCount - 1) * keyVGap + keyVGap + paddingBottom).toInt()
+        val totalHeight = if (currentCells != null) {
+            // NUMPAD body matches a 4-row letter layout exactly so the
+            // IME doesn't visibly resize when the user toggles modes.
+            val bodyHeight = 4 * keyHeight + 3 * keyVGap
+            (bodyHeight + keyVGap + paddingBottom).toInt()
+        } else {
+            val rowCount = currentRows.size
+            val totalRowHeight = currentRows.sumOf { (keyHeight * it.heightMultiplier).toDouble() }.toFloat()
+            (totalRowHeight + (rowCount - 1) * keyVGap + keyVGap + paddingBottom).toInt()
+        }
         setMeasuredDimension(width, totalHeight)
     }
 
@@ -366,16 +421,42 @@ class EchosKeyboardView @JvmOverloads constructor(
             keyRectsValid = true
         }
 
-        for (rowIdx in currentRows.indices) {
-            val row = currentRows[rowIdx]
-            for (colIdx in row.keys.indices) {
-                val key = row.keys[colIdx]
-                val rect = keyRects[rowIdx][colIdx]
-                drawKey(canvas, key, rect, isKeyPressed(rowIdx, colIdx))
+        val cells = currentCells
+        if (cells != null) {
+            // NUMPAD mode: keyRects[cellIdx] holds the rect(s) for cell
+            // `cellIdx`. Single-key cells produce one rect; VERTICAL_STACK
+            // and HORIZONTAL_SPLIT produce multiple. The list-of-lists
+            // shape lets `findKey`, `isKeyPressed`, and pointer tracking
+            // keep working uniformly.
+            for (cellIdx in cells.indices) {
+                drawNumpadCell(canvas, cells[cellIdx], cellIdx)
+            }
+        } else {
+            for (rowIdx in currentRows.indices) {
+                val row = currentRows[rowIdx]
+                for (colIdx in row.keys.indices) {
+                    val key = row.keys[colIdx]
+                    val rect = keyRects[rowIdx][colIdx]
+                    drawKey(canvas, key, rect, isKeyPressed(rowIdx, colIdx))
+                }
             }
         }
         // Popups (preview balloon + accent variants) draw in `KeyOverlayView`,
         // not here — see `setOverlay` for the wiring.
+    }
+
+    /// Lookup the Key at the given outer/inner index. Row-based modes
+    /// (LETTERS/NUMBERS/SYMBOLS) use outer=row, inner=col. NUMPAD uses
+    /// outer=cell index, inner=sub-key (0 for SINGLE cells, 0..N-1 for
+    /// VERTICAL_STACK or HORIZONTAL_SPLIT cells). `keyRects` mirrors this
+    /// shape, so the rest of the pointer pipeline stays unchanged.
+    private fun keyAt(outer: Int, inner: Int): EchosKeyboardLayout.Key? {
+        val cells = currentCells
+        return if (cells != null) {
+            cells.getOrNull(outer)?.keys?.getOrNull(inner)
+        } else {
+            currentRows.getOrNull(outer)?.keys?.getOrNull(inner)
+        }
     }
 
     /// True if any active pointer is currently down on this row/col. Linear
@@ -389,37 +470,178 @@ class EchosKeyboardView @JvmOverloads constructor(
         return false
     }
 
+    /// Cell-anchored layout. Every row in `currentRows` declares its content
+    /// in fractional cells of a single shared grid; `cellsPerRow` is the
+    /// widest row's total (typically 10). One cell occupies `cellPitch` of
+    /// horizontal space, where `cellPitch = u + g` (key visual width + one
+    /// inter-key gap). A key with weight w renders as `w*cellPitch - g`,
+    /// which means w=1 -> u, w=1.5 -> 1.5u + 0.5g (so SHIFT reaches exactly
+    /// to the right edge of "a"), and w=4 -> 4u + 3g (spacebar spans c-v-b-n
+    /// including the gaps it covers).
     private fun computeKeyRects() {
         keyRects.clear()
         val availableWidth = width.toFloat() - 2 * paddingH
+
+        val cells = currentCells
+        if (cells != null) {
+            computeCellKeyRects(cells, availableWidth)
+            return
+        }
+
         var y = keyVGap / 2f
 
-        for (row in currentRows) {
-            val totalWeight = row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
-            val totalGaps = (row.keys.size - 1) * keyHGap
-            val unitWidth = (availableWidth - totalGaps) / totalWeight
+        val cellsPerRow = currentRows.maxOf { row ->
+            val keyCells = row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
+            row.leadingPadCells + keyCells + row.trailingPadCells
+        }
+        val cellPitch = (availableWidth + keyHGap) / cellsPerRow
 
+        for (row in currentRows) {
             val rowRects = mutableListOf<RectF>()
-            var x = paddingH
+            var x = paddingH + row.leadingPadCells * cellPitch
+            val rowHeight = keyHeight * row.heightMultiplier
 
             for (key in row.keys) {
-                val keyWidth = unitWidth * key.widthWeight
-                rowRects.add(RectF(x, y, x + keyWidth, y + keyHeight))
-                x += keyWidth + keyHGap
+                val keyWidth = key.widthWeight * cellPitch - keyHGap
+                rowRects.add(RectF(x, y, x + keyWidth, y + rowHeight))
+                x += key.widthWeight * cellPitch
             }
 
             keyRects.add(rowRects)
-            y += keyHeight + keyVGap
+            y += rowHeight + keyVGap
         }
     }
 
-    private fun drawKey(canvas: Canvas, key: EchosKeyboardLayout.Key, rect: RectF, isPressed: Boolean) {
+    /// Cell-based layout (NUMPAD). Lays out a fixed 5-col × 4-row grid
+    /// using [EchosKeyboardLayout.NUMPAD_COL_WEIGHTS], then walks
+    /// [EchosKeyboardLayout.NUMPAD_CELLS] to assign each cell to its
+    /// grid rectangle. SINGLE cells produce one rect; VERTICAL_STACK
+    /// (the operator column) splits its cell into N equal-height
+    /// rectangles with no inter-key gap; HORIZONTAL_SPLIT (the
+    /// bottom-row pairs) splits with the usual horizontal gap.
+    private fun computeCellKeyRects(
+        cells: List<EchosKeyboardLayout.NumpadCell>,
+        availableWidth: Float,
+    ) {
+        cellBounds.clear()
+        val colWeights = EchosKeyboardLayout.NUMPAD_COL_WEIGHTS
+        // Match a 4-row regular layout exactly so toggling LETTERS <->
+        // NUMPAD doesn't visibly resize the IME.
+        val bodyHeight = 4 * keyHeight + 3 * keyVGap
+        // Vertical inter-row gap matches the horizontal inter-key gap so
+        // the 3×3 digit grid reads as a uniform mesh (instead of the
+        // letter-layout's wider vertical rhythm).
+        val vGap = keyHGap
+        // Bottom function row stays at the standard letter-key height.
+        // The three digit rows absorb the remainder so the number keys
+        // are as tall as the tighter vertical spacing allows.
+        val bottomRowH = keyHeight
+        val digitRowH = (bodyHeight - 3 * vGap - bottomRowH) / 3
+        val rowHeights = floatArrayOf(digitRowH, digitRowH, digitRowH, bottomRowH)
+
+        val totalColWeight = colWeights.sum()
+        val totalHGap = (colWeights.size - 1) * keyHGap
+        val colUnit = (availableWidth - totalHGap) / totalColWeight
+
+        val colLefts = FloatArray(colWeights.size + 1)
+        colLefts[0] = paddingH
+        for (i in colWeights.indices) {
+            colLefts[i + 1] = colLefts[i] + colWeights[i] * colUnit + keyHGap
+        }
+        val rowTops = FloatArray(rowHeights.size + 1)
+        rowTops[0] = keyVGap / 2f
+        for (i in rowHeights.indices) {
+            rowTops[i + 1] = rowTops[i] + rowHeights[i] + vGap
+        }
+
+        for (cell in cells) {
+            val left = colLefts[cell.col]
+            val right = colLefts[cell.col + cell.colSpan] - keyHGap
+            val top = rowTops[cell.row]
+            val bottom = rowTops[cell.row + cell.rowSpan] - vGap
+
+            cellBounds.add(RectF(left, top, right, bottom))
+
+            val rects = when (cell.layout) {
+                EchosKeyboardLayout.CellLayout.SINGLE ->
+                    listOf(RectF(left, top, right, bottom))
+                EchosKeyboardLayout.CellLayout.VERTICAL_STACK -> {
+                    // Operator column: NO inter-key vertical gaps, so the
+                    // stack reads as one connected pill. Only the first
+                    // `NUMPAD_OP_VISIBLE` slots take the visible band;
+                    // the rest extend below and are revealed by
+                    // `opScrollY` (vertical drag inside the column).
+                    val visible = NUMPAD_OP_VISIBLE
+                    val keyH = (bottom - top) / visible
+                    val n = cell.keys.size
+                    List(n) { i ->
+                        val ty = top + i * keyH - opScrollY
+                        RectF(left, ty, right, ty + keyH)
+                    }
+                }
+                EchosKeyboardLayout.CellLayout.HORIZONTAL_SPLIT -> {
+                    val n = cell.keys.size
+                    val weights = cell.subWidthWeights ?: FloatArray(n) { 1f }
+                    val totalWeight = weights.sum()
+                    val totalGaps = (n - 1) * keyHGap
+                    val unitW = (right - left - totalGaps) / totalWeight
+                    var x = left
+                    List(n) { i ->
+                        val w = weights[i] * unitW
+                        val r = RectF(x, top, x + w, bottom)
+                        x += w + keyHGap
+                        r
+                    }
+                }
+            }
+            keyRects.add(rects)
+        }
+    }
+
+    /// Max value of [opScrollY]. Computed from the operator cell's
+    /// visible band (in [cellBounds]) and the total number of operators.
+    private fun opScrollMax(): Float {
+        val cells = currentCells ?: return 0f
+        val opCell = cells.firstOrNull {
+            it.layout == EchosKeyboardLayout.CellLayout.VERTICAL_STACK
+        } ?: return 0f
+        val band = cellBounds.getOrNull(cells.indexOf(opCell)) ?: return 0f
+        val visible = NUMPAD_OP_VISIBLE
+        val total = opCell.keys.size
+        if (total <= visible) return 0f
+        val keyH = band.height() / visible
+        return (total - visible) * keyH
+    }
+
+    /// Draws one key. `drawBackground = false` lets the caller share a
+    /// single backing rectangle across multiple sub-keys — used by the
+    /// NUMPAD's operator stack so the four ops render as one connected
+    /// pill instead of four separate keys.
+    private fun drawKey(
+        canvas: Canvas,
+        key: EchosKeyboardLayout.Key,
+        rect: RectF,
+        isPressed: Boolean,
+        drawBackground: Boolean = true,
+    ) {
         // Shift becomes "active" while uppercase or caps-lock is engaged —
         // we light up its background (using the brighter regular-key tone)
         // so the user can tell at a glance which mode they're in.
         val isShiftActive = key.type == EchosKeyboardLayout.KeyType.SHIFT
             && shiftState != ShiftState.OFF
-        val bgColor = when {
+        // NUMPAD diverges from the regular bg rules: the operator column,
+        // ABC, comma, ".", "%", space, delete, and return are all
+        // "light" (specialKeyBackground); the digit keys, "=", and "!?#"
+        // stay on the standard keyBackground. We special-case this up
+        // front and skip the regular `when` ladder.
+        val bgColor = if (currentCells != null) {
+            val darkInNumpad = isNumpadDarkKey(key)
+            if (darkInNumpad) {
+                if (isPressed) theme.keyBackgroundPressed else theme.keyBackground
+            } else {
+                if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
+            }
+        } else when {
             key.type == EchosKeyboardLayout.KeyType.MIC -> {
                 when (micState) {
                     MicState.RECORDING -> theme.micButtonRecording
@@ -434,8 +656,9 @@ class EchosKeyboardView @JvmOverloads constructor(
             key.type == EchosKeyboardLayout.KeyType.DELETE ||
             key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH ||
+            key.type == EchosKeyboardLayout.KeyType.NUMPAD_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.GLOBE ||
-            key.type == EchosKeyboardLayout.KeyType.EMOJI -> {
+            key.type == EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
                 if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN -> {
@@ -446,13 +669,27 @@ class EchosKeyboardView @JvmOverloads constructor(
             }
         }
 
-        keyPaint.color = bgColor
-        canvas.drawRoundRect(rect, keyCornerRadius, keyCornerRadius, keyPaint)
+        // Only the two outer keys in the bottom row (?123 / ABC and the
+        // return key) get the pill shape — everything else keeps the
+        // standard 8dp corner, matching Gboard. Shift, delete, globe,
+        // emoji_comma all sit at the same radius as letter keys.
+        val cornerRadius = when (key.type) {
+            EchosKeyboardLayout.KeyType.MODE_SWITCH,
+            EchosKeyboardLayout.KeyType.RETURN -> rect.height() / 2f
+            else -> keyCornerRadius
+        }
 
-        // Draw key label
+        if (drawBackground) {
+            keyPaint.color = bgColor
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, keyPaint)
+        }
+
+        // Draw key label. NUMPAD returns sit on the lighter (gray) bg, so
+        // they keep the standard `keyText` foreground; everywhere else the
+        // return key uses the accent bg and needs the contrast color.
         val textColor = when {
-            key.type == EchosKeyboardLayout.KeyType.MIC ||
-            key.type == EchosKeyboardLayout.KeyType.RETURN -> theme.micButtonIcon
+            key.type == EchosKeyboardLayout.KeyType.MIC -> theme.micButtonIcon
+            key.type == EchosKeyboardLayout.KeyType.RETURN && currentCells == null -> theme.micButtonIcon
             else -> theme.keyText
         }
 
@@ -462,12 +699,26 @@ class EchosKeyboardView @JvmOverloads constructor(
         // drawable can't be resolved keeps the keyboard usable on devices
         // where the resource hasn't been bundled for some reason.
         val iconName = when {
-            key.type == EchosKeyboardLayout.KeyType.SHIFT && shiftState == ShiftState.CAPS_LOCK -> "ic_capslock"
+            key.type == EchosKeyboardLayout.KeyType.SHIFT -> when (shiftState) {
+                ShiftState.OFF -> "ic_shift_outline"
+                ShiftState.ON -> "ic_shift"
+                ShiftState.CAPS_LOCK -> "ic_capslock"
+            }
+            key.type == EchosKeyboardLayout.KeyType.RETURN && returnAsCheckmark -> "ic_check"
             else -> key.iconName
         }
         val iconDrawable = iconName?.let { resolveIcon(it) }
         if (iconDrawable != null) {
-            drawIcon(canvas, iconDrawable, rect, textColor)
+            if (key.type == EchosKeyboardLayout.KeyType.EMOJI_COMMA) {
+                drawEmojiCommaKey(canvas, iconDrawable, rect, textColor, key.label)
+            } else {
+                drawIcon(canvas, iconDrawable, rect, textColor)
+            }
+            return
+        }
+
+        if (key.type == EchosKeyboardLayout.KeyType.NUMPAD_SWITCH) {
+            drawNumpadSwitchKey(canvas, rect, textColor)
             return
         }
 
@@ -525,6 +776,114 @@ class EchosKeyboardView @JvmOverloads constructor(
         )
         drawable.setTint(tint)
         drawable.draw(canvas)
+    }
+
+    /// Returns true for NUMPAD keys that should render on the dark
+    /// background: the digits 0-9, "=", and "!?#" (the symbol switch).
+    /// Everything else in NUMPAD reads as "light" (operators, ABC,
+    /// comma, ".", "%", space, delete, return).
+    private fun isNumpadDarkKey(key: EchosKeyboardLayout.Key): Boolean {
+        if (key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH) return true
+        if (key.type != EchosKeyboardLayout.KeyType.CHARACTER) return false
+        if (key.label == "=") return true
+        return key.label.length == 1 && key.label[0].isDigit()
+    }
+
+    /// NUMPAD cell renderer. Walks the cell's sub-rects and draws each
+    /// rendered key. VERTICAL_STACK cells share a single rounded bg pill
+    /// (so the four operators look connected — no inter-key gaps); the
+    /// sub-keys then draw only their text on top with `drawBackground=false`.
+    private fun drawNumpadCell(
+        canvas: Canvas,
+        cell: EchosKeyboardLayout.NumpadCell,
+        outer: Int,
+    ) {
+        val rects = keyRects[outer]
+        when (cell.layout) {
+            EchosKeyboardLayout.CellLayout.SINGLE,
+            EchosKeyboardLayout.CellLayout.HORIZONTAL_SPLIT -> {
+                for (inner in cell.keys.indices) {
+                    drawKey(canvas, cell.keys[inner], rects[inner], isKeyPressed(outer, inner))
+                }
+            }
+            EchosKeyboardLayout.CellLayout.VERTICAL_STACK -> {
+                // The shared bg covers the visible band only (not the
+                // scrolled-off operators that extend beyond it).
+                val band = cellBounds[outer]
+                keyPaint.color = theme.specialKeyBackground
+                canvas.drawRoundRect(band, keyCornerRadius, keyCornerRadius, keyPaint)
+                // Clip subsequent draws to the visible band so the
+                // operators scrolling in/out of view get clipped at the
+                // band's edges.
+                val saveCount = canvas.save()
+                canvas.clipRect(band)
+                val pressedInner = (0 until cell.keys.size).firstOrNull { isKeyPressed(outer, it) }
+                if (pressedInner != null) {
+                    keyPaint.color = theme.specialKeyBackgroundPressed
+                    canvas.drawRoundRect(
+                        rects[pressedInner],
+                        keyCornerRadius * 0.5f,
+                        keyCornerRadius * 0.5f,
+                        keyPaint,
+                    )
+                }
+                for (inner in cell.keys.indices) {
+                    drawKey(
+                        canvas,
+                        cell.keys[inner],
+                        rects[inner],
+                        isKeyPressed(outer, inner),
+                        drawBackground = false,
+                    )
+                }
+                canvas.restoreToCount(saveCount)
+            }
+        }
+    }
+
+    /// "1234" key — renders digits in a 2x2 grid so users recognize the
+    /// numeric-pad shortcut at a glance, matching Gboard's glyph.
+    private fun drawNumpadSwitchKey(canvas: Canvas, rect: RectF, tint: Int) {
+        keyTextPaintSpecial.color = tint
+        val cx = rect.centerX()
+        val dx = rect.width() * 0.18f
+        val dy = rect.height() * 0.18f
+        canvas.drawText("1", cx - dx, rect.centerY() - dy + specialBaselineOffset, keyTextPaintSpecial)
+        canvas.drawText("2", cx + dx, rect.centerY() - dy + specialBaselineOffset, keyTextPaintSpecial)
+        canvas.drawText("3", cx - dx, rect.centerY() + dy + specialBaselineOffset, keyTextPaintSpecial)
+        canvas.drawText("4", cx + dx, rect.centerY() + dy + specialBaselineOffset, keyTextPaintSpecial)
+    }
+
+    /// Renders the combined emoji+comma key the way Gboard does: smiley
+    /// scaled down ~70% and pushed into the top third, with a "," label
+    /// sitting below at the same weight as a normal special-key glyph.
+    /// Tap commits the label; long-press opens the emoji picker.
+    private fun drawEmojiCommaKey(
+        canvas: Canvas,
+        drawable: Drawable,
+        rect: RectF,
+        tint: Int,
+        label: String,
+    ) {
+        val iconSide = (iconSizePx * 0.7f).toInt()
+        val cx = rect.centerX().toInt()
+        val iconCy = (rect.top + rect.height() * 0.32f).toInt()
+        drawable.setBounds(
+            cx - iconSide / 2,
+            iconCy - iconSide / 2,
+            cx + iconSide / 2,
+            iconCy + iconSide / 2,
+        )
+        drawable.setTint(tint)
+        drawable.draw(canvas)
+
+        keyTextPaintSpecial.color = tint
+        canvas.drawText(
+            label,
+            rect.centerX(),
+            rect.bottom - rect.height() * 0.14f,
+            keyTextPaintSpecial,
+        )
     }
 
     // -- Touch Handling --
@@ -595,6 +954,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             val state = pointers.get(pointerId) ?: continue
             val x = event.getX(i)
             val y = event.getY(i)
+            state.lastX = x
 
             // Variants popover takes over the drag for its owning pointer —
             // forward and skip everything else (no row/col re-detection,
@@ -602,6 +962,32 @@ class EchosKeyboardView @JvmOverloads constructor(
             if (state.ownsVariants && variantsActive) {
                 ov?.updateVariantsHighlight(x, y)
                 continue
+            }
+
+            // NUMPAD operator-column scroll: if the touch started on the
+            // operator stack (cell 0, VERTICAL_STACK) and the user
+            // dragged vertically past the activation threshold, claim
+            // the pointer for scrolling and start tracking it. Once
+            // owned, subsequent moves keep updating opScrollY until
+            // release.
+            val cells = currentCells
+            val onOpStack = cells != null && state.rowIdx == 0 &&
+                cells.getOrNull(0)?.layout == EchosKeyboardLayout.CellLayout.VERTICAL_STACK
+            if (onOpStack) {
+                val dy = y - state.opScrollStartY
+                if (!state.ownsOpScroll && kotlin.math.abs(dy) > dpPx(8f)) {
+                    state.ownsOpScroll = true
+                    state.longPressFired = true // Suppress the press's tap.
+                    state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                    state.longPressRunnable = null
+                }
+                if (state.ownsOpScroll) {
+                    opScrollY = (state.opScrollInitial - dy)
+                        .coerceIn(0f, opScrollMax())
+                    keyRectsValid = false
+                    invalidate()
+                    continue
+                }
             }
 
             // Long-press already fired (e.g. globe picker shown): drift is
@@ -628,8 +1014,8 @@ class EchosKeyboardView @JvmOverloads constructor(
             val newCol = packed and 0xFFFF
             if (newRow == state.rowIdx && newCol == state.colIdx) continue
 
-            val newKey = currentRows[newRow].keys[newCol]
-            val oldKey = currentRows[state.rowIdx].keys[state.colIdx]
+            val newKey = keyAt(newRow, newCol) ?: continue
+            val oldKey = keyAt(state.rowIdx, state.colIdx) ?: continue
 
             // Only slide between character-ish keys. Sliding from `q` onto
             // shift / delete / return would do more harm than good — and
@@ -664,7 +1050,6 @@ class EchosKeyboardView @JvmOverloads constructor(
 
     private fun isSlideable(type: EchosKeyboardLayout.KeyType): Boolean =
         type == EchosKeyboardLayout.KeyType.CHARACTER ||
-            type == EchosKeyboardLayout.KeyType.COMMA ||
             type == EchosKeyboardLayout.KeyType.PERIOD
 
     private fun keyRectAtOrNull(rowIdx: Int, colIdx: Int): RectF? {
@@ -689,7 +1074,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         if (packed < 0) return
         val rowIdx = packed ushr 16
         val colIdx = packed and 0xFFFF
-        val key = currentRows[rowIdx].keys[colIdx]
+        val key = keyAt(rowIdx, colIdx) ?: return
         val keyRect = keyRects[rowIdx][colIdx]
 
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -702,7 +1087,18 @@ class EchosKeyboardView @JvmOverloads constructor(
             longPressFired = false,
             ownsVariants = false,
             ownsDeleteRepeat = false,
+            lastX = x,
         )
+        // NUMPAD operator-column: capture the touch's Y at press so a
+        // subsequent vertical drag can engage the scroll without
+        // additional state.
+        val cells = currentCells
+        if (cells != null && rowIdx == 0 &&
+            cells.getOrNull(0)?.layout == EchosKeyboardLayout.CellLayout.VERTICAL_STACK
+        ) {
+            state.opScrollStartY = y
+            state.opScrollInitial = opScrollY
+        }
         pointers.put(pointerId, state)
 
         when (key.type) {
@@ -718,19 +1114,38 @@ class EchosKeyboardView @JvmOverloads constructor(
                 }
             }
             EchosKeyboardLayout.KeyType.GLOBE -> scheduleGlobeLongPress(state)
+            EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
+                // Surface the same typewriter balloon we show for letter
+                // presses, but with a smiley glyph. Makes the long-press
+                // affordance (opens the emoji picker) obvious — without
+                // it, the user has to discover the gesture by accident.
+                overlay?.showPreview("🙂", keyRect)
+                scheduleEmojiLongPress(state)
+            }
+            EchosKeyboardLayout.KeyType.SHIFT -> scheduleShiftLongPress(state)
             EchosKeyboardLayout.KeyType.CHARACTER -> {
                 val ch = if (shiftState != ShiftState.OFF) {
                     uppercaseLabelCache[key.label] ?: key.label.uppercase()
                 } else {
                     key.label
                 }
-                // Latest pointer wins the preview balloon (overlay shows
-                // only one at a time). The variants popup is exclusive too:
-                // if another pointer already owns it, don't schedule a
-                // competing long-press.
-                overlay?.showPreview(ch, keyRect)
+                // NUMPAD suppresses the typewriter balloon for digits,
+                // operators, "=", and "!?#" — only the comma surfaces a
+                // preview (and PERIOD, which uses its own key type).
+                val showPreview = currentCells == null || key.label == ","
+                if (showPreview) {
+                    overlay?.showPreview(ch, keyRect)
+                }
                 if (AccentVariants.hasVariants(key.label) && !anyPointerOwnsVariants()) {
                     scheduleAccentLongPress(state, keyRect, key)
+                }
+            }
+            EchosKeyboardLayout.KeyType.PERIOD -> {
+                // Period in NUMPAD shows a preview just like comma; in
+                // letter/number layouts it falls through to no preview
+                // (matches the current behaviour for those layouts).
+                if (currentCells != null) {
+                    overlay?.showPreview(".", keyRect)
                 }
             }
             else -> Unit
@@ -745,7 +1160,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
         state.longPressRunnable = null
 
-        val key = currentRows[state.rowIdx].keys[state.colIdx]
+        val key = keyAt(state.rowIdx, state.colIdx) ?: return
 
         // Hide the preview balloon once the last pointer lifts. Earlier
         // releases keep it up so the user still sees feedback for whatever
@@ -853,7 +1268,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 // releases its pressed-state highlight.
                 state.longPressFired = true
                 state.ownsVariants = true
-                overlay?.showVariants(anchorRect, variants)
+                overlay?.showVariants(anchorRect, variants, state.lastX)
                 invalidate()
             }
         }
@@ -865,6 +1280,28 @@ class EchosKeyboardView @JvmOverloads constructor(
         val runnable = Runnable {
             state.longPressFired = true
             listener?.onShowKeyboardPicker()
+        }
+        state.longPressRunnable = runnable
+        longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
+    }
+
+    private fun scheduleEmojiLongPress(state: PointerState) {
+        val runnable = Runnable {
+            state.longPressFired = true
+            listener?.onEmojiPress()
+        }
+        state.longPressRunnable = runnable
+        longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
+    }
+
+    /// Long-press shift -> caps-lock (Gboard pattern). The release handler
+    /// ignores the tap when `longPressFired` is set, so caps-lock sticks
+    /// after the user lifts.
+    private fun scheduleShiftLongPress(state: PointerState) {
+        val runnable = Runnable {
+            state.longPressFired = true
+            shiftState = ShiftState.CAPS_LOCK
+            invalidate()
         }
         state.longPressRunnable = runnable
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
@@ -893,7 +1330,23 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// `hitTestKeyButton` fix and Archagon's `ForwardingView.findNearestView`.
     private fun findKey(x: Float, y: Float): Int {
         // Fast path: direct hit.
+        val cells = currentCells
         for (rowIdx in keyRects.indices) {
+            // NUMPAD VERTICAL_STACK cells lay out *all* operator keys —
+            // including the overflow ones (e.g. "(", ")") that only
+            // appear after the user scrolls the column. Those overflow
+            // rects extend below the visible band and would otherwise
+            // claim hits that belong to the row 3 cell sitting under
+            // the stack (the ABC mode-switch). Clip hit-testing to the
+            // cell's [cellBounds] band so an unscrolled tap on ABC
+            // doesn't fall through to "(".
+            val band = if (cells != null) {
+                val cell = cells.getOrNull(rowIdx)
+                if (cell?.layout == EchosKeyboardLayout.CellLayout.VERTICAL_STACK) {
+                    cellBounds.getOrNull(rowIdx)
+                } else null
+            } else null
+            if (band != null && (y < band.top || y > band.bottom)) continue
             for (colIdx in keyRects[rowIdx].indices) {
                 if (keyRects[rowIdx][colIdx].contains(x, y)) {
                     return (rowIdx shl 16) or colIdx
@@ -903,6 +1356,12 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         // Pick the row whose vertical band the touch lies in, or the row
         // with the nearest vertical edge if the touch is between rows.
+        // In NUMPAD (column mode), the outer index is a column, so we
+        // pick by horizontal proximity instead.
+        // NUMPAD (cell-based) has 4 visual rows just like row-based
+        // layouts, so the row-major nearest-row fallback works. The
+        // direct-hit path covers most touches; this fallback only fires
+        // when a touch lands in inter-cell space.
         val candidateRow = nearestRowIndex(y)
         if (candidateRow < 0) return -1
 
@@ -939,9 +1398,9 @@ class EchosKeyboardView @JvmOverloads constructor(
         return (candidateRow shl 16) or bestCol
     }
 
-    /// Index of the row whose vertical span best matches `y`; falls back to
-    /// the row with the nearest vertical edge if the touch is between rows.
-    /// Returns -1 only when `keyRects` is empty.
+    /// Index of the row whose vertical span best matches `y`; falls back
+    /// to the row with the nearest vertical edge if the touch is between
+    /// rows. Returns -1 only when `keyRects` is empty.
     private fun nearestRowIndex(y: Float): Int {
         if (keyRects.isEmpty()) return -1
         var bestRow = -1
@@ -973,15 +1432,16 @@ class EchosKeyboardView @JvmOverloads constructor(
             EchosKeyboardLayout.KeyType.DELETE -> listener?.onDeletePress()
             EchosKeyboardLayout.KeyType.SPACE -> listener?.onSpacePress()
             EchosKeyboardLayout.KeyType.RETURN -> listener?.onReturnPress()
-            EchosKeyboardLayout.KeyType.COMMA -> listener?.onKeyPress(",")
             EchosKeyboardLayout.KeyType.PERIOD -> listener?.onKeyPress(".")
             EchosKeyboardLayout.KeyType.MIC -> listener?.onMicRelease()
-            EchosKeyboardLayout.KeyType.EMOJI -> listener?.onEmojiPress()
+            EchosKeyboardLayout.KeyType.EMOJI_COMMA -> listener?.onKeyPress(",")
             EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()
             EchosKeyboardLayout.KeyType.SHIFT -> {
+                // Tap toggles SHIFT on/off. Long-press jumps straight to
+                // caps-lock (handled separately via the long-press timer).
                 shiftState = when (shiftState) {
                     ShiftState.OFF -> ShiftState.ON
-                    ShiftState.ON -> ShiftState.CAPS_LOCK
+                    ShiftState.ON -> ShiftState.OFF
                     ShiftState.CAPS_LOCK -> ShiftState.OFF
                 }
                 invalidate()
@@ -995,12 +1455,15 @@ class EchosKeyboardView @JvmOverloads constructor(
                     LayoutMode.LETTERS -> {
                         layoutMode = LayoutMode.NUMBERS
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
+                        currentCells = null
                     }
-                    LayoutMode.NUMBERS, LayoutMode.SYMBOLS -> {
+                    LayoutMode.NUMBERS, LayoutMode.SYMBOLS, LayoutMode.NUMPAD -> {
                         layoutMode = LayoutMode.LETTERS
                         currentRows = EchosKeyboardLayout.LETTER_ROWS
+                        currentCells = null
                     }
                 }
+                opScrollY = 0f
                 keyRectsValid = false
                 requestLayout()
                 invalidate()
@@ -1008,16 +1471,36 @@ class EchosKeyboardView @JvmOverloads constructor(
             EchosKeyboardLayout.KeyType.SYMBOL_SWITCH -> {
                 cancelOtherActivePointers()
                 when (layoutMode) {
-                    LayoutMode.NUMBERS -> {
+                    LayoutMode.NUMBERS, LayoutMode.NUMPAD -> {
                         layoutMode = LayoutMode.SYMBOLS
                         currentRows = EchosKeyboardLayout.SYMBOL_ROWS
+                        currentCells = null
                     }
                     LayoutMode.SYMBOLS -> {
                         layoutMode = LayoutMode.NUMBERS
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
+                        currentCells = null
                     }
                     else -> {}
                 }
+                opScrollY = 0f
+                keyRectsValid = false
+                requestLayout()
+                invalidate()
+            }
+            EchosKeyboardLayout.KeyType.NUMPAD_SWITCH -> {
+                cancelOtherActivePointers()
+                // Tap from numbers/symbols -> calculator layout. Tap again
+                // (from inside numpad) returns to numbers.
+                if (layoutMode == LayoutMode.NUMPAD) {
+                    layoutMode = LayoutMode.NUMBERS
+                    currentRows = EchosKeyboardLayout.NUMBER_ROWS
+                    currentCells = null
+                } else {
+                    layoutMode = LayoutMode.NUMPAD
+                    currentCells = EchosKeyboardLayout.NUMPAD_CELLS
+                }
+                opScrollY = 0f
                 keyRectsValid = false
                 requestLayout()
                 invalidate()

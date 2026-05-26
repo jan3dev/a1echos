@@ -1,0 +1,29 @@
+<!-- "1234" key glyph — a 2x2 mini-grid of digits showing the calculator
+     layout the key opens. Drawn at the same 24dp viewport as the other
+     keyboard icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M5.6,4h3.0v3.6h-3.0z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M5.6,11.2h3.0v3.6h-3.0z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M5.6,18.4h3.0v3.6h-3.0z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M14.0,4h6.4v3.6h-6.4z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M14.0,11.2h6.4v3.6h-6.4z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M14.0,18.4h6.4v3.6h-6.4z"/>
+    </group>
+</vector>
