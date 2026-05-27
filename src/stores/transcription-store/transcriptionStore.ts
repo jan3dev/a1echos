@@ -29,6 +29,21 @@ import { useUIStore } from "../ui-store/uiStore";
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
 
+// expo-keep-awake rejects with "current activity is no longer available"
+// when the host Activity is mid-recreation. Swallow it — keep-awake is
+// best-effort and recording-state correctness doesn't depend on it.
+const safeKeepAwake = async (active: boolean): Promise<void> => {
+  try {
+    if (active) {
+      await activateKeepAwakeAsync("recording");
+    } else {
+      await deactivateKeepAwake("recording");
+    }
+  } catch {
+    // Activity transitioning — ignore.
+  }
+};
+
 export const AUDIO_BUSY_STATES: ReadonlySet<TranscriptionState> = new Set([
   TranscriptionState.RECORDING_STARTING,
   TranscriptionState.RECORDING,
@@ -442,7 +457,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return false;
       }
 
-      // Keep screen awake during recording/streaming/transcribing
+      // Keep screen awake during recording/streaming/transcribing.
+      // expo-keep-awake throws "current activity is no longer available"
+      // when the host Activity is being recreated (rotation, background,
+      // splash transition) — swallow it; keep-awake is best-effort and
+      // the user gets feedback through other channels if the screen
+      // does sleep mid-recording.
       const keepAwakeStates = new Set([
         TranscriptionState.RECORDING,
         TranscriptionState.STREAMING,
@@ -450,9 +470,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       ]);
       if (AppState.currentState === "active") {
         if (keepAwakeStates.has(newState)) {
-          void activateKeepAwakeAsync("recording").catch(() => {});
+          void safeKeepAwake(true);
         } else if (keepAwakeStates.has(currentState)) {
-          void deactivateKeepAwake("recording").catch(() => {});
+          void safeKeepAwake(false);
         }
       }
 

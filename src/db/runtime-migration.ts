@@ -344,11 +344,25 @@ export async function consolidateDefaultSessionIfNeeded(): Promise<void> {
 }
 
 /**
- * Best-effort cleanup of legacy storage artifacts. Runs unconditionally on
- * every app launch (cheap exists checks) so a crash between the
+ * Best-effort cleanup of legacy storage artifacts. Gated on schema_version>=1
+ * so a failed migration never wipes the only copy of the user's data — the
+ * legacy files are the source of truth until the import has actually
+ * committed. Runs on every successful launch so a crash between the
  * schema_version bump and this step doesn't leave stale files forever.
  */
 export async function cleanupLegacyArtifactsIfPresent(): Promise<void> {
+  // Refuse to delete legacy data unless the migration actually succeeded.
+  // `runLegacyMigrationIfNeeded` catches its own errors and returns silently,
+  // so without this gate a transient migration failure would lose data.
+  try {
+    if ((await getSchemaVersion()) < 1) return;
+  } catch (error) {
+    logWarn(`Skipping legacy cleanup — schema_version read failed: ${error}`, {
+      flag: FeatureFlag.storage,
+    });
+    return;
+  }
+
   await Promise.allSettled([
     AsyncStorage.removeItem(LEGACY_SESSIONS_KEY),
     AsyncStorage.removeItem(LEGACY_ACTIVE_SESSION_KEY),

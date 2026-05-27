@@ -69,5 +69,39 @@ describe("db/index", () => {
       expect(getRawDatabase()).toBe(rawDb);
       expect(getDb()).toBeDefined();
     });
+
+    it('deletes and recreates the DB when the probe rejects with "file is not a database"', async () => {
+      const closeAsync = jest.fn(async () => undefined);
+      const failingExec = jest.fn(async (sql: string) => {
+        if (sql.startsWith("SELECT")) {
+          throw new Error("file is not a database");
+        }
+      });
+      const goodExec = jest.fn(async () => undefined);
+      (SQLite.openDatabaseSync as jest.Mock)
+        .mockReturnValueOnce({ execAsync: failingExec, closeAsync })
+        .mockReturnValueOnce({ execAsync: goodExec });
+
+      const db = await openAndPrepareDatabase();
+      expect(db).toBeDefined();
+      expect(SQLite.deleteDatabaseSync).toHaveBeenCalledWith("echos.db");
+      // Probe ran twice: once to detect the bad DB, once on the fresh file.
+      expect(SQLite.openDatabaseSync).toHaveBeenCalledTimes(2);
+      expect(closeAsync).toHaveBeenCalled();
+    });
+
+    it("propagates errors that aren't decryption failures", async () => {
+      const closeAsync = jest.fn(async () => undefined);
+      const execAsync = jest.fn(async () => {
+        throw new Error("disk i/o error");
+      });
+      (SQLite.openDatabaseSync as jest.Mock).mockReturnValueOnce({
+        execAsync,
+        closeAsync,
+      });
+
+      await expect(openAndPrepareDatabase()).rejects.toThrow(/disk i\/o/);
+      expect(SQLite.deleteDatabaseSync).not.toHaveBeenCalled();
+    });
   });
 });

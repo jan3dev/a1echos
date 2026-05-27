@@ -572,7 +572,14 @@ describe("runtime-migration", () => {
   });
 
   describe("cleanupLegacyArtifactsIfPresent", () => {
-    it("removes AsyncStorage keys and legacy files", async () => {
+    const stubSchemaVersion = (value: string | null) => {
+      mockTxChain.get.mockImplementationOnce(async () =>
+        value === null ? null : { key: "schema_version", value },
+      );
+    };
+
+    it("removes AsyncStorage keys and legacy files when schema_version>=1", async () => {
+      stubSchemaVersion("1");
       const mockFile = { exists: true, delete: jest.fn() };
       (File as unknown as jest.Mock).mockImplementation(() => mockFile);
 
@@ -583,7 +590,35 @@ describe("runtime-migration", () => {
       expect(mockFile.delete).toHaveBeenCalled();
     });
 
+    it("refuses to delete anything when schema_version is still 0", async () => {
+      // Simulates the failure path: runLegacyMigrationIfNeeded threw and
+      // never bumped schema_version. The legacy files are still the only
+      // copy of the user's data — cleanup must NOT run.
+      stubSchemaVersion(null);
+      const mockFile = { exists: true, delete: jest.fn() };
+      (File as unknown as jest.Mock).mockImplementation(() => mockFile);
+
+      await cleanupLegacyArtifactsIfPresent();
+
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+      expect(mockFile.delete).not.toHaveBeenCalled();
+    });
+
+    it("aborts cleanup if the schema_version read throws", async () => {
+      mockTxChain.get.mockImplementationOnce(async () => {
+        throw new Error("db closed");
+      });
+      const mockFile = { exists: true, delete: jest.fn() };
+      (File as unknown as jest.Mock).mockImplementation(() => mockFile);
+
+      await cleanupLegacyArtifactsIfPresent();
+
+      expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+      expect(mockFile.delete).not.toHaveBeenCalled();
+    });
+
     it("ignores already-absent files", async () => {
+      stubSchemaVersion("1");
       const mockFile = { exists: false, delete: jest.fn() };
       (File as unknown as jest.Mock).mockImplementation(() => mockFile);
 
@@ -593,6 +628,7 @@ describe("runtime-migration", () => {
     });
 
     it("swallows file delete errors", async () => {
+      stubSchemaVersion("1");
       const mockFile = {
         exists: true,
         delete: jest.fn(() => {

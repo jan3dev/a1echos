@@ -201,6 +201,7 @@ jest.mock("expo-sqlite", () => ({
     deleteAsync: jest.fn(async () => undefined),
   })),
   deleteDatabaseAsync: jest.fn(async () => undefined),
+  deleteDatabaseSync: jest.fn(() => undefined),
 }));
 
 // drizzle-orm/expo-sqlite — return a stub by default; DB-touching tests

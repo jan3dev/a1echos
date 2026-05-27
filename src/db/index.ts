@@ -15,6 +15,46 @@ const DATABASE_NAME = "echos.db";
 let _db: Db | null = null;
 let _raw: SQLite.SQLiteDatabase | null = null;
 
+/**
+ * Opens a fresh SQLite handle and applies the SQLCipher PRAGMAs +
+ * sanity probe. Closes and rethrows on any failure so the caller can
+ * decide whether to recover.
+ */
+async function openWithKey(hex: string): Promise<SQLite.SQLiteDatabase> {
+  const raw = SQLite.openDatabaseSync(DATABASE_NAME);
+  try {
+    // SQLCipher PRAGMAs MUST run before any other statement on the connection.
+    // Raw-key form (x'<hex>') skips PBKDF2 — the key is already 256 random bits.
+    await raw.execAsync(`PRAGMA key = "x'${hex}'";`);
+    await raw.execAsync("PRAGMA cipher_compatibility = 4;");
+    await raw.execAsync("PRAGMA foreign_keys = ON;");
+    await raw.execAsync("PRAGMA journal_mode = WAL;");
+    // A wrong key fails on first read, not on the PRAGMA call — probe explicitly.
+    await raw.execAsync("SELECT count(*) FROM sqlite_master;");
+    return raw;
+  } catch (error) {
+    try {
+      await raw.closeAsync();
+    } catch {
+      // ignore — already in an error path
+    }
+    throw error;
+  }
+}
+
+/**
+ * Matches the SQLCipher "can't decrypt this" family of errors so the
+ * opener knows to delete the DB and recreate. Triggered by:
+ *   - a pre-SQLCipher plain-text echos.db left over from an older build,
+ *   - a SecureStore key rotation that orphaned the previous DB.
+ */
+function isUnreadableDbError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes("file is not a database") || msg.includes("file is encrypted")
+  );
+}
+
 export async function openAndPrepareDatabase(): Promise<Db> {
   if (_db) return _db;
 
@@ -25,16 +65,29 @@ export async function openAndPrepareDatabase(): Promise<Db> {
   if (!/^[0-9a-f]{64}$/.test(hex)) {
     throw new Error("SQLCipher key failed format check");
   }
-  const raw = SQLite.openDatabaseSync(DATABASE_NAME);
 
-  // SQLCipher PRAGMAs MUST run before any other statement on the connection.
-  // Raw-key form (x'<hex>') skips PBKDF2 — the key is already 256 random bits.
-  await raw.execAsync(`PRAGMA key = "x'${hex}'";`);
-  await raw.execAsync("PRAGMA cipher_compatibility = 4;");
-  await raw.execAsync("PRAGMA foreign_keys = ON;");
-  await raw.execAsync("PRAGMA journal_mode = WAL;");
-  // A wrong key fails on first read, not on the PRAGMA call — probe explicitly.
-  await raw.execAsync("SELECT count(*) FROM sqlite_master;");
+  let raw: SQLite.SQLiteDatabase;
+  try {
+    raw = await openWithKey(hex);
+  } catch (error) {
+    if (!isUnreadableDbError(error)) throw error;
+    // Either a leftover plain-text SQLite DB from a pre-SQLCipher build
+    // or a SecureStore key rotation that orphaned the previous DB.
+    // Recovery: delete and recreate. Data in the DB is lost; the
+    // legacy-JSON migration step that runs after opening will re-import
+    // any surviving JSON artifacts.
+    logWarn(`Encrypted DB unreadable — deleting and recreating: ${error}`, {
+      flag: FeatureFlag.storage,
+    });
+    try {
+      SQLite.deleteDatabaseSync(DATABASE_NAME);
+    } catch (deleteError) {
+      logWarn(`Failed to delete unreadable DB file: ${deleteError}`, {
+        flag: FeatureFlag.storage,
+      });
+    }
+    raw = await openWithKey(hex);
+  }
 
   if (Platform.OS === "ios") {
     // expo-sqlite stores DBs under {documentDirectory}/SQLite/<name>. iOS
