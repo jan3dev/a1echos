@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Landscape overrides. Vertical space is scarce in landscape, so the
+         keys shrink and the inter-row gap drops to match the inter-key
+         horizontal gap exactly (4dp == 4dp) — this gives the QWERTY grid
+         a uniform breathing room in both axes rather than the taller
+         portrait rhythm. -->
+    <dimen name="key_height">32dp</dimen>
+    <dimen name="key_vertical_gap">4dp</dimen>
+</resources>

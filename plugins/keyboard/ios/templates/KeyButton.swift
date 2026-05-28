@@ -263,11 +263,11 @@ class KeyButton: UIControl {
             // background — no brand-color highlight.
             textColor = theme.keyText
             tintColor = theme.keyText
-            weight = shiftState == .off ? .regular : .semibold
+            weight = shiftState.isShifted ? .semibold : .regular
             fontSize = 17
             switch shiftState {
-            case .off: setDisplaySymbol("shift")
-            case .on: setDisplaySymbol("shift.fill")
+            case .off, .manualFromAuto: setDisplaySymbol("shift")
+            case .on, .automatic: setDisplaySymbol("shift.fill")
             case .capsLock: setDisplaySymbol("capslock.fill")
             }
 

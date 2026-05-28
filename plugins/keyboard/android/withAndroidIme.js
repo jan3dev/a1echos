@@ -137,6 +137,9 @@ function withImeSources(config) {
         "SkinTonePopupView.kt",
         "EmojiCellTextView.kt",
         "ImeSettingsActivity.kt",
+        "SpacingAndPunctuations.kt",
+        "AutoCapEngine.kt",
+        "DoubleSpacePeriod.kt",
       ];
 
       for (const file of ktFiles) {
@@ -213,6 +216,23 @@ function withImeSources(config) {
         fs.writeFileSync(
           path.join(valuesDir, "keyboard_dimens.xml"),
           fs.readFileSync(dimensPath, "utf8"),
+        );
+      }
+
+      // res/values-land/keyboard_dimens.xml — landscape overrides
+      // (shorter keys, vertical gap == horizontal gap).
+      const valuesLandDir = path.join(resDir, "values-land");
+      ensureDir(valuesLandDir);
+      const dimensLandPath = path.join(
+        TEMPLATES_DIR,
+        "res",
+        "values-land",
+        "keyboard_dimens.xml",
+      );
+      if (fs.existsSync(dimensLandPath)) {
+        fs.writeFileSync(
+          path.join(valuesLandDir, "keyboard_dimens.xml"),
+          fs.readFileSync(dimensLandPath, "utf8"),
         );
       }
 

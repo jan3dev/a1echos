@@ -11,6 +11,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -70,6 +71,18 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var opScrollY: Float = 0f
     private var layoutMode: LayoutMode = LayoutMode.LETTERS
     private var shiftState: ShiftState = ShiftState.OFF
+
+    /// Timestamp (SystemClock.uptimeMillis) of the previous shift tap.
+    /// A second tap within `SHIFT_DOUBLE_TAP_WINDOW_MS` escalates to
+    /// caps lock. 0 = no shift tap pending.
+    private var lastShiftTapAt: Long = 0L
+
+    /// §4.9 symbols auto-return — set when the user types a non-space
+    /// symbol from the NUMBERS / SYMBOLS layout, consumed on the next
+    /// space or enter to flip back to letters. Reset on every explicit
+    /// layout switch so the next space after a manual swap doesn't
+    /// jump the user somewhere they didn't ask for.
+    private var typedNonSpaceInSymbols: Boolean = false
     private var micState: MicState = MicState.IDLE
     private var returnLabel: String = "\u23CE"
     /// When true, the RETURN key renders as a checkmark \u2014 the IME flips
@@ -198,6 +211,14 @@ class EchosKeyboardView @JvmOverloads constructor(
     private companion object {
         private const val LONG_PRESS_THRESHOLD_MS = 400L
 
+        /// LatinIME's `keyboard_lock_timeout` — long-press shift this long
+        /// jumps straight to caps lock, bypassing the regular tap cycle.
+        private const val SHIFT_LONG_PRESS_TO_LOCK_MS = 1200L
+
+        /// `getDoubleTapTimeout()` default on Android is 300 ms. Two shift
+        /// taps inside this window escalate to caps lock.
+        private const val SHIFT_DOUBLE_TAP_WINDOW_MS = 300L
+
         /// Tag used by the optional perf logger. Toggle on a connected
         /// device with `adb shell setprop log.tag.EchosImePerf DEBUG`.
         /// Off by default — `Log.isLoggable` is a fast check.
@@ -243,7 +264,20 @@ class EchosKeyboardView @JvmOverloads constructor(
     )
 
     enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD }
-    enum class ShiftState { OFF, ON, CAPS_LOCK }
+    /**
+     * LatinIME-style 6-state shift machine. `AUTOMATIC` is rendered the
+     * same as `ON` but drops to `OFF` after one keystroke without feeling
+     * like the user undid a deliberate shift. `MANUAL_FROM_AUTO` is the
+     * transient "user cancelled the auto-shift" state; rendered as OFF.
+     */
+    enum class ShiftState {
+        OFF, ON, AUTOMATIC, MANUAL_FROM_AUTO, CAPS_LOCK;
+        /** Character keys commit uppercase when this is true. */
+        val isShifted: Boolean get() = when (this) {
+            OFF, MANUAL_FROM_AUTO -> false
+            ON, AUTOMATIC, CAPS_LOCK -> true
+        }
+    }
 
     init {
         isFocusable = true
@@ -251,6 +285,20 @@ class EchosKeyboardView @JvmOverloads constructor(
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
 
         loadDimensions()
+    }
+
+    /**
+     * Re-reads `keyboard_dimens.xml` and rebuilds the per-paint metric
+     * caches. Call after a configuration change (e.g. rotation) so the
+     * landscape `values-land/` overrides take effect — Android keeps
+     * the IME's input view across rotations by default, so dimensions
+     * read at init time would otherwise stay stale.
+     */
+    fun reloadDimensions() {
+        loadDimensions()
+        keyRectsValid = false
+        requestLayout()
+        invalidate()
     }
 
     private fun loadDimensions() {
@@ -325,6 +373,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         currentCells = null
         opScrollY = 0f
         shiftState = ShiftState.OFF
+        typedNonSpaceInSymbols = false
         keyRectsValid = false
         requestLayout()
         invalidate()
@@ -335,6 +384,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         currentRows = EchosKeyboardLayout.NUMBER_ROWS
         currentCells = null
         opScrollY = 0f
+        typedNonSpaceInSymbols = false
         keyRectsValid = false
         requestLayout()
         invalidate()
@@ -344,6 +394,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         layoutMode = LayoutMode.NUMPAD
         currentCells = EchosKeyboardLayout.NUMPAD_CELLS
         opScrollY = 0f
+        typedNonSpaceInSymbols = false
         // currentRows is left as-is; the cell pipeline owns layout.
         keyRectsValid = false
         requestLayout()
@@ -628,7 +679,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // we light up its background (using the brighter regular-key tone)
         // so the user can tell at a glance which mode they're in.
         val isShiftActive = key.type == EchosKeyboardLayout.KeyType.SHIFT
-            && shiftState != ShiftState.OFF
+            && shiftState.isShifted
         // NUMPAD diverges from the regular bg rules: the operator column,
         // ABC, comma, ".", "%", space, delete, and return are all
         // "light" (specialKeyBackground); the digit keys, "=", and "!?#"
@@ -658,7 +709,8 @@ class EchosKeyboardView @JvmOverloads constructor(
             key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.NUMPAD_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.GLOBE ||
-            key.type == EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
+            key.type == EchosKeyboardLayout.KeyType.EMOJI_COMMA ||
+            key.type == EchosKeyboardLayout.KeyType.PERIOD -> {
                 if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN -> {
@@ -700,8 +752,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         // where the resource hasn't been bundled for some reason.
         val iconName = when {
             key.type == EchosKeyboardLayout.KeyType.SHIFT -> when (shiftState) {
-                ShiftState.OFF -> "ic_shift_outline"
-                ShiftState.ON -> "ic_shift"
+                ShiftState.OFF, ShiftState.MANUAL_FROM_AUTO -> "ic_shift_outline"
+                ShiftState.ON, ShiftState.AUTOMATIC -> "ic_shift"
                 ShiftState.CAPS_LOCK -> "ic_capslock"
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN && returnAsCheckmark -> "ic_check"
@@ -731,7 +783,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         val displayLabel = when {
             key.type == EchosKeyboardLayout.KeyType.RETURN ->
                 if (returnAsCheckmark) "✓" else returnLabel
-            key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState != ShiftState.OFF ->
+            key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState.isShifted ->
                 uppercaseLabelCache[key.label] ?: key.label.uppercase()
             else -> key.label
         }
@@ -1032,7 +1084,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             needsRedraw = true
 
             val newKeyRect = keyRects[newRow][newCol]
-            val displayLabel = if (shiftState != ShiftState.OFF) {
+            val displayLabel = if (shiftState.isShifted) {
                 uppercaseLabelCache[newKey.label] ?: newKey.label.uppercase()
             } else newKey.label
             overlay?.showPreview(displayLabel, newKeyRect)
@@ -1115,16 +1167,15 @@ class EchosKeyboardView @JvmOverloads constructor(
             }
             EchosKeyboardLayout.KeyType.GLOBE -> scheduleGlobeLongPress(state)
             EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
-                // Surface the same typewriter balloon we show for letter
-                // presses, but with a smiley glyph. Makes the long-press
-                // affordance (opens the emoji picker) obvious — without
-                // it, the user has to discover the gesture by accident.
-                overlay?.showPreview("🙂", keyRect)
+                // Short tap commits a comma; long-press opens the emoji
+                // picker. Suppress the typewriter balloon on press so
+                // the user doesn't see a smiley pop up for what is
+                // primarily a comma key — matches Gboard.
                 scheduleEmojiLongPress(state)
             }
             EchosKeyboardLayout.KeyType.SHIFT -> scheduleShiftLongPress(state)
             EchosKeyboardLayout.KeyType.CHARACTER -> {
-                val ch = if (shiftState != ShiftState.OFF) {
+                val ch = if (shiftState.isShifted) {
                     uppercaseLabelCache[key.label] ?: key.label.uppercase()
                 } else {
                     key.label
@@ -1177,9 +1228,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             ov?.clearVariants()
             if (selected != null) {
                 listener?.onKeyPress(selected)
-                if (shiftState == ShiftState.ON) {
-                    shiftState = ShiftState.OFF
-                }
+                dropTransientShiftAfterCharacterCommit()
             }
             logTouchLatency(state, key.type)
             return
@@ -1260,7 +1309,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         val runnable = Runnable {
             val variants = AccentVariants.variants(
                 key.label,
-                shiftState != ShiftState.OFF,
+                shiftState.isShifted,
             )
             if (variants.isNotEmpty()) {
                 // The popup takes over visual feedback for the rest of the
@@ -1294,17 +1343,18 @@ class EchosKeyboardView @JvmOverloads constructor(
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
     }
 
-    /// Long-press shift -> caps-lock (Gboard pattern). The release handler
-    /// ignores the tap when `longPressFired` is set, so caps-lock sticks
-    /// after the user lifts.
+    /// Long-press shift -> caps-lock (LatinIME pattern at 1200 ms). The
+    /// release handler ignores the tap when `longPressFired` is set, so
+    /// caps-lock sticks after the user lifts.
     private fun scheduleShiftLongPress(state: PointerState) {
         val runnable = Runnable {
             state.longPressFired = true
             shiftState = ShiftState.CAPS_LOCK
+            lastShiftTapAt = 0L
             invalidate()
         }
         state.longPressRunnable = runnable
-        longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
+        longPressHandler.postDelayed(runnable, SHIFT_LONG_PRESS_TO_LOCK_MS)
     }
 
     private fun dpPx(value: Float): Float =
@@ -1422,35 +1472,37 @@ class EchosKeyboardView @JvmOverloads constructor(
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
         when (key.type) {
             EchosKeyboardLayout.KeyType.CHARACTER -> {
-                val char = if (shiftState != ShiftState.OFF) key.label.uppercase() else key.label
+                val char = if (shiftState.isShifted) key.label.uppercase() else key.label
                 listener?.onKeyPress(char)
-                if (shiftState == ShiftState.ON) {
-                    shiftState = ShiftState.OFF
-                    invalidate()
-                }
+                dropTransientShiftAfterCharacterCommit()
+                markSymbolTypedIfApplicable()
             }
             EchosKeyboardLayout.KeyType.DELETE -> listener?.onDeletePress()
-            EchosKeyboardLayout.KeyType.SPACE -> listener?.onSpacePress()
-            EchosKeyboardLayout.KeyType.RETURN -> listener?.onReturnPress()
-            EchosKeyboardLayout.KeyType.PERIOD -> listener?.onKeyPress(".")
-            EchosKeyboardLayout.KeyType.MIC -> listener?.onMicRelease()
-            EchosKeyboardLayout.KeyType.EMOJI_COMMA -> listener?.onKeyPress(",")
-            EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()
-            EchosKeyboardLayout.KeyType.SHIFT -> {
-                // Tap toggles SHIFT on/off. Long-press jumps straight to
-                // caps-lock (handled separately via the long-press timer).
-                shiftState = when (shiftState) {
-                    ShiftState.OFF -> ShiftState.ON
-                    ShiftState.ON -> ShiftState.OFF
-                    ShiftState.CAPS_LOCK -> ShiftState.OFF
-                }
-                invalidate()
+            EchosKeyboardLayout.KeyType.SPACE -> {
+                listener?.onSpacePress()
+                autoReturnToLettersIfApplicable()
             }
+            EchosKeyboardLayout.KeyType.RETURN -> {
+                listener?.onReturnPress()
+                autoReturnToLettersIfApplicable()
+            }
+            EchosKeyboardLayout.KeyType.PERIOD -> {
+                listener?.onKeyPress(".")
+                markSymbolTypedIfApplicable()
+            }
+            EchosKeyboardLayout.KeyType.MIC -> listener?.onMicRelease()
+            EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
+                listener?.onKeyPress(",")
+                markSymbolTypedIfApplicable()
+            }
+            EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()
+            EchosKeyboardLayout.KeyType.SHIFT -> handleShiftTap()
             EchosKeyboardLayout.KeyType.MODE_SWITCH -> {
                 // Any still-held pointers' rowIdx/colIdx index into the old
                 // layout — drop them before swapping `currentRows` so we
                 // don't commit a stale (and probably wrong) key on release.
                 cancelOtherActivePointers()
+                typedNonSpaceInSymbols = false
                 when (layoutMode) {
                     LayoutMode.LETTERS -> {
                         layoutMode = LayoutMode.NUMBERS
@@ -1470,6 +1522,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             }
             EchosKeyboardLayout.KeyType.SYMBOL_SWITCH -> {
                 cancelOtherActivePointers()
+                typedNonSpaceInSymbols = false
                 when (layoutMode) {
                     LayoutMode.NUMBERS, LayoutMode.NUMPAD -> {
                         layoutMode = LayoutMode.SYMBOLS
@@ -1490,6 +1543,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             }
             EchosKeyboardLayout.KeyType.NUMPAD_SWITCH -> {
                 cancelOtherActivePointers()
+                typedNonSpaceInSymbols = false
                 // Tap from numbers/symbols -> calculator layout. Tap again
                 // (from inside numpad) returns to numbers.
                 if (layoutMode == LayoutMode.NUMPAD) {
@@ -1506,6 +1560,100 @@ class EchosKeyboardView @JvmOverloads constructor(
                 invalidate()
             }
         }
+    }
+
+    /** Latches "user committed a non-space symbol in 123/symbols". */
+    private fun markSymbolTypedIfApplicable() {
+        if (layoutMode == LayoutMode.NUMBERS || layoutMode == LayoutMode.SYMBOLS) {
+            typedNonSpaceInSymbols = true
+        }
+    }
+
+    /**
+     * Auto-return to letters when the user committed a symbol then a
+     * space or enter (§4.9). Guarded so two spaces in a row, or a
+     * space immediately after entering symbols, don't flip layouts
+     * unexpectedly. NUMPAD intentionally opts out — it's a dedicated
+     * calculator surface and the user expects to stay.
+     */
+    private fun autoReturnToLettersIfApplicable() {
+        if (!typedNonSpaceInSymbols) return
+        if (layoutMode != LayoutMode.NUMBERS && layoutMode != LayoutMode.SYMBOLS) return
+        cancelOtherActivePointers()
+        typedNonSpaceInSymbols = false
+        layoutMode = LayoutMode.LETTERS
+        currentRows = EchosKeyboardLayout.LETTER_ROWS
+        currentCells = null
+        opScrollY = 0f
+        keyRectsValid = false
+        requestLayout()
+        invalidate()
+    }
+
+    /**
+     * LatinIME-style 6-state shift cycle on every tap, with a 300 ms
+     * double-tap window that escalates to caps lock. Long-press shift
+     * to caps lock is wired separately via [scheduleShiftLongPress].
+     */
+    private fun handleShiftTap() {
+        val now = SystemClock.uptimeMillis()
+        val withinDoubleTap = lastShiftTapAt != 0L &&
+            (now - lastShiftTapAt) <= SHIFT_DOUBLE_TAP_WINDOW_MS
+        lastShiftTapAt = now
+
+        shiftState = when (shiftState) {
+            ShiftState.OFF -> ShiftState.ON
+            ShiftState.ON -> if (withinDoubleTap) ShiftState.CAPS_LOCK else ShiftState.OFF
+            // User cancels the auto-shift; second tap in the window
+            // escalates straight to caps lock.
+            ShiftState.AUTOMATIC -> ShiftState.MANUAL_FROM_AUTO
+            ShiftState.MANUAL_FROM_AUTO ->
+                if (withinDoubleTap) ShiftState.CAPS_LOCK else ShiftState.ON
+            ShiftState.CAPS_LOCK -> ShiftState.OFF
+        }
+        invalidate()
+    }
+
+    /**
+     * Drops the transient one-shot shift states after any character
+     * commit. Caps lock stays sticky.
+     */
+    private fun dropTransientShiftAfterCharacterCommit() {
+        val next = when (shiftState) {
+            ShiftState.ON, ShiftState.AUTOMATIC, ShiftState.MANUAL_FROM_AUTO ->
+                ShiftState.OFF
+            ShiftState.OFF, ShiftState.CAPS_LOCK -> shiftState
+        }
+        if (next != shiftState) {
+            shiftState = next
+            invalidate()
+        }
+        // Any non-shift key invalidates the double-tap window.
+        lastShiftTapAt = 0L
+    }
+
+    /**
+     * Drives the shift state from outside (the IME service calls this
+     * from its auto-cap engine when the cursor sits at a sentence
+     * boundary). A no-op when the user has made an explicit choice
+     * (caps lock, manual on, or manual cancel of auto).
+     */
+    fun applyAutoShift(shouldCapitalize: Boolean) {
+        when (shiftState) {
+            ShiftState.CAPS_LOCK, ShiftState.ON, ShiftState.MANUAL_FROM_AUTO -> return
+            ShiftState.OFF, ShiftState.AUTOMATIC -> {
+                val next = if (shouldCapitalize) ShiftState.AUTOMATIC else ShiftState.OFF
+                if (next != shiftState) {
+                    shiftState = next
+                    invalidate()
+                }
+            }
+        }
+    }
+
+    /** Clears any pending double-tap state — called when the cursor moves. */
+    fun resetShiftDoubleTap() {
+        lastShiftTapAt = 0L
     }
 
     // -- Lifecycle --

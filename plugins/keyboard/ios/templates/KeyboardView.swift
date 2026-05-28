@@ -1,3 +1,4 @@
+import QuartzCore
 import UIKit
 
 /// Delegate protocol for keyboard actions.
@@ -93,6 +94,21 @@ class KeyboardView: UIInputView {
     private var micState: MicState = .idle
     private var returnKeyType: UIReturnKeyType = .default
     private var bannerHideTimer: Timer?
+
+    // Double-tap-shift → caps lock. LatinIME matches the system
+    // `getDoubleTapTimeout()` (≈300 ms); we use the same value.
+    // Stored as `CACurrentMediaTime()` (monotonic seconds since boot) —
+    // wall-clock `Date` jumps on NTP / DST / manual changes and would
+    // break the window check.
+    private static let shiftDoubleTapWindow: TimeInterval = 0.3
+    private var lastShiftTapAt: TimeInterval? = nil
+    // Long-press shift → caps lock fires at 1200 ms in LatinIME.
+    private static let shiftLongPressDuration: TimeInterval = 1.2
+
+    // §4.9 symbols auto-return — set when the user types a non-space
+    // symbol from the numbers / #+= layout, consumed on the next space
+    // or enter to flip back to letters. Reset on any manual layout swap.
+    private var typedNonSpaceInSymbols: Bool = false
 
     // Per-pointer state — without it, a second finger landing while the
     // first is still down races into touchUpOutside and gets dropped (the
@@ -368,7 +384,7 @@ class KeyboardView: UIInputView {
                 let def = button.keyDefinition
                 switch def.type {
                 case .character:
-                    let label = shiftState != .off ? def.label.uppercased() : def.label
+                    let label = shiftState.isShifted ? def.label.uppercased() : def.label
                     button.setDisplayLabel(label)
                 case .returnKey:
                     applyReturnKeyDisplay(to: button)
@@ -413,6 +429,30 @@ class KeyboardView: UIInputView {
         guard type != returnKeyType else { return }
         returnKeyType = type
         updateKeyLabels()
+    }
+
+    /// Drives the shift state from outside (the IME view controller calls
+    /// this from its auto-cap engine on `textDidChange`). A no-op when
+    /// the user has manually committed to caps lock — we never override
+    /// an explicit lock with an automatic shift.
+    func applyAutoShift(_ shouldCapitalize: Bool) {
+        switch shiftState {
+        case .capsLock, .on, .manualFromAuto:
+            // User made an explicit choice — never override with auto.
+            return
+        case .off, .automatic:
+            let next: KeyboardLayout.ShiftState = shouldCapitalize ? .automatic : .off
+            guard next != shiftState else { return }
+            shiftState = next
+            updateKeyLabels()
+        }
+    }
+
+    /// Clears any in-flight shift double-tap window — called by the IME
+    /// when the cursor moves so an unrelated later shift tap doesn't
+    /// race the double-tap detector.
+    func resetShiftDoubleTap() {
+        lastShiftTapAt = nil
     }
 
     var currentMicState: MicState { micState }
@@ -477,6 +517,10 @@ class KeyboardView: UIInputView {
     func switchToLayout(_ mode: KeyboardLayout.LayoutMode) {
         let modeChanged = mode != currentLayout
         currentLayout = mode
+        // Drop the symbols-auto-return latch — any explicit swap means
+        // the user is choosing their layout, the next space shouldn't
+        // also flip them somewhere they don't expect.
+        typedNonSpaceInSymbols = false
         buildLayout()
         if modeChanged {
             onLayoutModeChange?(mode)
@@ -484,6 +528,25 @@ class KeyboardView: UIInputView {
     }
 
     // MARK: - Multi-touch pipeline (QWERTY rows)
+
+    /// Touches landing inside the row stack area (including the 6 pt
+    /// inter-key gap and the 11 pt inter-row gap) need to reach
+    /// `touchesBegan` on `KeyboardView` so the multi-touch pipeline can
+    /// snap them to the nearest key. UIKit's default hit-test would
+    /// otherwise deliver them to the row `UIStackView` — which is
+    /// interactive by default and consumes the touch silently, since
+    /// it has no `touchesBegan` override. By returning `self` for any
+    /// hit inside `rowStackView`'s subtree, we force the parent to own
+    /// the entire QWERTY area. The top bar / popups / emoji picker
+    /// still route normally (they're sibling subviews, not descendants
+    /// of `rowStackView`).
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let target = super.hitTest(point, with: event) else { return nil }
+        if target === rowStackView || target.isDescendant(of: rowStackView) {
+            return self
+        }
+        return target
+    }
 
     /// Each UITouch in `event` is dispatched independently — this is the iOS
     /// analogue of LatinIME's `MainKeyboardView.processMotionEvent` walking
@@ -548,6 +611,17 @@ class KeyboardView: UIInputView {
             if AccentVariants.hasVariants(for: button.keyDefinition.label),
                !anyPointerOwnsVariants() {
                 scheduleAccentLongPress(state: state)
+            }
+        case .shift:
+            // Long-press shift = caps lock. Matches LatinIME 1200 ms.
+            scheduleLongPress(
+                state: state, delay: Self.shiftLongPressDuration
+            ) { [weak self] in
+                guard let self = self else { return }
+                state.longPressFired = true
+                self.shiftState = .capsLock
+                self.lastShiftTapAt = nil
+                self.updateKeyLabels()
             }
         default:
             showPreviewIfCharacter(button)
@@ -642,10 +716,7 @@ class KeyboardView: UIInputView {
             keyVariants.hide()
             if let variant = selected {
                 delegate?.keyboardView(self, didTapCharacter: variant)
-                if shiftState == .on {
-                    shiftState = .off
-                    updateKeyLabels()
-                }
+                dropTransientShiftAfterCharacterCommit()
             }
             return
         }
@@ -787,7 +858,7 @@ class KeyboardView: UIInputView {
             guard let self = self, let state = state else { return }
             let label = state.button.keyDefinition.label
             let variants = AccentVariants.variants(
-                for: label, uppercase: self.shiftState != .off
+                for: label, uppercase: self.shiftState.isShifted
             )
             guard !variants.isEmpty else { return }
             // Hide the typewriter preview — variants popover takes over.
@@ -853,7 +924,7 @@ class KeyboardView: UIInputView {
         let display: String
         switch type {
         case .character:
-            display = shiftState != .off
+            display = shiftState.isShifted
                 ? button.keyDefinition.label.uppercased()
                 : button.keyDefinition.label
         case .comma: display = ","
@@ -894,10 +965,7 @@ class KeyboardView: UIInputView {
         switch key.type {
         case .character:
             emojiSearchQuery += key.label.lowercased()
-            if shiftState == .on {
-                shiftState = .off
-                updateKeyLabels()
-            }
+            dropTransientShiftAfterCharacterCommit()
             refreshSearchOverlay()
             return true
         case .delete:
@@ -951,18 +1019,18 @@ class KeyboardView: UIInputView {
         }
         switch key.type {
         case .character:
-            let char = shiftState != .off ? key.label.uppercased() : key.label
+            let char = shiftState.isShifted ? key.label.uppercased() : key.label
             delegate?.keyboardView(self, didTapCharacter: char)
-            if shiftState == .on {
-                shiftState = .off
-                updateKeyLabels()
-            }
+            dropTransientShiftAfterCharacterCommit()
+            markSymbolTypedIfApplicable()
         case .delete:
             delegate?.keyboardViewDidTapDelete(self)
         case .space:
             delegate?.keyboardViewDidTapSpace(self)
+            autoReturnToLettersIfApplicable()
         case .returnKey:
             delegate?.keyboardViewDidTapReturn(self)
+            autoReturnToLettersIfApplicable()
         case .globe:
             delegate?.keyboardViewDidTapGlobe(self)
         case .emoji:
@@ -975,12 +1043,7 @@ class KeyboardView: UIInputView {
             // case a stale layout ever carries one.
             break
         case .shift:
-            switch shiftState {
-            case .off: shiftState = .on
-            case .on: shiftState = .capsLock
-            case .capsLock: shiftState = .off
-            }
-            updateKeyLabels()
+            handleShiftTap()
         case .modeSwitch:
             switch currentLayout {
             case .letters, .emojiSearch: switchToLayout(.numbers)
@@ -994,13 +1057,80 @@ class KeyboardView: UIInputView {
             }
         case .comma:
             delegate?.keyboardView(self, didTapCharacter: ",")
+            markSymbolTypedIfApplicable()
         case .period:
             delegate?.keyboardView(self, didTapCharacter: ".")
+            markSymbolTypedIfApplicable()
         case .spacer:
             // Unreachable — spacers don't have KeyButtons that can fire
             // touches. Present only so the switch stays exhaustive.
             break
         }
+    }
+
+    /// Latches the "user typed something in symbols" signal so the next
+    /// space or enter flips them back to letters (§4.9 LatinIME).
+    private func markSymbolTypedIfApplicable() {
+        if currentLayout == .numbers || currentLayout == .symbols {
+            typedNonSpaceInSymbols = true
+        }
+    }
+
+    /// Consumes the latch and switches back to the letters layout, but
+    /// only when the user actually committed a non-space symbol first.
+    /// Without the guard, hitting space twice in symbols would jump the
+    /// user out unexpectedly.
+    private func autoReturnToLettersIfApplicable() {
+        guard typedNonSpaceInSymbols,
+              currentLayout == .numbers || currentLayout == .symbols
+        else { return }
+        switchToLayout(.letters)
+    }
+
+    /// LatinIME-style 6-state shift cycle on every tap, with a double-
+    /// tap window that escalates to caps lock. The long-press shortcut
+    /// to caps lock is wired separately in `handlePointerDown`.
+    private func handleShiftTap() {
+        let now = CACurrentMediaTime()
+        let withinDoubleTap: Bool
+        if let last = lastShiftTapAt {
+            withinDoubleTap = (now - last) <= Self.shiftDoubleTapWindow
+        } else {
+            withinDoubleTap = false
+        }
+        lastShiftTapAt = now
+
+        switch shiftState {
+        case .off:
+            shiftState = .on
+        case .on:
+            shiftState = withinDoubleTap ? .capsLock : .off
+        case .automatic:
+            // User taps shift to cancel the auto-shift — go to the
+            // transient "from-auto" state. A second tap inside the
+            // double-tap window escalates straight to caps lock.
+            shiftState = .manualFromAuto
+        case .manualFromAuto:
+            shiftState = withinDoubleTap ? .capsLock : .on
+        case .capsLock:
+            shiftState = .off
+        }
+        updateKeyLabels()
+    }
+
+    /// Called after any character commit. Drops the transient one-shot
+    /// shift states; caps lock stays sticky.
+    private func dropTransientShiftAfterCharacterCommit() {
+        switch shiftState {
+        case .on, .automatic, .manualFromAuto:
+            shiftState = .off
+            updateKeyLabels()
+        case .off, .capsLock:
+            break
+        }
+        // Once a non-shift key has fired, the double-tap window for
+        // shift no longer applies.
+        lastShiftTapAt = nil
     }
 }
 

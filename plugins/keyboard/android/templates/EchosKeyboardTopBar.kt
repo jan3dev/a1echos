@@ -54,6 +54,12 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val pillColor: Int = Color.parseColor("#707171")
 
     init {
+        // Paint the same opaque keyboard background under the logo +
+        // record button so the bar never goes transparent when the host
+        // app sits behind it (some apps, and light-mode transitions,
+        // would otherwise let host content bleed through here).
+        setBackgroundColor(theme.keyboardBackground)
+
         val paddingPx = dim("keyboard_top_bar_horizontal_padding", 12)
 
         // Three-wave visualizer spans the full width of the bar so it can

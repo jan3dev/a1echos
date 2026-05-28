@@ -8,6 +8,7 @@ class EchosKeyboardViewController: UIInputViewController {
     private var keyboardView: KeyboardView!
     private var ipcClient: IPCClient!
     private var audioRecorder: AudioRecorder!
+    private var doubleSpacePeriod = DoubleSpacePeriod()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -97,12 +98,40 @@ class EchosKeyboardViewController: UIInputViewController {
         }
     }
 
+    /// Cursor moves are an out-of-band signal to abandon any in-flight
+    /// composing state — without this, the user could double-tap shift,
+    /// move the cursor, then tap shift again and accidentally engage
+    /// caps lock. Same for the smart double-space window.
+    override func selectionWillChange(_ textInput: UITextInput?) {
+        super.selectionWillChange(textInput)
+        doubleSpacePeriod.reset()
+        keyboardView.resetShiftDoubleTap()
+    }
+
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         // Update return key appearance based on context.
         let returnType = textDocumentProxy.returnKeyType ?? .default
         keyboardView.updateReturnKeyType(returnType)
         applyKeyboardAppearance()
+
+        // Re-evaluate auto-cap after every commit so the visual shift
+        // state matches the cursor position. Cheap (read cached
+        // documentContextBeforeInput, walk back ~10 chars).
+        applyAutoCap()
+    }
+
+    private func applyAutoCap() {
+        switch AutoCapEngine.decide(for: textDocumentProxy) {
+        case .capitalize:
+            keyboardView.applyAutoShift(true)
+        case .lowercase:
+            keyboardView.applyAutoShift(false)
+        case .disabled:
+            // Host opted out — leave shift state alone, the user's
+            // manual taps still work.
+            break
+        }
     }
 
     /// Honors `textDocumentProxy.keyboardAppearance` so a dark-mode host app
@@ -127,15 +156,42 @@ class EchosKeyboardViewController: UIInputViewController {
 extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     func keyboardView(_ view: KeyboardView, didTapCharacter char: String) {
+        // Any non-space, non-backspace input invalidates the smart
+        // double-space window. Letters / digits / accents all reset.
+        doubleSpacePeriod.reset()
         textDocumentProxy.insertText(char)
+        // iOS does NOT call `textDidChange` after our own `insertText`
+        // (only for host-driven changes), so we run the auto-cap pass
+        // inline here. Without this, typing ". " in the numbers layout
+        // never lifts the shift state and the next letter stays lowercase.
+        applyAutoCap()
     }
 
     func keyboardViewDidTapDelete(_ view: KeyboardView) {
+        // A backspace within 1100 ms of a smart `. ` commit reverts it
+        // back to a double space — matches LatinIME's "undo correction"
+        // behaviour for this specific helper.
+        if doubleSpacePeriod.shouldUndoPeriod() {
+            // Delete the `. ` we just inserted and put `  ` back in
+            // its place. We don't know the exact prior chars for sure
+            // (the host may have rewritten them), so we re-read to
+            // confirm before mutating.
+            let before = textDocumentProxy.documentContextBeforeInput ?? ""
+            if before.hasSuffix(". ") {
+                textDocumentProxy.deleteBackward()
+                textDocumentProxy.deleteBackward()
+                textDocumentProxy.insertText("  ")
+                applyAutoCap()
+                return
+            }
+        }
         textDocumentProxy.deleteBackward()
+        applyAutoCap()
     }
 
     func keyboardViewDidHoldDeleteWord(_ view: KeyboardView) {
         deleteWordBackward()
+        applyAutoCap()
     }
 
     /// Deletes a contiguous run of trailing whitespace plus the word before
@@ -168,11 +224,28 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     }
 
     func keyboardViewDidTapSpace(_ view: KeyboardView) {
+        // Smart double-space → ". ". Check the two chars before the
+        // cursor: if it looks like `<letter|digit|allowed-punct> ` and
+        // we're inside the 1100 ms window, swap the trailing space
+        // for `. ` (LatinIME §4.5).
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let tail = Array(before.suffix(2))
+        if doubleSpacePeriod.shouldCommitPeriod(previousChars: tail) {
+            textDocumentProxy.deleteBackward()
+            textDocumentProxy.insertText(". ")
+            doubleSpacePeriod.markPeriodCommitted()
+            applyAutoCap()
+            return
+        }
         textDocumentProxy.insertText(" ")
+        doubleSpacePeriod.recordSpaceCommit()
+        applyAutoCap()
     }
 
     func keyboardViewDidTapReturn(_ view: KeyboardView) {
+        doubleSpacePeriod.reset()
         textDocumentProxy.insertText("\n")
+        applyAutoCap()
     }
 
     func keyboardViewDidTapGlobe(_ view: KeyboardView) {

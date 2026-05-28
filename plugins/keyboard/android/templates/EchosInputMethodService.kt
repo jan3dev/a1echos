@@ -50,6 +50,31 @@ class EchosInputMethodService : InputMethodService(),
     private lateinit var transcriber: ImeSherpaTranscriber
     private var currentEditorAction: Int = EditorInfo.IME_ACTION_NONE
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val doubleSpacePeriod = DoubleSpacePeriod()
+    private var currentEditorInfo: EditorInfo? = null
+
+    // Tracks where we expect the host's cursor to land after each of
+    // our own commit/delete calls. The host then fires `onUpdateSelection`
+    // asynchronously to confirm — if the reported position matches
+    // an entry in [pendingExpectedPositions], it's our own update and
+    // we leave the composing state (double-space window, shift double-
+    // tap timer) alone. Otherwise (paste, tap-to-move, external
+    // programmatic edit) we treat it as a real cursor jump and reset.
+    //
+    // Without this, every keystroke fires an `onUpdateSelection` that
+    // wipes the double-space window — the user can never get a second
+    // space inside the 1100 ms window, so `space space → ". "` never
+    // triggers.
+    //
+    // The queue (rather than a single field) handles multi-step
+    // mutations: the smart-period commit fires delete-1 then commit-". "
+    // back-to-back, so two echoes will arrive — the first reporting
+    // the intermediate cursor after the delete, the second the final
+    // position. We must pop both as our own; matching only the latest
+    // would treat the first echo as external and clobber state.
+    private var expectedSelStart: Int = 0
+    private var expectedSelEnd: Int = 0
+    private val pendingExpectedPositions: ArrayDeque<Pair<Int, Int>> = ArrayDeque()
 
     override fun onCreate() {
         super.onCreate()
@@ -74,6 +99,17 @@ class EchosInputMethodService : InputMethodService(),
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
             )
+            // Opaque fallback behind the entire keyboard column. The
+            // top bar and keyboard view paint their own backgrounds,
+            // but a transitional frame (e.g. installing the emoji
+            // picker, or a light-mode swap) could otherwise show host
+            // content through this column for one frame.
+            val bgId = resources.getIdentifier(
+                "keyboard_background", "color", packageName,
+            )
+            if (bgId != 0) {
+                setBackgroundColor(ContextCompat.getColor(this@EchosInputMethodService, bgId))
+            }
         }
 
         topBarHeightPx = resources.getIdentifier("keyboard_top_bar_height", "dimen", packageName)
@@ -146,6 +182,7 @@ class EchosInputMethodService : InputMethodService(),
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         currentEditorAction = info.imeOptions and EditorInfo.IME_MASK_ACTION
+        currentEditorInfo = info
         keyboardView.updateReturnKeyType(currentEditorAction)
         showKeyboardLayout()
 
@@ -155,6 +192,89 @@ class EchosInputMethodService : InputMethodService(),
             android.text.InputType.TYPE_CLASS_PHONE -> keyboardView.showNumberLayout()
             android.text.InputType.TYPE_CLASS_TEXT -> keyboardView.showLetterLayout()
             else -> keyboardView.showLetterLayout()
+        }
+
+        // Fresh input field — start-of-document = sentence start.
+        doubleSpacePeriod.reset()
+        keyboardView.resetShiftDoubleTap()
+        // Seed expected cursor from the host's reported initial selection.
+        // Defaults to 0 if the host doesn't supply one (initialSelStart = -1).
+        expectedSelStart = info.initialSelStart.coerceAtLeast(0)
+        expectedSelEnd = info.initialSelEnd.coerceAtLeast(expectedSelStart)
+        pendingExpectedPositions.clear()
+        applyAutoCap()
+    }
+
+    /**
+     * Commit text via the host's [InputConnection] and update the
+     * expected cursor position. Use this everywhere instead of calling
+     * `commitText` directly so [onUpdateSelection] can tell our own
+     * mutations apart from external cursor moves.
+     */
+    private fun icCommitText(text: String) {
+        val ic = currentInputConnection ?: return
+        ic.commitText(text, 1)
+        // If there was a selection, it's replaced. Cursor lands at the
+        // smaller anchor plus the inserted text length.
+        val anchor = minOf(expectedSelStart, expectedSelEnd)
+        expectedSelStart = anchor + text.length
+        expectedSelEnd = expectedSelStart
+        pendingExpectedPositions.addLast(expectedSelStart to expectedSelEnd)
+    }
+
+    private fun icDeleteSurroundingText(beforeLength: Int, afterLength: Int) {
+        val ic = currentInputConnection ?: return
+        ic.deleteSurroundingText(beforeLength, afterLength)
+        expectedSelStart = (expectedSelStart - beforeLength).coerceAtLeast(0)
+        expectedSelEnd = expectedSelStart
+        pendingExpectedPositions.addLast(expectedSelStart to expectedSelEnd)
+    }
+
+    /**
+     * Cursor moves are an out-of-band signal to abandon any in-flight
+     * composing state. Without this, the user could double-tap shift,
+     * move the cursor, then tap shift again and accidentally engage
+     * caps lock. Same for the smart double-space window.
+     */
+    override fun onUpdateSelection(
+        oldSelStart: Int,
+        oldSelEnd: Int,
+        newSelStart: Int,
+        newSelEnd: Int,
+        candidatesStart: Int,
+        candidatesEnd: Int,
+    ) {
+        super.onUpdateSelection(
+            oldSelStart, oldSelEnd,
+            newSelStart, newSelEnd,
+            candidatesStart, candidatesEnd,
+        )
+        // The host fires this after every text commit — including our
+        // own. The smart-period commit issues two IC ops in a row
+        // (delete + commit), so we may have several pending echoes.
+        // Pop the front of the queue if it matches; treat any other
+        // position as an external cursor move and reset state.
+        val front = pendingExpectedPositions.firstOrNull()
+        val isOurEcho = front != null &&
+            newSelStart == front.first &&
+            newSelEnd == front.second
+        if (isOurEcho) {
+            pendingExpectedPositions.removeFirst()
+        } else {
+            pendingExpectedPositions.clear()
+            expectedSelStart = newSelStart
+            expectedSelEnd = newSelEnd
+            doubleSpacePeriod.reset()
+            keyboardView.resetShiftDoubleTap()
+        }
+        applyAutoCap()
+    }
+
+    private fun applyAutoCap() {
+        when (AutoCapEngine.decide(currentInputConnection, currentEditorInfo)) {
+            AutoCapEngine.Decision.CAPITALIZE -> keyboardView.applyAutoShift(true)
+            AutoCapEngine.Decision.LOWERCASE -> keyboardView.applyAutoShift(false)
+            AutoCapEngine.Decision.DISABLED -> Unit
         }
     }
 
@@ -166,6 +286,11 @@ class EchosInputMethodService : InputMethodService(),
         // keyboard mid-record would leave the lock stuck and silently block
         // the next attempt.
         RecordingLock.release("ime")
+        // Drop any composing state — the next input field gets a clean slate.
+        doubleSpacePeriod.reset()
+        keyboardView.resetShiftDoubleTap()
+        pendingExpectedPositions.clear()
+        currentEditorInfo = null
     }
 
     override fun onDestroy() {
@@ -179,6 +304,40 @@ class EchosInputMethodService : InputMethodService(),
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        // Re-read dimens so the `values-land/` overrides (shorter key
+        // height, tighter vertical gap) actually apply on rotation —
+        // IMEs keep their input view across config changes, so values
+        // loaded once at init would stay stale.
+        if (::keyboardView.isInitialized) {
+            keyboardView.reloadDimensions()
+        }
+        // Drop the cached emoji picker and search overlay — both pick
+        // their visible-row count from the current orientation at
+        // construction time, so stale instances would keep portrait
+        // dimensions after a rotation. Next show rebuilds them with
+        // the right size.
+        val pickerWasVisible = emojiPickerView?.visibility == View.VISIBLE
+        emojiPickerView?.let {
+            if (it.parent is ViewGroup) (it.parent as ViewGroup).removeView(it)
+        }
+        emojiPickerView = null
+        val searchWasVisible = emojiSearchOverlay?.visibility == View.VISIBLE
+        // Preserve the in-progress search query so rotation doesn't wipe
+        // what the user typed — `enterEmojiSearchMode` resets it.
+        val preservedSearchQuery = if (searchWasVisible) emojiSearchQuery else ""
+        emojiSearchOverlay?.let {
+            if (it.parent is ViewGroup) (it.parent as ViewGroup).removeView(it)
+        }
+        emojiSearchOverlay = null
+        if (searchWasVisible) {
+            enterEmojiSearchMode()
+            if (preservedSearchQuery.isNotEmpty()) {
+                emojiSearchQuery = preservedSearchQuery
+                refreshEmojiSearchOverlay()
+            }
+        } else if (pickerWasVisible) {
+            showEmojiPicker()
+        }
     }
 
     // -- KeyboardActionListener --
@@ -189,7 +348,11 @@ class EchosInputMethodService : InputMethodService(),
             refreshEmojiSearchOverlay()
             return
         }
-        currentInputConnection?.commitText(char, 1)
+        // Any non-space, non-backspace input invalidates the smart
+        // double-space window. Letters / digits / accents all reset.
+        doubleSpacePeriod.reset()
+        icCommitText(char)
+        applyAutoCap()
     }
 
     override fun onDeletePress() {
@@ -200,7 +363,21 @@ class EchosInputMethodService : InputMethodService(),
             }
             return
         }
+        // A backspace within 1100 ms of a smart `. ` commit reverts it
+        // back to a double space — matches LatinIME's "undo correction"
+        // behaviour for this specific helper.
+        if (doubleSpacePeriod.shouldUndoPeriod()) {
+            val ic = currentInputConnection
+            val before = ic?.getTextBeforeCursor(2, 0)?.toString().orEmpty()
+            if (ic != null && before == ". ") {
+                icDeleteSurroundingText(2, 0)
+                icCommitText("  ")
+                applyAutoCap()
+                return
+            }
+        }
         deleteOneGrapheme()
+        applyAutoCap()
     }
 
     override fun onDeleteWord() {
@@ -221,7 +398,7 @@ class EchosInputMethodService : InputMethodService(),
         val ic: InputConnection = currentInputConnection ?: return
         val selected = ic.getSelectedText(0)
         if (!selected.isNullOrEmpty()) {
-            ic.commitText("", 1)
+            icCommitText("")
             return
         }
         val before = ic.getTextBeforeCursor(32, 0)?.toString().orEmpty()
@@ -231,7 +408,7 @@ class EchosInputMethodService : InputMethodService(),
         val end = bi.last()
         val prev = bi.previous()
         val deleteLen = if (prev == BreakIterator.DONE) 1 else end - prev
-        ic.deleteSurroundingText(deleteLen, 0)
+        icDeleteSurroundingText(deleteLen, 0)
     }
 
     override fun onSpacePress() {
@@ -240,25 +417,45 @@ class EchosInputMethodService : InputMethodService(),
             refreshEmojiSearchOverlay()
             return
         }
-        currentInputConnection?.commitText(" ", 1)
+        val ic = currentInputConnection
+        // Smart double-space → ". ". Check the two chars before the
+        // cursor: if it looks like `<letter|digit|allowed-punct> ` and
+        // we're inside the 1100 ms window, swap the trailing space
+        // for `. ` (LatinIME §4.5).
+        val before = ic?.getTextBeforeCursor(2, 0)?.toString().orEmpty()
+        if (ic != null && doubleSpacePeriod.shouldCommitPeriod(before)) {
+            icDeleteSurroundingText(1, 0)
+            icCommitText(". ")
+            doubleSpacePeriod.markPeriodCommitted()
+            applyAutoCap()
+            return
+        }
+        icCommitText(" ")
+        doubleSpacePeriod.recordSpaceCommit()
+        applyAutoCap()
     }
 
     override fun onReturnPress() {
         if (emojiSearchActive) {
             val first = emojiSearchIndex?.search(emojiSearchQuery)?.firstOrNull()
             if (first != null) {
-                currentInputConnection?.commitText(first, 1)
+                commitEmoji(first)
                 RecentEmojis.record(this, first)
             }
             exitEmojiSearchMode()
             return
         }
+        doubleSpacePeriod.reset()
         val ic = currentInputConnection ?: return
         if (currentEditorAction != EditorInfo.IME_ACTION_NONE) {
+            // performEditorAction may dismiss the field entirely — we
+            // don't try to predict the cursor, the onUpdateSelection
+            // echo will reseed it.
             ic.performEditorAction(currentEditorAction)
         } else {
-            ic.commitText("\n", 1)
+            icCommitText("\n")
         }
+        applyAutoCap()
     }
 
     override fun onMicPress() = toggleRecording()
@@ -304,10 +501,19 @@ class EchosInputMethodService : InputMethodService(),
         }
     }
 
+    /// Emoji commits invalidate any in-flight smart-double-space window
+    /// (just like any non-space, non-backspace input) and need to refresh
+    /// the auto-cap state so the shift indicator tracks the new cursor.
+    private fun commitEmoji(emoji: String) {
+        doubleSpacePeriod.reset()
+        icCommitText(emoji)
+        applyAutoCap()
+    }
+
     // -- EmojiPickerView.Listener --
 
     override fun onEmojiSelected(emoji: String) {
-        currentInputConnection?.commitText(emoji, 1)
+        commitEmoji(emoji)
     }
 
     override fun onBackToLetters() {
@@ -396,7 +602,7 @@ class EchosInputMethodService : InputMethodService(),
                     // Stay in search mode so the user can keep firing
                     // matches — Gboard does the same. Only the back arrow
                     // and the return-key checkmark leave search mode.
-                    currentInputConnection?.commitText(emoji, 1)
+                    commitEmoji(emoji)
                     RecentEmojis.record(this@EchosInputMethodService, emoji)
                 }
                 override fun onLeaveSearch() {
@@ -424,7 +630,7 @@ class EchosInputMethodService : InputMethodService(),
         val ic = currentInputConnection ?: return
         val selected = ic.getSelectedText(0)
         if (!selected.isNullOrEmpty()) {
-            ic.commitText("", 1)
+            icCommitText("")
             return
         }
         val before = ic.getTextBeforeCursor(256, 0)?.toString().orEmpty()
@@ -440,7 +646,7 @@ class EchosInputMethodService : InputMethodService(),
             idx--
         }
         if (count == 0) count = 1
-        ic.deleteSurroundingText(count, 0)
+        icDeleteSurroundingText(count, 0)
     }
 
     // -- TopBar.Listener --
@@ -489,7 +695,7 @@ class EchosInputMethodService : InputMethodService(),
         transcriber.startTranscription(
             onResult = { text ->
                 mainHandler.post {
-                    currentInputConnection?.commitText(text, 1)
+                    icCommitText(text)
                     setMicState(MicState.IDLE)
                     RecordingLock.release("ime")
                 }

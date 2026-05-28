@@ -2,6 +2,7 @@ package com.a1lab.echos.ime
 
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -59,6 +60,15 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
     private val resultsScroll: HorizontalScrollView
     private val resultsGrid: GridLayout
     private val cursorAnimator: ObjectAnimator
+
+    // Landscape collapses results to a single row + matching shorter
+    // viewport so the QWERTY rows below get more vertical room. Portrait
+    // keeps the original two-row grid.
+    private val isLandscape: Boolean =
+        context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    private val resultRowCount: Int = if (isLandscape) 1 else 2
+    private val resultsHeightDp: Float =
+        if (isLandscape) RESULT_CELL_HEIGHT_DP + 8f else RESULTS_HEIGHT_DP
 
     init {
         orientation = VERTICAL
@@ -124,11 +134,11 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
             setPadding(ph, dpPx(4f).toInt(), ph, dpPx(4f).toInt())
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT,
-                dpPx(RESULTS_HEIGHT_DP).toInt(),
+                dpPx(resultsHeightDp).toInt(),
             )
         }
         resultsGrid = GridLayout(context).apply {
-            rowCount = 2
+            rowCount = resultRowCount
             orientation = GridLayout.VERTICAL
         }
         resultsScroll.addView(resultsGrid)
@@ -240,7 +250,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
     /// reposition the long-press key-preview balloon so it sits just above
     /// the keyboard, not the original top-bar.
     fun measuredOverlayHeightDp(): Float =
-        (HEADER_HEIGHT_DP + 8f) + (RESULTS_HEIGHT_DP + 8f) + (SEARCH_PILL_HEIGHT_DP + 10f)
+        (HEADER_HEIGHT_DP + 8f) + (resultsHeightDp + 8f) + (SEARCH_PILL_HEIGHT_DP + 10f)
 
     private fun resolveDrawableId(name: String): Int =
         resources.getIdentifier(name, "drawable", context.packageName)
@@ -302,7 +312,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
                 gravity = Gravity.CENTER_VERTICAL
                 layoutParams = GridLayout.LayoutParams().apply {
                     columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 4)
-                    rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 2)
+                    rowSpec = GridLayout.spec(GridLayout.UNDEFINED, resultRowCount)
                 }
             }
             resultsGrid.addView(emptyView)

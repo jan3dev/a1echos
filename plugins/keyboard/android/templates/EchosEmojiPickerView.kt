@@ -2,6 +2,7 @@ package com.a1lab.echos.ime
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.RectF
@@ -240,9 +241,15 @@ class EchosEmojiPickerView @JvmOverloads constructor(
             isVerticalScrollBarEnabled = true
             scrollBarStyle = SCROLLBARS_OUTSIDE_OVERLAY
             overScrollMode = OVER_SCROLL_NEVER
+            // Landscape compresses the picker to 3 visible rows so the
+            // QWERTY rows below have enough vertical room. Portrait
+            // keeps the full 6-row viewport.
+            val visibleRows = if (
+                resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            ) 3 else 6
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(SCROLL_HEIGHT_DP).toInt(),
+                dp(visibleRows * CELL_HEIGHT_DP).toInt(),
             )
         }
         sectionsColumn = LinearLayout(context).apply {
@@ -763,9 +770,6 @@ class EchosEmojiPickerView @JvmOverloads constructor(
         /// RECENTS + SMILEYS cover the viewport for almost everyone;
         /// the remaining seven categories fill in on subsequent frames.
         private const val INITIAL_SYNC_SECTIONS: Int = 2
-        // 6 visible rows × 46dp = 276dp. Combined with the 48dp header
-        // the picker totals ~324dp.
-        private const val SCROLL_HEIGHT_DP: Float = 276f
         // Scroll past this many dp on the category strip triggers the
         // one-way pill collapse. Small enough that the user just nudging
         // the strip counts; large enough that fingers casually grazing

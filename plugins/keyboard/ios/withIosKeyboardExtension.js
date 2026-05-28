@@ -64,6 +64,9 @@ function withKeyboardXcodeTarget(config) {
       "AudioRecorder.swift",
       "IPCClient.swift",
       "HapticManager.swift",
+      "SpacingAndPunctuations.swift",
+      "AutoCapEngine.swift",
+      "DoubleSpacePeriod.swift",
     ];
 
     const extensionGroup = proj.addPbxGroup(swiftFiles, targetName, targetName);
@@ -289,6 +292,9 @@ function withKeyboardExtensionFiles(config) {
         "AudioRecorder.swift",
         "IPCClient.swift",
         "HapticManager.swift",
+        "SpacingAndPunctuations.swift",
+        "AutoCapEngine.swift",
+        "DoubleSpacePeriod.swift",
       ];
 
       for (const file of swiftFiles) {

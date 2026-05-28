@@ -36,10 +36,25 @@ enum KeyboardLayout {
         case emojiSearch
     }
 
+    /// LatinIME-style 6-state shift machine. `automatic` is rendered the
+    /// same as `on` but drops to `off` after one keystroke without
+    /// feeling like the user undid a deliberate shift. `manualFromAuto`
+    /// drops to `off` on a single tap (so a user who didn't want the
+    /// auto-shift can clear it with one tap, not two).
     enum ShiftState {
         case off
         case on
+        case automatic
+        case manualFromAuto
         case capsLock
+
+        /// True when character keys should commit uppercase.
+        var isShifted: Bool {
+            switch self {
+            case .off, .manualFromAuto: return false
+            case .on, .automatic, .capsLock: return true
+            }
+        }
     }
 
     /// A single key. `label` is the text drawn for character keys; `symbolName`
