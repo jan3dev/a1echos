@@ -39,8 +39,9 @@ enum KeyboardLayout {
     /// LatinIME-style 6-state shift machine. `automatic` is rendered the
     /// same as `on` but drops to `off` after one keystroke without
     /// feeling like the user undid a deliberate shift. `manualFromAuto`
-    /// drops to `off` on a single tap (so a user who didn't want the
-    /// auto-shift can clear it with one tap, not two).
+    /// is the transient "user cancelled the auto-shift" state, rendered
+    /// as `off`: one tap from `automatic` lands here (so the user clears
+    /// an unwanted auto-shift with one tap, not two); a further tap → `on`.
     enum ShiftState {
         case off
         case on
@@ -258,4 +259,13 @@ enum AccentVariants {
         guard let firstChar = character.lowercased().first else { return false }
         return map[firstChar] != nil
     }
+}
+
+/// Long-press punctuation surfaced on the period (".") key, mirroring
+/// LatinIME's period `moreKeys`. The "." is first so a no-drag release
+/// re-types a period.
+enum PunctuationVariants {
+    static let period: [String] = [
+        ".", ",", "?", "!", "'", "\"", ":", ";", "-", "(", ")", "/",
+    ]
 }

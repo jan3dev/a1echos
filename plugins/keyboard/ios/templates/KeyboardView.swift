@@ -12,6 +12,15 @@ protocol KeyboardViewDelegate: AnyObject {
     func keyboardViewDidTapSpace(_ view: KeyboardView)
     func keyboardViewDidTapReturn(_ view: KeyboardView)
     func keyboardViewDidTapGlobe(_ view: KeyboardView)
+    /// Tapped shift. Return true if the tap was consumed (e.g. recapitalizing
+    /// a text selection) so the view skips its normal shift-state cycle.
+    func keyboardViewDidTapShift(_ view: KeyboardView) -> Bool
+    /// Spacebar cursor-drag: move the caret by `offset` characters (negative
+    /// = left). §5.1.
+    func keyboardView(_ view: KeyboardView, moveCursorBy offset: Int)
+    /// Spacebar cursor-drag vertical: move the caret up (`lines` negative) or
+    /// down (`lines` positive) between newline-delimited lines. §5.1.
+    func keyboardView(_ view: KeyboardView, moveCursorVerticallyBy lines: Int)
     /// Long-press on the emoji key (iOS-only path to the system keyboard
     /// picker now that the dedicated globe key is gone).
     func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView)
@@ -120,6 +129,12 @@ class KeyboardView: UIInputView {
         var longPressFired: Bool = false
         var ownsVariants: Bool = false
         var ownsDeleteRepeat: Bool = false
+        // Spacebar cursor-drag (§5.1): set once the hold timer promotes the
+        // space press into cursor mode. `cursorLastStepX` tracks the x at
+        // which the last ±1 caret step fired.
+        var cursorModeActive: Bool = false
+        var cursorLastStepX: CGFloat = 0
+        var cursorLastStepY: CGFloat = 0
         init(button: KeyButton, location: CGPoint) {
             self.button = button
             self.lastLocation = location
@@ -127,13 +142,16 @@ class KeyboardView: UIInputView {
     }
     private var pointers: [ObjectIdentifier: PointerState] = [:]
 
-    // Cached key frames. Hit-testing every finger on every move via
-    // UIView.convert would dominate the touch pipeline. keyFrameRow tracks
-    // the row index of each cached frame so the nearest-key fallback can
-    // constrain its search to the row vertically containing the touch.
+    // Cached hit tiles, one per key and parallel to `keyFramesFlat`. Re-hit-
+    // testing every finger on every move via UIView.convert would dominate the
+    // touch pipeline. Unlike the drawn key rects, these tiles cover the whole
+    // keyboard body edge to edge — each absorbs its share of the inter-key
+    // gaps, the outer margins, and the bands above the top row / below the
+    // bottom row (§1.4), with the inter-row split biased toward the lower row
+    // (§1.5). So every touch on the body resolves to exactly one key with no
+    // gap or edge dead zones, and no nearest-key fallback is needed.
     private var keyFrames: [CGRect] = []
     private var keyFramesFlat: [KeyButton] = []
-    private var keyFrameRow: [Int] = []
     private var keyFramesValid: Bool = false
 
     // Drag-to-correct hysteresis — matches LatinIME's keyHysteresisDistance (~0.5 keys).
@@ -142,12 +160,23 @@ class KeyboardView: UIInputView {
     // Delete-repeat is owned by whichever pointer first lands on delete;
     // a second finger on delete commits a single tap on its own release.
     private let deleteRepeater = DeleteRepeater()
-    private static let longPressDuration: TimeInterval = 0.4
+    // Accent / emoji long-press fires at 300 ms to match LatinIME's default;
+    // the shift → caps-lock long-press is separate (`shiftLongPressDuration`).
+    private static let longPressDuration: TimeInterval = 0.3
 
     // Brief hide-delay so the preview balloon retargets to a new finger
-    // landing in the interim instead of flickering off and back on.
-    private static let previewHideDelay: TimeInterval = 0.05
+    // landing in the interim instead of flickering off and back on. 70 ms
+    // matches LatinIME's key-preview linger.
+    private static let previewHideDelay: TimeInterval = 0.07
     private var previewHideTimer: Timer?
+
+    // Spacebar cursor-drag (§5.1, iOS convention). Hold space this long to
+    // enter cursor mode; thereafter every this-many points of horizontal
+    // travel nudges the caret by one character.
+    private static let spaceCursorHoldDelay: TimeInterval = 0.3
+    private static let cursorStepDistance: CGFloat = 10.0
+    // Vertical travel per caret line-step — roughly one key-row tall.
+    private static let cursorRowStepDistance: CGFloat = 18.0
 
     init() {
         super.init(frame: .zero, inputViewStyle: .keyboard)
@@ -529,22 +558,34 @@ class KeyboardView: UIInputView {
 
     // MARK: - Multi-touch pipeline (QWERTY rows)
 
-    /// Touches landing inside the row stack area (including the 6 pt
-    /// inter-key gap and the 11 pt inter-row gap) need to reach
-    /// `touchesBegan` on `KeyboardView` so the multi-touch pipeline can
-    /// snap them to the nearest key. UIKit's default hit-test would
-    /// otherwise deliver them to the row `UIStackView` — which is
-    /// interactive by default and consumes the touch silently, since
-    /// it has no `touchesBegan` override. By returning `self` for any
-    /// hit inside `rowStackView`'s subtree, we force the parent to own
-    /// the entire QWERTY area. The top bar / popups / emoji picker
-    /// still route normally (they're sibling subviews, not descendants
-    /// of `rowStackView`).
+    /// The multi-touch pipeline must own the entire QWERTY body — keys, the
+    /// inter-key/inter-row gaps, the outer margins, and the thin bands above
+    /// and below the rows — so the hit-tile lookup (`hitTestKeyButton`) can
+    /// run on every touch. We can't just forward `rowStackView`-subtree hits:
+    /// `UIInputView`'s `super.hitTest` returns `nil` for the outer padding and
+    /// the row/top-bar gaps (it treats them as non-content), which previously
+    /// turned those regions into dead zones. So whenever the rows are showing,
+    /// claim any in-bounds point for `self` regardless of what `super` returns
+    /// — except the top bar (record button) and the popups / emoji overlays,
+    /// which own their own touches.
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard let target = super.hitTest(point, with: event) else { return nil }
-        if target === rowStackView || target.isDescendant(of: rowStackView) {
-            return self
+        let target = super.hitTest(point, with: event)
+        if let target = target {
+            if target === topBar || target.isDescendant(of: topBar) { return target }
+            if !keyVariants.isHidden,
+               target === keyVariants || target.isDescendant(of: keyVariants) {
+                return target
+            }
+            if let picker = emojiPickerView, !picker.isHidden,
+               target === picker || target.isDescendant(of: picker) {
+                return target
+            }
+            if let overlay = searchOverlay, !overlay.isHidden,
+               target === overlay || target.isDescendant(of: overlay) {
+                return target
+            }
         }
+        if !rowStackView.isHidden, bounds.contains(point) { return self }
         return target
     }
 
@@ -608,9 +649,9 @@ class KeyboardView: UIInputView {
             showPreviewIfCharacter(button)
         case .character:
             showPreviewIfCharacter(button)
-            if AccentVariants.hasVariants(for: button.keyDefinition.label),
+            if hasLongPressVariants(button.keyDefinition.label),
                !anyPointerOwnsVariants() {
-                scheduleAccentLongPress(state: state)
+                scheduleVariantsLongPress(state: state)
             }
         case .shift:
             // Long-press shift = caps lock. Matches LatinIME 1200 ms.
@@ -623,6 +664,21 @@ class KeyboardView: UIInputView {
                 self.lastShiftTapAt = nil
                 self.updateKeyLabels()
             }
+        case .space:
+            // Hold space to enter cursor-drag mode (§5.1). A quick tap never
+            // reaches here — the timer is cancelled on release — so normal
+            // space and double-space-period are unaffected.
+            scheduleLongPress(
+                state: state, delay: Self.spaceCursorHoldDelay
+            ) { [weak self, weak state] in
+                guard let self = self, let state = state else { return }
+                state.cursorModeActive = true
+                state.cursorLastStepX = state.lastLocation.x
+                state.cursorLastStepY = state.lastLocation.y
+                self.keyPreview.hide()
+                self.setTrackpadBlankOnAllKeys(true)
+                HapticManager.keyTap()
+            }
         default:
             showPreviewIfCharacter(button)
         }
@@ -632,6 +688,27 @@ class KeyboardView: UIInputView {
         guard let state = pointers[ObjectIdentifier(touch)] else { return }
         let location = touch.location(in: self)
         state.lastLocation = location
+
+        // Spacebar cursor-drag mode (§5.1): horizontal travel nudges the
+        // caret one character per `cursorStepDistance` points. Takes over the
+        // drag entirely — no key re-detection, no space commit on release.
+        if state.cursorModeActive {
+            let dx = location.x - state.cursorLastStepX
+            let step = Self.cursorStepDistance
+            if abs(dx) >= step {
+                let steps = Int(dx / step)
+                delegate?.keyboardView(self, moveCursorBy: steps)
+                state.cursorLastStepX += CGFloat(steps) * step
+            }
+            let dy = location.y - state.cursorLastStepY
+            let vStep = Self.cursorRowStepDistance
+            if abs(dy) >= vStep {
+                let rows = Int(dy / vStep)
+                delegate?.keyboardView(self, moveCursorVerticallyBy: rows)
+                state.cursorLastStepY += CGFloat(rows) * vStep
+            }
+            return
+        }
 
         // Variants popover takes over the drag — forward to it for slide-pick.
         if state.ownsVariants {
@@ -684,7 +761,7 @@ class KeyboardView: UIInputView {
         if newButton.keyDefinition.type == .character,
            AccentVariants.hasVariants(for: newButton.keyDefinition.label),
            !anyPointerOwnsVariants() {
-            scheduleAccentLongPress(state: state)
+            scheduleVariantsLongPress(state: state)
         }
     }
 
@@ -707,6 +784,7 @@ class KeyboardView: UIInputView {
         if cancelled {
             if state.ownsVariants { keyVariants.hide() }
             if state.ownsDeleteRepeat { stopDeleteRepeat() }
+            if state.cursorModeActive { setTrackpadBlankOnAllKeys(false) }
             return
         }
 
@@ -733,85 +811,127 @@ class KeyboardView: UIInputView {
         // shouldn't also open the emoji panel.
         if state.longPressFired { return }
 
+        // Cursor-drag consumed the press — don't insert a space or arm the
+        // double-space window.
+        if state.cursorModeActive {
+            setTrackpadBlankOnAllKeys(false)
+            return
+        }
+
         handleKeyAction(state.button.keyDefinition)
     }
 
-    // Returns the key under the point — or the nearest key in the same row
-    // if the point lands in the ~6 pt inter-key gap (otherwise the gap is a
-    // dead zone). Constraining nearest-key to the row vertically containing
-    // the touch keeps a slightly-low thumb from snapping up a row.
+    // The key whose hit tile contains `point`. The tiles cover the keyboard
+    // body with no gaps (see `rebuildKeyFrames`), so any touch on the body —
+    // the ~6 pt inter-key gaps (§1.1/§1.3), the outer side margins, and the
+    // bands just above the top row / just below the space row (§1.4) — lands
+    // on exactly one key. A point off the body (e.g. a drag that wanders up
+    // into the top bar) matches no tile and returns nil, which keeps a drag on
+    // its current key instead of snapping to a far edge key.
     private func hitTestKeyButton(at point: CGPoint) -> KeyButton? {
-        if !keyFramesValid { rebuildKeyFrames() }
-        guard !keyFramesFlat.isEmpty else { return nil }
-
-        // Fast path: direct hit.
-        for (idx, frame) in keyFrames.enumerated() {
-            if frame.contains(point) { return keyFramesFlat[idx] }
+        if !keyFramesValid {
+            // Flush any pending Auto Layout first — on the first touch after a
+            // layout invalidation the buttons can still report zero-width
+            // bounds, which would drop them from the cache below.
+            layoutIfNeeded()
+            rebuildKeyFrames()
         }
-
-        // Pick the row whose vertical band the touch lies in; if the touch is
-        // between rows, pick the row with the nearest vertical edge so the
-        // snap follows the natural drift of a thumb roll.
-        let candidateRow = nearestRowIndex(for: point.y) ?? -1
-        guard candidateRow >= 0 else { return nil }
-
-        var best: (idx: Int, distSq: CGFloat)? = nil
-        for idx in 0..<keyFramesFlat.count where keyFrameRow[idx] == candidateRow {
-            let f = keyFrames[idx]
-            let dx = max(f.minX - point.x, max(0, point.x - f.maxX))
-            let dy = max(f.minY - point.y, max(0, point.y - f.maxY))
-            let d = dx * dx + dy * dy
-            if best == nil || d < best!.distSq { best = (idx, d) }
-        }
-        // Cap the snap distance to something reasonable so a touch way off
-        // the keyboard (e.g. in the top bar via gesture forwarding) doesn't
-        // commit some random edge key. ~1.5× a key's smaller side.
-        guard let best = best else { return nil }
-        let cap = (keyFrames[best.idx].height * 1.5)
-        if best.distSq > cap * cap { return nil }
-        return keyFramesFlat[best.idx]
-    }
-
-    /// Finds the row index whose vertical band best matches `y`. Returns nil
-    /// if the touch is dramatically outside the QWERTY area.
-    private func nearestRowIndex(for y: CGFloat) -> Int? {
-        // Compute the vertical span of each row from its first key frame.
-        var bestRow: Int? = nil
-        var bestDist: CGFloat = .greatestFiniteMagnitude
-        for rowIdx in keyButtons.indices {
-            guard let first = keyButtons[rowIdx].first,
-                  let frame = cachedFrame(for: first) else { continue }
-            if y >= frame.minY && y <= frame.maxY { return rowIdx }
-            let d = min(abs(y - frame.minY), abs(y - frame.maxY))
-            if d < bestDist {
-                bestDist = d
-                bestRow = rowIdx
-            }
-        }
-        return bestRow
-    }
-
-    private func cachedFrame(for button: KeyButton) -> CGRect? {
-        for (idx, b) in keyFramesFlat.enumerated() where b === button {
-            return keyFrames[idx]
+        for (idx, frame) in keyFrames.enumerated() where frame.contains(point) {
+            return keyFramesFlat[idx]
         }
         return nil
     }
 
+    /// Per-row sweet-spot Y bias (§1.5): a downward offset, in points, for the
+    /// lower letter rows. Folded into the inter-row tile split in
+    /// `rebuildKeyFrames` so the gap above a lower row is mostly claimed by
+    /// that row — people systematically land a touch high on the bottom rows,
+    /// so an ambiguous inter-row tap should resolve *down*, not snap up.
+    /// Fractions of row height mirror LatinIME's touch-position correction
+    /// (top ≈ 0, mid 0.038, bottom 0.088), indexed by QWERTY letter row.
+    private func rowYBias(forRow rowIdx: Int, rowHeight: CGFloat) -> CGFloat {
+        switch rowIdx {
+        case 1: return 0.038 * rowHeight
+        case 2: return 0.088 * rowHeight
+        default: return 0
+        }
+    }
+
+    /// Rebuilds the hit-tile cache (`keyFrames`, parallel to `keyFramesFlat`).
+    /// Each key's tile, with its row and column neighbours, tiles the keyboard
+    /// body edge to edge — the drawn key rects are untouched, only the hit
+    /// geometry grows:
+    ///   • columns split at the inter-key gap midpoint; the first / last key in
+    ///     a row run out to the keyboard's side edges (§1.4 left/right),
+    ///   • rows split at the inter-row gap midpoint pulled up by the averaged
+    ///     sweet-spot bias so the lower row claims most of the gap (§1.5); the
+    ///     top row runs up to the top bar's lower edge (§1.4 top) and the
+    ///     bottom row down to the keyboard's bottom (§1.4 bottom, iOS).
     private func rebuildKeyFrames() {
         keyFrames.removeAll(keepingCapacity: true)
         keyFramesFlat.removeAll(keepingCapacity: true)
-        keyFrameRow.removeAll(keepingCapacity: true)
+
+        // Snapshot each non-empty row's visible keys with their on-screen
+        // frames; the tiling needs each key's neighbours and the adjacent
+        // rows' bands. The original row index rides along so the sweet-spot
+        // bias keys off the QWERTY row, not a post-filter position.
+        var rows: [(rowIdx: Int, keys: [(button: KeyButton, frame: CGRect)])] = []
         for (rowIdx, row) in keyButtons.enumerated() {
-            for button in row {
-                guard button.window != nil, button.bounds.width > 0 else { continue }
-                let frame = button.convert(button.bounds, to: self)
-                keyFrames.append(frame)
-                keyFramesFlat.append(button)
-                keyFrameRow.append(rowIdx)
+            let keys = row
+                .filter { $0.window != nil && $0.bounds.width > 0 }
+                .map { (button: $0, frame: $0.convert($0.bounds, to: self)) }
+            if !keys.isEmpty { rows.append((rowIdx: rowIdx, keys: keys)) }
+        }
+        guard !rows.isEmpty else {
+            keyFramesValid = false
+            return
+        }
+
+        let viewWidth = bounds.width
+        let viewMaxY = bounds.maxY
+        // Top row reaches up to the top bar's lower edge — never into the bar
+        // (it owns the record button); the full top edge when the bar is hidden.
+        let topEdgeY = topBar.isHidden ? 0 : topBar.frame.maxY
+
+        // Shared vertical edge of row `i` (above) and row `i + 1` (below): the
+        // inter-row gap midpoint pulled up by the averaged sweet-spot bias.
+        func interRowSplit(_ i: Int) -> CGFloat {
+            let upper = rows[i].keys[0].frame
+            let lower = rows[i + 1].keys[0].frame
+            let midpoint = (upper.maxY + lower.minY) / 2
+            let bias = (rowYBias(forRow: rows[i].rowIdx, rowHeight: upper.height)
+                + rowYBias(forRow: rows[i + 1].rowIdx, rowHeight: lower.height)) / 2
+            return midpoint - bias
+        }
+
+        for (i, row) in rows.enumerated() {
+            let bandTop = i == 0
+                ? min(row.keys[0].frame.minY, topEdgeY)
+                : interRowSplit(i - 1)
+            let bandBottom = i == rows.count - 1
+                ? max(row.keys[0].frame.maxY, viewMaxY)
+                : interRowSplit(i)
+            let lastCol = row.keys.count - 1
+            for (col, key) in row.keys.enumerated() {
+                let left: CGFloat = col == 0
+                    ? 0
+                    : (row.keys[col - 1].frame.maxX + key.frame.minX) / 2
+                let right: CGFloat = col == lastCol
+                    ? max(viewWidth, key.frame.maxX)
+                    : (key.frame.maxX + row.keys[col + 1].frame.minX) / 2
+                keyFrames.append(CGRect(
+                    x: left, y: bandTop,
+                    width: right - left, height: bandBottom - bandTop
+                ))
+                keyFramesFlat.append(key.button)
             }
         }
-        keyFramesValid = !keyFramesFlat.isEmpty
+
+        // Only treat the cache as valid once every key made it in — a build
+        // that dropped zero-width buttons must rebuild on the next touch
+        // rather than leaving those keys permanently un-hittable.
+        let expected = keyButtons.reduce(0) { $0 + $1.count }
+        keyFramesValid = keyFramesFlat.count == expected && !keyFramesFlat.isEmpty
     }
 
     override func layoutSubviews() {
@@ -849,17 +969,29 @@ class KeyboardView: UIInputView {
         ) { _ in action() }
     }
 
-    /// Accent variants long-press. Scheduled per-pointer instead of via a
-    /// `UILongPressGestureRecognizer` on the button so it composes correctly
-    /// with the multi-touch pipeline (a recognizer would steal the touch from
-    /// `touchesBegan`-based commit logic).
-    private func scheduleAccentLongPress(state: PointerState) {
+    /// True when a long-press on `label` should open the variants popup —
+    /// either accent variants for a letter, or the punctuation popup on ".".
+    private func hasLongPressVariants(_ label: String) -> Bool {
+        return AccentVariants.hasVariants(for: label) || label == "."
+    }
+
+    /// Long-press variants (accent letters or period punctuation). Scheduled
+    /// per-pointer instead of via a `UILongPressGestureRecognizer` on the
+    /// button so it composes correctly with the multi-touch pipeline (a
+    /// recognizer would steal the touch from `touchesBegan`-based commit
+    /// logic).
+    private func scheduleVariantsLongPress(state: PointerState) {
         scheduleLongPress(state: state) { [weak self, weak state] in
             guard let self = self, let state = state else { return }
             let label = state.button.keyDefinition.label
-            let variants = AccentVariants.variants(
-                for: label, uppercase: self.shiftState.isShifted
-            )
+            let variants: [String]
+            if label == "." {
+                variants = PunctuationVariants.period
+            } else {
+                variants = AccentVariants.variants(
+                    for: label, uppercase: self.shiftState.isShifted
+                )
+            }
             guard !variants.isEmpty else { return }
             // Hide the typewriter preview — variants popover takes over.
             self.keyPreview.hide()
@@ -895,7 +1027,19 @@ class KeyboardView: UIInputView {
         previewHideTimer = nil
         keyPreview.hide()
         keyVariants.hide()
+        setTrackpadBlankOnAllKeys(false)
         stopDeleteRepeat()
+    }
+
+    /// Toggles the trackpad-blank visual across every key (§5.1). Idempotent —
+    /// safe to call on any cursor-drag exit path, including a layout rebuild
+    /// that happens mid-drag.
+    private func setTrackpadBlankOnAllKeys(_ blank: Bool) {
+        for row in keyButtons {
+            for button in row {
+                button.setTrackpadBlank(blank)
+            }
+        }
     }
 
     // MARK: - Delete auto-repeat
@@ -1043,6 +1187,9 @@ class KeyboardView: UIInputView {
             // case a stale layout ever carries one.
             break
         case .shift:
+            // A live text selection turns shift into a recapitalize gesture
+            // (§4.7); the controller owns the document proxy, so it decides.
+            if delegate?.keyboardViewDidTapShift(self) == true { return }
             handleShiftTap()
         case .modeSwitch:
             switch currentLayout {

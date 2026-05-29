@@ -52,6 +52,11 @@ class EchosKeyboardView @JvmOverloads constructor(
         /// Long-press on the globe key — surfaces the system keyboard
         /// picker so the user can pick a different IME entirely.
         fun onShowKeyboardPicker()
+
+        /// Tapped shift. Returns true if the tap was consumed (e.g.
+        /// recapitalizing a text selection, §4.7) so the view skips its
+        /// normal shift-state cycle.
+        fun onShiftTap(): Boolean
     }
 
     private var listener: KeyboardActionListener? = null
@@ -129,8 +134,15 @@ class EchosKeyboardView @JvmOverloads constructor(
     )
     private val pointers = SparseArray<PointerState>()
 
-    // Computed key rects for hit testing
+    // Drawn key rects (used by onDraw). Mirror shape of `currentRows`.
     private val keyRects = mutableListOf<List<RectF>>()
+
+    // Hit-test rects: same shape as `keyRects`, but the outermost keys'
+    // rects are stretched into the keyboard's outer padding (§1.4 edge-key
+    // hitbox extension). Drawing always uses `keyRects`; hit detection
+    // (`findKey` / `nearestRowIndex`) uses these so margin taps resolve to
+    // the nearest edge key without visibly enlarging the keys.
+    private val hitRects = mutableListOf<List<RectF>>()
 
     // Paints. Three pre-configured text paints \u2014 one per text size \u2014 so
     // `drawKey` never mutates `textSize` mid-frame. Mutating textSize forces
@@ -209,7 +221,8 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var overlay: KeyOverlayView? = null
 
     private companion object {
-        private const val LONG_PRESS_THRESHOLD_MS = 400L
+        // Accent / emoji long-press default — 300 ms matches LatinIME.
+        private const val LONG_PRESS_THRESHOLD_MS = 300L
 
         /// LatinIME's `keyboard_lock_timeout` — long-press shift this long
         /// jumps straight to caps lock, bypassing the regular tap cycle.
@@ -531,11 +544,15 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// including the gaps it covers).
     private fun computeKeyRects() {
         keyRects.clear()
+        hitRects.clear()
         val availableWidth = width.toFloat() - 2 * paddingH
 
         val cells = currentCells
         if (cells != null) {
             computeCellKeyRects(cells, availableWidth)
+            // NUMPAD keeps hit rects identical to draw rects — the cell grid
+            // owns its own geometry and scroll bands, so no edge extension.
+            for (row in keyRects) hitRects.add(row.map { RectF(it) })
             return
         }
 
@@ -551,15 +568,59 @@ class EchosKeyboardView @JvmOverloads constructor(
             val rowRects = mutableListOf<RectF>()
             var x = paddingH + row.leadingPadCells * cellPitch
             val rowHeight = keyHeight * row.heightMultiplier
-
             for (key in row.keys) {
                 val keyWidth = key.widthWeight * cellPitch - keyHGap
                 rowRects.add(RectF(x, y, x + keyWidth, y + rowHeight))
                 x += key.widthWeight * cellPitch
             }
-
             keyRects.add(rowRects)
             y += rowHeight + keyVGap
+        }
+
+        // Build the hit tiles from the drawn rects: tile the whole keyboard
+        // body edge to edge so every touch resolves to exactly one key — the
+        // inter-key gaps, the outer side margins, and the bands above the top
+        // row / below the bottom row (§1.4) are all absorbed, with the inter-
+        // row split pulled up by the averaged sweet-spot bias so the lower row
+        // claims most of the gap (§1.5). The drawn rects stay untouched.
+        buildHitTiles(width.toFloat(), height.toFloat())
+    }
+
+    /// Fills `hitRects` (parallel to the already-built `keyRects`) with a gap-
+    /// free tiling of the keyboard body — see [computeKeyRects]. Columns split
+    /// at the inter-key gap midpoint and the first / last key runs to the side
+    /// edge; rows split at the inter-row gap midpoint pulled up by the averaged
+    /// sweet-spot bias, the top row reaching y=0 and the bottom row the view
+    /// bottom. With no gaps, every touch on the body lands on exactly one key,
+    /// so the nearest-key fallback in `findKey` only ever fires for NUMPAD.
+    private fun buildHitTiles(viewW: Float, viewH: Float) {
+        val rowCount = keyRects.size
+
+        // Shared vertical edge of row `i` (above) and row `i + 1` (below): the
+        // inter-row gap midpoint pulled up by the averaged sweet-spot bias.
+        fun interRowSplit(i: Int): Float {
+            val upper = keyRects[i][0]
+            val lower = keyRects[i + 1][0]
+            val midpoint = (upper.bottom + lower.top) / 2f
+            val bias = (rowYBias(i, upper.height()) + rowYBias(i + 1, lower.height())) / 2f
+            return midpoint - bias
+        }
+
+        for (rowIdx in keyRects.indices) {
+            val row = keyRects[rowIdx]
+            if (row.isEmpty()) { hitRects.add(emptyList()); continue }
+            val top = if (rowIdx == 0) 0f else interRowSplit(rowIdx - 1)
+            val bottom = if (rowIdx == rowCount - 1) viewH else interRowSplit(rowIdx)
+            val lastCol = row.size - 1
+            val rowHit = mutableListOf<RectF>()
+            for (colIdx in row.indices) {
+                val left = if (colIdx == 0) 0f
+                    else (row[colIdx - 1].right + row[colIdx].left) / 2f
+                val right = if (colIdx == lastCol) viewW
+                    else (row[colIdx].right + row[colIdx + 1].left) / 2f
+                rowHit.add(RectF(left, top, right, bottom))
+            }
+            hitRects.add(rowHit)
         }
     }
 
@@ -1192,11 +1253,14 @@ class EchosKeyboardView @JvmOverloads constructor(
                 }
             }
             EchosKeyboardLayout.KeyType.PERIOD -> {
-                // Period in NUMPAD shows a preview just like comma; in
-                // letter/number layouts it falls through to no preview
-                // (matches the current behaviour for those layouts).
+                // Period in NUMPAD shows a preview just like comma and keeps
+                // its calculator behaviour (no popup). In letter/number/symbol
+                // layouts a long-press surfaces a punctuation more-keys popup
+                // (LatinIME §3.11); a short tap still types ".".
                 if (currentCells != null) {
                     overlay?.showPreview(".", keyRect)
+                } else if (!anyPointerOwnsVariants()) {
+                    schedulePunctuationLongPress(state, keyRect)
                 }
             }
             else -> Unit
@@ -1325,6 +1389,20 @@ class EchosKeyboardView @JvmOverloads constructor(
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
     }
 
+    /// Long-press the period key -> punctuation more-keys popup (LatinIME
+    /// §3.11). Reuses the accent-variants popup + slide-pick machinery.
+    private fun schedulePunctuationLongPress(state: PointerState, keyRect: RectF) {
+        val anchorRect = RectF(keyRect)
+        val runnable = Runnable {
+            state.longPressFired = true
+            state.ownsVariants = true
+            overlay?.showVariants(anchorRect, AccentVariants.punctuationForPeriod(), state.lastX)
+            invalidate()
+        }
+        state.longPressRunnable = runnable
+        longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
+    }
+
     private fun scheduleGlobeLongPress(state: PointerState) {
         val runnable = Runnable {
             state.longPressFired = true
@@ -1379,9 +1457,10 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// low thumb from snapping up to the row above. This mirrors the iOS
     /// `hitTestKeyButton` fix and Archagon's `ForwardingView.findNearestView`.
     private fun findKey(x: Float, y: Float): Int {
-        // Fast path: direct hit.
+        // Fast path: direct hit. Uses `hitRects` (edge-extended) so taps in
+        // the outer padding land on the nearest edge key.
         val cells = currentCells
-        for (rowIdx in keyRects.indices) {
+        for (rowIdx in hitRects.indices) {
             // NUMPAD VERTICAL_STACK cells lay out *all* operator keys —
             // including the overflow ones (e.g. "(", ")") that only
             // appear after the user scrolls the column. Those overflow
@@ -1397,8 +1476,8 @@ class EchosKeyboardView @JvmOverloads constructor(
                 } else null
             } else null
             if (band != null && (y < band.top || y > band.bottom)) continue
-            for (colIdx in keyRects[rowIdx].indices) {
-                if (keyRects[rowIdx][colIdx].contains(x, y)) {
+            for (colIdx in hitRects[rowIdx].indices) {
+                if (hitRects[rowIdx][colIdx].contains(x, y)) {
                     return (rowIdx shl 16) or colIdx
                 }
             }
@@ -1418,7 +1497,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // Find the nearest key in that row by squared distance-to-rect.
         var bestCol = -1
         var bestDistSq = Float.MAX_VALUE
-        val row = keyRects[candidateRow]
+        val row = hitRects[candidateRow]
         for (colIdx in row.indices) {
             val r = row[colIdx]
             val dx = when {
@@ -1450,23 +1529,41 @@ class EchosKeyboardView @JvmOverloads constructor(
 
     /// Index of the row whose vertical span best matches `y`; falls back
     /// to the row with the nearest vertical edge if the touch is between
-    /// rows. Returns -1 only when `keyRects` is empty.
+    /// rows. Returns -1 only when `hitRects` is empty. Uses the edge-extended
+    /// hit rects so the top/bottom rows' bands reach the keyboard edges, plus
+    /// a small per-row sweet-spot bias (§1.5) that nudges the effective Y down
+    /// on the lower rows so an ambiguous inter-row tap resolves to the
+    /// intended lower row instead of snapping up.
     private fun nearestRowIndex(y: Float): Int {
-        if (keyRects.isEmpty()) return -1
+        if (hitRects.isEmpty()) return -1
         var bestRow = -1
         var bestDist = Float.MAX_VALUE
-        for (rowIdx in keyRects.indices) {
-            val rowRects = keyRects[rowIdx]
+        for (rowIdx in hitRects.indices) {
+            val rowRects = hitRects[rowIdx]
             if (rowRects.isEmpty()) continue
             val ref = rowRects[0]
-            if (y in ref.top..ref.bottom) return rowIdx
-            val d = minOf(kotlin.math.abs(y - ref.top), kotlin.math.abs(y - ref.bottom))
+            val effY = y + rowYBias(rowIdx, ref.height())
+            val d = when {
+                effY < ref.top -> ref.top - effY
+                effY > ref.bottom -> effY - ref.bottom
+                else -> 0f
+            }
             if (d < bestDist) {
                 bestDist = d
                 bestRow = rowIdx
             }
         }
         return bestRow
+    }
+
+    /// Per-row sweet-spot Y bias (§1.5): fractions of row height mirroring
+    /// LatinIME's touch-position correction (top ~0, mid 0.038, bottom
+    /// 0.088), indexed by QWERTY letter row. Pulls ambiguous inter-row taps
+    /// toward the intended lower row.
+    private fun rowYBias(rowIdx: Int, rowHeight: Float): Float = when (rowIdx) {
+        1 -> 0.038f * rowHeight
+        2 -> 0.088f * rowHeight
+        else -> 0f
     }
 
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
@@ -1496,7 +1593,12 @@ class EchosKeyboardView @JvmOverloads constructor(
                 markSymbolTypedIfApplicable()
             }
             EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()
-            EchosKeyboardLayout.KeyType.SHIFT -> handleShiftTap()
+            EchosKeyboardLayout.KeyType.SHIFT -> {
+                // A live text selection turns shift into a recapitalize
+                // gesture (§4.7); the service owns the InputConnection, so it
+                // decides. Otherwise run the normal shift-state cycle.
+                if (listener?.onShiftTap() != true) handleShiftTap()
+            }
             EchosKeyboardLayout.KeyType.MODE_SWITCH -> {
                 // Any still-held pointers' rowIdx/colIdx index into the old
                 // layout — drop them before swapping `currentRows` so we

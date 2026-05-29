@@ -19,6 +19,10 @@ final class KeyVariantsView: UIView {
     private static let cornerRadius: CGFloat = 12
     private static let highlightCornerRadius: CGFloat = 8
     private static let gapAboveKey: CGFloat = 6
+    /// Max cells per row before the popup wraps to a new row. Matches
+    /// LatinIME's default more-keys column cap (it uses 5; we allow 6 to
+    /// keep common accent sets on a single row).
+    private static let maxColumns: Int = 6
 
     init() {
         super.init(frame: .zero)
@@ -58,19 +62,27 @@ final class KeyVariantsView: UIView {
         let count = variants.count
         let containerWidth = container.bounds.width
 
+        // Wrap into a grid when there are more variants than fit in one row
+        // (e.g. "o" has 8 accents) so the popup never runs off-screen. With
+        // count <= maxColumns this is a single row and the geometry matches
+        // the previous single-row layout exactly.
+        let columns = max(min(count, Self.maxColumns), 1)
+        let rows = Int(ceil(Double(count) / Double(columns)))
+
         // Preferred cell size matches the key. Shrink horizontally if the
-        // total width would overflow the container.
+        // widest row would overflow the container.
         var cellW = keyFrame.width
         let maxAvailableW =
-            containerWidth - 2 * Self.outerPadding - CGFloat(max(count - 1, 0)) * Self.cellSpacing
-        if CGFloat(count) * cellW > maxAvailableW {
-            cellW = floor(maxAvailableW / CGFloat(count))
+            containerWidth - 2 * Self.outerPadding - CGFloat(columns - 1) * Self.cellSpacing
+        if CGFloat(columns) * cellW > maxAvailableW {
+            cellW = floor(maxAvailableW / CGFloat(columns))
         }
         let cellH = keyFrame.height
 
-        let totalCellsW = CGFloat(count) * cellW + CGFloat(max(count - 1, 0)) * Self.cellSpacing
-        let popoverWidth = totalCellsW + 2 * Self.outerPadding
-        let popoverHeight = cellH + 2 * Self.outerPadding
+        let gridW = CGFloat(columns) * cellW + CGFloat(columns - 1) * Self.cellSpacing
+        let gridH = CGFloat(rows) * cellH + CGFloat(max(rows - 1, 0)) * Self.cellSpacing
+        let popoverWidth = gridW + 2 * Self.outerPadding
+        let popoverHeight = gridH + 2 * Self.outerPadding
 
         var popoverX = keyFrame.midX - popoverWidth / 2
         popoverX = max(0, min(containerWidth - popoverWidth, popoverX))
@@ -78,20 +90,15 @@ final class KeyVariantsView: UIView {
 
         frame = CGRect(x: popoverX, y: popoverY, width: popoverWidth, height: popoverHeight)
 
-        rebuildLabels(cellWidth: cellW, cellHeight: cellH)
+        rebuildLabels(columns: columns, cellWidth: cellW, cellHeight: cellH)
 
-        // Default highlight: cell whose midX is nearest to the original key.
-        let keyMidInPopover = keyFrame.midX - popoverX
-        var bestIndex = 0
-        var bestDist = CGFloat.greatestFiniteMagnitude
-        for (i, cellFrame) in variantFrames.enumerated() {
-            let dist = abs(cellFrame.midX - keyMidInPopover)
-            if dist < bestDist {
-                bestDist = dist
-                bestIndex = i
-            }
-        }
-        highlightedIndex = bestIndex
+        // Default highlight: cell nearest the originating key center. For a
+        // single row this reduces to the horizontally-nearest cell (the
+        // previous behavior); for a grid it picks the closest bottom-row cell.
+        let keyCenterInPopover = CGPoint(
+            x: keyFrame.midX - popoverX, y: keyFrame.midY - popoverY
+        )
+        highlightedIndex = nearestCellIndex(to: keyCenterInPopover) ?? 0
         applyHighlightStyles()
 
         if superview !== container {
@@ -106,27 +113,37 @@ final class KeyVariantsView: UIView {
     }
 
     /// Updates the highlighted variant from a touch in the container's
-    /// coordinate space. Touches off either side snap to the outer cell.
+    /// coordinate space. Picks the nearest cell, so a finger resting below
+    /// the popup (still on the key) tracks horizontally, and in a multi-row
+    /// popup it can travel up through rows. A single-row popup ignores Y
+    /// (all cells share one row) and clamps off-edge drags to the end cell.
     func updateHighlight(at locationInContainer: CGPoint) {
-        let xInPopover = locationInContainer.x - frame.minX
-        var newIndex = highlightedIndex
-
-        if let first = variantFrames.first, xInPopover < first.minX {
-            newIndex = 0
-        } else if let last = variantFrames.last, xInPopover >= last.maxX {
-            newIndex = variantFrames.count - 1
-        } else {
-            for (i, cellFrame) in variantFrames.enumerated()
-            where xInPopover >= cellFrame.minX && xInPopover < cellFrame.maxX {
-                newIndex = i
-                break
-            }
-        }
-
+        let pointInPopover = CGPoint(
+            x: locationInContainer.x - frame.minX,
+            y: locationInContainer.y - frame.minY
+        )
+        guard let newIndex = nearestCellIndex(to: pointInPopover) else { return }
         if newIndex != highlightedIndex {
             highlightedIndex = newIndex
             applyHighlightStyles()
         }
+    }
+
+    /// Index of the cell nearest `point` (popover coords) by squared
+    /// distance to the cell rect (0 when inside).
+    private func nearestCellIndex(to point: CGPoint) -> Int? {
+        var bestIndex: Int? = nil
+        var bestDistSq = CGFloat.infinity
+        for (i, f) in variantFrames.enumerated() {
+            let dx = max(f.minX - point.x, max(0, point.x - f.maxX))
+            let dy = max(f.minY - point.y, max(0, point.y - f.maxY))
+            let d = dx * dx + dy * dy
+            if d < bestDistSq {
+                bestDistSq = d
+                bestIndex = i
+            }
+        }
+        return bestIndex
     }
 
     func selectedVariant() -> String? {
@@ -146,26 +163,27 @@ final class KeyVariantsView: UIView {
 
     // MARK: - Private
 
-    private func rebuildLabels(cellWidth: CGFloat, cellHeight: CGFloat) {
+    private func rebuildLabels(columns: Int, cellWidth: CGFloat, cellHeight: CGFloat) {
         for label in variantLabels {
             label.removeFromSuperview()
         }
         variantLabels.removeAll()
         variantFrames.removeAll()
 
-        var x: CGFloat = Self.outerPadding
-        for variant in variants {
+        for (i, variant) in variants.enumerated() {
+            let row = i / columns
+            let col = i % columns
+            let x = Self.outerPadding + CGFloat(col) * (cellWidth + Self.cellSpacing)
+            let y = Self.outerPadding + CGFloat(row) * (cellHeight + Self.cellSpacing)
+            let cellFrame = CGRect(x: x, y: y, width: cellWidth, height: cellHeight)
             let label = UILabel()
             label.text = variant
             label.textAlignment = .center
             label.font = UIFont.systemFont(ofSize: 22, weight: .regular)
-            let cellFrame = CGRect(x: x, y: Self.outerPadding,
-                                   width: cellWidth, height: cellHeight)
             label.frame = cellFrame
             addSubview(label)
             variantLabels.append(label)
             variantFrames.append(cellFrame)
-            x += cellWidth + Self.cellSpacing
         }
     }
 

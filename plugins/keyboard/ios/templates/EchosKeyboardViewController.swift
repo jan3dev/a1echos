@@ -9,6 +9,7 @@ class EchosKeyboardViewController: UIInputViewController {
     private var ipcClient: IPCClient!
     private var audioRecorder: AudioRecorder!
     private var doubleSpacePeriod = DoubleSpacePeriod()
+    private let recapitalize = RecapitalizeEngine()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -106,6 +107,10 @@ class EchosKeyboardViewController: UIInputViewController {
         super.selectionWillChange(textInput)
         doubleSpacePeriod.reset()
         keyboardView.resetShiftDoubleTap()
+        // A user-driven cursor/selection move ends any recapitalize rotation
+        // (§4.7). Our own proxy edits don't fire this callback, so an
+        // in-progress rotation survives consecutive shift taps.
+        recapitalize.reset()
     }
 
     override func textDidChange(_ textInput: UITextInput?) {
@@ -250,6 +255,101 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     func keyboardViewDidTapGlobe(_ view: KeyboardView) {
         advanceToNextInputMode()
+    }
+
+    /// Spacebar cursor-drag (§5.1): move the caret without inserting a space.
+    func keyboardView(_ view: KeyboardView, moveCursorBy offset: Int) {
+        textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
+    }
+
+    /// Spacebar cursor-drag vertical (§5.1). The keyboard proxy exposes no
+    /// text geometry, so we move between newline-delimited lines on a
+    /// best-effort basis, preserving the caret's column where the target line
+    /// is long enough. Soft-wrapped visual lines are invisible to us.
+    func keyboardView(_ view: KeyboardView, moveCursorVerticallyBy lines: Int) {
+        guard lines != 0 else { return }
+        for _ in 0..<abs(lines) {
+            if lines < 0 { moveCaretUpOneLine() } else { moveCaretDownOneLine() }
+        }
+    }
+
+    /// Caret's column = characters since the last newline in the text behind it.
+    private func currentColumn(in before: String) -> Int {
+        if let nl = before.lastIndex(of: "\n") {
+            return before.distance(from: before.index(after: nl), to: before.endIndex)
+        }
+        return before.count
+    }
+
+    private func moveCaretUpOneLine() {
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let col = currentColumn(in: before)
+        guard let curLineStart = before.lastIndex(of: "\n") else {
+            // Already on the first line — clamp to its start.
+            if !before.isEmpty {
+                textDocumentProxy.adjustTextPosition(byCharacterOffset: -before.count)
+            }
+            return
+        }
+        let prevChunk = before[..<curLineStart]
+        let prevLineStart = prevChunk.lastIndex(of: "\n").map { prevChunk.index(after: $0) }
+            ?? prevChunk.startIndex
+        let prevLineLength = prevChunk.distance(from: prevLineStart, to: prevChunk.endIndex)
+        let targetCol = min(col, prevLineLength)
+        let offset = -(col + 1 + (prevLineLength - targetCol))
+        textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
+    }
+
+    private func moveCaretDownOneLine() {
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let after = textDocumentProxy.documentContextAfterInput ?? ""
+        let col = currentColumn(in: before)
+        guard let nlIdx = after.firstIndex(of: "\n") else {
+            // Already on the last line — clamp to its end.
+            if !after.isEmpty {
+                textDocumentProxy.adjustTextPosition(byCharacterOffset: after.count)
+            }
+            return
+        }
+        let remainderOfCurLine = after.distance(from: after.startIndex, to: nlIdx)
+        let nextLineStart = after.index(after: nlIdx)
+        let nextLineEnd = after[nextLineStart...].firstIndex(of: "\n") ?? after.endIndex
+        let nextLineLength = after.distance(from: nextLineStart, to: nextLineEnd)
+        let targetCol = min(col, nextLineLength)
+        let offset = remainderOfCurLine + 1 + targetCol
+        textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
+    }
+
+    /// Recapitalize-on-selection (§4.7). With text selected, shift replaces
+    /// the selection with the next case form (lower → Title → UPPER) and
+    /// returns true so the view skips its shift-state cycle. iOS can't
+    /// re-select, so a follow-up shift tap continues the rotation by deleting
+    /// and re-inserting our own run — but only while that run is still intact
+    /// immediately before the cursor (any typing or cursor move ends it).
+    /// Returns false (normal shift) when there's nothing to recapitalize.
+    func keyboardViewDidTapShift(_ view: KeyboardView) -> Bool {
+        if let selection = textDocumentProxy.selectedText, !selection.isEmpty {
+            guard let next = RecapitalizeEngine.nextCase(selection) else { return false }
+            doubleSpacePeriod.reset()
+            textDocumentProxy.insertText(next)  // replaces the selection
+            recapitalize.begin(inserted: next)
+            return true
+        }
+        guard recapitalize.active,
+              !recapitalize.lastInserted.isEmpty,
+              let before = textDocumentProxy.documentContextBeforeInput,
+              before.hasSuffix(recapitalize.lastInserted),
+              let next = RecapitalizeEngine.nextCase(recapitalize.lastInserted)
+        else {
+            recapitalize.reset()
+            return false
+        }
+        for _ in 0..<recapitalize.lastInserted.count {
+            textDocumentProxy.deleteBackward()
+        }
+        textDocumentProxy.insertText(next)
+        recapitalize.begin(inserted: next)
+        return true
     }
 
     /// Long-press on the emoji key surfaces the system keyboard picker

@@ -140,6 +140,7 @@ function withImeSources(config) {
         "SpacingAndPunctuations.kt",
         "AutoCapEngine.kt",
         "DoubleSpacePeriod.kt",
+        "RecapitalizeEngine.kt",
       ];
 
       for (const file of ktFiles) {

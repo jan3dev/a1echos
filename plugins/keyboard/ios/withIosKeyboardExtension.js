@@ -67,6 +67,7 @@ function withKeyboardXcodeTarget(config) {
       "SpacingAndPunctuations.swift",
       "AutoCapEngine.swift",
       "DoubleSpacePeriod.swift",
+      "RecapitalizeEngine.swift",
     ];
 
     const extensionGroup = proj.addPbxGroup(swiftFiles, targetName, targetName);
@@ -295,6 +296,7 @@ function withKeyboardExtensionFiles(config) {
         "SpacingAndPunctuations.swift",
         "AutoCapEngine.swift",
         "DoubleSpacePeriod.swift",
+        "RecapitalizeEngine.swift",
       ];
 
       for (const file of swiftFiles) {

@@ -479,6 +479,34 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     /**
+     * Recapitalize-on-selection (§4.7). With text selected, shift replaces the
+     * selection with the next case form (lower -> Title -> UPPER) and re-selects
+     * the result so a follow-up shift tap keeps cycling. Returns false (normal
+     * shift) when nothing is selected.
+     */
+    override fun onShiftTap(): Boolean {
+        if (emojiSearchActive) return false
+        val ic = currentInputConnection ?: return false
+        val selected = ic.getSelectedText(0)
+        if (selected.isNullOrEmpty()) return false
+        val next = RecapitalizeEngine.nextCase(selected.toString()) ?: return false
+
+        val anchor = minOf(expectedSelStart, expectedSelEnd)
+        doubleSpacePeriod.reset()
+        // commitText replaces the selection (cursor lands after the run), then
+        // setSelection re-selects it. Each op fires its own onUpdateSelection
+        // echo, so push both expected positions (same pattern as the smart-
+        // period delete+commit) to keep them from being read as a cursor move.
+        ic.commitText(next, 1)
+        pendingExpectedPositions.addLast((anchor + next.length) to (anchor + next.length))
+        ic.setSelection(anchor, anchor + next.length)
+        pendingExpectedPositions.addLast(anchor to (anchor + next.length))
+        expectedSelStart = anchor
+        expectedSelEnd = anchor + next.length
+        return true
+    }
+
+    /**
      * Walks the user toward granting RECORD_AUDIO. IMEs can't request runtime
      * permissions directly (no UI host), so we open the main Echos app —
      * which already has the runtime permission flow wired up — and surface

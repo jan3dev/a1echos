@@ -211,6 +211,16 @@ class KeyButton: UIControl {
         }
     }
 
+    /// Spacebar cursor-drag (trackpad) mode: native iOS blanks every key —
+    /// glyphs vanish and the fill dims so the keyboard reads as a trackpad.
+    /// Driven via `alpha` so it layers over (and reverses cleanly without
+    /// disturbing) the color state owned by `updateAppearance`.
+    func setTrackpadBlank(_ blank: Bool) {
+        label.alpha = blank ? 0 : 1
+        symbolView.alpha = blank ? 0 : 1
+        backgroundView.alpha = blank ? 0.4 : 1
+    }
+
     func updateAppearance(
         theme: KeyboardTheme,
         micState: MicState,

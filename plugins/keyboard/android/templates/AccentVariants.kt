@@ -32,6 +32,15 @@ object AccentVariants {
     )
 
     /**
+     * Punctuation marks surfaced when long-pressing the period key (LatinIME
+     * period `moreKeys`). "." is first so a no-drag release re-types a period.
+     */
+    private val periodPunctuation: List<String> =
+        listOf(".", ",", "?", "!", "'", "\"", ":", ";", "-", "(", ")", "/")
+
+    fun punctuationForPeriod(): List<String> = periodPunctuation
+
+    /**
      * Number associated with a top-row letter, or null. Used by the keyboard
      * view to draw the small secondary label in the corner of the key.
      */

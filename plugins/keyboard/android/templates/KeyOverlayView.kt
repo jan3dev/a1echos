@@ -95,8 +95,14 @@ class KeyOverlayView @JvmOverloads constructor(
         val cellW = dpPx(40f)
         val cellH = dpPx(44f)
         val pad = dpPx(6f)
-        val totalW = variants.size * cellW + 2 * pad
-        val totalH = cellH + 2 * pad
+
+        // Wrap into a grid when there are more variants than fit in one row
+        // (e.g. "o" has 8 accents + a paired number) so the popup never runs
+        // off-screen. Single-row popups keep their exact previous geometry.
+        val cols = minOf(variants.size, MAX_VARIANT_COLUMNS)
+        val rows = if (cols == 0) 0 else (variants.size + cols - 1) / cols
+        val totalW = cols * cellW + 2 * pad
+        val totalH = rows * cellH + 2 * pad
 
         var bgLeft = key.centerX() - totalW / 2
         if (bgLeft < 0f) bgLeft = 0f
@@ -106,9 +112,12 @@ class KeyOverlayView @JvmOverloads constructor(
         // somehow still isn't room (tiny screen / oversized variant set).
         val bgTop = (key.top - totalH - dpPx(4f)).coerceAtLeast(0f)
 
-        val cellRects = (0 until variants.size).map { i ->
-            val cellLeft = bgLeft + pad + i * cellW
-            RectF(cellLeft, bgTop + pad, cellLeft + cellW, bgTop + pad + cellH)
+        val cellRects = variants.indices.map { i ->
+            val r = i / cols
+            val c = i % cols
+            val cellLeft = bgLeft + pad + c * cellW
+            val cellTop = bgTop + pad + r * cellH
+            RectF(cellLeft, cellTop, cellLeft + cellW, cellTop + cellH)
         }
         // Hide the typewriter balloon as soon as the variants take over —
         // matches Gboard.
@@ -134,8 +143,9 @@ class KeyOverlayView @JvmOverloads constructor(
     fun updateVariantsHighlight(xInKeyboard: Float, yInKeyboard: Float) {
         val state = variantsState ?: return
         val x = xInKeyboard
-        // y is unused — once the popup is up we only track horizontal drag,
-        // matching Gboard.
+        // cellRects live in overlay coords (Y shifted by the top-bar band);
+        // translate the keyboard-coord touch Y to match.
+        val y = yInKeyboard + keyboardOffsetY
         // Hold the initial highlight (index 0) until the user actually moves
         // their finger. Without this, the popup centers above the key and a
         // single ACTION_MOVE event lands the finger over the *middle* cell —
@@ -147,15 +157,25 @@ class KeyOverlayView @JvmOverloads constructor(
             if (kotlin.math.abs(x - state.openX) < dpPx(VARIANT_DRAG_THRESHOLD_DP)) return
             state.userHasDragged = true
         }
-        if (x < state.backgroundRect.left || x > state.backgroundRect.right) return
-        for ((i, cellRect) in state.cellRects.withIndex()) {
-            if (x >= cellRect.left && x <= cellRect.right) {
-                if (i != state.selectedIndex) {
-                    state.selectedIndex = i
-                    invalidate()
-                }
-                return
+        // Nearest cell by clamped distance. This lets the finger sit below the
+        // popup (still on the key) and track horizontally, and travel up
+        // through rows in a multi-row popup. For a single-row popup every cell
+        // shares one row, so y never changes the result — preserving the old
+        // horizontal-only feel — and an off-edge drag clamps to the end cell.
+        var bestIdx = -1
+        var bestDist = Float.MAX_VALUE
+        for ((i, cell) in state.cellRects.withIndex()) {
+            val dx = maxOf(cell.left - x, 0f, x - cell.right)
+            val dy = maxOf(cell.top - y, 0f, y - cell.bottom)
+            val d = dx * dx + dy * dy
+            if (d < bestDist) {
+                bestDist = d
+                bestIdx = i
             }
+        }
+        if (bestIdx >= 0 && bestIdx != state.selectedIndex) {
+            state.selectedIndex = bestIdx
+            invalidate()
         }
     }
 
@@ -252,5 +272,10 @@ class KeyOverlayView @JvmOverloads constructor(
         /// snapping its highlight to whatever cell sits under the finger.
         /// ~8dp matches Gboard's tolerance.
         private const val VARIANT_DRAG_THRESHOLD_DP = 8f
+
+        /// Max cells per row before the variants popup wraps to a new row.
+        /// Matches LatinIME's default more-keys column cap (it uses 5; we
+        /// allow 6 to keep common accent sets on a single row).
+        private const val MAX_VARIANT_COLUMNS = 6
     }
 }
