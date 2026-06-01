@@ -12,7 +12,7 @@ import {
   TranscriptionMode,
 } from "@/models";
 import { sherpaTranscriptionService } from "@/services";
-import { FeatureFlag, logError, logWarn } from "@/utils";
+import { FeatureFlag, logError, logWarn, writeKeyboardSettings } from "@/utils";
 
 import { preWarmModel } from "../transcription-store/preWarmModel";
 
@@ -26,6 +26,7 @@ const STORAGE_KEYS = {
   INCOGNITO_MODE: "incognito_mode",
   SMART_SPLIT_ENABLED: "smart_split_enabled",
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
+  KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -42,6 +43,9 @@ interface SettingsStore {
   isIncognitoMode: boolean;
   smartSplitEnabled: boolean;
   hasSeenKeyboardPrompt: boolean;
+  /** Keyboard: auto-apply the top spelling guess on space (default off =
+   *  tap-to-apply suggestions only). */
+  keyboardAutocorrect: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -54,6 +58,7 @@ interface SettingsStore {
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
   markKeyboardPromptSeen: () => Promise<void>;
+  setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -105,6 +110,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   isIncognitoMode: false,
   smartSplitEnabled: true,
   hasSeenKeyboardPrompt: false,
+  keyboardAutocorrect: false,
 
   initialize: async () => {
     try {
@@ -118,6 +124,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         incognitoModeValue,
         smartSplitValue,
         keyboardPromptValue,
+        keyboardAutocorrectValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -128,6 +135,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.INCOGNITO_MODE),
         AsyncStorage.getItem(STORAGE_KEYS.SMART_SPLIT_ENABLED),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_AUTOCORRECT),
       ]);
 
       const selectedTheme = themeValue
@@ -188,6 +196,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const smartSplitEnabled =
         smartSplitValue === null || smartSplitValue === "true";
       const hasSeenKeyboardPrompt = keyboardPromptValue === "true";
+      // Default false — only the explicit string "true" enables autocorrect.
+      const keyboardAutocorrect = keyboardAutocorrectValue === "true";
 
       set({
         selectedTheme,
@@ -199,7 +209,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         isIncognitoMode,
         smartSplitEnabled,
         hasSeenKeyboardPrompt,
+        keyboardAutocorrect,
       });
+
+      // Mirror the preference to the keyboard config file so the native
+      // keyboards have it on first launch (and after a reinstall) without
+      // waiting for the user to toggle it.
+      writeKeyboardSettings({ autocorrect: keyboardAutocorrect });
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
@@ -215,6 +231,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         isIncognitoMode: false,
         smartSplitEnabled: true,
         hasSeenKeyboardPrompt: false,
+        keyboardAutocorrect: false,
       });
     }
   },
@@ -425,6 +442,29 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
+
+  setKeyboardAutocorrect: async (enabled: boolean) => {
+    const previousValue = get().keyboardAutocorrect;
+    if (previousValue === enabled) return;
+    set({ keyboardAutocorrect: enabled });
+    // Push the new preference to the keyboard config file optimistically so
+    // the native keyboards pick it up on next field focus.
+    writeKeyboardSettings({ autocorrect: enabled });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.KEYBOARD_AUTOCORRECT,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save keyboard autocorrect preference",
+      });
+      set({ keyboardAutocorrect: previousValue });
+      writeKeyboardSettings({ autocorrect: previousValue });
+      throw error;
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -456,6 +496,10 @@ export const useHasSeenKeyboardPrompt = () =>
   useSettingsStore((s) => s.hasSeenKeyboardPrompt);
 export const useMarkKeyboardPromptSeen = () =>
   useSettingsStore((s) => s.markKeyboardPromptSeen);
+export const useKeyboardAutocorrect = () =>
+  useSettingsStore((s) => s.keyboardAutocorrect);
+export const useSetKeyboardAutocorrect = () =>
+  useSettingsStore((s) => s.setKeyboardAutocorrect);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

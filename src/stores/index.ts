@@ -29,6 +29,8 @@ export {
   useSmartSplitEnabled,
   useHasSeenKeyboardPrompt,
   useMarkKeyboardPromptSeen,
+  useKeyboardAutocorrect,
+  useSetKeyboardAutocorrect,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,

@@ -35,10 +35,13 @@ jest.mock("@/hooks", () => ({
 }));
 
 const mockSetSmartSplitEnabled = jest.fn();
+const mockSetKeyboardAutocorrect = jest.fn();
 const mockShowKeyboardPrompt = jest.fn();
 jest.mock("@/stores", () => ({
   useSmartSplitEnabled: jest.fn(() => true),
   useSetSmartSplitEnabled: jest.fn(() => mockSetSmartSplitEnabled),
+  useKeyboardAutocorrect: jest.fn(() => false),
+  useSetKeyboardAutocorrect: jest.fn(() => mockSetKeyboardAutocorrect),
   useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
 }));
 
@@ -60,9 +63,14 @@ jest.mock("@/components", () => {
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <RNText>{String(children)}</RNText>,
-    Toggle: ({ value, onValueChange }: any) => (
-      <TouchableOpacity testID="toggle" onPress={() => onValueChange?.(!value)}>
-        <RNText testID="toggle-value">{value ? "on" : "off"}</RNText>
+    Toggle: ({ value, onValueChange, accessibilityLabel }: any) => (
+      <TouchableOpacity
+        testID={`toggle-${accessibilityLabel}`}
+        onPress={() => onValueChange?.(!value)}
+      >
+        <RNText testID={`toggle-value-${accessibilityLabel}`}>
+          {value ? "on" : "off"}
+        </RNText>
       </TouchableOpacity>
     ),
     TopAppBar: ({ title }: any) => (
@@ -77,9 +85,15 @@ describe("AdvancedSettingsScreen", () => {
   beforeEach(() => {
     mockSetSmartSplitEnabled.mockReset();
     mockSetSmartSplitEnabled.mockResolvedValue(undefined);
+    mockSetKeyboardAutocorrect.mockReset();
+    mockSetKeyboardAutocorrect.mockResolvedValue(undefined);
     mockShowKeyboardPrompt.mockReset();
-    const { useSmartSplitEnabled } = require("@/stores");
+    const {
+      useSmartSplitEnabled,
+      useKeyboardAutocorrect,
+    } = require("@/stores");
     (useSmartSplitEnabled as jest.Mock).mockReturnValue(true);
+    (useKeyboardAutocorrect as jest.Mock).mockReturnValue(false);
   });
 
   it("renders TopAppBar with advanced settings title", () => {
@@ -99,7 +113,7 @@ describe("AdvancedSettingsScreen", () => {
 
   it("toggle reflects the current enabled state (on by default)", () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
-    expect(getByTestId("toggle-value")).toHaveTextContent("on");
+    expect(getByTestId("toggle-value-smartSplitTitle")).toHaveTextContent("on");
   });
 
   it("toggle reflects disabled state when store says off", () => {
@@ -107,12 +121,14 @@ describe("AdvancedSettingsScreen", () => {
     (useSmartSplitEnabled as jest.Mock).mockReturnValueOnce(false);
 
     const { getByTestId } = render(<AdvancedSettingsScreen />);
-    expect(getByTestId("toggle-value")).toHaveTextContent("off");
+    expect(getByTestId("toggle-value-smartSplitTitle")).toHaveTextContent(
+      "off",
+    );
   });
 
   it("pressing the toggle persists the flipped value", async () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
-    fireEvent.press(getByTestId("toggle"));
+    fireEvent.press(getByTestId("toggle-smartSplitTitle"));
     await waitFor(() => {
       expect(mockSetSmartSplitEnabled).toHaveBeenCalledWith(false);
     });
@@ -137,5 +153,31 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
     fireEvent.press(getByTestId(TestID.SettingsAddKeyboardRow));
     expect(mockShowKeyboardPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the keyboard autocorrect row (off by default)", () => {
+    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByTestId(TestID.SettingsKeyboardAutocorrectToggle)).toBeTruthy();
+    expect(getByText("keyboardAutocorrectTitle")).toBeTruthy();
+    expect(getByText("keyboardAutocorrectDescription")).toBeTruthy();
+    expect(
+      getByTestId("toggle-value-keyboardAutocorrectTitle"),
+    ).toHaveTextContent("off");
+  });
+
+  it("pressing the autocorrect toggle persists the flipped value", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId("toggle-keyboardAutocorrectTitle"));
+    await waitFor(() => {
+      expect(mockSetKeyboardAutocorrect).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("pressing the autocorrect row also flips the toggle", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId(TestID.SettingsKeyboardAutocorrectToggle));
+    await waitFor(() => {
+      expect(mockSetKeyboardAutocorrect).toHaveBeenCalledWith(true);
+    });
   });
 });

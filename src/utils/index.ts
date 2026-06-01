@@ -83,3 +83,8 @@ export { createPcmStreamWriter } from "./wav-writer/WavWriter";
 export type { PcmStreamWriter } from "./wav-writer/WavWriter";
 export { iosPressed } from "./ripple/ripple";
 export { openKeyboardSettings } from "./keyboard-settings/openKeyboardSettings";
+export {
+  writeKeyboardSettings,
+  type KeyboardSettingsConfig,
+} from "./keyboard-settings/writeKeyboardSettings";
+export { writeJsonAtomic } from "./file/writeJsonAtomic";

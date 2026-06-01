@@ -17,7 +17,7 @@ class IPCClient {
     static let resultNotificationName = "com.a1lab.echos.transcriptionResult"
     /// Pre-flight ping/pong notifications. The keyboard fires a ping
     /// before recording so we can detect a force-killed main app and
-    /// surface a clear "open Echos" banner instead of letting the user
+    /// surface a clear "open Echos" toast instead of letting the user
     /// record and then time out 10 seconds later.
     static let pingNotificationName = "com.a1lab.echos.transcriptionPing"
     static let pongNotificationName = "com.a1lab.echos.transcriptionPong"

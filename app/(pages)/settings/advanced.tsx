@@ -5,6 +5,8 @@ import { Icon, ListItem, Screen, Toggle, TopAppBar } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
+  useKeyboardAutocorrect,
+  useSetKeyboardAutocorrect,
   useSetSmartSplitEnabled,
   useShowKeyboardPrompt,
   useSmartSplitEnabled,
@@ -18,10 +20,16 @@ export default function AdvancedSettingsScreen() {
 
   const smartSplitEnabled = useSmartSplitEnabled();
   const setSmartSplitEnabled = useSetSmartSplitEnabled();
+  const keyboardAutocorrect = useKeyboardAutocorrect();
+  const setKeyboardAutocorrect = useSetKeyboardAutocorrect();
   const showKeyboardPrompt = useShowKeyboardPrompt();
 
   const handleToggle = (next: boolean) => {
     void setSmartSplitEnabled(next);
+  };
+
+  const handleAutocorrectToggle = (next: boolean) => {
+    void setKeyboardAutocorrect(next);
   };
 
   return (
@@ -50,6 +58,19 @@ export default function AdvancedSettingsScreen() {
             />
           }
           onPress={() => handleToggle(!smartSplitEnabled)}
+        />
+        <ListItem
+          testID={TestID.SettingsKeyboardAutocorrectToggle}
+          title={loc.keyboardAutocorrectTitle}
+          subtitle={loc.keyboardAutocorrectDescription}
+          iconTrailing={
+            <Toggle
+              value={keyboardAutocorrect}
+              onValueChange={handleAutocorrectToggle}
+              accessibilityLabel={loc.keyboardAutocorrectTitle}
+            />
+          }
+          onPress={() => handleAutocorrectToggle(!keyboardAutocorrect)}
         />
         <ListItem
           testID={TestID.SettingsAddKeyboardRow}

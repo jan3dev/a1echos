@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Runs in the main Echos app process. Listens for transcription requests from
 /// the keyboard extension via Darwin notifications, transcribes the audio via
@@ -19,6 +20,14 @@ import Foundation
     /// transcription. The listener runs in the main app process so App Group
     /// sharing is unnecessary for this file.
     private let modelConfigFilename = "keyboard-sherpa-model.json"
+    /// Keyboard settings JSON written by JS (`writeKeyboardSettings`) into the
+    /// app's Documents directory. Mirrored into App Group `UserDefaults` (below)
+    /// because the keyboard *extension* is sandboxed away from Documents and
+    /// can only read the shared suite.
+    private let keyboardSettingsFilename = "keyboard-settings.json"
+    /// Must match `KeyboardSettings.swift` in the extension.
+    private let autocorrectDefaultsKey = "EchosKeyboard.autocorrect"
+    private var lifecycleObservers: [NSObjectProtocol] = []
 
     private override init() {
         super.init()
@@ -58,6 +67,22 @@ import Foundation
             .deliverImmediately
         )
 
+        // Mirror keyboard settings (written by JS to the app sandbox, which the
+        // extension can't read) into the App Group suite the extension reads.
+        // Re-mirror when the app backgrounds so a toggle made mid-session
+        // reaches the keyboard before the user switches to another app.
+        mirrorKeyboardSettings()
+        let nc = NotificationCenter.default
+        for name in [
+            UIApplication.willResignActiveNotification,
+            UIApplication.didEnterBackgroundNotification,
+        ] {
+            let token = nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.mirrorKeyboardSettings()
+            }
+            lifecycleObservers.append(token)
+        }
+
         NSLog("[KeyboardTranscriptionListener] Started listening for keyboard transcription requests")
     }
 
@@ -65,6 +90,32 @@ import Foundation
         let center = CFNotificationCenterGetDarwinNotifyCenter()
         let observer = Unmanaged.passUnretained(self).toOpaque()
         CFNotificationCenterRemoveObserver(center, observer, nil, nil)
+        for token in lifecycleObservers {
+            NotificationCenter.default.removeObserver(token)
+        }
+        lifecycleObservers.removeAll()
+    }
+
+    // MARK: - Keyboard Settings Mirror
+
+    /// Reads `keyboard-settings.json` from the app's Documents directory and
+    /// copies the `autocorrect` flag into the App Group `UserDefaults` the
+    /// keyboard extension reads via `KeyboardSettings.load()`. Writes the
+    /// conservative default (false) when the file is missing or unparseable.
+    private func mirrorKeyboardSettings() {
+        guard let docsDir = NSSearchPathForDirectoriesInDomains(
+            .documentDirectory, .userDomainMask, true
+        ).first else { return }
+        let path = (docsDir as NSString).appendingPathComponent(keyboardSettingsFilename)
+
+        var autocorrect = false
+        if FileManager.default.fileExists(atPath: path),
+           let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let value = json["autocorrect"] as? Bool {
+            autocorrect = value
+        }
+        UserDefaults(suiteName: appGroupID)?.set(autocorrect, forKey: autocorrectDefaultsKey)
     }
 
     // MARK: - Handle Request

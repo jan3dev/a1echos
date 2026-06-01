@@ -14,6 +14,7 @@ import {
   logError,
   logWarn,
   PcmStreamWriter,
+  writeJsonAtomic,
 } from "@/utils";
 
 import { audioSessionService } from "../audio-session-service/AudioSessionService";
@@ -216,17 +217,13 @@ const writeKeyboardModelConfig = (
       config.language = whisperLanguage ?? languageCode;
     }
 
-    // Atomic write: stage to a sibling tmp file and move it into place so
-    // the IME never reads a half-written JSON. The IME's
+    // Atomic write so the IME never reads a half-written JSON — its
     // `SherpaModelManager` parses with `JSONObject(readText())`, which would
     // throw on a truncated payload.
-    const tmpFile = new File(Paths.document, `${KEYBOARD_CONFIG_FILENAME}.tmp`);
-    if (tmpFile.exists) tmpFile.delete();
-    tmpFile.write(JSON.stringify(config));
-
-    const configFile = new File(Paths.document, KEYBOARD_CONFIG_FILENAME);
-    if (configFile.exists) configFile.delete();
-    tmpFile.move(configFile);
+    writeJsonAtomic(KEYBOARD_CONFIG_FILENAME, config, {
+      flag: FeatureFlag.model,
+      label: "keyboard model config",
+    });
   } catch (error) {
     logWarn(`Failed to write keyboard model config: ${error}`, {
       flag: FeatureFlag.model,

@@ -96,6 +96,8 @@ export const useLocalization = () => {
       advancedSettingsTitle: t("advancedSettingsTitle"),
       smartSplitTitle: t("smartSplitTitle"),
       smartSplitDescription: t("smartSplitDescription"),
+      keyboardAutocorrectTitle: t("keyboardAutocorrectTitle"),
+      keyboardAutocorrectDescription: t("keyboardAutocorrectDescription"),
       keyboardPromptTitle: t("keyboardPromptTitle"),
       keyboardPromptBody: t("keyboardPromptBody"),
       keyboardPromptIosDisclaimer: t("keyboardPromptIosDisclaimer"),

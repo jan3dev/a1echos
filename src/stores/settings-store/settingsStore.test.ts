@@ -13,7 +13,9 @@ import {
   initializeSettingsStore,
   useHasSeenKeyboardPrompt,
   useIsIncognitoMode,
+  useKeyboardAutocorrect,
   useMarkKeyboardPromptSeen,
+  useSetKeyboardAutocorrect,
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
@@ -35,7 +37,13 @@ jest.mock("@/utils", () => ({
   FeatureFlag: { settings: "SETTINGS" },
   logError: jest.fn(),
   logWarn: jest.fn(),
+  writeKeyboardSettings: jest.fn(),
 }));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { writeKeyboardSettings } = require("@/utils") as {
+  writeKeyboardSettings: jest.Mock;
+};
 
 jest.mock("../transcription-store/preWarmModel", () => ({
   preWarmModel: jest.fn(),
@@ -55,11 +63,13 @@ const initialState = {
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   smartSplitEnabled: true,
+  keyboardAutocorrect: false,
 };
 
 describe("settingsStore", () => {
   beforeEach(() => {
     useSettingsStore.setState(initialState);
+    writeKeyboardSettings.mockClear();
   });
 
   describe("initial state", () => {
@@ -421,6 +431,88 @@ describe("settingsStore", () => {
 
     it("useMarkKeyboardPromptSeen returns the action", () => {
       const { result } = renderHook(() => useMarkKeyboardPromptSeen());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("setKeyboardAutocorrect()", () => {
+    it("defaults to false in the store", () => {
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(false);
+    });
+
+    it("enables, persists 'true', and mirrors to the keyboard config", async () => {
+      await useSettingsStore.getState().setKeyboardAutocorrect(true);
+
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_autocorrect",
+        "true",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({ autocorrect: true });
+    });
+
+    it("disables and persists 'false'", async () => {
+      useSettingsStore.setState({ keyboardAutocorrect: true });
+
+      await useSettingsStore.getState().setKeyboardAutocorrect(false);
+
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(false);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_autocorrect",
+        "false",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+      });
+    });
+
+    it("is a no-op when the value is unchanged", async () => {
+      await useSettingsStore.getState().setKeyboardAutocorrect(false);
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      expect(writeKeyboardSettings).not.toHaveBeenCalled();
+    });
+
+    it("rolls back state and mirror on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setKeyboardAutocorrect(true),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(false);
+      // Optimistic mirror, then rollback mirror to the previous value.
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
+        autocorrect: true,
+      });
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
+        autocorrect: false,
+      });
+    });
+
+    it("initialize() treats only the string 'true' as enabled", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_autocorrect" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(true);
+      // initialize() mirrors the loaded value to the keyboard config.
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({ autocorrect: true });
+    });
+
+    it("useKeyboardAutocorrect selector reflects state", () => {
+      useSettingsStore.setState({ keyboardAutocorrect: true });
+      const { result } = renderHook(() => useKeyboardAutocorrect());
+      expect(result.current).toBe(true);
+    });
+
+    it("useSetKeyboardAutocorrect returns the action", () => {
+      const { result } = renderHook(() => useSetKeyboardAutocorrect());
       expect(typeof result.current).toBe("function");
     });
   });

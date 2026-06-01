@@ -45,24 +45,16 @@ app-example
 # local module build artifacts (gradle / kotlin caches)
 modules/*/android/build/
 
-# Cursor
-.cursor/
-
 # temp
 temp/
-
-# YoYo AI version control directory
-.yoyo/
 
 # Android Studio
 .idea/
 
-# tldr
-.tldr/
-.tldrignore
-
-# Claude
-.claude/
-
 # Tests
 coverage/
+
+# Claude — track only project agents and commands; ignore local state
+.claude/*
+!.claude/agents/
+!.claude/commands/

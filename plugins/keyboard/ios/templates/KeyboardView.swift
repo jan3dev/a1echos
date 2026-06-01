@@ -25,6 +25,9 @@ protocol KeyboardViewDelegate: AnyObject {
     /// picker now that the dedicated globe key is gone).
     func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView)
     func keyboardViewDidToggleRecord(_ view: KeyboardView)
+    /// A suggestion candidate was tapped in the top-bar strip (§5.5); the
+    /// controller replaces the in-progress word with `candidate`.
+    func keyboardView(_ view: KeyboardView, didSelectSuggestion candidate: String)
 }
 
 /// Mic button states.
@@ -72,7 +75,7 @@ class KeyboardView: UIInputView {
     private let topBar = KeyboardTopBar()
     private let keyPreview = KeyPreviewView()
     private let keyVariants = KeyVariantsView()
-    private let banner = KeyboardBannerView()
+    private let toast = KeyboardToastView()
     private var rowStackView: UIStackView!
     private var emojiPickerView: EmojiPickerView?
     private var searchOverlay: EmojiSearchOverlayView?
@@ -102,7 +105,7 @@ class KeyboardView: UIInputView {
     private var shiftState: KeyboardLayout.ShiftState = .off
     private var micState: MicState = .idle
     private var returnKeyType: UIReturnKeyType = .default
-    private var bannerHideTimer: Timer?
+    private var toastHideTimer: Timer?
 
     // Double-tap-shift → caps lock. LatinIME matches the system
     // `getDoubleTapTimeout()` (≈300 ms); we use the same value.
@@ -217,9 +220,9 @@ class KeyboardView: UIInputView {
 
         addSubview(rowStackView)
         // Added before the popups so accent/typewriter popovers render above it.
-        banner.translatesAutoresizingMaskIntoConstraints = false
-        banner.isHidden = true
-        addSubview(banner)
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        toast.isHidden = true
+        addSubview(toast)
         // Both popups sit above all other subviews. Variants is added last
         // so the accent popover renders above the typewriter balloon — in
         // practice only one is visible at a time.
@@ -252,10 +255,15 @@ class KeyboardView: UIInputView {
             rowStackBottom,
             rowStackHeightConstraint,
 
-            banner.leadingAnchor.constraint(equalTo: leadingAnchor),
-            banner.trailingAnchor.constraint(equalTo: trailingAnchor),
-            banner.topAnchor.constraint(equalTo: topAnchor),
-            banner.heightAnchor.constraint(equalToConstant: KeyboardTopBar.preferredHeight),
+            // Toast band sits near the bottom of the keyboard, centered. The
+            // inner pill self-centers within this full-width band, so an error
+            // floats over the lower key rows (briefly) instead of covering the
+            // top bar's record button. Auto-hides, and is non-interactive so
+            // taps still reach the keys underneath.
+            toast.leadingAnchor.constraint(equalTo: leadingAnchor),
+            toast.trailingAnchor.constraint(equalTo: trailingAnchor),
+            toast.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            toast.heightAnchor.constraint(equalToConstant: 40),
         ])
 
         buildLayout()
@@ -486,6 +494,20 @@ class KeyboardView: UIInputView {
 
     var currentMicState: MicState { micState }
 
+    /// Exposes the live shift state so the controller can case suggestion
+    /// candidates to match what a typed character would produce (§5.5).
+    var currentShiftState: KeyboardLayout.ShiftState { shiftState }
+
+    /// Shows up to 3 suggestion candidates in the top bar (no-op while
+    /// recording — `KeyboardTopBar` guards that). An empty list hides the strip.
+    func showSuggestions(_ candidates: [String]) {
+        topBar.showSuggestions(candidates)
+    }
+
+    func hideSuggestions() {
+        topBar.hideSuggestions()
+    }
+
     func setAudioLevel(_ level: Double) {
         topBar.setAudioLevel(level)
     }
@@ -508,38 +530,41 @@ class KeyboardView: UIInputView {
 
     func showMicError(_ message: String) {
         UIAccessibility.post(notification: .announcement, argument: message)
-        presentBanner(message: message)
+        presentToast(message: message)
     }
 
     func showOpenAppPrompt(_ message: String) {
         UIAccessibility.post(notification: .announcement, argument: message)
-        presentBanner(message: message, autoHideAfter: 5.0)
+        presentToast(message: message, autoHideAfter: 5.0)
     }
 
-    private func presentBanner(
+    private func presentToast(
         message: String, autoHideAfter seconds: TimeInterval = 3.0
     ) {
-        bannerHideTimer?.invalidate()
-        banner.setMessage(message)
-        if banner.isHidden {
-            banner.alpha = 0
-            banner.isHidden = false
-            UIView.animate(withDuration: 0.18) { self.banner.alpha = 1 }
+        toastHideTimer?.invalidate()
+        toast.setMessage(message)
+        // Float above any emoji picker / search overlay installed later in the
+        // view stack — those bring only the key popups forward, not the toast.
+        bringSubviewToFront(toast)
+        if toast.isHidden {
+            toast.alpha = 0
+            toast.isHidden = false
+            UIView.animate(withDuration: 0.18) { self.toast.alpha = 1 }
         }
-        bannerHideTimer = Timer.scheduledTimer(
+        toastHideTimer = Timer.scheduledTimer(
             withTimeInterval: seconds, repeats: false
         ) { [weak self] _ in
-            self?.dismissBanner()
+            self?.dismissToast()
         }
     }
 
-    private func dismissBanner() {
-        bannerHideTimer?.invalidate()
-        bannerHideTimer = nil
+    private func dismissToast() {
+        toastHideTimer?.invalidate()
+        toastHideTimer = nil
         UIView.animate(
             withDuration: 0.18,
-            animations: { self.banner.alpha = 0 },
-            completion: { _ in self.banner.isHidden = true }
+            animations: { self.toast.alpha = 0 },
+            completion: { _ in self.toast.isHidden = true }
         )
     }
 
@@ -1288,6 +1313,10 @@ extension KeyboardView: KeyboardTopBarDelegate {
         HapticManager.keyTap()
         delegate?.keyboardViewDidToggleRecord(self)
     }
+
+    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion candidate: String) {
+        delegate?.keyboardView(self, didSelectSuggestion: candidate)
+    }
 }
 
 // MARK: - Emoji picker
@@ -1405,14 +1434,16 @@ extension KeyboardView: EmojiSearchOverlayViewDelegate {
     }
 }
 
-// MARK: - Banner
+// MARK: - Toast
 
-/// Inline status banner shown over the top bar when the keyboard needs
-/// to relay a recoverable error or instruction to the user — typically
+/// Transient toast pill shown near the bottom-center of the keyboard when it
+/// needs to relay a recoverable error or instruction to the user — typically
 /// "Open Echos to enable voice typing" when the main app isn't running.
-/// Keyboard extensions can't open URLs reliably, so the banner is
-/// informational only.
-final class KeyboardBannerView: UIView {
+/// Mirrors the Android keyboard's native bottom toast so both platforms
+/// surface errors the same way. Keyboard extensions can't open URLs reliably,
+/// so the toast is informational only (and non-interactive, so it never
+/// swallows taps meant for the keys beneath it).
+final class KeyboardToastView: UIView {
 
     private let label = UILabel()
     private let pill = UIView()

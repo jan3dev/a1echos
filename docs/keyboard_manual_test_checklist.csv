@@ -88,6 +88,21 @@ Shift state machine,SHIFT-05,Auto-shift one-tap cancel,At sentence start (auto-c
 Shift state machine,SHIFT-06,Double-tap from auto-shift,At sentence start double-tap Shift quickly,Caps lock engages,iOS+Android,,,
 Shift state machine,SHIFT-07,Caps lock visual,Engage caps lock,Shift glyph shows capslock icon; letters render uppercase,iOS+Android,,,
 Shift state machine,SHIFT-08,Shift visual states,Cycle through OFF / ON / capslock,Glyph: outline (off) / filled (on) / capslock icon (locked),iOS+Android,,,
+Suggestions & autocorrect,SUG-01,Suggestion strip appears,Type a misspelled or partial word (≥2 letters) in a normal text field,Top bar shows up to 3 word suggestions,iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-02,Tap suggestion applies word,Tap a candidate in the strip,Current word is replaced with the candidate (no extra trailing space),iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-03,Strip hidden mid-word,Move the caret into the middle of an existing word,No suggestions shown (only resolves at a word end),iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-04,No suggestions for short/numeric tokens,"Type a single letter, or a token containing a digit",Strip stays empty,iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-05,Suppressed in URL/email/password,Focus a URL/email/password field and type,No suggestion strip appears,iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-06,Hidden while recording,Start mic recording while a word is composed,Strip yields to the recording UI; no suggestions shown,iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-07,Casing matches shift state,Type a word with Shift on or caps lock engaged,Suggested candidates adopt the matching case,iOS+Android,,,Phase 3 §5.5
+Suggestions & autocorrect,SUG-08,Language follows host locale,Set the device language different from the app spoken language then type,Suggestions use the host/device language (not the ASR model language),iOS+Android,,,§5.5 host-locale
+Suggestions & autocorrect,SUG-09,Autocorrect default off,Fresh install — type a misspelling then space,Word is NOT auto-changed (suggestions remain tap-only),iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-10,Enable autocorrect setting,In Echos ▸ Advanced Settings toggle Keyboard Autocorrect on,Setting persists; keyboard applies it on next field focus,iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-11,Autocorrect on space,With autocorrect on type a misspelling then space,Top guess replaces the word and a space is committed,iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-12,Autocorrect backspace revert,Press backspace immediately after an autocorrect fires,Original typed word is restored exactly,iOS+Android,,,Phase 3 §5.4
+Suggestions & autocorrect,SUG-13,Autocorrect respects field opt-out,With autocorrect on type in a password/URL field then space,No autocorrection is applied,iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-14,No system spell checker (Android),Disable all system spell checkers then type a word,One-time toast points to the spell-checker setting; strip stays empty,Android,,,§5.5 Android spellchecker gap
+Suggestions & autocorrect,SUG-15,Autocorrect chains auto-cap,With autocorrect on autocorrect the first word of a sentence,Auto-cap still capitalizes the next sentence start,iOS+Android,,,Phase 3 §5.10
 Voice transcription,VOX-01,Tap mic to record,Tap top-bar mic,Records; waveform animates with real input level,iOS+Android,,,
 Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recording,Stops recording; transcription inserted at cursor,iOS+Android,,,
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,

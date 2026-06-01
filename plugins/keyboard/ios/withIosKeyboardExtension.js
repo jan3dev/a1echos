@@ -68,6 +68,9 @@ function withKeyboardXcodeTarget(config) {
       "AutoCapEngine.swift",
       "DoubleSpacePeriod.swift",
       "RecapitalizeEngine.swift",
+      "KeyboardSettings.swift",
+      "SuggestionEngine.swift",
+      "SuggestionStripView.swift",
     ];
 
     const extensionGroup = proj.addPbxGroup(swiftFiles, targetName, targetName);
@@ -297,6 +300,9 @@ function withKeyboardExtensionFiles(config) {
         "AutoCapEngine.swift",
         "DoubleSpacePeriod.swift",
         "RecapitalizeEngine.swift",
+        "KeyboardSettings.swift",
+        "SuggestionEngine.swift",
+        "SuggestionStripView.swift",
       ];
 
       for (const file of swiftFiles) {

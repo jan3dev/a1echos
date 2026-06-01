@@ -141,6 +141,9 @@ function withImeSources(config) {
         "AutoCapEngine.kt",
         "DoubleSpacePeriod.kt",
         "RecapitalizeEngine.kt",
+        "KeyboardSettings.kt",
+        "SuggestionEngine.kt",
+        "SuggestionStripView.kt",
       ];
 
       for (const file of ktFiles) {

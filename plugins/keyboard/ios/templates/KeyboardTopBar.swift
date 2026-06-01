@@ -6,6 +6,8 @@ import UIKit
 /// will host the three-wave-lines recording visualizer.
 protocol KeyboardTopBarDelegate: AnyObject {
     func topBarDidTapRecord(_ topBar: KeyboardTopBar)
+    /// A suggestion candidate in the strip was tapped (§5.5).
+    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion candidate: String)
 }
 
 final class KeyboardTopBar: UIView {
@@ -28,6 +30,9 @@ final class KeyboardTopBar: UIView {
     /// wave runs at 30fps, and visually identical to the Android keyboard.
     private let recordSpinner = LoadingSpinnerIconView()
     private let waveform = RecordingWaveformView()
+    /// Suggestion strip overlay (§5.5). Hidden by default; shown over the
+    /// idle chrome while the user composes a word, never while recording.
+    private let suggestionStrip = SuggestionStripView()
     private var micState: MicState = .idle
 
     override init(frame: CGRect) {
@@ -86,6 +91,12 @@ final class KeyboardTopBar: UIView {
         insertSubview(waveform, at: 0)
         waveform.installEdgeFadeMask()
 
+        // Added last so it renders above the logo / record button / waveform
+        // when suggestions take over the bar.
+        suggestionStrip.delegate = self
+        suggestionStrip.isHidden = true
+        addSubview(suggestionStrip)
+
         NSLayoutConstraint.activate([
             logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             logoView.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -114,6 +125,11 @@ final class KeyboardTopBar: UIView {
             waveform.trailingAnchor.constraint(equalTo: trailingAnchor),
             waveform.centerYAnchor.constraint(equalTo: centerYAnchor),
             waveform.heightAnchor.constraint(equalToConstant: RecordingWaveformView.preferredHeight),
+
+            suggestionStrip.leadingAnchor.constraint(equalTo: leadingAnchor),
+            suggestionStrip.trailingAnchor.constraint(equalTo: trailingAnchor),
+            suggestionStrip.topAnchor.constraint(equalTo: topAnchor),
+            suggestionStrip.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
         applyMicState()
@@ -124,7 +140,34 @@ final class KeyboardTopBar: UIView {
     func setMicState(_ state: MicState) {
         guard state != micState else { return }
         micState = state
+        // Recording / transcribing always owns the bar — clear any suggestion
+        // overlay and restore the idle chrome before applying the mic visuals.
+        hideSuggestions()
         applyMicState()
+    }
+
+    /// Shows the suggestion strip in place of the logo + record button while
+    /// the user composes a word. No-op while recording / transcribing so voice
+    /// capture always owns the bar.
+    func showSuggestions(_ candidates: [String]) {
+        guard micState == .idle, !candidates.isEmpty else {
+            hideSuggestions()
+            return
+        }
+        suggestionStrip.setCandidates(candidates)
+        suggestionStrip.isHidden = false
+        logoView.isHidden = true
+        logoLabel.isHidden = true
+        recordButton.isHidden = true
+    }
+
+    /// Hides the suggestion strip and restores the idle chrome. The record
+    /// button's enabled/spinner state is governed separately by `applyMicState`.
+    func hideSuggestions() {
+        suggestionStrip.isHidden = true
+        logoView.isHidden = false
+        logoLabel.isHidden = false
+        recordButton.isHidden = false
     }
 
     /// Latest recorder amplitude (0…1) — drives the wave lines' phase
@@ -179,6 +222,14 @@ final class KeyboardTopBar: UIView {
             waveform.isHidden = true
             recordButton.accessibilityLabel = "Transcribing"
         }
+    }
+}
+
+// MARK: - SuggestionStripViewDelegate
+
+extension KeyboardTopBar: SuggestionStripViewDelegate {
+    func suggestionStrip(_ strip: SuggestionStripView, didSelect candidate: String) {
+        delegate?.topBar(self, didSelectSuggestion: candidate)
     }
 }
 

@@ -31,6 +31,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
 
     interface Listener {
         fun onRecordClick()
+        /** A suggestion candidate in the strip was tapped (§5.5). */
+        fun onSuggestionTapped(word: String)
     }
 
     private val logoView: ImageView
@@ -38,6 +40,12 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
     private val recordSpinner: ImageView
+    /// Foreground row (logo + label + spacer + record). Hidden while the
+    /// suggestion strip takes over the bar.
+    private val foreground: LinearLayout
+    /// Suggestion strip overlay (§5.5). Hidden by default; shown over the idle
+    /// chrome while composing a word, never while recording.
+    private val suggestionStrip: SuggestionStripView
     /// Continuous rotation that drives the loading-spinner glyph while
     /// transcribing. Started/stopped with the view's visibility so the
     /// keyboard isn't paying for an animator while idle.
@@ -86,7 +94,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         // Foreground row: logo + wordmark on the left, record button on
         // the right. Wrapped in a horizontal `LinearLayout` so the inner
         // gravity stays consistent regardless of waveform state.
-        val foreground = LinearLayout(context).apply {
+        foreground = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(paddingPx, 0, paddingPx, 0)
@@ -189,15 +197,46 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             visibility = INVISIBLE
         }
         recordContainer.addView(recordSpinner)
+
+        // Added last so it draws on top of the foreground row when suggestions
+        // take over the bar.
+        suggestionStrip = SuggestionStripView(context).apply {
+            layoutParams = LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
+            )
+            visibility = GONE
+            setListener { word -> listener?.onSuggestionTapped(word) }
+        }
+        addView(suggestionStrip)
     }
 
     fun setListener(listener: Listener) {
         this.listener = listener
     }
 
+    /**
+     * Shows the suggestion strip over the logo + record button while the user
+     * composes a word. Hides it (restoring the chrome) for an empty list or
+     * while recording / transcribing — voice capture always owns the bar.
+     */
+    fun setSuggestions(words: List<String>) {
+        if (words.isEmpty() || micState != MicState.IDLE) {
+            suggestionStrip.visibility = GONE
+            foreground.visibility = VISIBLE
+            return
+        }
+        suggestionStrip.setCandidates(words)
+        suggestionStrip.visibility = VISIBLE
+        foreground.visibility = INVISIBLE
+    }
+
     fun setMicState(state: MicState) {
         if (state == micState) return
         micState = state
+        // Recording / transcribing always owns the bar — clear any suggestion
+        // overlay and restore the foreground chrome before applying visuals.
+        suggestionStrip.visibility = GONE
+        foreground.visibility = VISIBLE
         // Pill stays gray across all states (matches iOS); only the glyph
         // and its alpha change.
         recordBackground.setColor(pillColor)

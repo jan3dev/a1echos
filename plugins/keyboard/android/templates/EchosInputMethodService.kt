@@ -18,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import java.text.BreakIterator
+import java.util.Locale
 
 /**
  * Echos system keyboard with voice transcription.
@@ -53,6 +54,33 @@ class EchosInputMethodService : InputMethodService(),
     private val doubleSpacePeriod = DoubleSpacePeriod()
     private var currentEditorInfo: EditorInfo? = null
 
+    // -- Suggestions (§5.5) --
+    private lateinit var suggestionEngine: SuggestionEngine
+    private var keyboardSettings = KeyboardSettings.Settings()
+    /// Whether the current field allows suggestions (false for URL / email /
+    /// password / no-suggestions fields). Computed once per `onStartInputView`.
+    private var suggestionsAllowed: Boolean = false
+    /// Latest async result, cached so autocorrect-on-space can consult it
+    /// without a second lookup. Keyed by the word it was computed for.
+    private var lastSuggestionWord: String = ""
+    private var lastSuggestions: List<String> = emptyList()
+    private var lastLooksLikeTypo: Boolean = false
+    /// Pending autocorrect-on-space revert target (§5.4): set when the top
+    /// guess auto-applied on space, cleared by the next backspace (which
+    /// restores the typed word) or any other keystroke / cursor move.
+    private var lastAutoCorrected: LastComposedWord? = null
+    private val suggestionRunnable = Runnable { performSuggestionLookup() }
+    /// One-time nudge guard (§5.5): HyperOS and several OEM builds ship the
+    /// system spell checker disabled/absent, so [SuggestionEngine] never gets a
+    /// session and the whole suggestion + autocorrect layer silently no-ops.
+    /// Android has no always-available bundled equivalent of iOS's
+    /// `UITextChecker`, so the first time the user types a word that would have
+    /// produced a suggestion we point them at the setting — once, then never
+    /// again (persisted in IME-private prefs).
+    private var spellCheckerHintShown = false
+
+    private data class LastComposedWord(val original: String, val corrected: String)
+
     // Tracks where we expect the host's cursor to land after each of
     // our own commit/delete calls. The host then fires `onUpdateSelection`
     // asynchronously to confirm — if the reported position matches
@@ -79,6 +107,17 @@ class EchosInputMethodService : InputMethodService(),
     override fun onCreate() {
         super.onCreate()
         transcriber = ImeSherpaTranscriber(this)
+        // The callback runs on the main thread (the engine posts there).
+        suggestionEngine = SuggestionEngine(this) { word, candidates, looksLikeTypo ->
+            lastSuggestionWord = word
+            lastSuggestions = candidates
+            lastLooksLikeTypo = looksLikeTypo
+            if (micState == MicState.IDLE && suggestionsAllowed && !emojiSearchActive) {
+                topBar.setSuggestions(candidates)
+            } else {
+                topBar.setSuggestions(emptyList())
+            }
+        }
     }
 
     override fun onCreateInputView(): View {
@@ -202,6 +241,16 @@ class EchosInputMethodService : InputMethodService(),
         expectedSelStart = info.initialSelStart.coerceAtLeast(0)
         expectedSelEnd = info.initialSelEnd.coerceAtLeast(expectedSelStart)
         pendingExpectedPositions.clear()
+
+        // Suggestions (§5.5): refresh the autocorrect preference, recompute
+        // whether this field allows suggestions, ensure the spell-checker
+        // session is up for the current language, and clear any stale strip.
+        keyboardSettings = KeyboardSettings.load(this)
+        suggestionsAllowed = computeSuggestionsAllowed(info)
+        ensureSuggestionEngineStarted()
+        lastAutoCorrected = null
+        clearSuggestions()
+
         applyAutoCap()
     }
 
@@ -266,6 +315,10 @@ class EchosInputMethodService : InputMethodService(),
             expectedSelEnd = newSelEnd
             doubleSpacePeriod.reset()
             keyboardView.resetShiftDoubleTap()
+            // A real cursor jump invalidates the composing word and the
+            // autocorrect revert window — drop both and recompute the strip.
+            lastAutoCorrected = null
+            refreshSuggestions()
         }
         applyAutoCap()
     }
@@ -291,6 +344,10 @@ class EchosInputMethodService : InputMethodService(),
         keyboardView.resetShiftDoubleTap()
         pendingExpectedPositions.clear()
         currentEditorInfo = null
+        // Cancel any in-flight suggestion lookup and clear the strip.
+        mainHandler.removeCallbacks(suggestionRunnable)
+        lastAutoCorrected = null
+        clearSuggestions()
     }
 
     override fun onDestroy() {
@@ -299,6 +356,7 @@ class EchosInputMethodService : InputMethodService(),
         // the main app restarts.
         RecordingLock.release("ime")
         transcriber.release()
+        suggestionEngine.close()
         super.onDestroy()
     }
 
@@ -351,8 +409,11 @@ class EchosInputMethodService : InputMethodService(),
         // Any non-space, non-backspace input invalidates the smart
         // double-space window. Letters / digits / accents all reset.
         doubleSpacePeriod.reset()
+        // Typing past an autocorrect ends its one-shot revert window.
+        lastAutoCorrected = null
         icCommitText(char)
         applyAutoCap()
+        refreshSuggestions()
     }
 
     override fun onDeletePress() {
@@ -373,11 +434,29 @@ class EchosInputMethodService : InputMethodService(),
                 icDeleteSurroundingText(2, 0)
                 icCommitText("  ")
                 applyAutoCap()
+                refreshSuggestions()
                 return
             }
         }
+        // Revert an autocorrect-on-space (§5.4): the first backspace after the
+        // auto-applied correction restores exactly what the user typed.
+        val auto = lastAutoCorrected
+        if (auto != null) {
+            val ic = currentInputConnection
+            val before = ic?.getTextBeforeCursor(auto.corrected.length + 1, 0)?.toString().orEmpty()
+            if (ic != null && before == auto.corrected + " ") {
+                icDeleteSurroundingText(auto.corrected.length + 1, 0)
+                icCommitText(auto.original)
+                lastAutoCorrected = null
+                applyAutoCap()
+                refreshSuggestions()
+                return
+            }
+            lastAutoCorrected = null
+        }
         deleteOneGrapheme()
         applyAutoCap()
+        refreshSuggestions()
     }
 
     override fun onDeleteWord() {
@@ -388,7 +467,9 @@ class EchosInputMethodService : InputMethodService(),
             }
             return
         }
+        lastAutoCorrected = null
         deleteWordBackward()
+        clearSuggestions()
     }
 
     // Grapheme-cluster delete — deleteSurroundingText(1, 0) drops half a
@@ -423,16 +504,44 @@ class EchosInputMethodService : InputMethodService(),
         // we're inside the 1100 ms window, swap the trailing space
         // for `. ` (LatinIME §4.5).
         val before = ic?.getTextBeforeCursor(2, 0)?.toString().orEmpty()
+        // Smart double-space → ". " runs first and unchanged — it owns the case
+        // where the previous keystroke was already a space.
         if (ic != null && doubleSpacePeriod.shouldCommitPeriod(before)) {
+            lastAutoCorrected = null
             icDeleteSurroundingText(1, 0)
             icCommitText(". ")
             doubleSpacePeriod.markPeriodCommitted()
             applyAutoCap()
+            clearSuggestions()
             return
         }
+        // Autocorrect-on-space (§5.10) — only when the user enabled it and the
+        // cached lookup for the current word flagged it a typo with a differing
+        // top guess. Replace the word, then commit the space, recording the
+        // original for backspace-revert.
+        if (ic != null && keyboardSettings.autocorrect && suggestionsAllowed) {
+            val context = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+            val word = SuggestionEngine.currentWordBefore(context)
+            if (word.isNotEmpty() && word == lastSuggestionWord &&
+                lastLooksLikeTypo && lastSuggestions.isNotEmpty()
+            ) {
+                val corrected = lastSuggestions[0]
+                if (!corrected.equals(word, ignoreCase = true)) {
+                    icDeleteSurroundingText(word.length, 0)
+                    icCommitText("$corrected ")
+                    lastAutoCorrected = LastComposedWord(word, corrected)
+                    doubleSpacePeriod.recordSpaceCommit()
+                    applyAutoCap()
+                    clearSuggestions()
+                    return
+                }
+            }
+        }
+        lastAutoCorrected = null
         icCommitText(" ")
         doubleSpacePeriod.recordSpaceCommit()
         applyAutoCap()
+        clearSuggestions()
     }
 
     override fun onReturnPress() {
@@ -446,6 +555,7 @@ class EchosInputMethodService : InputMethodService(),
             return
         }
         doubleSpacePeriod.reset()
+        lastAutoCorrected = null
         val ic = currentInputConnection ?: return
         if (currentEditorAction != EditorInfo.IME_ACTION_NONE) {
             // performEditorAction may dismiss the field entirely — we
@@ -456,6 +566,7 @@ class EchosInputMethodService : InputMethodService(),
             icCommitText("\n")
         }
         applyAutoCap()
+        clearSuggestions()
     }
 
     override fun onMicPress() = toggleRecording()
@@ -683,6 +794,126 @@ class EchosInputMethodService : InputMethodService(),
         toggleRecording()
     }
 
+    override fun onSuggestionTapped(word: String) {
+        replaceCurrentWord(word)
+    }
+
+    // -- Suggestions (§5.5) --
+
+    /**
+     * Recomputes the suggestion strip for the current composing word, debounced
+     * onto the main handler. Clears the strip (no-op early) when the bar is
+     * busy, the field disallows suggestions, or we're in emoji search.
+     */
+    private fun refreshSuggestions() {
+        mainHandler.removeCallbacks(suggestionRunnable)
+        if (micState != MicState.IDLE || !suggestionsAllowed || emojiSearchActive) {
+            clearSuggestions()
+            return
+        }
+        // Coalesce rapid keystrokes — the async spell-check request can
+        // outlive several taps; the engine's word guard drops stale results.
+        mainHandler.postDelayed(suggestionRunnable, 120L)
+    }
+
+    private fun performSuggestionLookup() {
+        val ic = currentInputConnection
+        if (ic == null) {
+            clearSuggestions()
+            return
+        }
+        // Mid-word guard: only suggest when the cursor is at a word's end.
+        val after = ic.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        if (after.isNotEmpty() && !SpacingAndPunctuations.isWordSeparator(after[0])) {
+            clearSuggestions()
+            return
+        }
+        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val word = SuggestionEngine.currentWordBefore(before)
+        if (word.length < 2) {
+            clearSuggestions()
+            return
+        }
+        // No system spell checker on this device — the request would no-op and
+        // the strip stay empty forever. Nudge the user toward enabling one
+        // (once) instead of failing silently.
+        if (!suggestionEngine.isReady()) {
+            maybeShowSpellCheckerHint()
+            return
+        }
+        suggestionEngine.request(word)
+    }
+
+    /**
+     * Surfaces a one-time toast pointing the user at the system spell-checker
+     * setting when none is enabled. Persisted in IME-private prefs so it shows
+     * at most once per install — a missing checker is a setup gap, not a
+     * recurring error worth nagging about.
+     */
+    private fun maybeShowSpellCheckerHint() {
+        if (spellCheckerHintShown) return
+        spellCheckerHintShown = true
+        val prefs = getSharedPreferences("echos_ime", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("spell_checker_hint_shown", false)) return
+        prefs.edit().putBoolean("spell_checker_hint_shown", true).apply()
+        Toast.makeText(
+            this,
+            "Turn on a system spell checker in Settings ▸ Languages & input ▸ " +
+                "Spell checker to get word suggestions in Echos.",
+            Toast.LENGTH_LONG,
+        ).show()
+    }
+
+    private fun clearSuggestions() {
+        lastSuggestionWord = ""
+        lastSuggestions = emptyList()
+        lastLooksLikeTypo = false
+        topBar.setSuggestions(emptyList())
+    }
+
+    /** Replaces the in-progress word with [candidate] (tap-to-apply, §5.5). No
+     *  trailing space — the user keeps control of word spacing. */
+    private fun replaceCurrentWord(candidate: String) {
+        val ic = currentInputConnection ?: return
+        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val current = SuggestionEngine.currentWordBefore(before)
+        if (current.isEmpty()) return
+        doubleSpacePeriod.reset()
+        lastAutoCorrected = null
+        icDeleteSurroundingText(current.length, 0)
+        icCommitText(candidate)
+        applyAutoCap()
+        clearSuggestions()
+    }
+
+    /** Starts the spell-checker session for the host locale. Suggestions follow
+     *  the device language, independent of the ASR model's spoken language —
+     *  the spoken-language setting only affects transcription, not typing. */
+    private fun ensureSuggestionEngineStarted() {
+        suggestionEngine.start(Locale.getDefault())
+    }
+
+    /** Suppresses suggestions in URL / email / password / no-suggestions
+     *  fields, mirroring auto-cap's opt-out. */
+    private fun computeSuggestionsAllowed(info: EditorInfo): Boolean {
+        val klass = info.inputType and android.text.InputType.TYPE_MASK_CLASS
+        if (klass != android.text.InputType.TYPE_CLASS_TEXT) return false
+        val variation = info.inputType and android.text.InputType.TYPE_MASK_VARIATION
+        when (variation) {
+            android.text.InputType.TYPE_TEXT_VARIATION_URI,
+            android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            android.text.InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+            android.text.InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS,
+            android.text.InputType.TYPE_TEXT_VARIATION_FILTER -> return false
+        }
+        if (info.inputType and android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0) {
+            return false
+        }
+        return true
+    }
+
     // -- Transcription --
 
     private var micState: MicState = MicState.IDLE
@@ -690,6 +921,12 @@ class EchosInputMethodService : InputMethodService(),
     private fun setMicState(state: MicState) {
         micState = state
         topBar.setMicState(state)
+        // Recording / transcribing owns the bar — drop the strip; idle lets
+        // the next keystroke re-show suggestions.
+        if (state != MicState.IDLE) {
+            mainHandler.removeCallbacks(suggestionRunnable)
+            clearSuggestions()
+        }
     }
 
     private fun toggleRecording() {
