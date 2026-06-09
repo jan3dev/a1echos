@@ -41,6 +41,12 @@ enum KeyboardLayout {
         case numberPad
         /// `numberPad` + a decimal `.` key, for `UIKeyboardType.decimalPad`.
         case decimalPad
+        /// QWERTY tuned for `UIKeyboardType.URL`: native iOS drops the spacebar
+        /// (URLs have no spaces) and surfaces `.` `/` `.com` in its place. §9.1.
+        case urlLetters
+        /// QWERTY tuned for `UIKeyboardType.emailAddress`: `@` and `.` sit beside
+        /// a slightly shrunk spacebar. §9.1.
+        case emailLetters
     }
 
     /// LatinIME-style 6-state shift machine. `automatic` is rendered the
@@ -89,6 +95,11 @@ enum KeyboardLayout {
         /// digits opt in because they have no typewriter balloon; QWERTY
         /// character keys leave it off (the balloon is their feedback).
         let flashesOnPress: Bool
+        /// When true the character label renders at the smaller modifier-key
+        /// font (≈17pt) instead of the full 25pt character size. Used by the
+        /// URL variant's `/` and `.com` keys so they match native iOS, where
+        /// the field-punctuation keys are smaller than the letters.
+        let usesCompactLabelFont: Bool
 
         init(
             label: String,
@@ -99,7 +110,8 @@ enum KeyboardLayout {
             pressedSymbolName: String? = nil,
             subLabel: String? = nil,
             rendersIdleBackground: Bool = true,
-            flashesOnPress: Bool = false
+            flashesOnPress: Bool = false,
+            usesCompactLabelFont: Bool = false
         ) {
             self.label = label
             self.type = type
@@ -110,6 +122,7 @@ enum KeyboardLayout {
             self.subLabel = subLabel
             self.rendersIdleBackground = rendersIdleBackground
             self.flashesOnPress = flashesOnPress
+            self.usesCompactLabelFont = usesCompactLabelFont
         }
     }
 
@@ -234,6 +247,51 @@ enum KeyboardLayout {
 
     static let symbolsRow4 = numbersRow4
 
+    // MARK: - Field-type letter variants (§9.1)
+
+    // URL / email reuse lettersRow1–3; only the bottom row changes. The total
+    // width weight is held at ≈ 9.5 (the lettersRow4 sum) so the row-4 chrome
+    // doesn't visibly resize when the variant is shown.
+
+    // email: `@` and `.` follow a shrunk space. `applyWidthConstraints` anchors
+    // the row to the first weight-1.0 key, so `emoji` / `@` / `.` stay at 1.0
+    // (the unit); only `123` / `space` / `return` carry tuned weights. Aligns
+    // with row 3 despite the two extra inter-key gaps: `emoji` ends under `z`,
+    // the spacebar runs from `x`'s left edge to the middle of `v` (its trailing
+    // gap with `@` lands on v's centre), then `@` / `.` / return. `@` uses the
+    // compact label font so it reads a touch smaller than a letter.
+    static let emailLettersRow4: [KeyDefinition] = [
+        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+                      accessibilityLabel: "Emoji", symbolName: "face.smiling"),
+        KeyDefinition(label: " ", type: .space, widthWeight: 2.252, accessibilityLabel: "Space"),
+        KeyDefinition(label: "@", widthWeight: 1.0, usesCompactLabelFont: true),
+        KeyDefinition(label: "."),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
+                      accessibilityLabel: "Return", symbolName: "return"),
+    ]
+
+    // URL: native iOS shows no spacebar; `.` `/` `.com` take its place and
+    // tile exactly under row 3's x-c-v-b-n. Replacing the single spacebar with
+    // three keys adds two extra 6pt inter-key gaps, which shrinks this row's
+    // per-unit key width — so `123`/`emoji`/`return` carry heavier weights than
+    // lettersRow4 to keep their pixel widths despite the gaps (otherwise `emoji`
+    // ends left of `z` and `.` starts left of `x`). `.` and `/` are one
+    // letter-key wide (land under `x` and `c`); `.com` spans the remaining
+    // three (`v`-`b`-`n`). Tuned to the row-1 reference (K ≈ 33pt, gap 6pt),
+    // matching the lettersRow4 alignment math.
+    static let urlLettersRow4: [KeyDefinition] = [
+        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.40, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji, widthWeight: 1.19,
+                      accessibilityLabel: "Emoji", symbolName: "face.smiling"),
+        KeyDefinition(label: ".", widthWeight: 1.0),
+        KeyDefinition(label: "/", widthWeight: 1.0, usesCompactLabelFont: true),
+        KeyDefinition(label: ".com", widthWeight: 3.36, accessibilityLabel: "dot com",
+                      usesCompactLabelFont: true),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.77,
+                      accessibilityLabel: "Return", symbolName: "return"),
+    ]
+
     // MARK: - Numeric Pads (§9.1)
 
     // Mirrors the native iOS numberPad / decimalPad exactly: a 3×4 grid of
@@ -296,6 +354,10 @@ enum KeyboardLayout {
             return [numberPadDigitRow1, numberPadDigitRow2, numberPadDigitRow3, numberPadRow4]
         case .decimalPad:
             return [numberPadDigitRow1, numberPadDigitRow2, numberPadDigitRow3, decimalPadRow4]
+        case .urlLetters:
+            return [lettersRow1, lettersRow2, lettersRow3, urlLettersRow4]
+        case .emailLetters:
+            return [lettersRow1, lettersRow2, lettersRow3, emailLettersRow4]
         }
     }
 }

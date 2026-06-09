@@ -35,6 +35,14 @@ Emoji picker,EMJ-03,Skin-tone variants,Long-press 👍 in picker,Skin-tone popup
 Emoji picker,EMJ-04,Search filter,"Activate search, type ""smile""",Grinning emojis appear,iOS+Android,,,
 Emoji picker,EMJ-05,ABC returns to QWERTY,Tap ABC inside picker,Returns to letters layout,iOS+Android,,,
 Emoji picker,EMJ-06,Delete works inside picker,Tap backspace inside picker,Deletes from host text field,iOS+Android,,,
+Field-type layouts,FLD-01,iOS numbers-and-punctuation auto-open,Focus a numbers-and-punctuation field,Keyboard opens directly to the numbers/symbols page,iOS,,,§9.1
+Field-type layouts,FLD-02,iOS numbers-and-punctuation ABC persists,"On a numbers-and-punctuation field tap ABC to reach letters, then type",Stays on letters (not forced back to numbers on the next keystroke),iOS,,,§9.1
+Field-type layouts,FLD-03,iOS URL field variant,Focus a URL field,QWERTY with . / .com in the bottom row and no spacebar; Go return,iOS,,,§9.1
+Field-type layouts,FLD-04,iOS email field variant,Focus an email-address field,QWERTY with dedicated @ and . keys flanking the spacebar,iOS,,,§9.1
+Field-type layouts,FLD-05,Android email field variant,Focus an email-address field,QWERTY bottom row shows @ and . (no comma),Android,,,§9.2
+Field-type layouts,FLD-06,Android URI field variant,Focus a URL field,"QWERTY bottom row shows /, . and a .com key",Android,,,§9.2
+Field-type layouts,FLD-07,.com key inserts verbatim,"On the URL variant with Shift on, tap the .com key","Inserts "".com"" (not "".COM"")",iOS+Android,,,§9
+Field-type layouts,FLD-08,Field type follows focus without fighting,"On a URL/email field tap 123 to open numbers and keep typing, then focus a plain text field",Stays on numbers while in the field; returns to QWERTY for the plain field (layout never yanks back mid-field),iOS+Android,,,§9.1
 Hit detection & layout,HIT-01,Inter-key gap is not a dead zone,Tap precisely in the ~6pt gap between two letters,Nearer letter commits (no missed press),iOS+Android,no,,
 Hit detection & layout,HIT-02,Multi-touch fast typing,"Type ""hello world"" rapidly using both thumbs alternating",Every keystroke registers (no skipped keys),iOS+Android,,,
 Hit detection & layout,HIT-03,Slide-to-correct (drag-typing),"Press q, drag onto w past ~12pt threshold, release",Commits w on release; dragging back commits q,iOS+Android,,,
@@ -62,8 +70,27 @@ Long-press behaviors,LP-08,Multi-row accent popup,Long-press o then drag across 
 Misc / robustness,MISC-01,Rapid Shift double-tap then letter,"Double-tap Shift, immediately type a letter",Caps lock engages and letter commits uppercase,iOS+Android,,,
 Misc / robustness,MISC-02,Mode switch mid-press,Hold a letter; with another finger tap 123,Layout switches; stale key not committed on release,iOS+Android,,,
 Misc / robustness,MISC-03,Backgrounded mid-record,Send app to background while recording,Recording stops cleanly; no stuck UI,iOS+Android,,,
-Misc / robustness,MISC-04,Numeric input field,Focus a number-only field,Keyboard opens directly to numbers layout,iOS+Android,,,
+Misc / robustness,MISC-04,Numeric input field,Focus a number-only field,Keyboard opens directly to the compact numeric pad (see NUM-*),iOS+Android,,,§9
 Misc / robustness,MISC-05,Haptic feedback on key tap,Tap any key with haptics on,Tick haptic per press,iOS+Android,,,
+Numeric pad layouts,NUM-01,iOS numberPad layout,Focus a number-pad field,"Telephone-style pad — digits 1-9 with ABC/DEF… letters beneath 2-9, 0 and delete on the bottom row; no decimal key, no return key",iOS,,,§9.1
+Numeric pad layouts,NUM-02,iOS numeric pad drops top bar,Focus a number-pad field,No logo / mic / suggestion strip; the pad fills the keyboard area (compact native look),iOS,,,§9.1
+Numeric pad layouts,NUM-03,iOS decimalPad separator,Focus a decimal-pad field,Bottom-left slot shows the locale decimal separator instead of the numberPad's empty spacer,iOS,,,§9.1
+Numeric pad layouts,NUM-04,iOS decimal separator follows locale,Set device region to one that uses a comma separator (e.g. Germany) then focus a decimal-pad field,Decimal key shows a comma instead of a period,iOS,,,§9.1
+Numeric pad layouts,NUM-05,iOS digit press flash,Tap a digit on the numeric pad,Key flashes to the pressed fill; no typewriter balloon appears,iOS,,,§9.1
+Numeric pad layouts,NUM-06,iOS leaving numeric field restores letters,"Focus a number-pad field, then focus a normal text field",Layout switches back to QWERTY,iOS,,,§9.1
+Numeric pad layouts,NUM-07,iOS manual page not yanked away,"On a normal text field open the 123 / symbols / emoji page, then trigger a text change",Stays on the manually-opened page (not forced back to letters),iOS,,,§9.1
+Numeric pad layouts,NUM-08,iOS keyboard-switch affordance on pad,While on the numeric pad invoke keyboard switching,iOS's own keyboard switcher works; no duplicate globe key is shown on the pad,iOS,,,§9.1
+Numeric pad layouts,NUM-09,Android 4x4 numeric pad,Focus a numeric field (number-pad / numeric),"Compact 4x4 pad — row1 1 2 3 −, row2 4 5 6 space, row3 7 8 9 delete, row4 comma 0 . enter",Android,,,§9.2
+Numeric pad layouts,NUM-10,Android full key set regardless of flags,"Focus a decimal-pad field, then a signed/plain numeric field","All variants show the identical full pad (−, comma and . always present; not gated on decimal/signed flags)",Android,,,§9.2
+Numeric pad layouts,NUM-11,Android minus inserts ASCII hyphen,Tap the − key on the numeric pad,"Inserts ""-"" (ASCII hyphen-minus)",Android,,,§9.2
+Numeric pad layouts,NUM-12,Android enter is a checkmark,Inspect the bottom-right key on the numeric pad,Shows a checkmark glyph (not a return arrow); tapping commits / advances the field,Android,,,§9.2
+Numeric pad layouts,NUM-13,Android space key on numeric pad,Tap the space key (row 2 right column),Inserts a space,Android,,,§9.2
+Numeric pad layouts,NUM-14,Android numeric pad hides top bar,Focus a numeric field,Top bar (logo / mic / suggestion strip) is hidden; the pad starts at the very top of the keyboard area,Android,,,§9.2
+Numeric pad layouts,NUM-15,Android phone field keeps number page,Focus a phone-pad field,"Shows the existing row-based NUMBER page, NOT the new 4x4 pad (dedicated phone pad is deferred)",Android,,,§9.2
+Numeric pad layouts,NUM-16,Android calculator NUMPAD unchanged,"On the symbols page tap ""1234""",Scrollable 5-column calculator pad opens (separate layout; unaffected by the auto 4x4 pad),Android,,,§9.2
+Numeric pad layouts,NUM-17,Delete on numeric pad,Type digits on the numeric pad then tap delete,Deletes one character from the host field,iOS+Android,,,§9
+Numeric pad layouts,NUM-18,Decimal/period key inserts,Tap the decimal/period key on the pad,Inserts the decimal separator into the field,iOS+Android,,,§9
+Numeric pad layouts,NUM-19,Android numeric-password pad,Focus a numeric password / PIN field (number-pad + secure entry),"Digits-only 4x4 pad — no −, comma or decimal; digits, space, delete and enter present",Android,,,§9.2
 Key preview (typewriter balloon),PRV-01,Letter press shows preview,Press a letter,Balloon appears above the key with the character,iOS+Android,,,
 Key preview (typewriter balloon),PRV-02,Honors shift case,Press a with Shift on,Balloon shows uppercase,iOS+Android,,,
 Key preview (typewriter balloon),PRV-03,Drag retargets preview,Drag from q to w,Balloon moves with finger,iOS+Android,,,

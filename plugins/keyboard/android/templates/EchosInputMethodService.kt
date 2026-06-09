@@ -226,19 +226,36 @@ class EchosInputMethodService : InputMethodService(),
         showKeyboardLayout()
 
         val inputType = info.inputType and android.text.InputType.TYPE_MASK_CLASS
+        val variation = info.inputType and android.text.InputType.TYPE_MASK_VARIATION
+        // Both the standard numeric pad and the digits-only password pad drop
+        // the top bar for the compact native look.
         val isNumericPad = inputType == android.text.InputType.TYPE_CLASS_NUMBER
         when (inputType) {
-            // Gboard parity (§9.2): all numeric field types (number / decimal /
-            // signed) show the same compact 4×4 pad.
-            android.text.InputType.TYPE_CLASS_NUMBER -> keyboardView.showNumericPadLayout()
+            // Gboard parity (§9.2): numeric password fields (PINs / passcodes)
+            // get the stripped digits-only pad; all other numeric field types
+            // (number / decimal / signed) share the full 4×4 pad.
+            android.text.InputType.TYPE_CLASS_NUMBER ->
+                if (variation == android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) {
+                    keyboardView.showNumericPasswordPadLayout()
+                } else {
+                    keyboardView.showNumericPadLayout()
+                }
             // Phone fields keep the row-based number page for now (the
             // dedicated phone pad is a later P2 item, §9.2).
             android.text.InputType.TYPE_CLASS_PHONE -> keyboardView.showNumberLayout()
-            android.text.InputType.TYPE_CLASS_TEXT -> keyboardView.showLetterLayout()
+            // Text fields: surface the field-appropriate letter variant (§9.2).
+            android.text.InputType.TYPE_CLASS_TEXT -> when (variation) {
+                android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+                android.text.InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ->
+                    keyboardView.showEmailLayout()
+                android.text.InputType.TYPE_TEXT_VARIATION_URI ->
+                    keyboardView.showUriLayout()
+                else -> keyboardView.showLetterLayout()
+            }
             else -> keyboardView.showLetterLayout()
         }
 
-        // The numeric pad drops the top bar (logo / mic / suggestion strip)
+        // The numeric pads drop the top bar (logo / mic / suggestion strip)
         // for the compact native look, mirroring iOS (§9.1); the keyboard then
         // starts at the very top, so the overlay's key-Y offset is zero.
         topBar.visibility = if (isNumericPad) View.GONE else View.VISIBLE

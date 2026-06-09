@@ -16,6 +16,12 @@ class EchosKeyboardViewController: UIInputViewController {
     /// guess auto-applied on space, cleared by the next backspace (which
     /// restores the typed word) or any other keystroke / cursor move.
     private var lastAutocorrect: SuggestionEngine.LastAutocorrect?
+    /// The `keyboardType` for which the field-type layout was last applied
+    /// (§9.1). Used so we only auto-open the field's preferred layout when the
+    /// field actually changes — not on every keystroke, which would fight a
+    /// user who tapped `123`/`ABC` to navigate within a URL/email/numbers field.
+    /// Reset in `viewWillAppear` so a freshly-shown keyboard starts fresh.
+    private var lastAppliedKeyboardType: UIKeyboardType?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -92,6 +98,9 @@ class EchosKeyboardViewController: UIInputViewController {
         // the checker language so a host-locale change is picked up.
         settings = KeyboardSettings.load()
         suggestionEngine.resolveLanguage()
+        // A freshly-shown keyboard should always start in the field-appropriate
+        // layout, so forget the last-applied type before re-applying.
+        lastAppliedKeyboardType = nil
         // Apply the field-type layout on first appearance too — `textDidChange`
         // may not fire before the keyboard is shown for a freshly focused field.
         applyFieldTypeLayout()
@@ -206,21 +215,38 @@ class EchosKeyboardViewController: UIInputViewController {
         }
     }
 
-    /// Applies the field-type adaptive layout (§9.1). Numeric fields force the
-    /// matching pad; leaving a numeric field restores letters. A non-numeric
-    /// field while already on a non-pad layout is left untouched so we don't
-    /// yank the user out of the numbers / symbols / emoji page they opened
-    /// manually. Phone / name-phone / secure fields never reach our extension
-    /// (iOS forces the system keyboard), so they need no handling here.
+    /// Applies the field-type adaptive layout (§9.1). The field's preferred
+    /// layout is applied only when `keyboardType` *changes* — `textDidChange`
+    /// fires on every keystroke, and re-forcing the layout each time would
+    /// fight a user who tapped `123`/`ABC` to navigate within a URL / email /
+    /// numbers field (the numeric pads have no such escape, but the letter
+    /// variants and `.numbersAndPunctuation` do). Phone / name-phone / secure
+    /// fields never reach our extension (iOS forces the system keyboard), so
+    /// they need no handling here.
     private func applyFieldTypeLayout() {
         let keyboardType = textDocumentProxy.keyboardType
-        if keyboardType == .decimalPad {
+        guard keyboardType != lastAppliedKeyboardType else { return }
+        lastAppliedKeyboardType = keyboardType
+
+        switch keyboardType {
+        case .decimalPad:
             keyboardView.switchToLayout(.decimalPad)
-        } else if keyboardType == .numberPad || keyboardType == .asciiCapableNumberPad {
+        case .numberPad, .asciiCapableNumberPad:
             keyboardView.switchToLayout(.numberPad)
-        } else {
+        case .URL:
+            keyboardView.switchToLayout(.urlLetters)
+        case .emailAddress:
+            keyboardView.switchToLayout(.emailLetters)
+        case .numbersAndPunctuation:
+            // Open to the numbers page once; the user can tap `ABC` to reach
+            // letters and stays there (we don't re-force on later keystrokes).
+            keyboardView.switchToLayout(.numbers)
+        default:
+            // A plain text field: restore letters only if we're sitting on a
+            // field-specific layout. Don't yank the user out of a numbers /
+            // symbols / emoji page they opened manually.
             switch keyboardView.currentLayoutMode {
-            case .numberPad, .decimalPad:
+            case .numberPad, .decimalPad, .urlLetters, .emailLetters:
                 keyboardView.switchToLayout(.letters)
             default:
                 break

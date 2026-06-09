@@ -30,11 +30,7 @@ npm run android
 
 ## Design System Gallery
 
-```bash
-EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start
-```
-
-Boots the app directly into the in-app component gallery.
+Longpress the Echos wordmark on the homescreen in dev mode to open the design system gallery.
 
 ## Testing
 

@@ -21,10 +21,6 @@ npm run android       # Run Android development build (recommended)
 
 ### Design System Gallery
 
-```bash
-EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start
-```
-
 Boots the app directly into the in-app component gallery. Each component has a sibling `*.gallery.tsx` file co-located with its source; entries are wired into `app/(design-system)/manifest.ts`.
 
 ### Linting
@@ -256,7 +252,6 @@ DocumentDirectory/
 #### Design System Gallery
 
 - In-app component gallery at `app/(design-system)/` (no Storybook dependency).
-- `EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start` boots the gallery as initial route.
 - Each component has a co-located `*.gallery.tsx` file exporting a `GalleryEntry` (`{ slug, title, group, demos }`).
 - Add new components to the gallery by importing the file and adding it to `DESIGN_SYSTEM_MANIFEST` in `app/(design-system)/manifest.ts`.
 

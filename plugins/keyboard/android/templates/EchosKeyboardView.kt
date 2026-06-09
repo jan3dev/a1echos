@@ -80,6 +80,12 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// (`+ - * /` visible). Positive = scrolled down, revealing brackets.
     private var opScrollY: Float = 0f
     private var layoutMode: LayoutMode = LayoutMode.LETTERS
+    /// True for both auto numeric pads (the standard 4×4 and the digits-only
+    /// password variant), which share identical cell-grid rendering — distinct
+    /// from the scrollable calculator NUMPAD.
+    private val isNumericPadMode: Boolean
+        get() = layoutMode == LayoutMode.NUMERIC_PAD ||
+            layoutMode == LayoutMode.NUMERIC_PAD_PASSWORD
     private var shiftState: ShiftState = ShiftState.OFF
 
     /// Timestamp (SystemClock.uptimeMillis) of the previous shift tap.
@@ -288,7 +294,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         onWordDelete = { listener?.onDeleteWord() },
     )
 
-    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD }
+    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD, NUMERIC_PAD_PASSWORD, EMAIL, URI }
     /**
      * LatinIME-style 6-state shift machine. `AUTOMATIC` is rendered the
      * same as `ON` but drops to `OFF` after one keystroke without feeling
@@ -395,9 +401,11 @@ class EchosKeyboardView @JvmOverloads constructor(
         this.overlay = overlay
     }
 
-    fun showLetterLayout() {
-        layoutMode = LayoutMode.LETTERS
-        currentRows = EchosKeyboardLayout.LETTER_ROWS
+    /// Shared switch for the QWERTY letter variants (default, email, URI):
+    /// row-driven layout, shift reset to OFF, scroll/symbol state cleared.
+    private fun showRowLayout(mode: LayoutMode, rows: List<EchosKeyboardLayout.Row>) {
+        layoutMode = mode
+        currentRows = rows
         currentCells = null
         opScrollY = 0f
         shiftState = ShiftState.OFF
@@ -406,6 +414,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         requestLayout()
         invalidate()
     }
+
+    fun showLetterLayout() = showRowLayout(LayoutMode.LETTERS, EchosKeyboardLayout.LETTER_ROWS)
 
     fun showNumberLayout() {
         layoutMode = LayoutMode.NUMBERS
@@ -444,6 +454,27 @@ class EchosKeyboardView @JvmOverloads constructor(
         requestLayout()
         invalidate()
     }
+
+    /// Digits-only numeric pad for `TYPE_CLASS_NUMBER` + password variation
+    /// (PINs / numeric passcodes) — the 4×4 grid with the symbol cells dropped
+    /// (§9.2).
+    fun showNumericPasswordPadLayout() {
+        layoutMode = LayoutMode.NUMERIC_PAD_PASSWORD
+        currentCells = EchosKeyboardLayout.NUMERIC_PAD_PASSWORD_CELLS
+        currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
+        opScrollY = 0f
+        typedNonSpaceInSymbols = false
+        keyRectsValid = false
+        requestLayout()
+        invalidate()
+    }
+
+    /// Email letter variant (§9.2): QWERTY with a dedicated `@` and `.` in the
+    /// bottom row (no comma), mirroring Gboard's email keyboard.
+    fun showEmailLayout() = showRowLayout(LayoutMode.EMAIL, EchosKeyboardLayout.EMAIL_LETTER_ROWS)
+
+    /// URI letter variant (§9.2): QWERTY with `/`, `.` and a `.com` key.
+    fun showUriLayout() = showRowLayout(LayoutMode.URI, EchosKeyboardLayout.URI_LETTER_ROWS)
 
     /// Toggle the visual checkmark/return glyph on the RETURN key. Used by
     /// the IME service to flag emoji-search dismiss behaviour without
@@ -674,7 +705,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // Inter-key gap. The auto numeric pad uses a slightly wider gap than
         // the standard key gap to match Gboard; the calculator NUMPAD keeps
         // the tight mesh.
-        val gap = if (layoutMode == LayoutMode.NUMERIC_PAD) keyHGap * 1.5f else keyHGap
+        val gap = if (isNumericPadMode) keyHGap * 1.5f else keyHGap
         // Vertical inter-row gap matches the horizontal inter-key gap so the
         // grid reads as a uniform mesh.
         val vGap = gap
@@ -702,7 +733,7 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         for (cell in cells) {
             val left = colLefts[cell.col]
-            val right = colLefts[cell.col + cell.colSpan] - keyHGap
+            val right = colLefts[cell.col + cell.colSpan] - gap
             val top = rowTops[cell.row]
             val bottom = rowTops[cell.row + cell.rowSpan] - vGap
 
@@ -729,13 +760,13 @@ class EchosKeyboardView @JvmOverloads constructor(
                     val n = cell.keys.size
                     val weights = cell.subWidthWeights ?: FloatArray(n) { 1f }
                     val totalWeight = weights.sum()
-                    val totalGaps = (n - 1) * keyHGap
+                    val totalGaps = (n - 1) * gap
                     val unitW = (right - left - totalGaps) / totalWeight
                     var x = left
                     List(n) { i ->
                         val w = weights[i] * unitW
                         val r = RectF(x, top, x + w, bottom)
-                        x += w + keyHGap
+                        x += w + gap
                         r
                     }
                 }
@@ -805,11 +836,18 @@ class EchosKeyboardView @JvmOverloads constructor(
             key.type == EchosKeyboardLayout.KeyType.NUMPAD_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.GLOBE ||
             key.type == EchosKeyboardLayout.KeyType.EMOJI_COMMA ||
-            key.type == EchosKeyboardLayout.KeyType.PERIOD -> {
+            key.type == EchosKeyboardLayout.KeyType.PERIOD ||
+            key.useSpecialBackground -> {
                 if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN -> {
-                theme.micButtonBackground // Accent color for return
+                // Email / URL render the enter key as a neutral functional key
+                // (like the period / globe), not the accent pill.
+                if (layoutMode == LayoutMode.EMAIL || layoutMode == LayoutMode.URI) {
+                    if (isPressed) theme.specialKeyBackgroundPressed else theme.specialKeyBackground
+                } else {
+                    theme.micButtonBackground // Accent color for return
+                }
             }
             else -> {
                 if (isPressed) theme.keyBackgroundPressed else theme.keyBackground
@@ -823,7 +861,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // The auto numeric pad uses fully-rounded pills for every key; on
         // other layouts only the two outer bottom-row keys (?123/ABC and
         // return) do.
-        val isPill = layoutMode == LayoutMode.NUMERIC_PAD ||
+        val isPill = isNumericPadMode ||
             key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.RETURN
         val cornerRadius = if (isPill) rect.height() / 2f else keyCornerRadius
@@ -836,9 +874,14 @@ class EchosKeyboardView @JvmOverloads constructor(
         // Draw key label. NUMPAD returns sit on the lighter (gray) bg, so
         // they keep the standard `keyText` foreground; everywhere else the
         // return key uses the accent bg and needs the contrast color.
+        val returnOnAccent = key.type == EchosKeyboardLayout.KeyType.RETURN &&
+            currentCells == null &&
+            layoutMode != LayoutMode.EMAIL && layoutMode != LayoutMode.URI
         val textColor = when {
             key.type == EchosKeyboardLayout.KeyType.MIC -> theme.micButtonIcon
-            key.type == EchosKeyboardLayout.KeyType.RETURN && currentCells == null -> theme.micButtonIcon
+            // Accent-pill return needs the white contrast glyph; the email / URL
+            // neutral return uses the standard dark key text like other keys.
+            returnOnAccent -> theme.micButtonIcon
             else -> theme.keyText
         }
 
@@ -854,6 +897,9 @@ class EchosKeyboardView @JvmOverloads constructor(
                 ShiftState.CAPS_LOCK -> "ic_capslock"
             }
             key.type == EchosKeyboardLayout.KeyType.RETURN && returnAsCheckmark -> "ic_check"
+            // Email and URL enter both use the checkmark glyph.
+            key.type == EchosKeyboardLayout.KeyType.RETURN &&
+                (layoutMode == LayoutMode.EMAIL || layoutMode == LayoutMode.URI) -> "ic_check"
             else -> key.iconName
         }
         val iconDrawable = iconName?.let { resolveIcon(it) }
@@ -872,14 +918,15 @@ class EchosKeyboardView @JvmOverloads constructor(
         }
 
         val isSpecial = key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
-            key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH
+            key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH ||
+            key.useCompactFont
         val labelPaint = when {
-            layoutMode == LayoutMode.NUMERIC_PAD -> keyTextPaintNumericPad
+            isNumericPadMode -> keyTextPaintNumericPad
             isSpecial -> keyTextPaintSpecial
             else -> keyTextPaintRegular
         }
         val labelBaselineOffset = when {
-            layoutMode == LayoutMode.NUMERIC_PAD -> numericPadBaselineOffset
+            isNumericPadMode -> numericPadBaselineOffset
             isSpecial -> specialBaselineOffset
             else -> regularBaselineOffset
         }
@@ -888,8 +935,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         val displayLabel = when {
             key.type == EchosKeyboardLayout.KeyType.RETURN ->
                 if (returnAsCheckmark) "✓" else returnLabel
-            key.type == EchosKeyboardLayout.KeyType.CHARACTER && shiftState.isShifted ->
-                uppercaseLabelCache[key.label] ?: key.label.uppercase()
+            key.type == EchosKeyboardLayout.KeyType.CHARACTER -> shiftedLabel(key.label)
             else -> key.label
         }
 
@@ -945,7 +991,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // Auto numeric pad (4×4): digits, comma, and the decimal point use the
         // light digit fill; the functional column (−, space, delete, enter)
         // uses the darker special fill, matching Gboard.
-        if (layoutMode == LayoutMode.NUMERIC_PAD) {
+        if (isNumericPadMode) {
             return when (key.type) {
                 EchosKeyboardLayout.KeyType.PERIOD -> true
                 EchosKeyboardLayout.KeyType.CHARACTER -> key.label != "-"
@@ -1201,10 +1247,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             needsRedraw = true
 
             val newKeyRect = keyRects[newRow][newCol]
-            val displayLabel = if (shiftState.isShifted) {
-                uppercaseLabelCache[newKey.label] ?: newKey.label.uppercase()
-            } else newKey.label
-            overlay?.showPreview(displayLabel, newKeyRect)
+            overlay?.showPreview(shiftedLabel(newKey.label), newKeyRect)
 
             if (newKey.type == EchosKeyboardLayout.KeyType.CHARACTER &&
                 AccentVariants.hasVariants(newKey.label) &&
@@ -1292,16 +1335,12 @@ class EchosKeyboardView @JvmOverloads constructor(
             }
             EchosKeyboardLayout.KeyType.SHIFT -> scheduleShiftLongPress(state)
             EchosKeyboardLayout.KeyType.CHARACTER -> {
-                val ch = if (shiftState.isShifted) {
-                    uppercaseLabelCache[key.label] ?: key.label.uppercase()
-                } else {
-                    key.label
-                }
+                val ch = shiftedLabel(key.label)
                 // The auto numeric pad shows no balloon for any key. The
                 // calculator NUMPAD keeps its comma preview; non-cell layouts
                 // preview as usual.
                 val showPreview = currentCells == null ||
-                    (layoutMode != LayoutMode.NUMERIC_PAD && key.label == ",")
+                    (!isNumericPadMode && key.label == ",")
                 if (showPreview) {
                     overlay?.showPreview(ch, keyRect)
                 }
@@ -1314,7 +1353,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 // calculator NUMPAD still previews ".". In letter/number/symbol
                 // layouts a long-press surfaces a punctuation more-keys popup
                 // (LatinIME §3.11); a short tap still types ".".
-                if (layoutMode != LayoutMode.NUMERIC_PAD) {
+                if (!isNumericPadMode) {
                     if (currentCells != null) {
                         overlay?.showPreview(".", keyRect)
                     } else if (!anyPointerOwnsVariants()) {
@@ -1625,11 +1664,21 @@ class EchosKeyboardView @JvmOverloads constructor(
         else -> 0f
     }
 
+    /// Shift-cased label for a character key. Only single-char labels
+    /// uppercase — multi-char field-variant keys like ".com" must render and
+    /// commit verbatim (not ".COM"). Uses [uppercaseLabelCache] to avoid
+    /// re-allocating in the per-frame draw / preview paths.
+    private fun shiftedLabel(label: String): String =
+        if (shiftState.isShifted && label.length == 1) {
+            uppercaseLabelCache[label] ?: label.uppercase()
+        } else {
+            label
+        }
+
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
         when (key.type) {
             EchosKeyboardLayout.KeyType.CHARACTER -> {
-                val char = if (shiftState.isShifted) key.label.uppercase() else key.label
-                listener?.onKeyPress(char)
+                listener?.onKeyPress(shiftedLabel(key.label))
                 dropTransientShiftAfterCharacterCommit()
                 markSymbolTypedIfApplicable()
             }
@@ -1665,15 +1714,17 @@ class EchosKeyboardView @JvmOverloads constructor(
                 cancelOtherActivePointers()
                 typedNonSpaceInSymbols = false
                 when (layoutMode) {
-                    LayoutMode.LETTERS -> {
+                    // The email / URI variants carry the same ?123 key as
+                    // letters, so their mode-switch goes to the numbers page.
+                    LayoutMode.LETTERS, LayoutMode.EMAIL, LayoutMode.URI -> {
                         layoutMode = LayoutMode.NUMBERS
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
                         currentCells = null
                     }
-                    // NUMERIC_PAD has no mode-switch key, so this is
-                    // unreachable for it; listed to keep the `when` exhaustive.
+                    // The numeric pads have no mode-switch key, so those are
+                    // unreachable; listed to keep the `when` exhaustive.
                     LayoutMode.NUMBERS, LayoutMode.SYMBOLS, LayoutMode.NUMPAD,
-                    LayoutMode.NUMERIC_PAD -> {
+                    LayoutMode.NUMERIC_PAD, LayoutMode.NUMERIC_PAD_PASSWORD -> {
                         layoutMode = LayoutMode.LETTERS
                         currentRows = EchosKeyboardLayout.LETTER_ROWS
                         currentCells = null

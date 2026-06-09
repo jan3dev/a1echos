@@ -534,8 +534,10 @@ when `PHANTOM` space is pending.
 
 1. Android 4×4 numeric pad for `TYPE_CLASS_NUMBER` (P0); iOS `numberPad` +
    `decimalPad` (P0).
-2. Contextual letter rows (email/URL) on both platforms (P1); Android-only
-   phone pad (P2 — iOS forces the system pad, §9.1).
+2. Contextual letter rows (email/URL) on both platforms (P1 — DONE: iOS
+   `numbersAndPunctuation` auto-open + URL/email variants, Android email/URI
+   variants + numeric-password pad); Android-only phone pad (P2 — iOS forces
+   the system pad, §9.1).
 
 **Polish (P1):**
 
@@ -610,7 +612,7 @@ keyboards already receive the field's declared type but barely act on it.
 
 > **Manual test harness:** design-system gallery **"Keyboard Layouts"**
 > (`src/design-system/keyboard-layouts/KeyboardLayouts.gallery.tsx`, group
-> Domain). Boot with `EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start`,
+> Domain).
 > open _Keyboard Layouts_, and focus each field to trigger its layout. Fields
 > pin `keyboardType` / `returnKeyType` / `secureTextEntry` / `textContentType`
 > / `autoComplete` so the native traits the keyboards read are exercised
@@ -622,19 +624,19 @@ keyboards already receive the field's declared type but barely act on it.
 (`https://developer.apple.com/design/human-interface-guidelines/virtual-keyboards`)
 and `UIKeyboardType`. RN `keyboardType` → `UIKeyboardType` 1:1.
 
-| #   | `UIKeyboardType` (RN value)                            | Native layout                                             | Our state                                                     | Action                                                          | Pri      |
-| --- | ------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| 1   | `default` / `asciiCapable` (`default`/`ascii-capable`) | Full QWERTY                                               | ✓ shipped                                                     | —                                                               | —        |
-| 2   | `numbersAndPunctuation` (`numbers-and-punctuation`)    | Opens to the numbers/symbols page; ABC returns to letters | Layout exists (`.numbers`) but never auto-opened              | Open to `.numbers` on focus                                     | P1       |
-| 3   | `URL` (`url`)                                          | QWERTY with `.` `/` `.com` keys; **Go** return            | ✗ (plain QWERTY)                                              | URL letter-row variant (`.`/`/`/`.com`); Go return already maps | P1       |
-| 4   | `numberPad` (`number-pad`)                             | Digits 1–9, 0, delete — no decimal, no return             | ✗                                                             | New `.numberPad` layout (digits-only pad, per provided design)  | **P0**   |
-| 5   | `decimalPad` (`decimal-pad`)                           | `numberPad` + a `.` key                                   | ✗                                                             | `.numberPad` + decimal key                                      | **P0**   |
-| 6   | `asciiCapableNumberPad` (not exposed by RN)            | `numberPad` restricted to ASCII digits                    | ✗                                                             | Same layout as `.numberPad` (we only ever emit ASCII)           | P1       |
-| 7   | `phonePad` (`phone-pad`)                               | Digits + `+ * #`, Pause/Wait                              | **System keyboard** — custom keyboards ineligible (see below) | **None** — iOS shows its own pad                                | **SKIP** |
-| 8   | `namePhonePad` (`name-phone-pad`)                      | QWERTY by default; alternate page is a phone keypad       | **System keyboard** — custom keyboards ineligible             | **None** — iOS shows its own                                    | **SKIP** |
-| 9   | `emailAddress` (`email-address`)                       | QWERTY with `@` and `.` visible (no spacebar shrink)      | ✗                                                             | Email letter-row variant (`@`/`.`)                              | P1       |
-| 10  | `twitter` (`twitter`)                                  | QWERTY with `@` and `#` visible                           | ✗                                                             | Twitter letter-row variant                                      | P2       |
-| 11  | `webSearch` (`web-search`)                             | QWERTY with `.`; **Search** return                        | ✗                                                             | Search variant; Search return already maps                      | P2       |
+| #   | `UIKeyboardType` (RN value)                            | Native layout                                             | Our state                                                     | Action                                                         | Pri      |
+| --- | ------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------- | -------- |
+| 1   | `default` / `asciiCapable` (`default`/`ascii-capable`) | Full QWERTY                                               | ✓ shipped                                                     | —                                                              | —        |
+| 2   | `numbersAndPunctuation` (`numbers-and-punctuation`)    | Opens to the numbers/symbols page; ABC returns to letters | ✓ auto-opens `.numbers` on focus (ABC stays)                  | DONE — change-detection open on field focus                    | P1       |
+| 3   | `URL` (`url`)                                          | QWERTY with `.` `/` `.com` keys; **Go** return            | ✓ `.urlLetters` (`.`/`/`/`.com`, no space)                    | DONE — Go return already maps                                  | P1       |
+| 4   | `numberPad` (`number-pad`)                             | Digits 1–9, 0, delete — no decimal, no return             | ✗                                                             | New `.numberPad` layout (digits-only pad, per provided design) | **P0**   |
+| 5   | `decimalPad` (`decimal-pad`)                           | `numberPad` + a `.` key                                   | ✗                                                             | `.numberPad` + decimal key                                     | **P0**   |
+| 6   | `asciiCapableNumberPad` (not exposed by RN)            | `numberPad` restricted to ASCII digits                    | ✗                                                             | Same layout as `.numberPad` (we only ever emit ASCII)          | P1       |
+| 7   | `phonePad` (`phone-pad`)                               | Digits + `+ * #`, Pause/Wait                              | **System keyboard** — custom keyboards ineligible (see below) | **None** — iOS shows its own pad                               | **SKIP** |
+| 8   | `namePhonePad` (`name-phone-pad`)                      | QWERTY by default; alternate page is a phone keypad       | **System keyboard** — custom keyboards ineligible             | **None** — iOS shows its own                                   | **SKIP** |
+| 9   | `emailAddress` (`email-address`)                       | QWERTY with `@` and `.` visible (no spacebar shrink)      | ✓ `.emailLetters` (`@`/`.`)                                   | DONE                                                           | P1       |
+| 10  | `twitter` (`twitter`)                                  | QWERTY with `@` and `#` visible                           | ✗                                                             | Twitter letter-row variant                                     | P2       |
+| 11  | `webSearch` (`web-search`)                             | QWERTY with `.`; **Search** return                        | ✗                                                             | Search variant; Search return already maps                     | P2       |
 
 **iOS eligibility — what we DON'T have to build.** Apple's App Extension
 Programming Guide forbids third-party keyboards in three cases; iOS silently
@@ -684,11 +686,11 @@ Gboard as closely as possible.
 | `inputType` (class · variation · flag)                   | Gboard layout                                                        | Our state                                                        | Action                                                                | Pri    |
 | -------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
 | `TYPE_CLASS_TEXT` (default)                              | QWERTY                                                               | ✓                                                                | —                                                                     | —      |
-| `TEXT` · `VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS` | QWERTY with `@` and `.` (no comma)                                   | ✗ (plain QWERTY)                                                 | Email letter-row variant                                              | P1     |
-| `TEXT` · `VARIATION_URI`                                 | QWERTY with `/` and `.com`                                           | ✗                                                                | URI letter-row variant                                                | P1     |
+| `TEXT` · `VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS` | QWERTY with `@` and `.` (no comma)                                   | ✓ email variant (`@`/`.`)                                        | DONE                                                                  | P1     |
+| `TEXT` · `VARIATION_URI`                                 | QWERTY with `/` and `.com`                                           | ✓ URI variant (`/`/`.`/`.com`)                                   | DONE                                                                  | P1     |
 | `TEXT` · `VARIATION_*PASSWORD`                           | QWERTY, suggestions/autocorrect off                                  | Partial (suggestions suppressed via `computeSuggestionsAllowed`) | Confirm autocorrect fully off on password fields                      | P2     |
 | `TYPE_CLASS_NUMBER`                                      | Compact numeric pad; `FLAG_DECIMAL` adds `.`, `FLAG_SIGNED` adds `−` | ✗ — shows the row-based NUMBER page                              | **Add the provided 4×4 numeric pad**; gate `.`/`−` on the flags       | **P0** |
-| `NUMBER` · `VARIATION_PASSWORD`                          | Stripped numeric pad (digits only)                                   | ✗                                                                | Numeric pad, no punctuation/symbols                                   | P1     |
+| `NUMBER` · `VARIATION_PASSWORD`                          | Stripped numeric pad (digits only)                                   | ✓ digits-only 4×4 (no `−`/`,`/`.`)                               | DONE                                                                  | P1     |
 | `TYPE_CLASS_PHONE`                                       | Phone pad: digits + `* # + , ; ( ) - / N P W`, Pause/Wait            | ✗ — shows NUMBER page                                            | Phone-pad layout — **Android-only** (iOS forces the system pad, §9.1) | P2     |
 | `TYPE_CLASS_DATETIME` (+ `DATE` / `TIME`)                | Numeric pad + `/` `:` (+ am/pm for time)                             | ✗                                                                | Datetime pad                                                          | P2     |
 
@@ -720,7 +722,7 @@ layouts in `EchosKeyboardLayout.kt` — the cell-grid infra
 - **P0**: Android numeric pad (provided 4×4) for `TYPE_CLASS_NUMBER`; iOS
   `numberPad` + `decimalPad`. DONE
 - **P1**: iOS `numbersAndPunctuation` auto-open, URL + email letter variants;
-  Android email/URI variants, numeric-password pad.
+  Android email/URI variants, numeric-password pad. DONE
 - **P2**: iOS `twitter`, `webSearch`; Android phone pad + datetime pad
   (Android-only — iOS uses the system pad), password no-autocorrect
   confirmation.

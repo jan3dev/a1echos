@@ -31,6 +31,16 @@ object EchosKeyboardLayout {
         /// for shift / return / delete / emoji so the glyphs match the iOS
         /// SF Symbols visually rather than relying on Unicode characters.
         val iconName: String? = null,
+        /// When true the key is drawn on the darker `specialKeyBackground`
+        /// (like the period / globe / delete keys) even though it's a plain
+        /// CHARACTER — used by the email `@` and URL `/` so they read as
+        /// field-punctuation keys, not letters.
+        val useSpecialBackground: Boolean = false,
+        /// When true the label renders in the smaller, centered special-key
+        /// font instead of the full letter size. Set on the email `@`
+        /// (mirrors iOS `usesCompactLabelFont`); the URL `/` leaves this off so
+        /// it stays letter-sized like the period key.
+        val useCompactFont: Boolean = false,
     )
 
     /// A keyboard row. Rows are laid out on a fixed cell grid anchored to
@@ -89,6 +99,44 @@ object EchosKeyboardLayout {
     )
 
     val LETTER_ROWS = listOf(LETTERS_ROW_1, LETTERS_ROW_2, LETTERS_ROW_3, LETTERS_ROW_4)
+
+    // -- Field-type letter variants (§9.2) --
+    //
+    // Email / URI reuse the QWERTY rows 1-3; only the bottom row changes,
+    // mirroring Gboard. Each row-4 keeps the 10-cell weight total so the row
+    // chrome doesn't resize between layouts. Gboard drops the comma on these
+    // fields and surfaces the field-relevant punctuation instead.
+
+    // Email: the comma/emoji slot becomes a dedicated `@`; the period is
+    // already present. 1.5 + 1 + 1 + 4 + 1 + 1.5 = 10.
+    val EMAIL_LETTERS_ROW_4 = Row(
+        listOf(
+            Key(label = "?123", type = KeyType.MODE_SWITCH, widthWeight = 1.5f, contentDescription = "Numbers"),
+            Key(label = "@", widthWeight = 1f, useSpecialBackground = true, useCompactFont = true),
+            Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 4f, contentDescription = "Space"),
+            Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.5f, contentDescription = "Return", iconName = "ic_return"),
+        )
+    )
+
+    val EMAIL_LETTER_ROWS = listOf(LETTERS_ROW_1, LETTERS_ROW_2, LETTERS_ROW_3, EMAIL_LETTERS_ROW_4)
+
+    // URI: `/`, `.` and a `.com` key (label inserted verbatim). Globe is kept
+    // for the IME switcher. 1.5 + 1 + 1 + 2.6 + 1 + 1.4 + 1.5 = 10.
+    val URI_LETTERS_ROW_4 = Row(
+        listOf(
+            Key(label = "?123", type = KeyType.MODE_SWITCH, widthWeight = 1.5f, contentDescription = "Numbers"),
+            Key(label = "/", widthWeight = 1f, useSpecialBackground = true),
+            Key(label = "", type = KeyType.GLOBE, widthWeight = 1f, contentDescription = "Switch keyboard", iconName = "ic_globe"),
+            Key(label = " ", type = KeyType.SPACE, widthWeight = 2.6f, contentDescription = "Space"),
+            Key(label = ".", type = KeyType.PERIOD, widthWeight = 1f),
+            Key(label = ".com", widthWeight = 1.4f, contentDescription = "dot com"),
+            Key(label = "", type = KeyType.RETURN, widthWeight = 1.5f, contentDescription = "Return", iconName = "ic_return"),
+        )
+    )
+
+    val URI_LETTER_ROWS = listOf(LETTERS_ROW_1, LETTERS_ROW_2, LETTERS_ROW_3, URI_LETTERS_ROW_4)
 
     // -- Number Layout --
 
@@ -329,6 +377,45 @@ object EchosKeyboardLayout {
         NumpadCell(col = 1, row = 3, keys = listOf(Key("0"))),
         NumpadCell(col = 2, row = 3, keys = listOf(Key(".", type = KeyType.PERIOD))),
         // Gboard's numeric pad enter is a checkmark, not a return arrow.
+        NumpadCell(
+            col = 3, row = 3,
+            keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),
+        ),
+    )
+
+    // -- Numeric-password pad (§9.2) --
+
+    /// Stripped, digits-only variant of [NUMERIC_PAD_4X4_CELLS] for
+    /// `TYPE_CLASS_NUMBER` + `TYPE_NUMBER_VARIATION_PASSWORD` (PINs / numeric
+    /// passcodes). The `−`, `,` and `.` cells are omitted — an absent grid slot
+    /// renders empty, so no spacer key is needed. Digits, space, delete and
+    /// the enter checkmark are retained. Reuses [NUMERIC_PAD_4X4_COL_WEIGHTS].
+    ///
+    /// ```
+    /// 1   2   3
+    /// 4   5   6   ␣
+    /// 7   8   9   ⌫
+    ///     0       ⏎
+    /// ```
+    val NUMERIC_PAD_PASSWORD_CELLS: List<NumpadCell> = listOf(
+        NumpadCell(col = 0, row = 0, keys = listOf(Key("1"))),
+        NumpadCell(col = 1, row = 0, keys = listOf(Key("2"))),
+        NumpadCell(col = 2, row = 0, keys = listOf(Key("3"))),
+
+        NumpadCell(col = 0, row = 1, keys = listOf(Key("4"))),
+        NumpadCell(col = 1, row = 1, keys = listOf(Key("5"))),
+        NumpadCell(col = 2, row = 1, keys = listOf(Key("6"))),
+        NumpadCell(col = 3, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space", iconName = "ic_space"))),
+
+        NumpadCell(col = 0, row = 2, keys = listOf(Key("7"))),
+        NumpadCell(col = 1, row = 2, keys = listOf(Key("8"))),
+        NumpadCell(col = 2, row = 2, keys = listOf(Key("9"))),
+        NumpadCell(
+            col = 3, row = 2,
+            keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),
+        ),
+
+        NumpadCell(col = 1, row = 3, keys = listOf(Key("0"))),
         NumpadCell(
             col = 3, row = 3,
             keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),

@@ -47,10 +47,13 @@ const withFmtConstevalFix = (config) => {
       if (contents.includes(MARKER)) return config;
 
       // Insert right after the `react_native_post_install(...)` call closes so
-      // our define wins over anything RN's post-install sets. The trailing
-      // newline is optional so a single-line `react_native_post_install(...)`
-      // (some Podfile templates) matches too.
-      const callRegex = /react_native_post_install\([\s\S]*?\n?\s*\)/;
+      // our define wins over anything RN's post-install sets. The closing paren
+      // must be matched on its own line: the call's argument list contains a
+      // nested `ccache_enabled?(podfile_properties)`, so a plain non-greedy
+      // `...?\)` would stop at that inner paren and splice the snippet into the
+      // middle of the argument list. Requiring `\n[ \t]*\)` skips the inner
+      // paren (never newline-aligned) and matches the real terminator.
+      const callRegex = /react_native_post_install\([\s\S]*?\n[ \t]*\)/;
       if (!callRegex.test(contents)) {
         // Don't silently no-op — a missed match means the fmt define never
         // lands and the iOS build breaks again with no hint why.

@@ -334,7 +334,9 @@ class KeyButton: UIControl {
         default:
             textColor = theme.keyText
             tintColor = theme.keyText
-            fontSize = characterFontSize
+            // URL-variant `/` and `.com` opt into the smaller modifier-key
+            // size so they don't tower over the rest of the row (native iOS).
+            fontSize = keyDefinition.usesCompactLabelFont ? 17 : characterFontSize
             weight = .regular
         }
 

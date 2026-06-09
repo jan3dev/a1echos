@@ -166,6 +166,18 @@ const SECURE_FIELDS: FieldSpec[] = [
       autoComplete: "sms-otp",
     },
   },
+  {
+    // Android: TYPE_CLASS_NUMBER + VARIATION_PASSWORD → the stripped
+    // digits-only numeric pad (§9.2). iOS forces the system keyboard for
+    // secure entry, so this row verifies the system takeover there.
+    label: "numeric-password / PIN",
+    props: {
+      keyboardType: "number-pad",
+      secureTextEntry: true,
+      textContentType: "password",
+      autoComplete: "off",
+    },
+  },
 ];
 
 // -- Return key (iOS returnKeyType / Android imeOptions) --

@@ -440,20 +440,26 @@ class KeyboardView: UIInputView {
         }
     }
 
+    /// Shift-cased label for a character key. Only single-char labels
+    /// uppercase — multi-char field-variant keys like ".com" must render and
+    /// commit verbatim (not ".COM").
+    private func shiftedLabel(_ label: String) -> String {
+        shiftState.isShifted && label.count == 1 ? label.uppercased() : label
+    }
+
     private func updateKeyLabels() {
         for row in keyButtons {
             for button in row {
                 let def = button.keyDefinition
                 switch def.type {
                 case .character:
-                    let label = shiftState.isShifted ? def.label.uppercased() : def.label
-                    button.setDisplayLabel(label)
+                    button.setDisplayLabel(shiftedLabel(def.label))
                 case .returnKey:
                     applyReturnKeyDisplay(to: button)
-                    // In emoji-search mode the return key is the "done"
-                    // affordance — render as a blue accent pill with a
-                    // checkmark glyph, like native iOS 26 search chrome.
-                    button.setPrimaryAction(currentLayout == .emojiSearch)
+                    // Accent-fill the return key when it's a "primary" action:
+                    // the emoji-search done affordance, or a `.go` field (URL /
+                    // search) — a blue accent pill, like native iOS search chrome.
+                    button.setPrimaryAction(currentLayout == .emojiSearch || returnKeyType == .go)
                 default:
                     break
                 }
@@ -472,7 +478,9 @@ class KeyboardView: UIInputView {
             return
         }
         switch returnKeyType {
-        case .go: button.setDisplayLabel("Go")
+        // Go (URL / search "go") renders as an accent-filled right arrow — the
+        // accent pill is applied via `setPrimaryAction` in `updateKeyLabels`.
+        case .go: button.setDisplaySymbol("arrow.right")
         case .send: button.setDisplayLabel("Send")
         case .next: button.setDisplayLabel("Next")
         case .done: button.setDisplayLabel("Done")
@@ -1127,9 +1135,7 @@ class KeyboardView: UIInputView {
         let display: String
         switch type {
         case .character:
-            display = shiftState.isShifted
-                ? button.keyDefinition.label.uppercased()
-                : button.keyDefinition.label
+            display = shiftedLabel(button.keyDefinition.label)
         case .comma: display = ","
         case .period: display = "."
         default: return
@@ -1222,8 +1228,7 @@ class KeyboardView: UIInputView {
         }
         switch key.type {
         case .character:
-            let char = shiftState.isShifted ? key.label.uppercased() : key.label
-            delegate?.keyboardView(self, didTapCharacter: char)
+            delegate?.keyboardView(self, didTapCharacter: shiftedLabel(key.label))
             dropTransientShiftAfterCharacterCommit()
             markSymbolTypedIfApplicable()
         case .delete:
@@ -1252,7 +1257,9 @@ class KeyboardView: UIInputView {
             handleShiftTap()
         case .modeSwitch:
             switch currentLayout {
-            case .letters, .emojiSearch: switchToLayout(.numbers)
+            // The URL / email variants carry the same `123` key as letters, so
+            // their mode-switch goes to the numbers page too.
+            case .letters, .emojiSearch, .urlLetters, .emailLetters: switchToLayout(.numbers)
             case .numbers, .symbols, .emoji: switchToLayout(.letters)
             // Numeric pads have no mode-switch key; unreachable, present
             // only to keep the switch exhaustive.
