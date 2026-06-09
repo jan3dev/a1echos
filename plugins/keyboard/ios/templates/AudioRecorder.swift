@@ -29,6 +29,7 @@ class AudioRecorder: NSObject {
         case setupFailed(String)
         case recordFailed(String)
         case noAudioRecorded
+        case alreadyRecording
 
         var errorDescription: String? {
             switch self {
@@ -44,12 +45,22 @@ class AudioRecorder: NSObject {
                 return "Recording failed to start: \(detail)"
             case .noAudioRecorded:
                 return "No audio was recorded."
+            case .alreadyRecording:
+                return "A recording is already in progress."
             }
         }
     }
 
     /// Starts recording audio. Calls completion with the audio file URL when done.
     func startRecording(completion: @escaping (Result<URL, Error>) -> Void) {
+        // A re-entrant start while one is in flight would overwrite `completion`
+        // and orphan the first caller (its handler would never fire). Reject it
+        // instead of corrupting recorder state.
+        guard audioRecorder == nil else {
+            NSLog("[EchosKeyboard.AudioRecorder] startRecording called while already recording")
+            completion(.failure(RecorderError.alreadyRecording))
+            return
+        }
         self.completion = completion
 
         // Keyboard extensions cannot present the system mic permission

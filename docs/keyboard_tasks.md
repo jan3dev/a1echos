@@ -36,11 +36,13 @@ Citations are `file:line` relative to the LatinIME repo unless noted.
    (`ProximityInfo` + n-gram). We do not need to chase a feature that
    doesn't exist; if we want it, we'd be inventing it. See §1.7.
 
-2. **Remaining capabilities, in rough priority order:** shift-chord detection
-   (§4.1), sliding modifier input (§3.5), long-press space → IME picker (§3.9),
-   locale-aware accent variants (§3.3), phantom space (§4.4) + smart
-   punctuation (§4.6), next-word prediction (§5.6) + personal-dictionary
-   learning (§5.8/§5.9), gesture typing (§2).
+2. **Remaining capabilities, in rough priority order:** field-type adaptive
+   layouts — numeric/phone/decimal pads + contextual letter rows, the biggest
+   open gap (§9, has P0 items); shift-chord detection (§4.1), sliding modifier
+   input (§3.5), long-press space → IME picker (§3.9), locale-aware accent
+   variants (§3.3), phantom space (§4.4) + smart punctuation (§4.6), next-word
+   prediction (§5.6) + personal-dictionary learning (§5.8/§5.9), gesture
+   typing (§2).
 
 3. **Confirmed out of scope / myth:** dead keys (§3.10), dynamic key resizing by
    LM (§1.7 / §5.7), phrase gestures across spaces (§2.9), bogus-move detector
@@ -528,21 +530,28 @@ when `PHANTOM` space is pending.
 
 # 7. Implementation roadmap (remaining order)
 
+**Field-type layouts (P0 → P1, §9):**
+
+1. Android 4×4 numeric pad for `TYPE_CLASS_NUMBER` (P0); iOS `numberPad` +
+   `decimalPad` (P0).
+2. Contextual letter rows (email/URL) on both platforms (P1); Android-only
+   phone pad (P2 — iOS forces the system pad, §9.1).
+
 **Polish (P1):**
 
-1. Shift-chord detection (§4.1) — overlaps sliding-modifier input.
-2. Sliding modifier input: shift → letter slide (§3.5).
+3. Shift-chord detection (§4.1) — overlaps sliding-modifier input.
+4. Sliding modifier input: shift → letter slide (§3.5).
 
 **Suggestion backend depth (P2):**
 
-3. Phantom space (§4.4) + smart punctuation (§4.6) on strip picks.
-4. Next-word prediction (§5.6) + personal dictionary (§5.8/§5.9).
-5. Locale-aware accent variants (§3.3).
-6. Long-press space → IME picker (§3.9).
+5. Phantom space (§4.4) + smart punctuation (§4.6) on strip picks.
+6. Next-word prediction (§5.6) + personal dictionary (§5.8/§5.9).
+7. Locale-aware accent variants (§3.3).
+8. Long-press space → IME picker (§3.9).
 
 **Gesture typing (P2):**
 
-7. Glide-typing recognizer (§2). Multi-week project; reconsider need.
+9. Glide-typing recognizer (§2). Multi-week project; reconsider need.
 
 **Skip outright:**
 
@@ -578,3 +587,169 @@ Android:
   variants (§3.3).
 - `plugins/keyboard/android/templates/SuggestionEngine.kt` — next-word /
   personal dictionary (§5.6, §5.8) if we build the backend.
+
+---
+
+# 9. Field-type adaptive keyboard layouts
+
+A forgiving keyboard shows the _right keys for the field_: a numeric pad for
+amounts, a phone pad for phone numbers, `@`/`.` within reach for email. Both
+keyboards already receive the field's declared type but barely act on it.
+
+- **iOS** reads `textDocumentProxy.keyboardType` (a `UIKeyboardType`),
+  `.returnKeyType`, and `.textContentType`. Today it uses `keyboardType` only
+  to gate suggestions (`EchosKeyboardViewController.suggestionsAllowed`) and
+  `returnKeyType` only to relabel the return key — **it never switches the
+  layout**, so every field gets QWERTY.
+- **Android** reads `EditorInfo.inputType` (class + variation + flags) and
+  `imeOptions`. `onStartInputView` maps `TYPE_CLASS_NUMBER`/`TYPE_CLASS_PHONE`
+  → `showNumberLayout()` (the row-based 0-9 + symbols page) and everything
+  else → `showLetterLayout()`. That is **not** Gboard-accurate: Gboard shows a
+  compact numeric pad for number fields and a distinct phone pad for phone
+  fields.
+
+> **Manual test harness:** design-system gallery **"Keyboard Layouts"**
+> (`src/design-system/keyboard-layouts/KeyboardLayouts.gallery.tsx`, group
+> Domain). Boot with `EXPO_PUBLIC_DESIGN_SYSTEM_ENABLED=true npm start`,
+> open _Keyboard Layouts_, and focus each field to trigger its layout. Fields
+> pin `keyboardType` / `returnKeyType` / `secureTextEntry` / `textContentType`
+> / `autoComplete` so the native traits the keyboards read are exercised
+> directly. (RN folds iOS-only `keyboardType`s to text on Android — see §9.2.)
+
+## 9.1 iOS — `UIKeyboardType` (the 12 documented virtual keyboards)
+
+**Reference**: Apple HIG _Virtual keyboards_
+(`https://developer.apple.com/design/human-interface-guidelines/virtual-keyboards`)
+and `UIKeyboardType`. RN `keyboardType` → `UIKeyboardType` 1:1.
+
+| #   | `UIKeyboardType` (RN value)                            | Native layout                                             | Our state                                                     | Action                                                          | Pri      |
+| --- | ------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
+| 1   | `default` / `asciiCapable` (`default`/`ascii-capable`) | Full QWERTY                                               | ✓ shipped                                                     | —                                                               | —        |
+| 2   | `numbersAndPunctuation` (`numbers-and-punctuation`)    | Opens to the numbers/symbols page; ABC returns to letters | Layout exists (`.numbers`) but never auto-opened              | Open to `.numbers` on focus                                     | P1       |
+| 3   | `URL` (`url`)                                          | QWERTY with `.` `/` `.com` keys; **Go** return            | ✗ (plain QWERTY)                                              | URL letter-row variant (`.`/`/`/`.com`); Go return already maps | P1       |
+| 4   | `numberPad` (`number-pad`)                             | Digits 1–9, 0, delete — no decimal, no return             | ✗                                                             | New `.numberPad` layout (digits-only pad, per provided design)  | **P0**   |
+| 5   | `decimalPad` (`decimal-pad`)                           | `numberPad` + a `.` key                                   | ✗                                                             | `.numberPad` + decimal key                                      | **P0**   |
+| 6   | `asciiCapableNumberPad` (not exposed by RN)            | `numberPad` restricted to ASCII digits                    | ✗                                                             | Same layout as `.numberPad` (we only ever emit ASCII)           | P1       |
+| 7   | `phonePad` (`phone-pad`)                               | Digits + `+ * #`, Pause/Wait                              | **System keyboard** — custom keyboards ineligible (see below) | **None** — iOS shows its own pad                                | **SKIP** |
+| 8   | `namePhonePad` (`name-phone-pad`)                      | QWERTY by default; alternate page is a phone keypad       | **System keyboard** — custom keyboards ineligible             | **None** — iOS shows its own                                    | **SKIP** |
+| 9   | `emailAddress` (`email-address`)                       | QWERTY with `@` and `.` visible (no spacebar shrink)      | ✗                                                             | Email letter-row variant (`@`/`.`)                              | P1       |
+| 10  | `twitter` (`twitter`)                                  | QWERTY with `@` and `#` visible                           | ✗                                                             | Twitter letter-row variant                                      | P2       |
+| 11  | `webSearch` (`web-search`)                             | QWERTY with `.`; **Search** return                        | ✗                                                             | Search variant; Search return already maps                      | P2       |
+
+**iOS eligibility — what we DON'T have to build.** Apple's App Extension
+Programming Guide forbids third-party keyboards in three cases; iOS silently
+swaps in the **system keyboard** instead (this is why a phone-pad field shows
+no keyboard-switcher / globe and no Echos mic button):
+
+1. **Secure text entry** (`isSecureTextEntry` — passwords, passcodes).
+2. **`UIKeyboardType.phonePad`**.
+3. **`UIKeyboardType.namePhonePad`**.
+
+So on iOS we build **no** phone pad, name-phone pad, or password layout — the
+OS handles them and our extension never even loads for those fields. That
+leaves the eligible numeric pads (`numberPad` / `decimalPad`) and the
+contextual letter-row variants as the only iOS work. _Android has no such
+restriction_ — its IME is always used (see §9.2). Source: Apple _App Extension
+Programming Guide → Custom Keyboard_ (`https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/CustomKeyboard.html`).
+
+**Design note**: the eligible iOS numeric pads follow HIG-specific designs
+(distinct from Android's Gboard-style pads); dark + light numpad designs are to
+be supplied before building #4–5. These compact pads should drop the
+record/mic button and top bar to match the native numeric look — but must keep
+a next-keyboard affordance (Apple requires a way to switch keyboards;
+today that's the emoji-key long-press).
+
+**Hook-in**: in `EchosKeyboardViewController` (`textDidChange` and on
+`viewWillAppear`/`onStartInput`) read `textDocumentProxy.keyboardType`, map it
+through a new `layoutMode(for:)`, and call a new
+`keyboardView.switchLayout(to:)`. Define the numeric pads (`.numberPad` /
+`.decimalPad`) + contextual letter-row variants in `KeyboardLayout.swift`
+(mirror the existing `LayoutMode` /
+`KeyDefinition` pattern; the row-stack + width-weight builder already supports
+arbitrary rows).
+
+## 9.2 Android — Gboard parity (`EditorInfo.inputType`)
+
+**Reference**: developer.android.com _Specify the input method type_;
+`android.text.InputType` (class + `TYPE_MASK_VARIATION` + flags). Goal: copy
+Gboard as closely as possible.
+
+> **RN caveat**: React Native maps only `number-pad`/`numeric`/`decimal-pad`
+> → `TYPE_CLASS_NUMBER` (+ decimal/signed), `phone-pad` → `TYPE_CLASS_PHONE`,
+> `email-address` → text|email, `url` → text|uri. The iOS-only `keyboardType`
+> values fall back to the text keyboard on Android. So in the test harness the
+> `ascii-capable` / `numbers-and-punctuation` / `twitter` / `web-search` /
+> `name-phone-pad` rows show QWERTY on Android — expected.
+
+| `inputType` (class · variation · flag)                   | Gboard layout                                                        | Our state                                                        | Action                                                                | Pri    |
+| -------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
+| `TYPE_CLASS_TEXT` (default)                              | QWERTY                                                               | ✓                                                                | —                                                                     | —      |
+| `TEXT` · `VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS` | QWERTY with `@` and `.` (no comma)                                   | ✗ (plain QWERTY)                                                 | Email letter-row variant                                              | P1     |
+| `TEXT` · `VARIATION_URI`                                 | QWERTY with `/` and `.com`                                           | ✗                                                                | URI letter-row variant                                                | P1     |
+| `TEXT` · `VARIATION_*PASSWORD`                           | QWERTY, suggestions/autocorrect off                                  | Partial (suggestions suppressed via `computeSuggestionsAllowed`) | Confirm autocorrect fully off on password fields                      | P2     |
+| `TYPE_CLASS_NUMBER`                                      | Compact numeric pad; `FLAG_DECIMAL` adds `.`, `FLAG_SIGNED` adds `−` | ✗ — shows the row-based NUMBER page                              | **Add the provided 4×4 numeric pad**; gate `.`/`−` on the flags       | **P0** |
+| `NUMBER` · `VARIATION_PASSWORD`                          | Stripped numeric pad (digits only)                                   | ✗                                                                | Numeric pad, no punctuation/symbols                                   | P1     |
+| `TYPE_CLASS_PHONE`                                       | Phone pad: digits + `* # + , ; ( ) - / N P W`, Pause/Wait            | ✗ — shows NUMBER page                                            | Phone-pad layout — **Android-only** (iOS forces the system pad, §9.1) | P2     |
+| `TYPE_CLASS_DATETIME` (+ `DATE` / `TIME`)                | Numeric pad + `/` `:` (+ am/pm for time)                             | ✗                                                                | Datetime pad                                                          | P2     |
+
+**Provided numeric-pad design** (the 4×4 auto-pad for `TYPE_CLASS_NUMBER`):
+
+```
+1   2   3   −
+4   5   6   ␣(space)
+7   8   9   ⌫(delete)
+,   0   .   ⏎(enter/next)
+```
+
+This auto-activates on numeric fields. The **existing 5-column calculator
+`NUMPAD_CELLS`** (scrollable `+ − × ÷ ( )` operator stack, reached via the
+"1234" key in the symbols page) **stays as-is** per decision — the new pad is a
+separate layout, not a replacement.
+
+**Hook-in**: `EchosInputMethodService.onStartInputView` already switches on
+`info.inputType and TYPE_MASK_CLASS`. Extend it to route `TYPE_CLASS_NUMBER`
+→ `keyboardView.showNumericPadLayout()` (new) and `TYPE_CLASS_PHONE`
+→ `keyboardView.showPhonePadLayout()` (new), and inspect
+`TYPE_MASK_VARIATION` for the email/URI letter variants. Define the new
+layouts in `EchosKeyboardLayout.kt` — the cell-grid infra
+(`NumpadCell` / `computeCellKeyRects`) already supports arbitrary grids, so the
+4×4 is a new `NumpadCell` list + `FloatArray` column weights.
+
+## 9.3 Priority summary
+
+- **P0**: Android numeric pad (provided 4×4) for `TYPE_CLASS_NUMBER`; iOS
+  `numberPad` + `decimalPad`. DONE
+- **P1**: iOS `numbersAndPunctuation` auto-open, URL + email letter variants;
+  Android email/URI variants, numeric-password pad.
+- **P2**: iOS `twitter`, `webSearch`; Android phone pad + datetime pad
+  (Android-only — iOS uses the system pad), password no-autocorrect
+  confirmation.
+- **SKIP (iOS)**: `phonePad`, `namePhonePad`, secure/password fields — iOS
+  forces the system keyboard (§9.1). `asciiCapableNumberPad` is not RN-settable
+  and behaves like `numberPad`.
+
+## 9.4 Files for §9 work
+
+iOS:
+
+- `plugins/keyboard/ios/templates/KeyboardLayout.swift` — new `numberPad` /
+  `decimalPad` layouts + URL/email/twitter/webSearch letter-row variants. (No
+  `phonePad` / `namePhonePad` / password — iOS forces the system keyboard, §9.1.)
+- `plugins/keyboard/ios/templates/KeyboardView.swift` — `switchLayout(to:)` +
+  rendering for the numeric pads.
+- `plugins/keyboard/ios/templates/EchosKeyboardViewController.swift` —
+  `keyboardType` → layout mapping on focus.
+
+Android:
+
+- `plugins/keyboard/android/templates/EchosKeyboardLayout.kt` — new numeric /
+  phone / datetime layouts + email/URI letter variants.
+- `plugins/keyboard/android/templates/EchosKeyboardView.kt` —
+  `showNumericPadLayout()` / `showPhonePadLayout()`.
+- `plugins/keyboard/android/templates/EchosInputMethodService.kt` — route
+  `inputType` class + variation to the new layouts.
+
+> If any of the above adds a **new** Swift/Kotlin template file (rather than
+> editing an existing one), it must also be appended to the hardcoded file
+> lists in `withIosKeyboardExtension.js` / `withAndroidIme.js`, or it never
+> reaches the native build.

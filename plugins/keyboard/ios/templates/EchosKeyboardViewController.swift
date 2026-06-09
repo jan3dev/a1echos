@@ -92,6 +92,9 @@ class EchosKeyboardViewController: UIInputViewController {
         // the checker language so a host-locale change is picked up.
         settings = KeyboardSettings.load()
         suggestionEngine.resolveLanguage()
+        // Apply the field-type layout on first appearance too — `textDidChange`
+        // may not fire before the keyboard is shown for a freshly focused field.
+        applyFieldTypeLayout()
     }
 
     override func viewWillLayoutSubviews() {
@@ -136,6 +139,11 @@ class EchosKeyboardViewController: UIInputViewController {
 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
+        // Field-type adaptive layout (§9.1): swap to the numeric pad when the
+        // host declares a numeric keyboard type, and back to letters when a
+        // numeric field loses focus. `switchToLayout` no-ops unless the mode
+        // actually changes, so this is cheap to run on every change.
+        applyFieldTypeLayout()
         // Update return key appearance based on context.
         let returnType = textDocumentProxy.returnKeyType ?? .default
         keyboardView.updateReturnKeyType(returnType)
@@ -195,6 +203,28 @@ class EchosKeyboardViewController: UIInputViewController {
         case .capsLock: return .upper
         case .on, .automatic: return .capitalize
         case .off, .manualFromAuto: return .lower
+        }
+    }
+
+    /// Applies the field-type adaptive layout (§9.1). Numeric fields force the
+    /// matching pad; leaving a numeric field restores letters. A non-numeric
+    /// field while already on a non-pad layout is left untouched so we don't
+    /// yank the user out of the numbers / symbols / emoji page they opened
+    /// manually. Phone / name-phone / secure fields never reach our extension
+    /// (iOS forces the system keyboard), so they need no handling here.
+    private func applyFieldTypeLayout() {
+        let keyboardType = textDocumentProxy.keyboardType
+        if keyboardType == .decimalPad {
+            keyboardView.switchToLayout(.decimalPad)
+        } else if keyboardType == .numberPad || keyboardType == .asciiCapableNumberPad {
+            keyboardView.switchToLayout(.numberPad)
+        } else {
+            switch keyboardView.currentLayoutMode {
+            case .numberPad, .decimalPad:
+                keyboardView.switchToLayout(.letters)
+            default:
+                break
+            }
         }
     }
 

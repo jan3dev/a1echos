@@ -65,6 +65,9 @@ class KeyboardView: UIInputView {
         switch currentLayout {
         case .emoji, .emojiSearch:
             rowsHeight = isLandscape ? 236 : 366
+        case .numberPad, .decimalPad:
+            // Top bar is hidden on numeric pads — return the rows-only budget.
+            return isLandscape ? 154 : 212
         default:
             rowsHeight = isLandscape ? 154 : 212
         }
@@ -83,6 +86,10 @@ class KeyboardView: UIInputView {
     private var rowStackTopFromTopBar: NSLayoutConstraint!
     // Pinned under the search overlay that replaces the topBar in .emojiSearch.
     private var rowStackTopFromSearchOverlay: NSLayoutConstraint?
+    // Pins the rowStack to the keyboard's top edge directly, used by the
+    // numeric pads where the top bar is hidden (§9.1) so the pad doesn't sit
+    // below an empty 56pt band.
+    private var rowStackTopFromContainer: NSLayoutConstraint?
     // Pins the rowStack to the QWERTY-equivalent height regardless of mode
     // so swapping into/out of search doesn't resize the keys.
     private var rowStackHeightConstraint: NSLayoutConstraint!
@@ -95,7 +102,14 @@ class KeyboardView: UIInputView {
     }
 
     private var rowStackInterRowSpacing: CGFloat {
-        isPhoneLandscape ? 9 : 11
+        switch currentLayout {
+        case .numberPad, .decimalPad:
+            // Match the 6 pt horizontal inter-key gap so the pad reads as a
+            // uniform mesh; the keys grow taller to absorb the tighter spacing.
+            return 6
+        default:
+            return isPhoneLandscape ? 9 : 11
+        }
     }
 
     private lazy var emojiSearchIndex = EmojiSearchIndex()
@@ -231,6 +245,9 @@ class KeyboardView: UIInputView {
         rowStackTopFromTopBar = rowStackView.topAnchor.constraint(
             equalTo: topBar.bottomAnchor, constant: 4
         )
+        rowStackTopFromContainer = rowStackView.topAnchor.constraint(
+            equalTo: topAnchor, constant: 4
+        )
         rowStackHeightConstraint = rowStackView.heightAnchor.constraint(
             equalToConstant: qwertyRowStackHeight
         )
@@ -287,16 +304,24 @@ class KeyboardView: UIInputView {
 
         // Search overlay anchors below the topBar so the search field
         // lines up with the picker's search field instead of jumping up.
+        // Numeric pads (§9.1) drop the top bar entirely and pin the rows to
+        // the container's top edge so there's no empty band above the pad.
         let isSearchMode = currentLayout == .emojiSearch
-        topBar.isHidden = false
-        if isSearchMode {
+        let isNumericPad = currentLayout == .numberPad || currentLayout == .decimalPad
+        topBar.isHidden = isNumericPad
+        // Exactly one of the three top-pin constraints is active at a time.
+        rowStackTopFromTopBar.isActive = false
+        rowStackTopFromSearchOverlay?.isActive = false
+        rowStackTopFromContainer?.isActive = false
+        if isNumericPad {
+            searchOverlay?.isHidden = true
+            rowStackTopFromContainer?.isActive = true
+        } else if isSearchMode {
             installSearchOverlayIfNeeded()
             searchOverlay?.isHidden = false
-            rowStackTopFromTopBar.isActive = false
             rowStackTopFromSearchOverlay?.isActive = true
         } else {
             searchOverlay?.isHidden = true
-            rowStackTopFromSearchOverlay?.isActive = false
             rowStackTopFromTopBar.isActive = true
         }
 
@@ -498,6 +523,11 @@ class KeyboardView: UIInputView {
     /// candidates to match what a typed character would produce (§5.5).
     var currentShiftState: KeyboardLayout.ShiftState { shiftState }
 
+    /// Exposes the live layout mode so the controller can apply field-type
+    /// layouts without yanking the user out of a page they chose manually
+    /// (§9.1).
+    var currentLayoutMode: KeyboardLayout.LayoutMode { currentLayout }
+
     /// Shows up to 3 suggestion candidates in the top bar (no-op while
     /// recording — `KeyboardTopBar` guards that). An empty list hides the strip.
     func showSuggestions(_ candidates: [String]) {
@@ -569,16 +599,17 @@ class KeyboardView: UIInputView {
     }
 
     func switchToLayout(_ mode: KeyboardLayout.LayoutMode) {
-        let modeChanged = mode != currentLayout
+        // No-op on an unchanged mode so callers can fire this on every
+        // keystroke (the field-type adaptive layout does — §9.1) without
+        // paying a full `buildLayout()` teardown/rebuild each time.
+        guard mode != currentLayout else { return }
         currentLayout = mode
         // Drop the symbols-auto-return latch — any explicit swap means
         // the user is choosing their layout, the next space shouldn't
         // also flip them somewhere they don't expect.
         typedNonSpaceInSymbols = false
         buildLayout()
-        if modeChanged {
-            onLayoutModeChange?(mode)
-        }
+        onLayoutModeChange?(mode)
     }
 
     // MARK: - Multi-touch pipeline (QWERTY rows)
@@ -1086,6 +1117,9 @@ class KeyboardView: UIInputView {
     }
 
     private func showPreviewIfCharacter(_ button: KeyButton) {
+        // Numeric pads don't use the typewriter balloon (matches the native
+        // pad) — the keys flash on press instead.
+        if currentLayout == .numberPad || currentLayout == .decimalPad { return }
         let type = button.keyDefinition.type
         guard type == .character || type == .comma || type == .period else {
             return
@@ -1220,6 +1254,9 @@ class KeyboardView: UIInputView {
             switch currentLayout {
             case .letters, .emojiSearch: switchToLayout(.numbers)
             case .numbers, .symbols, .emoji: switchToLayout(.letters)
+            // Numeric pads have no mode-switch key; unreachable, present
+            // only to keep the switch exhaustive.
+            case .numberPad, .decimalPad: break
             }
         case .symbolSwitch:
             switch currentLayout {

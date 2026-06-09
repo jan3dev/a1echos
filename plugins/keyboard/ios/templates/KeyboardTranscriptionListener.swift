@@ -188,6 +188,11 @@ import UIKit
             return
         }
 
+        // The recording holds the user's voice — never leave it in the shared
+        // App Group container once we've handled the request. `defer` covers
+        // every return path below (model-not-ready, load failure, success).
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+
         NSLog("[KeyboardTranscriptionListener] Processing request: %@", requestID)
 
         let bridge = SherpaBridge.shared()

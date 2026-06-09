@@ -34,6 +34,13 @@ enum KeyboardLayout {
         /// query. Character keys are intercepted by `KeyboardView` and
         /// routed to the search query instead of the host's text proxy.
         case emojiSearch
+        /// Apple-minimal numeric pad for `UIKeyboardType.numberPad`. The
+        /// top bar (logo / mic / suggestion strip) is dropped for the compact
+        /// native look; a globe key keeps the required keyboard-switch
+        /// affordance. See §9.1.
+        case numberPad
+        /// `numberPad` + a decimal `.` key, for `UIKeyboardType.decimalPad`.
+        case decimalPad
     }
 
     /// LatinIME-style 6-state shift machine. `automatic` is rendered the
@@ -67,19 +74,42 @@ enum KeyboardLayout {
         let widthWeight: CGFloat
         let accessibilityLabel: String
         let symbolName: String?
+        /// SF Symbol swapped in while the key is held — used by the flat
+        /// numeric-pad keys to show a filled (black) glyph on press instead of
+        /// a background fill. Nil = no swap.
+        let pressedSymbolName: String?
+        /// Small secondary text drawn beneath the main label — the telephone
+        /// letters (ABC, DEF…) under the numeric-pad digits. Nil for most keys.
+        let subLabel: String?
+        /// When false the key has no fill at rest (only the press flash shows),
+        /// matching the native numeric pad's flat functional keys (delete,
+        /// decimal separator). Defaults true (the standard filled key).
+        let rendersIdleBackground: Bool
+        /// When true the key flashes to the pressed fill on touch. Numeric-pad
+        /// digits opt in because they have no typewriter balloon; QWERTY
+        /// character keys leave it off (the balloon is their feedback).
+        let flashesOnPress: Bool
 
         init(
             label: String,
             type: KeyType = .character,
             widthWeight: CGFloat = 1.0,
             accessibilityLabel: String? = nil,
-            symbolName: String? = nil
+            symbolName: String? = nil,
+            pressedSymbolName: String? = nil,
+            subLabel: String? = nil,
+            rendersIdleBackground: Bool = true,
+            flashesOnPress: Bool = false
         ) {
             self.label = label
             self.type = type
             self.widthWeight = widthWeight
             self.accessibilityLabel = accessibilityLabel ?? label
             self.symbolName = symbolName
+            self.pressedSymbolName = pressedSymbolName
+            self.subLabel = subLabel
+            self.rendersIdleBackground = rendersIdleBackground
+            self.flashesOnPress = flashesOnPress
         }
     }
 
@@ -204,6 +234,47 @@ enum KeyboardLayout {
 
     static let symbolsRow4 = numbersRow4
 
+    // MARK: - Numeric Pads (§9.1)
+
+    // Mirrors the native iOS numberPad / decimalPad exactly: a 3×4 grid of
+    // telephone-keypad digits (small ABC/DEF… letters beneath 2–9), an empty
+    // bottom-left, the `0`, and delete. No globe key — iOS supplies its own
+    // keyboard switcher, so adding one here produced a duplicate.
+    private static func padDigit(_ digit: String, _ letters: String? = nil) -> KeyDefinition {
+        KeyDefinition(label: digit, subLabel: letters, flashesOnPress: true)
+    }
+
+    private static let padDeleteKey = KeyDefinition(
+        label: "", type: .delete, accessibilityLabel: "Delete",
+        symbolName: "delete.left", pressedSymbolName: "delete.left.fill",
+        rendersIdleBackground: false
+    )
+
+    static let numberPadDigitRow1: [KeyDefinition] = [padDigit("1"), padDigit("2", "ABC"), padDigit("3", "DEF")]
+    static let numberPadDigitRow2: [KeyDefinition] = [padDigit("4", "GHI"), padDigit("5", "JKL"), padDigit("6", "MNO")]
+    static let numberPadDigitRow3: [KeyDefinition] = [padDigit("7", "PQRS"), padDigit("8", "TUV"), padDigit("9", "WXYZ")]
+
+    static let numberPadRow4: [KeyDefinition] = [
+        KeyDefinition(label: "", type: .spacer, widthWeight: 1.0),
+        padDigit("0"),
+        padDeleteKey,
+    ]
+
+    // decimalPad replaces the empty bottom-left slot with the locale decimal
+    // separator (".", "," …) — matching the native pad, which is
+    // locale-dependent. Computed so it follows the device locale.
+    static var decimalPadRow4: [KeyDefinition] {
+        let separator = Locale.current.decimalSeparator ?? "."
+        return [
+            KeyDefinition(
+                label: separator, accessibilityLabel: "Decimal",
+                rendersIdleBackground: false
+            ),
+            padDigit("0"),
+            padDeleteKey,
+        ]
+    }
+
     // MARK: - Row Access
 
     static func rows(for mode: LayoutMode) -> [[KeyDefinition]] {
@@ -221,6 +292,10 @@ enum KeyboardLayout {
             // Emoji mode renders `EmojiPickerView` instead of QWERTY rows;
             // KeyboardView.buildLayout() branches before calling this.
             return []
+        case .numberPad:
+            return [numberPadDigitRow1, numberPadDigitRow2, numberPadDigitRow3, numberPadRow4]
+        case .decimalPad:
+            return [numberPadDigitRow1, numberPadDigitRow2, numberPadDigitRow3, decimalPadRow4]
         }
     }
 }

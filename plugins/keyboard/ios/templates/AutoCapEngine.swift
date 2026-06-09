@@ -27,7 +27,13 @@ enum AutoCapEngine {
     /// a sentence boundary. Returns `.disabled` if the host field opts
     /// out of auto-cap.
     static func decide(for proxy: UITextDocumentProxy) -> Decision {
-        switch proxy.autocapitalizationType {
+        // `autocapitalizationType` is optional on the proxy. Coalescing to
+        // UIKit's own default (`.sentences`) before the switch makes this a
+        // non-optional enum switch — so `case .none` matches the actual
+        // `UITextAutocapitalizationType.none` trait (host opted out) rather
+        // than `Optional.none` (trait simply absent), and an absent trait
+        // gets sentence-aware capitalization like a stock text field.
+        switch proxy.autocapitalizationType ?? .sentences {
         case .none: return .disabled
         case .allCharacters: return .capitalize
         // .words and .sentences both want sentence-aware capitalization

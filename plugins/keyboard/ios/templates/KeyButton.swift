@@ -24,6 +24,7 @@ class KeyButton: UIControl {
     var widthMultiplier: CGFloat = 1.0
 
     private let label = UILabel()
+    private let subLabel = UILabel()
     private let symbolView = UIImageView()
     private let backgroundView = UIView()
 
@@ -97,6 +98,16 @@ class KeyButton: UIControl {
         label.isUserInteractionEnabled = false
         addSubview(label)
 
+        // Telephone letters under the numeric-pad digits (2 → ABC, etc.).
+        // Small, tracked, and muted to match the native pad's secondary glyphs.
+        subLabel.textAlignment = .center
+        subLabel.font = .systemFont(ofSize: 9, weight: .regular)
+        subLabel.textColor = theme.keyTextSecondary
+        subLabel.translatesAutoresizingMaskIntoConstraints = false
+        subLabel.isUserInteractionEnabled = false
+        subLabel.isHidden = true
+        addSubview(subLabel)
+
         symbolView.contentMode = .scaleAspectFit
         symbolView.translatesAutoresizingMaskIntoConstraints = false
         symbolView.isUserInteractionEnabled = false
@@ -113,13 +124,29 @@ class KeyButton: UIControl {
             backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
 
             symbolView.centerXAnchor.constraint(equalTo: centerXAnchor),
             symbolView.centerYAnchor.constraint(equalTo: centerYAnchor),
             symbolView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.6),
             symbolView.heightAnchor.constraint(lessThanOrEqualTo: heightAnchor, multiplier: 0.55),
         ])
+
+        if let sub = keyDefinition.subLabel, !sub.isEmpty {
+            // Telephone-keypad digit: nudge the number up and tuck the small
+            // letters just beneath it, mirroring the native numeric pad.
+            subLabel.isHidden = false
+            subLabel.attributedText = NSAttributedString(
+                string: sub.uppercased(),
+                attributes: [.kern: 1.5]
+            )
+            NSLayoutConstraint.activate([
+                label.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -7),
+                subLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+                subLabel.topAnchor.constraint(equalTo: label.bottomAnchor, constant: -1),
+            ])
+        } else {
+            label.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+        }
 
         if let name = keyDefinition.symbolName {
             symbolView.image = UIImage(systemName: name)
@@ -208,6 +235,17 @@ class KeyButton: UIControl {
         // Match the native keyboard's "fill flash" rather than a transform.
         UIView.animate(withDuration: pressed ? 0.02 : 0.12, delay: 0, options: .curveEaseOut) {
             self.applyBackgroundColor(pressed: pressed)
+        }
+        // Flat numeric-pad keys (delete, decimal separator) give their press
+        // feedback through the glyph — no background fill. The icon swaps to its
+        // filled (black) variant; a text glyph dims briefly. Driven by the whole
+        // key's press state, so it reacts anywhere in the key, not just the glyph.
+        guard !keyDefinition.rendersIdleBackground else { return }
+        if let pressedSymbol = keyDefinition.pressedSymbolName,
+           let restSymbol = keyDefinition.symbolName {
+            setDisplaySymbol(pressed ? pressedSymbol : restSymbol)
+        } else {
+            label.alpha = pressed ? 0.4 : 1.0
         }
     }
 
@@ -318,6 +356,18 @@ class KeyButton: UIControl {
             return pressed
                 ? theme.micButtonBackground.withAlphaComponent(0.85)
                 : theme.micButtonBackground
+        }
+        // Numeric-pad functional keys (delete, decimal separator) never fill —
+        // their press feedback comes from the glyph (filled icon / dim), so the
+        // background stays clear in every state.
+        if !keyDefinition.rendersIdleBackground {
+            return .clear
+        }
+        // Numeric-pad digits have no typewriter balloon, so they flash on press
+        // for feedback (QWERTY character keys leave this off — the balloon is
+        // their feedback and they never flash).
+        if keyDefinition.flashesOnPress {
+            return pressed ? theme.specialKeyPressed : theme.keyBackground
         }
         switch keyDefinition.type {
         case .mic:

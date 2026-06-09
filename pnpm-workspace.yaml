@@ -1,0 +1,65 @@
+# --- Supply-chain hardening -------------------------------------------------
+# Refuse to install any package version published less than 2 days ago.
+# Unit is MINUTES: 2 * 24 * 60 = 2880. Applies to transitive deps too.
+# Default since v11 is 1440 (1 day). Malicious releases are usually pulled
+# from the registry within ~1 hour, so a multi-day cooldown is strong defense.
+minimumReleaseAge: 2880
+
+# Don't silently accept a package whose registry metadata lacks a `time` field
+# (which would otherwise bypass the cooldown). Fail instead. Default: true (skip).
+minimumReleaseAgeIgnoreMissingTime: false
+
+# Fail resolution outright if no version satisfies the cooldown window, rather
+# than quietly resolving to something unexpected.
+minimumReleaseAgeStrict: true
+
+# Allowlist for urgent security hotfixes that must bypass the cooldown, e.g.:
+# minimumReleaseAgeExclude:
+#   - some-package@1.2.3
+# For a one-off override instead: pnpm install --config.minimumReleaseAge=0
+
+# --- Network (tuned for a slow connection) ----------------------------------
+# Cap how many tarballs download at once. Default is 16; on a slow link that
+# saturates bandwidth and each request stalls past fetchTimeout. 2 downloads
+# one-or-two-at-a-time so none time out.
+networkConcurrency: 2
+# Per-request timeout in ms (default 60000 = 1 min). Large native tarballs
+# (@qvac/*, bare-*) need much longer on a slow link.
+fetchTimeout: 600000
+# Retry a failed/stalled fetch more times, with a longer backoff window.
+fetchRetries: 5
+fetchRetryMintimeout: 20000
+fetchRetryMaxtimeout: 120000
+
+# --- Module layout ----------------------------------------------------------
+# Expo + React Native tooling (Metro, CocoaPods, and the QVAC/react-native-bare-kit
+# bare-pack worker bundler) resolve modules from a flat node_modules and don't
+# follow pnpm's symlinked store. Without this, bare-pack fails to resolve bundled
+# bare-* modules (e.g. `bare-process`) and `expo prebuild` errors out. This is
+# Expo's documented pnpm requirement.
+nodeLinker: hoisted
+
+# --- General ----------------------------------------------------------------
+# Honor engines.node / engines.pnpm in package.json.
+engineStrict: true
+# Auto-install peer dependencies (npm v7+ behavior; pnpm v11 default is already true).
+autoInstallPeers: true
+
+# Lockdown of which deps may run install/build scripts. msw is a transitive dev
+# dependency we don't use; its postinstall (service-worker setup) is not needed.
+allowBuilds:
+  # Skia compiles/links its native module on install — required for the image
+  # color pipeline. esbuild and unrs-resolver fetch/build their platform native
+  # binaries (used by metro/expo and the eslint resolver). msgpackr-extract is a
+  # purely optional speedup with a JS fallback, so we skip its native build.
+  "@shopify/react-native-skia": true
+  "@supersami/rn-foreground-service": false
+  # better-sqlite3 compiles its native binding (prebuild-install, else node-gyp).
+  # Required for the Drizzle SQLite driver in the Electron main process.
+  better-sqlite3: true
+  esbuild: true
+  msgpackr-extract: false
+  msw: false
+  unrs-resolver: true
+
+blockExoticSubdeps: false

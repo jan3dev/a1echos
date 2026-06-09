@@ -2,9 +2,8 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components";
-import { useTheme } from "@/theme";
-
 import { findGalleryBySlug } from "@/design-system/manifest";
+import { useTheme } from "@/theme";
 
 export default function DesignSystemDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -38,6 +37,7 @@ export default function DesignSystemDetail() {
     <ScrollView
       style={{ backgroundColor: theme.colors.surfaceBackground }}
       contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen
         options={{

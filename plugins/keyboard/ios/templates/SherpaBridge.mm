@@ -2,6 +2,7 @@
 
 #include <sherpa-onnx/c-api/cxx-api.h>
 
+#include <exception>
 #include <memory>
 #include <string>
 
@@ -173,12 +174,25 @@ std::string JoinPath(NSString *dir, NSString *name) {
         return nil;
     }
 
-    OfflineStream stream = _recognizer->CreateStream();
-    stream.AcceptWaveform(wave.sample_rate, wave.samples.data(),
-                          static_cast<int32_t>(wave.samples.size()));
-    _recognizer->Decode(&stream);
-
-    OfflineRecognizerResult result = _recognizer->GetResult(&stream);
+    // The sherpa-onnx C++ calls can throw (malformed audio, internal
+    // errors). Without this guard a thrown exception would skip the unlock
+    // below and deadlock every subsequent transcription.
+    OfflineRecognizerResult result;
+    try {
+        OfflineStream stream = _recognizer->CreateStream();
+        stream.AcceptWaveform(wave.sample_rate, wave.samples.data(),
+                              static_cast<int32_t>(wave.samples.size()));
+        _recognizer->Decode(&stream);
+        result = _recognizer->GetResult(&stream);
+    } catch (const std::exception &e) {
+        [_lock unlock];
+        NSLog(@"[SherpaBridge] Transcription threw: %s", e.what());
+        return nil;
+    } catch (...) {
+        [_lock unlock];
+        NSLog(@"[SherpaBridge] Transcription threw an unknown exception");
+        return nil;
+    }
     [_lock unlock];
 
     NSString *text = [NSString stringWithUTF8String:result.text.c_str()];

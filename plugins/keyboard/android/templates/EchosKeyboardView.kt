@@ -66,6 +66,11 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// grid + utility column + bottom row); everything else continues
     /// to use the row-based logic.
     private var currentCells: List<EchosKeyboardLayout.NumpadCell>? = null
+    /// Column weights for the active cell grid — the 5-col calculator
+    /// ([EchosKeyboardLayout.NUMPAD_COL_WEIGHTS]) or the 4-col auto numeric
+    /// pad ([EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS]). Only read while
+    /// [currentCells] is non-null.
+    private var currentColWeights: FloatArray = EchosKeyboardLayout.NUMPAD_COL_WEIGHTS
     /// Per-cell visible band rect (untouched by scroll). Used for the
     /// VERTICAL_STACK operator column: the shared background draws to
     /// this rect, and rendering clips to this band so off-scroll
@@ -163,8 +168,15 @@ class EchosKeyboardView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT
     }
+    // Larger digit text for the auto numeric pad (the 4×4 keys are wide, so
+    // the numbers read bigger than on the QWERTY/number layouts).
+    private val keyTextPaintNumericPad = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT
+    }
     private var regularBaselineOffset = 0f
     private var specialBaselineOffset = 0f
+    private var numericPadBaselineOffset = 0f
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     // Dimensions (loaded from resources)
@@ -276,7 +288,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         onWordDelete = { listener?.onDeleteWord() },
     )
 
-    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD }
+    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD }
     /**
      * LatinIME-style 6-state shift machine. `AUTOMATIC` is rendered the
      * same as `ON` but drops to `OFF` after one keystroke without feeling
@@ -343,10 +355,13 @@ class EchosKeyboardView @JvmOverloads constructor(
         keyTextPaintRegular.textSize = keyTextSize
         keyTextPaintSpecial.textSize = keyTextSizeSpecial
         keyTextPaintNumber.textSize = numberLabelTextSize
+        keyTextPaintNumericPad.textSize = keyTextSize * 1.45f
         regularBaselineOffset =
             -(keyTextPaintRegular.descent() + keyTextPaintRegular.ascent()) / 2
         specialBaselineOffset =
             -(keyTextPaintSpecial.descent() + keyTextPaintSpecial.ascent()) / 2
+        numericPadBaselineOffset =
+            -(keyTextPaintNumericPad.descent() + keyTextPaintNumericPad.ascent()) / 2
 
         prewarmLabelCaches()
     }
@@ -406,9 +421,25 @@ class EchosKeyboardView @JvmOverloads constructor(
     fun showNumpadLayout() {
         layoutMode = LayoutMode.NUMPAD
         currentCells = EchosKeyboardLayout.NUMPAD_CELLS
+        currentColWeights = EchosKeyboardLayout.NUMPAD_COL_WEIGHTS
         opScrollY = 0f
         typedNonSpaceInSymbols = false
         // currentRows is left as-is; the cell pipeline owns layout.
+        keyRectsValid = false
+        requestLayout()
+        invalidate()
+    }
+
+    /// Auto numeric pad (4×4) for all `TYPE_CLASS_NUMBER` fields (§9.2) —
+    /// number, decimal, and signed all show the same full Gboard-style pad.
+    /// Reuses the cell pipeline with 4 equal columns. Separate from
+    /// [showNumpadLayout]'s 5-col calculator.
+    fun showNumericPadLayout() {
+        layoutMode = LayoutMode.NUMERIC_PAD
+        currentCells = EchosKeyboardLayout.NUMERIC_PAD_4X4_CELLS
+        currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
+        opScrollY = 0f
+        typedNonSpaceInSymbols = false
         keyRectsValid = false
         requestLayout()
         invalidate()
@@ -636,14 +667,17 @@ class EchosKeyboardView @JvmOverloads constructor(
         availableWidth: Float,
     ) {
         cellBounds.clear()
-        val colWeights = EchosKeyboardLayout.NUMPAD_COL_WEIGHTS
+        val colWeights = currentColWeights
         // Match a 4-row regular layout exactly so toggling LETTERS <->
         // NUMPAD doesn't visibly resize the IME.
         val bodyHeight = 4 * keyHeight + 3 * keyVGap
-        // Vertical inter-row gap matches the horizontal inter-key gap so
-        // the 3×3 digit grid reads as a uniform mesh (instead of the
-        // letter-layout's wider vertical rhythm).
-        val vGap = keyHGap
+        // Inter-key gap. The auto numeric pad uses a slightly wider gap than
+        // the standard key gap to match Gboard; the calculator NUMPAD keeps
+        // the tight mesh.
+        val gap = if (layoutMode == LayoutMode.NUMERIC_PAD) keyHGap * 1.5f else keyHGap
+        // Vertical inter-row gap matches the horizontal inter-key gap so the
+        // grid reads as a uniform mesh.
+        val vGap = gap
         // Bottom function row stays at the standard letter-key height.
         // The three digit rows absorb the remainder so the number keys
         // are as tall as the tighter vertical spacing allows.
@@ -652,13 +686,13 @@ class EchosKeyboardView @JvmOverloads constructor(
         val rowHeights = floatArrayOf(digitRowH, digitRowH, digitRowH, bottomRowH)
 
         val totalColWeight = colWeights.sum()
-        val totalHGap = (colWeights.size - 1) * keyHGap
+        val totalHGap = (colWeights.size - 1) * gap
         val colUnit = (availableWidth - totalHGap) / totalColWeight
 
         val colLefts = FloatArray(colWeights.size + 1)
         colLefts[0] = paddingH
         for (i in colWeights.indices) {
-            colLefts[i + 1] = colLefts[i] + colWeights[i] * colUnit + keyHGap
+            colLefts[i + 1] = colLefts[i] + colWeights[i] * colUnit + gap
         }
         val rowTops = FloatArray(rowHeights.size + 1)
         rowTops[0] = keyVGap / 2f
@@ -786,11 +820,13 @@ class EchosKeyboardView @JvmOverloads constructor(
         // return key) get the pill shape — everything else keeps the
         // standard 8dp corner, matching Gboard. Shift, delete, globe,
         // emoji_comma all sit at the same radius as letter keys.
-        val cornerRadius = when (key.type) {
-            EchosKeyboardLayout.KeyType.MODE_SWITCH,
-            EchosKeyboardLayout.KeyType.RETURN -> rect.height() / 2f
-            else -> keyCornerRadius
-        }
+        // The auto numeric pad uses fully-rounded pills for every key; on
+        // other layouts only the two outer bottom-row keys (?123/ABC and
+        // return) do.
+        val isPill = layoutMode == LayoutMode.NUMERIC_PAD ||
+            key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
+            key.type == EchosKeyboardLayout.KeyType.RETURN
+        val cornerRadius = if (isPill) rect.height() / 2f else keyCornerRadius
 
         if (drawBackground) {
             keyPaint.color = bgColor
@@ -837,8 +873,16 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         val isSpecial = key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH
-        val labelPaint = if (isSpecial) keyTextPaintSpecial else keyTextPaintRegular
-        val labelBaselineOffset = if (isSpecial) specialBaselineOffset else regularBaselineOffset
+        val labelPaint = when {
+            layoutMode == LayoutMode.NUMERIC_PAD -> keyTextPaintNumericPad
+            isSpecial -> keyTextPaintSpecial
+            else -> keyTextPaintRegular
+        }
+        val labelBaselineOffset = when {
+            layoutMode == LayoutMode.NUMERIC_PAD -> numericPadBaselineOffset
+            isSpecial -> specialBaselineOffset
+            else -> regularBaselineOffset
+        }
         labelPaint.color = textColor
 
         val displayLabel = when {
@@ -891,11 +935,23 @@ class EchosKeyboardView @JvmOverloads constructor(
         drawable.draw(canvas)
     }
 
-    /// Returns true for NUMPAD keys that should render on the dark
-    /// background: the digits 0-9, "=", and "!?#" (the symbol switch).
-    /// Everything else in NUMPAD reads as "light" (operators, ABC,
-    /// comma, ".", "%", space, delete, return).
+    /// Returns true for NUMPAD keys that render on the standard digit fill
+    /// (`theme.keyBackground`): the digits 0-9, "=", and "!?#" (the symbol
+    /// switch). Everything else in NUMPAD uses the heavier
+    /// `theme.specialKeyBackground` (operators, ABC, comma, ".", "%", space,
+    /// delete, return). Name is historical — "dark" here means the digit fill,
+    /// which is visually the lighter of the two; see the NUMERIC_PAD note below.
     private fun isNumpadDarkKey(key: EchosKeyboardLayout.Key): Boolean {
+        // Auto numeric pad (4×4): digits, comma, and the decimal point use the
+        // light digit fill; the functional column (−, space, delete, enter)
+        // uses the darker special fill, matching Gboard.
+        if (layoutMode == LayoutMode.NUMERIC_PAD) {
+            return when (key.type) {
+                EchosKeyboardLayout.KeyType.PERIOD -> true
+                EchosKeyboardLayout.KeyType.CHARACTER -> key.label != "-"
+                else -> false
+            }
+        }
         if (key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH) return true
         if (key.type != EchosKeyboardLayout.KeyType.CHARACTER) return false
         if (key.label == "=") return true
@@ -1241,10 +1297,11 @@ class EchosKeyboardView @JvmOverloads constructor(
                 } else {
                     key.label
                 }
-                // NUMPAD suppresses the typewriter balloon for digits,
-                // operators, "=", and "!?#" — only the comma surfaces a
-                // preview (and PERIOD, which uses its own key type).
-                val showPreview = currentCells == null || key.label == ","
+                // The auto numeric pad shows no balloon for any key. The
+                // calculator NUMPAD keeps its comma preview; non-cell layouts
+                // preview as usual.
+                val showPreview = currentCells == null ||
+                    (layoutMode != LayoutMode.NUMERIC_PAD && key.label == ",")
                 if (showPreview) {
                     overlay?.showPreview(ch, keyRect)
                 }
@@ -1253,14 +1310,16 @@ class EchosKeyboardView @JvmOverloads constructor(
                 }
             }
             EchosKeyboardLayout.KeyType.PERIOD -> {
-                // Period in NUMPAD shows a preview just like comma and keeps
-                // its calculator behaviour (no popup). In letter/number/symbol
+                // Auto numeric pad: no balloon, no punctuation popup. The
+                // calculator NUMPAD still previews ".". In letter/number/symbol
                 // layouts a long-press surfaces a punctuation more-keys popup
                 // (LatinIME §3.11); a short tap still types ".".
-                if (currentCells != null) {
-                    overlay?.showPreview(".", keyRect)
-                } else if (!anyPointerOwnsVariants()) {
-                    schedulePunctuationLongPress(state, keyRect)
+                if (layoutMode != LayoutMode.NUMERIC_PAD) {
+                    if (currentCells != null) {
+                        overlay?.showPreview(".", keyRect)
+                    } else if (!anyPointerOwnsVariants()) {
+                        schedulePunctuationLongPress(state, keyRect)
+                    }
                 }
             }
             else -> Unit
@@ -1611,7 +1670,10 @@ class EchosKeyboardView @JvmOverloads constructor(
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
                         currentCells = null
                     }
-                    LayoutMode.NUMBERS, LayoutMode.SYMBOLS, LayoutMode.NUMPAD -> {
+                    // NUMERIC_PAD has no mode-switch key, so this is
+                    // unreachable for it; listed to keep the `when` exhaustive.
+                    LayoutMode.NUMBERS, LayoutMode.SYMBOLS, LayoutMode.NUMPAD,
+                    LayoutMode.NUMERIC_PAD -> {
                         layoutMode = LayoutMode.LETTERS
                         currentRows = EchosKeyboardLayout.LETTER_ROWS
                         currentCells = null

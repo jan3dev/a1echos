@@ -38,6 +38,10 @@ class ImeSherpaTranscriber(private val context: Context) {
     }
 
     private val isRecording = AtomicBoolean(false)
+    /// Set when the user dismisses the keyboard mid-capture (vs. a normal
+    /// stop). The capture thread checks this before transcribing so a cancel
+    /// doesn't surface a spurious "No audio recorded" error on the empty buffer.
+    private val isCancelled = AtomicBoolean(false)
     private var audioRecord: AudioRecord? = null
     private var recordingThread: Thread? = null
     // Pre-allocated primitive buffer sized for the full recording cap. A
@@ -99,6 +103,7 @@ class ImeSherpaTranscriber(private val context: Context) {
             return
         }
 
+        isCancelled.set(false)
         isRecording.set(true)
         synchronized(pcmBufferLock) { pcmBufferLength = 0 }
         audioRecord?.startRecording()
@@ -114,6 +119,7 @@ class ImeSherpaTranscriber(private val context: Context) {
 
     fun cancelIfActive() {
         if (isRecording.get()) {
+            isCancelled.set(true)
             isRecording.set(false)
             audioRecord?.stop()
             audioRecord?.release()
@@ -172,7 +178,11 @@ class ImeSherpaTranscriber(private val context: Context) {
         audioRecord?.release()
         audioRecord = null
 
-        transcribe(files)
+        // A cancel (keyboard dismissed) zeroes the buffer; don't transcribe it
+        // — that would surface a bogus "No audio recorded" error to the user.
+        if (!isCancelled.get()) {
+            transcribe(files)
+        }
     }
 
     private fun calculateRMS(buffer: ShortArray, length: Int): Double {

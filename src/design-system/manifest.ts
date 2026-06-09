@@ -23,6 +23,7 @@ import errorViewGallery from "@/components/shared/error-view/ErrorView.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
 import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button/ScrollToEdgeButton.gallery";
+import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
@@ -66,6 +67,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   listItemGallery,
   recordingButtonGallery,
   scrollToEdgeButtonGallery,
+  keyboardLayoutsGallery,
   homeGallery,
   sessionGallery,
   settingsGallery,

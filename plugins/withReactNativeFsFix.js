@@ -61,7 +61,30 @@ const withReactNativeFsFix = (config) => {
         "return [self constantsToExport];",
       );
 
-      fs.writeFileSync(filePath, contents, "utf-8");
+      // 5. react-native-fs ≥ 2.38: the library already declares
+      //    constantsToExport / getConstants returning the Builder type, but
+      //    getConstants' body still casts the result to the non-Builder
+      //    Constants type, which fails to compile. constantsToExport already
+      //    returns Builder, so the cast is wrong — drop it.
+      contents = contents.replace(
+        `return (${origType})[self constantsToExport];`,
+        "return [self constantsToExport];",
+      );
+
+      // pnpm hardlinks package files from its global content-addressable
+      // store, so an in-place write (open + truncate) would mutate the shared
+      // inode and corrupt the same file for every other project. Write a temp
+      // file and rename over the target so the hardlink is broken and only
+      // this project's copy changes. Harmless under npm/yarn too.
+      const tmpPath = `${filePath}.echos-fix.tmp`;
+      try {
+        fs.writeFileSync(tmpPath, contents, "utf-8");
+        fs.renameSync(tmpPath, filePath);
+      } catch (e) {
+        // Don't leave a stale temp file behind if the rename fails.
+        fs.rmSync(tmpPath, { force: true });
+        throw e;
+      }
       return config;
     },
   ]);

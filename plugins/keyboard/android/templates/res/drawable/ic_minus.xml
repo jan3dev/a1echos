@@ -1,0 +1,11 @@
+<!-- Wide minus glyph for the numeric pad's `−` key — a touch wider than the
+     ASCII hyphen, matching Gboard. The key still inserts an ASCII "-". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20,13H4v-2h16v2z"/>
+</vector>

@@ -226,12 +226,23 @@ class EchosInputMethodService : InputMethodService(),
         showKeyboardLayout()
 
         val inputType = info.inputType and android.text.InputType.TYPE_MASK_CLASS
+        val isNumericPad = inputType == android.text.InputType.TYPE_CLASS_NUMBER
         when (inputType) {
-            android.text.InputType.TYPE_CLASS_NUMBER,
+            // Gboard parity (§9.2): all numeric field types (number / decimal /
+            // signed) show the same compact 4×4 pad.
+            android.text.InputType.TYPE_CLASS_NUMBER -> keyboardView.showNumericPadLayout()
+            // Phone fields keep the row-based number page for now (the
+            // dedicated phone pad is a later P2 item, §9.2).
             android.text.InputType.TYPE_CLASS_PHONE -> keyboardView.showNumberLayout()
             android.text.InputType.TYPE_CLASS_TEXT -> keyboardView.showLetterLayout()
             else -> keyboardView.showLetterLayout()
         }
+
+        // The numeric pad drops the top bar (logo / mic / suggestion strip)
+        // for the compact native look, mirroring iOS (§9.1); the keyboard then
+        // starts at the very top, so the overlay's key-Y offset is zero.
+        topBar.visibility = if (isNumericPad) View.GONE else View.VISIBLE
+        keyOverlay.setKeyboardOffsetY(if (isNumericPad) 0f else topBarHeightPx.toFloat())
 
         // Fresh input field — start-of-document = sentence start.
         doubleSpacePeriod.reset()

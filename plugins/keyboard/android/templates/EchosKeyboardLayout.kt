@@ -286,6 +286,55 @@ object EchosKeyboardLayout {
     /// identical so the 3x3 grid keys all match exactly.
     val NUMPAD_COL_WEIGHTS: FloatArray = floatArrayOf(1.3f, 1.9f, 1.9f, 1.9f, 1.5f)
 
+    // -- Auto numeric pad (4x4) for TYPE_CLASS_NUMBER (§9.2) --
+
+    /// Four equal columns for the auto-activated numeric pad.
+    val NUMERIC_PAD_4X4_COL_WEIGHTS: FloatArray = floatArrayOf(1f, 1f, 1f, 1f)
+
+    /// The compact 4x4 numeric pad Gboard shows for `TYPE_CLASS_NUMBER`:
+    ///
+    /// ```
+    /// 1   2   3   −
+    /// 4   5   6   ␣
+    /// 7   8   9   ⌫
+    /// ,   0   .   ⏎
+    /// ```
+    ///
+    /// Used for all three numeric field types (number / decimal / signed) —
+    /// the full set of keys is always shown, matching Gboard, rather than
+    /// gating `−` / `.` on the field's flags. Distinct from the scrollable
+    /// 5-col calculator [NUMPAD_CELLS] (reached via the symbols-page "1234"
+    /// key), which is unchanged. The `−` uses an ASCII hyphen-minus.
+    val NUMERIC_PAD_4X4_CELLS: List<NumpadCell> = listOf(
+        NumpadCell(col = 0, row = 0, keys = listOf(Key("1"))),
+        NumpadCell(col = 1, row = 0, keys = listOf(Key("2"))),
+        NumpadCell(col = 2, row = 0, keys = listOf(Key("3"))),
+        // Inserts an ASCII "-"; rendered with the wider `ic_minus` glyph.
+        NumpadCell(col = 3, row = 0, keys = listOf(Key("-", contentDescription = "Minus", iconName = "ic_minus"))),
+
+        NumpadCell(col = 0, row = 1, keys = listOf(Key("4"))),
+        NumpadCell(col = 1, row = 1, keys = listOf(Key("5"))),
+        NumpadCell(col = 2, row = 1, keys = listOf(Key("6"))),
+        NumpadCell(col = 3, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space", iconName = "ic_space"))),
+
+        NumpadCell(col = 0, row = 2, keys = listOf(Key("7"))),
+        NumpadCell(col = 1, row = 2, keys = listOf(Key("8"))),
+        NumpadCell(col = 2, row = 2, keys = listOf(Key("9"))),
+        NumpadCell(
+            col = 3, row = 2,
+            keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),
+        ),
+
+        NumpadCell(col = 0, row = 3, keys = listOf(Key(","))),
+        NumpadCell(col = 1, row = 3, keys = listOf(Key("0"))),
+        NumpadCell(col = 2, row = 3, keys = listOf(Key(".", type = KeyType.PERIOD))),
+        // Gboard's numeric pad enter is a checkmark, not a return arrow.
+        NumpadCell(
+            col = 3, row = 3,
+            keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),
+        ),
+    )
+
     // Row heights are computed directly in `EchosKeyboardView.computeCellKeyRects`
     // — bottom row matches letter-key height, digit rows fill the rest.
 }
