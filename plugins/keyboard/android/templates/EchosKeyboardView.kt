@@ -80,12 +80,15 @@ class EchosKeyboardView @JvmOverloads constructor(
     /// (`+ - * /` visible). Positive = scrolled down, revealing brackets.
     private var opScrollY: Float = 0f
     private var layoutMode: LayoutMode = LayoutMode.LETTERS
-    /// True for both auto numeric pads (the standard 4×4 and the digits-only
-    /// password variant), which share identical cell-grid rendering — distinct
-    /// from the scrollable calculator NUMPAD.
+    /// True for the compact cell pads — the two auto numeric pads (standard 4×4
+    /// + digits-only password) and the two phone-pad pages — which all share the
+    /// same 4-column cell-grid rendering (wider Gboard gap, pill keys, digit
+    /// fill). Distinct from the scrollable calculator NUMPAD.
     private val isNumericPadMode: Boolean
         get() = layoutMode == LayoutMode.NUMERIC_PAD ||
-            layoutMode == LayoutMode.NUMERIC_PAD_PASSWORD
+            layoutMode == LayoutMode.NUMERIC_PAD_PASSWORD ||
+            layoutMode == LayoutMode.PHONE_PAD ||
+            layoutMode == LayoutMode.PHONE_SYMBOLS_PAD
     private var shiftState: ShiftState = ShiftState.OFF
 
     /// Timestamp (SystemClock.uptimeMillis) of the previous shift tap.
@@ -202,6 +205,10 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var numberLabelTextSize = 0f
     private var numberLabelOffsetRight = 0f
     private var numberLabelOffsetTop = 0f
+    /// Gap between a phone-pad key's digit and its trailing hint ("2"/"ABC").
+    /// Derived from the sublabel paint size; computed once so the draw loop
+    /// doesn't recompute it per sublabeled key per frame.
+    private var subLabelGap = 0f
     private var iconSizePx = 0
 
     // Caches that turn per-frame work in `drawKey` into one-time map
@@ -294,7 +301,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         onWordDelete = { listener?.onDeleteWord() },
     )
 
-    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD, NUMERIC_PAD_PASSWORD, EMAIL, URI }
+    enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD, NUMERIC_PAD_PASSWORD, PHONE_PAD, PHONE_SYMBOLS_PAD, EMAIL, URI }
     /**
      * LatinIME-style 6-state shift machine. `AUTOMATIC` is rendered the
      * same as `ON` but drops to `OFF` after one keystroke without feeling
@@ -361,6 +368,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         keyTextPaintRegular.textSize = keyTextSize
         keyTextPaintSpecial.textSize = keyTextSizeSpecial
         keyTextPaintNumber.textSize = numberLabelTextSize
+        subLabelGap = numberLabelTextSize * 0.4f
         keyTextPaintNumericPad.textSize = keyTextSize * 1.45f
         regularBaselineOffset =
             -(keyTextPaintRegular.descent() + keyTextPaintRegular.ascent()) / 2
@@ -440,13 +448,12 @@ class EchosKeyboardView @JvmOverloads constructor(
         invalidate()
     }
 
-    /// Auto numeric pad (4×4) for all `TYPE_CLASS_NUMBER` fields (§9.2) —
-    /// number, decimal, and signed all show the same full Gboard-style pad.
-    /// Reuses the cell pipeline with 4 equal columns. Separate from
-    /// [showNumpadLayout]'s 5-col calculator.
-    fun showNumericPadLayout() {
-        layoutMode = LayoutMode.NUMERIC_PAD
-        currentCells = EchosKeyboardLayout.NUMERIC_PAD_4X4_CELLS
+    /// Shared setup for the compact 4×4 cell pads (numeric, numeric-password,
+    /// and the two phone-pad pages) — all share the equal-column weights and
+    /// reset the same transient state before re-laying out.
+    private fun showCellPadLayout(mode: LayoutMode, cells: List<EchosKeyboardLayout.NumpadCell>) {
+        layoutMode = mode
+        currentCells = cells
         currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
         opScrollY = 0f
         typedNonSpaceInSymbols = false
@@ -455,19 +462,29 @@ class EchosKeyboardView @JvmOverloads constructor(
         invalidate()
     }
 
+    /// Auto numeric pad (4×4) for all `TYPE_CLASS_NUMBER` fields (§9.2) —
+    /// number, decimal, and signed all show the same full Gboard-style pad.
+    /// Reuses the cell pipeline with 4 equal columns. Separate from
+    /// [showNumpadLayout]'s 5-col calculator.
+    fun showNumericPadLayout() =
+        showCellPadLayout(LayoutMode.NUMERIC_PAD, EchosKeyboardLayout.NUMERIC_PAD_4X4_CELLS)
+
     /// Digits-only numeric pad for `TYPE_CLASS_NUMBER` + password variation
     /// (PINs / numeric passcodes) — the 4×4 grid with the symbol cells dropped
     /// (§9.2).
-    fun showNumericPasswordPadLayout() {
-        layoutMode = LayoutMode.NUMERIC_PAD_PASSWORD
-        currentCells = EchosKeyboardLayout.NUMERIC_PAD_PASSWORD_CELLS
-        currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
-        opScrollY = 0f
-        typedNonSpaceInSymbols = false
-        keyRectsValid = false
-        requestLayout()
-        invalidate()
-    }
+    fun showNumericPasswordPadLayout() =
+        showCellPadLayout(LayoutMode.NUMERIC_PAD_PASSWORD, EchosKeyboardLayout.NUMERIC_PAD_PASSWORD_CELLS)
+
+    /// Phone dial pad (§9.2, `TYPE_CLASS_PHONE`) — Gboard's two-page keypad.
+    /// Page 1 (digits); the `* #` key switches to [showPhoneSymbolsPadLayout].
+    /// Reuses the 4×4 cell pipeline + equal columns.
+    fun showPhonePadLayout() =
+        showCellPadLayout(LayoutMode.PHONE_PAD, EchosKeyboardLayout.PHONE_PAD_CELLS)
+
+    /// Phone pad page 2 — symbols + telephony controls. The `123` key returns
+    /// to [showPhonePadLayout].
+    fun showPhoneSymbolsPadLayout() =
+        showCellPadLayout(LayoutMode.PHONE_SYMBOLS_PAD, EchosKeyboardLayout.PHONE_SYMBOLS_PAD_CELLS)
 
     /// Email letter variant (§9.2): QWERTY with a dedicated `@` and `.` in the
     /// bottom row (no comma), mirroring Gboard's email keyboard.
@@ -920,14 +937,18 @@ class EchosKeyboardView @JvmOverloads constructor(
         val isSpecial = key.type == EchosKeyboardLayout.KeyType.MODE_SWITCH ||
             key.type == EchosKeyboardLayout.KeyType.SYMBOL_SWITCH ||
             key.useCompactFont
+        // `isSpecial` is checked before `isNumericPadMode` so the phone pad's
+        // multi-char keys (`* #`, `Pause`, `Wait`, `123`) keep the smaller
+        // special font instead of the oversized digit font. Numeric-pad digits
+        // and `.`/`-` aren't `isSpecial`, so they're unaffected.
         val labelPaint = when {
-            isNumericPadMode -> keyTextPaintNumericPad
             isSpecial -> keyTextPaintSpecial
+            isNumericPadMode -> keyTextPaintNumericPad
             else -> keyTextPaintRegular
         }
         val labelBaselineOffset = when {
-            isNumericPadMode -> numericPadBaselineOffset
             isSpecial -> specialBaselineOffset
+            isNumericPadMode -> numericPadBaselineOffset
             else -> regularBaselineOffset
         }
         labelPaint.color = textColor
@@ -941,12 +962,25 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         val textX = rect.centerX()
         val textY = rect.centerY() + labelBaselineOffset
-        canvas.drawText(displayLabel, textX, textY, labelPaint)
+        val subLabel = key.subLabel
+        if (subLabel != null) {
+            // Phone-pad digit + small trailing hint ("2" + "ABC"), drawn as a
+            // centered pair sharing the digit's baseline.
+            keyTextPaintNumber.color = theme.keyTextSecondary
+            val mainW = labelPaint.measureText(displayLabel)
+            val subW = keyTextPaintNumber.measureText(subLabel)
+            val total = mainW + subLabelGap + subW
+            canvas.drawText(displayLabel, textX - total / 2f + mainW / 2f, textY, labelPaint)
+            canvas.drawText(subLabel, textX + total / 2f - subW / 2f, textY, keyTextPaintNumber)
+        } else {
+            canvas.drawText(displayLabel, textX, textY, labelPaint)
+        }
 
         // Top-row letters carry a small number in the top-right corner so the
         // user knows long-pressing types it (Gboard convention). Skip when
-        // shift is engaged because the character is already shown in caps.
-        if (key.type == EchosKeyboardLayout.KeyType.CHARACTER) {
+        // shift is engaged because the character is already shown in caps, and
+        // on the compact pads (the digit grids never carry long-press numbers).
+        if (key.type == EchosKeyboardLayout.KeyType.CHARACTER && !isNumericPadMode) {
             val number = numberLabelCache[key.label]
             if (number != null) {
                 keyTextPaintNumber.color = theme.keyTextSecondary
@@ -995,6 +1029,10 @@ class EchosKeyboardView @JvmOverloads constructor(
             return when (key.type) {
                 EchosKeyboardLayout.KeyType.PERIOD -> true
                 EchosKeyboardLayout.KeyType.CHARACTER -> key.label != "-"
+                // Phone pad: the `* #` and `123` page-switch keys read as light
+                // digit keys, like the dial pad in Gboard.
+                EchosKeyboardLayout.KeyType.SYMBOL_SWITCH,
+                EchosKeyboardLayout.KeyType.MODE_SWITCH -> true
                 else -> false
             }
         }
@@ -1678,7 +1716,9 @@ class EchosKeyboardView @JvmOverloads constructor(
     private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
         when (key.type) {
             EchosKeyboardLayout.KeyType.CHARACTER -> {
-                listener?.onKeyPress(shiftedLabel(key.label))
+                // `output` lets a key display one thing and emit another — the
+                // phone pad's `Pause`/`Wait` show those words but commit `,`/`;`.
+                listener?.onKeyPress(key.output ?: shiftedLabel(key.label))
                 dropTransientShiftAfterCharacterCommit()
                 markSymbolTypedIfApplicable()
             }
@@ -1721,10 +1761,18 @@ class EchosKeyboardView @JvmOverloads constructor(
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
                         currentCells = null
                     }
-                    // The numeric pads have no mode-switch key, so those are
-                    // unreachable; listed to keep the `when` exhaustive.
+                    // `123` on the phone symbols page returns to the dial pad.
+                    LayoutMode.PHONE_SYMBOLS_PAD -> {
+                        layoutMode = LayoutMode.PHONE_PAD
+                        currentCells = EchosKeyboardLayout.PHONE_PAD_CELLS
+                        currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
+                    }
+                    // The numeric pads and the phone dial pad have no `123`
+                    // mode-switch key, so those are unreachable; listed to keep
+                    // the `when` exhaustive.
                     LayoutMode.NUMBERS, LayoutMode.SYMBOLS, LayoutMode.NUMPAD,
-                    LayoutMode.NUMERIC_PAD, LayoutMode.NUMERIC_PAD_PASSWORD -> {
+                    LayoutMode.NUMERIC_PAD, LayoutMode.NUMERIC_PAD_PASSWORD,
+                    LayoutMode.PHONE_PAD -> {
                         layoutMode = LayoutMode.LETTERS
                         currentRows = EchosKeyboardLayout.LETTER_ROWS
                         currentCells = null
@@ -1748,6 +1796,12 @@ class EchosKeyboardView @JvmOverloads constructor(
                         layoutMode = LayoutMode.NUMBERS
                         currentRows = EchosKeyboardLayout.NUMBER_ROWS
                         currentCells = null
+                    }
+                    // `* #` on the dial pad opens the symbols / telephony page.
+                    LayoutMode.PHONE_PAD -> {
+                        layoutMode = LayoutMode.PHONE_SYMBOLS_PAD
+                        currentCells = EchosKeyboardLayout.PHONE_SYMBOLS_PAD_CELLS
+                        currentColWeights = EchosKeyboardLayout.NUMERIC_PAD_4X4_COL_WEIGHTS
                     }
                     else -> {}
                 }

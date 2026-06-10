@@ -456,10 +456,7 @@ class KeyboardView: UIInputView {
                     button.setDisplayLabel(shiftedLabel(def.label))
                 case .returnKey:
                     applyReturnKeyDisplay(to: button)
-                    // Accent-fill the return key when it's a "primary" action:
-                    // the emoji-search done affordance, or a `.go` field (URL /
-                    // search) — a blue accent pill, like native iOS search chrome.
-                    button.setPrimaryAction(currentLayout == .emojiSearch || returnKeyType == .go)
+                    button.setPrimaryAction(returnKeyIsPrimaryAction)
                 default:
                     break
                 }
@@ -468,22 +465,32 @@ class KeyboardView: UIInputView {
         }
     }
 
-    /// Applies either a text label ("Go", "Send", "Next", "Done") or an SF
-    /// Symbol (`return`, `magnifyingglass`, `checkmark` in search mode) to
-    /// the return key so it matches the native keyboard's per-context
-    /// appearance.
+    /// Whether the return key should render as the accent-filled "primary
+    /// action" pill. True for the emoji-search done affordance and for the
+    /// action return types that read as a confirm/submit (go, send, done) or a
+    /// search (search / google / yahoo). `.next` and plain `.default` stay
+    /// neutral (a regular white key).
+    private var returnKeyIsPrimaryAction: Bool {
+        if currentLayout == .emojiSearch { return true }
+        switch returnKeyType {
+        case .go, .send, .done, .search, .google, .yahoo: return true
+        default: return false
+        }
+    }
+
+    /// Applies the per-context SF Symbol to the return key so it matches the
+    /// native keyboard. The accent pill itself is applied separately via
+    /// `setPrimaryAction` (see `returnKeyIsPrimaryAction`).
     private func applyReturnKeyDisplay(to button: KeyButton) {
         if currentLayout == .emojiSearch {
             button.setDisplaySymbol("checkmark")
             return
         }
         switch returnKeyType {
-        // Go (URL / search "go") renders as an accent-filled right arrow — the
-        // accent pill is applied via `setPrimaryAction` in `updateKeyLabels`.
         case .go: button.setDisplaySymbol("arrow.right")
-        case .send: button.setDisplayLabel("Send")
-        case .next: button.setDisplayLabel("Next")
-        case .done: button.setDisplayLabel("Done")
+        case .send: button.setDisplaySymbol("arrow.up")
+        case .next: button.setDisplaySymbol("chevron.right")
+        case .done: button.setDisplaySymbol("checkmark")
         case .search, .google, .yahoo:
             button.setDisplaySymbol("magnifyingglass")
         default:
@@ -1259,7 +1266,7 @@ class KeyboardView: UIInputView {
             switch currentLayout {
             // The URL / email variants carry the same `123` key as letters, so
             // their mode-switch goes to the numbers page too.
-            case .letters, .emojiSearch, .urlLetters, .emailLetters: switchToLayout(.numbers)
+            case .letters, .emojiSearch, .urlLetters, .emailLetters, .twitter, .webSearch: switchToLayout(.numbers)
             case .numbers, .symbols, .emoji: switchToLayout(.letters)
             // Numeric pads have no mode-switch key; unreachable, present
             // only to keep the switch exhaustive.

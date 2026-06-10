@@ -237,6 +237,10 @@ class EchosKeyboardViewController: UIInputViewController {
             keyboardView.switchToLayout(.urlLetters)
         case .emailAddress:
             keyboardView.switchToLayout(.emailLetters)
+        case .twitter:
+            keyboardView.switchToLayout(.twitter)
+        case .webSearch:
+            keyboardView.switchToLayout(.webSearch)
         case .numbersAndPunctuation:
             // Open to the numbers page once; the user can tap `ABC` to reach
             // letters and stays there (we don't re-force on later keystrokes).
@@ -246,7 +250,7 @@ class EchosKeyboardViewController: UIInputViewController {
             // field-specific layout. Don't yank the user out of a numbers /
             // symbols / emoji page they opened manually.
             switch keyboardView.currentLayoutMode {
-            case .numberPad, .decimalPad, .urlLetters, .emailLetters:
+            case .numberPad, .decimalPad, .urlLetters, .emailLetters, .twitter, .webSearch:
                 keyboardView.switchToLayout(.letters)
             default:
                 break

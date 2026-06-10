@@ -47,6 +47,12 @@ enum KeyboardLayout {
         /// QWERTY tuned for `UIKeyboardType.emailAddress`: `@` and `.` sit beside
         /// a slightly shrunk spacebar. §9.1.
         case emailLetters
+        /// QWERTY tuned for `UIKeyboardType.twitter`: `@` and `#` sit beside a
+        /// slightly shrunk spacebar (mirrors `emailLetters` with `#` for `.`). §9.1.
+        case twitter
+        /// QWERTY tuned for `UIKeyboardType.webSearch`: a `.` sits beside the
+        /// spacebar; the host's Search return key is already mapped. §9.1.
+        case webSearch
     }
 
     /// LatinIME-style 6-state shift machine. `automatic` is rendered the
@@ -292,6 +298,34 @@ enum KeyboardLayout {
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 
+    // twitter: same shape as email — a shrunk spacebar flanked by two
+    // punctuation keys — but the keys are `@` and `#` instead of `@` / `.`.
+    // Weights match `emailLettersRow4` so the row-4 chrome doesn't resize.
+    static let twitterLettersRow4: [KeyDefinition] = [
+        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+                      accessibilityLabel: "Emoji", symbolName: "face.smiling"),
+        KeyDefinition(label: " ", type: .space, widthWeight: 2.252, accessibilityLabel: "Space"),
+        KeyDefinition(label: "@", widthWeight: 1.0, usesCompactLabelFont: true),
+        KeyDefinition(label: "#", widthWeight: 1.0),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
+                      accessibilityLabel: "Return", symbolName: "return"),
+    ]
+
+    // webSearch: a single `.` beside the spacebar. Drops email's `@` and folds
+    // its width into the spacebar (2.252 + 1.0), keeping `123` / emoji / `.` /
+    // return aligned with the email variant. The Search return is mapped from
+    // the host's `returnKeyType`, not here.
+    static let webSearchLettersRow4: [KeyDefinition] = [
+        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+                      accessibilityLabel: "Emoji", symbolName: "face.smiling"),
+        KeyDefinition(label: " ", type: .space, widthWeight: 3.252, accessibilityLabel: "Space"),
+        KeyDefinition(label: "."),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
+                      accessibilityLabel: "Return", symbolName: "return"),
+    ]
+
     // MARK: - Numeric Pads (§9.1)
 
     // Mirrors the native iOS numberPad / decimalPad exactly: a 3×4 grid of
@@ -358,6 +392,10 @@ enum KeyboardLayout {
             return [lettersRow1, lettersRow2, lettersRow3, urlLettersRow4]
         case .emailLetters:
             return [lettersRow1, lettersRow2, lettersRow3, emailLettersRow4]
+        case .twitter:
+            return [lettersRow1, lettersRow2, lettersRow3, twitterLettersRow4]
+        case .webSearch:
+            return [lettersRow1, lettersRow2, lettersRow3, webSearchLettersRow4]
         }
     }
 }

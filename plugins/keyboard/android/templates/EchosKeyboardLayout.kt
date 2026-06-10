@@ -41,6 +41,13 @@ object EchosKeyboardLayout {
         /// (mirrors iOS `usesCompactLabelFont`); the URL `/` leaves this off so
         /// it stays letter-sized like the period key.
         val useCompactFont: Boolean = false,
+        /// Small trailing hint drawn to the right of the label (phone-pad
+        /// digits: `"2"` + `"ABC"`, `"0"` + `"+"`), mirroring iOS's `subLabel`.
+        /// Display-only — never typed.
+        val subLabel: String? = null,
+        /// Text committed when it differs from the displayed label. The phone
+        /// pad's `Pause` / `Wait` keys show those words but emit `,` / `;`.
+        val output: String? = null,
     )
 
     /// A keyboard row. Rows are laid out on a fixed cell grid anchored to
@@ -416,6 +423,87 @@ object EchosKeyboardLayout {
         ),
 
         NumpadCell(col = 1, row = 3, keys = listOf(Key("0"))),
+        NumpadCell(
+            col = 3, row = 3,
+            keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),
+        ),
+    )
+
+    // -- Phone pad (§9.2, TYPE_CLASS_PHONE) --
+
+    /// Gboard's two-page phone keypad, built on the same 4×4 grid + equal
+    /// columns as [NUMERIC_PAD_4X4_CELLS]. Page 1 is the dial pad (digits with
+    /// the telephone-keypad letter hints); the `* #` key
+    /// ([KeyType.SYMBOL_SWITCH]) flips to the symbols page, whose `123` key
+    /// ([KeyType.MODE_SWITCH]) flips back. The right column (`−` / space /
+    /// delete / enter) reuses the numeric-pad special keys + glyphs verbatim.
+    ///
+    /// ```
+    /// 1      2 ABC   3 DEF   −
+    /// 4 GHI  5 JKL   6 MNO   ␣
+    /// 7 PQRS 8 TUV   9 WXYZ  ⌫
+    /// * #    0 +     .       ⏎
+    /// ```
+    val PHONE_PAD_CELLS: List<NumpadCell> = listOf(
+        NumpadCell(col = 0, row = 0, keys = listOf(Key("1"))),
+        NumpadCell(col = 1, row = 0, keys = listOf(Key("2", subLabel = "ABC"))),
+        NumpadCell(col = 2, row = 0, keys = listOf(Key("3", subLabel = "DEF"))),
+        NumpadCell(col = 3, row = 0, keys = listOf(Key("-", contentDescription = "Minus", iconName = "ic_minus"))),
+
+        NumpadCell(col = 0, row = 1, keys = listOf(Key("4", subLabel = "GHI"))),
+        NumpadCell(col = 1, row = 1, keys = listOf(Key("5", subLabel = "JKL"))),
+        NumpadCell(col = 2, row = 1, keys = listOf(Key("6", subLabel = "MNO"))),
+        NumpadCell(col = 3, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space", iconName = "ic_space"))),
+
+        NumpadCell(col = 0, row = 2, keys = listOf(Key("7", subLabel = "PQRS"))),
+        NumpadCell(col = 1, row = 2, keys = listOf(Key("8", subLabel = "TUV"))),
+        NumpadCell(col = 2, row = 2, keys = listOf(Key("9", subLabel = "WXYZ"))),
+        NumpadCell(
+            col = 3, row = 2,
+            keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),
+        ),
+
+        NumpadCell(col = 0, row = 3, keys = listOf(Key("* #", type = KeyType.SYMBOL_SWITCH, contentDescription = "More symbols", useCompactFont = true))),
+        NumpadCell(col = 1, row = 3, keys = listOf(Key("0", subLabel = "+"))),
+        NumpadCell(col = 2, row = 3, keys = listOf(Key(".", type = KeyType.PERIOD))),
+        NumpadCell(
+            col = 3, row = 3,
+            keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),
+        ),
+    )
+
+    /// Phone pad page 2 — symbols + telephony controls. `Pause` emits `,` and
+    /// `Wait` emits `;` (dial-string pause/wait); the `123` key
+    /// ([KeyType.MODE_SWITCH]) returns to [PHONE_PAD_CELLS].
+    ///
+    /// ```
+    /// (      /      )      −
+    /// N      Pause  ,      ␣
+    /// *      Wait   #      ⌫
+    /// 123    +      .      ⏎
+    /// ```
+    val PHONE_SYMBOLS_PAD_CELLS: List<NumpadCell> = listOf(
+        NumpadCell(col = 0, row = 0, keys = listOf(Key("("))),
+        NumpadCell(col = 1, row = 0, keys = listOf(Key("/"))),
+        NumpadCell(col = 2, row = 0, keys = listOf(Key(")"))),
+        NumpadCell(col = 3, row = 0, keys = listOf(Key("-", contentDescription = "Minus", iconName = "ic_minus"))),
+
+        NumpadCell(col = 0, row = 1, keys = listOf(Key("N"))),
+        NumpadCell(col = 1, row = 1, keys = listOf(Key("Pause", output = ",", contentDescription = "Pause", useCompactFont = true))),
+        NumpadCell(col = 2, row = 1, keys = listOf(Key(","))),
+        NumpadCell(col = 3, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space", iconName = "ic_space"))),
+
+        NumpadCell(col = 0, row = 2, keys = listOf(Key("*"))),
+        NumpadCell(col = 1, row = 2, keys = listOf(Key("Wait", output = ";", contentDescription = "Wait", useCompactFont = true))),
+        NumpadCell(col = 2, row = 2, keys = listOf(Key("#"))),
+        NumpadCell(
+            col = 3, row = 2,
+            keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),
+        ),
+
+        NumpadCell(col = 0, row = 3, keys = listOf(Key("123", type = KeyType.MODE_SWITCH, contentDescription = "Digits"))),
+        NumpadCell(col = 1, row = 3, keys = listOf(Key("+"))),
+        NumpadCell(col = 2, row = 3, keys = listOf(Key(".", type = KeyType.PERIOD))),
         NumpadCell(
             col = 3, row = 3,
             keys = listOf(Key("", type = KeyType.RETURN, contentDescription = "Enter", iconName = "ic_check")),

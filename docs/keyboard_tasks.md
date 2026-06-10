@@ -37,8 +37,9 @@ Citations are `file:line` relative to the LatinIME repo unless noted.
    doesn't exist; if we want it, we'd be inventing it. See §1.7.
 
 2. **Remaining capabilities, in rough priority order:** field-type adaptive
-   layouts — numeric/phone/decimal pads + contextual letter rows, the biggest
-   open gap (§9, has P0 items); shift-chord detection (§4.1), sliding modifier
+   layouts are now done (§9 — numeric/decimal pads, contextual letter rows,
+   iOS twitter/webSearch, Android two-page phone pad; datetime deferred);
+   shift-chord detection (§4.1), sliding modifier
    input (§3.5), long-press space → IME picker (§3.9), locale-aware accent
    variants (§3.3), phantom space (§4.4) + smart punctuation (§4.6), next-word
    prediction (§5.6) + personal-dictionary learning (§5.8/§5.9), gesture
@@ -536,8 +537,8 @@ when `PHANTOM` space is pending.
    `decimalPad` (P0).
 2. Contextual letter rows (email/URL) on both platforms (P1 — DONE: iOS
    `numbersAndPunctuation` auto-open + URL/email variants, Android email/URI
-   variants + numeric-password pad); Android-only phone pad (P2 — iOS forces
-   the system pad, §9.1).
+   variants + numeric-password pad); iOS `twitter`/`webSearch` (P2 — DONE);
+   Android-only two-page phone pad (P2 — DONE; iOS forces the system pad, §9.1).
 
 **Polish (P1):**
 
@@ -635,8 +636,8 @@ and `UIKeyboardType`. RN `keyboardType` → `UIKeyboardType` 1:1.
 | 7   | `phonePad` (`phone-pad`)                               | Digits + `+ * #`, Pause/Wait                              | **System keyboard** — custom keyboards ineligible (see below) | **None** — iOS shows its own pad                               | **SKIP** |
 | 8   | `namePhonePad` (`name-phone-pad`)                      | QWERTY by default; alternate page is a phone keypad       | **System keyboard** — custom keyboards ineligible             | **None** — iOS shows its own                                   | **SKIP** |
 | 9   | `emailAddress` (`email-address`)                       | QWERTY with `@` and `.` visible (no spacebar shrink)      | ✓ `.emailLetters` (`@`/`.`)                                   | DONE                                                           | P1       |
-| 10  | `twitter` (`twitter`)                                  | QWERTY with `@` and `#` visible                           | ✗                                                             | Twitter letter-row variant                                     | P2       |
-| 11  | `webSearch` (`web-search`)                             | QWERTY with `.`; **Search** return                        | ✗                                                             | Search variant; Search return already maps                     | P2       |
+| 10  | `twitter` (`twitter`)                                  | QWERTY with `@` and `#` visible                           | ✓ `.twitter` (`@`/`#`)                                        | DONE                                                           | P2       |
+| 11  | `webSearch` (`web-search`)                             | QWERTY with `.`; **Search** return                        | ✓ `.webSearch` (`.`)                                          | DONE — Search return already maps                              | P2       |
 
 **iOS eligibility — what we DON'T have to build.** Apple's App Extension
 Programming Guide forbids third-party keyboards in three cases; iOS silently
@@ -683,16 +684,16 @@ Gboard as closely as possible.
 > `ascii-capable` / `numbers-and-punctuation` / `twitter` / `web-search` /
 > `name-phone-pad` rows show QWERTY on Android — expected.
 
-| `inputType` (class · variation · flag)                   | Gboard layout                                                        | Our state                                                        | Action                                                                | Pri    |
-| -------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- | ------ |
-| `TYPE_CLASS_TEXT` (default)                              | QWERTY                                                               | ✓                                                                | —                                                                     | —      |
-| `TEXT` · `VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS` | QWERTY with `@` and `.` (no comma)                                   | ✓ email variant (`@`/`.`)                                        | DONE                                                                  | P1     |
-| `TEXT` · `VARIATION_URI`                                 | QWERTY with `/` and `.com`                                           | ✓ URI variant (`/`/`.`/`.com`)                                   | DONE                                                                  | P1     |
-| `TEXT` · `VARIATION_*PASSWORD`                           | QWERTY, suggestions/autocorrect off                                  | Partial (suggestions suppressed via `computeSuggestionsAllowed`) | Confirm autocorrect fully off on password fields                      | P2     |
-| `TYPE_CLASS_NUMBER`                                      | Compact numeric pad; `FLAG_DECIMAL` adds `.`, `FLAG_SIGNED` adds `−` | ✗ — shows the row-based NUMBER page                              | **Add the provided 4×4 numeric pad**; gate `.`/`−` on the flags       | **P0** |
-| `NUMBER` · `VARIATION_PASSWORD`                          | Stripped numeric pad (digits only)                                   | ✓ digits-only 4×4 (no `−`/`,`/`.`)                               | DONE                                                                  | P1     |
-| `TYPE_CLASS_PHONE`                                       | Phone pad: digits + `* # + , ; ( ) - / N P W`, Pause/Wait            | ✗ — shows NUMBER page                                            | Phone-pad layout — **Android-only** (iOS forces the system pad, §9.1) | P2     |
-| `TYPE_CLASS_DATETIME` (+ `DATE` / `TIME`)                | Numeric pad + `/` `:` (+ am/pm for time)                             | ✗                                                                | Datetime pad                                                          | P2     |
+| `inputType` (class · variation · flag)                   | Gboard layout                                                        | Our state                                                                                                          | Action                                                          | Pri    |
+| -------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ------ |
+| `TYPE_CLASS_TEXT` (default)                              | QWERTY                                                               | ✓                                                                                                                  | —                                                               | —      |
+| `TEXT` · `VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS` | QWERTY with `@` and `.` (no comma)                                   | ✓ email variant (`@`/`.`)                                                                                          | DONE                                                            | P1     |
+| `TEXT` · `VARIATION_URI`                                 | QWERTY with `/` and `.com`                                           | ✓ URI variant (`/`/`.`/`.com`)                                                                                     | DONE                                                            | P1     |
+| `TEXT` · `VARIATION_*PASSWORD`                           | QWERTY, suggestions/autocorrect off                                  | ✓ both off — `computeSuggestionsAllowed` gates the strip **and** autocorrect (`autocorrect && suggestionsAllowed`) | DONE — confirmed                                                | P2     |
+| `TYPE_CLASS_NUMBER`                                      | Compact numeric pad; `FLAG_DECIMAL` adds `.`, `FLAG_SIGNED` adds `−` | ✗ — shows the row-based NUMBER page                                                                                | **Add the provided 4×4 numeric pad**; gate `.`/`−` on the flags | **P0** |
+| `NUMBER` · `VARIATION_PASSWORD`                          | Stripped numeric pad (digits only)                                   | ✓ digits-only 4×4 (no `−`/`,`/`.`)                                                                                 | DONE                                                            | P1     |
+| `TYPE_CLASS_PHONE`                                       | Phone pad: digits + `* # + , ; ( ) - / N P W`, Pause/Wait            | ✓ two-page dial pad (digits + `* #` → `( ) / N Pause , * Wait # + .`)                                              | DONE — **Android-only** (iOS forces the system pad, §9.1)       | P2     |
+| `TYPE_CLASS_DATETIME` (+ `DATE` / `TIME`)                | Numeric pad + `/` `:` (+ am/pm for time)                             | ✗ — **deferred** (RN `TextInput` can't produce `TYPE_CLASS_DATETIME`, so it's unreachable from our app)            | Deferred follow-up                                              | P2     |
 
 **Provided numeric-pad design** (the 4×4 auto-pad for `TYPE_CLASS_NUMBER`):
 
@@ -723,9 +724,10 @@ layouts in `EchosKeyboardLayout.kt` — the cell-grid infra
   `numberPad` + `decimalPad`. DONE
 - **P1**: iOS `numbersAndPunctuation` auto-open, URL + email letter variants;
   Android email/URI variants, numeric-password pad. DONE
-- **P2**: iOS `twitter`, `webSearch`; Android phone pad + datetime pad
-  (Android-only — iOS uses the system pad), password no-autocorrect
-  confirmation.
+- **P2**: iOS `twitter`, `webSearch` DONE; Android phone pad DONE (Android-only
+  two-page dial pad — iOS uses the system pad), password no-autocorrect
+  CONFIRMED. Android datetime pad **deferred** — RN `TextInput` can't produce
+  `TYPE_CLASS_DATETIME`, so it's unreachable from our app / the gallery harness.
 - **SKIP (iOS)**: `phonePad`, `namePhonePad`, secure/password fields — iOS
   forces the system keyboard (§9.1). `asciiCapableNumberPad` is not RN-settable
   and behaves like `numberPad`.
