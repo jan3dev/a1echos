@@ -1,5 +1,6 @@
 import { StyleSheet, View, ViewStyle } from "react-native";
 
+import { AquaPrimitiveColors } from "@/theme";
 import { logWarn } from "@/utils";
 
 import { iconMap, IconName } from "./iconMap";
@@ -16,7 +17,7 @@ interface IconProps {
 export const Icon = ({
   name,
   size = 24,
-  color = "#090A0B",
+  color = AquaPrimitiveColors.metal950,
   style,
 }: IconProps) => {
   const IconComponent = iconMap[name];

@@ -7,10 +7,9 @@ import {
   HomeContent,
   IncognitoEmptyState,
 } from "@/components";
+import type { GalleryEntry } from "@/design-system/manifest";
 import { Session } from "@/models";
 import { useSessionStore, useSettingsStore } from "@/stores";
-
-import type { GalleryEntry } from "@/design-system/manifest";
 
 // Mock Data
 const dummySessions: Session[] = [
@@ -164,8 +163,12 @@ const gallery: GalleryEntry = {
   title: "Home",
   group: "Domain",
   demos: [
-    { name: "AppBarDefault", render: AppBarDefault },
-    { name: "AppBarSelectionState", render: AppBarSelectionState },
+    { name: "AppBarDefault", render: AppBarDefault, selfScrolling: true },
+    {
+      name: "AppBarSelectionState",
+      render: AppBarSelectionState,
+      selfScrolling: true,
+    },
     { name: "EmptyState", render: EmptyState },
     { name: "EmptyStateDisappearing", render: EmptyStateDisappearing },
     { name: "IncognitoEmpty", render: IncognitoEmpty },

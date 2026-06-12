@@ -73,10 +73,11 @@ describe("themeColors", () => {
     expect(lightColors.textPrimary).not.toBe(darkColors.textPrimary);
     expect(lightColors.surfacePrimary).not.toBe(darkColors.surfacePrimary);
     expect(lightColors.ripple).not.toBe(darkColors.ripple);
+    // Brand accent uses neonBlue500 in light, neonBlue400 in dark.
+    expect(lightColors.accentBrand).not.toBe(darkColors.accentBrand);
   });
 
   it("shared accent colors match in both themes", () => {
-    expect(lightColors.accentBrand).toBe(darkColors.accentBrand);
     expect(lightColors.accentBrandTransparent).toBe(
       darkColors.accentBrandTransparent,
     );

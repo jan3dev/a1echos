@@ -59,7 +59,7 @@ export const Checkbox = ({
               ? colors.accentBrand
               : isDark
                 ? colors.surfaceTertiary
-                : "#F4F5F6",
+                : colors.surfaceBackground,
             borderWidth: value ? 0 : borderWidth,
             borderColor: colors.surfaceBorderSecondary,
           },

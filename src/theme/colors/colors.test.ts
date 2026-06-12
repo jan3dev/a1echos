@@ -4,23 +4,25 @@ describe("AquaPrimitiveColors", () => {
   const keys = Object.keys(AquaPrimitiveColors);
   const values = Object.values(AquaPrimitiveColors);
 
-  it("exports an object with 43 keys", () => {
-    expect(keys).toHaveLength(43);
+  it("exports an object with 46 keys", () => {
+    expect(keys).toHaveLength(46);
   });
 
   it("contains all expected key groups", () => {
     const grayscaleKeys = [
       "white",
       "black",
-      "gray50",
-      "gray100",
-      "gray500",
-      "gray750",
-      "gray850",
-      "gray900",
-      "gray950",
-      "gray1000",
-      "gray",
+      "metal50",
+      "metal100",
+      "metal200",
+      "metal300",
+      "metal400",
+      "metal500",
+      "metal750",
+      "metal850",
+      "metal900",
+      "metal950",
+      "metal1000",
     ];
     const neonBlueKeys = [
       "neonBlue300",
@@ -30,14 +32,15 @@ describe("AquaPrimitiveColors", () => {
       "neonBlue",
       "neonBlue16",
       "neonBlue8",
+      "neonBlue400Transparent8",
     ];
     const semanticKeys = [
-      "green500",
-      "green",
-      "green16",
-      "amber500",
-      "amber",
-      "amber16",
+      "forestGreen500",
+      "forestGreen",
+      "forestGreen24",
+      "harvestGold500",
+      "harvestGold",
+      "harvestGold16",
       "scarlet500",
       "scarlet",
       "scarlet16",
@@ -99,8 +102,8 @@ describe("AquaPrimitiveColors", () => {
     ["white", "#FFFFFF"],
     ["black", "#000000"],
     ["neonBlue", "#4361EE"],
-    ["green", "#18A23B"],
-    ["amber", "#FFAB1B"],
+    ["forestGreen", "#18A23B"],
+    ["harvestGold", "#FFAB1B"],
     ["scarlet", "#FF3B13"],
   ] as const)("%s === %s", (key, expected) => {
     expect(AquaPrimitiveColors[key]).toBe(expected);

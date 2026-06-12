@@ -13,8 +13,11 @@ import Foundation
 class IPCClient {
 
     static let appGroupID = "group.com.a1lab.echos.shared"
-    static let requestNotificationName = "com.a1lab.echos.transcriptionRequest"
     static let resultNotificationName = "com.a1lab.echos.transcriptionResult"
+    /// iOS forbids the keyboard extension from recording the mic, so the main
+    /// app records on our behalf. These tell it when to start and stop.
+    static let recordStartNotificationName = "com.a1lab.echos.recordStart"
+    static let recordStopNotificationName = "com.a1lab.echos.recordStop"
     /// Pre-flight ping/pong notifications. The keyboard fires a ping
     /// before recording so we can detect a force-killed main app and
     /// surface a clear "open Echos" toast instead of letting the user
@@ -71,17 +74,28 @@ class IPCClient {
         cachedKeyboardDirectory
     }
 
-    static func audioFileURL() -> URL {
-        let dir = keyboardDirectory() ?? FileManager.default.temporaryDirectory
-        return dir.appendingPathComponent("audio.wav")
-    }
-
     private static func requestFileURL() -> URL? {
         keyboardDirectory()?.appendingPathComponent("request.json")
     }
 
     private static func resultFileURL() -> URL? {
         keyboardDirectory()?.appendingPathComponent("result.json")
+    }
+
+    private static func meterFileURL() -> URL? {
+        keyboardDirectory()?.appendingPathComponent("meter")
+    }
+
+    /// Latest input level (0…1) the main app publishes while recording, or nil
+    /// if nothing's been written yet (file absent or mid-rewrite). Cheap enough
+    /// to poll at display rate — a single 8-byte read.
+    func readMeterLevel() -> Double? {
+        guard let url = IPCClient.meterFileURL(),
+              let data = try? Data(contentsOf: url),
+              data.count == MemoryLayout<Double>.size else { return nil }
+        let level = data.withUnsafeBytes { $0.loadUnaligned(as: Double.self) }
+        guard level.isFinite else { return nil }
+        return max(0, min(1, level))
     }
 
     private static func pingFileURL() -> URL? {
@@ -146,42 +160,45 @@ class IPCClient {
         DispatchQueue.main.async { completion?(alive) }
     }
 
-    // MARK: - Request Transcription
+    // MARK: - Record (main app records on the keyboard's behalf)
 
-    /// Sends a transcription request to the main app.
-    func requestTranscription(audioFileURL: URL) {
+    /// Tells the main app to start recording. We write the request marker —
+    /// carrying the ID the eventual result is keyed to — BEFORE posting, so the
+    /// app can read it when it stops (either on our recordStop or its own
+    /// max-duration backstop). `language` is deliberately omitted so the app
+    /// uses the language in `keyboard-sherpa-model.json`, which it keeps fresh.
+    func requestRecordStart() {
         let requestID = UUID().uuidString
         currentRequestID = requestID
-
-        // Write request file. Note: we deliberately omit `language` —
-        // `KeyboardTranscriptionListener` falls through to the language
-        // recorded in `keyboard-sherpa-model.json`, which the main app
-        // rewrites whenever the user changes the spoken-language setting.
-        // A hardcoded value here would override that fresh config.
-        let request: [String: Any] = [
-            "id": requestID,
-            "status": "pending",
-            "timestamp": Date().timeIntervalSince1970,
-        ]
 
         guard let requestURL = IPCClient.requestFileURL() else {
             onTranscriptionError?("Could not access shared storage")
             return
         }
 
+        let request: [String: Any] = [
+            "id": requestID,
+            "status": "recording",
+            "timestamp": Date().timeIntervalSince1970,
+        ]
         do {
             let data = try JSONSerialization.data(withJSONObject: request)
             try data.write(to: requestURL)
         } catch {
-            onTranscriptionError?("Failed to create transcription request")
+            onTranscriptionError?("Failed to start recording")
             return
         }
 
-        // Post Darwin notification to wake the main app
-        postDarwinNotification(IPCClient.requestNotificationName)
+        postDarwinNotification(IPCClient.recordStartNotificationName)
+    }
 
-        // Start polling for result as fallback
-        startPolling(requestID: requestID)
+    /// Tells the main app to stop recording and transcribe. The result arrives
+    /// via the Darwin result observer; polling is a fallback if it's missed.
+    func requestRecordStop() {
+        postDarwinNotification(IPCClient.recordStopNotificationName)
+        if let requestID = currentRequestID {
+            startPolling(requestID: requestID)
+        }
     }
 
     // MARK: - Darwin Notifications

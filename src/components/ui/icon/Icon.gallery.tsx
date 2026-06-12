@@ -2,10 +2,10 @@ import { ScrollView, StyleSheet, View } from "react-native";
 
 import { Icon, Text } from "@/components";
 import { useTheme } from "@/theme";
+import type { GalleryEntry } from "@/design-system/manifest";
 
 import { iconMap, IconName } from "./iconMap";
 
-import type { GalleryEntry } from "@/design-system/manifest";
 
 export const AllIcons = () => {
   const { theme } = useTheme();
@@ -50,7 +50,7 @@ export const Sizes = () => {
 export const Colors = () => {
   const { theme } = useTheme();
   const colors = [
-    { name: "Black", value: "#090A0B" },
+    { name: "Black", value: "#0F1214" },
     { name: "Brand", value: "#4361EE" },
     { name: "Orange", value: "#F7931A" },
     { name: "Cyan", value: "#16BAC5" },
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   },
   iconLabel: {
     textAlign: "center",
-    color: "#4C5357",
+    color: "#2C3136",
   },
   colorBackground: {
     padding: 16,

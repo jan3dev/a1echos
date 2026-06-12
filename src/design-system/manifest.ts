@@ -23,6 +23,7 @@ import errorViewGallery from "@/components/shared/error-view/ErrorView.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
 import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button/ScrollToEdgeButton.gallery";
+import colorsGallery from "@/design-system/colors/Colors.gallery";
 import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
@@ -34,6 +35,13 @@ export type GalleryGroup = "UI" | "Shared" | "Domain";
 export interface GalleryDemo {
   name: string;
   render: () => ReactNode;
+  /**
+   * Set when the demo renders its own VirtualizedList (FlatList/SectionList).
+   * Such demos are rendered outside the detail page's ScrollView so the inner
+   * list doesn't trip the "VirtualizedLists should never be nested inside
+   * plain ScrollViews with the same orientation" warning.
+   */
+  selfScrolling?: boolean;
 }
 
 export interface GalleryEntry {
@@ -44,6 +52,7 @@ export interface GalleryEntry {
 }
 
 export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
+  colorsGallery,
   buttonGallery,
   checkboxGallery,
   chipGallery,

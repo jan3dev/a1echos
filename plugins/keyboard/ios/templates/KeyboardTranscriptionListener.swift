@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import UIKit
 
@@ -10,10 +11,16 @@ import UIKit
     static let shared = KeyboardTranscriptionListener()
 
     private let appGroupID = "group.com.a1lab.echos.shared"
-    private let requestNotificationName = "com.a1lab.echos.transcriptionRequest"
     private let resultNotificationName = "com.a1lab.echos.transcriptionResult"
     private let pingNotificationName = "com.a1lab.echos.transcriptionPing"
     private let pongNotificationName = "com.a1lab.echos.transcriptionPong"
+    // iOS forbids keyboard extensions from recording the mic (the audio daemon
+    // rejects AURemoteIO start with "extension … doesn't have entitlements to
+    // record audio"). So the *app* records on the keyboard's behalf: the
+    // keyboard posts recordStart/recordStop and we drive AVAudioRecorder here,
+    // then transcribe and reply over the existing result channel.
+    private let recordStartNotificationName = "com.a1lab.echos.recordStart"
+    private let recordStopNotificationName = "com.a1lab.echos.recordStop"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -28,6 +35,25 @@ import UIKit
     /// Must match `KeyboardSettings.swift` in the extension.
     private let autocorrectDefaultsKey = "EchosKeyboard.autocorrect"
     private var lifecycleObservers: [NSObjectProtocol] = []
+
+    /// Active recording driven by the keyboard. Owned + mutated on the main
+    /// thread (recordStart/recordStop handlers and the max-duration timer all
+    /// hop to main) so no extra synchronisation is needed.
+    private var audioRecorder: AVAudioRecorder?
+    private var recordingMaxTimer: Timer?
+    private let recordingSampleRate: Double = 16000
+    /// Whisper's context window is 30s; cap recording so a keyboard left in the
+    /// recording state can't hold the mic (and the app awake) indefinitely.
+    private let recordingMaxSeconds: TimeInterval = 30
+
+    /// Publishes the recorder's input level into the App Group so the keyboard's
+    /// waveform can react to real audio (it can't read levels itself — capture
+    /// lives here, in the app process).
+    private var meterTimer: Timer?
+    /// dB range mapped to the waveform's 0…1 level — matches the values the
+    /// keyboard's `RecordingWaveformView` was tuned against.
+    private let meterMinDb: Float = -50
+    private let meterMaxDb: Float = -10
 
     private override init() {
         super.init()
@@ -44,9 +70,22 @@ import UIKit
             { _, observer, _, _, _ in
                 guard let observer = observer else { return }
                 let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
-                listener.handleTranscriptionRequest()
+                listener.handleRecordStart()
             },
-            requestNotificationName as CFString,
+            recordStartNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
+                listener.handleRecordStop()
+            },
+            recordStopNotificationName as CFString,
             nil,
             .deliverImmediately
         )
@@ -118,12 +157,221 @@ import UIKit
         UserDefaults(suiteName: appGroupID)?.set(autocorrect, forKey: autocorrectDefaultsKey)
     }
 
-    // MARK: - Handle Request
+    // MARK: - Recording (on the keyboard's behalf)
 
-    private func handleTranscriptionRequest() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.processRequest()
+    private func handleRecordStart() {
+        DispatchQueue.main.async { [weak self] in self?.beginRecording() }
+    }
+
+    private func handleRecordStop() {
+        DispatchQueue.main.async { [weak self] in self?.finishRecordingAndTranscribe() }
+    }
+
+    /// Temp WAV the app records into. Lives in the app's own sandbox (not the
+    /// shared App Group container) — the user's voice never touches shared
+    /// storage, and we transcribe it in-process.
+    private func recordingFileURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("keyboard-recording.wav")
+    }
+
+    /// Records 16 kHz mono PCM in the main app process. Unlike the extension
+    /// (which the OS forbids from recording), a full app with the `audio`
+    /// background mode is allowed to capture the mic while backgrounded.
+    private func beginRecording() {
+        guard audioRecorder == nil else {
+            NSLog("[KeyboardTranscriptionListener] recordStart while already recording")
+            return
         }
+
+        let session = AVAudioSession.sharedInstance()
+        guard session.recordPermission == .granted else {
+            // Without permission there's nothing to transcribe; the keyboard's
+            // poll will time out and prompt the user to open Echos.
+            NSLog("[KeyboardTranscriptionListener] Mic permission not granted — cannot record")
+            return
+        }
+
+        do {
+            try session.setCategory(
+                .playAndRecord, mode: .measurement,
+                options: [.allowBluetooth, .mixWithOthers]
+            )
+            try session.setActive(true)
+        } catch {
+            NSLog("[KeyboardTranscriptionListener] Session setup failed: %@",
+                  error.localizedDescription)
+            return
+        }
+
+        let url = recordingFileURL()
+        try? FileManager.default.removeItem(at: url)
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: recordingSampleRate,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+        ]
+
+        do {
+            let recorder = try AVAudioRecorder(url: url, settings: settings)
+            recorder.isMeteringEnabled = true
+            guard recorder.record() else {
+                NSLog("[KeyboardTranscriptionListener] record() returned false")
+                try? session.setActive(false, options: .notifyOthersOnDeactivation)
+                return
+            }
+            audioRecorder = recorder
+        } catch {
+            NSLog("[KeyboardTranscriptionListener] Recorder init failed: %@",
+                  error.localizedDescription)
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            return
+        }
+
+        NSLog("[KeyboardTranscriptionListener] Recording started: %@", url.path)
+        startMetering()
+        recordingMaxTimer = Timer.scheduledTimer(
+            withTimeInterval: recordingMaxSeconds, repeats: false
+        ) { [weak self] _ in
+            self?.finishRecordingAndTranscribe()
+        }
+    }
+
+    // MARK: - Metering IPC
+
+    /// File in the App Group container holding the latest input level as a raw
+    /// little-endian `Double` (0…1). The keyboard polls it to drive its waveform.
+    private func meterFileURL() -> URL? {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else { return nil }
+        return container
+            .appendingPathComponent("keyboard", isDirectory: true)
+            .appendingPathComponent("meter")
+    }
+
+    private func startMetering() {
+        stopMetering()
+        // Start from a clean slate so a value from a prior session can't flash.
+        if let url = meterFileURL() { try? FileManager.default.removeItem(at: url) }
+        meterTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) {
+            [weak self] _ in self?.publishMeterLevel()
+        }
+    }
+
+    private func publishMeterLevel() {
+        guard let recorder = audioRecorder, recorder.isRecording,
+              let url = meterFileURL() else { return }
+        recorder.updateMeters()
+        let power = recorder.averagePower(forChannel: 0)
+        let normalized = max(0, min(1, (power - meterMinDb) / (meterMaxDb - meterMinDb)))
+        let data = withUnsafeBytes(of: Double(normalized)) { Data($0) }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private func stopMetering() {
+        meterTimer?.invalidate()
+        meterTimer = nil
+        if let url = meterFileURL() { try? FileManager.default.removeItem(at: url) }
+    }
+
+    /// Stops the active recording (from recordStop or the max-duration backstop)
+    /// and kicks transcription off the main thread. Idempotent: the first call
+    /// clears `audioRecorder`, so the timer + recordStop racing is harmless.
+    private func finishRecordingAndTranscribe() {
+        recordingMaxTimer?.invalidate()
+        recordingMaxTimer = nil
+        stopMetering()
+
+        guard let recorder = audioRecorder else { return }
+        let url = recorder.url
+        let didRecord = recorder.isRecording
+        recorder.stop()
+        audioRecorder = nil
+
+        try? AVAudioSession.sharedInstance().setActive(
+            false, options: .notifyOthersOnDeactivation
+        )
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.processRecordedAudio(at: url, didRecord: didRecord)
+        }
+    }
+
+    /// Transcribes the freshly recorded clip and replies over the result
+    /// channel, keyed to the request ID the keyboard wrote at recordStart.
+    private func processRecordedAudio(at audioURL: URL, didRecord: Bool) {
+        guard let containerURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else {
+            NSLog("[KeyboardTranscriptionListener] Cannot access App Group container")
+            return
+        }
+
+        let keyboardDir = containerURL.appendingPathComponent("keyboard", isDirectory: true)
+        let requestURL = keyboardDir.appendingPathComponent("request.json")
+        let resultURL = keyboardDir.appendingPathComponent("result.json")
+
+        // The keyboard wrote request.json at recordStart; without its ID there's
+        // no result to key — nothing to reply to.
+        guard FileManager.default.fileExists(atPath: requestURL.path),
+              let requestData = try? Data(contentsOf: requestURL),
+              let request = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any],
+              let requestID = request["id"] as? String else {
+            try? FileManager.default.removeItem(at: audioURL)
+            return
+        }
+
+        // The clip holds the user's voice — remove it (and the request marker)
+        // on every return path once we've handled it.
+        defer {
+            try? FileManager.default.removeItem(at: audioURL)
+            try? FileManager.default.removeItem(at: requestURL)
+        }
+
+        guard didRecord,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: audioURL.path),
+              let size = attrs[.size] as? UInt64, size > 1024 else {
+            writeResult(to: resultURL, id: requestID, text: nil, error: "No audio was recorded.")
+            postResultNotification()
+            return
+        }
+
+        NSLog("[KeyboardTranscriptionListener] Transcribing request: %@", requestID)
+        transcribe(audioPath: audioURL.path, requestID: requestID,
+                   requestedLanguage: request["language"] as? String, resultURL: resultURL)
+    }
+
+    /// Loads the active model and transcribes a WAV, writing the outcome to
+    /// `result.json` and posting the result notification.
+    private func transcribe(
+        audioPath: String, requestID: String,
+        requestedLanguage: String?, resultURL: URL
+    ) {
+        let bridge = SherpaBridge.shared()
+        guard let files = resolveModelFiles(requestedLanguage: requestedLanguage) else {
+            writeResult(to: resultURL, id: requestID, text: nil,
+                        error: "Echos voice model not ready. Open Echos app first.")
+            postResultNotification()
+            return
+        }
+
+        if !bridge.loadModel(files) {
+            writeResult(to: resultURL, id: requestID, text: nil, error: "Failed to load voice model")
+            postResultNotification()
+            return
+        }
+
+        let text = bridge.transcribeFile(audioPath)
+        if let text = text, !text.isEmpty {
+            writeResult(to: resultURL, id: requestID, text: text, error: nil)
+        } else {
+            writeResult(to: resultURL, id: requestID, text: nil, error: "Transcription returned empty result")
+        }
+        postResultNotification()
     }
 
     /// Reply to a keyboard pre-flight ping by writing the matching ID to
@@ -158,66 +406,6 @@ import UIKit
             CFNotificationName(pongNotificationName as CFString),
             nil, nil, true
         )
-    }
-
-    private func processRequest() {
-        guard let containerURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupID
-        ) else {
-            NSLog("[KeyboardTranscriptionListener] Cannot access App Group container")
-            return
-        }
-
-        let keyboardDir = containerURL.appendingPathComponent("keyboard", isDirectory: true)
-        let requestURL = keyboardDir.appendingPathComponent("request.json")
-        let audioURL = keyboardDir.appendingPathComponent("audio.wav")
-        let resultURL = keyboardDir.appendingPathComponent("result.json")
-
-        guard FileManager.default.fileExists(atPath: requestURL.path),
-              let requestData = try? Data(contentsOf: requestURL),
-              let request = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any],
-              let requestID = request["id"] as? String,
-              let status = request["status"] as? String,
-              status == "pending" else {
-            return
-        }
-
-        guard FileManager.default.fileExists(atPath: audioURL.path) else {
-            writeResult(to: resultURL, id: requestID, text: nil, error: "No audio file found")
-            postResultNotification()
-            return
-        }
-
-        // The recording holds the user's voice — never leave it in the shared
-        // App Group container once we've handled the request. `defer` covers
-        // every return path below (model-not-ready, load failure, success).
-        defer { try? FileManager.default.removeItem(at: audioURL) }
-
-        NSLog("[KeyboardTranscriptionListener] Processing request: %@", requestID)
-
-        let bridge = SherpaBridge.shared()
-        guard let files = resolveModelFiles(requestedLanguage: request["language"] as? String) else {
-            writeResult(to: resultURL, id: requestID, text: nil,
-                        error: "Echos voice model not ready. Open Echos app first.")
-            postResultNotification()
-            return
-        }
-
-        if !bridge.loadModel(files) {
-            writeResult(to: resultURL, id: requestID, text: nil, error: "Failed to load voice model")
-            postResultNotification()
-            return
-        }
-
-        let text = bridge.transcribeFile(audioURL.path)
-        if let text = text, !text.isEmpty {
-            writeResult(to: resultURL, id: requestID, text: text, error: nil)
-        } else {
-            writeResult(to: resultURL, id: requestID, text: nil, error: "Transcription returned empty result")
-        }
-
-        try? FileManager.default.removeItem(at: requestURL)
-        postResultNotification()
     }
 
     // MARK: - Model Resolution

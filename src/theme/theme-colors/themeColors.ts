@@ -47,20 +47,20 @@ export interface AquaColors {
 }
 
 export const lightColors: AquaColors = {
-  textPrimary: AquaPrimitiveColors.gray1000,
-  textSecondary: AquaPrimitiveColors.gray750,
-  textTertiary: AquaPrimitiveColors.gray500,
+  textPrimary: AquaPrimitiveColors.metal950,
+  textSecondary: AquaPrimitiveColors.metal750,
+  textTertiary: AquaPrimitiveColors.metal500,
   textInverse: AquaPrimitiveColors.white,
 
   surfacePrimary: AquaPrimitiveColors.white,
-  surfaceBorderPrimary: AquaPrimitiveColors.gray50,
-  surfaceSecondary: AquaPrimitiveColors.gray50,
-  surfaceBorderSecondary: AquaPrimitiveColors.gray100,
-  surfaceTertiary: AquaPrimitiveColors.gray100,
-  surfaceInverse: AquaPrimitiveColors.gray50,
-  surfaceBackground: AquaPrimitiveColors.gray50,
-  surfaceSelected: AquaPrimitiveColors.neonBlue8,
-  surfaceBorderSelected: AquaPrimitiveColors.neonBlue400,
+  surfaceBorderPrimary: AquaPrimitiveColors.metal100,
+  surfaceSecondary: AquaPrimitiveColors.metal200,
+  surfaceBorderSecondary: AquaPrimitiveColors.metal300,
+  surfaceTertiary: AquaPrimitiveColors.metal300,
+  surfaceInverse: AquaPrimitiveColors.metal950,
+  surfaceBackground: AquaPrimitiveColors.metal50,
+  surfaceSelected: AquaPrimitiveColors.neonBlue400Transparent8,
+  surfaceBorderSelected: AquaPrimitiveColors.neonBlue500,
 
   glassSurface: AquaPrimitiveColors.glassSurfaceLight,
   glassSurfaceSecondary: AquaPrimitiveColors.glassSurfaceSecondaryLight,
@@ -70,43 +70,43 @@ export const lightColors: AquaColors = {
 
   accentBrand: AquaPrimitiveColors.neonBlue500,
   accentBrandTransparent: AquaPrimitiveColors.neonBlue16,
-  accentSuccess: AquaPrimitiveColors.green500,
-  accentSuccessTransparent: AquaPrimitiveColors.green16,
-  accentWarning: AquaPrimitiveColors.amber500,
-  accentWarningTransparent: AquaPrimitiveColors.amber16,
+  accentSuccess: AquaPrimitiveColors.forestGreen500,
+  accentSuccessTransparent: AquaPrimitiveColors.forestGreen24,
+  accentWarning: AquaPrimitiveColors.harvestGold500,
+  accentWarningTransparent: AquaPrimitiveColors.harvestGold16,
   accentDanger: AquaPrimitiveColors.scarlet500,
   accentDangerTransparent: AquaPrimitiveColors.scarlet16,
 
-  chipSuccessBackgroundColor: AquaPrimitiveColors.green16,
+  chipSuccessBackgroundColor: AquaPrimitiveColors.forestGreen24,
   chipErrorBackgroundColor: AquaPrimitiveColors.scarlet16,
-  chipSuccessForegroundColor: AquaPrimitiveColors.green500,
+  chipSuccessForegroundColor: AquaPrimitiveColors.forestGreen500,
   chipErrorForegroundColor: AquaPrimitiveColors.scarlet500,
 
   ripple: AquaPrimitiveColors.rippleLight,
   rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
 
   buttonPrimaryBackgroundFlat: AquaPrimitiveColors.neonBlue400,
-  buttonUtilityBackground: AquaPrimitiveColors.gray950,
+  buttonUtilityBackground: AquaPrimitiveColors.metal950,
   buttonFocusRing: AquaPrimitiveColors.neonBlue400,
 
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
 };
 
-// In dark mode, buttonUtilityBackground uses gray850 instead of gray950 so
-// the utility button stays visible against surfacePrimary (also gray950).
+// In dark mode, buttonUtilityBackground uses metal850 instead of metal950 so
+// the utility button stays visible against surfacePrimary (also metal950).
 export const darkColors: AquaColors = {
-  textPrimary: AquaPrimitiveColors.gray50,
-  textSecondary: AquaPrimitiveColors.gray500,
-  textTertiary: AquaPrimitiveColors.gray750,
-  textInverse: AquaPrimitiveColors.gray950,
+  textPrimary: AquaPrimitiveColors.metal50,
+  textSecondary: AquaPrimitiveColors.metal400,
+  textTertiary: AquaPrimitiveColors.metal500,
+  textInverse: AquaPrimitiveColors.metal950,
 
-  surfacePrimary: AquaPrimitiveColors.gray950,
-  surfaceBorderPrimary: AquaPrimitiveColors.gray900,
-  surfaceSecondary: AquaPrimitiveColors.gray900,
-  surfaceBorderSecondary: AquaPrimitiveColors.gray850,
-  surfaceTertiary: AquaPrimitiveColors.gray850,
-  surfaceInverse: AquaPrimitiveColors.gray50,
-  surfaceBackground: AquaPrimitiveColors.gray1000,
+  surfacePrimary: AquaPrimitiveColors.metal950,
+  surfaceBorderPrimary: AquaPrimitiveColors.metal900,
+  surfaceSecondary: AquaPrimitiveColors.metal900,
+  surfaceBorderSecondary: AquaPrimitiveColors.metal850,
+  surfaceTertiary: AquaPrimitiveColors.metal850,
+  surfaceInverse: AquaPrimitiveColors.white,
+  surfaceBackground: AquaPrimitiveColors.metal1000,
   surfaceSelected: AquaPrimitiveColors.neonBlue8,
   surfaceBorderSelected: AquaPrimitiveColors.neonBlue800,
 
@@ -116,25 +116,25 @@ export const darkColors: AquaColors = {
   glassInverse: AquaPrimitiveColors.glassInverseDark,
   glassBackground: AquaPrimitiveColors.glassBackgroundDark,
 
-  accentBrand: AquaPrimitiveColors.neonBlue500,
+  accentBrand: AquaPrimitiveColors.neonBlue400,
   accentBrandTransparent: AquaPrimitiveColors.neonBlue16,
-  accentSuccess: AquaPrimitiveColors.green500,
-  accentSuccessTransparent: AquaPrimitiveColors.green16,
-  accentWarning: AquaPrimitiveColors.amber500,
-  accentWarningTransparent: AquaPrimitiveColors.amber16,
+  accentSuccess: AquaPrimitiveColors.forestGreen500,
+  accentSuccessTransparent: AquaPrimitiveColors.forestGreen24,
+  accentWarning: AquaPrimitiveColors.harvestGold500,
+  accentWarningTransparent: AquaPrimitiveColors.harvestGold16,
   accentDanger: AquaPrimitiveColors.scarlet500,
   accentDangerTransparent: AquaPrimitiveColors.scarlet16,
 
-  chipSuccessBackgroundColor: AquaPrimitiveColors.green16,
+  chipSuccessBackgroundColor: AquaPrimitiveColors.forestGreen24,
   chipErrorBackgroundColor: AquaPrimitiveColors.scarlet16,
-  chipSuccessForegroundColor: AquaPrimitiveColors.green500,
+  chipSuccessForegroundColor: AquaPrimitiveColors.forestGreen500,
   chipErrorForegroundColor: AquaPrimitiveColors.scarlet500,
 
   ripple: AquaPrimitiveColors.rippleDark,
   rippleOnPrimary: AquaPrimitiveColors.rippleOnPrimary,
 
   buttonPrimaryBackgroundFlat: AquaPrimitiveColors.neonBlue400,
-  buttonUtilityBackground: AquaPrimitiveColors.gray850,
+  buttonUtilityBackground: AquaPrimitiveColors.metal850,
   buttonFocusRing: AquaPrimitiveColors.neonBlue400,
 
   systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,

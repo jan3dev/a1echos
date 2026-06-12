@@ -7,8 +7,11 @@ class EchosKeyboardViewController: UIInputViewController {
 
     private var keyboardView: KeyboardView!
     private var ipcClient: IPCClient!
-    private var audioRecorder: AudioRecorder!
     private var doubleSpacePeriod = DoubleSpacePeriod()
+    /// Polls the level the main app publishes while recording (capture lives in
+    /// the app — iOS forbids extensions from recording) and drives the top-bar
+    /// waveform off it.
+    private var meterTimer: Timer?
     private let recapitalize = RecapitalizeEngine()
     private let suggestionEngine = SuggestionEngine()
     private var settings = KeyboardSettings.load()
@@ -27,7 +30,6 @@ class EchosKeyboardViewController: UIInputViewController {
         super.viewDidLoad()
 
         ipcClient = IPCClient()
-        audioRecorder = AudioRecorder()
         suggestionEngine.resolveLanguage()
 
         keyboardView = KeyboardView()
@@ -61,6 +63,7 @@ class EchosKeyboardViewController: UIInputViewController {
         // Listen for transcription results from the main app
         ipcClient.onTranscriptionResult = { [weak self] text in
             DispatchQueue.main.async {
+                self?.stopMetering()
                 self?.textDocumentProxy.insertText(text)
                 self?.keyboardView.setMicState(.idle)
             }
@@ -69,6 +72,7 @@ class EchosKeyboardViewController: UIInputViewController {
         ipcClient.onTranscriptionError = { [weak self] error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
+                self.stopMetering()
                 // Timeout = main app went away (force-killed, jetsamed)
                 // mid-recording. Show the same "open Echos" toast the
                 // pre-flight ping uses so the user gets a consistent
@@ -84,10 +88,6 @@ class EchosKeyboardViewController: UIInputViewController {
             }
         }
 
-        // Drive the top-bar waveform from the recorder's metering loop.
-        audioRecorder.onAudioLevelChange = { [weak self] level in
-            self?.keyboardView.setAudioLevel(Double(level))
-        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -589,8 +589,11 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// immediately and avoid wasting recording time.
     func keyboardViewDidToggleRecord(_ view: KeyboardView) {
         if isCurrentlyRecording {
+            // Hand off to the main app to stop + transcribe. The result (or a
+            // timeout) flows back through ipcClient's result/error callbacks.
             view.setMicState(.transcribing)
-            audioRecorder.stopRecording()
+            stopMetering()
+            ipcClient.requestRecordStop()
             return
         }
 
@@ -608,23 +611,34 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     private func beginRecording() {
         keyboardView.setMicState(.recording)
-        audioRecorder.startRecording { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let audioURL):
-                    self?.keyboardView.setMicState(.transcribing)
-                    self?.ipcClient.requestTranscription(audioFileURL: audioURL)
-                case .failure(let error):
-                    self?.keyboardView.showMicError(error.localizedDescription)
-                    self?.keyboardView.setMicState(.idle)
-                }
+        startMetering()
+        ipcClient.requestRecordStart()
+    }
+
+    /// Polls the app-published input level at display rate and feeds the
+    /// waveform. The waveform's own smoothing absorbs the polling cadence, and a
+    /// nil read (app hasn't written yet) simply leaves the last level in place.
+    private func startMetering() {
+        stopMetering()
+        keyboardView.setAudioLevel(0)
+        meterTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.0 / 30.0, repeats: true
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            if let level = self.ipcClient.readMeterLevel() {
+                self.keyboardView.setAudioLevel(level)
             }
         }
     }
 
-    /// Tracks whether the recorder is currently capturing. The view's mic
-    /// state is the source of truth — `AudioRecorder` doesn't expose its
-    /// internal AVAudioRecorder state publicly.
+    private func stopMetering() {
+        meterTimer?.invalidate()
+        meterTimer = nil
+    }
+
+    /// Tracks whether a recording is in progress. The view's mic state is the
+    /// source of truth — recording itself happens in the main app, so there's
+    /// no local recorder to query.
     private var isCurrentlyRecording: Bool {
         keyboardView.currentMicState == .recording
     }
