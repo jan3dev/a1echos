@@ -98,7 +98,7 @@ final class KeyboardTopBar: UIView {
         addSubview(suggestionStrip)
 
         NSLayoutConstraint.activate([
-            logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             logoView.centerYAnchor.constraint(equalTo: centerYAnchor),
             logoView.widthAnchor.constraint(equalToConstant: 18),
             logoView.heightAnchor.constraint(equalToConstant: 24),

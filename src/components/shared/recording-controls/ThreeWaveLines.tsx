@@ -74,36 +74,66 @@ const BASE_AMPLITUDE_RANGE = BASE_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const RECORDING_AMPLITUDE_RANGE = RECORDING_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const POINTS_MINUS_ONE = POINTS - 1;
 const VOICE_THRESHOLD = 0.38;
-const WAVE_OPACITY = 0.85;
+const WAVE_OPACITY = 0.8;
 
 const MASK_OPAQUE = "rgb(255, 255, 255)";
 const MASK_CLEAR = "rgba(255, 255, 255, 0)";
 
-const buildAlphaMaskColors = (alphas: number[]): string[] =>
-  alphas.map((a) => (a === 1 ? MASK_OPAQUE : MASK_CLEAR));
+// Vertical progressive (graduated) layer blur per Figma. Each wave's blur
+// ramps from 0 to END_BLUR along a near-vertical axis. Skia has no variable
+// blur, so we stack BLUR_LAYERS stroked copies of the path with increasing
+// BlurMask, each revealed only inside its band by an alpha gradient along the
+// axis. LinearGradient clamps beyond its endpoints, matching Figma's clamp.
+const BLUR_LAYERS = 4;
+const END_BLUR = 5;
 
-// Per-wave alternation pattern: where the sharp stroke pass is opaque
-// (`sharpVisible[i] = 1`) the blurred pass is transparent and vice-versa.
-// Wave 1 is inverted so the three lines never soften at the same x.
-interface WaveGradient {
-  positions: number[];
-  sharpVisible: number[];
+interface BlurAxis {
+  // Fractions of the element box. Blur is 0 at `start`, END_BLUR at `end`.
+  start: { x: number; y: number };
+  end: { x: number; y: number };
 }
 
-const WAVE_GRADIENTS: WaveGradient[] = [
-  {
-    positions: [0, 0.18, 0.25, 0.4, 0.55, 0.75, 0.85, 1.0],
-    sharpVisible: [1, 1, 0, 0, 1, 1, 0, 0],
-  },
-  {
-    positions: [0, 0.2, 0.3, 0.5, 0.62, 0.78, 0.85, 1.0],
-    sharpVisible: [0, 0, 1, 1, 0, 0, 1, 1],
-  },
-  {
-    positions: [0, 0.32, 0.45, 0.58, 0.65, 0.72, 0.8, 0.92],
-    sharpVisible: [1, 1, 0, 0, 1, 1, 0, 0],
-  },
+const WAVE_BLUR_AXES: BlurAxis[] = [
+  { start: { x: 0.3516, y: 1.0133 }, end: { x: 0.3527, y: 0.5067 } },
+  { start: { x: 0.5, y: 0.0 }, end: { x: 0.5, y: 1.0 } },
+  { start: { x: 0.5, y: 0.0 }, end: { x: 0.5, y: 1.0 } },
 ];
+
+interface LayerSpec {
+  blur: number;
+  positions: number[];
+  colors: string[];
+}
+
+const buildLayerSpecs = (n: number, endBlur: number): LayerSpec[] => {
+  const specs: LayerSpec[] = [];
+  const f = 1 / (2 * (n - 1));
+  for (let k = 0; k < n; k++) {
+    const blur = (endBlur * k) / (n - 1);
+    const tLo = (2 * k - 1) / (2 * (n - 1));
+    const tHi = (2 * k + 1) / (2 * (n - 1));
+    if (k === 0) {
+      specs.push({
+        blur,
+        positions: [0, tHi, Math.min(1, tHi + f)],
+        colors: [MASK_OPAQUE, MASK_OPAQUE, MASK_CLEAR],
+      });
+    } else if (k === n - 1) {
+      specs.push({
+        blur,
+        positions: [Math.max(0, tLo - f), tLo, 1],
+        colors: [MASK_CLEAR, MASK_OPAQUE, MASK_OPAQUE],
+      });
+    } else {
+      specs.push({
+        blur,
+        positions: [tLo - f, tLo, tHi, tHi + f],
+        colors: [MASK_CLEAR, MASK_OPAQUE, MASK_OPAQUE, MASK_CLEAR],
+      });
+    }
+  }
+  return specs;
+};
 
 const useAnimatedWave = (
   waveIndex: number,
@@ -292,13 +322,10 @@ const useAnimatedWave = (
 interface MaskedWaveProps {
   path: ReturnType<typeof usePathValue>;
   strokeWidth: number;
-  sharpMask: string[];
-  blurredMask: string[];
-  positions: number[];
+  layerSpecs: LayerSpec[];
+  blurAxis: { value: { sx: number; sy: number; ex: number; ey: number } };
   containerWidth: { value: number };
   height: number;
-  gradientStart: { x: number; y: number };
-  gradientEnd: { value: { x: number; y: number } };
   colorGradientStart: { x: number; y: number };
   colorGradientEnd: { x: number; y: number };
 }
@@ -306,56 +333,54 @@ interface MaskedWaveProps {
 const MaskedWave = ({
   path,
   strokeWidth,
-  sharpMask,
-  blurredMask,
-  positions,
+  layerSpecs,
+  blurAxis,
   containerWidth,
   height,
-  gradientStart,
-  gradientEnd,
   colorGradientStart,
   colorGradientEnd,
 }: MaskedWaveProps) => {
-  const renderStrokedPath = (blurred: boolean) => (
-    <Path
-      path={path}
-      style="stroke"
-      strokeWidth={strokeWidth}
-      strokeCap="round"
-      strokeJoin="round"
-    >
-      <LinearGradient
-        start={colorGradientStart}
-        end={colorGradientEnd}
-        colors={recordingGradient.colors}
-        positions={recordingGradient.locations}
-      />
-      {blurred && <BlurMask blur={2.5} style="normal" />}
-    </Path>
+  const maskStart = useDerivedValue(() =>
+    vec(blurAxis.value.sx, blurAxis.value.sy),
   );
-
-  const renderMask = (maskColors: string[], blurred: boolean) => (
-    <Mask
-      mode="alpha"
-      mask={
-        <Rect x={0} y={0} width={containerWidth} height={height}>
-          <LinearGradient
-            start={gradientStart}
-            end={gradientEnd}
-            colors={maskColors}
-            positions={positions}
-          />
-        </Rect>
-      }
-    >
-      {renderStrokedPath(blurred)}
-    </Mask>
+  const maskEnd = useDerivedValue(() =>
+    vec(blurAxis.value.ex, blurAxis.value.ey),
   );
 
   return (
     <Group opacity={WAVE_OPACITY}>
-      {renderMask(sharpMask, false)}
-      {renderMask(blurredMask, true)}
+      {layerSpecs.map((spec, k) => (
+        <Mask
+          key={k}
+          mode="alpha"
+          mask={
+            <Rect x={0} y={0} width={containerWidth} height={height}>
+              <LinearGradient
+                start={maskStart}
+                end={maskEnd}
+                colors={spec.colors}
+                positions={spec.positions}
+              />
+            </Rect>
+          }
+        >
+          <Path
+            path={path}
+            style="stroke"
+            strokeWidth={strokeWidth}
+            strokeCap="round"
+            strokeJoin="round"
+          >
+            <LinearGradient
+              start={colorGradientStart}
+              end={colorGradientEnd}
+              colors={recordingGradient.colors}
+              positions={recordingGradient.locations}
+            />
+            {spec.blur > 0 && <BlurMask blur={spec.blur} style="normal" />}
+          </Path>
+        </Mask>
+      ))}
     </Group>
   );
 };
@@ -403,45 +428,36 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
 
   const centerY = height / 2;
 
-  // Per-wave horizontal alpha-mask color arrays: where the sharp pass
-  // is opaque the blurred pass is transparent (and vice versa). Built
-  // once per visibility pattern so the per-frame render stays
-  // allocation-free.
-  const wave0SharpMask = useMemo(
-    () => buildAlphaMaskColors(WAVE_GRADIENTS[0].sharpVisible),
-    [],
-  );
-  const wave0BlurredMask = useMemo(
-    () =>
-      buildAlphaMaskColors(WAVE_GRADIENTS[0].sharpVisible.map((a) => 1 - a)),
-    [],
-  );
-  const wave1SharpMask = useMemo(
-    () => buildAlphaMaskColors(WAVE_GRADIENTS[1].sharpVisible),
-    [],
-  );
-  const wave1BlurredMask = useMemo(
-    () =>
-      buildAlphaMaskColors(WAVE_GRADIENTS[1].sharpVisible.map((a) => 1 - a)),
-    [],
-  );
-  const wave2SharpMask = useMemo(
-    () => buildAlphaMaskColors(WAVE_GRADIENTS[2].sharpVisible),
-    [],
-  );
-  const wave2BlurredMask = useMemo(
-    () =>
-      buildAlphaMaskColors(WAVE_GRADIENTS[2].sharpVisible.map((a) => 1 - a)),
-    [],
-  );
+  // Blur-band mask stops live in normalized axis space, so the spec set is
+  // shared across all three waves and built once.
+  const layerSpecs = useMemo(() => buildLayerSpecs(BLUR_LAYERS, END_BLUR), []);
 
-  // Horizontal mask gradient endpoints follow the canvas width so the
-  // alternation pattern scales with the container.
-  const gradientStart = useMemo(() => vec(0, 0), []);
-  const gradientEnd = useDerivedValue(() => vec(containerWidth.value, 0));
-  // Vertical color gradient runs top-to-bottom across the canvas, so
-  // every wave shares the purple → blue → peach palette regardless of
-  // its individual vertical offset.
+  // Per-wave blur axis in pixels: x follows the canvas width, y is a fixed
+  // fraction of the height. Blur ramps 0 → END_BLUR from `start` to `end`.
+  const wave0Axis = useDerivedValue(() => ({
+    sx: WAVE_BLUR_AXES[0].start.x * containerWidth.value,
+    sy: WAVE_BLUR_AXES[0].start.y * height,
+    ex: WAVE_BLUR_AXES[0].end.x * containerWidth.value,
+    ey: WAVE_BLUR_AXES[0].end.y * height,
+  }));
+  const wave1Axis = useDerivedValue(() => ({
+    sx: WAVE_BLUR_AXES[1].start.x * containerWidth.value,
+    sy: WAVE_BLUR_AXES[1].start.y * height,
+    ex: WAVE_BLUR_AXES[1].end.x * containerWidth.value,
+    ey: WAVE_BLUR_AXES[1].end.y * height,
+  }));
+  const wave2Axis = useDerivedValue(() => ({
+    sx: WAVE_BLUR_AXES[2].start.x * containerWidth.value,
+    sy: WAVE_BLUR_AXES[2].start.y * height,
+    ex: WAVE_BLUR_AXES[2].end.x * containerWidth.value,
+    ey: WAVE_BLUR_AXES[2].end.y * height,
+  }));
+
+  // Vertical color gradient runs top-to-bottom across the full canvas, so
+  // the wave band traverses the whole palette: purple at the top, blue
+  // through the middle, and the orange stop (offset 1) reaching the bottom
+  // crest. Mapping to `height` (rather than a multiple of it) keeps the
+  // orange on-screen so the lower waves pick up its warmth.
   const colorGradientStart = useMemo(() => vec(0, 0), []);
   const colorGradientEnd = useMemo(() => vec(0, height), [height]);
 
@@ -488,36 +504,18 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
     >
       <Canvas style={styles.canvas}>
         {[
-          {
-            wave: wave0,
-            sharp: wave0SharpMask,
-            blurred: wave0BlurredMask,
-            idx: 0,
-          },
-          {
-            wave: wave1,
-            sharp: wave1SharpMask,
-            blurred: wave1BlurredMask,
-            idx: 1,
-          },
-          {
-            wave: wave2,
-            sharp: wave2SharpMask,
-            blurred: wave2BlurredMask,
-            idx: 2,
-          },
-        ].map(({ wave, sharp, blurred, idx }) => (
+          { wave: wave0, blurAxis: wave0Axis, idx: 0 },
+          { wave: wave1, blurAxis: wave1Axis, idx: 1 },
+          { wave: wave2, blurAxis: wave2Axis, idx: 2 },
+        ].map(({ wave, blurAxis, idx }) => (
           <MaskedWave
             key={idx}
             path={wave.path}
             strokeWidth={wave.strokeWidth}
-            sharpMask={sharp}
-            blurredMask={blurred}
-            positions={WAVE_GRADIENTS[idx].positions}
+            layerSpecs={layerSpecs}
+            blurAxis={blurAxis}
             containerWidth={containerWidth}
             height={height}
-            gradientStart={gradientStart}
-            gradientEnd={gradientEnd}
             colorGradientStart={colorGradientStart}
             colorGradientEnd={colorGradientEnd}
           />

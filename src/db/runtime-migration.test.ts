@@ -353,6 +353,69 @@ describe("runtime-migration", () => {
       expect(mockDb.insert).not.toHaveBeenCalled();
     });
 
+    it("completes migration when legacy sessions are undecryptable (bad auth tag)", async () => {
+      mockTxChain.get.mockImplementationOnce(async () => null);
+      // Encrypted-with-a-lost-key blob: decrypt throws, the plaintext fallback
+      // is non-JSON ciphertext, and JSON.parse would choke on it.
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
+        "d34db33f:undecryptable-cipher-text",
+      );
+      const txFile = { exists: false };
+      (File as unknown as jest.Mock).mockImplementationOnce(() => txFile);
+
+      const {
+        encryptionService,
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+      } = require("@/services/encryption-service/EncryptionService");
+      (encryptionService.decrypt as jest.Mock).mockImplementationOnce(
+        async () => {
+          throw new Error("Decryption failed: Bad auth tag exception");
+        },
+      );
+
+      await expect(runLegacyMigrationIfNeeded()).resolves.toBeUndefined();
+
+      // The undecryptable source is skipped (no session rows inserted) but the
+      // migration still completes and bumps schema_version.
+      expect(mockDb.insert).toHaveBeenCalled();
+    });
+
+    it("completes migration when legacy transcriptions are undecryptable", async () => {
+      mockTxChain.get.mockImplementationOnce(async () => null);
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null) // no legacy sessions
+        .mockResolvedValueOnce(null); // no active session
+      const txFile = {
+        exists: true,
+        text: jest.fn(async () => "not-valid-json-ciphertext"),
+      };
+      (File as unknown as jest.Mock).mockImplementationOnce(() => txFile);
+
+      await expect(runLegacyMigrationIfNeeded()).resolves.toBeUndefined();
+
+      expect(mockDb.insert).toHaveBeenCalled();
+    });
+
+    it("skips a legacy sessions payload that isn't a JSON array", async () => {
+      mockTxChain.get.mockImplementationOnce(async () => null);
+      // Decryptable, valid JSON, but an object rather than an array.
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
+        JSON.stringify({ unexpected: "shape" }),
+      );
+      const txFile = { exists: false };
+      (File as unknown as jest.Mock).mockImplementationOnce(() => txFile);
+
+      await runLegacyMigrationIfNeeded();
+
+      // No session rows inserted, migration still completes.
+      const calls = (mockTxChain.values as jest.Mock).mock.calls;
+      const sessionInsert = calls.find(
+        (args) => Array.isArray(args[0]) && args[0].length > 0,
+      );
+      expect(sessionInsert).toBeUndefined();
+      expect(mockDb.insert).toHaveBeenCalled();
+    });
+
     it("runs audio-dir protection step on both platforms", async () => {
       setPlatform("ios");
       mockTxChain.get.mockImplementationOnce(async () => null);

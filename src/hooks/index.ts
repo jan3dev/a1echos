@@ -1,3 +1,4 @@
+export { useKeyboardHeight } from "./use-keyboard-height/useKeyboardHeight";
 export { useLocalization } from "./use-localization/useLocalization";
 export { useMicPermission } from "./use-mic-permission/useMicPermission";
 export { usePermissions } from "./use-permissions/usePermissions";

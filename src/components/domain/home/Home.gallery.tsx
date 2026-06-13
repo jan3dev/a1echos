@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Button as RNButton, StyleSheet, View } from "react-native";
+import { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 
 import {
   EmptyStateView,
@@ -92,30 +92,7 @@ export const EmptyState = () => {
   useSeedStore();
   return (
     <View style={styles.emptyStateStage}>
-      <EmptyStateView
-        message="Hit the record button to start transcribing"
-        shouldDisappear={false}
-      />
-    </View>
-  );
-};
-
-export const EmptyStateDisappearing = () => {
-  useSeedStore();
-  const [shouldDisappear, setShouldDisappear] = useState(false);
-  return (
-    <View style={styles.emptyStateStage}>
-      <View style={styles.triggerButton}>
-        <RNButton
-          title={shouldDisappear ? "Reset" : "Trigger disappear"}
-          onPress={() => setShouldDisappear((v) => !v)}
-        />
-      </View>
-      <EmptyStateView
-        message="Hit the record button to start transcribing"
-        shouldDisappear={shouldDisappear}
-        onDisappearComplete={() => console.log("Disappear complete")}
-      />
+      <EmptyStateView message="Tap the button to start transcribing" />
     </View>
   );
 };
@@ -146,10 +123,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     gap: 16,
   },
-  triggerButton: {
-    alignSelf: "stretch",
-    alignItems: "center",
-  },
   fillContainer: {
     flex: 1,
     alignItems: "center",
@@ -170,7 +143,6 @@ const gallery: GalleryEntry = {
       selfScrolling: true,
     },
     { name: "EmptyState", render: EmptyState },
-    { name: "EmptyStateDisappearing", render: EmptyStateDisappearing },
     { name: "IncognitoEmpty", render: IncognitoEmpty },
   ],
 };

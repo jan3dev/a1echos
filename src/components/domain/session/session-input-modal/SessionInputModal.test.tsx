@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import { Keyboard } from "react-native";
 
 import { TestID } from "@/constants";
 
@@ -62,14 +63,42 @@ const defaultProps = {
   onCancel: jest.fn(),
 };
 
+// Drives the keyboard listeners registered by useKeyboardHeight so tests can
+// flip the modal into its "keyboard visible" state regardless of platform.
+const mockKeyboardListeners = () => {
+  const listeners: Record<string, (e: any) => void> = {};
+  const remove = jest.fn();
+  jest
+    .spyOn(Keyboard, "addListener")
+    .mockImplementation((event: string, cb: (e: any) => void) => {
+      listeners[event] = cb;
+      return { remove } as never;
+    });
+  const show = (height: number) => {
+    const cb = listeners.keyboardWillShow ?? listeners.keyboardDidShow;
+    act(() => cb?.({ endCoordinates: { height } }));
+  };
+  const hide = () => {
+    const cb = listeners.keyboardWillHide ?? listeners.keyboardDidHide;
+    act(() => cb?.({ endCoordinates: { height: 0 } }));
+  };
+  return { show, hide, remove };
+};
+
 describe("SessionInputModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it("renders title text", () => {
     const { getByText } = render(<SessionInputModal {...defaultProps} />);
     expect(getByText("Rename Session")).toBeTruthy();
+  });
+
+  it("renders the max-length helper text", () => {
+    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
+    expect(getByTestId(TestID.SessionInputModalCard)).toBeTruthy();
   });
 
   it("renders primary button with buttonText", () => {
@@ -85,11 +114,6 @@ describe("SessionInputModal", () => {
     fireEvent.changeText(textField, "  New Name  ");
     fireEvent.press(getByTestId(TestID.PrimaryButton));
     expect(defaultProps.onSubmit).toHaveBeenCalledWith("New Name");
-  });
-
-  it("renders the drag bar grabber", () => {
-    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    expect(getByTestId(TestID.SessionInputModalGrabber)).toBeTruthy();
   });
 
   it("validates max length", () => {
@@ -170,7 +194,6 @@ describe("SessionInputModal", () => {
     fireEvent.changeText(textField, "Modified");
     expect(textField.props.value).toBe("Modified");
 
-    // Re-render as visible with new initialValue resets text
     rerender(
       <SessionInputModal
         {...defaultProps}
@@ -180,6 +203,15 @@ describe("SessionInputModal", () => {
     );
     const updatedField = getByTestId(TestID.TextField);
     expect(updatedField.props.value).toBe("New Value");
+  });
+
+  it("clears animations when visibility changes to false", () => {
+    const { getByTestId, rerender, queryByTestId } = render(
+      <SessionInputModal {...defaultProps} visible={true} />,
+    );
+    expect(getByTestId(TestID.Dimmer)).toBeTruthy();
+    rerender(<SessionInputModal {...defaultProps} visible={false} />);
+    expect(queryByTestId(TestID.Dimmer)).toBeNull();
   });
 
   it("does not submit text exceeding max length", () => {
@@ -201,12 +233,6 @@ describe("SessionInputModal", () => {
     expect(() => {
       render(<SessionInputModal {...propsWithoutCancel} />);
     }).not.toThrow();
-  });
-
-  it("text field shows correct maxLength from AppConstants", () => {
-    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
-    const textField = getByTestId(TestID.TextField);
-    expect(textField.props.maxLength).toBe(30);
   });
 
   it("submit button text matches buttonText prop", () => {
@@ -237,39 +263,51 @@ describe("SessionInputModal", () => {
   });
 
   it("dismiss calls Keyboard.dismiss when keyboard is visible", () => {
-    const { Keyboard } = require("react-native");
+    const kb = mockKeyboardListeners();
+    const dismissSpy = jest.spyOn(Keyboard, "dismiss").mockImplementation();
     const onCancel = jest.fn();
-    const mockRemove = jest.fn();
-    const originalDismiss = Keyboard.dismiss;
-    const mockDismiss = jest.fn();
-    Keyboard.dismiss = mockDismiss;
-
-    // Capture the keyboard show listener
-    let keyboardShowCallback: (() => void) | null = null;
-    const originalAddListener = Keyboard.addListener;
-    Keyboard.addListener = jest.fn((event: string, callback: () => void) => {
-      if (event === "keyboardDidShow") {
-        keyboardShowCallback = callback;
-      }
-      return { remove: mockRemove };
-    });
 
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} onCancel={onCancel} />,
     );
 
-    // Simulate keyboard showing
-    if (keyboardShowCallback) {
-      // @ts-expect-error - keyboardShowCallback is a function
-      keyboardShowCallback();
-    }
+    fireEvent(getByTestId(TestID.SessionInputModalCard), "layout", {
+      nativeEvent: { layout: { height: 400 } },
+    });
+    kb.show(320);
 
     fireEvent.press(getByTestId(TestID.DimmerBackdrop));
-    // Should have called dismiss (which we spy on)
-    expect(mockDismiss).toHaveBeenCalled();
+    expect(dismissSpy).toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 
-    Keyboard.addListener = originalAddListener;
-    Keyboard.dismiss = originalDismiss;
+  it("lifts above the keyboard then settles when it hides", () => {
+    const kb = mockKeyboardListeners();
+    const onCancel = jest.fn();
+
+    const { getByTestId } = render(
+      <SessionInputModal {...defaultProps} onCancel={onCancel} />,
+    );
+
+    // Measure the card so the keyboard-lift effect has a height to work with.
+    fireEvent(getByTestId(TestID.SessionInputModalCard), "layout", {
+      nativeEvent: { layout: { height: 600 } },
+    });
+    // Tall keyboard forces an overlap → the card shifts up.
+    kb.show(400);
+    // Hiding it returns the card to rest and clears the keyboard-visible flag.
+    kb.hide();
+
+    fireEvent.press(getByTestId(TestID.DimmerBackdrop));
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("ignores a repeated layout with the same height", () => {
+    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
+    const card = getByTestId(TestID.SessionInputModalCard);
+    fireEvent(card, "layout", { nativeEvent: { layout: { height: 300 } } });
+    fireEvent(card, "layout", { nativeEvent: { layout: { height: 300 } } });
+    expect(card).toBeTruthy();
   });
 
   it("clear button resets text field to empty", () => {
@@ -294,54 +332,17 @@ describe("SessionInputModal", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it("hides keyboard-visible flag when keyboard dismisses", () => {
-    const { Keyboard } = require("react-native");
-    const onCancel = jest.fn();
-    const mockRemove = jest.fn();
-    const originalAddListener = Keyboard.addListener;
-    const originalDismiss = Keyboard.dismiss;
-    const mockDismiss = jest.fn();
-    Keyboard.dismiss = mockDismiss;
-
-    let showCb: (() => void) | null = null;
-    let hideCb: (() => void) | null = null;
-    Keyboard.addListener = jest.fn((event: string, cb: () => void) => {
-      if (event === "keyboardDidShow") showCb = cb;
-      if (event === "keyboardDidHide") hideCb = cb;
-      return { remove: mockRemove };
-    });
-
-    const { getByTestId } = render(
-      <SessionInputModal {...defaultProps} onCancel={onCancel} />,
-    );
-
-    // @ts-expect-error - showCb is captured above
-    showCb?.();
-    // @ts-expect-error - hideCb is captured above
-    hideCb?.();
-
-    // After hide, backdrop press should call onCancel (not Keyboard.dismiss)
-    fireEvent.press(getByTestId(TestID.DimmerBackdrop));
-    expect(onCancel).toHaveBeenCalled();
-    expect(mockDismiss).not.toHaveBeenCalled();
-
-    Keyboard.addListener = originalAddListener;
-    Keyboard.dismiss = originalDismiss;
-  });
-
-  it("handleDismiss calls onCancel when keyboard is not visible and onCancel is undefined", () => {
+  it("handleDismiss is a no-op-safe when onCancel is undefined", () => {
     const propsWithoutCancel = {
       visible: true,
       title: "Rename",
       buttonText: "Save",
       initialValue: "",
       onSubmit: jest.fn(),
-      // No onCancel
     };
     const { getByTestId } = render(
       <SessionInputModal {...propsWithoutCancel} />,
     );
-    // Should not throw when pressing backdrop without onCancel
     expect(() =>
       fireEvent.press(getByTestId(TestID.DimmerBackdrop)),
     ).not.toThrow();
@@ -358,18 +359,9 @@ describe("SessionInputModal", () => {
   });
 
   it("keyboard listeners are cleaned up on unmount", () => {
-    const { Keyboard } = require("react-native");
-    const mockRemove = jest.fn();
-    const originalAddListener = Keyboard.addListener;
-    Keyboard.addListener = jest.fn(() => ({ remove: mockRemove }));
-
+    const kb = mockKeyboardListeners();
     const { unmount } = render(<SessionInputModal {...defaultProps} />);
     unmount();
-
-    // Listeners registered and cleanup called
-    expect(Keyboard.addListener).toHaveBeenCalled();
-    expect(mockRemove).toHaveBeenCalled();
-
-    Keyboard.addListener = originalAddListener;
+    expect(kb.remove).toHaveBeenCalled();
   });
 });

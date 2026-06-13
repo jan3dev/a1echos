@@ -2,24 +2,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
+  LayoutChangeEvent,
   Pressable,
   ScrollView,
   StyleSheet,
-  View,
   useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants, TestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useKeyboardHeight, useLocalization } from "@/hooks";
 import { getShadow, useTheme } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
 import { Dimmer } from "../../../ui/modal/Dimmer";
 import { Text } from "../../../ui/text/Text";
 import { TextField } from "../../../ui/textfield/TextField";
+
+// Minimum gap kept between the bottom of the modal and the top of the keyboard
+// before the centered card lifts off its resting position.
+const KEYBOARD_GAP = 16;
 
 interface SessionInputModalProps {
   visible: boolean;
@@ -42,39 +45,73 @@ export const SessionInputModal = ({
 }: SessionInputModalProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
-  const { height: screenHeight } = useWindowDimensions();
-  const { bottom: bottomInset } = useSafeAreaInsets();
+  const { width, height: screenHeight } = useWindowDimensions();
+  const { top: topInset } = useSafeAreaInsets();
   const [text, setText] = useState(initialValue);
+  const [modalHeight, setModalHeight] = useState(0);
+  const keyboardHeight = useKeyboardHeight();
   const keyboardVisibleRef = useRef(false);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
 
-  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+  const maxLength = AppConstants.SESSION_NAME_MAX_LENGTH || 50;
 
+  // Mirror keyboard visibility into a ref so the dismiss handler can read it
+  // without taking `keyboardHeight` as a dependency (and recreating itself).
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      keyboardVisibleRef.current = true;
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      keyboardVisibleRef.current = false;
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+    keyboardVisibleRef.current = keyboardHeight > 0;
+  }, [keyboardHeight]);
 
   useEffect(() => {
     if (visible) {
       setText(initialValue);
       Animated.spring(slideAnim, {
-        toValue: 0,
+        toValue: 1,
         useNativeDriver: true,
         tension: 65,
-        friction: 11,
+        friction: 8,
       }).start();
     } else {
-      slideAnim.setValue(screenHeight);
+      slideAnim.setValue(0);
+      keyboardOffset.setValue(0);
     }
-  }, [visible, initialValue, screenHeight, slideAnim]);
+  }, [visible, initialValue, slideAnim, keyboardOffset]);
+
+  // Keep the modal centered, lifting it just enough to preserve KEYBOARD_GAP
+  // above the keyboard when the centered position would otherwise overlap it.
+  useEffect(() => {
+    if (modalHeight === 0) return;
+    const center = screenHeight / 2;
+    const modalBottom = center + modalHeight / 2;
+    const keyboardTop = screenHeight - keyboardHeight;
+    let shift = 0;
+    if (keyboardHeight > 0) {
+      const overlap = modalBottom + KEYBOARD_GAP - keyboardTop;
+      if (overlap > 0) {
+        // Never lift the modal under the status bar / notch.
+        const minTop = KEYBOARD_GAP + topInset;
+        const maxShift = Math.max(0, center - modalHeight / 2 - minTop);
+        shift = Math.min(overlap, maxShift);
+      }
+    }
+    Animated.timing(keyboardOffset, {
+      toValue: -shift,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [keyboardHeight, modalHeight, screenHeight, topInset, keyboardOffset]);
+
+  const entranceTranslate = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [300, 0],
+  });
+  const translateY = Animated.add(entranceTranslate, keyboardOffset);
+  const opacity = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const modalWidth = width >= 768 ? 343 : width - 32;
 
   const handleDismiss = useCallback(() => {
     if (keyboardVisibleRef.current) {
@@ -84,11 +121,16 @@ export const SessionInputModal = ({
     onCancel?.();
   }, [onCancel]);
 
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    const height = e.nativeEvent.layout.height;
+    setModalHeight((prev) => (prev === height ? prev : height));
+  }, []);
+
   const handleSubmit = () => {
     const trimmed = text.trim();
     if (
       (trimmed.length > 0 || initialValue.length > 0) &&
-      trimmed.length <= (AppConstants.SESSION_NAME_MAX_LENGTH || 50)
+      trimmed.length <= maxLength
     ) {
       onSubmit(trimmed);
     }
@@ -96,116 +138,98 @@ export const SessionInputModal = ({
 
   return (
     <Dimmer visible={visible} onDismiss={handleDismiss}>
-      <KeyboardAvoidingView
-        behavior="padding"
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -46}
-      >
-        <View style={styles.overlay}>
-          <Animated.View
-            style={[
-              styles.container,
-              getShadow("modal"),
-              {
-                backgroundColor: theme.colors.surfaceBackground,
-                borderColor: theme.colors.surfaceBorderPrimary,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
+      <View style={styles.overlay}>
+        <Animated.View
+          testID={TestID.SessionInputModalCard}
+          onLayout={handleLayout}
+          style={[
+            styles.container,
+            getShadow("modal"),
+            {
+              width: modalWidth,
+              backgroundColor: theme.colors.surfaceBackground,
+              transform: [{ translateY }],
+              opacity,
+            },
+          ]}
+        >
+          <ScrollView
+            style={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
           >
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={{ paddingBottom: bottomInset + 32 }}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              bounces={false}
+            <Pressable
+              testID={TestID.SessionInputModal}
+              onPress={(e) => e.stopPropagation()}
+              style={styles.card}
             >
-              <Pressable
-                testID={TestID.SessionInputModal}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View style={styles.grabberSlot}>
-                  <View
-                    testID={TestID.SessionInputModalGrabber}
-                    style={[
-                      styles.grabber,
-                      { backgroundColor: theme.colors.systemBackgroundColor },
-                    ]}
-                  />
-                </View>
+              <View style={styles.header}>
+                <Text
+                  variant="subtitle"
+                  weight="semibold"
+                  color={theme.colors.textPrimary}
+                >
+                  {title}
+                </Text>
+                <Text
+                  variant="body1"
+                  weight="medium"
+                  color={theme.colors.textSecondary}
+                  style={styles.helper}
+                >
+                  {loc.sessionNameMaxLengthHelper}
+                </Text>
+              </View>
 
-                <View style={styles.content}>
-                  <Text
-                    variant="subtitle"
-                    weight="semibold"
-                    color={theme.colors.textPrimary}
-                    align="center"
-                    style={styles.title}
-                  >
-                    {title}
-                  </Text>
+              <TextField
+                label={loc.sessionNameLabel}
+                value={text}
+                onChangeText={setText}
+                variant="brand"
+                maxLength={maxLength}
+                showClearIcon
+                onClear={() => setText("")}
+                forceFocus={visible}
+                debounceTime={0}
+              />
 
-                  <TextField
-                    label={loc.sessionNameLabel}
-                    value={text}
-                    onChangeText={setText}
-                    variant="brand"
-                    maxLength={AppConstants.SESSION_NAME_MAX_LENGTH || 50}
-                    assistiveText={loc.sessionNameMaxLengthHelper}
-                    showClearIcon
-                    onClear={() => setText("")}
-                    forceFocus={visible}
-                    debounceTime={0}
-                  />
+              <View style={styles.spacer} />
 
-                  <View style={styles.spacer} />
-
-                  <Button.primary text={buttonText} onPress={handleSubmit} />
-                </View>
-              </Pressable>
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </KeyboardAvoidingView>
+              <Button.primary text={buttonText} onPress={handleSubmit} />
+            </Pressable>
+          </ScrollView>
+        </Animated.View>
+      </View>
     </Dimmer>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
-    alignItems: "stretch",
+    justifyContent: "center",
+    alignItems: "center",
   },
   container: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
+    borderRadius: 16,
     maxHeight: "100%",
+    overflow: "hidden",
   },
   scroll: {
     flexGrow: 0,
   },
-  grabberSlot: {
-    paddingTop: 8,
-    paddingBottom: 32,
-    alignItems: "center",
+  card: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
   },
-  grabber: {
-    width: 48,
-    height: 5,
-    borderRadius: 100,
+  header: {
+    marginBottom: 16,
   },
-  content: {
-    paddingHorizontal: 16,
-  },
-  title: {
-    marginBottom: 32,
+  helper: {
+    marginTop: 4,
   },
   spacer: {
-    height: 32,
+    height: 24,
   },
 });

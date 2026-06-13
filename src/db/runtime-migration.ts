@@ -54,6 +54,38 @@ async function tryDecrypt(cipherText: string): Promise<string> {
   }
 }
 
+/**
+ * Decrypt a legacy blob and parse it as a JSON array. Returns `[]` (and warns)
+ * when the payload can't be read — i.e. it's encrypted with a key we no longer
+ * have (`Bad auth tag`) so the plaintext fallback yields non-JSON ciphertext,
+ * or the JSON simply doesn't parse into an array. Such failures are
+ * deterministic (they won't recover on a later launch), so we skip the source
+ * and let the migration complete rather than aborting the whole transaction
+ * and retrying — and failing identically — on every boot forever.
+ */
+async function tryDecryptAndParseArray<T>(
+  cipherText: string,
+  label: string,
+): Promise<T[]> {
+  const plain = await tryDecrypt(cipherText);
+  try {
+    const parsed = JSON.parse(plain);
+    if (!Array.isArray(parsed)) {
+      logWarn(`Legacy ${label} payload was not a JSON array — skipping`, {
+        flag: FeatureFlag.storage,
+      });
+      return [];
+    }
+    return parsed as T[];
+  } catch (error) {
+    logWarn(
+      `Legacy ${label} unreadable (undecryptable or corrupt) — skipping: ${error}`,
+      { flag: FeatureFlag.storage },
+    );
+    return [];
+  }
+}
+
 async function getSchemaVersion(): Promise<number> {
   const row = await getDb()
     .select()
@@ -103,8 +135,10 @@ export async function runLegacyMigrationIfNeeded(): Promise<void> {
     await db.transaction(async (tx) => {
       // ---- Step 1: sessions ----
       if (hasLegacySessions) {
-        const plain = await tryDecrypt(hasLegacySessions);
-        const list = JSON.parse(plain) as SessionJSON[];
+        const list = await tryDecryptAndParseArray<SessionJSON>(
+          hasLegacySessions,
+          "sessions",
+        );
         const rows = list
           .map((json) => {
             try {
@@ -142,8 +176,10 @@ export async function runLegacyMigrationIfNeeded(): Promise<void> {
       if (txFile.exists) {
         const cipher = await txFile.text();
         if (cipher && cipher.trim() !== "") {
-          const plain = await tryDecrypt(cipher);
-          const list = JSON.parse(plain) as TranscriptionJSON[];
+          const list = await tryDecryptAndParseArray<TranscriptionJSON>(
+            cipher,
+            "transcriptions",
+          );
           const allRows = list
             .map((json) => {
               try {

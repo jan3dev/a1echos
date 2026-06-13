@@ -6,6 +6,7 @@ import { BackHandler, FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  AppBarBlurTarget,
   EmptyStateView,
   HomeAppBar,
   HomeContent,
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<FlatList<Session>>(null);
+  const blurTargetRef = useRef<View>(null);
 
   const sessions = useSessions();
   const incognitoSession = useIncognitoSession();
@@ -88,11 +90,9 @@ export default function HomeScreen() {
 
   const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
 
-  const [tooltipShouldDisappear, setTooltipShouldDisappear] = useState(false);
-
   // Incognito sessions live outside `sessions`; treat them as non-empty so the
-  // tooltip unmounts during the record→session-screen transition. In incognito
-  // mode, IncognitoEmptyState owns the empty-state messaging instead.
+  // empty-state label unmounts during the record→session-screen transition. In
+  // incognito mode, IncognitoEmptyState owns the empty-state messaging instead.
   const effectivelyEmpty =
     sessions.length === 0 && !incognitoSession && !isIncognitoMode;
 
@@ -115,10 +115,6 @@ export default function HomeScreen() {
     if (scrollRef.current) {
       scrollRef.current.scrollToOffset({ offset: 0, animated: true });
     }
-  }, []);
-
-  const handleTooltipDisappearComplete = useCallback(() => {
-    setTooltipShouldDisappear(false);
   }, []);
 
   const handleSessionLongPress = useCallback(
@@ -152,12 +148,6 @@ export default function HomeScreen() {
   useEffect(() => {
     handleRecordingStartRef.current = async () => {
       if (!(await ensureMicPermission())) return;
-
-      if (effectivelyEmpty) {
-        setTooltipShouldDisappear(true);
-        // wait for tooltip animation to finish (270ms)
-        await new Promise((resolve) => setTimeout(resolve, 270));
-      }
 
       try {
         const sessionId = await createSession(
@@ -194,12 +184,9 @@ export default function HomeScreen() {
           message: getErrorMessage(error),
           variant: "error",
         });
-      } finally {
-        setTooltipShouldDisappear(false);
       }
     };
   }, [
-    effectivelyEmpty,
     isIncognitoMode,
     loc,
     router,
@@ -360,27 +347,26 @@ export default function HomeScreen() {
         selectionMode={isSessionSelectionMode}
         selectionTitle={loc.selectedCount(selectedSessionIds.length)}
         onExitSelectionPressed={exitSessionSelection}
+        blurTarget={blurTargetRef}
       />
 
-      <HomeContent
-        selectionMode={isSessionSelectionMode}
-        selectedSessionIds={selectedSessionIdsSet}
-        onSessionLongPress={handleSessionLongPress}
-        onSessionTap={handleSessionTap}
-        onSelectionToggle={toggleSessionSelection}
-        onSessionMorePress={handleSessionMorePress}
-        scrollRef={scrollRef}
-      />
+      <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
+        <HomeContent
+          selectionMode={isSessionSelectionMode}
+          selectedSessionIds={selectedSessionIdsSet}
+          onSessionLongPress={handleSessionLongPress}
+          onSessionTap={handleSessionTap}
+          onSelectionToggle={toggleSessionSelection}
+          onSessionMorePress={handleSessionMorePress}
+          scrollRef={scrollRef}
+        />
+      </AppBarBlurTarget>
 
       {effectivelyEmpty && (
         <View
-          style={[styles.tooltipContainer, { bottom: insets.bottom + 112 }]}
+          style={[styles.emptyStateContainer, { bottom: insets.bottom + 120 }]}
         >
-          <EmptyStateView
-            message={loc.emptySessionsMessage}
-            shouldDisappear={tooltipShouldDisappear}
-            onDisappearComplete={handleTooltipDisappearComplete}
-          />
+          <EmptyStateView message={loc.emptySessionsMessage} />
         </View>
       )}
 
@@ -411,6 +397,7 @@ export default function HomeScreen() {
       <SubScreenNavbar
         visible={isSessionSelectionMode}
         actions={navbarActions}
+        blurTarget={blurTargetRef}
       />
 
       <Toast {...deleteToastState} />
@@ -420,7 +407,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  tooltipContainer: {
+  emptyStateContainer: {
     position: "absolute",
     left: 0,
     right: 0,

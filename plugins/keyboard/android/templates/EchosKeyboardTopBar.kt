@@ -68,7 +68,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         // would otherwise let host content bleed through here).
         setBackgroundColor(theme.keyboardBackground)
 
-        val paddingPx = dim("keyboard_top_bar_horizontal_padding", 12)
+        val paddingPx = dim("keyboard_top_bar_horizontal_padding", 8)
+        val logoLeftPaddingPx = dim("keyboard_top_bar_logo_left_padding", 16)
 
         // Three-wave visualizer spans the full width of the bar so it can
         // sit behind the logo and record button — the foreground row is
@@ -97,7 +98,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         foreground = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(paddingPx, 0, paddingPx, 0)
+            setPadding(logoLeftPaddingPx, 0, paddingPx, 0)
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
             )

@@ -46,7 +46,7 @@ export enum TestID {
   SessionShare = "session-share",
   SessionList = "session-list",
   SessionInputModal = "session-input-modal",
-  SessionInputModalGrabber = "session-input-modal-grabber",
+  SessionInputModalCard = "session-input-modal-card",
   SelectionMode = "selection-mode",
   EditMode = "edit-mode",
   RenameModal = "rename-modal",
