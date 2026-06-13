@@ -25,6 +25,14 @@ class EchosKeyboardViewController: UIInputViewController {
     /// user who tapped `123`/`ABC` to navigate within a URL/email/numbers field.
     /// Reset in `viewWillAppear` so a freshly-shown keyboard starts fresh.
     private var lastAppliedKeyboardType: UIKeyboardType?
+    /// Pending spell-check pass for the suggestion strip. The `UITextChecker`
+    /// lookup is debounced off the keystroke path so a fast burst of letters
+    /// doesn't block the main thread between taps (which reads as input lag).
+    private var suggestionRefreshWork: DispatchWorkItem?
+    /// Coalescing window for the suggestion spell-check. Shorter than the gap
+    /// between deliberate keystrokes, so a paused user sees fresh suggestions
+    /// promptly while a fast typist only pays for the spell-check once.
+    private static let suggestionDebounce: TimeInterval = 0.09
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -185,8 +193,11 @@ class EchosKeyboardViewController: UIInputViewController {
     /// Hides the strip (restoring the logo + record button) when there's no
     /// word, the field disallows suggestions, or the bar is busy recording.
     private func refreshSuggestions() {
+        // The cheap gating stays synchronous so the strip hides immediately and
+        // we never schedule a spell-check the field doesn't want.
         guard keyboardView.currentMicState == .idle,
               suggestionsAllowed(for: textDocumentProxy) else {
+            suggestionRefreshWork?.cancel()
             keyboardView.hideSuggestions()
             return
         }
@@ -194,15 +205,29 @@ class EchosKeyboardViewController: UIInputViewController {
         let after = textDocumentProxy.documentContextAfterInput ?? ""
         let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
         guard !word.isEmpty else {
+            suggestionRefreshWork?.cancel()
             keyboardView.hideSuggestions()
             return
         }
-        let result = suggestionEngine.suggestions(for: word, casing: currentCasing())
-        if result.candidates.isEmpty {
-            keyboardView.hideSuggestions()
-        } else {
-            keyboardView.showSuggestions(result.candidates)
+        // Debounce the expensive `UITextChecker` pass: cancel any pending lookup
+        // and reschedule, so a fast burst of keystrokes only spell-checks once,
+        // after the user pauses — the keystroke itself already committed via
+        // `insertText`, so this never delays the character appearing.
+        let casing = currentCasing()
+        suggestionRefreshWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            let result = self.suggestionEngine.suggestions(for: word, casing: casing)
+            if result.candidates.isEmpty {
+                self.keyboardView.hideSuggestions()
+            } else {
+                self.keyboardView.showSuggestions(result.candidates)
+            }
         }
+        suggestionRefreshWork = work
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + Self.suggestionDebounce, execute: work
+        )
     }
 
     /// Maps the live shift state to the casing suggestion candidates should

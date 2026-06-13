@@ -742,6 +742,9 @@ class EchosKeyboardView @JvmOverloads constructor(
         for (i in colWeights.indices) {
             colLefts[i + 1] = colLefts[i] + colWeights[i] * colUnit + gap
         }
+        // Defensive clamp: a cells/weights pairing left mismatched by a layout
+        // switch must never index past `colLefts` and crash `onDraw`.
+        val maxCol = colLefts.size - 1
         val rowTops = FloatArray(rowHeights.size + 1)
         rowTops[0] = keyVGap / 2f
         for (i in rowHeights.indices) {
@@ -749,8 +752,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         }
 
         for (cell in cells) {
-            val left = colLefts[cell.col]
-            val right = colLefts[cell.col + cell.colSpan] - gap
+            val left = colLefts[cell.col.coerceAtMost(maxCol)]
+            val right = colLefts[(cell.col + cell.colSpan).coerceAtMost(maxCol)] - gap
             val top = rowTops[cell.row]
             val bottom = rowTops[cell.row + cell.rowSpan] - vGap
 
@@ -1822,6 +1825,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 } else {
                     layoutMode = LayoutMode.NUMPAD
                     currentCells = EchosKeyboardLayout.NUMPAD_CELLS
+                    currentColWeights = EchosKeyboardLayout.NUMPAD_COL_WEIGHTS
                 }
                 opScrollY = 0f
                 keyRectsValid = false

@@ -166,7 +166,9 @@ class KeyboardView: UIInputView {
     // gaps, the outer margins, and the bands above the top row / below the
     // bottom row (§1.4), with the inter-row split biased toward the lower row
     // (§1.5). So every touch on the body resolves to exactly one key with no
-    // gap or edge dead zones, and no nearest-key fallback is needed.
+    // gap or edge dead zones. `hitTestKeyButton` additionally falls back to the
+    // nearest key for any in-body point the cache happens to miss (stale/empty
+    // cache), so a tap on the body is never silently dropped.
     private var keyFrames: [CGRect] = []
     private var keyFramesFlat: [KeyButton] = []
     private var keyFramesValid: Bool = false
@@ -896,9 +898,13 @@ class KeyboardView: UIInputView {
     // body with no gaps (see `rebuildKeyFrames`), so any touch on the body —
     // the ~6 pt inter-key gaps (§1.1/§1.3), the outer side margins, and the
     // bands just above the top row / just below the space row (§1.4) — lands
-    // on exactly one key. A point off the body (e.g. a drag that wanders up
-    // into the top bar) matches no tile and returns nil, which keeps a drag on
-    // its current key instead of snapping to a far edge key.
+    // on exactly one key. If the cache is momentarily empty/stale/partial (the
+    // first-touch zero-width-bounds window, an orientation/layout transition,
+    // or a build that dropped a key), the tile loop can miss; a nearest-key
+    // fallback then guarantees any in-body tap still resolves to a key, just
+    // like the native keyboard. A point off the body (e.g. a drag that wanders
+    // up into the top bar) is gated out so it returns nil, which keeps a drag
+    // on its current key instead of snapping to a far edge key.
     private func hitTestKeyButton(at point: CGPoint) -> KeyButton? {
         if !keyFramesValid {
             // Flush any pending Auto Layout first — on the first touch after a
@@ -910,7 +916,41 @@ class KeyboardView: UIInputView {
         for (idx, frame) in keyFrames.enumerated() where frame.contains(point) {
             return keyFramesFlat[idx]
         }
-        return nil
+        // Nearest-key fallback: any tap on the keyboard body must resolve to a
+        // key (native iOS), even when the tile cache didn't cover this point.
+        // Gated on the body — the same test `hitTest` uses to claim touches —
+        // so an off-body point still returns nil and `handlePointerMoved`
+        // keeps the finger on its current key.
+        guard !rowStackView.isHidden, bounds.contains(point) else { return nil }
+        return nearestKeyButton(to: point)
+    }
+
+    /// Squared distance from `point` to the nearest edge of `rect` (0 when the
+    /// point is inside). Mirrors `KeyVariantsView.nearestCellIndex`. Squared to
+    /// avoid the `sqrt` — only relative ordering matters.
+    private func squaredDistance(from point: CGPoint, to rect: CGRect) -> CGFloat {
+        let dx = max(rect.minX - point.x, max(0, point.x - rect.maxX))
+        let dy = max(rect.minY - point.y, max(0, point.y - rect.maxY))
+        return dx * dx + dy * dy
+    }
+
+    /// The key whose *visible* frame is nearest `point`. Walks the live buttons
+    /// rather than the tile cache so it still works when the cache is empty or
+    /// partial — that's the whole point of the fallback in `hitTestKeyButton`.
+    private func nearestKeyButton(to point: CGPoint) -> KeyButton? {
+        var best: KeyButton?
+        var bestDistSq = CGFloat.infinity
+        for row in keyButtons {
+            for button in row where button.window != nil && button.bounds.width > 0 {
+                let frame = button.convert(button.bounds, to: self)
+                let d = squaredDistance(from: point, to: frame)
+                if d < bestDistSq {
+                    bestDistSq = d
+                    best = button
+                }
+            }
+        }
+        return best
     }
 
     /// Per-row sweet-spot Y bias (§1.5): a downward offset, in points, for the

@@ -101,8 +101,8 @@ class EchosWaveformView @JvmOverloads constructor(
     /// Sharp pass — never blurred. Visible only in the segments where the
     /// per-wave horizontal alpha gradient is opaque. Combined with the
     /// blurred pass below, this produces the alternating crisp/blurred
-    /// segments the Figma design uses along each wave. The vertical
-    /// color gradient (`#A54CFF → #4588D2 → #FBCAB9`) is installed via
+    /// segments the Figma design uses along each wave. Each wave's
+    /// per-line horizontal color gradient is installed via
     /// `onSizeChanged` once the view dimensions are known.
     private val sharpPaints = profiles.map { p ->
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -207,18 +207,21 @@ class EchosWaveformView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (h <= 0) return
-        // Vertical color gradient runs top-to-bottom across the view, so
-        // every wave shares the same purple → blue → peach palette
-        // regardless of its individual vertical offset. Recreated on
-        // size changes since `LinearGradient` bakes its endpoints in.
-        val shader = LinearGradient(
-            0f, 0f, 0f, h.toFloat(),
-            WAVE_GRADIENT_COLORS, WAVE_GRADIENT_STOPS,
-            Shader.TileMode.CLAMP,
-        )
-        sharpPaints.forEach { it.shader = shader }
-        blurredPaints.forEach { it.shader = shader }
+        if (w <= 0 || h <= 0) return
+        // Each wave gets its own horizontal gradient running left-to-right
+        // across the view, mirroring the main app's per-line palette (middle
+        // line orange). Recreated on size changes since `LinearGradient` bakes
+        // its endpoints in.
+        for (i in profiles.indices) {
+            val shader = LinearGradient(
+                0f, 0f, w.toFloat(), 0f,
+                WAVE_LINE_GRADIENTS[i % WAVE_LINE_GRADIENTS.size],
+                WAVE_LINE_GRADIENT_STOPS,
+                Shader.TileMode.CLAMP,
+            )
+            sharpPaints[i].shader = shader
+            blurredPaints[i].shader = shader
+        }
     }
 
     private fun tick(nowNs: Long) {
@@ -506,15 +509,14 @@ class EchosWaveformView @JvmOverloads constructor(
             intArrayOf(1, 1, 0, 0, 1, 1, 0, 0),
         )
 
-        /// Shared vertical color gradient applied to every wave —
-        /// replaces the previous per-wave orange / accent / cyan palette.
-        /// Mirrors `WAVE_GRADIENT_COLORS` in `ThreeWaveLines.tsx` and the
-        /// `gradientStops` constants in iOS `KeyboardTopBar.swift`.
-        private val WAVE_GRADIENT_COLORS = intArrayOf(
-            Color.parseColor("#A54CFF"),
-            Color.parseColor("#4588D2"),
-            Color.parseColor("#FBCAB9"),
+        /// Per-line horizontal color gradients, one per wave, mirroring
+        /// `recordingWaveGradients` (src/theme/gradients/gradients.ts). Each
+        /// wave spans its full palette left-to-right; the middle line is orange.
+        private val WAVE_LINE_GRADIENTS = arrayOf(
+            intArrayOf(Color.parseColor("#A54CFF"), Color.parseColor("#4588D2")),
+            intArrayOf(Color.parseColor("#FF8A3D"), Color.parseColor("#F7931A")),
+            intArrayOf(Color.parseColor("#4588D2"), Color.parseColor("#A54CFF")),
         )
-        private val WAVE_GRADIENT_STOPS = floatArrayOf(0f, 0.5f, 1f)
+        private val WAVE_LINE_GRADIENT_STOPS = floatArrayOf(0f, 1f)
     }
 }
