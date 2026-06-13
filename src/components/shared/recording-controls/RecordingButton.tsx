@@ -19,7 +19,7 @@ import Animated, {
 
 import { TestID } from "@/constants";
 import { TranscriptionState } from "@/models";
-import { AquaColors, getShadow, lightColors, recordingGradient } from "@/theme";
+import { AquaColors, lightColors, recordingGradient } from "@/theme";
 
 import { Icon } from "../../ui/icon/Icon";
 import { ProgressIndicator } from "../../ui/progress/ProgressIndicator";
@@ -277,13 +277,7 @@ export const RecordingButton = ({
           },
         ]}
       />
-      <View
-        style={[
-          styles.buttonContainer,
-          circleSize,
-          getShadow("recordingButton"),
-        ]}
-      >
+      <View style={[styles.buttonContainer, circleSize]}>
         <RotatingGradientCircle size={size} />
         <TouchableOpacity
           testID={TestID.RecordingButtonStart}
@@ -301,14 +295,7 @@ export const RecordingButton = ({
   );
 
   const renderRecordingButton = () => (
-    <View
-      style={[
-        styles.buttonContainer,
-        circleSize,
-        surfaceFill,
-        getShadow("recordingButton"),
-      ]}
-    >
+    <View style={[styles.buttonContainer, circleSize, surfaceFill]}>
       <TouchableOpacity
         testID={TestID.RecordingButtonStop}
         style={styles.buttonTouchable}
@@ -334,14 +321,7 @@ export const RecordingButton = ({
   );
 
   const renderSpinnerButton = (testID: string, label: string) => (
-    <View
-      style={[
-        styles.buttonContainer,
-        circleSize,
-        surfaceFill,
-        getShadow("recordingButton"),
-      ]}
-    >
+    <View style={[styles.buttonContainer, circleSize, surfaceFill]}>
       <TouchableOpacity
         testID={testID}
         style={styles.buttonTouchable}

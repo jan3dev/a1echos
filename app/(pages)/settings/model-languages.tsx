@@ -44,8 +44,8 @@ export default function ModelLanguagesScreen() {
 
   return (
     <Screen>
-      <TopAppBar title="" blurTarget={blurTargetRef} />
-
+      {/* Bars render after content so Android's blur target ref is populated
+          before the bar's BlurView mounts and resolves its `blurTarget`. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[
@@ -53,6 +53,7 @@ export default function ModelLanguagesScreen() {
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
               paddingBottom: insets.bottom + 16,
+              backgroundColor: theme.colors.surfaceBackground,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -89,6 +90,8 @@ export default function ModelLanguagesScreen() {
           </View>
         </ScrollView>
       </AppBarBlurTarget>
+
+      <TopAppBar title="" blurTarget={blurTargetRef} />
     </Screen>
   );
 }

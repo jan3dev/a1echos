@@ -49,6 +49,7 @@ jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
+    AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     Card: ({ children, ...rest }: any) => (
       <View testID={TID.Card} {...rest}>
         {children}

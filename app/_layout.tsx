@@ -4,12 +4,12 @@ import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as SystemUI from "expo-system-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Modal, Platform, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { enableFreeze } from "react-native-screens";
 
 import {
   AppErrorBoundary,
@@ -52,11 +52,6 @@ import {
 } from "@/stores";
 import { useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
-
-// Freezes inactive screens so their React tree pauses while off-screen — prevents
-// the outgoing screen from briefly repainting on top of the new one after the
-// slide animation completes on Android.
-enableFreeze(true);
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
@@ -186,32 +181,48 @@ function GlobalTooltipRenderer() {
       ? insets.bottom + footerHeight + TOOLTIP_GAP_ABOVE_FOOTER
       : insets.bottom + TOOLTIP_GAP_ABOVE_SAFE_AREA;
 
+  // Rendered in a Modal so it paints above everything — including opaque screen
+  // content like the home empty-state string. On Android the react-native-screens
+  // <Stack> composites its active screen above sibling overlays regardless of
+  // zIndex/elevation, so a plain root-level View can't reliably sit on top; a
+  // Modal escapes into its own window. Transparent with no backdrop so it reads
+  // as a floating tooltip, not a blocking dialog.
   return (
-    <View
-      style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
-      pointerEvents={isDismissible || hasAction ? "auto" : "none"}
+    <Modal
+      visible={!!displayedTooltip}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={hideTooltip}
+      supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
-      <Tooltip
-        visible={!!tooltip}
-        message={displayedTooltip?.message ?? ""}
-        variant={displayedTooltip?.variant ?? "normal"}
-        pointerPosition="none"
-        isInfo={displayedTooltip?.isInfo ?? false}
-        isDismissible={isDismissible}
-        onDismiss={hideTooltip}
-        margin={0}
-        leadingIcon={
-          hasAction ? (
-            <Icon
-              name={displayedTooltip?.action?.iconName ?? "settings"}
-              size={18}
-              color={theme.colors.textInverse}
-            />
-          ) : undefined
-        }
-        onLeadingIconTap={hasAction ? handleActionPress : undefined}
-      />
-    </View>
+      <View
+        style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
+        pointerEvents={isDismissible || hasAction ? "box-none" : "none"}
+      >
+        <Tooltip
+          visible={!!tooltip}
+          message={displayedTooltip?.message ?? ""}
+          variant={displayedTooltip?.variant ?? "normal"}
+          pointerPosition="none"
+          isInfo={displayedTooltip?.isInfo ?? false}
+          isDismissible={isDismissible}
+          onDismiss={hideTooltip}
+          margin={0}
+          leadingIcon={
+            hasAction ? (
+              <Icon
+                name={displayedTooltip?.action?.iconName ?? "settings"}
+                size={18}
+                color={theme.colors.textInverse}
+              />
+            ) : undefined
+          }
+          onLeadingIconTap={hasAction ? handleActionPress : undefined}
+        />
+      </View>
+    </Modal>
   );
 }
 
@@ -318,6 +329,15 @@ export default function RootLayout() {
     installGlobalErrorHandler();
   }, []);
 
+  // Match the native window background to the theme. Without this the Android
+  // window stays its default (dark) color, which flashes through for a frame
+  // when a newly-pushed screen's blur view clears before it captures content.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(theme.colors.surfaceBackground).catch(
+      () => undefined,
+    );
+  }, [theme.colors.surfaceBackground]);
+
   // Initialize stores and services
   useEffect(() => {
     async function initializeApp() {
@@ -394,16 +414,19 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            // Android (Fabric + new arch) flashes the outgoing screen on top
-            // of the new one for any non-"none" animation. Native iOS slide
-            // is unaffected.
-            animation: Platform.OS === "android" ? "none" : "default",
-            gestureEnabled: true,
             contentStyle: {
               backgroundColor: theme.colors.surfaceBackground,
             },
           }}
         />
+        {/* Overlays live here (siblings of <Stack>, not inside screens) on
+            purpose: the recording controls must persist across home↔session
+            navigation without remounting or interrupting an active recording,
+            and the tooltip is fired from non-screen contexts (e.g. a background
+            model download finishing). Because react-native-screens composites
+            the active screen above sibling overlays on Android, each overlay
+            that can sit over opaque content uses a Modal to escape onto its own
+            window — do not "simplify" these into plain root-level Views. */}
         <GlobalRecordingControls />
         <GlobalTooltipRenderer />
         <GlobalKeyboardPromptRenderer />
@@ -417,7 +440,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    zIndex: 9999,
   },
   recordingControls: {
     position: "absolute",

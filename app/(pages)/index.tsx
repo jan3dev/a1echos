@@ -343,13 +343,10 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <HomeAppBar
-        selectionMode={isSessionSelectionMode}
-        selectionTitle={loc.selectedCount(selectedSessionIds.length)}
-        onExitSelectionPressed={exitSessionSelection}
-        blurTarget={blurTargetRef}
-      />
-
+      {/* Content (and its blur target) renders before the bars so the Android
+          BlurTargetView ref is populated by the time the bars' BlurView mounts
+          and resolves its `blurTarget`. The bars float on top via absolute
+          positioning + zIndex, so JSX order doesn't affect what paints above. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <HomeContent
           selectionMode={isSessionSelectionMode}
@@ -361,6 +358,13 @@ export default function HomeScreen() {
           scrollRef={scrollRef}
         />
       </AppBarBlurTarget>
+
+      <HomeAppBar
+        selectionMode={isSessionSelectionMode}
+        selectionTitle={loc.selectedCount(selectedSessionIds.length)}
+        onExitSelectionPressed={exitSessionSelection}
+        blurTarget={blurTargetRef}
+      />
 
       {effectivelyEmpty && (
         <View

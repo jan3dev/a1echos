@@ -19,7 +19,7 @@ import { delay, FeatureFlag, logError } from "@/utils";
 
 export default function ThemeSettingsScreen() {
   const router = useRouter();
-  const { selectedTheme, setTheme } = useTheme();
+  const { selectedTheme, setTheme, theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
@@ -58,8 +58,8 @@ export default function ThemeSettingsScreen() {
 
   return (
     <Screen>
-      <TopAppBar title={loc.themeTitle} blurTarget={blurTargetRef} />
-
+      {/* Bars render after content so Android's blur target ref is populated
+          before the bar's BlurView mounts and resolves its `blurTarget`. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[
@@ -67,6 +67,7 @@ export default function ThemeSettingsScreen() {
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
               paddingBottom: insets.bottom + 16,
+              backgroundColor: theme.colors.surfaceBackground,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -127,6 +128,8 @@ export default function ThemeSettingsScreen() {
           </View>
         </ScrollView>
       </AppBarBlurTarget>
+
+      <TopAppBar title={loc.themeTitle} blurTarget={blurTargetRef} />
     </Screen>
   );
 }

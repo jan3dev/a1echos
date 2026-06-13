@@ -265,8 +265,16 @@ describe("RootLayout", () => {
   });
 
   it("renders GlobalTooltipRenderer", async () => {
+    const { useGlobalTooltip } = require("@/stores");
+    (useGlobalTooltip as jest.Mock).mockReturnValue({
+      id: "t",
+      message: "Hi",
+      variant: "normal",
+      duration: 3000,
+    });
     const { getByTestId } = await renderAndWaitForInit();
     expect(getByTestId(TestID.Tooltip)).toBeTruthy();
+    (useGlobalTooltip as jest.Mock).mockReturnValue(null);
   });
 
   it("GlobalRecordingControls hidden when not on recording screen", async () => {
@@ -366,8 +374,8 @@ describe("RootLayout", () => {
       const { useGlobalTooltip } = require("@/stores");
       (useGlobalTooltip as jest.Mock).mockReturnValue(null);
 
-      const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId(TestID.Tooltip)).toBeTruthy();
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.Tooltip)).toBeNull();
     });
   });
 

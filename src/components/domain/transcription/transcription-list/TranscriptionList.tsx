@@ -27,6 +27,7 @@ import {
   useSettingsStore,
   useTranscriptionStore,
 } from "@/stores";
+import { useTheme } from "@/theme";
 
 import { TranscriptionItem } from "../transcription-item/TranscriptionItem";
 
@@ -71,6 +72,7 @@ export const TranscriptionList = ({
 }: TranscriptionListProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const { loc } = useLocalization();
+  const { theme } = useTheme();
   const { height: viewportHeight } = useWindowDimensions();
 
   const transcriptions = useSessionTranscriptions();
@@ -401,6 +403,7 @@ export const TranscriptionList = ({
         contentContainerStyle={{
           padding: 16,
           paddingTop: topPadding + 16,
+          backgroundColor: theme.colors.surfaceBackground,
         }}
         ListFooterComponent={<View style={{ height: bottomPadding }} />}
         renderItem={renderItem}

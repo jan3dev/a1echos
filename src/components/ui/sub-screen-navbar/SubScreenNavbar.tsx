@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import { RefObject, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -19,6 +18,12 @@ import type { IconName } from "../icon/iconMap";
 import { Text } from "../text/Text";
 
 export const SUB_SCREEN_NAVBAR_HEIGHT = 72;
+
+// The translucent glass bar sits over now-opaque scroll content, so any
+// sub-pixel seam at the screen's bottom edge lets that content show as a
+// hairline. Extending the bar this far below the edge (clipped off-screen by
+// `overflow: hidden`) closes the seam.
+const BOTTOM_BLEED = 1;
 
 export interface SubScreenNavbarAction {
   key: string;
@@ -133,18 +138,20 @@ export const SubScreenNavbar = ({
         getShadow("modal"),
         {
           borderTopColor: theme.colors.surfaceBorderSecondary,
-          paddingBottom: bottomInset,
+          // Extra `BOTTOM_BLEED` keeps the action row the same distance from the
+          // screen edge while the container bleeds 1px below it (see styles).
+          paddingBottom: bottomInset + BOTTOM_BLEED,
           transform: [{ translateY: slideAnim }],
         },
         style,
       ]}
     >
       <GlassBlurBackground blurTarget={blurTarget} />
-      <LinearGradient
-        style={StyleSheet.absoluteFill}
-        colors={["transparent", theme.colors.glassBackground]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: theme.colors.glassBackground },
+        ]}
       />
       <View style={styles.row}>
         {actions.map((action) => (
@@ -165,10 +172,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 0,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    bottom: -BOTTOM_BLEED,
     overflow: "hidden",
   },
   row: {

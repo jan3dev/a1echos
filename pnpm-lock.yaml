@@ -86,6 +86,9 @@ importers:
       expo-sqlite:
         specifier: 55.0.16
         version: 55.0.16(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
+      expo-system-ui:
+        specifier: ~55.0.18
+        version: 55.0.18(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))
       i18next:
         specifier: 25.7.1
         version: 25.7.1(typescript@5.9.2)
@@ -3523,6 +3526,16 @@ packages:
       expo-font: '*'
       react: '*'
       react-native: '*'
+
+  expo-system-ui@55.0.18:
+    resolution: {integrity: sha512-Fbc0HJgqMpABeA/gI7NJFnSXwUeLrEMjjXq8Nl+4gTXyacIK2iOOrzCkvq41rKBBde0CR6kVnB1DXj0j9ZYnjg==}
+    peerDependencies:
+      expo: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
 
   expo-updates-interface@55.1.6:
     resolution: {integrity: sha512-evxNpagCkjT3lE6bGV570TFzRtKuIuLY8I37RYHoriXCJ+ZKCN1hbmklK29uAixya+BxGpeTI2K4FqYeJLvfrw==}
@@ -9740,6 +9753,15 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
+
+  expo-system-ui@55.0.18(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)):
+    dependencies:
+      '@react-native/normalize-colors': 0.83.6
+      debug: 4.4.3
+      expo: 55.0.9(@babel/core@7.28.5)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.8)(react-dom@19.2.7(react@19.2.0))(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2)
+      react-native: 0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)
+    transitivePeerDependencies:
+      - supports-color
 
   expo-updates-interface@55.1.6(expo@55.0.9):
     dependencies:

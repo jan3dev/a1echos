@@ -599,22 +599,10 @@ export default function SessionScreen() {
 
   return (
     <Screen>
-      <SessionAppBar
-        sessionName={sessionName}
-        selectionMode={selectionMode}
-        selectionTitle={loc.selectedCount(selectedIds.size)}
-        editMode={isEditing}
-        isIncognitoSession={isIncognito}
-        onBackPressed={handleBackPressed}
-        onTitlePressed={handleTitlePressed}
-        onLanguageFlagPressed={handleLanguageFlagPressed}
-        onMorePressed={enterSelectionMode}
-        onExitSelectionPressed={exitSelectionMode}
-        onCancelEditPressed={handleCancelEdit}
-        onSaveEditPressed={handleSaveEdit}
-        blurTarget={blurTargetRef}
-      />
-
+      {/* Content (and its blur target) renders before the bars so the Android
+          BlurTargetView ref is populated by the time the bars' BlurView mounts
+          and resolves its `blurTarget`. The bars float on top via absolute
+          positioning + zIndex, so JSX order doesn't affect what paints above. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
@@ -635,6 +623,22 @@ export default function SessionScreen() {
           )}
         </KeyboardAvoidingView>
       </AppBarBlurTarget>
+
+      <SessionAppBar
+        sessionName={sessionName}
+        selectionMode={selectionMode}
+        selectionTitle={loc.selectedCount(selectedIds.size)}
+        editMode={isEditing}
+        isIncognitoSession={isIncognito}
+        onBackPressed={handleBackPressed}
+        onTitlePressed={handleTitlePressed}
+        onLanguageFlagPressed={handleLanguageFlagPressed}
+        onMorePressed={enterSelectionMode}
+        onExitSelectionPressed={exitSelectionMode}
+        onCancelEditPressed={handleCancelEdit}
+        onSaveEditPressed={handleSaveEdit}
+        blurTarget={blurTargetRef}
+      />
 
       <SubScreenNavbar
         visible={selectionMode}

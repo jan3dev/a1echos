@@ -14,6 +14,7 @@ import { AppConstants, TestID } from "@/constants";
 import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
 import { Session } from "@/models";
 import { useIsIncognitoMode, useSessions } from "@/stores";
+import { useTheme } from "@/theme";
 
 import { SessionListItem } from "../../session/session-list-item/SessionListItem";
 import { IncognitoEmptyState } from "../incognito-empty-state/IncognitoEmptyState";
@@ -40,6 +41,7 @@ export const HomeContent = ({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { loc } = useLocalization();
+  const { theme } = useTheme();
   const isIncognitoMode = useIsIncognitoMode();
   const sessions = useSessions();
 
@@ -138,6 +140,7 @@ export const HomeContent = ({
           paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
           paddingHorizontal: 16,
           paddingBottom: insets.bottom + AppConstants.RECORDING_CONTROLS_HEIGHT,
+          backgroundColor: theme.colors.surfaceBackground,
         }}
         showsVerticalScrollIndicator={false}
       />

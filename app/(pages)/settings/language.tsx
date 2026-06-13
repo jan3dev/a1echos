@@ -24,11 +24,13 @@ import {
   useSelectedModelId,
   useSetLanguage,
 } from "@/stores";
+import { useTheme } from "@/theme";
 import { delay, FeatureFlag, logError } from "@/utils";
 
 export default function LanguageSettingsScreen() {
   const router = useRouter();
   const { loc } = useLocalization();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
 
@@ -74,8 +76,8 @@ export default function LanguageSettingsScreen() {
 
   return (
     <Screen>
-      <TopAppBar title={loc.spokenLanguageTitle} blurTarget={blurTargetRef} />
-
+      {/* Bars render after content so Android's blur target ref is populated
+          before the bar's BlurView mounts and resolves its `blurTarget`. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={[
@@ -83,6 +85,7 @@ export default function LanguageSettingsScreen() {
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
               paddingBottom: insets.bottom + 16,
+              backgroundColor: theme.colors.surfaceBackground,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -113,6 +116,8 @@ export default function LanguageSettingsScreen() {
           </View>
         </ScrollView>
       </AppBarBlurTarget>
+
+      <TopAppBar title={loc.spokenLanguageTitle} blurTarget={blurTargetRef} />
     </Screen>
   );
 }
