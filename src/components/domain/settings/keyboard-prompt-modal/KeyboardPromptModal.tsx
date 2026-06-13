@@ -148,19 +148,6 @@ export const KeyboardPromptModal = ({
                 >
                   {loc.keyboardPromptBody}
                 </Text>
-                {Platform.OS === "ios" && (
-                  <>
-                    <View style={styles.disclaimerSpacing} />
-                    <Text
-                      variant="caption1"
-                      weight="regular"
-                      color={colors.textTertiary}
-                      align="center"
-                    >
-                      {loc.keyboardPromptIosDisclaimer}
-                    </Text>
-                  </>
-                )}
               </View>
 
               <View style={styles.ctas}>
@@ -222,9 +209,6 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     lineHeight: 19.2,
-  },
-  disclaimerSpacing: {
-    height: 12,
   },
   ctas: {
     paddingHorizontal: 16,

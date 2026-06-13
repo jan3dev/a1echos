@@ -251,6 +251,21 @@ jest.mock("expo-linear-gradient", () => ({
   LinearGradient: "LinearGradient",
 }));
 
+// Native blur/glass backgrounds render as plain string components in tests.
+jest.mock("expo-blur", () => ({
+  BlurView: "BlurView",
+  BlurTargetView: "BlurTargetView",
+}));
+
+jest.mock("expo-glass-effect", () => ({
+  GlassView: "GlassView",
+  GlassContainer: "GlassContainer",
+  // Default to the cross-platform blur path; tests that need Liquid Glass
+  // override this with mockReturnValueOnce(true).
+  isLiquidGlassAvailable: jest.fn(() => false),
+  isGlassEffectAPIAvailable: jest.fn(() => false),
+}));
+
 jest.mock("expo-clipboard", () => ({
   setStringAsync: jest.fn(),
   getStringAsync: jest.fn(async () => ""),

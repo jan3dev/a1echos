@@ -150,28 +150,4 @@ describe("KeyboardPromptModal", () => {
     );
     expect(getByTestId(TestID.KeyboardPromptImageAndroid)).toBeTruthy();
   });
-
-  it("shows the iOS disclaimer on iOS", () => {
-    setPlatform("ios");
-    const { getByText } = render(
-      <KeyboardPromptModal
-        visible={true}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />,
-    );
-    expect(getByText("keyboardPromptIosDisclaimer")).toBeTruthy();
-  });
-
-  it("does not show the iOS disclaimer on Android", () => {
-    setPlatform("android");
-    const { queryByText } = render(
-      <KeyboardPromptModal
-        visible={true}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />,
-    );
-    expect(queryByText("keyboardPromptIosDisclaimer")).toBeNull();
-  });
 });

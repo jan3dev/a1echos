@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
-import { Pressable } from "react-native";
+import { RefObject } from "react";
+import { Pressable, View } from "react-native";
 
 import { Routes, TestID } from "@/constants";
 import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
@@ -14,12 +15,14 @@ interface HomeAppBarProps {
   selectionMode?: boolean;
   selectionTitle?: string;
   onExitSelectionPressed?: () => void;
+  blurTarget?: RefObject<View | null>;
 }
 
 export const HomeAppBar = ({
   selectionMode = false,
   selectionTitle,
   onExitSelectionPressed,
+  blurTarget,
 }: HomeAppBarProps) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -35,6 +38,7 @@ export const HomeAppBar = ({
       <TopAppBar
         title={selectionTitle ?? ""}
         showBackButton={false}
+        blurTarget={blurTarget}
         leading={
           <RipplePressable
             onPress={() => onExitSelectionPressed?.()}
@@ -114,6 +118,7 @@ export const HomeAppBar = ({
   return (
     <TopAppBar
       showBackButton={false}
+      blurTarget={blurTarget}
       leading={leading}
       titleWidget={titleWidget}
       actions={actions}

@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   separator: {
-    height: 8,
+    height: 16,
   },
   jumpButtonOverlay: {
     position: "absolute",

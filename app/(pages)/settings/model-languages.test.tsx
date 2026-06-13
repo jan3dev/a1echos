@@ -73,6 +73,7 @@ jest.mock("@/stores", () => ({
 jest.mock("@/components", () => {
   const { View, Text } = require("react-native");
   return {
+    AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     Chip: ({ label, iconLeading, testID }: any) => (
       <View testID={testID}>
         {iconLeading}

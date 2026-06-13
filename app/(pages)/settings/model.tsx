@@ -1,9 +1,15 @@
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ModelCard, Screen, Text, TopAppBar } from "@/components";
+import {
+  AppBarBlurTarget,
+  ModelCard,
+  Screen,
+  Text,
+  TopAppBar,
+} from "@/components";
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
 import { AppConstants, Routes } from "@/constants";
@@ -31,6 +37,7 @@ export default function ModelSettingsScreen() {
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
+  const blurTargetRef = useRef<View>(null);
 
   const selectedModelId = useSelectedModelId();
   const modelModes = useModelModes();
@@ -224,56 +231,58 @@ export default function ModelSettingsScreen() {
 
   return (
     <Screen>
-      <TopAppBar title={loc.title} />
+      <TopAppBar title={loc.title} blurTarget={blurTargetRef} />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-            paddingBottom: insets.bottom + 16,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text
-          variant="body1"
-          weight="medium"
-          color={theme.colors.textSecondary}
+      <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
+              paddingBottom: insets.bottom + 16,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          {loc.description}
-        </Text>
+          <Text
+            variant="body1"
+            weight="medium"
+            color={theme.colors.textSecondary}
+          >
+            {loc.description}
+          </Text>
 
-        {downloadedSection.length > 0 && (
-          <View style={styles.section}>
-            <Text
-              variant="body2"
-              weight="medium"
-              color={theme.colors.textSecondary}
-            >
-              {loc.sectionDownloaded}
-            </Text>
-            <View style={styles.cardList}>
-              {downloadedSection.map(renderCard)}
+          {downloadedSection.length > 0 && (
+            <View style={styles.section}>
+              <Text
+                variant="body2"
+                weight="medium"
+                color={theme.colors.textSecondary}
+              >
+                {loc.sectionDownloaded}
+              </Text>
+              <View style={styles.cardList}>
+                {downloadedSection.map(renderCard)}
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        {availableSection.length > 0 && (
-          <View style={styles.section}>
-            <Text
-              variant="body2"
-              weight="medium"
-              color={theme.colors.textSecondary}
-            >
-              {loc.sectionAvailable}
-            </Text>
-            <View style={styles.cardList}>
-              {availableSection.map(renderCard)}
+          {availableSection.length > 0 && (
+            <View style={styles.section}>
+              <Text
+                variant="body2"
+                weight="medium"
+                color={theme.colors.textSecondary}
+              >
+                {loc.sectionAvailable}
+              </Text>
+              <View style={styles.cardList}>
+                {availableSection.map(renderCard)}
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </AppBarBlurTarget>
 
       <Toast {...deleteToastState} />
     </Screen>
@@ -286,9 +295,9 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   section: {
-    gap: 8,
+    gap: 16,
   },
   cardList: {
-    gap: 8,
+    gap: 16,
   },
 });

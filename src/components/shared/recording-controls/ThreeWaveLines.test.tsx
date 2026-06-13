@@ -81,9 +81,9 @@ describe("ThreeWaveLines", () => {
     expect(getByTestId(TestID.SkiaCanvas)).toBeTruthy();
   });
 
-  it("renders 6 Path elements (3 sharp + 3 blurred)", () => {
+  it("renders 12 Path elements (3 waves x 4 blur layers)", () => {
     const { getAllByTestId } = render(<ThreeWaveLines />);
-    expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(6);
+    expect(getAllByTestId(TestID.SkiaPath)).toHaveLength(12);
   });
 
   it("subscribes to transcriptionStore audio level changes", () => {

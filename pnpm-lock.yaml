@@ -32,6 +32,9 @@ importers:
       expo-audio:
         specifier: 55.0.9
         version: 55.0.9(expo-asset@55.0.17(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2))(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
+      expo-blur:
+        specifier: ~55.0.14
+        version: 55.0.14(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
       expo-build-properties:
         specifier: 55.0.10
         version: 55.0.10(expo@55.0.9)
@@ -53,6 +56,9 @@ importers:
       expo-font:
         specifier: 55.0.4
         version: 55.0.4(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
+      expo-glass-effect:
+        specifier: ~55.0.11
+        version: 55.0.11(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)
       expo-haptics:
         specifier: 55.0.9
         version: 55.0.9(expo@55.0.9)
@@ -3316,6 +3322,13 @@ packages:
     peerDependencies:
       expo: '*'
       expo-asset: '*'
+      react: '*'
+      react-native: '*'
+
+  expo-blur@55.0.14:
+    resolution: {integrity: sha512-NKyCKFWTNpX4CZSsiE1sgkqk/yvR1K0UTukuIbxVKoobB+yALLg1CFav0NqfdQqjhtoj5oEzP0Brlq92Z08Zfg==}
+    peerDependencies:
+      expo: '*'
       react: '*'
       react-native: '*'
 
@@ -9501,6 +9514,12 @@ snapshots:
     dependencies:
       expo: 55.0.9(@babel/core@7.28.5)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.8)(react-dom@19.2.7(react@19.2.0))(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2)
       expo-asset: 55.0.17(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2)
+      react: 19.2.0
+      react-native: 0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)
+
+  expo-blur@55.0.14(expo@55.0.9)(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      expo: 55.0.9(@babel/core@7.28.5)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.8)(react-dom@19.2.7(react@19.2.0))(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2)
       react: 19.2.0
       react-native: 0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)
 

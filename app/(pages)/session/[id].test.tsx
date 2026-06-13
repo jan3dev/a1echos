@@ -158,6 +158,7 @@ jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
   const { TestID: TID } = require("@/constants");
   return {
+    AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     SessionAppBar: (props: any) => {
       mockOnTitlePressed = props.onTitlePressed;
       mockOnBackPressed = props.onBackPressed;

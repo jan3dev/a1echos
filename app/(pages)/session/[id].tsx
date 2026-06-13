@@ -17,9 +17,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  View,
 } from "react-native";
 
 import {
+  AppBarBlurTarget,
   Screen,
   SessionAppBar,
   SessionInputModal,
@@ -75,6 +77,7 @@ export default function SessionScreen() {
     FlatList<Transcription>
   >;
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTargetRef = useRef<View>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isCancellingEdit, setIsCancellingEdit] = useState(false);
@@ -609,28 +612,35 @@ export default function SessionScreen() {
         onExitSelectionPressed={exitSelectionMode}
         onCancelEditPressed={handleCancelEdit}
         onSaveEditPressed={handleSaveEdit}
+        blurTarget={blurTargetRef}
       />
 
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
-      >
-        {!isInitializing && (
-          <TranscriptionContentView
-            listRef={listRef}
-            selectionMode={selectionMode}
-            selectedTranscriptionIds={selectedIds}
-            onTranscriptionTap={handleTranscriptionTap}
-            onTranscriptionLongPress={handleTranscriptionLongPress}
-            onEditStart={handleEditStart}
-            onEditEnd={handleEditEnd}
-            isCancellingEdit={isCancellingEdit}
-          />
-        )}
-      </KeyboardAvoidingView>
+      <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          {!isInitializing && (
+            <TranscriptionContentView
+              listRef={listRef}
+              selectionMode={selectionMode}
+              selectedTranscriptionIds={selectedIds}
+              onTranscriptionTap={handleTranscriptionTap}
+              onTranscriptionLongPress={handleTranscriptionLongPress}
+              onEditStart={handleEditStart}
+              onEditEnd={handleEditEnd}
+              isCancellingEdit={isCancellingEdit}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </AppBarBlurTarget>
 
-      <SubScreenNavbar visible={selectionMode} actions={navbarActions} />
+      <SubScreenNavbar
+        visible={selectionMode}
+        actions={navbarActions}
+        blurTarget={blurTargetRef}
+      />
 
       <SessionInputModal
         visible={showRenameModal}

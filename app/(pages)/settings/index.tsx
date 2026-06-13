@@ -145,9 +145,7 @@ export default function SettingsScreen() {
             }
             onPress={() => router.push(Routes.settingsAdvanced)}
           />
-        </View>
 
-        <View style={styles.contactSupport}>
           <ListItem
             testID={TestID.SettingsContactSupport}
             title={loc.contactSupport}
@@ -186,10 +184,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   list: {
-    gap: 8,
-  },
-  contactSupport: {
-    marginTop: 8,
+    gap: 16,
   },
   bannerContainer: {
     paddingTop: 24,

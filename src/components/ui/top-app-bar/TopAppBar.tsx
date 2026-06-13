@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Fragment, ReactNode } from "react";
+import { Fragment, ReactNode, RefObject } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -7,6 +7,7 @@ import { AppConstants, TestID } from "@/constants";
 import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
+import { GlassBlurBackground } from "../glass-blur-background/GlassBlurBackground";
 import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
@@ -21,6 +22,17 @@ export interface TopAppBarProps {
   titleWidget?: ReactNode;
   actions?: ReactNode[];
   transparent?: boolean;
+  /**
+   * Render the bar's own glass/blur background. Default true. Set false when a
+   * screen supplies its own shared glass surface behind the bar.
+   */
+  showBackground?: boolean;
+  /**
+   * Android only: ref to the screen's `AppBarBlurTarget` wrapping the content
+   * that should show through the blurred bar. expo-blur needs this explicit
+   * target to blur underlying views; iOS blurs natively and ignores it.
+   */
+  blurTarget?: RefObject<View | null>;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -36,6 +48,8 @@ export const TopAppBar = ({
   titleWidget,
   actions = [],
   transparent = false,
+  showBackground = true,
+  blurTarget,
   style,
 }: TopAppBarProps) => {
   const { theme } = useTheme();
@@ -66,15 +80,19 @@ export const TopAppBar = ({
         style,
       ]}
     >
+      {!transparent && showBackground && (
+        <GlassBlurBackground blurTarget={blurTarget} />
+      )}
       <View
         style={[
           styles.contentContainer,
           {
             paddingTop: topPadding + 16,
             height: totalHeight,
-            backgroundColor: transparent
-              ? "transparent"
-              : theme.colors.glassBackground,
+            backgroundColor:
+              transparent || !showBackground
+                ? "transparent"
+                : theme.colors.glassBackground,
           },
         ]}
       >

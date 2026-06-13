@@ -38,6 +38,11 @@ interface RecordingButtonProps {
 
 const GRADIENT_ROTATION_PERIOD_MS = 6000;
 const PRESS_DOWN_SCALE = 0.9;
+const IDLE_RING_THICKNESS = 10;
+const IDLE_RING_RADIUS = 300;
+// Tuck the ring's inner edge slightly under the button so the two visually
+// connect instead of leaving a hairline gap at the seam.
+const IDLE_RING_OVERLAP = 2;
 const GESTURE_ISOLATION_DURATION = 2000;
 const EASE_OUT = Easing.out(Easing.ease);
 
@@ -260,21 +265,38 @@ export const RecordingButton = ({
   const surfaceFill = { backgroundColor: colors.surfacePrimary };
 
   const renderReadyButton = () => (
-    <View
-      style={[styles.buttonContainer, circleSize, getShadow("recordingButton")]}
-    >
-      <RotatingGradientCircle size={size} />
-      <TouchableOpacity
-        testID={TestID.RecordingButtonStart}
-        style={styles.buttonTouchable}
-        onPress={handleStartRecording}
-        disabled={isDebouncing || gestureIsolationActive || !enabled}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Start Recording"
+    <View style={styles.readyContainer}>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.idleRing,
+          {
+            width: size + (IDLE_RING_THICKNESS - IDLE_RING_OVERLAP) * 2,
+            height: size + (IDLE_RING_THICKNESS - IDLE_RING_OVERLAP) * 2,
+            borderColor: colors.glassSurface,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.buttonContainer,
+          circleSize,
+          getShadow("recordingButton"),
+        ]}
       >
-        <Icon name="mic" size={24} color={lightColors.textInverse} />
-      </TouchableOpacity>
+        <RotatingGradientCircle size={size} />
+        <TouchableOpacity
+          testID={TestID.RecordingButtonStart}
+          style={styles.buttonTouchable}
+          onPress={handleStartRecording}
+          disabled={isDebouncing || gestureIsolationActive || !enabled}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Start Recording"
+        >
+          <Icon name="mic" size={24} color={lightColors.textInverse} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -340,6 +362,15 @@ export const RecordingButton = ({
 };
 
 const styles = StyleSheet.create({
+  readyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  idleRing: {
+    position: "absolute",
+    borderRadius: IDLE_RING_RADIUS,
+    borderWidth: IDLE_RING_THICKNESS,
+  },
   buttonContainer: {
     borderRadius: 1000,
     overflow: "hidden",

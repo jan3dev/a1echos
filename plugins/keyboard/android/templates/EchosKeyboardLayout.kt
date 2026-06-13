@@ -325,7 +325,7 @@ object EchosKeyboardLayout {
 
         // Col 4: utility stack (rows 0-2) + return (row 3).
         NumpadCell(col = 4, row = 0, keys = listOf(Key("%"))),
-        NumpadCell(col = 4, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space"))),
+        NumpadCell(col = 4, row = 1, keys = listOf(Key(" ", type = KeyType.SPACE, contentDescription = "Space", iconName = "ic_space"))),
         NumpadCell(
             col = 4, row = 2,
             keys = listOf(Key("", type = KeyType.DELETE, contentDescription = "Delete", iconName = "ic_backspace_outline")),

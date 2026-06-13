@@ -16,6 +16,7 @@ import {
   Icon,
   KeyboardPromptModal,
   RecordingControlsView,
+  SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
   Tooltip,
 } from "@/components";
@@ -38,6 +39,8 @@ import {
   useHideGlobalTooltip,
   useHideKeyboardPrompt,
   useIsEngineInitializing,
+  useIsSessionSelectionMode,
+  useIsTranscriptionSelectionMode,
   useKeyboardPromptVisible,
   useMarkKeyboardPromptSeen,
   useOnRecordingStart,
@@ -92,7 +95,7 @@ export const unstable_settings = {
   initialRouteName: "(pages)/index",
 };
 
-const TOOLTIP_GAP_ABOVE_RECORDING_CONTROLS = 8;
+const TOOLTIP_GAP_ABOVE_FOOTER = 16;
 const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
 
 function GlobalTooltipRenderer() {
@@ -101,6 +104,8 @@ function GlobalTooltipRenderer() {
   const tooltip = useGlobalTooltip();
   const hideTooltip = useHideGlobalTooltip();
   const recordingControlsVisible = useRecordingControlsVisible();
+  const isSessionSelectionMode = useIsSessionSelectionMode();
+  const isTranscriptionSelectionMode = useIsTranscriptionSelectionMode();
   const pathname = usePathname();
   const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearDisplayedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -165,11 +170,21 @@ function GlobalTooltipRenderer() {
   const isOnRecordingScreen =
     pathname === "/" || pathname.startsWith("/session/");
   const liftAboveControls = recordingControlsVisible && isOnRecordingScreen;
-  const bottomOffset = liftAboveControls
-    ? insets.bottom +
-      AppConstants.RECORDING_CONTROLS_HEIGHT +
-      TOOLTIP_GAP_ABOVE_RECORDING_CONTROLS
-    : insets.bottom + TOOLTIP_GAP_ABOVE_SAFE_AREA;
+  // The bottom selection action bar (SubScreenNavbar) and the recording
+  // controls are mutually exclusive — screens hide the controls whenever
+  // selection mode is active. Lift the tooltip above whichever is present.
+  const navbarVisible =
+    (pathname === "/" && isSessionSelectionMode) ||
+    (pathname.startsWith("/session/") && isTranscriptionSelectionMode);
+  const footerHeight = liftAboveControls
+    ? AppConstants.RECORDING_CONTROLS_HEIGHT
+    : navbarVisible
+      ? SUB_SCREEN_NAVBAR_HEIGHT
+      : 0;
+  const bottomOffset =
+    footerHeight > 0
+      ? insets.bottom + footerHeight + TOOLTIP_GAP_ABOVE_FOOTER
+      : insets.bottom + TOOLTIP_GAP_ABOVE_SAFE_AREA;
 
   return (
     <View

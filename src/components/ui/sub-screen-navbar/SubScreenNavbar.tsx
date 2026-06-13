@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { RefObject, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -12,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getShadow, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
+import { GlassBlurBackground } from "../glass-blur-background/GlassBlurBackground";
 import { Icon } from "../icon/Icon";
 import type { IconName } from "../icon/iconMap";
 import { Text } from "../text/Text";
@@ -33,6 +35,11 @@ export interface SubScreenNavbarProps {
   visible: boolean;
   actions: SubScreenNavbarAction[];
   testID?: string;
+  /**
+   * Android only: ref to the screen's `AppBarBlurTarget` wrapping the scroll
+   * content that should show through the navbar's glass background.
+   */
+  blurTarget?: RefObject<View | null>;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -78,6 +85,7 @@ export const SubScreenNavbar = ({
   visible,
   actions,
   testID,
+  blurTarget,
   style,
 }: SubScreenNavbarProps) => {
   const { theme } = useTheme();
@@ -124,7 +132,6 @@ export const SubScreenNavbar = ({
         styles.container,
         getShadow("modal"),
         {
-          backgroundColor: theme.colors.surfacePrimary,
           borderTopColor: theme.colors.surfaceBorderSecondary,
           paddingBottom: bottomInset,
           transform: [{ translateY: slideAnim }],
@@ -132,6 +139,13 @@ export const SubScreenNavbar = ({
         style,
       ]}
     >
+      <GlassBlurBackground blurTarget={blurTarget} />
+      <LinearGradient
+        style={StyleSheet.absoluteFill}
+        colors={["transparent", theme.colors.glassBackground]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
       <View style={styles.row}>
         {actions.map((action) => (
           <NavbarAction
@@ -153,6 +167,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    overflow: "hidden",
   },
   row: {
     height: SUB_SCREEN_NAVBAR_HEIGHT,

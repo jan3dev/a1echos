@@ -96,6 +96,7 @@ jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
   const { TestID: TID } = require("@/constants");
   return {
+    AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     HomeAppBar: () => <View testID={TID.HomeAppBar} />,
     HomeContent: (props: any) => {
       mockOnSessionTap = props.onSessionTap;

@@ -1,17 +1,24 @@
 import { useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Chip, FlagIcon, Screen, Text, TopAppBar } from "@/components";
+import {
+  AppBarBlurTarget,
+  Chip,
+  FlagIcon,
+  Screen,
+  Text,
+  TopAppBar,
+} from "@/components";
 import { AppConstants } from "@/constants";
 import { useLocalization } from "@/hooks";
 import type { ModelId } from "@/models";
 import {
   MODEL_REGISTRY,
   SupportedLanguages,
-  getModelInfo,
   getCountryCode,
+  getModelInfo,
 } from "@/models";
 import { useSelectedModelId } from "@/stores";
 import { useTheme } from "@/theme";
@@ -20,6 +27,7 @@ export default function ModelLanguagesScreen() {
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
+  const blurTargetRef = useRef<View>(null);
   const params = useLocalSearchParams<{ modelId?: string }>();
   const selectedModelId = useSelectedModelId();
 
@@ -36,45 +44,51 @@ export default function ModelLanguagesScreen() {
 
   return (
     <Screen>
-      <TopAppBar title="" />
+      <TopAppBar title="" blurTarget={blurTargetRef} />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-            paddingBottom: insets.bottom + 16,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text variant="h4" weight="semibold" color={theme.colors.textPrimary}>
-            {modelInfo.name}
-          </Text>
-          <Text
-            variant="body1"
-            weight="medium"
-            color={theme.colors.textSecondary}
-          >
-            {loc.languagesSupported(languages.length)}
-          </Text>
-        </View>
+      <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
+              paddingBottom: insets.bottom + 16,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text
+              variant="h4"
+              weight="semibold"
+              color={theme.colors.textPrimary}
+            >
+              {modelInfo.name}
+            </Text>
+            <Text
+              variant="body1"
+              weight="medium"
+              color={theme.colors.textSecondary}
+            >
+              {loc.languagesSupported(languages.length)}
+            </Text>
+          </View>
 
-        <View style={styles.chipsGrid}>
-          {languages.map((language) => (
-            <Chip
-              key={language.code}
-              testID={`language-chip-${language.code}`}
-              size="large"
-              label={language.name}
-              iconLeading={
-                <FlagIcon name={getCountryCode(language)} size={16} />
-              }
-            />
-          ))}
-        </View>
-      </ScrollView>
+          <View style={styles.chipsGrid}>
+            {languages.map((language) => (
+              <Chip
+                key={language.code}
+                testID={`language-chip-${language.code}`}
+                size="large"
+                label={language.name}
+                iconLeading={
+                  <FlagIcon name={getCountryCode(language)} size={16} />
+                }
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </AppBarBlurTarget>
     </Screen>
   );
 }

@@ -50,6 +50,8 @@ jest.mock("@/stores", () => ({
   useGlobalTooltip: jest.fn(() => null),
   useHideGlobalTooltip: jest.fn(() => jest.fn()),
   useIsEngineInitializing: jest.fn(() => false),
+  useIsSessionSelectionMode: jest.fn(() => false),
+  useIsTranscriptionSelectionMode: jest.fn(() => false),
   useOnRecordingStart: jest.fn(() => jest.fn()),
   useOnRecordingStop: jest.fn(() => jest.fn()),
   useRecordingControlsEnabled: jest.fn(() => true),
@@ -114,6 +116,8 @@ jest.mock("@/components", () => {
       );
     },
     RecordingControlsView: () => <View testID={TID.RecordingControlsView} />,
+    SUB_SCREEN_NAVBAR_HEIGHT: 72,
+    TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
   };
 });

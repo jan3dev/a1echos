@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import { StyleSheet, View } from "react-native";
 
 import { TranscriptionState } from "@/models";
 
@@ -26,6 +27,7 @@ const mockColors = {
   textPrimary: "#000000",
   textTertiary: "#999999",
   surfacePrimary: "#FFFFFF",
+  glassSurface: "rgba(255,255,255,0.90)",
 } as any;
 
 describe("RecordingButton", () => {
@@ -38,6 +40,34 @@ describe("RecordingButton", () => {
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
     expect(getByLabelText("Start Recording")).toBeTruthy();
+  });
+
+  it("renders the idle ring (10px thick, 300 radius, glass surface) in READY state", () => {
+    const { UNSAFE_getAllByType } = render(
+      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
+    );
+    const ring = UNSAFE_getAllByType(View).find((node) => {
+      const flat = StyleSheet.flatten(node.props.style) ?? {};
+      return flat.borderWidth === 10;
+    });
+    expect(ring).toBeTruthy();
+    const style = StyleSheet.flatten(ring!.props.style);
+    expect(style.borderRadius).toBe(300);
+    expect(style.borderColor).toBe("rgba(255,255,255,0.90)");
+  });
+
+  it("does not render the idle ring while RECORDING", () => {
+    const { UNSAFE_getAllByType } = render(
+      <RecordingButton
+        state={TranscriptionState.RECORDING}
+        colors={mockColors}
+      />,
+    );
+    const ring = UNSAFE_getAllByType(View).find((node) => {
+      const flat = StyleSheet.flatten(node.props.style) ?? {};
+      return flat.borderWidth === 10;
+    });
+    expect(ring).toBeUndefined();
   });
 
   it('renders with "Stop Recording" accessibility label in RECORDING state', () => {

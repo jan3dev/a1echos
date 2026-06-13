@@ -1,3 +1,6 @@
+import { RefObject } from "react";
+import { View } from "react-native";
+
 import { useLocalization } from "@/hooks";
 import { getCountryCode } from "@/models";
 import { useSelectedLanguage } from "@/stores";
@@ -21,6 +24,7 @@ interface SessionAppBarProps {
   onExitSelectionPressed?: () => void;
   onCancelEditPressed?: () => void;
   onSaveEditPressed?: () => void;
+  blurTarget?: RefObject<View | null>;
 }
 
 export const SessionAppBar = ({
@@ -36,6 +40,7 @@ export const SessionAppBar = ({
   onExitSelectionPressed,
   onCancelEditPressed,
   onSaveEditPressed,
+  blurTarget,
 }: SessionAppBarProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
@@ -46,6 +51,7 @@ export const SessionAppBar = ({
       <TopAppBar
         title={loc.edit}
         showBackButton={false}
+        blurTarget={blurTarget}
         leading={
           <RipplePressable
             onPress={onCancelEditPressed}
@@ -79,6 +85,7 @@ export const SessionAppBar = ({
   return (
     <TopAppBar
       title={selectionMode ? (selectionTitle ?? "") : sessionName}
+      blurTarget={blurTarget}
       onBackPressed={onBackPressed}
       onTitlePressed={
         !isIncognitoSession && !selectionMode ? onTitlePressed : undefined

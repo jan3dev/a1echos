@@ -100,7 +100,6 @@ export const useLocalization = () => {
       keyboardAutocorrectDescription: t("keyboardAutocorrectDescription"),
       keyboardPromptTitle: t("keyboardPromptTitle"),
       keyboardPromptBody: t("keyboardPromptBody"),
-      keyboardPromptIosDisclaimer: t("keyboardPromptIosDisclaimer"),
       keyboardPromptCta: t("keyboardPromptCta"),
       keyboardPromptDismiss: t("keyboardPromptDismiss"),
       advancedSettingsAddKeyboardTitle: t("advancedSettingsAddKeyboardTitle"),
