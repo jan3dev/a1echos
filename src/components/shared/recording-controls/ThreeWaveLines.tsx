@@ -19,7 +19,7 @@ import {
 import { scheduleOnUI } from "react-native-worklets";
 
 import { useTranscriptionStore } from "@/stores";
-import { recordingGradient } from "@/theme";
+import { recordingWaveGradients } from "@/theme";
 
 interface ThreeWaveLinesProps {
   height?: number;
@@ -74,7 +74,7 @@ const BASE_AMPLITUDE_RANGE = BASE_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const RECORDING_AMPLITUDE_RANGE = RECORDING_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const POINTS_MINUS_ONE = POINTS - 1;
 const VOICE_THRESHOLD = 0.38;
-const WAVE_OPACITY = 0.8;
+const WAVE_OPACITY = 1.0;
 
 const MASK_OPAQUE = "rgb(255, 255, 255)";
 const MASK_CLEAR = "rgba(255, 255, 255, 0)";
@@ -85,7 +85,7 @@ const MASK_CLEAR = "rgba(255, 255, 255, 0)";
 // BlurMask, each revealed only inside its band by an alpha gradient along the
 // axis. LinearGradient clamps beyond its endpoints, matching Figma's clamp.
 const BLUR_LAYERS = 4;
-const END_BLUR = 5;
+const END_BLUR = 2.5;
 
 interface BlurAxis {
   // Fractions of the element box. Blur is 0 at `start`, END_BLUR at `end`.
@@ -326,8 +326,8 @@ interface MaskedWaveProps {
   blurAxis: { value: { sx: number; sy: number; ex: number; ey: number } };
   containerWidth: { value: number };
   height: number;
-  colorGradientStart: { x: number; y: number };
-  colorGradientEnd: { x: number; y: number };
+  gradientColors: string[];
+  gradientLocations: number[];
 }
 
 const MaskedWave = ({
@@ -337,8 +337,8 @@ const MaskedWave = ({
   blurAxis,
   containerWidth,
   height,
-  colorGradientStart,
-  colorGradientEnd,
+  gradientColors,
+  gradientLocations,
 }: MaskedWaveProps) => {
   const maskStart = useDerivedValue(() =>
     vec(blurAxis.value.sx, blurAxis.value.sy),
@@ -346,6 +346,11 @@ const MaskedWave = ({
   const maskEnd = useDerivedValue(() =>
     vec(blurAxis.value.ex, blurAxis.value.ey),
   );
+
+  // Horizontal color gradient: each wave spans the full purple → blue → orange
+  // palette along its length, so the colors read regardless of amplitude.
+  const colorStart = useDerivedValue(() => vec(0, 0));
+  const colorEnd = useDerivedValue(() => vec(containerWidth.value, 0));
 
   return (
     <Group opacity={WAVE_OPACITY}>
@@ -372,10 +377,10 @@ const MaskedWave = ({
             strokeJoin="round"
           >
             <LinearGradient
-              start={colorGradientStart}
-              end={colorGradientEnd}
-              colors={recordingGradient.colors}
-              positions={recordingGradient.locations}
+              start={colorStart}
+              end={colorEnd}
+              colors={gradientColors}
+              positions={gradientLocations}
             />
             {spec.blur > 0 && <BlurMask blur={spec.blur} style="normal" />}
           </Path>
@@ -453,14 +458,6 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
     ey: WAVE_BLUR_AXES[2].end.y * height,
   }));
 
-  // Vertical color gradient runs top-to-bottom across the full canvas, so
-  // the wave band traverses the whole palette: purple at the top, blue
-  // through the middle, and the orange stop (offset 1) reaching the bottom
-  // crest. Mapping to `height` (rather than a multiple of it) keeps the
-  // orange on-screen so the lower waves pick up its warmth.
-  const colorGradientStart = useMemo(() => vec(0, 0), []);
-  const colorGradientEnd = useMemo(() => vec(0, height), [height]);
-
   const wave0 = useAnimatedWave(
     0,
     audioLevel,
@@ -516,8 +513,8 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
             blurAxis={blurAxis}
             containerWidth={containerWidth}
             height={height}
-            colorGradientStart={colorGradientStart}
-            colorGradientEnd={colorGradientEnd}
+            gradientColors={recordingWaveGradients[idx].colors}
+            gradientLocations={recordingWaveGradients[idx].locations}
           />
         ))}
       </Canvas>
