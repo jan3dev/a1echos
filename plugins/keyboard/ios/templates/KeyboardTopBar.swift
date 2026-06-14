@@ -901,11 +901,11 @@ final class RecordingWaveformView: UIView {
         let isTranscribing = mode == .transcribing
 
         // Per-frame paths + matching opacity that we'll stroke into the
-        // off-screen canvas after the simulation step finishes. Color is
-        // no longer per-wave — every wave shares the same vertical
-        // gradient (`#A54CFF → #4588D2 → #FBCAB9`), applied during the
-        // stroke pass. Opacity stays per-wave so each line still fades
-        // in/out independently with its own state machine.
+        // off-screen canvas after the simulation step finishes. Each wave's
+        // color comes from its own horizontal gradient (see `gradientStops`,
+        // mirroring `recordingWaveGradients` — wave 1 is orange), applied by
+        // index during the stroke pass. Opacity stays per-wave so each line
+        // still fades in/out independently with its own state machine.
         var paths: [(UIBezierPath, CGFloat, CGFloat)] = []
         paths.reserveCapacity(Self.profiles.count)
 
@@ -1084,13 +1084,14 @@ final class RecordingWaveformView: UIView {
                 cg.setLineWidth(lineWidth)
                 cg.addPath(path.cgPath)
                 // Convert the stroked outline into a fillable region, then
-                // clip to it so the vertical color gradient fills exactly
-                // the stroke's shape. Replaces the previous solid-color
-                // stroke with the shared `#A54CFF → #4588D2 → #FBCAB9`
-                // palette every wave now uses.
+                // clip to it so this wave's horizontal color gradient fills
+                // exactly the stroke's shape (per-wave palette mirroring
+                // `recordingWaveGradients` — wave 1 is the orange middle line).
                 cg.replacePathWithStrokedPath()
                 cg.clip()
-                Self.drawWaveGradient(in: cg, opacity: opacity, height: bounds.height)
+                Self.drawWaveGradient(
+                    in: cg, waveIndex: i, opacity: opacity, width: bounds.width
+                )
                 cg.restoreGState()
             }
             let blurredStroke = applyGaussianBlur(to: strokeImage)
@@ -1203,21 +1204,29 @@ final class RecordingWaveformView: UIView {
         [1, 1, 0, 0, 1, 1, 0, 0],
     ]
 
-    /// Shared vertical color gradient applied to every wave — replaces
-    /// the previous per-wave orange / accent / cyan palette. Mirrors
-    /// `WAVE_GRADIENT_COLORS` in `ThreeWaveLines.tsx` and the Figma
-    /// SVG's `#A54CFF → #4588D2 → #FBCAB9` stops.
-    private static let gradientStops: [UInt32] = [0xA54CFF, 0x4588D2, 0xFBCAB9]
-    private static let gradientLocations: [CGFloat] = [0, 0.5, 1.0]
+    /// Per-wave horizontal color gradient, mirroring `recordingWaveGradients`
+    /// in the app's `gradients.ts` — the wave palette runs *across* the lines
+    /// (along each wave's width), so the middle wave reads orange end to end.
+    /// Each entry is a 2-stop gradient drawn left → right:
+    ///   Wave 0: #A54CFF → #4588D2   (purple → blue)
+    ///   Wave 1: #FF8A3D → #F7931A   (orange — the middle line)
+    ///   Wave 2: #4588D2 → #A54CFF   (blue → purple)
+    private static let gradientStops: [[UInt32]] = [
+        [0xA54CFF, 0x4588D2],
+        [0xFF8A3D, 0xF7931A],
+        [0x4588D2, 0xA54CFF],
+    ]
+    private static let gradientLocations: [CGFloat] = [0, 1.0]
 
-    /// Fills the current clip region with the shared vertical gradient
-    /// at the given opacity (0…1). Caller is responsible for setting up
-    /// the clip via `replacePathWithStrokedPath` + `clip` so only the
-    /// stroke's shape is painted.
+    /// Fills the current clip region with `waveIndex`'s horizontal gradient
+    /// at the given opacity (0…1). Caller is responsible for setting up the
+    /// clip via `replacePathWithStrokedPath` + `clip` so only the stroke's
+    /// shape is painted.
     private static func drawWaveGradient(
-        in cg: CGContext, opacity: CGFloat, height: CGFloat
+        in cg: CGContext, waveIndex: Int, opacity: CGFloat, width: CGFloat
     ) {
-        let cgColors: [CGColor] = gradientStops.map { hex -> CGColor in
+        let stops = gradientStops[min(waveIndex, gradientStops.count - 1)]
+        let cgColors: [CGColor] = stops.map { hex -> CGColor in
             UIColor(hex: hex, alpha: opacity).cgColor
         }
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -1229,7 +1238,7 @@ final class RecordingWaveformView: UIView {
         cg.drawLinearGradient(
             gradient,
             start: CGPoint(x: 0, y: 0),
-            end: CGPoint(x: 0, y: height),
+            end: CGPoint(x: width, y: 0),
             options: []
         )
     }

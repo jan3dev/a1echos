@@ -173,9 +173,6 @@ class KeyboardView: UIInputView {
     private var keyFramesFlat: [KeyButton] = []
     private var keyFramesValid: Bool = false
 
-    // Drag-to-correct hysteresis — matches LatinIME's keyHysteresisDistance (~0.5 keys).
-    private static let keyHysteresis: CGFloat = 12.0
-
     // Delete-repeat is owned by whichever pointer first lands on delete;
     // a second finger on delete commits a single tap on its own release.
     private let deleteRepeater = DeleteRepeater()
@@ -208,9 +205,17 @@ class KeyboardView: UIInputView {
     }
 
     private func setupView() {
-        // The `.keyboard` input style supplies the backdrop; keep our own
-        // `backgroundColor` clear so the blur shows through.
-        backgroundColor = theme.keyboardBackground
+        // A custom keyboard's touch region is built by the host from the
+        // extension's *rendered, non-transparent* content — NOT from
+        // `hitTest`/`point(inside:)`. With a fully `.clear` background only the
+        // opaque keys land in that region, so taps in the inter-key gaps,
+        // margins, and the band below the rows fall straight through to the
+        // host app and never reach `touchesBegan` (Apple DTS forum 702798).
+        // A near-transparent (non-`clear`) fill puts the whole keyboard body
+        // in the region while staying visually clear over the system blur; the
+        // empty `draw(_:)` override below stops UIKit from optimizing the
+        // near-transparent fill (and the touch region with it) back out.
+        backgroundColor = UIColor.black.withAlphaComponent(0.02)
         allowsSelfSizing = true
 
         // CRITICAL: UIView ships with `isMultipleTouchEnabled = false`, which
@@ -631,6 +636,23 @@ class KeyboardView: UIInputView {
 
     // MARK: - Multi-touch pipeline (QWERTY rows)
 
+    /// Treat the whole body as "inside" while the rows are showing — `UIInputView`
+    /// otherwise reports `false` for its inter-key/margin gaps. This keeps
+    /// in-process hit-testing consistent with the `hitTest` body-claim below.
+    /// (The cross-process *touch region* the host uses is fixed separately, by
+    /// the near-transparent `backgroundColor` in `setupView` — a `.clear`
+    /// background excludes the gaps from that region entirely.)
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if !rowStackView.isHidden, bounds.contains(point) { return true }
+        return super.point(inside: point, with: event)
+    }
+
+    /// Intentionally empty. Forcing a `draw(_:)` pass keeps UIKit from
+    /// optimizing the near-transparent `backgroundColor` (see `setupView`) out
+    /// of the rasterized content, which would shrink the keyboard's touch
+    /// region back to just the opaque keys and re-open the dead-zone gaps.
+    override func draw(_ rect: CGRect) {}
+
     /// The multi-touch pipeline must own the entire QWERTY body — keys, the
     /// inter-key/inter-row gaps, the outer margins, and the thin bands above
     /// and below the rows — so the hit-tile lookup (`hitTestKeyButton`) can
@@ -798,44 +820,17 @@ class KeyboardView: UIInputView {
         // Long-press already fired (emoji picker): finger drift is just noise.
         if state.longPressFired { return }
 
-        // Hysteresis-gated drag-to-correct (LatinIME's
-        // `isMajorEnoughMoveToBeOnNewKey`). The finger has to leave the
-        // current key's frame by at least `keyHysteresis` points before we
-        // transfer the press — otherwise jitter on the boundary would cause
-        // a constant ping-pong between adjacent keys.
-        let currentFrame = state.button.convert(state.button.bounds, to: self)
-        let inflated = currentFrame.insetBy(
-            dx: -Self.keyHysteresis, dy: -Self.keyHysteresis
-        )
-        if inflated.contains(location) { return }
-
-        guard let newButton = hitTestKeyButton(at: location),
-              newButton !== state.button else { return }
-
-        // Don't slide across non-character keys — sliding from `q` onto
-        // shift / delete / return would cause more confusion than help.
-        guard newButton.keyDefinition.type == .character ||
-              newButton.keyDefinition.type == .comma ||
-              newButton.keyDefinition.type == .period else { return }
-        guard state.button.keyDefinition.type == .character ||
-              state.button.keyDefinition.type == .comma ||
-              state.button.keyDefinition.type == .period else { return }
-
-        // Cancel any pending long-press for the old key — the drag-correct
-        // is a fresh press, not a held one.
-        state.longPressTimer?.invalidate()
-        state.longPressTimer = nil
-
-        state.button.setPressed(false)
-        state.button = newButton
-        newButton.setPressed(true)
-        showPreviewIfCharacter(newButton)
-
-        if newButton.keyDefinition.type == .character,
-           AccentVariants.hasVariants(for: newButton.keyDefinition.label),
-           !anyPointerOwnsVariants() {
-            scheduleVariantsLongPress(state: state)
-        }
+        // The pressed key is sticky: once a touch lands on a key (the
+        // nearest-key fallback in `hitTestKeyButton` already makes *landing*
+        // forgiving), finger movement does NOT retarget to a neighbour. This
+        // matches the native feel — a quick tap that rolls slightly, or a
+        // hold-and-wiggle, commits the key you actually pressed instead of
+        // ping-ponging to an adjacent letter (which read as wrong/skipped
+        // letters while typing fast). Deliberate slides are still handled by
+        // the dedicated paths above: spacebar cursor-drag, the accent-variants
+        // popover, and delete-repeat. Keeping the variants long-press timer
+        // alive here (we no longer cancel it on move) means holding a key and
+        // wiggling shows its accent popup rather than changing the key.
     }
 
     private func handlePointerUp(_ touch: UITouch, cancelled: Bool) {

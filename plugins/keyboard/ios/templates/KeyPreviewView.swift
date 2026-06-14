@@ -91,20 +91,25 @@ final class KeyPreviewView: UIView {
         let balloonWidth = max(keyFrame.width * Self.widthRatio, 44)
         let shaftH = keyFrame.height
         let desiredHeadH = max(keyFrame.height * 1.1, 50)
-        let desiredTransitionH = Self.transitionHeight
-        let totalH = desiredHeadH + desiredTransitionH + shaftH
-        let actualHeadH = desiredHeadH
-        let actualTransitionH = desiredTransitionH
+        let actualTransitionH = Self.transitionHeight
 
-        // Native iPhone keyboards let the press balloon extend above the
-        // QWERTY area — it overlaps the suggestion bar / top bar instead of
-        // shrinking. We previously clamped the head height for top-row keys
-        // to keep the balloon inside the keyboard, which made those balloons
-        // visibly smaller than middle/bottom rows. Now we always keep the
-        // head full-size and let `minY` go negative; `KeyboardView` sets
-        // `clipsToBounds = false` and brings the balloon to the front so it
-        // draws over the top bar's record button while a top-row key is held.
-        let minY = keyFrame.maxY - totalH
+        // A keyboard extension cannot draw above its input view's top edge —
+        // the system clips anything above the keyboard, so a balloon with a
+        // negative `minY` gets its head cut off (the bug on top-row keys).
+        // Keep the balloon's bottom pinned to the key and, when the full-size
+        // head would poke above the keyboard, shrink the head just enough to
+        // fit (`minY >= topInset`). Middle/bottom rows have room and keep the
+        // full head. `layoutSubviews` scales the glyph to the resulting head
+        // height, so a shrunk top-row head stays legible.
+        let topInset: CGFloat = 1
+        var actualHeadH = desiredHeadH
+        var totalH = actualHeadH + actualTransitionH + shaftH
+        var minY = keyFrame.maxY - totalH
+        if minY < topInset {
+            actualHeadH = max(0, keyFrame.maxY - topInset - actualTransitionH - shaftH)
+            totalH = actualHeadH + actualTransitionH + shaftH
+            minY = keyFrame.maxY - totalH
+        }
 
         // Decide horizontal placement. If natural-centered placement would
         // overflow either side, lock the balloon's outer edge to the key's
