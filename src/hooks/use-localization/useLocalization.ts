@@ -98,6 +98,8 @@ export const useLocalization = () => {
       smartSplitDescription: t("smartSplitDescription"),
       keyboardAutocorrectTitle: t("keyboardAutocorrectTitle"),
       keyboardAutocorrectDescription: t("keyboardAutocorrectDescription"),
+      keyboardHapticTitle: t("keyboardHapticTitle"),
+      keyboardHapticDescription: t("keyboardHapticDescription"),
       keyboardPromptTitle: t("keyboardPromptTitle"),
       keyboardPromptBody: t("keyboardPromptBody"),
       keyboardPromptCta: t("keyboardPromptCta"),

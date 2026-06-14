@@ -14,7 +14,9 @@ class EchosKeyboardViewController: UIInputViewController {
     private var meterTimer: Timer?
     private let recapitalize = RecapitalizeEngine()
     private let suggestionEngine = SuggestionEngine()
-    private var settings = KeyboardSettings.load()
+    private var settings = KeyboardSettings.load() {
+        didSet { HapticManager.isEnabled = settings.hapticFeedback }
+    }
     /// Pending autocorrect-on-space revert target (§5.4): set when the top
     /// guess auto-applied on space, cleared by the next backspace (which
     /// restores the typed word) or any other keystroke / cursor move.
@@ -612,6 +614,11 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// Echos app would silently swallow the audio and time out 10 seconds
     /// later. Pinging first lets us surface a clear "open Echos" prompt
     /// immediately and avoid wasting recording time.
+    ///
+    /// The IPC channel (App Group container + Darwin notifications) only works
+    /// when the user has granted Full Access. Without it the ping can never
+    /// reach the app, so we check that first and point the user at the real
+    /// fix instead of a misleading "open Echos" prompt.
     func keyboardViewDidToggleRecord(_ view: KeyboardView) {
         if isCurrentlyRecording {
             // Hand off to the main app to stop + transcribe. The result (or a
@@ -619,6 +626,13 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             view.setMicState(.transcribing)
             stopMetering()
             ipcClient.requestRecordStop()
+            return
+        }
+
+        guard hasFullAccess else {
+            keyboardView.showOpenAppPrompt(
+                "Enable Full Access in Settings to use voice typing"
+            )
             return
         }
 

@@ -66,6 +66,7 @@ export enum TestID {
   SettingsFooter = "settings-footer",
   SettingsSmartSplitToggle = "settings-smart-split-toggle",
   SettingsKeyboardAutocorrectToggle = "settings-keyboard-autocorrect-toggle",
+  SettingsKeyboardHapticToggle = "settings-keyboard-haptic-toggle",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
   KeyboardPromptModal = "keyboard-prompt-modal",
   KeyboardPromptImageIos = "keyboard-prompt-image-ios",

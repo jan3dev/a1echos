@@ -4,7 +4,12 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PathMeasure
+import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.util.AttributeSet
@@ -40,6 +45,11 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
     private val recordSpinner: ImageView
+    /// Bright white border that rings the record button while recording and
+    /// depletes counter-clockwise over the 30s recording cap, so the user can
+    /// see when the keyboard will auto-stop and transcribe. Mirrors the iOS
+    /// `KeyboardTopBar.countdownRing`.
+    private val countdownRing: CountdownRingView
     /// Foreground row (logo + label + spacer + record). Hidden while the
     /// suggestion strip takes over the bar.
     private val foreground: LinearLayout
@@ -180,6 +190,17 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         recordContainer.addView(recordButton)
 
+        // Countdown ring overlay — same 72×40 footprint, rides the pill edge.
+        countdownRing = CountdownRingView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            )
+            cornerRadiusPx = dim("keyboard_top_bar_record_corner_radius", 20).toFloat()
+            visibility = INVISIBLE
+        }
+        recordContainer.addView(countdownRing)
+
         // Loading spinner shown while transcribing — replaces the heavy
         // waveform animation in that state. Uses the design system's
         // `ic_spinner_loading` glyph rotated continuously by an
@@ -252,6 +273,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.isEnabled = true
                 waveform.stopAnimating()
                 waveform.visibility = INVISIBLE
+                countdownRing.stop()
+                countdownRing.visibility = INVISIBLE
             }
             MicState.RECORDING -> {
                 recordButton.setImageResource(drawable("ic_stop"))
@@ -264,6 +287,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 waveform.setMode(EchosWaveformView.Mode.RECORDING)
                 waveform.visibility = VISIBLE
                 waveform.startAnimating()
+                countdownRing.visibility = VISIBLE
+                countdownRing.start()
             }
             MicState.TRANSCRIBING -> {
                 // Swap the mic glyph for the design-system spinner glyph
@@ -280,6 +305,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.isEnabled = false
                 waveform.stopAnimating()
                 waveform.visibility = INVISIBLE
+                countdownRing.stop()
+                countdownRing.visibility = INVISIBLE
             }
         }
     }
@@ -324,4 +351,88 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
 
     private fun drawable(name: String): Int =
         context.resources.getIdentifier(name, "drawable", context.packageName)
+}
+
+/**
+ * Bright white capsule border that starts full and depletes counter-clockwise
+ * over the 30s recording cap. Mirrors the iOS `KeyboardTopBar.countdownRing`
+ * (a `CAShapeLayer` animating `strokeEnd` 1 → 0) — including its
+ * counter-clockwise depletion. A linear `ValueAnimator` drives `progress`.
+ */
+private class CountdownRingView(context: Context) : View(context) {
+
+    /// Corner radius of the capsule, in px — set to match the record pill.
+    var cornerRadiusPx: Float = 0f
+
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        color = Color.WHITE
+        strokeWidth = RING_STROKE_DP * density
+        strokeCap = Paint.Cap.ROUND
+    }
+
+    private val fullPath = Path()
+    private val drawPath = Path()
+    private val pathMeasure = PathMeasure()
+    private var pathLength = 0f
+
+    /// 1 = full ring, 0 = empty. Drives how much of `fullPath` is drawn.
+    private var progress = 1f
+    private var animator: ValueAnimator? = null
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w <= 0 || h <= 0) return
+        val inset = paint.strokeWidth / 2f
+        val rect = RectF(inset, inset, w - inset, h - inset)
+        val radius = (cornerRadiusPx - inset).coerceAtLeast(0f)
+        fullPath.reset()
+        // CW winding: depleting the segment tail (`getSegment(0, len*progress)`
+        // shrinking 1 → 0) then sweeps the remaining stroke counter-clockwise,
+        // matching the iOS ring's depletion direction.
+        fullPath.addRoundRect(rect, radius, radius, Path.Direction.CW)
+        pathMeasure.setPath(fullPath, false)
+        pathLength = pathMeasure.length
+    }
+
+    fun start() {
+        animator?.cancel()
+        progress = 1f
+        animator = ValueAnimator.ofFloat(1f, 0f).apply {
+            duration = COUNTDOWN_DURATION_MS
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    fun stop() {
+        animator?.cancel()
+        animator = null
+        progress = 1f
+        invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+        stop()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (pathLength <= 0f || progress <= 0f) return
+        drawPath.reset()
+        pathMeasure.getSegment(0f, pathLength * progress, drawPath, true)
+        canvas.drawPath(drawPath, paint)
+    }
+
+    companion object {
+        private const val RING_STROKE_DP = 2.5f
+        /// Mirrors `recordingMaxSeconds` (iOS) / `MAX_RECORDING_SECONDS`
+        /// (Android transcriber) — the hard cap the ring counts down against.
+        private const val COUNTDOWN_DURATION_MS = 30_000L
+    }
 }

@@ -27,7 +27,7 @@ describe("writeKeyboardSettings", () => {
   });
 
   it("stages to a tmp file then moves it into place", () => {
-    writeKeyboardSettings({ autocorrect: true });
+    writeKeyboardSettings({ autocorrect: true, hapticFeedback: true });
 
     // Two File handles created: the tmp sibling, then the target.
     expect(FileMock).toHaveBeenCalledTimes(2);
@@ -35,23 +35,23 @@ describe("writeKeyboardSettings", () => {
     const settings = FileMock.mock.results[1].value as MockFile;
 
     expect(tmp.write).toHaveBeenCalledWith(
-      JSON.stringify({ autocorrect: true }),
+      JSON.stringify({ autocorrect: true, hapticFeedback: true }),
     );
     expect(tmp.move).toHaveBeenCalledWith(settings);
     expect(logWarn).not.toHaveBeenCalled();
   });
 
-  it("serializes the false value too", () => {
-    writeKeyboardSettings({ autocorrect: false });
+  it("serializes the false values too", () => {
+    writeKeyboardSettings({ autocorrect: false, hapticFeedback: false });
 
     const tmp = FileMock.mock.results[0].value as MockFile;
     expect(tmp.write).toHaveBeenCalledWith(
-      JSON.stringify({ autocorrect: false }),
+      JSON.stringify({ autocorrect: false, hapticFeedback: false }),
     );
   });
 
   it("deletes pre-existing tmp and target files before writing", () => {
-    writeKeyboardSettings({ autocorrect: true });
+    writeKeyboardSettings({ autocorrect: true, hapticFeedback: false });
 
     // The global mock reports exists: true, so both delete branches run.
     const tmp = FileMock.mock.results[0].value as MockFile;
@@ -73,7 +73,7 @@ describe("writeKeyboardSettings", () => {
       () => settings,
     );
 
-    writeKeyboardSettings({ autocorrect: true });
+    writeKeyboardSettings({ autocorrect: true, hapticFeedback: false });
 
     expect(tmp.delete).not.toHaveBeenCalled();
     expect(settings.delete).not.toHaveBeenCalled();
@@ -86,7 +86,9 @@ describe("writeKeyboardSettings", () => {
       throw new Error("disk full");
     });
 
-    expect(() => writeKeyboardSettings({ autocorrect: true })).not.toThrow();
+    expect(() =>
+      writeKeyboardSettings({ autocorrect: true, hapticFeedback: false }),
+    ).not.toThrow();
     // Only one File handle was attempted before the failure aborted the write.
     expect(FileMock).toHaveBeenCalledTimes(1);
   });

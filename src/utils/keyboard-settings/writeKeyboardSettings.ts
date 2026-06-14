@@ -13,6 +13,9 @@ export interface KeyboardSettingsConfig {
   /** When true, the keyboard auto-applies the top spelling guess on space
    *  (with backspace-revert). When false, suggestions are tap-only. */
   autocorrect: boolean;
+  /** When true, the keyboard plays a light haptic on each key press. When
+   *  false (default), it's silent — matching the iOS native default. */
+  hapticFeedback: boolean;
 }
 
 /**
@@ -24,7 +27,7 @@ export interface KeyboardSettingsConfig {
 export const writeKeyboardSettings = (config: KeyboardSettingsConfig): void => {
   writeJsonAtomic(
     KEYBOARD_SETTINGS_FILENAME,
-    { autocorrect: config.autocorrect },
+    { autocorrect: config.autocorrect, hapticFeedback: config.hapticFeedback },
     { flag: FeatureFlag.settings, label: "keyboard settings" },
   );
 };

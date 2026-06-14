@@ -27,6 +27,7 @@ const STORAGE_KEYS = {
   SMART_SPLIT_ENABLED: "smart_split_enabled",
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
   KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
+  KEYBOARD_HAPTIC: "keyboard_haptic",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -46,6 +47,9 @@ interface SettingsStore {
   /** Keyboard: auto-apply the top spelling guess on space (default off =
    *  tap-to-apply suggestions only). */
   keyboardAutocorrect: boolean;
+  /** Keyboard: play a light haptic on each key press (default off, matching
+   *  the iOS native keyboard). */
+  keyboardHaptic: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -59,6 +63,7 @@ interface SettingsStore {
   setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
   markKeyboardPromptSeen: () => Promise<void>;
   setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
+  setKeyboardHaptic: (enabled: boolean) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -111,6 +116,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   smartSplitEnabled: true,
   hasSeenKeyboardPrompt: false,
   keyboardAutocorrect: false,
+  keyboardHaptic: false,
 
   initialize: async () => {
     try {
@@ -125,6 +131,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         smartSplitValue,
         keyboardPromptValue,
         keyboardAutocorrectValue,
+        keyboardHapticValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -136,6 +143,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.SMART_SPLIT_ENABLED),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_AUTOCORRECT),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
       ]);
 
       const selectedTheme = themeValue
@@ -198,6 +206,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const hasSeenKeyboardPrompt = keyboardPromptValue === "true";
       // Default false — only the explicit string "true" enables autocorrect.
       const keyboardAutocorrect = keyboardAutocorrectValue === "true";
+      // Default false — only the explicit string "true" enables haptics.
+      const keyboardHaptic = keyboardHapticValue === "true";
 
       set({
         selectedTheme,
@@ -210,12 +220,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         smartSplitEnabled,
         hasSeenKeyboardPrompt,
         keyboardAutocorrect,
+        keyboardHaptic,
       });
 
-      // Mirror the preference to the keyboard config file so the native
-      // keyboards have it on first launch (and after a reinstall) without
-      // waiting for the user to toggle it.
-      writeKeyboardSettings({ autocorrect: keyboardAutocorrect });
+      // Mirror the preferences to the keyboard config file so the native
+      // keyboards have them on first launch (and after a reinstall) without
+      // waiting for the user to toggle them.
+      writeKeyboardSettings({
+        autocorrect: keyboardAutocorrect,
+        hapticFeedback: keyboardHaptic,
+      });
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
@@ -232,6 +246,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         smartSplitEnabled: true,
         hasSeenKeyboardPrompt: false,
         keyboardAutocorrect: false,
+        keyboardHaptic: false,
       });
     }
   },
@@ -448,8 +463,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     if (previousValue === enabled) return;
     set({ keyboardAutocorrect: enabled });
     // Push the new preference to the keyboard config file optimistically so
-    // the native keyboards pick it up on next field focus.
-    writeKeyboardSettings({ autocorrect: enabled });
+    // the native keyboards pick it up on next field focus. The config holds
+    // every keyboard preference, so carry the current haptic value through.
+    writeKeyboardSettings({
+      autocorrect: enabled,
+      hapticFeedback: get().keyboardHaptic,
+    });
     try {
       await AsyncStorage.setItem(
         STORAGE_KEYS.KEYBOARD_AUTOCORRECT,
@@ -461,7 +480,39 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         message: "Failed to save keyboard autocorrect preference",
       });
       set({ keyboardAutocorrect: previousValue });
-      writeKeyboardSettings({ autocorrect: previousValue });
+      writeKeyboardSettings({
+        autocorrect: previousValue,
+        hapticFeedback: get().keyboardHaptic,
+      });
+      throw error;
+    }
+  },
+
+  setKeyboardHaptic: async (enabled: boolean) => {
+    const previousValue = get().keyboardHaptic;
+    if (previousValue === enabled) return;
+    set({ keyboardHaptic: enabled });
+    // Mirror to the keyboard config file optimistically; carry the current
+    // autocorrect value through since the config holds both.
+    writeKeyboardSettings({
+      autocorrect: get().keyboardAutocorrect,
+      hapticFeedback: enabled,
+    });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.KEYBOARD_HAPTIC,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save keyboard haptic preference",
+      });
+      set({ keyboardHaptic: previousValue });
+      writeKeyboardSettings({
+        autocorrect: get().keyboardAutocorrect,
+        hapticFeedback: previousValue,
+      });
       throw error;
     }
   },
@@ -500,6 +551,10 @@ export const useKeyboardAutocorrect = () =>
   useSettingsStore((s) => s.keyboardAutocorrect);
 export const useSetKeyboardAutocorrect = () =>
   useSettingsStore((s) => s.setKeyboardAutocorrect);
+export const useKeyboardHaptic = () =>
+  useSettingsStore((s) => s.keyboardHaptic);
+export const useSetKeyboardHaptic = () =>
+  useSettingsStore((s) => s.setKeyboardHaptic);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

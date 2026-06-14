@@ -36,12 +36,15 @@ jest.mock("@/hooks", () => ({
 
 const mockSetSmartSplitEnabled = jest.fn();
 const mockSetKeyboardAutocorrect = jest.fn();
+const mockSetKeyboardHaptic = jest.fn();
 const mockShowKeyboardPrompt = jest.fn();
 jest.mock("@/stores", () => ({
   useSmartSplitEnabled: jest.fn(() => true),
   useSetSmartSplitEnabled: jest.fn(() => mockSetSmartSplitEnabled),
   useKeyboardAutocorrect: jest.fn(() => false),
   useSetKeyboardAutocorrect: jest.fn(() => mockSetKeyboardAutocorrect),
+  useKeyboardHaptic: jest.fn(() => false),
+  useSetKeyboardHaptic: jest.fn(() => mockSetKeyboardHaptic),
   useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
 }));
 
@@ -88,13 +91,17 @@ describe("AdvancedSettingsScreen", () => {
     mockSetSmartSplitEnabled.mockResolvedValue(undefined);
     mockSetKeyboardAutocorrect.mockReset();
     mockSetKeyboardAutocorrect.mockResolvedValue(undefined);
+    mockSetKeyboardHaptic.mockReset();
+    mockSetKeyboardHaptic.mockResolvedValue(undefined);
     mockShowKeyboardPrompt.mockReset();
     const {
       useSmartSplitEnabled,
       useKeyboardAutocorrect,
+      useKeyboardHaptic,
     } = require("@/stores");
     (useSmartSplitEnabled as jest.Mock).mockReturnValue(true);
     (useKeyboardAutocorrect as jest.Mock).mockReturnValue(false);
+    (useKeyboardHaptic as jest.Mock).mockReturnValue(false);
   });
 
   it("renders TopAppBar with advanced settings title", () => {
@@ -179,6 +186,32 @@ describe("AdvancedSettingsScreen", () => {
     fireEvent.press(getByTestId(TestID.SettingsKeyboardAutocorrectToggle));
     await waitFor(() => {
       expect(mockSetKeyboardAutocorrect).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("renders the keyboard haptic row (off by default)", () => {
+    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByTestId(TestID.SettingsKeyboardHapticToggle)).toBeTruthy();
+    expect(getByText("keyboardHapticTitle")).toBeTruthy();
+    expect(getByText("keyboardHapticDescription")).toBeTruthy();
+    expect(getByTestId("toggle-value-keyboardHapticTitle")).toHaveTextContent(
+      "off",
+    );
+  });
+
+  it("pressing the haptic toggle persists the flipped value", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId("toggle-keyboardHapticTitle"));
+    await waitFor(() => {
+      expect(mockSetKeyboardHaptic).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("pressing the haptic row also flips the toggle", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId(TestID.SettingsKeyboardHapticToggle));
+    await waitFor(() => {
+      expect(mockSetKeyboardHaptic).toHaveBeenCalledWith(true);
     });
   });
 });

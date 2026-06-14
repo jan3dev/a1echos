@@ -481,32 +481,30 @@ class EchosWaveformView @JvmOverloads constructor(
         private const val RECORDING_MAX_AMPLITUDE = 32.0
         private const val MIN_AMPLITUDE = 2.0
         private const val VOICE_THRESHOLD = 0.38
-        /// Matches `BlurMask blur={2.5}` in `ThreeWaveLines.tsx` and the
-        /// `feGaussianBlur stdDeviation=2.5` filter in the Figma source.
-        private const val BLUR_RADIUS_DP = 2.5f
+        /// Matches the Android `END_BLUR` in `ThreeWaveLines.tsx` (1.8 on
+        /// Android, vs 2.5 on iOS) — Android's blur composites the light
+        /// fringe brighter, so the tighter radius keeps the glow colored
+        /// instead of washing the line edges toward white.
+        private const val BLUR_RADIUS_DP = 1.8f
         /// Mirrors `opacity="0.8"` on the Figma group definition.
         private const val FIGMA_OPACITY_CEILING = 0.8
 
         /// Per-wave horizontal gradient stops + visibility pattern that
         /// drives which segments of the wave render as a sharp 3pt
-        /// stroke vs. a Gaussian-blurred stroke. Each wave has TWO
-        /// blurred spots at distinctly different x positions so the
-        /// three lines never all soften at the same place. Mirrors
-        /// `WAVE_GRADIENTS` in `ThreeWaveLines.tsx`.
-        ///
-        /// Approximate blur centers:
-        ///   Wave 0 (orange): ~32%, ~92%
-        ///   Wave 1 (blue) : ~10%, ~70%  (inverted pattern)
-        ///   Wave 2 (cyan) : ~51%, ~88%
+        /// stroke vs. a Gaussian-blurred stroke. Mirrors `WAVE_BLUR_REVEALS`
+        /// in `ThreeWaveLines.tsx`: the outer lines (0, 2) soften at both
+        /// ends and stay crisp through the middle; the middle line (1)
+        /// softens through the center and stays crisp at the ends. A `1`
+        /// marks where the sharp pass shows (blurred pass shows where `0`).
         private val GRADIENT_POSITIONS = arrayOf(
-            floatArrayOf(0f, 0.18f, 0.25f, 0.40f, 0.55f, 0.75f, 0.85f, 1f),
-            floatArrayOf(0f, 0.20f, 0.30f, 0.50f, 0.62f, 0.78f, 0.85f, 1f),
-            floatArrayOf(0f, 0.32f, 0.45f, 0.58f, 0.65f, 0.72f, 0.80f, 0.92f),
+            floatArrayOf(0f, 0.32f, 0.68f, 1f),
+            floatArrayOf(0f, 0.34f, 0.66f, 1f),
+            floatArrayOf(0f, 0.32f, 0.68f, 1f),
         )
         private val SHARP_VISIBILITY = arrayOf(
-            intArrayOf(1, 1, 0, 0, 1, 1, 0, 0),
-            intArrayOf(0, 0, 1, 1, 0, 0, 1, 1),
-            intArrayOf(1, 1, 0, 0, 1, 1, 0, 0),
+            intArrayOf(0, 1, 1, 0),
+            intArrayOf(1, 0, 0, 1),
+            intArrayOf(0, 1, 1, 0),
         )
 
         /// Per-line horizontal color gradients, one per wave, mirroring

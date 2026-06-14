@@ -31,6 +31,8 @@ export {
   useMarkKeyboardPromptSeen,
   useKeyboardAutocorrect,
   useSetKeyboardAutocorrect,
+  useKeyboardHaptic,
+  useSetKeyboardHaptic,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,

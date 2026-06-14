@@ -23,9 +23,13 @@ object KeyboardSettings {
     /** Kept in sync with the writer in writeKeyboardSettings.ts. */
     private const val FILENAME = "keyboard-settings.json"
 
-    /** When true, the top spelling guess auto-applies on space and the next
-     *  backspace reverts it. When false (default), suggestions are tap-only. */
-    data class Settings(val autocorrect: Boolean = false)
+    /** [autocorrect]: when true, the top spelling guess auto-applies on space
+     *  and the next backspace reverts it (false = tap-only). [hapticFeedback]:
+     *  when true, key presses vibrate (false = silent). Both default off. */
+    data class Settings(
+        val autocorrect: Boolean = false,
+        val hapticFeedback: Boolean = false,
+    )
 
     @Volatile
     private var cached: Settings = Settings()
@@ -45,7 +49,10 @@ object KeyboardSettings {
         if (mtime == cachedMtime) return cached
         return try {
             val json = JSONObject(file.readText(Charsets.UTF_8))
-            val settings = Settings(autocorrect = json.optBoolean("autocorrect", false))
+            val settings = Settings(
+                autocorrect = json.optBoolean("autocorrect", false),
+                hapticFeedback = json.optBoolean("hapticFeedback", false),
+            )
             cached = settings
             cachedMtime = mtime
             settings

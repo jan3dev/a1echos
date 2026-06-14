@@ -30,6 +30,13 @@ final class KeyboardTopBar: UIView {
     /// wave runs at 30fps, and visually identical to the Android keyboard.
     private let recordSpinner = LoadingSpinnerIconView()
     private let waveform = RecordingWaveformView()
+    /// Bright white border that rings the record button while recording and
+    /// depletes counter-clockwise over the 30s recording cap, so the user can
+    /// see when the keyboard will auto-stop and transcribe.
+    private let countdownRing = CAShapeLayer()
+    /// Mirrors `KeyboardTranscriptionListener.recordingMaxSeconds` — the
+    /// hard recording cap the ring counts down against.
+    private static let countdownDurationSeconds: CFTimeInterval = 30
     /// Suggestion strip overlay (§5.5). Hidden by default; shown over the
     /// idle chrome while the user composes a word, never while recording.
     private let suggestionStrip = SuggestionStripView()
@@ -72,6 +79,16 @@ final class KeyboardTopBar: UIView {
         recordButton.accessibilityLabel = "Record"
         recordButton.accessibilityTraits = [.button, .startsMediaSession]
         addSubview(recordButton)
+
+        // Countdown ring rides the capsule edge above the gray fill but below
+        // the glyph. Path + frame are set in `layoutSubviews` once the button
+        // has real bounds; the depletion animation is driven by `strokeEnd`.
+        countdownRing.fillColor = UIColor.clear.cgColor
+        countdownRing.strokeColor = UIColor.white.cgColor
+        countdownRing.lineWidth = 2.5
+        countdownRing.lineCap = .round
+        countdownRing.isHidden = true
+        recordButton.layer.addSublayer(countdownRing)
 
         recordIcon.translatesAutoresizingMaskIntoConstraints = false
         recordIcon.isUserInteractionEnabled = false
@@ -135,6 +152,23 @@ final class KeyboardTopBar: UIView {
         applyMicState()
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Keep the ring glued to the capsule edge. Inset by half the line width
+        // so the full stroke stays inside the button bounds rather than being
+        // clipped at the edge. Building the path here (not in `setup`) means it
+        // tracks any future size changes for free.
+        let inset = countdownRing.lineWidth / 2
+        let ringRect = recordButton.bounds.insetBy(dx: inset, dy: inset)
+        let radius = max(0, recordButton.layer.cornerRadius - inset)
+        countdownRing.frame = recordButton.bounds
+        // `.reversing()` flips the default clockwise winding so the stroke
+        // depletes counter-clockwise as `strokeEnd` runs 1 → 0.
+        countdownRing.path = UIBezierPath(
+            roundedRect: ringRect, cornerRadius: radius
+        ).reversing().cgPath
+    }
+
     // MARK: - Public
 
     func setMicState(_ state: MicState) {
@@ -195,6 +229,7 @@ final class KeyboardTopBar: UIView {
             recordButton.isEnabled = true
             waveform.stopAnimating()
             waveform.isHidden = true
+            stopCountdownRing()
             recordButton.accessibilityLabel = "Start recording"
         case .recording:
             recordIcon.state = .stop
@@ -206,6 +241,7 @@ final class KeyboardTopBar: UIView {
             waveform.setMode(.recording)
             waveform.isHidden = false
             waveform.startAnimating()
+            startCountdownRing()
             recordButton.accessibilityLabel = "Stop recording"
         case .transcribing:
             // Swap the mic glyph for the design-system spinner glyph
@@ -220,8 +256,35 @@ final class KeyboardTopBar: UIView {
             recordSpinner.startSpinning()
             waveform.stopAnimating()
             waveform.isHidden = true
+            stopCountdownRing()
             recordButton.accessibilityLabel = "Transcribing"
         }
+    }
+
+    // MARK: - Countdown Ring
+
+    /// Reveal the ring full and animate `strokeEnd` 1 → 0 over the recording
+    /// cap. `removedOnCompletion = false` + `.forwards` holds the empty state
+    /// if recording somehow outlives the cap before the state flips.
+    private func startCountdownRing() {
+        countdownRing.removeAnimation(forKey: "countdown")
+        countdownRing.isHidden = false
+        countdownRing.strokeEnd = 0
+
+        let animation = CABasicAnimation(keyPath: "strokeEnd")
+        animation.fromValue = 1
+        animation.toValue = 0
+        animation.duration = Self.countdownDurationSeconds
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .forwards
+        countdownRing.add(animation, forKey: "countdown")
+    }
+
+    private func stopCountdownRing() {
+        countdownRing.removeAnimation(forKey: "countdown")
+        countdownRing.isHidden = true
+        countdownRing.strokeEnd = 1
     }
 }
 
@@ -715,10 +778,13 @@ final class RecordingWaveformView: UIView {
     /// keyboard waveform reads identically to the main app's Skia version.
     private static let figmaOpacityCeiling: Double = 0.8
 
-    /// Sigma for the per-frame `CIGaussianBlur` — matches the
-    /// `feGaussianBlur stdDeviation=2.5` filter on every wave group in
-    /// the Figma SVG export.
-    private static let blurSigma: Double = 2.5
+    /// Sigma for the per-frame `CIGaussianBlur`. Matches the Android
+    /// keyboard's `BLUR_RADIUS_DP` (1.8) rather than the app's iOS Skia
+    /// value (2.5): the keyboard wave is edge-faded to its center third, so
+    /// the middle line's center blur is the only part on screen — a 2.5
+    /// sigma washes that line out entirely, while 1.8 keeps it legible and
+    /// identical to Android.
+    private static let blurSigma: Double = 1.8
 
     override init(frame: CGRect) {
         // Seed phases with offsets of 0, π, 2π so the three waves start
@@ -1187,21 +1253,20 @@ final class RecordingWaveformView: UIView {
     }
 
     /// Per-wave gradient stops + sharp-pass visibility pattern, mirroring
-    /// `WAVE_GRADIENTS` in `ThreeWaveLines.tsx` and `GRADIENT_POSITIONS` /
-    /// `SHARP_VISIBILITY` in `EchosWaveformView.kt`. Each wave gets two
-    /// blurred spots at distinctly different x positions:
-    ///   Wave 0 (orange): ~32%, ~92%
-    ///   Wave 1 (blue) : ~10%, ~70%  (inverted pattern)
-    ///   Wave 2 (cyan) : ~51%, ~88%
+    /// `WAVE_BLUR_REVEALS` in `ThreeWaveLines.tsx` and `GRADIENT_POSITIONS` /
+    /// `SHARP_VISIBILITY` in `EchosWaveformView.kt`. The outer lines (0, 2)
+    /// soften at both ends and stay crisp through the middle; the middle line
+    /// (1) softens through the center and stays crisp at the ends. A `1` marks
+    /// where the sharp pass shows (the blurred pass shows where it's `0`).
     private static let gradientPositions: [[CGFloat]] = [
-        [0, 0.18, 0.25, 0.40, 0.55, 0.75, 0.85, 1.0],
-        [0, 0.20, 0.30, 0.50, 0.62, 0.78, 0.85, 1.0],
-        [0, 0.32, 0.45, 0.58, 0.65, 0.72, 0.80, 0.92],
+        [0, 0.32, 0.68, 1.0],
+        [0, 0.34, 0.66, 1.0],
+        [0, 0.32, 0.68, 1.0],
     ]
     private static let sharpVisibility: [[Int]] = [
-        [1, 1, 0, 0, 1, 1, 0, 0],
-        [0, 0, 1, 1, 0, 0, 1, 1],
-        [1, 1, 0, 0, 1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [1, 0, 0, 1],
+        [0, 1, 1, 0],
     ]
 
     /// Per-wave horizontal color gradient, mirroring `recordingWaveGradients`

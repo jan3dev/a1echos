@@ -733,6 +733,11 @@ class KeyboardView: UIInputView {
             // a single delete on its own release.
             if !anyPointerOwnsDeleteRepeat() {
                 state.ownsDeleteRepeat = true
+                // Delete the first character on key-down (matches native iOS):
+                // the repeat timer only fires its first tick after a 0.4s hold,
+                // so without this a press feels dead until the hold kicks in.
+                // The owner's release tap is suppressed to avoid a double.
+                delegate?.keyboardViewDidTapDelete(self)
                 startDeleteRepeat()
             }
         case .emoji:
@@ -867,12 +872,11 @@ class KeyboardView: UIInputView {
             return
         }
 
-        // Delete repeat already fired one or more times: skip the trailing
-        // single-tap so we don't double-delete on release.
+        // The delete owner already deleted on key-down (and possibly repeated
+        // while held), so its release never commits another tap.
         if state.ownsDeleteRepeat {
-            let suppressTap = deleteRepeater.didRepeat
             stopDeleteRepeat()
-            if suppressTap { return }
+            return
         }
 
         // Emoji long-press already opened the keyboard picker; the release

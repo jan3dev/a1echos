@@ -89,6 +89,8 @@
   "smartSplitDescription": "Automatically splits long recordings into separate items at natural pauses.",
   "keyboardAutocorrectTitle": "Keyboard Autocorrect",
   "keyboardAutocorrectDescription": "Automatically fix misspellings as you type on the Echos keyboard.",
+  "keyboardHapticTitle": "Keyboard Haptics",
+  "keyboardHapticDescription": "Vibrate on each key press on the Echos keyboard.",
   "keyboardPromptTitle": "Use Echos Everywhere",
   "keyboardPromptBody": "Transcribe directly inside any app, privately. In Settings, tap Keyboard → Add New Keyboard → Echos. No Full Access required.",
   "keyboardPromptCta": "Add Keyboard",

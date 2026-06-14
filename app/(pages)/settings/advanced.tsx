@@ -14,7 +14,9 @@ import { AppConstants, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
   useKeyboardAutocorrect,
+  useKeyboardHaptic,
   useSetKeyboardAutocorrect,
+  useSetKeyboardHaptic,
   useSetSmartSplitEnabled,
   useShowKeyboardPrompt,
   useSmartSplitEnabled,
@@ -31,6 +33,8 @@ export default function AdvancedSettingsScreen() {
   const setSmartSplitEnabled = useSetSmartSplitEnabled();
   const keyboardAutocorrect = useKeyboardAutocorrect();
   const setKeyboardAutocorrect = useSetKeyboardAutocorrect();
+  const keyboardHaptic = useKeyboardHaptic();
+  const setKeyboardHaptic = useSetKeyboardHaptic();
   const showKeyboardPrompt = useShowKeyboardPrompt();
 
   const handleToggle = (next: boolean) => {
@@ -39,6 +43,10 @@ export default function AdvancedSettingsScreen() {
 
   const handleAutocorrectToggle = (next: boolean) => {
     void setKeyboardAutocorrect(next);
+  };
+
+  const handleHapticToggle = (next: boolean) => {
+    void setKeyboardHaptic(next);
   };
 
   return (
@@ -82,6 +90,19 @@ export default function AdvancedSettingsScreen() {
               />
             }
             onPress={() => handleAutocorrectToggle(!keyboardAutocorrect)}
+          />
+          <ListItem
+            testID={TestID.SettingsKeyboardHapticToggle}
+            title={loc.keyboardHapticTitle}
+            subtitle={loc.keyboardHapticDescription}
+            iconTrailing={
+              <Toggle
+                value={keyboardHaptic}
+                onValueChange={handleHapticToggle}
+                accessibilityLabel={loc.keyboardHapticTitle}
+              />
+            }
+            onPress={() => handleHapticToggle(!keyboardHaptic)}
           />
           <ListItem
             testID={TestID.SettingsAddKeyboardRow}

@@ -114,7 +114,7 @@ class IPCClient {
     /// if a pong arrives in time, `completion(false)` otherwise.
     /// `completion` is always invoked on the main thread.
     func pingMainApp(
-        timeout: TimeInterval = 0.3,
+        timeout: TimeInterval = 0.6,
         completion: @escaping (Bool) -> Void
     ) {
         // Cancel any in-flight ping — only the most recent one is valid.

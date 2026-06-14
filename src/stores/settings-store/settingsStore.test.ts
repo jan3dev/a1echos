@@ -14,8 +14,10 @@ import {
   useHasSeenKeyboardPrompt,
   useIsIncognitoMode,
   useKeyboardAutocorrect,
+  useKeyboardHaptic,
   useMarkKeyboardPromptSeen,
   useSetKeyboardAutocorrect,
+  useSetKeyboardHaptic,
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
@@ -64,6 +66,7 @@ const initialState = {
   isIncognitoMode: false,
   smartSplitEnabled: true,
   keyboardAutocorrect: false,
+  keyboardHaptic: false,
 };
 
 describe("settingsStore", () => {
@@ -448,7 +451,10 @@ describe("settingsStore", () => {
         "keyboard_autocorrect",
         "true",
       );
-      expect(writeKeyboardSettings).toHaveBeenCalledWith({ autocorrect: true });
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: true,
+        hapticFeedback: false,
+      });
     });
 
     it("disables and persists 'false'", async () => {
@@ -463,6 +469,7 @@ describe("settingsStore", () => {
       );
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
+        hapticFeedback: false,
       });
     });
 
@@ -486,9 +493,11 @@ describe("settingsStore", () => {
       // Optimistic mirror, then rollback mirror to the previous value.
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: true,
+        hapticFeedback: false,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
+        hapticFeedback: false,
       });
     });
 
@@ -501,8 +510,11 @@ describe("settingsStore", () => {
       await useSettingsStore.getState().initialize();
 
       expect(useSettingsStore.getState().keyboardAutocorrect).toBe(true);
-      // initialize() mirrors the loaded value to the keyboard config.
-      expect(writeKeyboardSettings).toHaveBeenCalledWith({ autocorrect: true });
+      // initialize() mirrors the loaded values to the keyboard config.
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: true,
+        hapticFeedback: false,
+      });
     });
 
     it("useKeyboardAutocorrect selector reflects state", () => {
@@ -513,6 +525,90 @@ describe("settingsStore", () => {
 
     it("useSetKeyboardAutocorrect returns the action", () => {
       const { result } = renderHook(() => useSetKeyboardAutocorrect());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("setKeyboardHaptic()", () => {
+    it("defaults to false in the store", () => {
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(false);
+    });
+
+    it("enables, persists 'true', and mirrors both keyboard flags", async () => {
+      await useSettingsStore.getState().setKeyboardHaptic(true);
+
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_haptic",
+        "true",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+        hapticFeedback: true,
+      });
+    });
+
+    it("carries the current autocorrect value through the mirror", async () => {
+      useSettingsStore.setState({ keyboardAutocorrect: true });
+
+      await useSettingsStore.getState().setKeyboardHaptic(true);
+
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: true,
+        hapticFeedback: true,
+      });
+    });
+
+    it("is a no-op when the value is unchanged", async () => {
+      await useSettingsStore.getState().setKeyboardHaptic(false);
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      expect(writeKeyboardSettings).not.toHaveBeenCalled();
+    });
+
+    it("rolls back state and mirror on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setKeyboardHaptic(true),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(false);
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
+        autocorrect: false,
+        hapticFeedback: true,
+      });
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
+        autocorrect: false,
+        hapticFeedback: false,
+      });
+    });
+
+    it("initialize() treats only the string 'true' as enabled", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_haptic" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(true);
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+        hapticFeedback: true,
+      });
+    });
+
+    it("useKeyboardHaptic selector reflects state", () => {
+      useSettingsStore.setState({ keyboardHaptic: true });
+      const { result } = renderHook(() => useKeyboardHaptic());
+      expect(result.current).toBe(true);
+    });
+
+    it("useSetKeyboardHaptic returns the action", () => {
+      const { result } = renderHook(() => useSetKeyboardHaptic());
       expect(typeof result.current).toBe("function");
     });
   });
