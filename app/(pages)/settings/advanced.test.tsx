@@ -8,8 +8,9 @@ import AdvancedSettingsScreen from "./advanced";
 
 // --- Mocks ---
 
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: jest.fn() }),
+  useRouter: () => ({ back: jest.fn(), push: mockPush }),
 }));
 
 jest.mock("@/theme", () => ({
@@ -45,6 +46,7 @@ jest.mock("@/stores", () => ({
   useSetKeyboardAutocorrect: jest.fn(() => mockSetKeyboardAutocorrect),
   useKeyboardHaptic: jest.fn(() => false),
   useSetKeyboardHaptic: jest.fn(() => mockSetKeyboardHaptic),
+  useKeyboardMicTimeout: jest.fn(() => 300),
   useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
 }));
 
@@ -55,13 +57,21 @@ jest.mock("@/components", () => {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
-    ListItem: ({ title, subtitle, onPress, iconTrailing, testID }: any) => (
+    ListItem: ({
+      title,
+      subtitle,
+      titleTrailing,
+      onPress,
+      iconTrailing,
+      testID,
+    }: any) => (
       <TouchableOpacity
         testID={testID ?? dTID.listItem(title)}
         onPress={onPress}
       >
         <RNText>{String(title)}</RNText>
         {subtitle && <RNText testID="subtitle">{String(subtitle)}</RNText>}
+        {titleTrailing && <RNText>{String(titleTrailing)}</RNText>}
         {iconTrailing}
       </TouchableOpacity>
     ),
@@ -94,14 +104,17 @@ describe("AdvancedSettingsScreen", () => {
     mockSetKeyboardHaptic.mockReset();
     mockSetKeyboardHaptic.mockResolvedValue(undefined);
     mockShowKeyboardPrompt.mockReset();
+    mockPush.mockReset();
     const {
       useSmartSplitEnabled,
       useKeyboardAutocorrect,
       useKeyboardHaptic,
+      useKeyboardMicTimeout,
     } = require("@/stores");
     (useSmartSplitEnabled as jest.Mock).mockReturnValue(true);
     (useKeyboardAutocorrect as jest.Mock).mockReturnValue(false);
     (useKeyboardHaptic as jest.Mock).mockReturnValue(false);
+    (useKeyboardMicTimeout as jest.Mock).mockReturnValue(300);
   });
 
   it("renders TopAppBar with advanced settings title", () => {
@@ -213,5 +226,31 @@ describe("AdvancedSettingsScreen", () => {
     await waitFor(() => {
       expect(mockSetKeyboardHaptic).toHaveBeenCalledWith(true);
     });
+  });
+
+  it("renders the microphone-timeout row with the current value", () => {
+    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByTestId(TestID.SettingsMicTimeoutRow)).toBeTruthy();
+    expect(getByText("micTimeoutTitle")).toBeTruthy();
+    // Default 300s → the "5 minutes" label.
+    expect(getByText("micTimeout5Min")).toBeTruthy();
+  });
+
+  it.each([
+    [0, "micTimeoutOff"],
+    [60, "micTimeout1Min"],
+    [1200, "micTimeout20Min"],
+    [3600, "micTimeout60Min"],
+  ])("shows the right label for a %i second timeout", (seconds, label) => {
+    const { useKeyboardMicTimeout } = require("@/stores");
+    (useKeyboardMicTimeout as jest.Mock).mockReturnValueOnce(seconds);
+    const { getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByText(label)).toBeTruthy();
+  });
+
+  it("pressing the microphone-timeout row navigates to the picker", () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId(TestID.SettingsMicTimeoutRow));
+    expect(mockPush).toHaveBeenCalledTimes(1);
   });
 });

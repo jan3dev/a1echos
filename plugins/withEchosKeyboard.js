@@ -4,6 +4,7 @@ const {
 const {
   withIosTranscriptionListener,
 } = require("./keyboard/ios/withIosTranscriptionListener");
+const { withIosLiveActivity } = require("./keyboard/ios/withIosLiveActivity");
 const { withAndroidIme } = require("./keyboard/android/withAndroidIme");
 
 /**
@@ -24,6 +25,8 @@ const withEchosKeyboard = (config) => {
   // iOS: Add keyboard extension target + App Group + transcription listener
   config = withIosKeyboardExtension(config);
   config = withIosTranscriptionListener(config);
+  // iOS: Add the Live Activity (voice-session indicator) widget extension
+  config = withIosLiveActivity(config);
 
   // Android: Register InputMethodService + write Kotlin sources & resources
   config = withAndroidIme(config);

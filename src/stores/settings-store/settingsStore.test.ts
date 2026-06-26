@@ -15,9 +15,11 @@ import {
   useIsIncognitoMode,
   useKeyboardAutocorrect,
   useKeyboardHaptic,
+  useKeyboardMicTimeout,
   useMarkKeyboardPromptSeen,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
+  useSetKeyboardMicTimeout,
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
@@ -67,6 +69,7 @@ const initialState = {
   smartSplitEnabled: true,
   keyboardAutocorrect: false,
   keyboardHaptic: false,
+  keyboardMicTimeoutSeconds: 300,
 };
 
 describe("settingsStore", () => {
@@ -454,6 +457,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -470,6 +474,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -494,10 +499,12 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: true,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -514,6 +521,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -545,6 +553,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: true,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -556,6 +565,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
         hapticFeedback: true,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -579,10 +589,12 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: false,
         hapticFeedback: true,
+        micTimeoutSeconds: 300,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -598,6 +610,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: true,
+        micTimeoutSeconds: 300,
       });
     });
 
@@ -609,6 +622,104 @@ describe("settingsStore", () => {
 
     it("useSetKeyboardHaptic returns the action", () => {
       const { result } = renderHook(() => useSetKeyboardHaptic());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("setKeyboardMicTimeout()", () => {
+    it("defaults to 300 seconds in the store", () => {
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(300);
+    });
+
+    it("updates, persists the seconds, and mirrors all keyboard flags", async () => {
+      await useSettingsStore.getState().setKeyboardMicTimeout(1200);
+
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(1200);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_mic_timeout",
+        "1200",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+        hapticFeedback: false,
+        micTimeoutSeconds: 1200,
+      });
+    });
+
+    it("persists Off (0)", async () => {
+      await useSettingsStore.getState().setKeyboardMicTimeout(0);
+
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(0);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_mic_timeout",
+        "0",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+        hapticFeedback: false,
+        micTimeoutSeconds: 0,
+      });
+    });
+
+    it("is a no-op when the value is unchanged", async () => {
+      await useSettingsStore.getState().setKeyboardMicTimeout(300);
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      expect(writeKeyboardSettings).not.toHaveBeenCalled();
+    });
+
+    it("rolls back state and mirror on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setKeyboardMicTimeout(60),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(300);
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
+        autocorrect: false,
+        hapticFeedback: false,
+        micTimeoutSeconds: 60,
+      });
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
+        autocorrect: false,
+        hapticFeedback: false,
+        micTimeoutSeconds: 300,
+      });
+    });
+
+    it("initialize() clamps an unknown stored value to the default", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_mic_timeout" ? "999" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(300);
+    });
+
+    it("initialize() loads a valid stored value", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_mic_timeout" ? "3600" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardMicTimeoutSeconds).toBe(3600);
+    });
+
+    it("useKeyboardMicTimeout selector reflects state", () => {
+      useSettingsStore.setState({ keyboardMicTimeoutSeconds: 60 });
+      const { result } = renderHook(() => useKeyboardMicTimeout());
+      expect(result.current).toBe(60);
+    });
+
+    it("useSetKeyboardMicTimeout returns the action", () => {
+      const { result } = renderHook(() => useSetKeyboardMicTimeout());
       expect(typeof result.current).toBe("function");
     });
   });

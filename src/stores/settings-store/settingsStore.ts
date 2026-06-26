@@ -28,9 +28,27 @@ const STORAGE_KEYS = {
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
   KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
   KEYBOARD_HAPTIC: "keyboard_haptic",
+  KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
+
+/** Selectable durations (seconds) a keyboard voice-typing session stays armed
+ *  in the background. `0` = Off. Surfaced as the "Microphone timeout" picker. */
+export const KEYBOARD_MIC_TIMEOUT_OPTIONS = [0, 60, 300, 1200, 3600] as const;
+
+/** Default session length: 5 minutes — long enough for a dictation sitting,
+ *  short enough to limit background battery use. */
+const DEFAULT_MIC_TIMEOUT_SECONDS = 300;
+
+/** Clamps a persisted/raw value to a known option, falling back to the default. */
+const parseMicTimeout = (raw: string | null): number => {
+  if (raw === null) return DEFAULT_MIC_TIMEOUT_SECONDS;
+  const value = Number(raw);
+  return (KEYBOARD_MIC_TIMEOUT_OPTIONS as readonly number[]).includes(value)
+    ? value
+    : DEFAULT_MIC_TIMEOUT_SECONDS;
+};
 
 interface SettingsStore {
   selectedTheme: AppTheme;
@@ -50,6 +68,9 @@ interface SettingsStore {
   /** Keyboard: play a light haptic on each key press (default off, matching
    *  the iOS native keyboard). */
   keyboardHaptic: boolean;
+  /** Keyboard: how long (seconds) a voice-typing session stays armed in the
+   *  background after being started from an external app. `0` = Off. */
+  keyboardMicTimeoutSeconds: number;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -64,6 +85,7 @@ interface SettingsStore {
   markKeyboardPromptSeen: () => Promise<void>;
   setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
+  setKeyboardMicTimeout: (seconds: number) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -105,6 +127,21 @@ const parseModelModes = (raw: string | null): ModelModes => {
   }
 };
 
+/**
+ * Mirror every keyboard preference to the config file the native keyboards
+ * read. Reads the current store state, so callers just `set()` then call this —
+ * no need to thread the other flags' values through by hand.
+ */
+const syncKeyboardConfig = (get: () => SettingsStore): void => {
+  const { keyboardAutocorrect, keyboardHaptic, keyboardMicTimeoutSeconds } =
+    get();
+  writeKeyboardSettings({
+    autocorrect: keyboardAutocorrect,
+    hapticFeedback: keyboardHaptic,
+    micTimeoutSeconds: keyboardMicTimeoutSeconds,
+  });
+};
+
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedTheme: AppTheme.AUTO,
   selectedModelType: getDefaultModelType(),
@@ -117,6 +154,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   hasSeenKeyboardPrompt: false,
   keyboardAutocorrect: false,
   keyboardHaptic: false,
+  keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
 
   initialize: async () => {
     try {
@@ -132,6 +170,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardPromptValue,
         keyboardAutocorrectValue,
         keyboardHapticValue,
+        keyboardMicTimeoutValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -144,6 +183,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_AUTOCORRECT),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
       ]);
 
       const selectedTheme = themeValue
@@ -208,6 +248,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const keyboardAutocorrect = keyboardAutocorrectValue === "true";
       // Default false — only the explicit string "true" enables haptics.
       const keyboardHaptic = keyboardHapticValue === "true";
+      const keyboardMicTimeoutSeconds = parseMicTimeout(
+        keyboardMicTimeoutValue,
+      );
 
       set({
         selectedTheme,
@@ -221,15 +264,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         hasSeenKeyboardPrompt,
         keyboardAutocorrect,
         keyboardHaptic,
+        keyboardMicTimeoutSeconds,
       });
 
       // Mirror the preferences to the keyboard config file so the native
       // keyboards have them on first launch (and after a reinstall) without
       // waiting for the user to toggle them.
-      writeKeyboardSettings({
-        autocorrect: keyboardAutocorrect,
-        hapticFeedback: keyboardHaptic,
-      });
+      syncKeyboardConfig(get);
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.settings,
@@ -247,6 +288,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         hasSeenKeyboardPrompt: false,
         keyboardAutocorrect: false,
         keyboardHaptic: false,
+        keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
       });
     }
   },
@@ -463,12 +505,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     if (previousValue === enabled) return;
     set({ keyboardAutocorrect: enabled });
     // Push the new preference to the keyboard config file optimistically so
-    // the native keyboards pick it up on next field focus. The config holds
-    // every keyboard preference, so carry the current haptic value through.
-    writeKeyboardSettings({
-      autocorrect: enabled,
-      hapticFeedback: get().keyboardHaptic,
-    });
+    // the native keyboards pick it up on next field focus.
+    syncKeyboardConfig(get);
     try {
       await AsyncStorage.setItem(
         STORAGE_KEYS.KEYBOARD_AUTOCORRECT,
@@ -480,10 +518,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         message: "Failed to save keyboard autocorrect preference",
       });
       set({ keyboardAutocorrect: previousValue });
-      writeKeyboardSettings({
-        autocorrect: previousValue,
-        hapticFeedback: get().keyboardHaptic,
-      });
+      syncKeyboardConfig(get);
       throw error;
     }
   },
@@ -492,12 +527,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const previousValue = get().keyboardHaptic;
     if (previousValue === enabled) return;
     set({ keyboardHaptic: enabled });
-    // Mirror to the keyboard config file optimistically; carry the current
-    // autocorrect value through since the config holds both.
-    writeKeyboardSettings({
-      autocorrect: get().keyboardAutocorrect,
-      hapticFeedback: enabled,
-    });
+    // Mirror to the keyboard config file optimistically.
+    syncKeyboardConfig(get);
     try {
       await AsyncStorage.setItem(
         STORAGE_KEYS.KEYBOARD_HAPTIC,
@@ -509,10 +540,29 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         message: "Failed to save keyboard haptic preference",
       });
       set({ keyboardHaptic: previousValue });
-      writeKeyboardSettings({
-        autocorrect: get().keyboardAutocorrect,
-        hapticFeedback: previousValue,
+      syncKeyboardConfig(get);
+      throw error;
+    }
+  },
+
+  setKeyboardMicTimeout: async (seconds: number) => {
+    const previousValue = get().keyboardMicTimeoutSeconds;
+    if (previousValue === seconds) return;
+    set({ keyboardMicTimeoutSeconds: seconds });
+    // Mirror to the keyboard config file optimistically.
+    syncKeyboardConfig(get);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT,
+        seconds.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save keyboard mic timeout preference",
       });
+      set({ keyboardMicTimeoutSeconds: previousValue });
+      syncKeyboardConfig(get);
       throw error;
     }
   },
@@ -555,6 +605,10 @@ export const useKeyboardHaptic = () =>
   useSettingsStore((s) => s.keyboardHaptic);
 export const useSetKeyboardHaptic = () =>
   useSettingsStore((s) => s.setKeyboardHaptic);
+export const useKeyboardMicTimeout = () =>
+  useSettingsStore((s) => s.keyboardMicTimeoutSeconds);
+export const useSetKeyboardMicTimeout = () =>
+  useSettingsStore((s) => s.setKeyboardMicTimeout);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

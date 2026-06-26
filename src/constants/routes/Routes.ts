@@ -16,6 +16,7 @@ export const Routes = {
   settingsTheme: "/settings/theme" as Href,
   settingsLanguage: "/settings/language" as Href,
   settingsAdvanced: "/settings/advanced" as Href,
+  settingsMicTimeout: "/settings/microphone-timeout" as Href,
   settingsModelLanguages: (modelId: string): Href =>
     ({
       pathname: "/settings/model-languages",

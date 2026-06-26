@@ -19,6 +19,7 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
 function withIosTranscriptionListener(config) {
   config = withListenerFiles(config);
   config = withListenerStartup(config);
+  config = withListenerDeepLink(config);
   return config;
 }
 
@@ -226,7 +227,13 @@ function withListenerStartup(config) {
   return withAppDelegate(config, (config) => {
     let contents = config.modResults.contents;
 
-    if (contents.includes("KeyboardTranscriptionListener")) {
+    // Guard on THIS injection's own marker, not the class name. The deep-link
+    // injection (withListenerDeepLink) also references
+    // KeyboardTranscriptionListener, so guarding on the class name made this
+    // bail whenever the deep-link ran first — startListening() was then never
+    // injected, the Darwin observers were never registered, and the listener
+    // silently answered no pings / recordStart / recordStop.
+    if (contents.includes("startListening()")) {
       return config;
     }
 
@@ -247,6 +254,50 @@ function withListenerStartup(config) {
               injection +
               contents.slice(nextLineIdx + 1);
           }
+        }
+      }
+    }
+
+    config.modResults.contents = contents;
+    return config;
+  });
+}
+
+/**
+ * Injects a handler into AppDelegate's `open url` method so the `echos://
+ * voice-session` deep link the keyboard opens arms a hot-mic session. iOS
+ * keyboard extensions can't launch the app silently, so the extension opens
+ * this URL (via the responder chain); we intercept it before it reaches the
+ * RN linking layer and start the session natively, then return to the user's
+ * previous app via the system back affordance.
+ */
+function withListenerDeepLink(config) {
+  return withAppDelegate(config, (config) => {
+    let contents = config.modResults.contents;
+
+    if (contents.includes("startVoiceSession")) {
+      return config;
+    }
+
+    const marker = "open url: URL,";
+    const markerIdx = contents.indexOf(marker);
+    if (markerIdx !== -1) {
+      const boolIdx = contents.indexOf("-> Bool", markerIdx);
+      const braceIdx = boolIdx !== -1 ? contents.indexOf("{", boolIdx) : -1;
+      if (braceIdx !== -1) {
+        const nextLineIdx = contents.indexOf("\n", braceIdx);
+        if (nextLineIdx !== -1) {
+          const injection = `
+    // Echos keyboard: arm a hot-mic voice session when opened from the keyboard.
+    if url.scheme == "echos", url.host == "voice-session" {
+      KeyboardTranscriptionListener.shared.startVoiceSession()
+      return true
+    }
+`;
+          contents =
+            contents.slice(0, nextLineIdx + 1) +
+            injection +
+            contents.slice(nextLineIdx + 1);
         }
       }
     }

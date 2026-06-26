@@ -33,6 +33,9 @@ export {
   useSetKeyboardAutocorrect,
   useKeyboardHaptic,
   useSetKeyboardHaptic,
+  useKeyboardMicTimeout,
+  useSetKeyboardMicTimeout,
+  KEYBOARD_MIC_TIMEOUT_OPTIONS,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,

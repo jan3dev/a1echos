@@ -73,9 +73,10 @@ class EchosKeyboardViewController: UIInputViewController {
         // Listen for transcription results from the main app
         ipcClient.onTranscriptionResult = { [weak self] text in
             DispatchQueue.main.async {
-                self?.stopMetering()
-                self?.textDocumentProxy.insertText(text)
-                self?.keyboardView.setMicState(.idle)
+                guard let self = self else { return }
+                self.stopMetering()
+                self.textDocumentProxy.insertText(text)
+                self.keyboardView.setMicState(.idle)
             }
         }
 
@@ -83,10 +84,9 @@ class EchosKeyboardViewController: UIInputViewController {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.stopMetering()
-                // Timeout = main app went away (force-killed, jetsamed)
-                // mid-recording. Show the same "open Echos" toast the
-                // pre-flight ping uses so the user gets a consistent
-                // recovery instruction instead of a vague timeout error.
+                // Timeout = main app went away (suspended/jetsamed) mid-recording.
+                // Show the same "open Echos" recovery the pre-flight ping uses
+                // instead of a vague timeout error.
                 if error.localizedCaseInsensitiveContains("timed out") {
                     self.keyboardView.showOpenAppPrompt(
                         "Open Echos to finish transcription"
@@ -636,16 +636,62 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             return
         }
 
-        ipcClient.pingMainApp { [weak self] alive in
+        // Always confirm the app is actually alive and ready with a ping before
+        // recording. A session marker alone is NOT proof: it can outlive the app
+        // (iOS suspends/jetsams a backgrounded app, or the user force-quits). The
+        // pong reports `armed` = the capture engine is live now (or the app is
+        // foreground and can start it on demand).
+        ipcClient.pingMainAppWithRetry { [weak self] alive, armed in
             guard let self = self else { return }
-            guard alive else {
+            // Record only when the app is alive AND truly armed. If it's suspended
+            // (!alive) or alive-but-not-armed (backgrounded with no live engine — a
+            // fresh background mic start fails with CoreAudio 2003329396), bring
+            // Echos to the foreground to arm: opening the app runs the deep link →
+            // armSession while foreground, where engine.start succeeds. The user
+            // swipes back and the next tap records.
+            guard alive && armed else {
+                let opened = self.openMainAppForVoiceSession()
                 self.keyboardView.showOpenAppPrompt(
-                    "Open Echos to enable voice typing"
+                    opened
+                        ? "Opening Echos to start voice typing — then swipe back"
+                        : "Open Echos to start voice typing"
                 )
                 return
             }
             self.beginRecording()
         }
+    }
+
+    /// Opens the Echos app via its `echos://voice-session` URL so it can arm a
+    /// hot-mic session (the app captures on the keyboard's behalf — iOS forbids
+    /// the extension from recording, and can't wake a suspended app for us).
+    ///
+    /// iOS gives keyboard extensions no *supported* way to open their container
+    /// app, so this walks the responder chain to `UIApplication.open` — the same
+    /// unsupported-but-shipping technique voice keyboards like Wispr Flow and
+    /// AQUA Voice use. Returns whether an open was attempted; on false the caller
+    /// falls back to a manual "open Echos" prompt.
+    @discardableResult
+    private func openMainAppForVoiceSession() -> Bool {
+        guard let url = URL(string: "echos://voice-session") else { return false }
+        let opener = #selector(UIApplication.open(_:options:completionHandler:))
+        var responder: UIResponder? = self
+        while let current = responder {
+            if current.responds(to: opener),
+               let application = current as? UIApplication {
+                application.open(url, options: [:], completionHandler: nil)
+                return true
+            }
+            responder = current.next
+        }
+        // Fallback: the extension context opener (documented for Today
+        // extensions; attempted in case the responder chain didn't expose
+        // UIApplication on this iOS version).
+        if let context = extensionContext {
+            context.open(url, completionHandler: nil)
+            return true
+        }
+        return false
     }
 
     private func beginRecording() {

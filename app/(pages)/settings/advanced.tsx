@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,11 +11,12 @@ import {
   Toggle,
   TopAppBar,
 } from "@/components";
-import { AppConstants, TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import {
   useKeyboardAutocorrect,
   useKeyboardHaptic,
+  useKeyboardMicTimeout,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
   useSetSmartSplitEnabled,
@@ -22,8 +24,10 @@ import {
   useSmartSplitEnabled,
 } from "@/stores";
 import { useTheme } from "@/theme";
+import { micTimeoutLabelKey } from "@/utils/keyboard-settings/micTimeoutLabel";
 
 export default function AdvancedSettingsScreen() {
+  const router = useRouter();
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -35,7 +39,10 @@ export default function AdvancedSettingsScreen() {
   const setKeyboardAutocorrect = useSetKeyboardAutocorrect();
   const keyboardHaptic = useKeyboardHaptic();
   const setKeyboardHaptic = useSetKeyboardHaptic();
+  const keyboardMicTimeout = useKeyboardMicTimeout();
   const showKeyboardPrompt = useShowKeyboardPrompt();
+
+  const micTimeoutDisplay = loc[micTimeoutLabelKey(keyboardMicTimeout)];
 
   const handleToggle = (next: boolean) => {
     void setSmartSplitEnabled(next);
@@ -103,6 +110,21 @@ export default function AdvancedSettingsScreen() {
               />
             }
             onPress={() => handleHapticToggle(!keyboardHaptic)}
+          />
+          <ListItem
+            testID={TestID.SettingsMicTimeoutRow}
+            title={loc.micTimeoutTitle}
+            subtitle={loc.micTimeoutDescription}
+            titleTrailing={micTimeoutDisplay}
+            titleTrailingColor={theme.colors.textSecondary}
+            iconTrailing={
+              <Icon
+                name="chevron_right"
+                size={24}
+                color={theme.colors.textSecondary}
+              />
+            }
+            onPress={() => router.push(Routes.settingsMicTimeout)}
           />
           <ListItem
             testID={TestID.SettingsAddKeyboardRow}

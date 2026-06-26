@@ -1,3 +1,4 @@
+import ActivityKit
 import AVFoundation
 import Foundation
 import UIKit
@@ -6,6 +7,20 @@ import UIKit
 /// the keyboard extension via Darwin notifications, transcribes the audio via
 /// `SherpaBridge` (sherpa-onnx C++ API), and writes the result into the App
 /// Group shared container for the extension to pick up.
+///
+/// ## Hot-mic sessions
+/// iOS forbids a keyboard extension from recording the mic, so the *app* records
+/// on its behalf — but the app can only do that while it is running, and iOS
+/// suspends a backgrounded app within seconds. To make voice typing work in
+/// external apps we run a user-controlled **session**: the keyboard opens the
+/// app (deep link) which calls `startVoiceSession()`, and for the duration of
+/// the configured "microphone timeout" the app holds an active capture engine.
+/// An active capture session keeps the app resident under the `audio` background
+/// mode, so the keyboard can record any time during the window. The mic stays
+/// genuinely live for the session (an honest "hot mic" — the system indicator is
+/// shown), but a WAV is only written while the user is actually dictating; idle
+/// buffers are discarded. The session auto-expires to stop the mic and let the
+/// app suspend.
 @objc class KeyboardTranscriptionListener: NSObject {
 
     static let shared = KeyboardTranscriptionListener()
@@ -17,10 +32,14 @@ import UIKit
     // iOS forbids keyboard extensions from recording the mic (the audio daemon
     // rejects AURemoteIO start with "extension … doesn't have entitlements to
     // record audio"). So the *app* records on the keyboard's behalf: the
-    // keyboard posts recordStart/recordStop and we drive AVAudioRecorder here,
+    // keyboard posts recordStart/recordStop and we drive an AVAudioEngine here,
     // then transcribe and reply over the existing result channel.
     private let recordStartNotificationName = "com.a1lab.echos.recordStart"
     private let recordStopNotificationName = "com.a1lab.echos.recordStop"
+    /// Posted by the keyboard to (re)arm a hot-mic session when the app is alive
+    /// but no session is currently active — lets it extend the window without a
+    /// full app-open round trip.
+    private let startSessionNotificationName = "com.a1lab.echos.startSession"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -43,12 +62,37 @@ import UIKit
     /// so without this the keyboard's voice typing dies the moment the user
     /// switches to another app. The assertion buys ~30s; we refresh it on each
     /// ping/record so a session in active use keeps going, and let it lapse
-    /// (re-suspending the app) once the user stops. Always touched on main.
+    /// (re-suspending the app) once the user stops.
+    /// During a hot-mic session the active capture engine is the real keep-alive;
+    /// the assertion just bridges the transitions. Always touched on main.
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
-    /// Active recording driven by the keyboard. Owned + mutated on the main
-    /// thread (recordStart/recordStop handlers and the max-duration timer all
-    /// hop to main) so no extra synchronisation is needed.
+    // MARK: - Hot-mic session
+    /// When set and in the future, a session is armed: the capture engine runs
+    /// (keeping the app resident) until this time, and the keyboard can dictate
+    /// at will. Touched on the main thread.
+    private var sessionExpiry: Date?
+    /// Fires at `sessionExpiry` to end the session (stop the mic, suspend).
+    private var sessionTimer: Timer?
+    private var isSessionActive: Bool {
+        guard let expiry = sessionExpiry else { return false }
+        return expiry > Date()
+    }
+
+    /// The running session Live Activity, stored type-erased because
+    /// `Activity<EchoSessionAttributes>` is only available on iOS 16.2+ and this
+    /// class deploys to 16.0. Cast back inside `if #available` guards.
+    private var liveActivity: Any?
+
+    /// Set when `armSession` runs while the app isn't yet `.active` (the deep
+    /// link fires mid-transition). `didBecomeActive` consumes it to bring the
+    /// session live once the app is fully foreground — where `engine.start()`
+    /// and `Activity.request` are actually permitted.
+    private var pendingArm = false
+
+    /// Capture engine. While a session is armed it stays running with the input
+    /// tap installed (the hot mic); a dictation just toggles `wavWriter` on/off
+    /// so idle buffers are discarded. Owned + mutated on the main thread.
     ///
     /// We capture via `AVAudioEngine` + an input tap rather than
     /// `AVAudioRecorder`: `AVAudioRecorder.record()` returns false when the app
@@ -57,6 +101,11 @@ import UIKit
     /// An `AVAudioEngine` tap starts reliably in that state, and we write the WAV
     /// ourselves from the converted PCM.
     private var audioEngine: AVAudioEngine?
+    /// Converter + target format built once when the engine starts and reused by
+    /// the tap across dictations within a session.
+    private var inputConverter: AVAudioConverter?
+    private var targetFormat: AVAudioFormat?
+    /// Non-nil only while the user is actively dictating; the tap writes to it.
     private var wavWriter: WavStreamWriter?
     /// Latest input level (0…1) computed on the audio tap thread, published to
     /// the App Group by `meterTimer` on the main thread. A plain `Float`
@@ -65,8 +114,9 @@ import UIKit
     private var latestLevel: Float = 0
     private var recordingMaxTimer: Timer?
     private let recordingSampleRate: Double = 16000
-    /// Whisper's context window is 30s; cap recording so a keyboard left in the
-    /// recording state can't hold the mic (and the app awake) indefinitely.
+    /// Whisper's context window is 30s; cap a single dictation so a keyboard left
+    /// in the recording state can't grow an unbounded clip. This ends the
+    /// dictation (and transcribes) but does NOT end the session.
     private let recordingMaxSeconds: TimeInterval = 30
 
     /// Publishes the recorder's input level into the App Group so the keyboard's
@@ -133,6 +183,21 @@ import UIKit
             .deliverImmediately
         )
 
+        // Re-arm handler — the keyboard asks us to (re)start a session while
+        // we're alive but idle, extending the window without a full app-open.
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
+                listener.handleStartSession()
+            },
+            startSessionNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+
         // Mirror keyboard settings (written by JS to the app sandbox, which the
         // extension can't read) into the App Group suite the extension reads.
         // Re-mirror when the app backgrounds so a toggle made mid-session
@@ -152,18 +217,45 @@ import UIKit
         // Open the grace window as the app backgrounds (so the keyboard can
         // still reach it for a spell), and close it once the app is foreground
         // again — a foreground app isn't suspended, so the assertion is pure
-        // battery cost there.
+        // battery cost there. Foregrounding also ends any hot-mic session: the
+        // user is back in Echos, so the background mic isn't needed.
         let bgToken = nc.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in self?.beginGraceWindow() }
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            self.beginGraceWindow()
+            // If a session is armed, start the hot mic now that we're
+            // backgrounded — its active capture keeps the app resident so the
+            // keyboard can dictate from the external app the user switched to.
+            if self.isSessionActive { _ = self.ensureEngineRunning() }
+        }
         lifecycleObservers.append(bgToken)
 
         let fgToken = nc.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in self?.endGraceWindow() }
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            self.endGraceWindow()
+            // Complete an arm that was requested while the app was still
+            // transitioning to the foreground — now we're .active, so the mic
+            // and Live Activity can actually start.
+            if self.pendingArm {
+                self.pendingArm = false
+                self.activateArmedSession()
+            }
+        }
         lifecycleObservers.append(fgToken)
+
+        // Audio-session interruptions (calls, other apps grabbing audio) and
+        // route changes can stop our capture engine; without re-activating, the
+        // hot mic — and the residency it buys — dies mid-session.
+        let interruptToken = nc.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil, queue: .main
+        ) { [weak self] note in self?.handleInterruption(note) }
+        lifecycleObservers.append(interruptToken)
 
         NSLog("[KeyboardTranscriptionListener] Started listening for keyboard transcription requests")
     }
@@ -176,6 +268,7 @@ import UIKit
             NotificationCenter.default.removeObserver(token)
         }
         lifecycleObservers.removeAll()
+        endSession()
         endGraceWindow()
     }
 
@@ -221,6 +314,223 @@ import UIKit
         }
     }
 
+    // MARK: - Session Lifecycle
+
+    /// Arms (or re-arms) a hot-mic session for the user-configured microphone
+    /// timeout. Called from the deep link the keyboard opens, and from the
+    /// `startSession` notification. Starts the capture engine now so the app
+    /// stays resident; a `0` timeout (Off) tears any session down instead.
+    /// Safe to call from any thread — hops to main.
+    @objc func startVoiceSession() {
+        DispatchQueue.main.async { [weak self] in self?.armSession() }
+    }
+
+    private func armSession() {
+        let seconds = loadMicTimeoutSeconds()
+        guard seconds > 0 else {
+            NSLog("[KeyboardTranscriptionListener] Mic timeout is Off — not arming a session")
+            endSession()
+            return
+        }
+
+        sessionExpiry = Date().addingTimeInterval(seconds)
+        sessionTimer?.invalidate()
+        sessionTimer = Timer.scheduledTimer(
+            withTimeInterval: seconds, repeats: false
+        ) { [weak self] _ in self?.endSession() }
+        NSLog("[KeyboardTranscriptionListener] Voice session armed for %.0fs", seconds)
+
+        // Activating the mic and the Live Activity both require the app to be
+        // FULLY foreground (.active): `engine.start()` hits the background-start
+        // restriction (CoreAudio 2003329396) and `Activity.request` throws
+        // `.visibility` if we're merely .inactive. The deep link that opens us
+        // (`echos://voice-session`) usually fires mid-transition, while the app
+        // is still .inactive — so activating right here would silently fail and
+        // the user would have to reopen Echos until the timing happened to land
+        // on .active. Instead, activate now only if already active; otherwise
+        // defer to `didBecomeActive`, which always fires fully foregrounded.
+        if UIApplication.shared.applicationState == .active {
+            activateArmedSession()
+        } else {
+            pendingArm = true
+        }
+    }
+
+    /// Brings the armed session live: starts the capture engine (the hot mic
+    /// that keeps the app resident), advertises the session marker, pre-warms
+    /// the recognizer, and shows the indicator. MUST run while `.active`.
+    private func activateArmedSession() {
+        guard isSessionActive else { return }
+        if let error = ensureEngineRunning() {
+            NSLog("[KeyboardTranscriptionListener] Session armed but mic didn't start: %@", error)
+            // The mic isn't actually live, so don't advertise an active session
+            // to the keyboard — it would record into a soon-suspended app.
+            clearSessionMarker()
+            requestMicPermissionIfNeeded()
+            return
+        }
+        // Advertise the live session so the keyboard can record directly
+        // (reading a shared file) without depending on a Darwin ping reaching
+        // the backgrounded app.
+        writeSessionMarker(expiry: sessionExpiry)
+        // Warm the recognizer now (foreground, unthrottled) so the first
+        // dictation only pays decode time, not the multi-second cold load —
+        // which in the background would blow the keyboard's result timeout.
+        prewarmModel()
+        // Show the session indicator (Lock Screen + Dynamic Island countdown).
+        if #available(iOS 16.2, *), let expiry = sessionExpiry {
+            startLiveActivity(expiry: expiry)
+        }
+    }
+
+    // MARK: - Live Activity (session indicator)
+
+    @available(iOS 16.2, *)
+    private func startLiveActivity(expiry: Date) {
+        endLiveActivity()
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            NSLog("[KeyboardTranscriptionListener] Live Activities disabled — skipping indicator")
+            return
+        }
+        let attributes = EchoSessionAttributes(title: "Echos")
+        let state = EchoSessionAttributes.ContentState(endDate: expiry)
+        do {
+            liveActivity = try Activity.request(
+                attributes: attributes,
+                content: ActivityContent(state: state, staleDate: expiry),
+                pushType: nil
+            )
+        } catch {
+            NSLog("[KeyboardTranscriptionListener] Live Activity start failed: %@",
+                  error.localizedDescription)
+        }
+    }
+
+    /// Ends the session indicator. Safe to call on any iOS version / when none
+    /// is running.
+    private func endLiveActivity() {
+        guard #available(iOS 16.2, *),
+              let activity = liveActivity as? Activity<EchoSessionAttributes> else {
+            liveActivity = nil
+            return
+        }
+        liveActivity = nil
+        Task { await activity.end(nil, dismissalPolicy: .immediate) }
+    }
+
+    /// File in the App Group the keyboard reads to learn whether a hot-mic
+    /// session is live (so it can record without a ping round-trip). Holds the
+    /// session's expiry as a raw epoch `Double`.
+    private func sessionMarkerURL() -> URL? {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else { return nil }
+        return container
+            .appendingPathComponent("keyboard", isDirectory: true)
+            .appendingPathComponent("session.json")
+    }
+
+    private func writeSessionMarker(expiry: Date?) {
+        guard let url = sessionMarkerURL(), let expiry = expiry else { return }
+        let payload: [String: Any] = ["expiry": expiry.timeIntervalSince1970]
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private func clearSessionMarker() {
+        guard let url = sessionMarkerURL() else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Warm the sherpa recognizer on a background thread. `SherpaBridge.loadModel`
+    /// caches by config signature, so this makes the first dictation's transcribe
+    /// a cache hit (decode only). The cold load is several seconds and would
+    /// otherwise run on the first stop — in the background, past the keyboard's
+    /// result timeout.
+    private func prewarmModel() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self,
+                  let files = self.resolveModelFiles(requestedLanguage: nil) else {
+                NSLog("[KeyboardTranscriptionListener] prewarm skipped (no model config)")
+                return
+            }
+            let ok = SherpaBridge.shared().loadModel(files)
+            NSLog("[KeyboardTranscriptionListener] prewarm loadModel=%@", ok ? "ok" : "failed")
+        }
+    }
+
+    /// If mic permission is still undetermined, ask for it (we're foreground when
+    /// arming via the deep link, so the system prompt can show) and start the
+    /// engine once granted.
+    private func requestMicPermissionIfNeeded() {
+        let session = AVAudioSession.sharedInstance()
+        guard session.recordPermission == .undetermined else { return }
+        session.requestRecordPermission { [weak self] granted in
+            NSLog("[KeyboardTranscriptionListener] mic permission granted=%@",
+                  granted ? "true" : "false")
+            guard granted else { return }
+            DispatchQueue.main.async {
+                guard let self = self, self.isSessionActive else { return }
+                if self.ensureEngineRunning() == nil {
+                    self.writeSessionMarker(expiry: self.sessionExpiry)
+                }
+            }
+        }
+    }
+
+    /// Ends the session: stops the hot mic (unless a dictation is in flight, in
+    /// which case the recording stop path tears down once it finishes) and lets
+    /// the app suspend. Idempotent.
+    private func endSession() {
+        let wasActive = sessionExpiry != nil
+        pendingArm = false
+        sessionTimer?.invalidate()
+        sessionTimer = nil
+        sessionExpiry = nil
+        clearSessionMarker()
+        // Don't yank the engine out from under an active dictation; finishing
+        // that recording will tear down because the session is no longer active.
+        if wavWriter == nil {
+            teardownEngine()
+            try? AVAudioSession.sharedInstance().setActive(
+                false, options: .notifyOthersOnDeactivation
+            )
+        }
+        if wasActive {
+            NSLog("[KeyboardTranscriptionListener] Voice session ended")
+            endLiveActivity()
+        }
+    }
+
+    private func handleStartSession() {
+        refreshGraceWindowIfBackgrounded()
+        startVoiceSession()
+    }
+
+    private func handleInterruption(_ note: Notification) {
+        guard let info = note.userInfo,
+              let raw = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            NSLog("[KeyboardTranscriptionListener] Audio interruption began")
+        case .ended:
+            // Re-activate + restart the hot mic so a session survives a call /
+            // Bluetooth handoff. Only while a session is still armed.
+            guard isSessionActive else { return }
+            let options = (info[AVAudioSessionInterruptionOptionKey] as? UInt)
+                .map { AVAudioSession.InterruptionOptions(rawValue: $0) } ?? []
+            if options.contains(.shouldResume) {
+                NSLog("[KeyboardTranscriptionListener] Interruption ended — resuming session mic")
+                teardownEngine()
+                _ = ensureEngineRunning()
+            }
+        @unknown default:
+            break
+        }
+    }
+
     // MARK: - Keyboard Settings Mirror
 
     /// Reads `keyboard-settings.json` from the app's Documents directory and
@@ -247,6 +557,20 @@ import UIKit
         defaults?.set(hapticFeedback, forKey: hapticDefaultsKey)
     }
 
+    /// Reads the configured microphone-timeout (session length) in seconds from
+    /// `keyboard-settings.json`. `0` (or a missing file) means Off — no session.
+    private func loadMicTimeoutSeconds() -> TimeInterval {
+        guard let docsDir = NSSearchPathForDirectoriesInDomains(
+            .documentDirectory, .userDomainMask, true
+        ).first else { return 0 }
+        let path = (docsDir as NSString).appendingPathComponent(keyboardSettingsFilename)
+        guard FileManager.default.fileExists(atPath: path),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let seconds = json["micTimeoutSeconds"] as? NSNumber else { return 0 }
+        return max(0, TimeInterval(truncating: seconds))
+    }
+
     // MARK: - Recording (on the keyboard's behalf)
 
     private func handleRecordStart() {
@@ -268,41 +592,35 @@ import UIKit
             .appendingPathComponent("keyboard-recording.wav")
     }
 
-    /// Records 16 kHz mono PCM in the main app process. Unlike the extension
-    /// (which the OS forbids from recording), a full app with the `audio`
-    /// background mode is allowed to capture the mic while backgrounded — but
-    /// only via `AVAudioEngine`; `AVAudioRecorder.record()` returns false in the
-    /// background (see `audioEngine`).
-    private func beginRecording() {
+    /// Ensures the capture engine + audio session are running with the input tap
+    /// installed. Idempotent: returns `nil` on success (engine already running or
+    /// freshly started) or a user-facing error message on failure. Used both to
+    /// arm a session and on-demand for a single recording when no session is
+    /// armed (e.g. the keyboard used inside the Echos app). The tap stays
+    /// installed and only writes when `wavWriter` is set, so idle buffers during
+    /// a session are discarded.
+    private func ensureEngineRunning() -> String? {
+        if audioEngine?.isRunning == true { return nil }
+        // A stale engine that isn't running means a prior teardown didn't fully
+        // complete; clear it so we build a clean one.
+        if audioEngine != nil { teardownEngine() }
+
         let app = UIApplication.shared
         NSLog(
-            "[KeyboardTranscriptionListener] beginRecording (appState=%ld, bgTimeRemaining=%.1fs)",
+            "[KeyboardTranscriptionListener] starting engine (appState=%ld, bgTimeRemaining=%.1fs)",
             app.applicationState.rawValue, app.backgroundTimeRemaining
         )
-
-        if audioEngine != nil {
-            // A stale engine means the previous session never stopped. Tear it
-            // down so this fresh request can proceed instead of dead-ending.
-            NSLog("[KeyboardTranscriptionListener] recordStart while already recording — resetting")
-            teardownEngine()
-        }
 
         let session = AVAudioSession.sharedInstance()
         let permission = session.recordPermission
         guard permission == .granted else {
-            // Mic permission is app-global, so this fails identically in fore- and
-            // background. Reply immediately with a specific instruction instead of
-            // letting the keyboard's stop poll time out 10s later.
             NSLog(
                 "[KeyboardTranscriptionListener] Mic permission not granted (rawValue=%ld)",
                 Int(permission.rawValue)
             )
-            replyError(
-                permission == .denied
-                    ? "Microphone access is off for Echos. Enable it in Settings › Echos."
-                    : "Open Echos and allow microphone access to use voice typing."
-            )
-            return
+            return permission == .denied
+                ? "Microphone access is off for Echos. Enable it in Settings › Echos."
+                : "Open Echos and allow microphone access to use voice typing."
         }
 
         do {
@@ -317,12 +635,8 @@ import UIKit
                 "[KeyboardTranscriptionListener] Session setup failed: %@ (domain=%@ code=%ld)",
                 error.localizedDescription, nsError.domain, nsError.code
             )
-            replyError("Couldn't start the microphone. Open Echos and try again.")
-            return
+            return "Couldn't start the microphone. Open Echos and try again."
         }
-
-        let url = recordingFileURL()
-        try? FileManager.default.removeItem(at: url)
 
         let engine = AVAudioEngine()
         let input = engine.inputNode
@@ -335,19 +649,56 @@ import UIKit
             inputFormat.sampleRate, inputFormat.channelCount
         )
         guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
-            replyError("Couldn't access the microphone. Open Echos and try again.")
-            return
+            return "Couldn't access the microphone. Open Echos and try again."
         }
 
-        guard let targetFormat = AVAudioFormat(
+        guard let target = AVAudioFormat(
             commonFormat: .pcmFormatInt16, sampleRate: recordingSampleRate,
             channels: 1, interleaved: true
-        ), let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
+        ), let converter = AVAudioConverter(from: inputFormat, to: target) else {
             NSLog("[KeyboardTranscriptionListener] Could not build audio converter")
-            replyError("Couldn't start recording. Open Echos and try again.")
+            return "Couldn't start recording. Open Echos and try again."
+        }
+        targetFormat = target
+        inputConverter = converter
+
+        input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) {
+            [weak self] buffer, _ in
+            self?.handleTapBuffer(buffer)
+        }
+
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            let nsError = error as NSError
+            NSLog(
+                "[KeyboardTranscriptionListener] engine.start() failed: %@ (code %ld)",
+                error.localizedDescription, nsError.code
+            )
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            return "Couldn't start recording. Open Echos and try again."
+        }
+
+        audioEngine = engine
+        NSLog("[KeyboardTranscriptionListener] Capture engine running")
+        return nil
+    }
+
+    /// Begins writing a dictation clip. Starts the engine on demand if no session
+    /// is armed (the in-app / foreground case), then opens the WAV writer so the
+    /// tap starts persisting audio.
+    private func beginRecording() {
+        if let error = ensureEngineRunning() {
+            // Mic/session setup failed — reply at once instead of letting the
+            // keyboard's stop poll time out 10s later.
+            replyError(error)
             return
         }
 
+        let url = recordingFileURL()
+        try? FileManager.default.removeItem(at: url)
         guard let writer = WavStreamWriter(
             url: url, sampleRate: Int(recordingSampleRate), channels: 1, bitsPerSample: 16
         ) else {
@@ -357,32 +708,8 @@ import UIKit
         }
 
         latestLevel = 0
-        input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) {
-            [weak self] buffer, _ in
-            self?.handleTapBuffer(buffer, converter: converter, targetFormat: targetFormat, writer: writer)
-        }
-
-        engine.prepare()
-        do {
-            try engine.start()
-        } catch {
-            input.removeTap(onBus: 0)
-            writer.close()
-            try? FileManager.default.removeItem(at: url)
-            let nsError = error as NSError
-            NSLog(
-                "[KeyboardTranscriptionListener] engine.start() failed: %@ (code %ld)",
-                error.localizedDescription, nsError.code
-            )
-            try? session.setActive(false, options: .notifyOthersOnDeactivation)
-            replyError("Couldn't start recording. Open Echos and try again.")
-            return
-        }
-
-        audioEngine = engine
         wavWriter = writer
-
-        NSLog("[KeyboardTranscriptionListener] Recording started: %@", url.path)
+        NSLog("[KeyboardTranscriptionListener] Dictation started: %@", url.path)
         startMetering()
         recordingMaxTimer = Timer.scheduledTimer(
             withTimeInterval: recordingMaxSeconds, repeats: false
@@ -393,13 +720,13 @@ import UIKit
 
     /// Converts a hardware capture buffer to 16 kHz mono PCM16, appends it to the
     /// WAV, and updates `latestLevel` for the waveform. Runs on the realtime
-    /// audio thread — keeps work minimal (one convert + one append).
-    private func handleTapBuffer(
-        _ buffer: AVAudioPCMBuffer,
-        converter: AVAudioConverter,
-        targetFormat: AVAudioFormat,
-        writer: WavStreamWriter
-    ) {
+    /// audio thread — keeps work minimal (one convert + one append). Returns
+    /// immediately when not dictating so idle hot-mic buffers are discarded.
+    private func handleTapBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard let writer = wavWriter,
+              let converter = inputConverter,
+              let targetFormat = targetFormat else { return }
+
         let ratio = targetFormat.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 1
         guard capacity > 0,
@@ -440,9 +767,10 @@ import UIKit
         latestLevel = max(0, min(1, (db - meterMinDb) / (meterMaxDb - meterMinDb)))
     }
 
-    /// Stops and discards the capture engine + WAV writer and the timers that
-    /// drive a recording. Idempotent — used to reset a stale session before a
-    /// fresh start.
+    /// Stops and discards the capture engine + the tap, and clears the converter
+    /// state. Idempotent — used both to end a session and to reset a stale engine
+    /// before a fresh start. Does not touch `wavWriter` (the recording stop path
+    /// owns that).
     private func teardownEngine() {
         recordingMaxTimer?.invalidate()
         recordingMaxTimer = nil
@@ -452,8 +780,8 @@ import UIKit
             engine.stop()
         }
         audioEngine = nil
-        wavWriter?.close()
-        wavWriter = nil
+        inputConverter = nil
+        targetFormat = nil
     }
 
     /// Activates the audio session, retrying once. Background activation of a
@@ -497,7 +825,7 @@ import UIKit
     }
 
     private func publishMeterLevel() {
-        guard audioEngine != nil, let url = meterFileURL() else { return }
+        guard wavWriter != nil, let url = meterFileURL() else { return }
         // `latestLevel` is set on the audio tap thread; we just snapshot and
         // publish it here on the main thread.
         let normalized = Double(latestLevel)
@@ -518,43 +846,42 @@ import UIKit
         if let url = meterFileURL() { try? FileManager.default.removeItem(at: url) }
     }
 
-    /// Stops the active recording (from recordStop or the max-duration backstop)
+    /// Stops the active dictation (from recordStop or the max-duration backstop)
     /// and kicks transcription off the main thread. Idempotent: the first call
-    /// clears `audioEngine`, so the timer + recordStop racing is harmless.
+    /// clears `wavWriter`, so the timer + recordStop racing is harmless. Keeps the
+    /// capture engine running if a session is still armed; otherwise tears down.
     private func finishRecordingAndTranscribe() {
         recordingMaxTimer?.invalidate()
         recordingMaxTimer = nil
         stopMetering()
 
-        guard let engine = audioEngine, let writer = wavWriter else {
+        guard let writer = wavWriter else {
             // Recording never started (beginRecording bailed). beginRecording
             // already replied with a specific error in that case; this is the
             // fallback so a missed reply still ends the keyboard's poll fast
             // rather than letting it run the full 10s timeout.
-            NSLog("[KeyboardTranscriptionListener] recordStop with no active engine")
+            NSLog("[KeyboardTranscriptionListener] recordStop with no active writer")
             replyError("Recording didn't start. Open Echos and try again.")
             return
         }
         let url = recordingFileURL()
-        let didRecord = engine.isRunning
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        let didRecord = audioEngine?.isRunning == true
         writer.close()
-        audioEngine = nil
         wavWriter = nil
-        NSLog("[KeyboardTranscriptionListener] Recording stopped (didRecord=%@)",
+        NSLog("[KeyboardTranscriptionListener] Dictation stopped (didRecord=%@)",
               didRecord ? "true" : "false")
 
-        // Deactivating the session drops the audio-mode background liveness that
-        // kept us awake while recording. Without a fresh assertion the app can
-        // be suspended before transcription writes its result — so the keyboard
-        // records fine but the stop silently times out. Refresh first; the
-        // window is released once the result is posted.
+        // Keep us alive long enough to transcribe and reply: an armed session's
+        // engine already does that; otherwise refresh the grace window before
+        // tearing the engine down (a backgrounded app would otherwise suspend
+        // mid-transcription and the keyboard's stop poll would time out).
         refreshGraceWindowIfBackgrounded()
-
-        try? AVAudioSession.sharedInstance().setActive(
-            false, options: .notifyOthersOnDeactivation
-        )
+        if !isSessionActive {
+            teardownEngine()
+            try? AVAudioSession.sharedInstance().setActive(
+                false, options: .notifyOthersOnDeactivation
+            )
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.processRecordedAudio(at: url, didRecord: didRecord)
@@ -631,17 +958,28 @@ import UIKit
 
         let text = bridge.transcribeFile(audioPath)
         if let text = text, !text.isEmpty {
+            NSLog("[KeyboardTranscriptionListener] transcription OK (len=%ld) for %@",
+                  text.count, requestID)
             writeResult(to: resultURL, id: requestID, text: text, error: nil)
         } else {
+            NSLog("[KeyboardTranscriptionListener] transcription empty for %@", requestID)
             writeResult(to: resultURL, id: requestID, text: nil, error: "Transcription returned empty result")
         }
         postResultNotification()
+        NSLog("[KeyboardTranscriptionListener] result posted for %@", requestID)
     }
 
     /// Reply to a keyboard pre-flight ping by writing the matching ID to
     /// `pong.json` and posting the pong Darwin notification. Synchronous
-    /// and minimal — this needs to round-trip in <300ms.
+    /// and minimal — this needs to round-trip in <300ms. The pong reports
+    /// whether a hot-mic session is currently armed so the keyboard knows
+    /// whether it can record immediately or must (re)arm one.
     private func handlePing() {
+        NSLog(
+            "[KeyboardTranscriptionListener] handlePing fired (appState=%ld, sessionActive=%@)",
+            UIApplication.shared.applicationState.rawValue,
+            isSessionActive ? "true" : "false"
+        )
         // A ping means the keyboard is about to record — keep us alive for it.
         refreshGraceWindowIfBackgrounded()
         guard let containerURL = FileManager.default.containerURL(
@@ -658,8 +996,19 @@ import UIKit
             return
         }
 
+        // "armed" must mean the keyboard can record RIGHT NOW. That's true only
+        // when the capture engine is already running (started while foreground,
+        // kept alive in the background), OR we're foreground and can start it on
+        // demand. A session marker / future expiry is NOT sufficient: starting
+        // AVAudioEngine fresh in the background fails (error 2003329396), so if
+        // the engine isn't live and we're backgrounded, report NOT armed — the
+        // keyboard will then open Echos to (re)arm in the foreground.
+        let engineLive = audioEngine?.isRunning == true
+        let foreground = UIApplication.shared.applicationState == .active
+        let armed = engineLive || foreground
         let pong: [String: Any] = [
             "id": pingID,
+            "armed": armed,
             "timestamp": Date().timeIntervalSince1970,
         ]
         guard let pongData = try? JSONSerialization.data(withJSONObject: pong) else { return }

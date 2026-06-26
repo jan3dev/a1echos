@@ -1,4 +1,10 @@
 import Foundation
+import os
+
+/// Logger for the keyboard extension. `NSLog` from a keyboard extension is
+/// unreliable in Console device streaming; `os.Logger` with an explicit
+/// subsystem always surfaces. Filter Console with `subsystem:com.a1lab.echos`.
+let kbLog = Logger(subsystem: "com.a1lab.echos", category: "keyboard")
 
 /// Handles IPC between the keyboard extension and the main Echos app
 /// using the App Group shared container and Darwin notifications.
@@ -18,6 +24,9 @@ class IPCClient {
     /// app records on our behalf. These tell it when to start and stop.
     static let recordStartNotificationName = "com.a1lab.echos.recordStart"
     static let recordStopNotificationName = "com.a1lab.echos.recordStop"
+    /// Asks an already-running app to (re)arm a hot-mic session — used when the
+    /// app answers the ping but no session is currently armed.
+    static let startSessionNotificationName = "com.a1lab.echos.startSession"
     /// Pre-flight ping/pong notifications. The keyboard fires a ping
     /// before recording so we can detect a force-killed main app and
     /// surface a clear "open Echos" toast instead of letting the user
@@ -30,10 +39,13 @@ class IPCClient {
 
     private var pollTimer: Timer?
     private var currentRequestID: String?
-    private let timeoutSeconds: TimeInterval = 10
+    // Generous because the first transcription in a process can still include a
+    // cold sherpa load, and background CPU is throttled. The app pre-warms the
+    // model on arm, so the common case returns in well under this.
+    private let timeoutSeconds: TimeInterval = 20
     private let pollInterval: TimeInterval = 0.5
 
-    private var pingCompletion: ((Bool) -> Void)?
+    private var pingCompletion: ((_ alive: Bool, _ armed: Bool) -> Void)?
     private var pingTimeoutTimer: Timer?
     private var currentPingID: String?
 
@@ -110,12 +122,14 @@ class IPCClient {
 
     /// Synchronous-feeling check that the main Echos app is running and
     /// listening. Writes a ping file, posts a Darwin notification, and
-    /// waits up to `timeout` for a matching pong. Calls `completion(true)`
-    /// if a pong arrives in time, `completion(false)` otherwise.
-    /// `completion` is always invoked on the main thread.
+    /// waits up to `timeout` for a matching pong. Calls `completion(alive,
+    /// armed)`: `alive` is whether the app answered in time, `armed` whether it
+    /// currently has a hot-mic session ready (so the keyboard can record at
+    /// once vs. needing to (re)arm one). `completion` is always invoked on the
+    /// main thread.
     func pingMainApp(
         timeout: TimeInterval = 0.6,
-        completion: @escaping (Bool) -> Void
+        completion: @escaping (_ alive: Bool, _ armed: Bool) -> Void
     ) {
         // Cancel any in-flight ping — only the most recent one is valid.
         pingTimeoutTimer?.invalidate()
@@ -126,7 +140,7 @@ class IPCClient {
         currentPingID = pingID
 
         guard let pingURL = IPCClient.pingFileURL() else {
-            finishPing(alive: false)
+            finishPing(alive: false, armed: false)
             return
         }
 
@@ -138,7 +152,7 @@ class IPCClient {
             let data = try JSONSerialization.data(withJSONObject: payload)
             try data.write(to: pingURL)
         } catch {
-            finishPing(alive: false)
+            finishPing(alive: false, armed: false)
             return
         }
 
@@ -147,17 +161,43 @@ class IPCClient {
         pingTimeoutTimer = Timer.scheduledTimer(
             withTimeInterval: timeout, repeats: false
         ) { [weak self] _ in
-            self?.finishPing(alive: false)
+            self?.finishPing(alive: false, armed: false)
         }
     }
 
-    private func finishPing(alive: Bool) {
+    private func finishPing(alive: Bool, armed: Bool) {
         pingTimeoutTimer?.invalidate()
         pingTimeoutTimer = nil
         let completion = pingCompletion
         pingCompletion = nil
         currentPingID = nil
-        DispatchQueue.main.async { completion?(alive) }
+        DispatchQueue.main.async { completion?(alive, armed) }
+    }
+
+    /// Pings, retrying a few times before concluding the app is unreachable.
+    /// A single missed pong can be a transient hiccup (cold start, a brief
+    /// scheduling delay, a just-suspended app relaunching); retrying avoids a
+    /// jarring app-switch / error flash on that first miss. `alive` is reported
+    /// true as soon as any attempt succeeds.
+    func pingMainAppWithRetry(
+        attempts: Int = 2,
+        timeout: TimeInterval = 0.6,
+        completion: @escaping (_ alive: Bool, _ armed: Bool) -> Void
+    ) {
+        pingMainApp(timeout: timeout) { [weak self] alive, armed in
+            if alive || attempts <= 1 {
+                completion(alive, armed)
+                return
+            }
+            self?.pingMainAppWithRetry(
+                attempts: attempts - 1, timeout: timeout, completion: completion
+            )
+        }
+    }
+
+    /// Posts the re-arm notification so a running-but-idle app starts a session.
+    func requestStartSession() {
+        postDarwinNotification(IPCClient.startSessionNotificationName)
     }
 
     // MARK: - Record (main app records on the keyboard's behalf)
@@ -253,7 +293,8 @@ class IPCClient {
             return
         }
         try? FileManager.default.removeItem(at: pongURL)
-        finishPing(alive: true)
+        let armed = (json["armed"] as? Bool) ?? false
+        finishPing(alive: true, armed: armed)
     }
 
     private func postDarwinNotification(_ name: String) {
@@ -270,8 +311,9 @@ class IPCClient {
         pollTimer = Timer.scheduledTimer(withTimeInterval: pollInterval, repeats: true) { [weak self] timer in
             elapsed += self?.pollInterval ?? 0.5
 
-            if elapsed >= (self?.timeoutSeconds ?? 10) {
+            if elapsed >= (self?.timeoutSeconds ?? 20) {
                 timer.invalidate()
+                kbLog.error("IPC transcription poll timed out after \(String(format: "%.0f", self?.timeoutSeconds ?? 20), privacy: .public)s")
                 self?.onTranscriptionError?("Transcription timed out. Is Echos app running?")
                 return
             }

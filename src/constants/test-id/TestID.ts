@@ -67,6 +67,7 @@ export enum TestID {
   SettingsSmartSplitToggle = "settings-smart-split-toggle",
   SettingsKeyboardAutocorrectToggle = "settings-keyboard-autocorrect-toggle",
   SettingsKeyboardHapticToggle = "settings-keyboard-haptic-toggle",
+  SettingsMicTimeoutRow = "settings-mic-timeout-row",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
   KeyboardPromptModal = "keyboard-prompt-modal",
   KeyboardPromptImageIos = "keyboard-prompt-image-ios",
@@ -76,6 +77,9 @@ export enum TestID {
   ThemeAuto = "theme-auto",
   ThemeLight = "theme-light",
   ThemeDark = "theme-dark",
+
+  // --- Microphone Timeout Settings ---
+  MicTimeoutOption = "mic-timeout-option",
 
   // --- Model Settings ---
   ModelWhisperFile = "model-whisper-file",

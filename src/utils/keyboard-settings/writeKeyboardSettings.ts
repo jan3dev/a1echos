@@ -16,6 +16,12 @@ export interface KeyboardSettingsConfig {
   /** When true, the keyboard plays a light haptic on each key press. When
    *  false (default), it's silent — matching the iOS native default. */
   hapticFeedback: boolean;
+  /** How long (seconds) a keyboard voice-typing session stays armed in the
+   *  background after the user starts it from an external app. iOS forbids the
+   *  extension from recording, so the main app captures on its behalf and must
+   *  stay resident for this window. `0` = Off (no background session). Read by
+   *  the iOS main-app transcription listener to size the session timer. */
+  micTimeoutSeconds: number;
 }
 
 /**
@@ -27,7 +33,11 @@ export interface KeyboardSettingsConfig {
 export const writeKeyboardSettings = (config: KeyboardSettingsConfig): void => {
   writeJsonAtomic(
     KEYBOARD_SETTINGS_FILENAME,
-    { autocorrect: config.autocorrect, hapticFeedback: config.hapticFeedback },
+    {
+      autocorrect: config.autocorrect,
+      hapticFeedback: config.hapticFeedback,
+      micTimeoutSeconds: config.micTimeoutSeconds,
+    },
     { flag: FeatureFlag.settings, label: "keyboard settings" },
   );
 };
