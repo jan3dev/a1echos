@@ -63,6 +63,14 @@ const {
 } = require("../../../src/test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
+  useScrollSurface: jest.fn(() => ({
+    scrolled: false,
+    contentBelow: false,
+    onScroll: jest.fn(),
+    onContentSizeChange: jest.fn(),
+    onLayout: jest.fn(),
+    reset: jest.fn(),
+  })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
   useMicPermission: jest.fn(() => jest.fn(async () => true)),
   usePermissions: jest.fn(() => ({

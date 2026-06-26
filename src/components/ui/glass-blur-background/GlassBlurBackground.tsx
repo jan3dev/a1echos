@@ -1,15 +1,13 @@
 import { BlurView } from "expo-blur";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { RefObject } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useTheme } from "@/theme";
 
-// Blur strength for the expo-blur fallback (iOS < 26, Android). Kept low:
-// expo-blur derives a translucent tint overlay whose opacity scales with
-// intensity, so a high value reads as a panel brighter than the background even
-// with nothing behind it. This keeps the surface near-invisible at rest and lets
-// the blur show only once content scrolls behind it.
+// Blur strength for the bars. Kept low: expo-blur derives a translucent tint
+// overlay whose opacity scales with intensity, so a high value reads as a panel
+// brighter than the background even with nothing behind it. This keeps the
+// surface subtle and lets the blur show the content scrolled behind it.
 const BLUR_INTENSITY = 20;
 
 export interface GlassBlurBackgroundProps {
@@ -22,10 +20,8 @@ export interface GlassBlurBackgroundProps {
 }
 
 /**
- * Absolutely-filling real glass/blur background shared by the surfaces that
- * float over scrolling content (the top app bar and the bottom sub-screen
- * navbar). Apple Liquid Glass (iOS 26+) when available, otherwise a native
- * expo-blur layer.
+ * Absolutely-filling native blur background shared by the surfaces that float
+ * over scrolling content (the top app bar and the bottom sub-screen navbar).
  *
  * Render as the first child of an `overflow: "hidden"` container, behind the
  * surface's own content.
@@ -34,16 +30,6 @@ export const GlassBlurBackground = ({
   blurTarget,
 }: GlassBlurBackgroundProps) => {
   const { isDark } = useTheme();
-
-  if (isLiquidGlassAvailable()) {
-    return (
-      <GlassView
-        style={StyleSheet.absoluteFill}
-        glassEffectStyle="regular"
-        colorScheme={isDark ? "dark" : "light"}
-      />
-    );
-  }
 
   return (
     <BlurView

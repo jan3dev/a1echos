@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
 import { Transcription } from "@/models";
-import { getShadow, useTheme } from "@/theme";
+import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { Checkbox } from "../../../ui/checkbox/Checkbox";
@@ -125,8 +125,7 @@ export const TranscriptionItem = ({
   return (
     <View
       style={[
-        styles.shadowContainer,
-        getShadow("cardElevated"),
+        styles.cardContainer,
         { backgroundColor: theme.colors.surfacePrimary },
         style,
       ]}
@@ -237,7 +236,7 @@ export const TranscriptionItem = ({
 };
 
 const styles = StyleSheet.create({
-  shadowContainer: {
+  cardContainer: {
     borderRadius: 16,
     marginBottom: 16,
   },

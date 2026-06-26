@@ -7,7 +7,7 @@ import { AppConstants, TestID } from "@/constants";
 import { useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
-import { GlassBlurBackground } from "../glass-blur-background/GlassBlurBackground";
+import { AnimatedGlassSurface } from "../animated-glass-surface/AnimatedGlassSurface";
 import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
@@ -33,6 +33,12 @@ export interface TopAppBarProps {
    * target to blur underlying views; iOS blurs natively and ignores it.
    */
   blurTarget?: RefObject<View | null>;
+  /**
+   * When false (default) the bar is a solid `surfaceBackground` that blends into
+   * the screen; when true its glass/blur background fades in. Drive from the
+   * screen's scroll position so the blur shows only with content behind the bar.
+   */
+  scrolled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -50,11 +56,14 @@ export const TopAppBar = ({
   transparent = false,
   showBackground = true,
   blurTarget,
+  scrolled = false,
   style,
 }: TopAppBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const showSurface = !transparent && showBackground;
 
   const handleBack = () => {
     if (onBackPressed) {
@@ -80,8 +89,8 @@ export const TopAppBar = ({
         style,
       ]}
     >
-      {!transparent && showBackground && (
-        <GlassBlurBackground blurTarget={blurTarget} />
+      {showSurface && (
+        <AnimatedGlassSurface scrolled={scrolled} blurTarget={blurTarget} />
       )}
       <View
         style={[
@@ -89,10 +98,7 @@ export const TopAppBar = ({
           {
             paddingTop: topPadding + 16,
             height: totalHeight,
-            backgroundColor:
-              transparent || !showBackground
-                ? "transparent"
-                : theme.colors.glassBackground,
+            backgroundColor: "transparent",
           },
         ]}
       >

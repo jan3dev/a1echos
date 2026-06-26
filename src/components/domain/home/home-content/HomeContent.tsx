@@ -1,6 +1,7 @@
 import { RefObject, useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   StyleSheet,
@@ -27,6 +28,9 @@ interface HomeContentProps {
   onSelectionToggle: (sessionId: string) => void;
   onSessionMorePress: (session: Session) => void;
   scrollRef?: RefObject<FlatList<Session> | null>;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export const HomeContent = ({
@@ -37,6 +41,9 @@ export const HomeContent = ({
   onSelectionToggle,
   onSessionMorePress,
   scrollRef,
+  onScroll,
+  onContentSizeChange,
+  onLayout,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -67,6 +74,9 @@ export const HomeContent = ({
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Always forward to the surface tracker, even during a programmatic
+      // scroll or selection mode, so the app bar's blur stays in sync.
+      onScroll?.(event);
       if (scrollGuard.isActive()) return;
       if (selectionMode) return;
       setShowJumpButton(
@@ -74,7 +84,7 @@ export const HomeContent = ({
           windowHeight * AppConstants.SCROLL_TO_EDGE_THRESHOLD_RATIO,
       );
     },
-    [scrollGuard, selectionMode, windowHeight],
+    [onScroll, scrollGuard, selectionMode, windowHeight],
   );
 
   const handleScrollToTop = useCallback(() => {
@@ -133,6 +143,8 @@ export const HomeContent = ({
         renderItem={renderItem}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        onContentSizeChange={onContentSizeChange}
+        onLayout={onLayout}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}

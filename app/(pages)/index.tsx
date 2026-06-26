@@ -22,6 +22,7 @@ import { Routes, TestID } from "@/constants";
 import {
   useLocalization,
   useMicPermission,
+  useScrollSurface,
   useSessionOperations,
 } from "@/hooks";
 import { Session } from "@/models";
@@ -53,6 +54,14 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<FlatList<Session>>(null);
   const blurTargetRef = useRef<View>(null);
+  const {
+    scrolled,
+    contentBelow,
+    onScroll,
+    onContentSizeChange,
+    onLayout,
+    reset,
+  } = useScrollSurface();
 
   const sessions = useSessions();
   const incognitoSession = useIncognitoSession();
@@ -95,6 +104,13 @@ export default function HomeScreen() {
   // incognito mode, IncognitoEmptyState owns the empty-state messaging instead.
   const effectivelyEmpty =
     sessions.length === 0 && !incognitoSession && !isIncognitoMode;
+
+  // Clear stale app-bar glass when the session list isn't a populated,
+  // scrollable surface (incognito empty state, or no sessions): no scroll
+  // event fires to reset it.
+  useEffect(() => {
+    if (isIncognitoMode || sessions.length === 0) reset();
+  }, [isIncognitoMode, sessions.length, reset]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -356,6 +372,9 @@ export default function HomeScreen() {
           onSelectionToggle={toggleSessionSelection}
           onSessionMorePress={handleSessionMorePress}
           scrollRef={scrollRef}
+          onScroll={onScroll}
+          onContentSizeChange={onContentSizeChange}
+          onLayout={onLayout}
         />
       </AppBarBlurTarget>
 
@@ -364,6 +383,7 @@ export default function HomeScreen() {
         selectionTitle={loc.selectedCount(selectedSessionIds.length)}
         onExitSelectionPressed={exitSessionSelection}
         blurTarget={blurTargetRef}
+        scrolled={scrolled}
       />
 
       {effectivelyEmpty && (
@@ -402,6 +422,7 @@ export default function HomeScreen() {
         visible={isSessionSelectionMode}
         actions={navbarActions}
         blurTarget={blurTargetRef}
+        scrolled={contentBelow}
       />
 
       <Toast {...deleteToastState} />

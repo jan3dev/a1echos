@@ -16,6 +16,7 @@ interface HomeAppBarProps {
   selectionTitle?: string;
   onExitSelectionPressed?: () => void;
   blurTarget?: RefObject<View | null>;
+  scrolled?: boolean;
 }
 
 export const HomeAppBar = ({
@@ -23,6 +24,7 @@ export const HomeAppBar = ({
   selectionTitle,
   onExitSelectionPressed,
   blurTarget,
+  scrolled = false,
 }: HomeAppBarProps) => {
   const { theme } = useTheme();
   const router = useRouter();
@@ -39,6 +41,7 @@ export const HomeAppBar = ({
         title={selectionTitle ?? ""}
         showBackButton={false}
         blurTarget={blurTarget}
+        scrolled={scrolled}
         leading={
           <RipplePressable
             onPress={() => onExitSelectionPressed?.()}
@@ -119,6 +122,7 @@ export const HomeAppBar = ({
     <TopAppBar
       showBackButton={false}
       blurTarget={blurTarget}
+      scrolled={scrolled}
       leading={leading}
       titleWidget={titleWidget}
       actions={actions}

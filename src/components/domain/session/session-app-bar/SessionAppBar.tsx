@@ -25,6 +25,7 @@ interface SessionAppBarProps {
   onCancelEditPressed?: () => void;
   onSaveEditPressed?: () => void;
   blurTarget?: RefObject<View | null>;
+  scrolled?: boolean;
 }
 
 export const SessionAppBar = ({
@@ -41,6 +42,7 @@ export const SessionAppBar = ({
   onCancelEditPressed,
   onSaveEditPressed,
   blurTarget,
+  scrolled = false,
 }: SessionAppBarProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
@@ -52,6 +54,7 @@ export const SessionAppBar = ({
         title={loc.edit}
         showBackButton={false}
         blurTarget={blurTarget}
+        scrolled={scrolled}
         leading={
           <RipplePressable
             onPress={onCancelEditPressed}
@@ -86,6 +89,7 @@ export const SessionAppBar = ({
     <TopAppBar
       title={selectionMode ? (selectionTitle ?? "") : sessionName}
       blurTarget={blurTarget}
+      scrolled={scrolled}
       onBackPressed={onBackPressed}
       onTitlePressed={
         !isIncognitoSession && !selectionMode ? onTitlePressed : undefined

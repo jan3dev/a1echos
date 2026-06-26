@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getShadow, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
-import { GlassBlurBackground } from "../glass-blur-background/GlassBlurBackground";
+import { AnimatedGlassSurface } from "../animated-glass-surface/AnimatedGlassSurface";
 import { Icon } from "../icon/Icon";
 import type { IconName } from "../icon/iconMap";
 import { Text } from "../text/Text";
@@ -45,6 +45,12 @@ export interface SubScreenNavbarProps {
    * content that should show through the navbar's glass background.
    */
   blurTarget?: RefObject<View | null>;
+  /**
+   * When false (default) the bar is a solid `surfaceBackground`; when true its
+   * glass/blur background fades in. Drive from whether the scroll content
+   * overflows behind the bar.
+   */
+  scrolled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -91,6 +97,7 @@ export const SubScreenNavbar = ({
   actions,
   testID,
   blurTarget,
+  scrolled = false,
   style,
 }: SubScreenNavbarProps) => {
   const { theme } = useTheme();
@@ -146,13 +153,7 @@ export const SubScreenNavbar = ({
         style,
       ]}
     >
-      <GlassBlurBackground blurTarget={blurTarget} />
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: theme.colors.glassBackground },
-        ]}
-      />
+      <AnimatedGlassSurface scrolled={scrolled} blurTarget={blurTarget} />
       <View style={styles.row}>
         {actions.map((action) => (
           <NavbarAction

@@ -32,6 +32,13 @@ const {
 } = require("../../../src/test-utils/mock-localization/mockLocalization");
 
 jest.mock("@/hooks", () => ({
+  useScrollSurface: jest.fn(() => ({
+    scrolled: false,
+    contentBelow: false,
+    onScroll: jest.fn(),
+    onContentSizeChange: jest.fn(),
+    onLayout: jest.fn(),
+  })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
 }));
 
@@ -252,5 +259,17 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
     fireEvent.press(getByTestId(TestID.SettingsMicTimeoutRow));
     expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the microphone-timeout row on Android", () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      const { queryByTestId } = render(<AdvancedSettingsScreen />);
+      expect(queryByTestId(TestID.SettingsMicTimeoutRow)).toBeNull();
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 });

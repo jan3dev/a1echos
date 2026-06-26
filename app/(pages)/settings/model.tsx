@@ -13,7 +13,7 @@ import {
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
 import { AppConstants, Routes } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
   ModelId,
@@ -38,6 +38,7 @@ export default function ModelSettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
 
   const selectedModelId = useSelectedModelId();
   const modelModes = useModelModes();
@@ -244,6 +245,8 @@ export default function ModelSettingsScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <Text
             variant="body1"
@@ -285,7 +288,11 @@ export default function ModelSettingsScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title={loc.title} blurTarget={blurTargetRef} />
+      <TopAppBar
+        title={loc.title}
+        blurTarget={blurTargetRef}
+        scrolled={scrolled}
+      />
 
       <Toast {...deleteToastState} />
     </Screen>

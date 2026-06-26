@@ -12,4 +12,8 @@ export const AppConstants = {
   SMART_SPLIT_SILENCE_ENERGY_THRESHOLD: 0.02,
   LIST_PAGE_SIZE: 30,
   SCROLL_TO_EDGE_THRESHOLD_RATIO: 0.5,
+  // Scroll offset (px) past which an app bar switches from a solid surface that
+  // blends into the screen to its glass/blur background. A few px avoids
+  // sub-pixel jitter flipping the state at the very top.
+  APP_BAR_SCROLL_BLUR_THRESHOLD: 4,
 } as const;

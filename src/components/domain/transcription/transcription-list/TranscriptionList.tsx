@@ -42,6 +42,9 @@ interface TranscriptionListProps {
   topPadding?: number;
   bottomPadding?: number;
   listRef?: RefObject<FlatList<Transcription>>;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 interface ActivePreviewState {
@@ -69,6 +72,9 @@ export const TranscriptionList = ({
   topPadding = 0,
   bottomPadding = 16,
   listRef,
+  onScroll,
+  onContentSizeChange,
+  onLayout,
 }: TranscriptionListProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const { loc } = useLocalization();
@@ -247,6 +253,9 @@ export const TranscriptionList = ({
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // Always forward to the surface tracker, even during a programmatic
+      // scroll, so the app bar's blur stays in sync.
+      onScroll?.(event);
       if (scrollGuard.isActive()) return;
       const { contentOffset, contentSize, layoutMeasurement } =
         event.nativeEvent;
@@ -257,7 +266,7 @@ export const TranscriptionList = ({
           viewportHeight * AppConstants.SCROLL_TO_EDGE_THRESHOLD_RATIO,
       );
     },
-    [scrollGuard, viewportHeight],
+    [onScroll, scrollGuard, viewportHeight],
   );
 
   const handleScrollToLatest = useCallback(() => {
@@ -286,12 +295,17 @@ export const TranscriptionList = ({
     };
   }, []);
 
-  const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    listLayoutHeightRef.current = event.nativeEvent.layout.height;
-  }, []);
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      onLayout?.(event);
+      listLayoutHeightRef.current = event.nativeEvent.layout.height;
+    },
+    [onLayout],
+  );
 
   const handleContentSizeChange = useCallback(
-    (_contentWidth: number, contentHeight: number) => {
+    (contentWidth: number, contentHeight: number) => {
+      onContentSizeChange?.(contentWidth, contentHeight);
       if (visibleData.length === 0) return;
 
       const layoutHeight = listLayoutHeightRef.current;
@@ -318,7 +332,7 @@ export const TranscriptionList = ({
         }, 60);
       }
     },
-    [listRef, visibleData.length],
+    [listRef, onContentSizeChange, visibleData.length],
   );
 
   const handleScrollBeginDrag = useCallback(() => {

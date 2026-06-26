@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Text, View } from "react-native";
@@ -144,11 +144,18 @@ describe("TopAppBar", () => {
     expect(json).not.toContain(lightColors.glassBackground);
   });
 
-  it("renders non-transparent mode with glass background", () => {
-    const { getByTestId, toJSON } = render(<TopAppBar title="Default" />);
-    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.glassBackground);
+  it("renders the glass tint on Android in non-transparent mode", () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      const { getByTestId, toJSON } = render(<TopAppBar title="Default" />);
+      expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+      const json = JSON.stringify(toJSON());
+      expect(json).toContain(lightColors.glassBackground);
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 
   it("renders titleWidget instead of title text when provided", () => {
@@ -176,14 +183,25 @@ describe("TopAppBar", () => {
     expect(getByText("Save")).toBeTruthy();
   });
 
-  it("renders with dark theme glass background", () => {
+  it("renders with dark theme glass tint on Android", () => {
+    const { Platform } = require("react-native");
     const { useThemeStore } = require("@/theme");
     const { darkColors } = require("@/theme");
-    useThemeStore.setState({ currentTheme: "dark" });
-    const { getByTestId, toJSON } = render(<TopAppBar title="Dark" />);
-    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(darkColors.glassBackground);
+    const originalOS = Platform.OS;
+    const originalTheme = useThemeStore.getState().currentTheme;
+    try {
+      Platform.OS = "android";
+      useThemeStore.setState({ currentTheme: "dark" });
+      const { getByTestId, toJSON } = render(<TopAppBar title="Dark" />);
+      expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+      const json = JSON.stringify(toJSON());
+      expect(json).toContain(darkColors.glassBackground);
+    } finally {
+      Platform.OS = originalOS;
+      act(() => {
+        useThemeStore.setState({ currentTheme: originalTheme });
+      });
+    }
   });
 
   it("renders on Android platform", () => {
@@ -208,6 +226,56 @@ describe("TopAppBar", () => {
 
   it("renders with default empty title", () => {
     const { getByTestId } = render(<TopAppBar />);
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+  });
+
+  it("renders an opaque surface base on Android for the blur to read", () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      const { toJSON } = render(<TopAppBar title="Surface" />);
+      const json = JSON.stringify(toJSON());
+      // The opaque base backs the Android BlurView so it has content to sample.
+      expect(json).toContain(lightColors.surfaceBackground);
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it("renders blur tint plus a fading surface cover on iOS", () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    Platform.OS = "ios";
+    try {
+      const { toJSON } = render(<TopAppBar title="Surface" />);
+      const json = JSON.stringify(toJSON());
+      // iOS keeps the blur + tint mounted and fades an opaque cover in front of
+      // it (animating the blur view's own alpha disables the native blur).
+      expect(json).toContain(lightColors.glassBackground);
+      expect(json).toContain(lightColors.surfaceBackground);
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
+  it("renders when scrolled", () => {
+    const { getByTestId } = render(<TopAppBar title="Scrolled" scrolled />);
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+  });
+
+  it("renders when not scrolled (default)", () => {
+    const { getByTestId } = render(
+      <TopAppBar title="Resting" scrolled={false} />,
+    );
+    expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
+  });
+
+  it("toggles the glass effect when scrolled changes", () => {
+    const { getByTestId, rerender } = render(
+      <TopAppBar title="Toggle" scrolled={false} />,
+    );
+    rerender(<TopAppBar title="Toggle" scrolled />);
     expect(getByTestId(TestID.TopAppBar)).toBeTruthy();
   });
 });

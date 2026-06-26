@@ -1,6 +1,5 @@
 import { Icon, TopAppBar } from "@/components";
 import { useTheme } from "@/theme";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Default = () => (

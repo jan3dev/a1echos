@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useRef } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -12,7 +12,7 @@ import {
   TopAppBar,
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import {
   useKeyboardAutocorrect,
   useKeyboardHaptic,
@@ -32,6 +32,7 @@ export default function AdvancedSettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
 
   const smartSplitEnabled = useSmartSplitEnabled();
   const setSmartSplitEnabled = useSetSmartSplitEnabled();
@@ -71,6 +72,8 @@ export default function AdvancedSettingsScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <ListItem
             testID={TestID.SettingsSmartSplitToggle}
@@ -111,21 +114,25 @@ export default function AdvancedSettingsScreen() {
             }
             onPress={() => handleHapticToggle(!keyboardHaptic)}
           />
-          <ListItem
-            testID={TestID.SettingsMicTimeoutRow}
-            title={loc.micTimeoutTitle}
-            subtitle={loc.micTimeoutDescription}
-            titleTrailing={micTimeoutDisplay}
-            titleTrailingColor={theme.colors.textSecondary}
-            iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={24}
-                color={theme.colors.textSecondary}
-              />
-            }
-            onPress={() => router.push(Routes.settingsMicTimeout)}
-          />
+          {/* The keyboard mic timeout only affects the iOS keyboard's hot-mic
+              session; it has no effect on Android, so hide the row there. */}
+          {Platform.OS === "ios" && (
+            <ListItem
+              testID={TestID.SettingsMicTimeoutRow}
+              title={loc.micTimeoutTitle}
+              subtitle={loc.micTimeoutDescription}
+              titleTrailing={micTimeoutDisplay}
+              titleTrailingColor={theme.colors.textSecondary}
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() => router.push(Routes.settingsMicTimeout)}
+            />
+          )}
           <ListItem
             testID={TestID.SettingsAddKeyboardRow}
             title={loc.advancedSettingsAddKeyboardTitle}
@@ -142,7 +149,11 @@ export default function AdvancedSettingsScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title={loc.advancedSettingsTitle} blurTarget={blurTargetRef} />
+      <TopAppBar
+        title={loc.advancedSettingsTitle}
+        blurTarget={blurTargetRef}
+        scrolled={scrolled}
+      />
     </Screen>
   );
 }

@@ -35,6 +35,7 @@ import { Routes } from "@/constants";
 import {
   useLocalization,
   useMicPermission,
+  useScrollSurface,
   useSessionOperations,
 } from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
@@ -78,6 +79,14 @@ export default function SessionScreen() {
   >;
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTargetRef = useRef<View>(null);
+  const {
+    scrolled,
+    contentBelow,
+    onScroll,
+    onContentSizeChange,
+    onLayout,
+    reset,
+  } = useScrollSurface();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isCancellingEdit, setIsCancellingEdit] = useState(false);
@@ -216,6 +225,12 @@ export default function SessionScreen() {
   } = useToast();
 
   const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
+
+  // Clear stale app-bar glass when the list isn't shown (loading/error/empty
+  // all coincide with no transcriptions): no scroll event fires to reset it.
+  useEffect(() => {
+    if (transcriptions.length === 0) reset();
+  }, [transcriptions.length, reset]);
 
   // Initialize session
   useEffect(() => {
@@ -619,6 +634,9 @@ export default function SessionScreen() {
               onEditStart={handleEditStart}
               onEditEnd={handleEditEnd}
               isCancellingEdit={isCancellingEdit}
+              onScroll={onScroll}
+              onContentSizeChange={onContentSizeChange}
+              onLayout={onLayout}
             />
           )}
         </KeyboardAvoidingView>
@@ -638,12 +656,14 @@ export default function SessionScreen() {
         onCancelEditPressed={handleCancelEdit}
         onSaveEditPressed={handleSaveEdit}
         blurTarget={blurTargetRef}
+        scrolled={scrolled}
       />
 
       <SubScreenNavbar
         visible={selectionMode}
         actions={navbarActions}
         blurTarget={blurTargetRef}
+        scrolled={contentBelow}
       />
 
       <SessionInputModal

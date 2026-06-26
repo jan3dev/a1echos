@@ -795,6 +795,42 @@ describe("TranscriptionList", () => {
     expect(capturedCancelling).toBe(true);
   });
 
+  it("forwards scroll, content-size and layout events to the surface tracker", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const onScroll = jest.fn();
+    const onContentSizeChange = jest.fn();
+    const onLayout = jest.fn();
+
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList
+        {...defaultProps}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        onLayout={onLayout}
+      />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+
+    const scrollArg = {
+      nativeEvent: {
+        contentOffset: { y: 30 },
+        contentSize: { height: 1000 },
+        layoutMeasurement: { height: 400 },
+      },
+    };
+    const layoutArg = { nativeEvent: { layout: { height: 400 } } };
+    act(() => {
+      flatList.props.onScroll(scrollArg);
+      flatList.props.onContentSizeChange(0, 1000);
+      flatList.props.onLayout(layoutArg);
+    });
+
+    expect(onScroll).toHaveBeenCalledWith(scrollArg);
+    expect(onContentSizeChange).toHaveBeenCalledWith(0, 1000);
+    expect(onLayout).toHaveBeenCalledWith(layoutArg);
+  });
+
   it("top padding adds to the chronological top of the list", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
 

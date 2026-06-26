@@ -12,7 +12,7 @@ import {
   TopAppBar,
 } from "@/components";
 import { AppConstants } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import type { ModelId } from "@/models";
 import {
   MODEL_REGISTRY,
@@ -28,6 +28,7 @@ export default function ModelLanguagesScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
   const params = useLocalSearchParams<{ modelId?: string }>();
   const selectedModelId = useSelectedModelId();
 
@@ -57,6 +58,8 @@ export default function ModelLanguagesScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <View style={styles.header}>
             <Text
@@ -91,7 +94,7 @@ export default function ModelLanguagesScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title="" blurTarget={blurTargetRef} />
+      <TopAppBar title="" blurTarget={blurTargetRef} scrolled={scrolled} />
     </Screen>
   );
 }

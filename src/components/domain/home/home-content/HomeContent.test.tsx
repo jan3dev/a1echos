@@ -213,4 +213,33 @@ describe("HomeContent", () => {
     const flatList = UNSAFE_getByType(FlatList);
     expect(flatList.props.ItemSeparatorComponent).toBeDefined();
   });
+
+  it("forwards scroll, content-size and layout events to the surface tracker", () => {
+    const onScroll = jest.fn();
+    const onContentSizeChange = jest.fn();
+    const onLayout = jest.fn();
+    const { UNSAFE_getByType } = render(
+      <HomeContent
+        {...defaultProps}
+        onScroll={onScroll}
+        onContentSizeChange={onContentSizeChange}
+        onLayout={onLayout}
+      />,
+    );
+    const { FlatList } = require("react-native");
+    const flatList = UNSAFE_getByType(FlatList);
+
+    const event = { nativeEvent: { contentOffset: { y: 20 } } };
+    act(() => {
+      flatList.props.onScroll(event);
+      flatList.props.onContentSizeChange(0, 1000);
+      flatList.props.onLayout({ nativeEvent: { layout: { height: 800 } } });
+    });
+
+    expect(onScroll).toHaveBeenCalledWith(event);
+    expect(onContentSizeChange).toHaveBeenCalledWith(0, 1000);
+    expect(onLayout).toHaveBeenCalledWith({
+      nativeEvent: { layout: { height: 800 } },
+    });
+  });
 });

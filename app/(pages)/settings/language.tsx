@@ -12,7 +12,7 @@ import {
   TopAppBar,
 } from "@/components";
 import { AppConstants, dynamicTestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import {
   getCountryCode,
   getModelInfo,
@@ -33,6 +33,7 @@ export default function LanguageSettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
 
   const selectedLanguage = useSelectedLanguage();
   const selectedModelId = useSelectedModelId();
@@ -89,6 +90,8 @@ export default function LanguageSettingsScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <View style={styles.list}>
             {languages.map((language) => (
@@ -117,7 +120,11 @@ export default function LanguageSettingsScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title={loc.spokenLanguageTitle} blurTarget={blurTargetRef} />
+      <TopAppBar
+        title={loc.spokenLanguageTitle}
+        blurTarget={blurTargetRef}
+        scrolled={scrolled}
+      />
     </Screen>
   );
 }

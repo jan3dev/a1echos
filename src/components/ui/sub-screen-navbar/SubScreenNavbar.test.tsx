@@ -85,6 +85,26 @@ describe("SubScreenNavbar", () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
+  it("renders with the glass background faded in when scrolled", () => {
+    const { getByText, rerender } = render(
+      <SubScreenNavbar
+        visible
+        scrolled={false}
+        actions={[makeAction({ key: "rename", label: "Rename" })]}
+      />,
+    );
+    expect(getByText("Rename")).toBeTruthy();
+
+    rerender(
+      <SubScreenNavbar
+        visible
+        scrolled
+        actions={[makeAction({ key: "rename", label: "Rename" })]}
+      />,
+    );
+    expect(getByText("Rename")).toBeTruthy();
+  });
+
   it("applies the action color to its label", () => {
     const { getByText } = render(
       <SubScreenNavbar

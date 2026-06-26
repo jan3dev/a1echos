@@ -14,7 +14,7 @@ import {
   TopAppBar,
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import { AppTheme, getModelInfo } from "@/models";
 import {
   useSelectedLanguage,
@@ -29,6 +29,7 @@ export default function SettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
 
   const selectedModelId = useSelectedModelId();
   const selectedTheme = useSelectedTheme();
@@ -67,6 +68,8 @@ export default function SettingsScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <View style={styles.list}>
             <ListItem
@@ -188,7 +191,11 @@ export default function SettingsScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title={loc.settingsTitle} blurTarget={blurTargetRef} />
+      <TopAppBar
+        title={loc.settingsTitle}
+        blurTarget={blurTargetRef}
+        scrolled={scrolled}
+      />
     </Screen>
   );
 }

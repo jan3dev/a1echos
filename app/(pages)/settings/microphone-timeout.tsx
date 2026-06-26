@@ -11,7 +11,7 @@ import {
   TopAppBar,
 } from "@/components";
 import { AppConstants, TestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import { useLocalization, useScrollSurface } from "@/hooks";
 import {
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useKeyboardMicTimeout,
@@ -27,6 +27,7 @@ export default function MicrophoneTimeoutSettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
+  const { scrolled, onScroll } = useScrollSurface();
 
   const selected = useKeyboardMicTimeout();
   const setMicTimeout = useSetKeyboardMicTimeout();
@@ -75,6 +76,8 @@ export default function MicrophoneTimeoutSettingsScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
           <View style={styles.list}>
             {KEYBOARD_MIC_TIMEOUT_OPTIONS.map((seconds) => (
@@ -100,7 +103,11 @@ export default function MicrophoneTimeoutSettingsScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <TopAppBar title={loc.micTimeoutTitle} blurTarget={blurTargetRef} />
+      <TopAppBar
+        title={loc.micTimeoutTitle}
+        blurTarget={blurTargetRef}
+        scrolled={scrolled}
+      />
     </Screen>
   );
 }

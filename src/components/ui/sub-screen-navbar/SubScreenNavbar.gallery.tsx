@@ -3,10 +3,10 @@ import { Button as RNButton, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "@/theme";
+import type { GalleryEntry } from "@/design-system/manifest";
 
 import { SUB_SCREEN_NAVBAR_HEIGHT, SubScreenNavbar } from "./SubScreenNavbar";
 
-import type { GalleryEntry } from "@/design-system/manifest";
 
 const Stage = ({ children }: { children: React.ReactNode }) => {
   const { bottom: bottomInset } = useSafeAreaInsets();

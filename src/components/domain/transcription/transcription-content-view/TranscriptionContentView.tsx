@@ -1,5 +1,13 @@
 import { RefObject } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  FlatList,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants } from "@/constants";
@@ -19,6 +27,9 @@ interface TranscriptionContentViewProps {
   onEditStart?: () => void;
   onEditEnd?: () => void;
   isCancellingEdit?: boolean;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export const TranscriptionContentView = ({
@@ -30,6 +41,9 @@ export const TranscriptionContentView = ({
   onEditStart,
   onEditEnd,
   isCancellingEdit = false,
+  onScroll,
+  onContentSizeChange,
+  onLayout,
 }: TranscriptionContentViewProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -70,6 +84,9 @@ export const TranscriptionContentView = ({
       isCancellingEdit={isCancellingEdit}
       topPadding={topPadding}
       bottomPadding={bottomPadding}
+      onScroll={onScroll}
+      onContentSizeChange={onContentSizeChange}
+      onLayout={onLayout}
     />
   );
 };
