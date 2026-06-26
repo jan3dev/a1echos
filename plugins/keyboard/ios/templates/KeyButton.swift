@@ -28,6 +28,11 @@ class KeyButton: UIControl {
     private let symbolView = UIImageView()
     private let backgroundView = UIView()
 
+    /// Vertical-centering constraint for the standalone label (the non-subLabel
+    /// path). Its constant is recomputed by `updateLabelOpticalCentering` so the
+    /// visible glyph box — not the font line box — is centered in the key.
+    private var labelCenterYConstraint: NSLayoutConstraint?
+
     // Cached theme state for the pressed/highlighted recomputation.
     private var theme = KeyboardTheme()
     private var micState: MicState = .idle
@@ -145,7 +150,9 @@ class KeyButton: UIControl {
                 subLabel.topAnchor.constraint(equalTo: label.bottomAnchor, constant: -1),
             ])
         } else {
-            label.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+            let centerY = label.centerYAnchor.constraint(equalTo: centerYAnchor)
+            centerY.isActive = true
+            labelCenterYConstraint = centerY
         }
 
         if let name = keyDefinition.symbolName {
@@ -211,6 +218,7 @@ class KeyButton: UIControl {
         label.text = text
         label.isHidden = false
         symbolView.isHidden = true
+        updateLabelOpticalCentering()
     }
 
     /// Assigns a specific SF Symbol (overrides the default in KeyDefinition).
@@ -342,11 +350,33 @@ class KeyButton: UIControl {
 
         label.textColor = textColor
         label.font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+        updateLabelOpticalCentering()
         symbolView.tintColor = tintColor
         applyBackgroundColor(pressed: false)
     }
 
     // MARK: - Private
+
+    /// Centers the *visible* glyph box (x-height for lowercase, cap-height for
+    /// uppercase/digits) instead of the font line box. The line box reserves
+    /// descender padding below the baseline that most glyphs don't fill, so a
+    /// plainly centered label renders its letters slightly low — most visibly
+    /// on the unshifted lowercase keys. Recomputed whenever the font or the
+    /// label's case changes.
+    private func updateLabelOpticalCentering() {
+        guard let constraint = labelCenterYConstraint,
+              !label.isHidden,
+              let font = label.font,
+              let text = label.text, !text.isEmpty
+        else { return }
+        // `font.descender` is negative; `ascender + descender` is the line box
+        // height. The glyph rests on the baseline, so its center sits this far
+        // below the line-box center — lift the label by that amount.
+        let hasLowercase = text != text.uppercased()
+        let glyphHeight = hasLowercase ? font.xHeight : font.capHeight
+        let dropBelowCenter = (font.ascender + font.descender - glyphHeight) / 2
+        constraint.constant = -dropBelowCenter
+    }
 
     private func applyBackgroundColor(pressed: Bool) {
         backgroundView.backgroundColor = resolvedBackgroundColor(pressed: pressed)

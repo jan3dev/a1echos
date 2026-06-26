@@ -19,8 +19,8 @@ struct KeyboardTheme {
     /// visually pop above the blurred background.
     let keyBackground: UIColor = UIColor { traits in
         if traits.userInterfaceStyle == .dark {
-            // ~#6B6C6D — matches stock iOS dark-mode character key.
-            return UIColor(red: 0.42, green: 0.42, blue: 0.43, alpha: 1.0)
+            // #3C3C3C — default dark-mode character key fill.
+            return UIColor(red: 60 / 255.0, green: 60 / 255.0, blue: 60 / 255.0, alpha: 1.0)
         }
         return .white
     }
@@ -69,12 +69,12 @@ struct KeyboardTheme {
     /// than the system keys so the QWERTY rows read as a continuous band of
     /// pill cells — matches the visual hierarchy KeyboardKit and stock iOS 26
     /// use to separate "letter" from "function" affordances.
-    let cornerRadiusCharacter: CGFloat = 8
+    let cornerRadiusCharacter: CGFloat = 6
 
     /// Corner radius for system keys (shift / delete / 123 / return / mic).
     /// A touch larger than `cornerRadiusCharacter` so the rounder shape reads
     /// as the action affordance.
-    let cornerRadiusSystem: CGFloat = 10
+    let cornerRadiusSystem: CGFloat = 8
 
     // MARK: - Emoji picker tokens
 

@@ -69,7 +69,11 @@ class KeyboardView: UIInputView {
             // Top bar is hidden on numeric pads — return the rows-only budget.
             return isLandscape ? 154 : 212
         default:
-            rowsHeight = isLandscape ? 154 : 212
+            // +14 pt over the rows-only budget: the extra band between the top
+            // bar and the first key row (see rowStackTopFromTopBar) gives the
+            // top-row key-preview balloon enough headroom to render full size
+            // instead of being clipped at the keyboard's top edge.
+            rowsHeight = isLandscape ? 168 : 226
         }
         return rowsHeight + KeyboardTopBar.preferredHeight
     }
@@ -250,7 +254,7 @@ class KeyboardView: UIInputView {
         addSubview(keyPreview)
         addSubview(keyVariants)
         rowStackTopFromTopBar = rowStackView.topAnchor.constraint(
-            equalTo: topBar.bottomAnchor, constant: 4
+            equalTo: topBar.bottomAnchor, constant: 18
         )
         rowStackTopFromContainer = rowStackView.topAnchor.constraint(
             equalTo: topAnchor, constant: 4
