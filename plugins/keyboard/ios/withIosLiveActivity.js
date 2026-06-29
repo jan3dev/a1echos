@@ -18,12 +18,18 @@ const WIDGET_SWIFT_FILES = [
   "EchosWidgetBundle.swift",
   "EchoSessionLiveActivity.swift",
   "EchoSessionAttributes.swift",
+  "EchoSessionControlIntent.swift",
 ];
 
-// Shared with the main app target so the listener can start/end the activity.
-// A second copy is compiled into the app; ActivityKit matches across the two
-// processes by the attributes type name.
-const SHARED_ATTRIBUTES_FILE = "EchoSessionAttributes.swift";
+// Compiled into the main app target too (a second copy alongside the widget's):
+// - EchoSessionAttributes lets the listener start/end the activity; ActivityKit
+//   matches across processes by the attributes type name.
+// - EchoSessionControlIntent lets the Live Activity off button's
+//   `LiveActivityIntent.perform()` run in the app process.
+const SHARED_APP_FILES = [
+  "EchoSessionAttributes.swift",
+  "EchoSessionControlIntent.swift",
+];
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
@@ -66,14 +72,20 @@ function withLiveActivityFiles(config) {
         }
       }
 
-      // Copy the shared attributes into the main app target's dir too, so the
-      // app compiles its own (identical) copy of the type.
+      // Copy the shared sources into the main app target's dir too, so the app
+      // compiles its own (identical) copies of these types.
       const mainAppDir = path.join(iosRoot, projectName);
-      const attrsTemplate = path.join(TEMPLATES_DIR, SHARED_ATTRIBUTES_FILE);
-      if (fs.existsSync(attrsTemplate)) {
+      for (const file of SHARED_APP_FILES) {
+        const template = path.join(TEMPLATES_DIR, file);
+        if (!fs.existsSync(template)) {
+          console.warn(
+            `[withIosLiveActivity] shared template missing, skipping: ${file}`,
+          );
+          continue;
+        }
         fs.writeFileSync(
-          path.join(mainAppDir, SHARED_ATTRIBUTES_FILE),
-          fs.readFileSync(attrsTemplate, "utf8"),
+          path.join(mainAppDir, file),
+          fs.readFileSync(template, "utf8"),
         );
       }
 
@@ -104,15 +116,15 @@ function withLiveActivityFiles(config) {
 }
 
 /**
- * Adds the shared ActivityAttributes file to the MAIN app target's Sources
- * build phase so the app can compile `EchoSessionAttributes`.
+ * Adds the shared Swift sources (ActivityAttributes + the off-button intent) to
+ * the MAIN app target's Sources build phase so the app compiles its own copies.
  */
-function addSharedAttributesToMainTarget(proj, projectName) {
+function addSharedFilesToMainTarget(proj, projectName) {
   const mainTarget = proj.getFirstTarget();
   if (!mainTarget) return;
-  const mainTargetUuid = mainTarget.uuid;
+  const targetObj = mainTarget.firstTarget;
 
-  // Find the main app group to register the file reference under.
+  // Find the main app group to register the file references under.
   const groups = proj.hash.project.objects["PBXGroup"];
   const mainGroupKey = proj.getFirstProject().firstProject.mainGroup;
   let appGroupKey = null;
@@ -130,41 +142,46 @@ function addSharedAttributesToMainTarget(proj, projectName) {
   const fileRefSection = proj.hash.project.objects["PBXFileReference"];
   const buildFileSection = proj.hash.project.objects["PBXBuildFile"];
 
-  const refUuid = proj.generateUuid();
-  fileRefSection[refUuid] = {
-    isa: "PBXFileReference",
-    lastKnownFileType: "sourcecode.swift",
-    name: SHARED_ATTRIBUTES_FILE,
-    path: `${projectName}/${SHARED_ATTRIBUTES_FILE}`,
-    sourceTree: '"<group>"',
-  };
-  fileRefSection[`${refUuid}_comment`] = SHARED_ATTRIBUTES_FILE;
-
-  if (appGroupKey && groups[appGroupKey]) {
-    groups[appGroupKey].children.push({
-      value: refUuid,
-      comment: SHARED_ATTRIBUTES_FILE,
-    });
-  }
-
-  const buildFileUuid = proj.generateUuid();
-  buildFileSection[buildFileUuid] = { isa: "PBXBuildFile", fileRef: refUuid };
-  buildFileSection[`${buildFileUuid}_comment`] =
-    `${SHARED_ATTRIBUTES_FILE} in Sources`;
-
-  const nativeTargets = proj.hash.project.objects["PBXNativeTarget"];
-  const targetObj = nativeTargets[mainTargetUuid];
+  // The Sources build phase is the same for every file — resolve it once.
+  const sourcePhases = proj.hash.project.objects["PBXSourcesBuildPhase"];
+  let sourcesPhase = null;
   if (targetObj) {
-    const sourcePhases = proj.hash.project.objects["PBXSourcesBuildPhase"];
     for (const bp of targetObj.buildPhases) {
-      const bpUuid = bp.value || bp;
-      if (sourcePhases[bpUuid]) {
-        sourcePhases[bpUuid].files.push({
-          value: buildFileUuid,
-          comment: `${SHARED_ATTRIBUTES_FILE} in Sources`,
-        });
+      const phase = sourcePhases[bp.value || bp];
+      if (phase) {
+        sourcesPhase = phase;
         break;
       }
+    }
+  }
+
+  for (const fileName of SHARED_APP_FILES) {
+    const refUuid = proj.generateUuid();
+    fileRefSection[refUuid] = {
+      isa: "PBXFileReference",
+      lastKnownFileType: "sourcecode.swift",
+      name: fileName,
+      path: `${projectName}/${fileName}`,
+      sourceTree: '"<group>"',
+    };
+    fileRefSection[`${refUuid}_comment`] = fileName;
+
+    if (appGroupKey && groups[appGroupKey]) {
+      groups[appGroupKey].children.push({
+        value: refUuid,
+        comment: fileName,
+      });
+    }
+
+    const buildFileUuid = proj.generateUuid();
+    buildFileSection[buildFileUuid] = { isa: "PBXBuildFile", fileRef: refUuid };
+    buildFileSection[`${buildFileUuid}_comment`] = `${fileName} in Sources`;
+
+    if (sourcesPhase) {
+      sourcesPhase.files.push({
+        value: buildFileUuid,
+        comment: `${fileName} in Sources`,
+      });
     }
   }
 }
@@ -253,7 +270,7 @@ function withLiveActivityXcodeTarget(config) {
       });
     }
 
-    for (const fw of ["SwiftUI", "WidgetKit", "ActivityKit"]) {
+    for (const fw of ["SwiftUI", "WidgetKit", "ActivityKit", "AppIntents"]) {
       proj.addFramework(`${fw}.framework`, { target: target.uuid });
     }
 
@@ -339,8 +356,8 @@ function withLiveActivityXcodeTarget(config) {
       }
     }
 
-    // Compile the shared attributes into the main app target as well.
-    addSharedAttributesToMainTarget(proj, projectName);
+    // Compile the shared sources into the main app target as well.
+    addSharedFilesToMainTarget(proj, projectName);
 
     return config;
   });

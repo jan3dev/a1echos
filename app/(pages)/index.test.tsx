@@ -72,6 +72,7 @@ const mockShowDeleteToast = jest.fn();
 const mockHideDeleteToast = jest.fn();
 
 let mockSessions: any[] = [];
+let mockGlobalTooltip: any = null;
 
 jest.mock("@/stores", () => ({
   useSessions: jest.fn(() => mockSessions),
@@ -84,6 +85,7 @@ jest.mock("@/stores", () => ({
   useSelectedSessionIdsSet: jest.fn(() => mockEmptySet),
   useToggleSessionSelection: jest.fn(() => mockToggleSessionSelection),
   useExitSessionSelection: jest.fn(() => mockExitSessionSelection),
+  useGlobalTooltip: jest.fn(() => mockGlobalTooltip),
   useShowGlobalTooltip: jest.fn(() => jest.fn()),
   useSetRecordingCallbacks: jest.fn(() => mockSetRecordingCallbacks),
   useSetRecordingControlsEnabled: jest.fn(
@@ -169,6 +171,7 @@ jest.mock("@/components", () => {
 
 beforeEach(() => {
   mockSessions = [];
+  mockGlobalTooltip = null;
   mockOnSessionTap = null;
   mockOnRenameSubmit = null;
   mockOnRenameCancel = null;
@@ -189,6 +192,13 @@ describe("HomeScreen", () => {
 
   it("hides EmptyStateView when sessions exist", () => {
     mockSessions = [{ id: "s1", name: "Session 1" }];
+    const { queryByTestId } = render(<HomeScreen />);
+    expect(queryByTestId(TestID.EmptyStateView)).toBeNull();
+  });
+
+  it("hides EmptyStateView while a global tooltip is showing", () => {
+    mockSessions = [];
+    mockGlobalTooltip = { id: "t1", message: "Recording saved" };
     const { queryByTestId } = render(<HomeScreen />);
     expect(queryByTestId(TestID.EmptyStateView)).toBeNull();
   });

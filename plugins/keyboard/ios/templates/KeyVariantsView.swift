@@ -31,10 +31,6 @@ final class KeyVariantsView: UIView {
         alpha = 0
         backgroundColor = .clear
 
-        backgroundLayer.shadowColor = theme.keyShadow.cgColor
-        backgroundLayer.shadowOpacity = 1.0
-        backgroundLayer.shadowOffset = CGSize(width: 0, height: 1)
-        backgroundLayer.shadowRadius = 3
         layer.addSublayer(backgroundLayer)
         layer.addSublayer(highlightLayer)
     }
@@ -45,10 +41,9 @@ final class KeyVariantsView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        backgroundLayer.fillColor = theme.keyBackground.cgColor
+        backgroundLayer.fillColor = theme.keyPopupBackground.cgColor
         let path = UIBezierPath(roundedRect: bounds, cornerRadius: Self.cornerRadius)
         backgroundLayer.path = path.cgPath
-        backgroundLayer.shadowPath = path.cgPath
         backgroundLayer.frame = bounds
         highlightLayer.frame = bounds
     }

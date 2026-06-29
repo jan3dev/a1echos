@@ -41,10 +41,6 @@ final class KeyPreviewView: UIView {
         alpha = 0
         backgroundColor = .clear
 
-        shapeLayer.shadowColor = theme.keyShadow.cgColor
-        shapeLayer.shadowOpacity = 1.0
-        shapeLayer.shadowOffset = CGSize(width: 0, height: 1)
-        shapeLayer.shadowRadius = 2
         layer.addSublayer(shapeLayer)
 
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -61,10 +57,9 @@ final class KeyPreviewView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         shapeLayer.frame = bounds
-        shapeLayer.fillColor = theme.keyBackground.cgColor
+        shapeLayer.fillColor = theme.keyPopupBackground.cgColor
         let path = balloonPath()
         shapeLayer.path = path.cgPath
-        shapeLayer.shadowPath = path.cgPath
 
         // Scale the label font to whatever vertical space the head ended
         // up with — top-row balloons get a smaller head than middle rows

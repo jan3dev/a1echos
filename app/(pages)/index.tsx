@@ -29,6 +29,7 @@ import { Session } from "@/models";
 import {
   useCreateSession,
   useExitSessionSelection,
+  useGlobalTooltip,
   useIncognitoSession,
   useIsIncognitoMode,
   useIsSessionSelectionMode,
@@ -99,11 +100,19 @@ export default function HomeScreen() {
 
   const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
 
+  // Hold the empty-state label back while a global tooltip is showing so it
+  // doesn't paint over (and visually beneath) the tooltip — the label appears
+  // once the tooltip has dismissed.
+  const globalTooltip = useGlobalTooltip();
+
   // Incognito sessions live outside `sessions`; treat them as non-empty so the
   // empty-state label unmounts during the record→session-screen transition. In
   // incognito mode, IncognitoEmptyState owns the empty-state messaging instead.
   const effectivelyEmpty =
-    sessions.length === 0 && !incognitoSession && !isIncognitoMode;
+    sessions.length === 0 &&
+    !incognitoSession &&
+    !isIncognitoMode &&
+    !globalTooltip;
 
   // Clear stale app-bar glass when the session list isn't a populated,
   // scrollable surface (incognito empty state, or no sessions): no scroll

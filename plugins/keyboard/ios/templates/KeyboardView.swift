@@ -219,7 +219,16 @@ class KeyboardView: UIInputView {
         // in the region while staying visually clear over the system blur; the
         // empty `draw(_:)` override below stops UIKit from optimizing the
         // near-transparent fill (and the touch region with it) back out.
-        backgroundColor = UIColor.black.withAlphaComponent(0.02)
+        //
+        // The tint matches the system keyboard blur's resolved tone per
+        // appearance, so this 2%-alpha fill shifts the blur toward the colour
+        // it already is (≈ no visible change) — a black fill instead darkened
+        // the whole keyboard a hair below the surrounding safe-area blur.
+        backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 0.17, alpha: 0.02)
+                : UIColor(white: 0.82, alpha: 0.02)
+        }
         allowsSelfSizing = true
 
         // CRITICAL: UIView ships with `isMultipleTouchEnabled = false`, which

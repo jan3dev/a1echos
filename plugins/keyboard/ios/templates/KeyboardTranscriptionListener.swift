@@ -40,6 +40,11 @@ import UIKit
     /// but no session is currently active — lets it extend the window without a
     /// full app-open round trip.
     private let startSessionNotificationName = "com.a1lab.echos.startSession"
+    /// Posted by the Live Activity "switch off" button (`EndEchoSessionIntent`)
+    /// to tear down an active session — stops the hot mic and clears the
+    /// indicator when the user dismisses it from the lock screen / Dynamic
+    /// Island.
+    private let endSessionNotificationName = "com.a1lab.echos.endSession"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -198,6 +203,21 @@ import UIKit
             .deliverImmediately
         )
 
+        // End-session handler — the Live Activity off button asks us to stop the
+        // hot mic and clear the indicator.
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
+                DispatchQueue.main.async { listener.endSession() }
+            },
+            endSessionNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+
         // Mirror keyboard settings (written by JS to the app sandbox, which the
         // extension can't read) into the App Group suite the extension reads.
         // Re-mirror when the app backgrounds so a toggle made mid-session
@@ -256,6 +276,18 @@ import UIKit
             object: nil, queue: .main
         ) { [weak self] note in self?.handleInterruption(note) }
         lifecycleObservers.append(interruptToken)
+
+        // End the session (stop the hot mic, clear the Live Activity) when the
+        // app is terminated, so the session indicator doesn't outlive the app.
+        // During an active session the app runs in the background under the
+        // `audio` mode, so iOS delivers this when the user swipes it away. (A
+        // *suspended* app force-killed gets no callback — handled instead by the
+        // activity's `staleDate` and the Live Activity off button.)
+        let terminateToken = nc.addObserver(
+            forName: UIApplication.willTerminateNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.endSession() }
+        lifecycleObservers.append(terminateToken)
 
         NSLog("[KeyboardTranscriptionListener] Started listening for keyboard transcription requests")
     }

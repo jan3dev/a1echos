@@ -14,13 +14,30 @@ struct KeyboardTheme {
     /// blur shows through.
     let keyboardBackground: UIColor = .clear
 
-    /// Character / space key fill. In light mode this is pure white; in dark
-    /// mode it's the lighter gray that stock iOS uses so character keys
-    /// visually pop above the blurred background.
+    /// Character / space key fill. In light mode this is pure white. In dark
+    /// mode it's a *translucent* light fill over the keyboard blur — matching
+    /// stock iOS, whose dark keys pick up the content behind the keyboard. This
+    /// is what keeps the keys from reading "too dark" when the system is dark
+    /// but the host app is light-themed (a light backdrop lightens the keys);
+    /// over a genuinely dark app it composites to ~#3C3C3C as before.
     let keyBackground: UIColor = UIColor { traits in
         if traits.userInterfaceStyle == .dark {
-            // #3C3C3C — default dark-mode character key fill.
-            return UIColor(red: 60 / 255.0, green: 60 / 255.0, blue: 60 / 255.0, alpha: 1.0)
+            return UIColor.white.withAlphaComponent(0.20)
+        }
+        return .white
+    }
+
+    /// Fill for the floating popups (character preview balloon + long-press
+    /// accent popover). Opaque, and in dark mode a touch *lighter* than the
+    /// keys so the popup reads as raised — matching the stock iOS callout. A
+    /// keyboard extension can't blur the host app behind it (the host content is
+    /// composited by the system outside the extension's layer tree, so a
+    /// `UIVisualEffectView` has nothing to sample and renders as a flat dark
+    /// material), so we use a solid fill rather than a frosted backdrop.
+    let keyPopupBackground: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            // ~#6A6A6C — lighter than the dark key fill so the popup lifts.
+            return UIColor(red: 106 / 255.0, green: 106 / 255.0, blue: 108 / 255.0, alpha: 1.0)
         }
         return .white
     }
@@ -52,16 +69,6 @@ struct KeyboardTheme {
 
     /// Icon tint on filled brand surfaces.
     let micButtonIcon: UIColor = .white
-
-    /// Drop-shadow color used on each key to match stock iOS's subtle elevation.
-    /// Dark-mode was previously 0.45α which crushed the floating-key look in
-    /// low-light; KeyboardKit / stock iOS use a much lighter shadow (~0.25α)
-    /// so the keys read as raised, not glued.
-    let keyShadow: UIColor = UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor.black.withAlphaComponent(0.25)
-            : UIColor.black.withAlphaComponent(0.15)
-    }
 
     // MARK: - Geometry tokens
 
