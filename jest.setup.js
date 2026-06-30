@@ -176,6 +176,7 @@ jest.mock("expo-router", () => ({
     Screen: "Screen",
   },
   Slot: "Slot",
+  Redirect: "Redirect",
 }));
 
 jest.mock("expo-splash-screen", () => ({
@@ -384,6 +385,7 @@ jest.mock("react-native-reanimated", () => ({
   useSharedValue: jest.fn((v) => ({ value: v })),
   useAnimatedStyle: jest.fn(() => ({})),
   useDerivedValue: jest.fn((fn) => ({ value: fn() })),
+  useReducedMotion: jest.fn(() => false),
   useFrameCallback: jest.fn(() => ({ setActive: jest.fn() })),
   useAnimatedRef: jest.fn(() => ({ current: null })),
   withTiming: jest.fn((v) => v),

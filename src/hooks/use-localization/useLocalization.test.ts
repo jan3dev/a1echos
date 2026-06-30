@@ -57,6 +57,9 @@ describe("useLocalization", () => {
       "failedToInitializeEngine",
       "copiedToClipboard",
       "contactSupport",
+      "welcomeTitle",
+      "welcomeSubtitle",
+      "welcomeGetStarted",
     ];
 
     for (const key of expectedStringKeys) {

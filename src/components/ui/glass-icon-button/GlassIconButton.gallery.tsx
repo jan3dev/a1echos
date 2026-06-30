@@ -3,10 +3,9 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
+import type { GalleryEntry } from "@/design-system/manifest";
 
 import { GlassIconButton } from "./GlassIconButton";
-
-import type { GalleryEntry } from "@/design-system/manifest";
 
 const StateLabel = ({ children }: { children: string }) => {
   const { theme } = useTheme();

@@ -12,6 +12,8 @@ import {
 import {
   initializeSettingsStore,
   useHasSeenKeyboardPrompt,
+  useHasSeenWelcome,
+  useMarkWelcomeSeen,
   useIsIncognitoMode,
   useKeyboardAutocorrect,
   useKeyboardHaptic,
@@ -70,6 +72,7 @@ const initialState = {
   keyboardAutocorrect: false,
   keyboardHaptic: false,
   keyboardMicTimeoutSeconds: 300,
+  hasSeenWelcome: false,
 };
 
 describe("settingsStore", () => {
@@ -437,6 +440,56 @@ describe("settingsStore", () => {
 
     it("useMarkKeyboardPromptSeen returns the action", () => {
       const { result } = renderHook(() => useMarkKeyboardPromptSeen());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("markWelcomeSeen()", () => {
+    it("defaults to false in the store", () => {
+      expect(useSettingsStore.getState().hasSeenWelcome).toBe(false);
+    });
+
+    it("sets true and persists", async () => {
+      await useSettingsStore.getState().markWelcomeSeen();
+
+      expect(useSettingsStore.getState().hasSeenWelcome).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "has_seen_welcome",
+        "true",
+      );
+    });
+
+    it("does NOT throw on persist failure (fire-and-forget)", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().markWelcomeSeen(),
+      ).resolves.toBeUndefined();
+
+      expect(useSettingsStore.getState().hasSeenWelcome).toBe(true);
+    });
+
+    it("initialize() reads persisted true value", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "has_seen_welcome" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().hasSeenWelcome).toBe(true);
+    });
+
+    it("useHasSeenWelcome selector reflects state", () => {
+      useSettingsStore.setState({ hasSeenWelcome: true });
+      const { result } = renderHook(() => useHasSeenWelcome());
+      expect(result.current).toBe(true);
+    });
+
+    it("useMarkWelcomeSeen returns the action", () => {
+      const { result } = renderHook(() => useMarkWelcomeSeen());
       expect(typeof result.current).toBe("function");
     });
   });

@@ -1,7 +1,6 @@
 import { View } from "react-native";
 
 import { Text } from "@/components";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Default = () => (

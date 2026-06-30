@@ -11,6 +11,7 @@ import Copy from "@/assets/icons/copy.svg";
 import Danger from "@/assets/icons/danger.svg";
 import Download from "@/assets/icons/download.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
+import EchosMark from "@/assets/icons/echos_mark.svg";
 import Edit from "@/assets/icons/edit.svg";
 import Export from "@/assets/icons/export.svg";
 import Flash from "@/assets/icons/flash.svg";
@@ -46,6 +47,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   danger: Danger,
   download: Download,
   echos_logo: EchosLogo,
+  echos_mark: EchosMark,
   edit: Edit,
   export: Export,
   flash: Flash,

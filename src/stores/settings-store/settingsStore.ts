@@ -29,6 +29,7 @@ const STORAGE_KEYS = {
   KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
   KEYBOARD_HAPTIC: "keyboard_haptic",
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
+  HAS_SEEN_WELCOME: "has_seen_welcome",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -71,6 +72,8 @@ interface SettingsStore {
   /** Keyboard: how long (seconds) a voice-typing session stays armed in the
    *  background after being started from an external app. `0` = Off. */
   keyboardMicTimeoutSeconds: number;
+  /** Whether the one-time first-launch welcome screen has been shown. */
+  hasSeenWelcome: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -86,6 +89,7 @@ interface SettingsStore {
   setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
+  markWelcomeSeen: () => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -155,6 +159,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardAutocorrect: false,
   keyboardHaptic: false,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
+  hasSeenWelcome: false,
 
   initialize: async () => {
     try {
@@ -171,6 +176,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardAutocorrectValue,
         keyboardHapticValue,
         keyboardMicTimeoutValue,
+        hasSeenWelcomeValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -184,6 +190,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_AUTOCORRECT),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
+        AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
       ]);
 
       const selectedTheme = themeValue
@@ -251,6 +258,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const keyboardMicTimeoutSeconds = parseMicTimeout(
         keyboardMicTimeoutValue,
       );
+      const hasSeenWelcome = hasSeenWelcomeValue === "true";
 
       set({
         selectedTheme,
@@ -265,6 +273,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardAutocorrect,
         keyboardHaptic,
         keyboardMicTimeoutSeconds,
+        hasSeenWelcome,
       });
 
       // Mirror the preferences to the keyboard config file so the native
@@ -289,6 +298,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardAutocorrect: false,
         keyboardHaptic: false,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
+        hasSeenWelcome: false,
       });
     }
   },
@@ -566,6 +576,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       throw error;
     }
   },
+
+  markWelcomeSeen: async () => {
+    set({ hasSeenWelcome: true });
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.HAS_SEEN_WELCOME, "true");
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save welcome seen flag",
+      });
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -609,6 +631,10 @@ export const useKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.keyboardMicTimeoutSeconds);
 export const useSetKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.setKeyboardMicTimeout);
+export const useHasSeenWelcome = () =>
+  useSettingsStore((s) => s.hasSeenWelcome);
+export const useMarkWelcomeSeen = () =>
+  useSettingsStore((s) => s.markWelcomeSeen);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

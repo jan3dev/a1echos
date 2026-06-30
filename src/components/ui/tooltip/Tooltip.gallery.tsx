@@ -6,7 +6,6 @@ import {
   TooltipVariant,
   useTooltip,
 } from "@/components";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 interface MatrixRow {

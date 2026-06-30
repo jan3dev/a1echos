@@ -2,10 +2,9 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
+import type { GalleryEntry } from "@/design-system/manifest";
 
 import { CTAModule } from "./CTAModule";
-
-import type { GalleryEntry } from "@/design-system/manifest";
 
 const SectionLabel = ({ children }: { children: string }) => {
   const { theme } = useTheme();

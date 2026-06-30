@@ -1,6 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +30,7 @@ import {
   useCreateSession,
   useExitSessionSelection,
   useGlobalTooltip,
+  useHasSeenWelcome,
   useIncognitoSession,
   useIsIncognitoMode,
   useIsSessionSelectionMode,
@@ -48,7 +49,23 @@ import {
 import { useTheme } from "@/theme";
 import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
+// First-launch gate. Kept as a thin wrapper so the home screen and its
+// recording-control side effects never mount for fresh installs: `useFocusEffect`
+// and the controls-visibility effect below would otherwise register against the
+// global ui store before the redirect resolves. The flag is loaded during boot
+// (before the splash hides), so this resolves synchronously; `Redirect` leaves
+// no home entry to swipe back to.
 export default function HomeScreen() {
+  const hasSeenWelcome = useHasSeenWelcome();
+
+  if (!hasSeenWelcome) {
+    return <Redirect href={Routes.welcome} />;
+  }
+
+  return <HomeScreenContent />;
+}
+
+function HomeScreenContent() {
   const router = useRouter();
   const { loc } = useLocalization();
   const { theme } = useTheme();

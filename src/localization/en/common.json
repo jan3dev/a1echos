@@ -103,5 +103,8 @@
   "keyboardPromptCta": "Add Keyboard",
   "keyboardPromptDismiss": "Maybe Later",
   "advancedSettingsAddKeyboardTitle": "Add Echos Keyboard",
-  "advancedSettingsAddKeyboardDescription": "Use the Echos keyboard in any app to transcribe while typing."
+  "advancedSettingsAddKeyboardDescription": "Use the Echos keyboard in any app to transcribe while typing.",
+  "welcomeTitle": "Welcome to Echos",
+  "welcomeSubtitle": "Speak freely. Transcribe privately. Remember everything.",
+  "welcomeGetStarted": "Get Started"
 }

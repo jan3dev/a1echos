@@ -12,6 +12,7 @@ import HomeScreen from "./index";
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
+  Redirect: "Redirect",
 }));
 
 jest.mock("@react-navigation/native", () => ({
@@ -75,6 +76,7 @@ let mockSessions: any[] = [];
 let mockGlobalTooltip: any = null;
 
 jest.mock("@/stores", () => ({
+  useHasSeenWelcome: jest.fn(() => true),
   useSessions: jest.fn(() => mockSessions),
   useIncognitoSession: jest.fn(() => null),
   useCreateSession: jest.fn(() => jest.fn()),
@@ -182,6 +184,14 @@ describe("HomeScreen", () => {
     const { getByTestId } = render(<HomeScreen />);
     expect(getByTestId(TestID.HomeAppBar)).toBeTruthy();
     expect(getByTestId(TestID.HomeContent)).toBeTruthy();
+  });
+
+  it("redirects to the welcome screen on first launch", () => {
+    const { useHasSeenWelcome } = require("@/stores");
+    useHasSeenWelcome.mockReturnValueOnce(false);
+    const { queryByTestId, toJSON } = render(<HomeScreen />);
+    expect(queryByTestId(TestID.HomeContent)).toBeNull();
+    expect(toJSON()).toMatchObject({ type: "Redirect" });
   });
 
   it("shows EmptyStateView when sessions empty", () => {

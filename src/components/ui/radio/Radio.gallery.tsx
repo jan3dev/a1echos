@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Radio } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 const RadioGroup = ({ size = "large" }: { size?: "large" | "small" }) => {

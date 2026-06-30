@@ -2,7 +2,6 @@ import { View } from "react-native";
 
 import { ProgressIndicator } from "@/components";
 import { lightColors, useTheme } from "@/theme";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 const DefaultStory = () => {

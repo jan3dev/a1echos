@@ -3,7 +3,6 @@ import { Button as RNButton, StyleSheet, View } from "react-native";
 
 import { Dimmer, Text } from "@/components";
 import { useTheme } from "@/theme";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 export const Basic = () => {

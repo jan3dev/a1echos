@@ -35,6 +35,8 @@ export {
   useSetKeyboardHaptic,
   useKeyboardMicTimeout,
   useSetKeyboardMicTimeout,
+  useHasSeenWelcome,
+  useMarkWelcomeSeen,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
 } from "./settings-store/settingsStore";
 export {

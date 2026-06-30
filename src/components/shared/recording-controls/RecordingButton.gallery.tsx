@@ -3,7 +3,6 @@ import { ComponentProps } from "react";
 import { RecordingButton } from "@/components";
 import { TranscriptionState } from "@/models";
 import { useTheme } from "@/theme";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 const DynamicRecordingButton = (

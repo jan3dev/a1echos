@@ -9,7 +9,6 @@ import {
   useTranscriptionStore,
   useUIStore,
 } from "@/stores";
-
 import type { GalleryEntry } from "@/design-system/manifest";
 
 const dummyTranscriptions: Transcription[] = [

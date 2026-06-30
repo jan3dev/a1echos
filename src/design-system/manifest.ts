@@ -19,6 +19,7 @@ import toastGallery from "@/components/ui/toast/Toast.gallery";
 import toggleGallery from "@/components/ui/toggle/Toggle.gallery";
 import tooltipGallery from "@/components/ui/tooltip/Tooltip.gallery";
 import topAppBarGallery from "@/components/ui/top-app-bar/TopAppBar.gallery";
+import ambientGlowGallery from "@/components/shared/ambient-glow/AmbientGlow.gallery";
 import errorViewGallery from "@/components/shared/error-view/ErrorView.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
@@ -26,6 +27,7 @@ import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button
 import colorsGallery from "@/design-system/colors/Colors.gallery";
 import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
+import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
 import transcriptionGallery from "@/components/domain/transcription/Transcription.gallery";
@@ -72,12 +74,14 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   toggleGallery,
   tooltipGallery,
   topAppBarGallery,
+  ambientGlowGallery,
   errorViewGallery,
   listItemGallery,
   recordingButtonGallery,
   scrollToEdgeButtonGallery,
   keyboardLayoutsGallery,
   homeGallery,
+  welcomeScreenGallery,
   sessionGallery,
   settingsGallery,
   transcriptionGallery,

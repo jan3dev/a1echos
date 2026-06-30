@@ -115,6 +115,9 @@ export const useLocalization = () => {
       advancedSettingsAddKeyboardDescription: t(
         "advancedSettingsAddKeyboardDescription",
       ),
+      welcomeTitle: t("welcomeTitle"),
+      welcomeSubtitle: t("welcomeSubtitle"),
+      welcomeGetStarted: t("welcomeGetStarted"),
     },
   };
 };
