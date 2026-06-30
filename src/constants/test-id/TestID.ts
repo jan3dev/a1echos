@@ -72,6 +72,7 @@ export enum TestID {
   KeyboardPromptModal = "keyboard-prompt-modal",
   KeyboardPromptImageIos = "keyboard-prompt-image-ios",
   KeyboardPromptImageAndroid = "keyboard-prompt-image-android",
+  VoiceSessionHintModal = "voice-session-hint-modal",
 
   // --- Theme Settings ---
   ThemeAuto = "theme-auto",

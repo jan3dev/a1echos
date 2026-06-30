@@ -88,3 +88,8 @@ export {
   type KeyboardSettingsConfig,
 } from "./keyboard-settings/writeKeyboardSettings";
 export { writeJsonAtomic } from "./file/writeJsonAtomic";
+export {
+  readKeyboardLaunchMarker,
+  clearKeyboardLaunchMarker,
+  type KeyboardLaunchMarker,
+} from "./keyboard-launch/keyboardLaunchMarker";

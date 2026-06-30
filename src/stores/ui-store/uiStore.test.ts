@@ -22,6 +22,9 @@ import {
   useKeyboardPromptVisible,
   useShowKeyboardPrompt,
   useHideKeyboardPrompt,
+  useVoiceSessionHintVisible,
+  useShowVoiceSessionHint,
+  useHideVoiceSessionHint,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useOnRecordingStart,
@@ -408,6 +411,30 @@ describe("uiStore", () => {
         result.current();
       });
       expect(useUIStore.getState().keyboardPromptVisible).toBe(false);
+    });
+  });
+
+  describe("Voice session hint visibility", () => {
+    it("defaults to hidden", () => {
+      const { result } = renderHook(() => useVoiceSessionHintVisible());
+      expect(result.current).toBe(false);
+    });
+
+    it("showVoiceSessionHint flips visibility to true", () => {
+      const { result } = renderHook(() => useShowVoiceSessionHint());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().voiceSessionHintVisible).toBe(true);
+    });
+
+    it("hideVoiceSessionHint flips visibility back to false", () => {
+      useUIStore.setState({ voiceSessionHintVisible: true });
+      const { result } = renderHook(() => useHideVoiceSessionHint());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().voiceSessionHintVisible).toBe(false);
     });
   });
 });

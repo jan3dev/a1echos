@@ -268,8 +268,9 @@ function withListenerStartup(config) {
  * voice-session` deep link the keyboard opens arms a hot-mic session. iOS
  * keyboard extensions can't launch the app silently, so the extension opens
  * this URL (via the responder chain); we intercept it before it reaches the
- * RN linking layer and start the session natively, then return to the user's
- * previous app via the system back affordance.
+ * RN linking layer, start the session natively, and drop a launch marker the
+ * JS layer reads to show a "swipe back to your app" hint (iOS gives us no way
+ * to return the user automatically).
  */
 function withListenerDeepLink(config) {
   return withAppDelegate(config, (config) => {
@@ -291,6 +292,7 @@ function withListenerDeepLink(config) {
     // Echos keyboard: arm a hot-mic voice session when opened from the keyboard.
     if url.scheme == "echos", url.host == "voice-session" {
       KeyboardTranscriptionListener.shared.startVoiceSession()
+      KeyboardTranscriptionListener.shared.markOpenedFromKeyboard()
       return true
     }
 `;

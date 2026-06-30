@@ -111,6 +111,9 @@ export const useLocalization = () => {
       keyboardPromptBody: t("keyboardPromptBody"),
       keyboardPromptCta: t("keyboardPromptCta"),
       keyboardPromptDismiss: t("keyboardPromptDismiss"),
+      voiceSessionHintTitle: t("voiceSessionHintTitle"),
+      voiceSessionHintBody: t("voiceSessionHintBody"),
+      voiceSessionHintCta: t("voiceSessionHintCta"),
       advancedSettingsAddKeyboardTitle: t("advancedSettingsAddKeyboardTitle"),
       advancedSettingsAddKeyboardDescription: t(
         "advancedSettingsAddKeyboardDescription",

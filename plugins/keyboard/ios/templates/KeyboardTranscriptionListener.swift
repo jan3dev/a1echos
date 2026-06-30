@@ -357,6 +357,35 @@ import UIKit
         DispatchQueue.main.async { [weak self] in self?.armSession() }
     }
 
+    /// Drops a marker the JS layer reads on foreground to show the "swipe back"
+    /// hint sheet. Written only on the keyboard deep-link open (not background
+    /// re-arms), so the hint appears exactly when the user was pulled into Echos
+    /// from another app's keyboard — iOS can't return them automatically, so we
+    /// tell them to swipe back. Runs in the main-app process (the deep link is
+    /// intercepted in the AppDelegate, not the extension), so it lands in the
+    /// app's own Documents dir where JS's `Paths.document` (expo-file-system)
+    /// resolves — not the App Group container the extension bridge uses.
+    /// Filename kept in sync with `keyboardLaunchMarker.ts`.
+    @objc func markOpenedFromKeyboard() {
+        guard let docsDir = NSSearchPathForDirectoriesInDomains(
+            .documentDirectory, .userDomainMask, true
+        ).first else { return }
+        let path = (docsDir as NSString)
+            .appendingPathComponent("keyboard-launch.json")
+        let payload: [String: Any] = [
+            "openedAt": Date().timeIntervalSince1970 * 1000
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
+            NSLog("[KeyboardTranscriptionListener] Failed to serialize keyboard-launch marker")
+            return
+        }
+        do {
+            try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        } catch {
+            NSLog("[KeyboardTranscriptionListener] Failed to write keyboard-launch marker: \(error)")
+        }
+    }
+
     private func armSession() {
         let seconds = loadMicTimeoutSeconds()
         guard seconds > 0 else {

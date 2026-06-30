@@ -44,6 +44,10 @@ interface UIStore {
   showKeyboardPrompt: () => void;
   hideKeyboardPrompt: () => void;
 
+  voiceSessionHintVisible: boolean;
+  showVoiceSessionHint: () => void;
+  hideVoiceSessionHint: () => void;
+
   setRecordingControlsEnabled: (enabled: boolean) => void;
   setRecordingControlsVisible: (visible: boolean) => void;
   setRecordingCallbacks: (
@@ -116,6 +120,16 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   hideKeyboardPrompt: () => {
     set({ keyboardPromptVisible: false });
+  },
+
+  voiceSessionHintVisible: false,
+
+  showVoiceSessionHint: () => {
+    set({ voiceSessionHintVisible: true });
+  },
+
+  hideVoiceSessionHint: () => {
+    set({ voiceSessionHintVisible: false });
   },
 
   setRecordingControlsEnabled: (enabled: boolean) => {
@@ -291,5 +305,12 @@ export const useShowKeyboardPrompt = () =>
   useUIStore((s) => s.showKeyboardPrompt);
 export const useHideKeyboardPrompt = () =>
   useUIStore((s) => s.hideKeyboardPrompt);
+
+export const useVoiceSessionHintVisible = () =>
+  useUIStore((s) => s.voiceSessionHintVisible);
+export const useShowVoiceSessionHint = () =>
+  useUIStore((s) => s.showVoiceSessionHint);
+export const useHideVoiceSessionHint = () =>
+  useUIStore((s) => s.hideVoiceSessionHint);
 
 export default useUIStore;

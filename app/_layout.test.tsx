@@ -68,6 +68,8 @@ jest.mock("@/stores", () => ({
   useMarkKeyboardPromptSeen: jest.fn(() =>
     jest.fn().mockResolvedValue(undefined),
   ),
+  useVoiceSessionHintVisible: jest.fn(() => false),
+  useHideVoiceSessionHint: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("@/services", () => ({
@@ -87,7 +89,9 @@ jest.mock("@/db/runtime-migration", () => ({
   cleanupLegacyArtifactsIfPresent: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("@/hooks", () => ({}));
+jest.mock("@/hooks", () => ({
+  useVoiceSessionHint: jest.fn(),
+}));
 
 jest.mock("@/utils", () => ({
   logError: jest.fn(),
@@ -119,6 +123,15 @@ jest.mock("@/components", () => {
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
     TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
+    VoiceSessionHintModal: ({ visible, onDismiss }: any) => {
+      const { TouchableOpacity } = require("react-native");
+      if (!visible) return null;
+      return (
+        <View testID={TID.VoiceSessionHintModal}>
+          <TouchableOpacity testID="vsh-dismiss" onPress={onDismiss} />
+        </View>
+      );
+    },
   };
 });
 
@@ -645,6 +658,40 @@ describe("RootLayout", () => {
       expect(mockMark).toHaveBeenCalled();
       expect(mockHide).toHaveBeenCalled();
       expect(openKeyboardSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GlobalVoiceSessionHintRenderer", () => {
+    it("does not render when voiceSessionHintVisible is false", async () => {
+      const { useVoiceSessionHintVisible } = require("@/stores");
+      (useVoiceSessionHintVisible as jest.Mock).mockReturnValue(false);
+
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.VoiceSessionHintModal)).toBeNull();
+    });
+
+    it("renders when voiceSessionHintVisible is true", async () => {
+      const { useVoiceSessionHintVisible } = require("@/stores");
+      (useVoiceSessionHintVisible as jest.Mock).mockReturnValue(true);
+
+      const { getByTestId } = await renderAndWaitForInit();
+      expect(getByTestId(TestID.VoiceSessionHintModal)).toBeTruthy();
+    });
+
+    it("dismiss hides the hint", async () => {
+      const mockHide = jest.fn();
+      const {
+        useVoiceSessionHintVisible,
+        useHideVoiceSessionHint,
+      } = require("@/stores");
+      (useVoiceSessionHintVisible as jest.Mock).mockReturnValue(true);
+      (useHideVoiceSessionHint as jest.Mock).mockReturnValue(mockHide);
+
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("vsh-dismiss"));
+      });
+      expect(mockHide).toHaveBeenCalled();
     });
   });
 

@@ -88,6 +88,9 @@ export {
   useKeyboardPromptVisible,
   useShowKeyboardPrompt,
   useHideKeyboardPrompt,
+  useVoiceSessionHintVisible,
+  useShowVoiceSessionHint,
+  useHideVoiceSessionHint,
 } from "./ui-store/uiStore";
 export type {
   GlobalTooltipAction,

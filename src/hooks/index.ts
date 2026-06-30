@@ -5,3 +5,4 @@ export { usePermissions } from "./use-permissions/usePermissions";
 export { useProgrammaticScrollGuard } from "./use-programmatic-scroll-guard/useProgrammaticScrollGuard";
 export { useScrollSurface } from "./use-scroll-surface/useScrollSurface";
 export { useSessionOperations } from "./use-session-operations/useSessionOperations";
+export { useVoiceSessionHint } from "./use-voice-session-hint/useVoiceSessionHint";

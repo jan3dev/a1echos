@@ -19,7 +19,9 @@ import {
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
   Tooltip,
+  VoiceSessionHintModal,
 } from "@/components";
+import { useVoiceSessionHint } from "@/hooks";
 import { AppConstants } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
 import migrationsBundle from "@/db/migrations/migrations.js";
@@ -41,8 +43,10 @@ import {
   useIsEngineInitializing,
   useIsSessionSelectionMode,
   useIsTranscriptionSelectionMode,
+  useHideVoiceSessionHint,
   useKeyboardPromptVisible,
   useMarkKeyboardPromptSeen,
+  useVoiceSessionHintVisible,
   useOnRecordingStart,
   useOnRecordingStop,
   useRecordingControlsEnabled,
@@ -251,6 +255,13 @@ function GlobalKeyboardPromptRenderer() {
   );
 }
 
+function GlobalVoiceSessionHintRenderer() {
+  const visible = useVoiceSessionHintVisible();
+  const hide = useHideVoiceSessionHint();
+
+  return <VoiceSessionHintModal visible={visible} onDismiss={hide} />;
+}
+
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
@@ -323,6 +334,9 @@ export default function RootLayout() {
 
   const initTheme = useThemeStore((state) => state.initTheme);
   const { isDark, theme } = useTheme();
+
+  // Show the "swipe back" hint when opened from the keyboard's mic button.
+  useVoiceSessionHint();
 
   // Install global error handler once
   useEffect(() => {
@@ -430,6 +444,7 @@ export default function RootLayout() {
         <GlobalRecordingControls />
         <GlobalTooltipRenderer />
         <GlobalKeyboardPromptRenderer />
+        <GlobalVoiceSessionHintRenderer />
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );
