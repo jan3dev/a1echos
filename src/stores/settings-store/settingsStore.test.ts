@@ -495,8 +495,13 @@ describe("settingsStore", () => {
   });
 
   describe("setKeyboardAutocorrect()", () => {
-    it("defaults to false in the store", () => {
-      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(false);
+    it("defaults to true when nothing is stored", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async () => null);
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(true);
     });
 
     it("enables, persists 'true', and mirrors to the keyboard config", async () => {
@@ -561,18 +566,18 @@ describe("settingsStore", () => {
       });
     });
 
-    it("initialize() treats only the string 'true' as enabled", async () => {
+    it("initialize() treats only the string 'false' as disabled", async () => {
       const AS: any = AsyncStorage;
       (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
-        key === "keyboard_autocorrect" ? "true" : null,
+        key === "keyboard_autocorrect" ? "false" : null,
       );
 
       await useSettingsStore.getState().initialize();
 
-      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(true);
+      expect(useSettingsStore.getState().keyboardAutocorrect).toBe(false);
       // initialize() mirrors the loaded values to the keyboard config.
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
-        autocorrect: true,
+        autocorrect: false,
         hapticFeedback: false,
         micTimeoutSeconds: 300,
       });
@@ -661,7 +666,7 @@ describe("settingsStore", () => {
 
       expect(useSettingsStore.getState().keyboardHaptic).toBe(true);
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
-        autocorrect: false,
+        autocorrect: true,
         hapticFeedback: true,
         micTimeoutSeconds: 300,
       });

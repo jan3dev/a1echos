@@ -6,15 +6,17 @@ import Foundation
 /// extension can't read the app's Documents directory — only the App Group
 /// container — so the mirror is what bridges the two sandboxes).
 ///
-/// Everything defaults to the conservative "suggest" behaviour, so a missing
-/// suite / missing key never enables a surprising edit.
+/// Autocorrect defaults on (matching the native iOS keyboard, and safe now
+/// that backspace offers a one-tap revert and reverted pairs are
+/// blacklisted); haptics default off.
 enum KeyboardSettings {
 
     /// Same App Group the IPC channel uses (`IPCClient.appGroupID`).
     static let appGroupID = "group.com.a1lab.echos.shared"
 
-    /// When true, the top spelling guess auto-applies on space and the next
-    /// backspace reverts it. When false (default), suggestions are tap-only.
+    /// When true (default), the engine's confident correction auto-applies on
+    /// a separator and the next backspace reverts it. When false, suggestions
+    /// are tap-only.
     private static let autocorrectKey = "EchosKeyboard.autocorrect"
 
     /// When true, the keyboard plays a light haptic on each key press. When
@@ -22,7 +24,7 @@ enum KeyboardSettings {
     private static let hapticKey = "EchosKeyboard.hapticFeedback"
 
     struct Values {
-        var autocorrect: Bool = false
+        var autocorrect: Bool = true
         var hapticFeedback: Bool = false
     }
 
@@ -30,8 +32,11 @@ enum KeyboardSettings {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
             return Values()
         }
+        // `bool(forKey:)` returns false for a missing key, which would flip
+        // the autocorrect default — read the raw object so absence keeps the
+        // default.
         return Values(
-            autocorrect: defaults.bool(forKey: autocorrectKey),
+            autocorrect: (defaults.object(forKey: autocorrectKey) as? Bool) ?? true,
             hapticFeedback: defaults.bool(forKey: hapticKey)
         )
     }

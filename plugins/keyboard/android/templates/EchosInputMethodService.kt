@@ -56,19 +56,36 @@ class EchosInputMethodService : InputMethodService(),
 
     // -- Suggestions (§5.5) --
     private lateinit var suggestionEngine: SuggestionEngine
+    /// Learned vocabulary + revert blacklist (§5.11). Loaded off-main in
+    /// [onCreate], flushed in [onFinishInputView].
+    private lateinit var userLexicon: UserLexicon
+    /// Bundled-dictionary correction engine (§5.10). Loaded off-main; until
+    /// then [SuggestionEngine] falls back to the system spell checker.
+    private lateinit var correctionEngine: CorrectionEngine
     private var keyboardSettings = KeyboardSettings.Settings()
+    /// Word the user explicitly kept by tapping the verbatim strip slot —
+    /// autocorrect must not fire on it when the separator lands. Cleared on
+    /// cursor moves and whenever the composing word ends.
+    private var autocorrectSuppressedWord: String? = null
     /// Whether the current field allows suggestions (false for URL / email /
     /// password / no-suggestions fields). Computed once per `onStartInputView`.
     private var suggestionsAllowed: Boolean = false
-    /// Latest async result, cached so autocorrect-on-space can consult it
-    /// without a second lookup. Keyed by the word it was computed for.
+    /// Latest async result, cached so the legacy (system spell checker)
+    /// autocorrect-on-space path can consult it without a second lookup.
+    /// Keyed by the word it was computed for. The bundled engine ignores this
+    /// cache — it looks up synchronously at commit time, which can't go stale.
     private var lastSuggestionWord: String = ""
-    private var lastSuggestions: List<String> = emptyList()
-    private var lastLooksLikeTypo: Boolean = false
-    /// Pending autocorrect-on-space revert target (§5.4): set when the top
-    /// guess auto-applied on space, cleared by the next backspace (which
-    /// restores the typed word) or any other keystroke / cursor move.
+    private var lastResult: SuggestionEngine.Result = SuggestionEngine.Result.EMPTY
+    /// Pending autocorrect revert target (§5.4): set when a correction
+    /// auto-applied on a separator, consumed by the next backspace (which
+    /// deletes the separator and offers the typed word in the strip) or any
+    /// other keystroke / cursor move.
     private var lastAutoCorrected: LastComposedWord? = null
+    /// Active revert offer (§5.4): the user backspaced right after an
+    /// autocorrect, so the strip shows the quoted original word — tapping it
+    /// swaps the correction back and blacklists the pair. Mirrors the native
+    /// iOS revert affordance. Cleared by any other input or cursor move.
+    private var pendingRevert: LastComposedWord? = null
     private val suggestionRunnable = Runnable { performSuggestionLookup() }
     /// One-time nudge guard (§5.5): HyperOS and several OEM builds ship the
     /// system spell checker disabled/absent, so [SuggestionEngine] never gets a
@@ -79,7 +96,14 @@ class EchosInputMethodService : InputMethodService(),
     /// again (persisted in IME-private prefs).
     private var spellCheckerHintShown = false
 
-    private data class LastComposedWord(val original: String, val corrected: String)
+    private data class LastComposedWord(
+        val original: String,
+        val corrected: String,
+        val separator: String,
+    )
+
+    /// Punctuation that commits a pending autocorrect, like space does.
+    private val autocorrectTriggers = setOf(".", ",", "!", "?", ";", ":")
 
     // Tracks where we expect the host's cursor to land after each of
     // our own commit/delete calls. The host then fires `onUpdateSelection`
@@ -107,17 +131,26 @@ class EchosInputMethodService : InputMethodService(),
     override fun onCreate() {
         super.onCreate()
         transcriber = ImeSherpaTranscriber(this)
-        // The callback runs on the main thread (the engine posts there).
-        suggestionEngine = SuggestionEngine(this) { word, candidates, looksLikeTypo ->
+        userLexicon = UserLexicon(this)
+        correctionEngine = CorrectionEngine(userLexicon)
+        // The callback runs on the main thread (sync for the bundled engine;
+        // the checker path posts there).
+        suggestionEngine = SuggestionEngine(this, correctionEngine) { word, result ->
             lastSuggestionWord = word
-            lastSuggestions = candidates
-            lastLooksLikeTypo = looksLikeTypo
+            lastResult = result
             if (micState == MicState.IDLE && suggestionsAllowed && !emojiSearchActive) {
-                topBar.setSuggestions(candidates)
+                topBar.setSuggestions(suggestionSlots(result))
             } else {
                 topBar.setSuggestions(emptyList())
             }
         }
+        // Both loads read files (assets + JSON) — keep them off the keystroke
+        // path. `isLoaded` flips once and only ever true afterwards, so the
+        // main thread simply keeps using the checker fallback until then.
+        Thread {
+            userLexicon.load()
+            correctionEngine.load(this)
+        }.start()
     }
 
     override fun onCreateInputView(): View {
@@ -277,6 +310,7 @@ class EchosInputMethodService : InputMethodService(),
         suggestionsAllowed = computeSuggestionsAllowed(info)
         ensureSuggestionEngineStarted()
         lastAutoCorrected = null
+        pendingRevert = null
         clearSuggestions()
 
         applyAutoCap()
@@ -343,9 +377,12 @@ class EchosInputMethodService : InputMethodService(),
             expectedSelEnd = newSelEnd
             doubleSpacePeriod.reset()
             keyboardView.resetShiftDoubleTap()
-            // A real cursor jump invalidates the composing word and the
-            // autocorrect revert window — drop both and recompute the strip.
+            // A real cursor jump invalidates the composing word, the
+            // autocorrect revert window, and any verbatim-tap suppression —
+            // drop them and recompute the strip.
             lastAutoCorrected = null
+            pendingRevert = null
+            autocorrectSuppressedWord = null
             refreshSuggestions()
         }
         applyAutoCap()
@@ -361,6 +398,9 @@ class EchosInputMethodService : InputMethodService(),
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        // Persist any learning from this session (debounced writes may still
+        // be pending).
+        userLexicon.flush()
         transcriber.cancelIfActive()
         topBar.setMicState(MicState.IDLE)
         // Release the lock if we still hold it — otherwise dismissing the
@@ -375,6 +415,7 @@ class EchosInputMethodService : InputMethodService(),
         // Cancel any in-flight suggestion lookup and clear the strip.
         mainHandler.removeCallbacks(suggestionRunnable)
         lastAutoCorrected = null
+        pendingRevert = null
         clearSuggestions()
     }
 
@@ -437,11 +478,101 @@ class EchosInputMethodService : InputMethodService(),
         // Any non-space, non-backspace input invalidates the smart
         // double-space window. Letters / digits / accents all reset.
         doubleSpacePeriod.reset()
+        // Sentence punctuation commits a pending autocorrect exactly like
+        // space does ("teh." becomes "the.").
+        if (char in autocorrectTriggers && commitWithAutocorrect(char)) {
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
+        if (char.length == 1 && SpacingAndPunctuations.isWordSeparator(char[0])) {
+            observeSeparatorCommit()
+        }
         // Typing past an autocorrect ends its one-shot revert window.
         lastAutoCorrected = null
+        pendingRevert = null
         icCommitText(char)
         applyAutoCap()
         refreshSuggestions()
+    }
+
+    /**
+     * Runs autocorrect for the in-progress word, committing the corrected
+     * word plus [separator] when the engine is confident. Returns true when
+     * it handled the commit. Shared by the space, punctuation, and return
+     * paths (§5.10).
+     */
+    private fun commitWithAutocorrect(separator: String): Boolean {
+        val ic = currentInputConnection ?: return false
+        if (!keyboardSettings.autocorrect || !suggestionsAllowed ||
+            micState != MicState.IDLE
+        ) {
+            return false
+        }
+        // Mid-word guard: only correct when the cursor is at the word's end.
+        val after = ic.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        if (after.isNotEmpty() && !SpacingAndPunctuations.isWordSeparator(after[0])) {
+            return false
+        }
+        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val word = SuggestionEngine.currentWordBefore(before)
+        if (word.isEmpty() || word.equals(autocorrectSuppressedWord, ignoreCase = true)) {
+            return false
+        }
+        val previous = SuggestionEngine.previousWordBefore(before, word)
+        val corrected: String? = if (suggestionEngine.usesBundledEngine) {
+            // Synchronous lookup — the decision can never be stale.
+            val result = suggestionEngine.lookupNow(word, previous)
+            if (result.topIsCorrection) result.replacement else null
+        } else {
+            // Legacy checker path: consult the cached async result.
+            if (word == lastSuggestionWord && lastResult.topIsCorrection) {
+                lastResult.replacement
+            } else {
+                null
+            }
+        }
+        // Exact compare: case-only corrections (i -> I, france -> France)
+        // must apply too.
+        if (corrected == null || corrected == word) return false
+        icDeleteSurroundingText(word.length, 0)
+        icCommitText(corrected + separator)
+        lastAutoCorrected = LastComposedWord(word, corrected, separator)
+        pendingRevert = null
+        autocorrectSuppressedWord = null
+        // The corrected pair feeds prediction learning too.
+        if (previous != null && !corrected.contains(' ')) {
+            userLexicon.observeBigram(previous, corrected)
+        }
+        return true
+    }
+
+    /**
+     * Learning hook (§5.11): a separator is about to end the in-progress
+     * word — feed it to the user lexicon. Unknown words are learned after
+     * two commits; known words strengthen their suggestion weight, and known
+     * word pairs feed next-word prediction.
+     */
+    private fun observeSeparatorCommit() {
+        if (micState != MicState.IDLE || !suggestionsAllowed) return
+        val ic = currentInputConnection ?: return
+        val after = ic.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        if (after.isNotEmpty() && !SpacingAndPunctuations.isWordSeparator(after[0])) {
+            return
+        }
+        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val word = SuggestionEngine.currentWordBefore(before)
+        if (word.isEmpty()) return
+        val isKnown = correctionEngine.contains(word) || userLexicon.contains(word)
+        userLexicon.observeCommit(word, isKnown)
+        // Predictions learn only vetted pairs — a typo must never resurface
+        // as a suggestion.
+        if (isKnown) {
+            SuggestionEngine.previousWordBefore(before, word)?.let { previous ->
+                userLexicon.observeBigram(previous, word)
+            }
+        }
+        autocorrectSuppressedWord = null
     }
 
     override fun onDeletePress() {
@@ -466,22 +597,24 @@ class EchosInputMethodService : InputMethodService(),
                 return
             }
         }
-        // Revert an autocorrect-on-space (§5.4): the first backspace after the
-        // auto-applied correction restores exactly what the user typed.
+        // Backspace after an autocorrect (§5.4): delete normally (removing
+        // the separator, matching native iOS — the correction itself stays),
+        // then offer the quoted original in the strip so one tap restores it.
         val auto = lastAutoCorrected
         if (auto != null) {
+            lastAutoCorrected = null
             val ic = currentInputConnection
-            val before = ic?.getTextBeforeCursor(auto.corrected.length + 1, 0)?.toString().orEmpty()
-            if (ic != null && before == auto.corrected + " ") {
-                icDeleteSurroundingText(auto.corrected.length + 1, 0)
-                icCommitText(auto.original)
-                lastAutoCorrected = null
+            val expected = auto.corrected + auto.separator
+            val before = ic?.getTextBeforeCursor(expected.length, 0)?.toString().orEmpty()
+            if (ic != null && auto.separator.isNotEmpty() && before == expected) {
+                icDeleteSurroundingText(auto.separator.length, 0)
+                pendingRevert = auto
                 applyAutoCap()
                 refreshSuggestions()
                 return
             }
-            lastAutoCorrected = null
         }
+        pendingRevert = null
         deleteOneGrapheme()
         applyAutoCap()
         refreshSuggestions()
@@ -496,6 +629,7 @@ class EchosInputMethodService : InputMethodService(),
             return
         }
         lastAutoCorrected = null
+        pendingRevert = null
         deleteWordBackward()
         clearSuggestions()
     }
@@ -536,6 +670,7 @@ class EchosInputMethodService : InputMethodService(),
         // where the previous keystroke was already a space.
         if (ic != null && doubleSpacePeriod.shouldCommitPeriod(before)) {
             lastAutoCorrected = null
+            pendingRevert = null
             icDeleteSurroundingText(1, 0)
             icCommitText(". ")
             doubleSpacePeriod.markPeriodCommitted()
@@ -543,33 +678,20 @@ class EchosInputMethodService : InputMethodService(),
             clearSuggestions()
             return
         }
-        // Autocorrect-on-space (§5.10) — only when the user enabled it and the
-        // cached lookup for the current word flagged it a typo with a differing
-        // top guess. Replace the word, then commit the space, recording the
-        // original for backspace-revert.
-        if (ic != null && keyboardSettings.autocorrect && suggestionsAllowed) {
-            val context = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
-            val word = SuggestionEngine.currentWordBefore(context)
-            if (word.isNotEmpty() && word == lastSuggestionWord &&
-                lastLooksLikeTypo && lastSuggestions.isNotEmpty()
-            ) {
-                val corrected = lastSuggestions[0]
-                if (!corrected.equals(word, ignoreCase = true)) {
-                    icDeleteSurroundingText(word.length, 0)
-                    icCommitText("$corrected ")
-                    lastAutoCorrected = LastComposedWord(word, corrected)
-                    doubleSpacePeriod.recordSpaceCommit()
-                    applyAutoCap()
-                    clearSuggestions()
-                    return
-                }
-            }
+        // Autocorrect-on-space (§5.10) — only when the user enabled it.
+        if (commitWithAutocorrect(" ")) {
+            doubleSpacePeriod.recordSpaceCommit()
+            applyAutoCap()
+            refreshSuggestions()
+            return
         }
+        observeSeparatorCommit()
         lastAutoCorrected = null
+        pendingRevert = null
         icCommitText(" ")
         doubleSpacePeriod.recordSpaceCommit()
         applyAutoCap()
-        clearSuggestions()
+        refreshSuggestions()
     }
 
     override fun onReturnPress() {
@@ -583,16 +705,31 @@ class EchosInputMethodService : InputMethodService(),
             return
         }
         doubleSpacePeriod.reset()
-        lastAutoCorrected = null
         val ic = currentInputConnection ?: return
         if (currentEditorAction != EditorInfo.IME_ACTION_NONE) {
+            // Apply a pending autocorrect before the action fires (send /
+            // search may dismiss the field). Empty separator: the action is
+            // the terminator. The revert check tolerates a vanished field —
+            // the before-text comparison simply fails.
+            commitWithAutocorrect("")
             // performEditorAction may dismiss the field entirely — we
             // don't try to predict the cursor, the onUpdateSelection
             // echo will reseed it.
             ic.performEditorAction(currentEditorAction)
-        } else {
-            icCommitText("\n")
+            applyAutoCap()
+            clearSuggestions()
+            return
         }
+        // Return commits a pending autocorrect too, then still newlines.
+        if (commitWithAutocorrect("\n")) {
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
+        observeSeparatorCommit()
+        lastAutoCorrected = null
+        pendingRevert = null
+        icCommitText("\n")
         applyAutoCap()
         clearSuggestions()
     }
@@ -822,8 +959,68 @@ class EchosInputMethodService : InputMethodService(),
         toggleRecording()
     }
 
-    override fun onSuggestionTapped(word: String) {
-        replaceCurrentWord(word)
+    override fun onSuggestionTapped(slot: SuggestionSlot) {
+        val ic = currentInputConnection ?: return
+        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        // During a revert offer the verbatim slot swaps the correction back
+        // to the typed word and blacklists the pair.
+        val revert = pendingRevert
+        if (revert != null && slot.isVerbatim) {
+            pendingRevert = null
+            if (!before.endsWith(revert.corrected)) return
+            doubleSpacePeriod.reset()
+            icDeleteSurroundingText(revert.corrected.length, 0)
+            icCommitText(revert.original)
+            userLexicon.recordRevert(revert.original, revert.corrected)
+            userLexicon.learnNow(revert.original)
+            autocorrectSuppressedWord = revert.original
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
+        val current = SuggestionEngine.currentWordBefore(before)
+        if (current.isEmpty()) {
+            // Next-word prediction tap: nothing to replace — insert the word
+            // plus a space.
+            if (!slot.isVerbatim) {
+                doubleSpacePeriod.reset()
+                lastAutoCorrected = null
+                pendingRevert = null
+                icCommitText(slot.text + " ")
+                applyAutoCap()
+                refreshSuggestions()
+            }
+            return
+        }
+        if (slot.isVerbatim) {
+            // Keep the typed word: learn it and stop autocorrect from
+            // touching it when the separator lands.
+            doubleSpacePeriod.reset()
+            lastAutoCorrected = null
+            userLexicon.learnNow(current)
+            autocorrectSuppressedWord = current
+            refreshSuggestions()
+            return
+        }
+        replaceCurrentWord(slot.text)
+    }
+
+    /** Builds the strip layout from a lookup result. While a correction is
+     *  pending it mirrors native QuickType: quoted typed word on the left,
+     *  the correction emphasized in the center, a runner-up on the right. */
+    private fun suggestionSlots(result: SuggestionEngine.Result): List<SuggestionSlot> {
+        val verbatim = result.verbatim
+        val replacement = result.replacement
+        if (!result.topIsCorrection || verbatim == null || replacement == null) {
+            return result.candidates.map { SuggestionSlot.candidate(it) }
+        }
+        val slots = mutableListOf(
+            SuggestionSlot(verbatim, isVerbatim = true, isEmphasized = false),
+            SuggestionSlot(replacement, isVerbatim = false, isEmphasized = true),
+        )
+        result.candidates.firstOrNull { !it.equals(replacement, ignoreCase = true) }
+            ?.let { slots.add(SuggestionSlot.candidate(it)) }
+        return slots
     }
 
     // -- Suggestions (§5.5) --
@@ -850,6 +1047,26 @@ class EchosInputMethodService : InputMethodService(),
             clearSuggestions()
             return
         }
+        // Revert offer (§5.4): the user just backspaced an autocorrect's
+        // separator — show the quoted original until they type on.
+        val revert = pendingRevert
+        if (revert != null) {
+            val tail = ic.getTextBeforeCursor(revert.corrected.length, 0)
+                ?.toString().orEmpty()
+            if (tail == revert.corrected) {
+                topBar.setSuggestions(
+                    listOf(
+                        SuggestionSlot(
+                            revert.original,
+                            isVerbatim = true,
+                            isEmphasized = false,
+                        ),
+                    ),
+                )
+                return
+            }
+            pendingRevert = null
+        }
         // Mid-word guard: only suggest when the cursor is at a word's end.
         val after = ic.getTextAfterCursor(1, 0)?.toString().orEmpty()
         if (after.isNotEmpty() && !SpacingAndPunctuations.isWordSeparator(after[0])) {
@@ -858,18 +1075,40 @@ class EchosInputMethodService : InputMethodService(),
         }
         val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
         val word = SuggestionEngine.currentWordBefore(before)
-        if (word.length < 2) {
+        if (word.isEmpty()) {
+            autocorrectSuppressedWord = null
+            // Next-word prediction (§5.12): the cursor sits right after a
+            // space that follows a word — offer its likely continuations.
+            if (before.endsWith(" ")) {
+                val previous = SuggestionEngine.previousWordBefore(before, "")
+                if (previous != null) {
+                    val predictions = suggestionEngine.predictions(previous)
+                    if (predictions.isNotEmpty()) {
+                        topBar.setSuggestions(
+                            predictions.map { SuggestionSlot.candidate(it) },
+                        )
+                        return
+                    }
+                }
+            }
             clearSuggestions()
             return
         }
-        // No system spell checker on this device — the request would no-op and
-        // the strip stay empty forever. Nudge the user toward enabling one
-        // (once) instead of failing silently.
+        // The bundled engine handles 1-char words itself ("i" -> "I"); the
+        // system checker is useless below 2 chars.
+        if (word.length < 2 && !suggestionEngine.usesBundledEngine) {
+            clearSuggestions()
+            return
+        }
+        // Non-English fallback with no system spell checker — the request
+        // would no-op and the strip stay empty forever. Nudge the user toward
+        // enabling one (once) instead of failing silently. (English never
+        // lands here: the bundled engine is always ready.)
         if (!suggestionEngine.isReady()) {
             maybeShowSpellCheckerHint()
             return
         }
-        suggestionEngine.request(word)
+        suggestionEngine.request(word, SuggestionEngine.previousWordBefore(before, word))
     }
 
     /**
@@ -894,8 +1133,7 @@ class EchosInputMethodService : InputMethodService(),
 
     private fun clearSuggestions() {
         lastSuggestionWord = ""
-        lastSuggestions = emptyList()
-        lastLooksLikeTypo = false
+        lastResult = SuggestionEngine.Result.EMPTY
         topBar.setSuggestions(emptyList())
     }
 
@@ -908,6 +1146,7 @@ class EchosInputMethodService : InputMethodService(),
         if (current.isEmpty()) return
         doubleSpacePeriod.reset()
         lastAutoCorrected = null
+        pendingRevert = null
         icDeleteSurroundingText(current.length, 0)
         icCommitText(candidate)
         applyAutoCap()

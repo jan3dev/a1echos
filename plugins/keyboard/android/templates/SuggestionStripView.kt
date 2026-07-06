@@ -2,6 +2,8 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -10,15 +12,35 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
+ * One strip slot. Mirrors the native QuickType layout: while a correction is
+ * pending the left slot shows the typed word in quotes (tap = keep it and
+ * learn it), the emphasized center slot shows the correction that autocorrect
+ * will apply, and the right slot a runner-up.
+ */
+data class SuggestionSlot(
+    /** The raw text tapping this slot commits (never quoted). */
+    val text: String,
+    /** True for the quoted "keep what I typed" slot. */
+    val isVerbatim: Boolean,
+    /** Bold — marks the word autocorrect is about to apply. */
+    val isEmphasized: Boolean,
+) {
+    companion object {
+        fun candidate(text: String) = SuggestionSlot(text, isVerbatim = false, isEmphasized = false)
+    }
+}
+
+/**
  * Up-to-3 tappable word candidates shown in place of the top bar's logo +
- * record chrome while the user composes a word (§5.5). Tapping a candidate asks
- * the listener to replace the in-progress word. Mirrors the iOS
- * `SuggestionStripView` so both platforms read as the same product.
+ * record chrome while the user composes a word (§5.5). Tapping a candidate
+ * asks the listener to replace the in-progress word (or keep it, for the
+ * verbatim slot). Mirrors the iOS `SuggestionStripView` so both platforms
+ * read as the same product.
  */
 class SuggestionStripView(context: Context) : LinearLayout(context) {
 
     fun interface Listener {
-        fun onCandidateTapped(word: String)
+        fun onSlotTapped(slot: SuggestionSlot)
     }
 
     private var listener: Listener? = null
@@ -35,33 +57,50 @@ class SuggestionStripView(context: Context) : LinearLayout(context) {
 
     /** Replaces the strip's contents. The caller hides the strip for an empty
      *  list — this only populates it. */
-    fun setCandidates(candidates: List<String>) {
+    fun setSlots(slots: List<SuggestionSlot>) {
         removeAllViews()
-        candidates.take(3).forEachIndexed { idx, candidate ->
+        slots.take(3).forEachIndexed { idx, slot ->
             if (idx > 0) addView(makeDivider())
-            addView(makeButton(candidate))
+            addView(makeButton(slot))
         }
     }
 
-    private fun makeButton(word: String): TextView {
+    private fun makeButton(slot: SuggestionSlot): TextView {
         return TextView(context).apply {
-            text = word
+            text = if (slot.isVerbatim) "“${slot.text}”" else slot.text
             setTextColor(theme.keyText)
             gravity = Gravity.CENTER
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTypeface(null, if (slot.isEmphasized) Typeface.BOLD else Typeface.NORMAL)
             isClickable = true
             isFocusable = true
-            contentDescription = word
+            contentDescription = if (slot.isVerbatim) "Keep ${slot.text}" else slot.text
             // Equal-width slots; the 1dp dividers keep their fixed width.
             layoutParams = LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)
-            val ripple = TypedValue()
-            context.theme.resolveAttribute(
-                android.R.attr.selectableItemBackground, ripple, true,
-            )
-            setBackgroundResource(ripple.resourceId)
-            setOnClickListener { listener?.onCandidateTapped(word) }
+            if (slot.isEmphasized) {
+                // Native-style highlight on the word autocorrect is about to
+                // apply.
+                background = GradientDrawable().apply {
+                    cornerRadius = 8 * resources.displayMetrics.density
+                    setColor(
+                        Color.argb(
+                            0x14,
+                            Color.red(theme.keyText),
+                            Color.green(theme.keyText),
+                            Color.blue(theme.keyText),
+                        ),
+                    )
+                }
+            } else {
+                val ripple = TypedValue()
+                context.theme.resolveAttribute(
+                    android.R.attr.selectableItemBackground, ripple, true,
+                )
+                setBackgroundResource(ripple.resourceId)
+            }
+            setOnClickListener { listener?.onSlotTapped(slot) }
         }
     }
 

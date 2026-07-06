@@ -36,8 +36,8 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
 
     interface Listener {
         fun onRecordClick()
-        /** A suggestion candidate in the strip was tapped (§5.5). */
-        fun onSuggestionTapped(word: String)
+        /** A suggestion slot in the strip was tapped (§5.5). */
+        fun onSuggestionTapped(slot: SuggestionSlot)
     }
 
     private val logoView: ImageView
@@ -227,7 +227,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
             )
             visibility = GONE
-            setListener { word -> listener?.onSuggestionTapped(word) }
+            setListener { slot -> listener?.onSuggestionTapped(slot) }
         }
         addView(suggestionStrip)
     }
@@ -241,13 +241,13 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
      * composes a word. Hides it (restoring the chrome) for an empty list or
      * while recording / transcribing — voice capture always owns the bar.
      */
-    fun setSuggestions(words: List<String>) {
-        if (words.isEmpty() || micState != MicState.IDLE) {
+    fun setSuggestions(slots: List<SuggestionSlot>) {
+        if (slots.isEmpty() || micState != MicState.IDLE) {
             suggestionStrip.visibility = GONE
             foreground.visibility = VISIBLE
             return
         }
-        suggestionStrip.setCandidates(words)
+        suggestionStrip.setSlots(slots)
         suggestionStrip.visibility = VISIBLE
         foreground.visibility = INVISIBLE
     }

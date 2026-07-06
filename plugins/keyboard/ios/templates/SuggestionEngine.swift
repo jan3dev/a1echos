@@ -1,11 +1,13 @@
 import UIKit
 
-/// On-device word suggestions backed by the system spell checker
-/// (`UITextChecker`). This is the Phase 3 "smart input" layer (§5.5): the
-/// source is iOS's offline dictionary rather than an n-gram language model, so
-/// it runs in a keyboard extension with no Full Access and no bundled data —
-/// at the cost of spelling completions/corrections only (no prefix-less
-/// next-word prediction).
+/// On-device word suggestions (§5.5). English routes through the bundled
+/// `CorrectionEngine` (frequency-ranked lexicon, fat-finger edit distance,
+/// contractions, splits, bigram context, learned words) with `UITextChecker`
+/// retained purely as a validity veto — Apple's much larger lexicon plus the
+/// system user dictionary and Contacts recognizes words our 82k list doesn't,
+/// and a recognized word must never be autocorrected. Non-English host
+/// locales keep the original `UITextChecker` candidate path, so they lose
+/// nothing.
 ///
 /// The keyboard keeps a commit-based text model (no marked/composing text), so
 /// the "current word" is the trailing run of non-separator characters read
@@ -14,20 +16,27 @@ import UIKit
 /// controller. This keeps auto-cap and double-space→period working unchanged.
 final class SuggestionEngine {
 
-    /// One lookup's result. `topIsCorrection` is true when the typed word was
-    /// misspelled and the leading candidate is a spelling fix — the signal the
-    /// autocorrect-on-space path needs.
+    /// One lookup's result. `topIsCorrection` is true when the typed word
+    /// looks like a typo and `replacement` is safe for autocorrect-on-space.
+    /// `verbatim` (the typed word) is set only in that case and feeds the
+    /// strip's quoted "keep what I typed" slot.
     struct Result {
         let candidates: [String]
         let topIsCorrection: Bool
-        static let empty = Result(candidates: [], topIsCorrection: false)
+        let verbatim: String?
+        let replacement: String?
+        static let empty = Result(
+            candidates: [], topIsCorrection: false, verbatim: nil, replacement: nil
+        )
     }
 
-    /// Tracks the most recent autocorrect-on-space so the next backspace can
-    /// revert it to exactly what the user typed (LatinIME's LastComposedWord).
+    /// Tracks the most recent autocorrect so the next backspace can revert it
+    /// to exactly what the user typed (LatinIME's LastComposedWord). The
+    /// separator is whatever triggered the correction — " ", ".", "\n", ….
     struct LastAutocorrect {
         let typed: String
         let corrected: String
+        let separator: String
     }
 
     /// Casing the candidates should adopt, derived from the live shift state.
@@ -41,6 +50,12 @@ final class SuggestionEngine {
     // instance across keystrokes rather than rebuilding it each lookup.
     private let checker = UITextChecker()
     private var resolvedLanguage: String?
+
+    private let correctionEngine: CorrectionEngine
+
+    init(correctionEngine: CorrectionEngine) {
+        self.correctionEngine = correctionEngine
+    }
 
     /// Width of the suggestion strip (matches LatinIME's 3-wide strip).
     private static let maxCandidates = 3
@@ -80,6 +95,12 @@ final class SuggestionEngine {
         return available.first { $0 == lang || $0.hasPrefix(lang + "_") }
     }
 
+    /// The bundled engine serves English hosts; everyone else keeps the
+    /// system checker.
+    private var usesCorrectionEngine: Bool {
+        correctionEngine.isLoaded && (resolvedLanguage?.hasPrefix("en") ?? false)
+    }
+
     // MARK: - Current word
 
     /// The in-progress word: the trailing run of non-separator characters
@@ -103,15 +124,91 @@ final class SuggestionEngine {
         return word
     }
 
+    /// The committed word before the in-progress one — bigram context for
+    /// ranking and next-word prediction. `beforeCursor` should already have
+    /// the current word stripped by the caller.
+    static func previousWord(beforeCursor: String, currentWord: String) -> String? {
+        var remaining = beforeCursor
+        if !currentWord.isEmpty, remaining.hasSuffix(currentWord) {
+            remaining.removeLast(currentWord.count)
+        }
+        while let last = remaining.last, SpacingAndPunctuations.isWordSeparator(last) {
+            // Sentence punctuation ends the context — "Hi. teh" has no
+            // previous word worth boosting by.
+            if last != " " { return nil }
+            remaining.removeLast()
+        }
+        var reversed = ""
+        for ch in remaining.reversed() {
+            if SpacingAndPunctuations.isWordSeparator(ch) { break }
+            reversed.append(ch)
+        }
+        let word = String(reversed.reversed())
+        return word.isEmpty ? nil : word
+    }
+
     // MARK: - Lookup
 
-    /// Builds up-to-3 candidates for `word`, cased per `casing`. Corrections
-    /// (when the word is misspelled) lead, then completions; the already-typed
-    /// word is dropped and the list deduped case-insensitively.
-    func suggestions(for word: String, casing: Casing) -> Result {
-        guard let language = resolvedLanguage, !word.isEmpty else {
-            return .empty
+    /// Builds up-to-3 candidates for `word`, cased per `casing`, plus the
+    /// autocorrect verdict. Synchronous and fast (<5 ms): safe on both the
+    /// debounced strip path and the space/punctuation commit path.
+    func suggestions(
+        for word: String, previousWord: String? = nil, casing: Casing
+    ) -> Result {
+        guard !word.isEmpty else { return .empty }
+        if usesCorrectionEngine {
+            return engineSuggestions(
+                for: word, previousWord: previousWord, casing: casing
+            )
         }
+        return checkerSuggestions(for: word, casing: casing)
+    }
+
+    /// Next-word prediction for an empty composing word (§5.12): top bigram
+    /// continuations of the word just committed.
+    func predictions(afterWord previousWord: String, casing: Casing) -> [String] {
+        guard usesCorrectionEngine else { return [] }
+        return correctionEngine.nextWords(after: previousWord)
+            .map { Self.applyCasing(casing, to: $0) }
+    }
+
+    private func engineSuggestions(
+        for word: String, previousWord: String?, casing: Casing
+    ) -> Result {
+        let evaluation = correctionEngine.evaluate(
+            typedRaw: word,
+            previousWord: previousWord,
+            checkerSaysValid: checkerRecognizes(word)
+        )
+        let candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
+        return Result(
+            candidates: candidates,
+            topIsCorrection: evaluation.topIsCorrection,
+            verbatim: evaluation.verbatim,
+            replacement: evaluation.replacement.map { Self.applyCasing(casing, to: $0) }
+        )
+    }
+
+    /// The veto oracle: does Apple's checker consider the word spelled
+    /// correctly? Deliberately ignores guesses/completions — ranking stays
+    /// deterministic in the bundled engine.
+    private func checkerRecognizes(_ word: String) -> Bool {
+        guard let language = resolvedLanguage else { return false }
+        let nsWord = word as NSString
+        let misspelledRange = checker.rangeOfMisspelledWord(
+            in: word,
+            range: NSRange(location: 0, length: nsWord.length),
+            startingAt: 0,
+            wrap: false,
+            language: language
+        )
+        return misspelledRange.location == NSNotFound
+    }
+
+    /// Original `UITextChecker` candidate path, kept verbatim for non-English
+    /// host locales.
+    private func checkerSuggestions(for word: String, casing: Casing) -> Result {
+        guard let language = resolvedLanguage else { return .empty }
         // UITextChecker works in UTF-16 (NSRange), distinct from Character
         // count — build the range from the bridged NSString length.
         let nsWord = word as NSString
@@ -140,13 +237,16 @@ final class SuggestionEngine {
             result.append(Self.applyCasing(casing, to: candidate))
             if result.count == Self.maxCandidates { break }
         }
+        let topIsCorrection = isMisspelled && !result.isEmpty
         return Result(
             candidates: result,
-            topIsCorrection: isMisspelled && !result.isEmpty
+            topIsCorrection: topIsCorrection,
+            verbatim: topIsCorrection ? word : nil,
+            replacement: topIsCorrection ? result.first : nil
         )
     }
 
-    private static func applyCasing(_ casing: Casing, to word: String) -> String {
+    static func applyCasing(_ casing: Casing, to word: String) -> String {
         switch casing {
         case .lower:
             return word

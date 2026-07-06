@@ -23,11 +23,12 @@ object KeyboardSettings {
     /** Kept in sync with the writer in writeKeyboardSettings.ts. */
     private const val FILENAME = "keyboard-settings.json"
 
-    /** [autocorrect]: when true, the top spelling guess auto-applies on space
-     *  and the next backspace reverts it (false = tap-only). [hapticFeedback]:
-     *  when true, key presses vibrate (false = silent). Both default off. */
+    /** [autocorrect]: when true (default), the engine's confident correction
+     *  auto-applies on a separator and the next backspace reverts it (false =
+     *  tap-only). [hapticFeedback]: when true, key presses vibrate (false =
+     *  silent, the default). */
     data class Settings(
-        val autocorrect: Boolean = false,
+        val autocorrect: Boolean = true,
         val hapticFeedback: Boolean = false,
     )
 
@@ -50,7 +51,7 @@ object KeyboardSettings {
         return try {
             val json = JSONObject(file.readText(Charsets.UTF_8))
             val settings = Settings(
-                autocorrect = json.optBoolean("autocorrect", false),
+                autocorrect = json.optBoolean("autocorrect", true),
                 hapticFeedback = json.optBoolean("hapticFeedback", false),
             )
             cached = settings

@@ -17,6 +17,51 @@ const EXTENSION_NAME = "EchosKeyboard";
 const EXTENSION_BUNDLE_ID = "com.a1lab.echos.EchosKeyboard";
 const APP_GROUP = "group.com.a1lab.echos.shared";
 
+// Single source of truth for the extension's Swift sources — consumed by both
+// the file-copy dangerous mod and the Xcode target setup so the two can't
+// drift.
+const EXTENSION_SWIFT_FILES = [
+  "EchosKeyboardViewController.swift",
+  "KeyboardView.swift",
+  "KeyboardTopBar.swift",
+  "KeyboardLayout.swift",
+  "KeyButton.swift",
+  "KeyPreviewView.swift",
+  "KeyVariantsView.swift",
+  "MicButton.swift",
+  "KeyboardTheme.swift",
+  "DeleteRepeater.swift",
+  "EmojiData.swift",
+  "EmojiPickerView.swift",
+  "EmojiSearchIndex.swift",
+  "EmojiSearchOverlayView.swift",
+  "IPCClient.swift",
+  "HapticManager.swift",
+  "SpacingAndPunctuations.swift",
+  "AutoCapEngine.swift",
+  "DoubleSpacePeriod.swift",
+  "RecapitalizeEngine.swift",
+  "KeyboardSettings.swift",
+  "SuggestionEngine.swift",
+  "SuggestionStripView.swift",
+  "CorrectionEngine.swift",
+  "KeyAdjacency.swift",
+  "UserLexicon.swift",
+];
+
+// Bundled (non-source) resources copied into the extension and added to a
+// Resources build phase.
+const DICTIONARY_FILE = "keyboard_dictionary.echd";
+const DICTIONARY_SOURCE = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "data",
+  "keyboard-dictionary",
+  DICTIONARY_FILE,
+);
+
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -45,34 +90,19 @@ function withKeyboardXcodeTarget(config) {
       EXTENSION_BUNDLE_ID,
     );
 
-    // Create a PBX group for the extension source files
-    const swiftFiles = [
-      "EchosKeyboardViewController.swift",
-      "KeyboardView.swift",
-      "KeyboardTopBar.swift",
-      "KeyboardLayout.swift",
-      "KeyButton.swift",
-      "KeyPreviewView.swift",
-      "KeyVariantsView.swift",
-      "MicButton.swift",
-      "KeyboardTheme.swift",
-      "DeleteRepeater.swift",
-      "EmojiData.swift",
-      "EmojiPickerView.swift",
-      "EmojiSearchIndex.swift",
-      "EmojiSearchOverlayView.swift",
-      "IPCClient.swift",
-      "HapticManager.swift",
-      "SpacingAndPunctuations.swift",
-      "AutoCapEngine.swift",
-      "DoubleSpacePeriod.swift",
-      "RecapitalizeEngine.swift",
-      "KeyboardSettings.swift",
-      "SuggestionEngine.swift",
-      "SuggestionStripView.swift",
-    ];
+    // Create a PBX group for the extension source files + bundled resources
+    const groupFiles = [...EXTENSION_SWIFT_FILES, DICTIONARY_FILE];
+    const extensionGroup = proj.addPbxGroup(groupFiles, targetName, targetName);
 
-    const extensionGroup = proj.addPbxGroup(swiftFiles, targetName, targetName);
+    // The xcode lib guesses `lastKnownFileType` poorly for the unknown .echd
+    // extension — mark it as raw data so Xcode doesn't try to compile it.
+    const fileRefSection = proj.hash.project.objects["PBXFileReference"];
+    for (const child of extensionGroup.pbxGroup.children) {
+      if (child.comment === DICTIONARY_FILE && fileRefSection[child.value]) {
+        fileRefSection[child.value].lastKnownFileType = "file";
+        delete fileRefSection[child.value].explicitFileType;
+      }
+    }
 
     // Add the group to the main project group
     const mainGroupKey = proj.getFirstProject().firstProject.mainGroup;
@@ -114,29 +144,54 @@ function withKeyboardXcodeTarget(config) {
       `${frameworkPhaseUuid}_comment`
     ] = "Frameworks";
 
+    // Create PBXResourcesBuildPhase (the dictionary binary ships as a bundle
+    // resource; addTarget created none for app_extension targets)
+    const resourcesPhaseUuid = proj.generateUuid();
+    if (!proj.hash.project.objects["PBXResourcesBuildPhase"]) {
+      proj.hash.project.objects["PBXResourcesBuildPhase"] = {};
+    }
+    proj.hash.project.objects["PBXResourcesBuildPhase"][resourcesPhaseUuid] = {
+      isa: "PBXResourcesBuildPhase",
+      buildActionMask: 2147483647,
+      files: [],
+      runOnlyForDeploymentPostprocessing: 0,
+    };
+    proj.hash.project.objects["PBXResourcesBuildPhase"][
+      `${resourcesPhaseUuid}_comment`
+    ] = "Resources";
+
     // Add phases to the target
     targetObj.buildPhases = [
       { value: sourcePhaseUuid, comment: "Sources" },
       { value: frameworkPhaseUuid, comment: "Frameworks" },
+      { value: resourcesPhaseUuid, comment: "Resources" },
     ];
 
-    // Add Swift source files as PBXBuildFile entries to the Sources phase
+    // Route group children by extension: .swift compiles in Sources, the
+    // dictionary binary copies in Resources (feeding it to Sources would
+    // break the build).
     const sourcesPhase =
       proj.hash.project.objects["PBXSourcesBuildPhase"][sourcePhaseUuid];
+    const resourcesPhase =
+      proj.hash.project.objects["PBXResourcesBuildPhase"][resourcesPhaseUuid];
     for (const child of extensionGroup.pbxGroup.children) {
       const fileRefUuid = child.value;
       const fileName = child.comment;
+      const isSource = fileName.endsWith(".swift");
+      const phase = isSource ? sourcesPhase : resourcesPhase;
+      const phaseName = isSource ? "Sources" : "Resources";
       const buildFileUuid = proj.generateUuid();
 
       buildFileSection[buildFileUuid] = {
         isa: "PBXBuildFile",
         fileRef: fileRefUuid,
       };
-      buildFileSection[`${buildFileUuid}_comment`] = `${fileName} in Sources`;
+      buildFileSection[`${buildFileUuid}_comment`] =
+        `${fileName} in ${phaseName}`;
 
-      sourcesPhase.files.push({
+      phase.files.push({
         value: buildFileUuid,
-        comment: `${fileName} in Sources`,
+        comment: `${fileName} in ${phaseName}`,
       });
     }
 
@@ -277,33 +332,7 @@ function withKeyboardExtensionFiles(config) {
       ensureDir(extensionDir);
 
       // Write Swift source files
-      const swiftFiles = [
-        "EchosKeyboardViewController.swift",
-        "KeyboardView.swift",
-        "KeyboardTopBar.swift",
-        "KeyboardLayout.swift",
-        "KeyButton.swift",
-        "KeyPreviewView.swift",
-        "KeyVariantsView.swift",
-        "MicButton.swift",
-        "KeyboardTheme.swift",
-        "DeleteRepeater.swift",
-        "EmojiData.swift",
-        "EmojiPickerView.swift",
-        "EmojiSearchIndex.swift",
-        "EmojiSearchOverlayView.swift",
-        "IPCClient.swift",
-        "HapticManager.swift",
-        "SpacingAndPunctuations.swift",
-        "AutoCapEngine.swift",
-        "DoubleSpacePeriod.swift",
-        "RecapitalizeEngine.swift",
-        "KeyboardSettings.swift",
-        "SuggestionEngine.swift",
-        "SuggestionStripView.swift",
-      ];
-
-      for (const file of swiftFiles) {
+      for (const file of EXTENSION_SWIFT_FILES) {
         const templatePath = path.join(TEMPLATES_DIR, file);
         if (fs.existsSync(templatePath)) {
           fs.writeFileSync(
@@ -312,6 +341,14 @@ function withKeyboardExtensionFiles(config) {
           );
         }
       }
+
+      // Copy the compiled correction dictionary (committed artifact — see
+      // scripts/keyboard-dictionary/build.js) next to the sources; the Xcode
+      // target adds it to the extension's Resources phase.
+      fs.copyFileSync(
+        DICTIONARY_SOURCE,
+        path.join(extensionDir, DICTIONARY_FILE),
+      );
 
       // Write extension Info.plist
       const infoPlist = {

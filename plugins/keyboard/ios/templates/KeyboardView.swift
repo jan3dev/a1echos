@@ -25,9 +25,10 @@ protocol KeyboardViewDelegate: AnyObject {
     /// picker now that the dedicated globe key is gone).
     func keyboardView(_ view: KeyboardView, didLongPressEmojiFrom sourceView: UIView)
     func keyboardViewDidToggleRecord(_ view: KeyboardView)
-    /// A suggestion candidate was tapped in the top-bar strip (§5.5); the
-    /// controller replaces the in-progress word with `candidate`.
-    func keyboardView(_ view: KeyboardView, didSelectSuggestion candidate: String)
+    /// A suggestion slot was tapped in the top-bar strip (§5.5); the
+    /// controller replaces the in-progress word (or keeps it, for the
+    /// verbatim slot).
+    func keyboardView(_ view: KeyboardView, didSelectSuggestion slot: SuggestionSlot)
 }
 
 /// Mic button states.
@@ -563,10 +564,10 @@ class KeyboardView: UIInputView {
     /// (§9.1).
     var currentLayoutMode: KeyboardLayout.LayoutMode { currentLayout }
 
-    /// Shows up to 3 suggestion candidates in the top bar (no-op while
+    /// Shows up to 3 suggestion slots in the top bar (no-op while
     /// recording — `KeyboardTopBar` guards that). An empty list hides the strip.
-    func showSuggestions(_ candidates: [String]) {
-        topBar.showSuggestions(candidates)
+    func showSuggestions(_ slots: [SuggestionSlot]) {
+        topBar.showSuggestions(slots)
     }
 
     func hideSuggestions() {
@@ -1417,8 +1418,8 @@ extension KeyboardView: KeyboardTopBarDelegate {
         delegate?.keyboardViewDidToggleRecord(self)
     }
 
-    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion candidate: String) {
-        delegate?.keyboardView(self, didSelectSuggestion: candidate)
+    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion slot: SuggestionSlot) {
+        delegate?.keyboardView(self, didSelectSuggestion: slot)
     }
 }
 

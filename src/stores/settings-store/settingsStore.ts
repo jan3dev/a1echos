@@ -156,7 +156,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   isIncognitoMode: false,
   smartSplitEnabled: true,
   hasSeenKeyboardPrompt: false,
-  keyboardAutocorrect: false,
+  keyboardAutocorrect: true,
   keyboardHaptic: false,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
   hasSeenWelcome: false,
@@ -251,8 +251,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const smartSplitEnabled =
         smartSplitValue === null || smartSplitValue === "true";
       const hasSeenKeyboardPrompt = keyboardPromptValue === "true";
-      // Default false — only the explicit string "true" enables autocorrect.
-      const keyboardAutocorrect = keyboardAutocorrectValue === "true";
+      // Default true (matching native keyboards) — only the explicit string
+      // "false" disables autocorrect.
+      const keyboardAutocorrect = keyboardAutocorrectValue !== "false";
       // Default false — only the explicit string "true" enables haptics.
       const keyboardHaptic = keyboardHapticValue === "true";
       const keyboardMicTimeoutSeconds = parseMicTimeout(
@@ -295,7 +296,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         isIncognitoMode: false,
         smartSplitEnabled: true,
         hasSeenKeyboardPrompt: false,
-        keyboardAutocorrect: false,
+        keyboardAutocorrect: true,
         keyboardHaptic: false,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
         hasSeenWelcome: false,

@@ -597,20 +597,19 @@ import UIKit
     /// Reads `keyboard-settings.json` from the app's Documents directory and
     /// copies the `autocorrect` and `hapticFeedback` flags into the App Group
     /// `UserDefaults` the keyboard extension reads via `KeyboardSettings.load()`.
-    /// Writes the conservative defaults (false) when the file is missing or
-    /// unparseable.
+    /// Autocorrect defaults on (matching native keyboards); haptics stay off.
     private func mirrorKeyboardSettings() {
         guard let docsDir = NSSearchPathForDirectoriesInDomains(
             .documentDirectory, .userDomainMask, true
         ).first else { return }
         let path = (docsDir as NSString).appendingPathComponent(keyboardSettingsFilename)
 
-        var autocorrect = false
+        var autocorrect = true
         var hapticFeedback = false
         if FileManager.default.fileExists(atPath: path),
            let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            autocorrect = (json["autocorrect"] as? Bool) ?? false
+            autocorrect = (json["autocorrect"] as? Bool) ?? true
             hapticFeedback = (json["hapticFeedback"] as? Bool) ?? false
         }
         let defaults = UserDefaults(suiteName: appGroupID)

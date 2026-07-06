@@ -13,14 +13,34 @@ class EchosKeyboardViewController: UIInputViewController {
     /// waveform off it.
     private var meterTimer: Timer?
     private let recapitalize = RecapitalizeEngine()
-    private let suggestionEngine = SuggestionEngine()
+    /// Learned vocabulary + revert blacklist (§5.11). Loaded off-main in
+    /// `viewDidLoad`, flushed in `viewWillDisappear`.
+    private let userLexicon = UserLexicon()
+    /// Bundled-dictionary correction engine (§5.10). Loaded off-main; until
+    /// then `SuggestionEngine` falls back to `UITextChecker`.
+    private lazy var correctionEngine = CorrectionEngine(userLexicon: userLexicon)
+    private lazy var suggestionEngine = SuggestionEngine(correctionEngine: correctionEngine)
     private var settings = KeyboardSettings.load() {
         didSet { HapticManager.isEnabled = settings.hapticFeedback }
     }
-    /// Pending autocorrect-on-space revert target (§5.4): set when the top
-    /// guess auto-applied on space, cleared by the next backspace (which
-    /// restores the typed word) or any other keystroke / cursor move.
+    /// Pending autocorrect revert target (§5.4): set when a correction
+    /// auto-applied on a separator, consumed by the next backspace (which
+    /// deletes the separator and offers the typed word in the strip) or any
+    /// other keystroke / cursor move.
     private var lastAutocorrect: SuggestionEngine.LastAutocorrect?
+    /// Active revert offer (§5.4): the user backspaced right after an
+    /// autocorrect, so the strip shows the quoted original word — tapping it
+    /// swaps the correction back and blacklists the pair. Mirrors the native
+    /// iOS revert affordance. Cleared by any other input or cursor move.
+    private var pendingRevert: SuggestionEngine.LastAutocorrect?
+    /// Word the user explicitly kept by tapping the verbatim strip slot —
+    /// autocorrect must not fire on it when the separator lands. Cleared on
+    /// cursor moves and whenever the composing word ends.
+    private var autocorrectSuppressedWord: String?
+    /// Punctuation that commits a pending autocorrect, like space does.
+    private static let autocorrectTriggers: Set<Character> = [
+        ".", ",", "!", "?", ";", ":",
+    ]
     /// The `keyboardType` for which the field-type layout was last applied
     /// (§9.1). Used so we only auto-open the field's preferred layout when the
     /// field actually changes — not on every keystroke, which would fight a
@@ -41,6 +61,16 @@ class EchosKeyboardViewController: UIInputViewController {
 
         ipcClient = IPCClient()
         suggestionEngine.resolveLanguage()
+        // Both loads read files (mmap + JSON) — keep them off the keystroke
+        // path. `isLoaded` flips once and is only ever read afterwards, so
+        // the main thread simply keeps using the checker fallback until the
+        // refresh below lands.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            self.userLexicon.load()
+            self.correctionEngine.load()
+            DispatchQueue.main.async { self.refreshSuggestions() }
+        }
 
         keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
@@ -116,6 +146,13 @@ class EchosKeyboardViewController: UIInputViewController {
         applyFieldTypeLayout()
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // Persist any learning from this session (debounced writes may still
+        // be pending).
+        userLexicon.flush()
+    }
+
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         applyPreferredKeyboardHeight()
@@ -150,9 +187,12 @@ class EchosKeyboardViewController: UIInputViewController {
         // (§4.7). Our own proxy edits don't fire this callback, so an
         // in-progress rotation survives consecutive shift taps.
         recapitalize.reset()
-        // A cursor move invalidates the composing word and the autocorrect
-        // revert window — drop both and recompute the strip for the new spot.
+        // A cursor move invalidates the composing word, the autocorrect
+        // revert window, and any verbatim-tap suppression — drop them and
+        // recompute the strip for the new spot.
         lastAutocorrect = nil
+        pendingRevert = nil
+        autocorrectSuppressedWord = nil
         refreshSuggestions()
     }
 
@@ -205,25 +245,62 @@ class EchosKeyboardViewController: UIInputViewController {
         }
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
         let after = textDocumentProxy.documentContextAfterInput ?? ""
+        // Revert offer (§5.4): the user just backspaced an autocorrect's
+        // separator — show the quoted original until they type on.
+        if let revert = pendingRevert {
+            if before.hasSuffix(revert.corrected) {
+                suggestionRefreshWork?.cancel()
+                keyboardView.showSuggestions([
+                    SuggestionSlot(
+                        text: revert.typed, isVerbatim: true, isEmphasized: false
+                    ),
+                ])
+                return
+            }
+            pendingRevert = nil
+        }
         let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
         guard !word.isEmpty else {
             suggestionRefreshWork?.cancel()
+            autocorrectSuppressedWord = nil
+            // Next-word prediction (§5.12): the cursor sits right after a
+            // space that follows a word — offer its most likely continuations.
+            if before.hasSuffix(" "),
+               let prev = SuggestionEngine.previousWord(
+                   beforeCursor: before, currentWord: ""
+               ) {
+                let predictions = suggestionEngine.predictions(
+                    afterWord: prev, casing: currentCasing()
+                )
+                if !predictions.isEmpty {
+                    keyboardView.showSuggestions(
+                        predictions.map(SuggestionSlot.candidate)
+                    )
+                    return
+                }
+            }
             keyboardView.hideSuggestions()
             return
         }
-        // Debounce the expensive `UITextChecker` pass: cancel any pending lookup
-        // and reschedule, so a fast burst of keystrokes only spell-checks once,
-        // after the user pauses — the keystroke itself already committed via
+        // Debounce the lookup: cancel any pending pass and reschedule, so a
+        // fast burst of keystrokes only pays for one evaluation, after the
+        // user pauses — the keystroke itself already committed via
         // `insertText`, so this never delays the character appearing.
-        let casing = currentCasing()
+        let previousWord = SuggestionEngine.previousWord(
+            beforeCursor: before, currentWord: word
+        )
+        let casing = Self.casing(forTyped: word)
         suggestionRefreshWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            let result = self.suggestionEngine.suggestions(for: word, casing: casing)
-            if result.candidates.isEmpty {
+            let result = self.suggestionEngine.suggestions(
+                for: word, previousWord: previousWord, casing: casing
+            )
+            let slots = Self.suggestionSlots(for: result)
+            if slots.isEmpty {
                 self.keyboardView.hideSuggestions()
             } else {
-                self.keyboardView.showSuggestions(result.candidates)
+                self.keyboardView.showSuggestions(slots)
             }
         }
         suggestionRefreshWork = work
@@ -232,14 +309,51 @@ class EchosKeyboardViewController: UIInputViewController {
         )
     }
 
+    /// Builds the strip layout from a lookup result. While a correction is
+    /// pending it mirrors native QuickType: quoted typed word on the left,
+    /// the correction emphasized in the center, a runner-up on the right.
+    private static func suggestionSlots(
+        for result: SuggestionEngine.Result
+    ) -> [SuggestionSlot] {
+        guard result.topIsCorrection,
+              let verbatim = result.verbatim,
+              let replacement = result.replacement else {
+            return result.candidates.map(SuggestionSlot.candidate)
+        }
+        var slots = [
+            SuggestionSlot(text: verbatim, isVerbatim: true, isEmphasized: false),
+            SuggestionSlot(text: replacement, isVerbatim: false, isEmphasized: true),
+        ]
+        if let runnerUp = result.candidates.first(where: {
+            $0.lowercased() != replacement.lowercased()
+        }) {
+            slots.append(.candidate(runnerUp))
+        }
+        return slots
+    }
+
     /// Maps the live shift state to the casing suggestion candidates should
-    /// adopt so a tapped/auto-applied word matches what a typed letter would.
+    /// adopt. Used only for next-word predictions (no typed word to mirror).
     private func currentCasing() -> SuggestionEngine.Casing {
         switch keyboardView.currentShiftState {
         case .capsLock: return .upper
         case .on, .automatic: return .capitalize
         case .off, .manualFromAuto: return .lower
         }
+    }
+
+    /// Casing for corrections/completions mirrors the typed word itself —
+    /// the shift state has usually dropped back to off by the time the word
+    /// is complete ("Teh" must correct to "The", not "the").
+    private static func casing(forTyped word: String) -> SuggestionEngine.Casing {
+        let letters = word.filter { $0.isLetter }
+        if letters.count > 1, letters.allSatisfy({ $0.isUppercase }) {
+            return .upper
+        }
+        if let first = word.first, first.isUppercase {
+            return .capitalize
+        }
+        return .lower
     }
 
     /// Applies the field-type adaptive layout (§9.1). The field's preferred
@@ -336,8 +450,21 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         // Any non-space, non-backspace input invalidates the smart
         // double-space window. Letters / digits / accents all reset.
         doubleSpacePeriod.reset()
+        // Sentence punctuation commits a pending autocorrect exactly like
+        // space does ("teh." becomes "the.").
+        if char.count == 1, let c = char.first, Self.autocorrectTriggers.contains(c),
+           commitWithAutocorrect(separator: char) {
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
+        if char.count == 1, let c = char.first,
+           SpacingAndPunctuations.isWordSeparator(c) {
+            observeSeparatorCommit()
+        }
         // Typing past an autocorrect ends its one-shot revert window.
         lastAutocorrect = nil
+        pendingRevert = nil
         textDocumentProxy.insertText(char)
         // iOS does NOT call `textDidChange` after our own `insertText`
         // (only for host-driven changes), so we run the auto-cap pass
@@ -345,6 +472,70 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         // never lifts the shift state and the next letter stays lowercase.
         applyAutoCap()
         refreshSuggestions()
+    }
+
+    /// Runs autocorrect for the in-progress word, committing the corrected
+    /// word plus `separator` when the engine is confident. Returns true when
+    /// it handled the commit. Shared by the space, punctuation, and return
+    /// paths (§5.10).
+    private func commitWithAutocorrect(separator: String) -> Bool {
+        guard settings.autocorrect,
+              keyboardView.currentMicState == .idle,
+              suggestionsAllowed(for: textDocumentProxy) else { return false }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let after = textDocumentProxy.documentContextAfterInput ?? ""
+        let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
+        guard !word.isEmpty,
+              word.lowercased() != autocorrectSuppressedWord?.lowercased() else {
+            return false
+        }
+        let previousWord = SuggestionEngine.previousWord(
+            beforeCursor: before, currentWord: word
+        )
+        let result = suggestionEngine.suggestions(
+            for: word, previousWord: previousWord, casing: Self.casing(forTyped: word)
+        )
+        // Exact compare: case-only corrections (i -> I, france -> France)
+        // must apply too.
+        guard result.topIsCorrection,
+              let corrected = result.replacement,
+              corrected != word else { return false }
+        for _ in 0..<word.count { textDocumentProxy.deleteBackward() }
+        textDocumentProxy.insertText(corrected + separator)
+        lastAutocorrect = SuggestionEngine.LastAutocorrect(
+            typed: word, corrected: corrected, separator: separator
+        )
+        pendingRevert = nil
+        autocorrectSuppressedWord = nil
+        // The corrected pair feeds prediction learning too.
+        if let previousWord, !corrected.contains(" ") {
+            userLexicon.observeBigram(previous: previousWord, word: corrected)
+        }
+        return true
+    }
+
+    /// Learning hook (§5.11): a separator is about to end the in-progress
+    /// word — feed it to the user lexicon. Unknown words are learned after
+    /// two commits; known words strengthen their suggestion weight, and
+    /// known word pairs feed next-word prediction.
+    private func observeSeparatorCommit() {
+        guard keyboardView.currentMicState == .idle,
+              suggestionsAllowed(for: textDocumentProxy) else { return }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let after = textDocumentProxy.documentContextAfterInput ?? ""
+        let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
+        guard !word.isEmpty else { return }
+        let isKnown = correctionEngine.contains(word) || userLexicon.contains(word)
+        userLexicon.observeCommit(word: word, isInDictionary: isKnown)
+        // Predictions learn only vetted pairs — a typo must never resurface
+        // as a suggestion.
+        if isKnown,
+           let previousWord = SuggestionEngine.previousWord(
+               beforeCursor: before, currentWord: word
+           ) {
+            userLexicon.observeBigram(previous: previousWord, word: word)
+        }
+        autocorrectSuppressedWord = nil
     }
 
     func keyboardViewDidTapDelete(_ view: KeyboardView) {
@@ -366,22 +557,22 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
                 return
             }
         }
-        // Revert an autocorrect-on-space (§5.4): the first backspace after the
-        // auto-applied correction restores exactly what the user typed.
+        // Backspace after an autocorrect (§5.4): delete normally (removing
+        // the separator, matching native iOS — the correction itself stays),
+        // then offer the quoted original in the strip so one tap restores it.
         if let last = lastAutocorrect {
+            lastAutocorrect = nil
             let before = textDocumentProxy.documentContextBeforeInput ?? ""
-            if before.hasSuffix(last.corrected + " ") {
-                for _ in 0..<(last.corrected.count + 1) {
-                    textDocumentProxy.deleteBackward()
-                }
-                textDocumentProxy.insertText(last.typed)
-                lastAutocorrect = nil
+            if !last.separator.isEmpty,
+               before.hasSuffix(last.corrected + last.separator) {
+                textDocumentProxy.deleteBackward()
+                pendingRevert = last
                 applyAutoCap()
                 refreshSuggestions()
                 return
             }
-            lastAutocorrect = nil
         }
+        pendingRevert = nil
         textDocumentProxy.deleteBackward()
         applyAutoCap()
         refreshSuggestions()
@@ -389,6 +580,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     func keyboardViewDidHoldDeleteWord(_ view: KeyboardView) {
         lastAutocorrect = nil
+        pendingRevert = nil
         deleteWordBackward()
         applyAutoCap()
         refreshSuggestions()
@@ -434,6 +626,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         // case where the previous keystroke was already a space.
         if doubleSpacePeriod.shouldCommitPeriod(previousChars: tail) {
             lastAutocorrect = nil
+            pendingRevert = nil
             textDocumentProxy.deleteBackward()
             textDocumentProxy.insertText(". ")
             doubleSpacePeriod.markPeriodCommitted()
@@ -441,32 +634,16 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             refreshSuggestions()
             return
         }
-        // Autocorrect-on-space (§5.10) — only when the user enabled it. Replace
-        // a misspelled in-progress word with the top guess, then commit the
-        // space, recording the original for backspace-revert.
-        if settings.autocorrect,
-           keyboardView.currentMicState == .idle,
-           suggestionsAllowed(for: textDocumentProxy) {
-            let after = textDocumentProxy.documentContextAfterInput ?? ""
-            let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
-            if !word.isEmpty {
-                let result = suggestionEngine.suggestions(for: word, casing: currentCasing())
-                if result.topIsCorrection,
-                   let corrected = result.candidates.first,
-                   corrected.lowercased() != word.lowercased() {
-                    for _ in 0..<word.count { textDocumentProxy.deleteBackward() }
-                    textDocumentProxy.insertText(corrected + " ")
-                    lastAutocorrect = SuggestionEngine.LastAutocorrect(
-                        typed: word, corrected: corrected
-                    )
-                    doubleSpacePeriod.recordSpaceCommit()
-                    applyAutoCap()
-                    refreshSuggestions()
-                    return
-                }
-            }
+        // Autocorrect-on-space (§5.10) — only when the user enabled it.
+        if commitWithAutocorrect(separator: " ") {
+            doubleSpacePeriod.recordSpaceCommit()
+            applyAutoCap()
+            refreshSuggestions()
+            return
         }
+        observeSeparatorCommit()
         lastAutocorrect = nil
+        pendingRevert = nil
         textDocumentProxy.insertText(" ")
         doubleSpacePeriod.recordSpaceCommit()
         applyAutoCap()
@@ -475,7 +652,16 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     func keyboardViewDidTapReturn(_ view: KeyboardView) {
         doubleSpacePeriod.reset()
+        // Return commits a pending autocorrect too, then still performs the
+        // newline.
+        if commitWithAutocorrect(separator: "\n") {
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
+        observeSeparatorCommit()
         lastAutocorrect = nil
+        pendingRevert = nil
         textDocumentProxy.insertText("\n")
         applyAutoCap()
         refreshSuggestions()
@@ -486,17 +672,50 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     }
 
     /// Tap-to-apply (§5.5): replace the in-progress word with the tapped
-    /// candidate. No trailing space — the user keeps control of word spacing
-    /// (and the double-space-period window stays clean).
-    func keyboardView(_ view: KeyboardView, didSelectSuggestion candidate: String) {
+    /// candidate — no trailing space, the user keeps control of word spacing.
+    /// The verbatim slot instead keeps the typed word, learns it, and stops
+    /// autocorrect from touching it. With no in-progress word the tap is a
+    /// next-word prediction: insert the word plus a space. During a revert
+    /// offer the verbatim slot swaps the correction back to the typed word.
+    func keyboardView(_ view: KeyboardView, didSelectSuggestion slot: SuggestionSlot) {
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
         let after = textDocumentProxy.documentContextAfterInput ?? ""
+        if let revert = pendingRevert, slot.isVerbatim {
+            pendingRevert = nil
+            guard before.hasSuffix(revert.corrected) else { return }
+            doubleSpacePeriod.reset()
+            for _ in 0..<revert.corrected.count { textDocumentProxy.deleteBackward() }
+            textDocumentProxy.insertText(revert.typed)
+            userLexicon.recordRevert(typed: revert.typed, corrected: revert.corrected)
+            userLexicon.learnNow(revert.typed)
+            autocorrectSuppressedWord = revert.typed
+            applyAutoCap()
+            refreshSuggestions()
+            return
+        }
         let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
-        guard !word.isEmpty else { return }
+        guard !word.isEmpty else {
+            if !slot.isVerbatim {
+                lastAutocorrect = nil
+                pendingRevert = nil
+                doubleSpacePeriod.reset()
+                textDocumentProxy.insertText(slot.text + " ")
+                applyAutoCap()
+                refreshSuggestions()
+            }
+            return
+        }
         lastAutocorrect = nil
+        pendingRevert = nil
         doubleSpacePeriod.reset()
+        if slot.isVerbatim {
+            userLexicon.learnNow(word)
+            autocorrectSuppressedWord = word
+            refreshSuggestions()
+            return
+        }
         for _ in 0..<word.count { textDocumentProxy.deleteBackward() }
-        textDocumentProxy.insertText(candidate)
+        textDocumentProxy.insertText(slot.text)
         applyAutoCap()
         refreshSuggestions()
     }

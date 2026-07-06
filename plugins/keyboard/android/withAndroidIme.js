@@ -144,6 +144,9 @@ function withImeSources(config) {
         "KeyboardSettings.kt",
         "SuggestionEngine.kt",
         "SuggestionStripView.kt",
+        "CorrectionEngine.kt",
+        "KeyAdjacency.kt",
+        "UserLexicon.kt",
       ];
 
       for (const file of ktFiles) {
@@ -155,6 +158,21 @@ function withImeSources(config) {
           );
         }
       }
+
+      // Bundle the compiled correction dictionary (committed artifact — see
+      // scripts/keyboard-dictionary/build.js) into assets/; CorrectionEngine
+      // reads it via an InputStream, so AAPT compression is irrelevant.
+      const assetsDir = path.join(androidRoot, "assets");
+      ensureDir(assetsDir);
+      fs.copyFileSync(
+        path.join(
+          projectRoot,
+          "data",
+          "keyboard-dictionary",
+          "keyboard_dictionary.echd",
+        ),
+        path.join(assetsDir, "keyboard_dictionary.echd"),
+      );
 
       // Write XML resources
       const resDir = path.join(androidRoot, "res");

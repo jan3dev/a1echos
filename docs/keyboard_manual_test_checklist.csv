@@ -123,13 +123,44 @@ Suggestions & autocorrect,SUG-05,Suppressed in URL/email/password,Focus a URL/em
 Suggestions & autocorrect,SUG-06,Hidden while recording,Start mic recording while a word is composed,Strip yields to the recording UI; no suggestions shown,iOS+Android,,,Phase 3 §5.5
 Suggestions & autocorrect,SUG-07,Casing matches shift state,Type a word with Shift on or caps lock engaged,Suggested candidates adopt the matching case,iOS+Android,,,Phase 3 §5.5
 Suggestions & autocorrect,SUG-08,Language follows host locale,Set the device language different from the app spoken language then type,Suggestions use the host/device language (not the ASR model language),iOS+Android,,,§5.5 host-locale
-Suggestions & autocorrect,SUG-09,Autocorrect default off,Fresh install — type a misspelling then space,Word is NOT auto-changed (suggestions remain tap-only),iOS+Android,,,Phase 3 §5.10
-Suggestions & autocorrect,SUG-10,Enable autocorrect setting,In Echos ▸ Advanced Settings toggle Keyboard Autocorrect on,Setting persists; keyboard applies it on next field focus,iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-09,Autocorrect default on,"Fresh install — type ""teh"" then space","Word auto-corrects to ""the "" (autocorrect defaults on)",iOS+Android,,,Correction engine
+Suggestions & autocorrect,SUG-10,Disable autocorrect setting,In Echos ▸ Advanced Settings toggle Keyboard Autocorrect off,Setting persists; keyboard stops auto-applying on next field focus (suggestions stay tap-only),iOS+Android,,,Phase 3 §5.10
 Suggestions & autocorrect,SUG-11,Autocorrect on space,With autocorrect on type a misspelling then space,Top guess replaces the word and a space is committed,iOS+Android,,,Phase 3 §5.10
 Suggestions & autocorrect,SUG-12,Autocorrect backspace revert,Press backspace immediately after an autocorrect fires,Original typed word is restored exactly,iOS+Android,,,Phase 3 §5.4
 Suggestions & autocorrect,SUG-13,Autocorrect respects field opt-out,With autocorrect on type in a password/URL field then space,No autocorrection is applied,iOS+Android,,,Phase 3 §5.10
-Suggestions & autocorrect,SUG-14,No system spell checker (Android),Disable all system spell checkers then type a word,One-time toast points to the spell-checker setting; strip stays empty,Android,,,§5.5 Android spellchecker gap
+Suggestions & autocorrect,SUG-14,No system spell checker (Android non-English),Set a non-English device language + disable all system spell checkers then type,One-time toast points to the spell-checker setting; English needs no system checker (bundled engine),Android,,,Bundled engine closes the OEM gap for English
 Suggestions & autocorrect,SUG-15,Autocorrect chains auto-cap,With autocorrect on autocorrect the first word of a sentence,Auto-cap still capitalizes the next sentence start,iOS+Android,,,Phase 3 §5.10
+Autocorrect engine,ACE-01,Adjacent-key typo,"Type ""wrold"" then space","Commits ""world """,iOS+Android,,,QWERTY-proximity edit distance
+Autocorrect engine,ACE-02,Transposition,"Type ""teh"" then space","Commits ""the """,iOS+Android,,,
+Autocorrect engine,ACE-03,Doubled-letter omission,"Type ""helo"" then space","Commits ""help """,iOS+Android,,,
+Autocorrect engine,ACE-04,Contraction,"Type ""dont"" then space","Commits ""don't """,iOS+Android,,,
+Autocorrect engine,ACE-05,Valid word never corrected,"Type ""well"" then space","Stays ""well"" (valid word; never becomes ""we'll"")",iOS+Android,,,
+Autocorrect engine,ACE-06,Standalone i,"Mid-sentence type ""i"" then space","Commits ""I """,iOS+Android,,,
+Autocorrect engine,ACE-07,Word split,"Type ""alot"" then space","Commits ""a lot """,iOS+Android,,,
+Autocorrect engine,ACE-08,Contraction split,"Type ""imnot"" then space","Commits ""I'm not """,iOS+Android,,,
+Autocorrect engine,ACE-09,ALL-CAPS acronym untouched,"Type ""TEH"" then space",No autocorrect (short ALL-CAPS treated as acronym),iOS+Android,,,
+Autocorrect engine,ACE-10,Hyphenated token untouched,"Type ""well-knwn"" then space",No autocorrect on hyphenated tokens (suggestions may still show),iOS+Android,,,
+Autocorrect engine,ACE-11,Punctuation trigger,"Type ""teh"" then period","Commits ""the.""",iOS+Android,,,Autocorrect fires on . , ! ? ; :
+Autocorrect engine,ACE-12,Return trigger,"Type ""teh"" then Return","Commits ""the"" + newline",iOS+Android,,,
+Autocorrect engine,ACE-13,Backspace after autocorrect offers revert,Backspace once right after an autocorrect,"Only the space is deleted (correction stays); strip shows the quoted original word",iOS+Android,,,Native-style revert affordance
+Autocorrect engine,ACE-14,Revert tap restores + blacklists,"Backspace after an autocorrect, tap the quoted original, retype the same word later + space","Original word restored exactly; the same pair never auto-applies again",iOS+Android,,,Learned blacklist
+Autocorrect engine,ACE-15,Verbatim slot keeps typed word,"Type an unknown word (e.g. ""figma"") — tap the quoted left slot then space",Typed word kept; not autocorrected; suggested in later sessions,iOS+Android,,,Tap-verbatim learns immediately
+Autocorrect engine,ACE-16,Passive learning,"Type an unknown word + space twice (no strip taps), then type it misspelled",Learned word appears as a suggestion/correction target,iOS+Android,,,Learned after 2 commits
+Autocorrect engine,ACE-17,Strip layout during pending correction,"Type ""teh"" and pause","Strip shows ""teh"" quoted left, ""the"" bold center, runner-up right",iOS+Android,,,QuickType-style slots
+Autocorrect engine,ACE-18,Next-word prediction,"Type ""thank"" then space","Strip offers continuations (""you"" first); tap inserts word + space",iOS+Android,,,Bigram predictions
+Autocorrect engine,ACE-19,No profanity offered,"Type ""fuk"" or ""shti"" and pause",No profane candidates in the strip; no autocorrect,iOS+Android,,,never_correct_to list
+Autocorrect engine,ACE-20,Speculative completion never auto-applies,"Type ""sata"" then space","Stays ""sata"" (completions like ""satan"" remain tap-only)",iOS+Android,,,
+Autocorrect engine,ACE-21,Informal words protected,"Type ""ok"" ""lol"" ""sats"" ""gonna"" each + space",None are autocorrected,iOS+Android,,,Supplemental wordlist
+Autocorrect engine,ACE-22,Modern vocab as target,"Type ""bircoin"" then space","Commits ""bitcoin """,iOS+Android,,,
+Autocorrect engine,ACE-23,Apple-only word veto (iOS),Type a word only Apple's dictionary knows (e.g. a contact name) then space,Not autocorrected (UITextChecker validity veto),iOS,,,
+Autocorrect engine,ACE-24,Non-English locale fallback,Switch device language to a non-English locale and type,Suggestions come from the system checker path (unchanged behavior),iOS+Android,,,
+Autocorrect engine,ACE-25,Lookup latency,Type rapidly in a long note,No perceptible input lag; strip updates after pauses,iOS+Android,,,<5 ms engine budget
+Autocorrect engine,ACE-26,Ambiguous contraction at sentence start,"Start a sentence with ""Its"" (auto-capped) then space","Commits ""It's ""; mid-sentence lowercase ""its"" is never touched",iOS+Android,,,Also Ill→I'll / Id→I'd / Lets→Let's
+Autocorrect engine,ACE-27,cant / wont unconditional,"Type ""cant"" and ""wont"" each + space","Commit ""can't"" / ""won't"" (matches native iOS)",iOS+Android,,,
+Autocorrect engine,ACE-28,Proper-noun casing,"Type ""franve"" + space; also type ""visit "" and check predictions","Corrections and predictions render proper nouns capitalized (France, Monday, Google)",iOS+Android,,,FLAG_PROPER_NOUN
+Autocorrect engine,ACE-29,Prediction learning,"Type the same two-word pair (e.g. ""stack sats"") a few times, then type the first word + space",The learned continuation leads the prediction strip,iOS+Android,,,User bigrams (keyboard-user-lexicon.json)
+Autocorrect engine,ACE-30,Correction casing mirrors typed word,"Type ""Teh"" (auto-capped) then space","Commits ""The "" (not ""the "")",iOS+Android,,,
+Autocorrect engine,ACE-31,Lowercase proper noun self-corrects,"Type ""france"" then space; also ""google"" + space","Commit ""France "" / ""Google ""; strip offers the quoted lowercase form to keep",iOS+Android,,,Case-only corrections apply
 Voice transcription,VOX-01,Tap mic to record,Tap top-bar mic,Records; waveform animates with real input level,iOS+Android,,,
 Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recording,Stops recording; transcription inserted at cursor,iOS+Android,,,
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,

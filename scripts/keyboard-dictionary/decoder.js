@@ -1,0 +1,740 @@
+"use strict";
+
+/**
+ * Decoder + reference correction engine for the "ECHD" v1 binary.
+ *
+ * The fuzzy search / scoring here is the canonical specification that
+ * CorrectionEngine.swift and CorrectionEngine.kt mirror 1:1. Golden vectors in
+ * the jest suite are generated from this implementation.
+ */
+
+const {
+  MAGIC,
+  VERSION,
+  HEADER_SIZE,
+  NODE_SIZE,
+  LEAF,
+  NON_TERMINAL_WORD_ID,
+  FLAG_NEVER_CORRECT_TO,
+  FLAG_PROPER_NOUN,
+  crc32,
+} = require("./encoder");
+
+/**
+ * Contractions whose typed form is ALSO a valid word (its, ill, id, lets).
+ * Auto-applied only when sentence-initial AND typed with a leading capital
+ * ("Its way" -> "It's way") — the capitalization comes from auto-cap, so this
+ * naturally limits to sentence starts, where the contraction reading
+ * dominates. Mid-sentence lowercase "its"/"ill" stay untouched.
+ */
+const AMBIGUOUS_SENTENCE_INITIAL = {
+  its: "It's",
+  ill: "I'll",
+  id: "I'd",
+  lets: "Let's",
+};
+
+const TUNING = {
+  subAdjacent: 0.6,
+  subOther: 1.0,
+  insertDuplicate: 0.5,
+  insertOther: 1.0,
+  deletionDuplicate: 0.5,
+  deletion: 0.9,
+  transposition: 0.5,
+  firstLetterSurcharge: 0.8,
+  apostropheRestore: 0.15,
+  wordSplit: 0.45,
+  completionPerChar: 0.2,
+  completionCap: 0.9,
+  // Completions may drive autocorrect-on-space only when the typed prefix is
+  // long, the tail short, and the word common; everything else stays a
+  // tap-only suggestion (sata must not become satan).
+  autocorrectMaxCompletionExtra: 2,
+  autocorrectCompletionMinTyped: 5,
+  autocorrectMaxScoreGap: 0.25,
+  shortTypedMaxEditCost: 0.9,
+  freqWeight: 0.35,
+  bigramWeight: 0.25,
+  maxCandidates: 3,
+  maxCompletions: 8,
+  confidenceCommon: 0.6,
+  confidenceRare: 0.72,
+  confidenceBigramBonus: 0.05,
+  commonFreqFloor: 64,
+};
+
+const KEY_ADJACENCY = {
+  q: "wa",
+  w: "qeas",
+  e: "wrsd",
+  r: "etdf",
+  t: "ryfg",
+  y: "tugh",
+  u: "yihj",
+  i: "uojk",
+  o: "ipkl",
+  p: "ol",
+  a: "qwsz",
+  s: "weadzx",
+  d: "ersfxc",
+  f: "rtdgcv",
+  g: "tyfhvb",
+  h: "yugjbn",
+  j: "uihknm",
+  k: "iojlm",
+  l: "opk",
+  z: "asx",
+  x: "sdzc",
+  c: "dfxv",
+  v: "fgcb",
+  b: "ghvn",
+  n: "hjbm",
+  m: "jkn",
+};
+
+function isAdjacent(a, b) {
+  const neighbors = KEY_ADJACENCY[a];
+  return neighbors !== undefined && neighbors.includes(b);
+}
+
+function editBudget(typedLength) {
+  if (typedLength <= 4) return 1.0;
+  if (typedLength <= 8) return 2.0;
+  return 2.5;
+}
+
+function decode(buffer) {
+  if (buffer.length < HEADER_SIZE) throw new Error("Buffer too small");
+  if (buffer.toString("ascii", 0, 4) !== MAGIC) throw new Error("Bad magic");
+  const version = buffer.readUInt16LE(4);
+  if (version !== VERSION) throw new Error(`Unsupported version ${version}`);
+  const header = {
+    version,
+    flags: buffer.readUInt16LE(6),
+    nodeCount: buffer.readUInt32LE(8),
+    wordCount: buffer.readUInt32LE(12),
+    nodesOffset: buffer.readUInt32LE(16),
+    labelsOffset: buffer.readUInt32LE(20),
+    labelsLength: buffer.readUInt32LE(24),
+    topStringsOffset: buffer.readUInt32LE(28),
+    topStringsCount: buffer.readUInt32LE(32),
+    bigramsOffset: buffer.readUInt32LE(36),
+    bigramCount: buffer.readUInt32LE(40),
+    contractionsOffset: buffer.readUInt32LE(44),
+    contractionCount: buffer.readUInt32LE(48),
+    crc32: buffer.readUInt32LE(52),
+  };
+  if (crc32(buffer.subarray(HEADER_SIZE)) !== header.crc32) {
+    throw new Error("CRC mismatch");
+  }
+
+  const node = (index) => {
+    const off = header.nodesOffset + index * NODE_SIZE;
+    const packed = buffer.readUInt32LE(off + 8);
+    const labelOffset = buffer.readUInt32LE(off + 4);
+    const labelLen = buffer.readUInt8(off + 12);
+    return {
+      index,
+      firstChildIndex: buffer.readUInt32LE(off),
+      label: buffer.toString(
+        "utf8",
+        header.labelsOffset + labelOffset,
+        header.labelsOffset + labelOffset + labelLen,
+      ),
+      wordId: packed & 0xffffff,
+      flags: (packed >>> 24) & 0xff,
+      terminal: ((packed >>> 24) & 0x01) !== 0,
+      childCount: buffer.readUInt8(off + 13),
+      freq: buffer.readUInt8(off + 14),
+      maxSubtreeFreq: buffer.readUInt8(off + 15),
+    };
+  };
+
+  const topString = (id) => {
+    if (id >= header.topStringsCount) return null;
+    const base = header.topStringsOffset;
+    const poolStart = base + 4 * (header.topStringsCount + 1);
+    const start = buffer.readUInt32LE(base + 4 * id);
+    const end = buffer.readUInt32LE(base + 4 * (id + 1));
+    return buffer.toString("utf8", poolStart + start, poolStart + end);
+  };
+
+  const contractions = new Map();
+  {
+    const base = header.contractionsOffset;
+    const poolStart = base + 6 * header.contractionCount;
+    for (let i = 0; i < header.contractionCount; i++) {
+      const off = base + i * 6;
+      const typedOffset = buffer.readUInt16LE(off);
+      const typedLen = buffer.readUInt8(off + 2);
+      const replOffset = buffer.readUInt16LE(off + 3);
+      const replLen = buffer.readUInt8(off + 5);
+      contractions.set(
+        buffer.toString(
+          "utf8",
+          poolStart + typedOffset,
+          poolStart + typedOffset + typedLen,
+        ),
+        buffer.toString(
+          "utf8",
+          poolStart + replOffset,
+          poolStart + replOffset + replLen,
+        ),
+      );
+    }
+  }
+
+  /**
+   * Walks `word` through the trie. Returns:
+   *  - { node, remainder: "" } when the walk consumed the whole word
+   *    (remainder of the final label in `labelRest`), or null when the word
+   *    diverges from every path.
+   */
+  const walk = (word) => {
+    let current = node(0);
+    let pos = 0;
+    for (;;) {
+      if (pos === word.length) return { node: current, labelRest: "" };
+      if (current.firstChildIndex === LEAF) return null;
+      let child = null;
+      for (let c = 0; c < current.childCount; c++) {
+        const candidate = node(current.firstChildIndex + c);
+        if (candidate.label[0] === word[pos]) {
+          child = candidate;
+          break;
+        }
+      }
+      if (!child) return null;
+      const label = child.label;
+      let k = 0;
+      while (
+        k < label.length &&
+        pos + k < word.length &&
+        label[k] === word[pos + k]
+      ) {
+        k++;
+      }
+      if (pos + k === word.length) {
+        return { node: child, labelRest: label.slice(k) };
+      }
+      if (k < label.length) return null;
+      current = child;
+      pos += k;
+    }
+  };
+
+  /** Exact lookup; returns the terminal node record or null. */
+  const find = (word) => {
+    const hit = walk(word);
+    return hit && hit.labelRest === "" && hit.node.terminal ? hit.node : null;
+  };
+
+  const bigramsFor = (prevWord) => {
+    const prev = find(prevWord.toLowerCase());
+    if (!prev || prev.wordId === NON_TERMINAL_WORD_ID) return [];
+    const prevId = prev.wordId;
+    let lo = 0;
+    let hi = header.bigramCount;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (buffer.readUIntLE(header.bigramsOffset + mid * 8, 3) < prevId) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    const results = [];
+    for (let i = lo; i < header.bigramCount; i++) {
+      const off = header.bigramsOffset + i * 8;
+      if (buffer.readUIntLE(off, 3) !== prevId) break;
+      const nextId = buffer.readUIntLE(off + 3, 3);
+      results.push({
+        nextId,
+        word: topString(nextId),
+        freq: buffer.readUInt8(off + 6),
+      });
+    }
+    return results;
+  };
+
+  const words = function* () {
+    const stack = [{ index: 0, prefix: "" }];
+    while (stack.length) {
+      const { index, prefix } = stack.pop();
+      const current = node(index);
+      const path = prefix + current.label;
+      if (current.terminal) {
+        yield {
+          word: path,
+          wordId: current.wordId,
+          freq: current.freq,
+          flags: current.flags,
+        };
+      }
+      if (current.firstChildIndex !== LEAF) {
+        for (let c = current.childCount - 1; c >= 0; c--) {
+          stack.push({ index: current.firstChildIndex + c, prefix: path });
+        }
+      }
+    }
+  };
+
+  return {
+    buffer,
+    header,
+    node,
+    topString,
+    contractions,
+    walk,
+    find,
+    bigramsFor,
+    words,
+  };
+}
+
+function applyFirstLetterSurcharge(typed, word, editCost) {
+  if (editCost === 0 || typed[0] === word[0]) return editCost;
+  const transposedFirstPair =
+    typed.length >= 2 &&
+    word.length >= 2 &&
+    typed[0] === word[1] &&
+    typed[1] === word[0];
+  return transposedFirstPair
+    ? editCost
+    : editCost + TUNING.firstLetterSurcharge;
+}
+
+/**
+ * Weighted Damerau-Levenshtein DP over trie descent. Returns fuzzy full-word
+ * candidates as { word, editCost, freq, flags }.
+ */
+function fuzzyMatches(model, typed) {
+  const n = typed.length;
+  const budget = editBudget(n);
+  const insertCost = (i) =>
+    i >= 2 && typed[i - 1] === typed[i - 2]
+      ? TUNING.insertDuplicate
+      : TUNING.insertOther;
+
+  const row0 = new Array(n + 1);
+  row0[0] = 0;
+  for (let i = 1; i <= n; i++) row0[i] = row0[i - 1] + insertCost(i);
+
+  const results = [];
+  // rows[j] = DP row after j path characters; the stack shape lets the
+  // Damerau transposition reach rows[j-2].
+  const rows = [row0];
+  const pathChars = [];
+
+  const dfs = (index) => {
+    const depthBefore = pathChars.length;
+    const current = model.node(index);
+    const label = index === 0 ? "" : current.label;
+    let pruned = false;
+    for (const c of label) {
+      const j = pathChars.length + 1;
+      const prevRow = rows[j - 1];
+      // Omitting a doubled letter (helo -> hello) is as common a typo as
+      // inserting one, so consuming a candidate char that repeats the
+      // previous path char is cheap.
+      const deleteCost =
+        j >= 2 && c === pathChars[j - 2]
+          ? TUNING.deletionDuplicate
+          : TUNING.deletion;
+      const newRow = new Array(n + 1);
+      newRow[0] = prevRow[0] + deleteCost;
+      let rowMin = newRow[0];
+      for (let i = 1; i <= n; i++) {
+        const t = typed[i - 1];
+        const subCost =
+          t === c ? 0 : isAdjacent(t, c) ? TUNING.subAdjacent : TUNING.subOther;
+        let best = Math.min(
+          prevRow[i - 1] + subCost,
+          newRow[i - 1] + insertCost(i),
+          prevRow[i] + deleteCost,
+        );
+        if (j >= 2 && i >= 2 && t === pathChars[j - 2] && typed[i - 2] === c) {
+          best = Math.min(best, rows[j - 2][i - 2] + TUNING.transposition);
+        }
+        newRow[i] = best;
+        if (best < rowMin) rowMin = best;
+      }
+      rows.push(newRow);
+      pathChars.push(c);
+      if (rowMin > budget + 1e-6) {
+        pruned = true;
+        break;
+      }
+    }
+    if (!pruned) {
+      if (current.terminal && pathChars.length > 0) {
+        const word = pathChars.join("");
+        const editCost = applyFirstLetterSurcharge(
+          typed,
+          word,
+          rows[rows.length - 1][n],
+        );
+        if (editCost <= budget + 1e-6) {
+          results.push({
+            word,
+            editCost,
+            freq: current.freq,
+            flags: current.flags,
+          });
+        }
+      }
+      if (current.firstChildIndex !== LEAF) {
+        for (let c = 0; c < current.childCount; c++) {
+          dfs(current.firstChildIndex + c);
+        }
+      }
+    }
+    rows.length = depthBefore + 1;
+    pathChars.length = depthBefore;
+  };
+  dfs(0);
+  return results;
+}
+
+/**
+ * Exact-prefix completions: walk `typed` through the trie, then best-first
+ * over maxSubtreeFreq collect the most frequent terminals below, with a
+ * per-extra-character penalty.
+ */
+function completions(model, typed) {
+  const hit = model.walk(typed);
+  if (!hit) return [];
+  const results = [];
+  const queue = [];
+  if (hit.labelRest.length > 0) {
+    // Prefix ends mid-label: the entry node itself completes the word.
+    queue.push({ index: hit.node.index, suffix: hit.labelRest });
+  } else if (hit.node.firstChildIndex !== LEAF) {
+    for (let c = 0; c < hit.node.childCount; c++) {
+      const child = model.node(hit.node.firstChildIndex + c);
+      queue.push({ index: child.index, suffix: child.label });
+    }
+  }
+  while (queue.length && results.length < TUNING.maxCompletions) {
+    queue.sort(
+      (a, b) =>
+        model.node(b.index).maxSubtreeFreq -
+          model.node(a.index).maxSubtreeFreq || a.index - b.index,
+    );
+    const { index, suffix } = queue.shift();
+    const current = model.node(index);
+    if (current.terminal && suffix.length > 0) {
+      const penalty = Math.min(
+        TUNING.completionCap,
+        TUNING.completionPerChar * suffix.length,
+      );
+      results.push({
+        word: typed + suffix,
+        editCost: penalty,
+        freq: current.freq,
+        flags: current.flags,
+        completionExtra: suffix.length,
+      });
+    }
+    if (current.firstChildIndex !== LEAF) {
+      for (let c = 0; c < current.childCount; c++) {
+        const child = model.node(current.firstChildIndex + c);
+        queue.push({ index: child.index, suffix: suffix + child.label });
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Apostrophe restoration (cant -> can't, wont -> won't): probe the exact
+ * dictionary for the typed word with an apostrophe inserted at each interior
+ * position. Cheap (len-1 exact lookups) and mirrors native iOS behavior.
+ */
+function apostropheVariants(model, typed) {
+  if (typed.includes("'")) return [];
+  const results = [];
+  for (let i = 1; i < typed.length; i++) {
+    const variant = typed.slice(0, i) + "'" + typed.slice(i);
+    const hit = model.find(variant);
+    if (hit) {
+      results.push({
+        word: variant,
+        editCost: TUNING.apostropheRestore,
+        freq: hit.freq,
+        flags: hit.flags,
+      });
+    }
+  }
+  return results;
+}
+
+/**
+ * Missing-space restoration (alot -> "a lot"): split the typed run at each
+ * interior position and offer the pair when both halves are common words.
+ */
+function wordSplits(model, typed) {
+  if (typed.length < 3 || typed.includes("'") || typed.includes("-")) return [];
+  // For a valid typed word ("maybe", "forgot") a split is only plausible when
+  // the corpus has seen the pair ("may be" yes, "for got" no).
+  const typedIsValid = model.find(typed) !== null;
+  const results = [];
+  for (let i = 1; i < typed.length; i++) {
+    const leftWord = typed.slice(0, i);
+    const rightWord = typed.slice(i);
+    // A half may be a contraction typed-form: imnot -> "I'm not".
+    const leftContraction = model.contractions.get(leftWord);
+    const rightContraction = model.contractions.get(rightWord);
+    const left = model.find(leftWord);
+    const right = model.find(rightWord);
+    if (!leftContraction && (!left || left.freq < TUNING.commonFreqFloor)) {
+      continue;
+    }
+    if (!rightContraction && (!right || right.freq < TUNING.commonFreqFloor)) {
+      continue;
+    }
+    const contractionHalf = Boolean(leftContraction || rightContraction);
+    const hasBigram =
+      !contractionHalf &&
+      right !== null &&
+      model.bigramsFor(leftWord).some((bg) => bg.nextId === right.wordId);
+    if (typedIsValid && !hasBigram) continue;
+    const renderHalf = (w, contraction) => contraction ?? (w === "i" ? "I" : w);
+    results.push({
+      word:
+        renderHalf(leftWord, leftContraction) +
+        " " +
+        renderHalf(rightWord, rightContraction),
+      editCost: TUNING.wordSplit,
+      freq: Math.min(left?.freq ?? 255, right?.freq ?? 255),
+      flags: (left?.flags ?? 0) | (right?.flags ?? 0),
+      // Contraction splits are self-evident; plain splits need corpus
+      // evidence before autocorrect may apply them.
+      splitHasBigram: contractionHalf || hasBigram,
+    });
+  }
+  return results;
+}
+
+/** Merged fuzzy + completion candidates, deduped keeping the lowest cost. */
+function search(model, typedRaw) {
+  const typed = typedRaw.toLowerCase();
+  if (!typed || typed.length > 32) return [];
+  const merged = new Map();
+  const addAll = (list) => {
+    for (const c of list) {
+      const existing = merged.get(c.word);
+      if (!existing || c.editCost < existing.editCost) merged.set(c.word, c);
+    }
+  };
+  addAll(fuzzyMatches(model, typed));
+  addAll(apostropheVariants(model, typed));
+  addAll(wordSplits(model, typed));
+  if (typed.length >= 2) addAll(completions(model, typed));
+  return [...merged.values()];
+}
+
+function scoreCandidates(model, rawCandidates, prevWord) {
+  const bigramFreqs = new Map();
+  if (prevWord) {
+    for (const bg of model.bigramsFor(prevWord)) {
+      if (bg.word) bigramFreqs.set(bg.word, bg.freq);
+    }
+  }
+  return rawCandidates
+    .map((c) => {
+      const bigramFreq = bigramFreqs.get(c.word) ?? 0;
+      return {
+        ...c,
+        bigramFreq,
+        score:
+          -c.editCost +
+          (TUNING.freqWeight * c.freq) / 255 +
+          (TUNING.bigramWeight * bigramFreq) / 255,
+      };
+    })
+    .sort((a, b) => b.score - a.score || (a.word < b.word ? -1 : 1));
+}
+
+/**
+ * Full reference evaluation mirroring the native engines' public behavior.
+ * `typedRaw` keeps original casing (for the ALL-CAPS gate). `knownValid`
+ * models the platform vetoes (user lexicon / UITextChecker); `blacklisted`
+ * models the learned "don't correct X to Y" pairs.
+ */
+function evaluate(model, typedRaw, prevWord = null, options = {}) {
+  const { knownValid = false, blacklisted = () => false } = options;
+  const typed = typedRaw.toLowerCase();
+  const empty = {
+    candidates: [],
+    topIsCorrection: false,
+    verbatim: null,
+    replacement: null,
+  };
+  if (!typed || typed.length > 32) return empty;
+  if (/\d/.test(typed)) return empty;
+
+  // The sole one-character correction: standalone lowercase "i" becomes "I"
+  // (mid-sentence, where auto-cap can't help).
+  if (typedRaw === "i" && !blacklisted("i", "i")) {
+    return {
+      candidates: ["I"],
+      topIsCorrection: true,
+      verbatim: typedRaw,
+      replacement: "I",
+    };
+  }
+
+  const ambiguous = AMBIGUOUS_SENTENCE_INITIAL[typed];
+  if (
+    ambiguous &&
+    !prevWord &&
+    typedRaw === typed[0].toUpperCase() + typed.slice(1) &&
+    !blacklisted(typed, ambiguous.toLowerCase())
+  ) {
+    return {
+      candidates: [ambiguous],
+      topIsCorrection: true,
+      verbatim: typedRaw,
+      replacement: ambiguous,
+    };
+  }
+
+  const contraction = model.contractions.get(typed);
+  if (contraction && !blacklisted(typed, contraction.toLowerCase())) {
+    return {
+      candidates: [contraction],
+      topIsCorrection: true,
+      verbatim: typedRaw,
+      replacement: contraction,
+    };
+  }
+
+  // Proper nouns typed all-lowercase self-correct to title case
+  // (france -> France), like native iOS.
+  if (typedRaw === typed) {
+    const typedNode = model.find(typed);
+    if (
+      typedNode &&
+      (typedNode.flags & FLAG_PROPER_NOUN) !== 0 &&
+      !blacklisted(typed, typed)
+    ) {
+      const properForm = typed[0].toUpperCase() + typed.slice(1);
+      return {
+        candidates: [properForm],
+        topIsCorrection: true,
+        verbatim: typedRaw,
+        replacement: properForm,
+      };
+    }
+  }
+
+  const raw = search(model, typed).filter(
+    (c) => c.editCost === 0 || (c.flags & FLAG_NEVER_CORRECT_TO) === 0,
+  );
+  const scored = scoreCandidates(model, raw, prevWord).filter(
+    (c) => c.word !== typed,
+  );
+  const top3 = scored
+    .slice(0, TUNING.maxCandidates)
+    .map((c) => renderCandidate(c.word, c.flags));
+
+  // Autocorrect considers the best candidate that is safe to apply blindly:
+  // speculative completions (long tail / rare / short prefix) and splits the
+  // corpus has never seen stay tap-only, so the strip may lead with
+  // "wichita" while space still commits "which". The fallback may not walk
+  // far down the ranking (sata must not fall through satan to sara), and
+  // short typed words demand tight edits (keyb must not become key).
+  const acTop = scored.find((c) => {
+    if (scored[0].score - c.score > TUNING.autocorrectMaxScoreGap) return false;
+    const extra = c.completionExtra ?? 0;
+    if (extra > TUNING.autocorrectMaxCompletionExtra) return false;
+    if (
+      extra > 0 &&
+      (c.freq < TUNING.commonFreqFloor ||
+        typed.length < TUNING.autocorrectCompletionMinTyped)
+    ) {
+      return false;
+    }
+    if (c.splitHasBigram === false) return false;
+    if (typed.length <= 4 && c.editCost > TUNING.shortTypedMaxEditCost) {
+      return false;
+    }
+    return true;
+  });
+
+  const isAllCapsAcronym =
+    typedRaw.length <= 5 &&
+    typedRaw === typedRaw.toUpperCase() &&
+    /[A-Z]/.test(typedRaw);
+  // Very short typed words have too many plausible neighbors; only replace
+  // them with common words (fuk must not become fum).
+  const shortTypedRareTop =
+    acTop !== undefined &&
+    typed.length <= 3 &&
+    acTop.freq < TUNING.commonFreqFloor;
+  let topIsCorrection = false;
+  if (
+    acTop &&
+    model.find(typed) === null &&
+    !knownValid &&
+    typed.length > 1 &&
+    !isAllCapsAcronym &&
+    !typed.includes("-") &&
+    !shortTypedRareTop &&
+    !blacklisted(typed, acTop.word)
+  ) {
+    const conf = 1 - acTop.editCost / Math.max(typed.length, acTop.word.length);
+    let threshold =
+      acTop.freq >= TUNING.commonFreqFloor
+        ? TUNING.confidenceCommon
+        : TUNING.confidenceRare;
+    if (acTop.bigramFreq > 0) threshold -= TUNING.confidenceBigramBonus;
+    topIsCorrection = conf >= threshold;
+  }
+
+  return {
+    candidates: top3,
+    topIsCorrection,
+    verbatim: topIsCorrection ? typedRaw : null,
+    replacement: topIsCorrection
+      ? renderCandidate(acTop.word, acTop.flags)
+      : null,
+  };
+}
+
+/** Proper nouns (France, Monday, Google) render title-case; split candidates
+ *  (contain a space) keep their per-half casing. */
+function renderCandidate(word, flags) {
+  if ((flags & FLAG_PROPER_NOUN) === 0 || word.includes(" ")) return word;
+  return word[0].toUpperCase() + word.slice(1);
+}
+
+function nextWords(model, prevWord, limit = 3) {
+  return model
+    .bigramsFor(prevWord)
+    .slice(0, limit)
+    .map((bg) => {
+      if (!bg.word) return null;
+      const node = model.find(bg.word);
+      return renderCandidate(bg.word, node ? node.flags : 0);
+    })
+    .filter(Boolean);
+}
+
+module.exports = {
+  TUNING,
+  KEY_ADJACENCY,
+  AMBIGUOUS_SENTENCE_INITIAL,
+  isAdjacent,
+  editBudget,
+  decode,
+  fuzzyMatches,
+  completions,
+  search,
+  applyFirstLetterSurcharge,
+  scoreCandidates,
+  evaluate,
+  nextWords,
+};

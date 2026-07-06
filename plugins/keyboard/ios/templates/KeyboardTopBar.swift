@@ -7,7 +7,7 @@ import UIKit
 protocol KeyboardTopBarDelegate: AnyObject {
     func topBarDidTapRecord(_ topBar: KeyboardTopBar)
     /// A suggestion candidate in the strip was tapped (§5.5).
-    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion candidate: String)
+    func topBar(_ topBar: KeyboardTopBar, didSelectSuggestion slot: SuggestionSlot)
 }
 
 final class KeyboardTopBar: UIView {
@@ -183,12 +183,12 @@ final class KeyboardTopBar: UIView {
     /// Shows the suggestion strip in place of the logo + record button while
     /// the user composes a word. No-op while recording / transcribing so voice
     /// capture always owns the bar.
-    func showSuggestions(_ candidates: [String]) {
-        guard micState == .idle, !candidates.isEmpty else {
+    func showSuggestions(_ slots: [SuggestionSlot]) {
+        guard micState == .idle, !slots.isEmpty else {
             hideSuggestions()
             return
         }
-        suggestionStrip.setCandidates(candidates)
+        suggestionStrip.setSlots(slots)
         suggestionStrip.isHidden = false
         logoView.isHidden = true
         logoLabel.isHidden = true
@@ -291,8 +291,8 @@ final class KeyboardTopBar: UIView {
 // MARK: - SuggestionStripViewDelegate
 
 extension KeyboardTopBar: SuggestionStripViewDelegate {
-    func suggestionStrip(_ strip: SuggestionStripView, didSelect candidate: String) {
-        delegate?.topBar(self, didSelectSuggestion: candidate)
+    func suggestionStrip(_ strip: SuggestionStripView, didSelect slot: SuggestionSlot) {
+        delegate?.topBar(self, didSelectSuggestion: slot)
     }
 }
 

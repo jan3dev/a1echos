@@ -10,7 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles"
+    "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
+    "build:dictionary": "node scripts/keyboard-dictionary/build.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
