@@ -2,6 +2,14 @@ import UIKit
 
 protocol EmojiPickerViewDelegate: AnyObject {
     func emojiPicker(_ view: EmojiPickerView, didSelect emoji: String)
+    /// A grid cell went pressed — `emoji` is the display (tone-applied)
+    /// glyph and `frame` the cell's frame in the picker's coordinate space,
+    /// so the owner can float a preview balloon above it.
+    func emojiPicker(_ view: EmojiPickerView, didHighlight emoji: String, at frame: CGRect)
+    func emojiPickerDidUnhighlight(_ view: EmojiPickerView)
+    /// Long-press on a skin-tone-capable emoji. `base` is the untinted
+    /// emoji the preference is keyed by.
+    func emojiPicker(_ view: EmojiPickerView, didLongPressSkinTonable base: String, at frame: CGRect)
     func emojiPickerDidTapABC(_ view: EmojiPickerView)
     func emojiPickerDidTapDelete(_ view: EmojiPickerView)
     func emojiPickerDidHoldDeleteWord(_ view: EmojiPickerView)
@@ -9,7 +17,7 @@ protocol EmojiPickerViewDelegate: AnyObject {
 }
 
 final class EmojiPickerView: UIView, UICollectionViewDataSource,
-    UICollectionViewDelegate, UITextFieldDelegate {
+    UICollectionViewDelegate, UITextFieldDelegate, UIGestureRecognizerDelegate {
 
     weak var delegate: EmojiPickerViewDelegate?
 
@@ -17,7 +25,6 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
 
     private let searchContainer = UIView()
     private let searchField = UITextField()
-    private let categoryTitleLabel = UILabel()
 
     private var compositionalLayout: UICollectionViewCompositionalLayout!
     private let collectionView: UICollectionView
@@ -44,9 +51,13 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
     // highlight to the section being scrolled away from.
     private var isAnimatingProgrammaticScroll: Bool = false
 
-    private static let searchBarHeight: CGFloat = 32
+    // Opens the skin-tone popover on the hand/finger emojis. Gated in
+    // `gestureRecognizerShouldBegin` so presses on non-tonable emojis are
+    // never cancelled and keep their normal tap flow.
+    private var skinToneLongPress: UILongPressGestureRecognizer!
+
+    private static let searchBarHeight: CGFloat = 40
     private static let stripHeight: CGFloat = 38
-    private static let categoryTitleHeight: CGFloat = 22
     private static let searchBarPadding: CGFloat = 8
     private static let cellSpacing: CGFloat = 2
 
@@ -91,7 +102,7 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         // a more recessed look for the search field so it reads as the
         // primary input affordance.
         searchField.backgroundColor = theme.emojiSearchBarFill
-        searchField.layer.cornerRadius = 10
+        searchField.layer.cornerRadius = EmojiPickerView.searchBarHeight / 2
         searchField.layer.cornerCurve = .continuous
         searchField.borderStyle = .none
         searchField.returnKeyType = .search
@@ -117,13 +128,6 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
 
         searchContainer.addSubview(searchField)
 
-        // ---- Category title (single row, between search and grid) ----
-        categoryTitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        categoryTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        categoryTitleLabel.textColor = theme.emojiSectionHeaderText
-        categoryTitleLabel.textAlignment = .left
-        addSubview(categoryTitleLabel)
-
         // ---- Collection view (middle) ----
         compositionalLayout = makeCompositionalLayout()
         collectionView.collectionViewLayout = compositionalLayout
@@ -136,6 +140,13 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         collectionView.showsVerticalScrollIndicator = false
         collectionView.alwaysBounceHorizontal = true
         addSubview(collectionView)
+
+        skinToneLongPress = UILongPressGestureRecognizer(
+            target: self, action: #selector(handleSkinToneLongPress(_:))
+        )
+        skinToneLongPress.minimumPressDuration = 0.4
+        skinToneLongPress.delegate = self
+        collectionView.addGestureRecognizer(skinToneLongPress)
 
         // ---- Bottom strip ----
         bottomStripContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -173,17 +184,9 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             searchField.topAnchor.constraint(equalTo: searchContainer.topAnchor),
             searchField.bottomAnchor.constraint(equalTo: searchContainer.bottomAnchor),
 
-            // Category title row — flush with the grid's leading column
-            // (12pt = 4pt outer padding around grid + 8pt to align with
-            // the first emoji's content rect).
-            categoryTitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            categoryTitleLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
-            categoryTitleLabel.topAnchor.constraint(equalTo: searchContainer.bottomAnchor, constant: EmojiPickerView.searchBarPadding),
-            categoryTitleLabel.heightAnchor.constraint(equalToConstant: EmojiPickerView.categoryTitleHeight),
-
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            collectionView.topAnchor.constraint(equalTo: categoryTitleLabel.bottomAnchor, constant: 0),
+            collectionView.topAnchor.constraint(equalTo: searchContainer.bottomAnchor, constant: EmojiPickerView.searchBarPadding),
             collectionView.bottomAnchor.constraint(equalTo: bottomStripContainer.topAnchor),
 
             bottomStripContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -204,12 +207,12 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
 
             let spacing = EmojiPickerView.cellSpacing
             let rowCount = self.traitCollection.verticalSizeClass == .compact
-                ? 3 : 5
+                ? 3 : 4
             let interGaps = CGFloat(rowCount - 1)
             // Cap prevents cellH from absorbing all leftover vertical space —
             // without it, reducing cellSpacing just inflates cell padding and
             // the visible gap doesn't change.
-            let maxCellSize: CGFloat = 44
+            let maxCellSize: CGFloat = 52
             let containerH = env.container.effectiveContentSize.height
             let usableH = max(80, containerH - interGaps * spacing - 2 * spacing)
             let cellH = min(floor(usableH / CGFloat(rowCount)), maxCellSize)
@@ -265,6 +268,17 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         rebuildCategories()
     }
 
+    /// Re-renders the visible cells after a skin-tone change. Offscreen
+    /// cells pick the new tone up on dequeue, so no full reload (which
+    /// would also reset the category highlight) is needed.
+    func refreshSkinTones() {
+        let visible = collectionView.indexPathsForVisibleItems
+        guard !visible.isEmpty else { return }
+        UIView.performWithoutAnimation {
+            collectionView.reloadItems(at: visible)
+        }
+    }
+
     // MARK: - Categories
 
     private func rebuildCategories() {
@@ -281,16 +295,6 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         collectionView.reloadData()
         currentCategoryIndex = 0
         updateCategorySelection()
-        updateCategoryTitle()
-    }
-
-    private func updateCategoryTitle() {
-        guard currentCategoryIndex < visibleCategories.count else {
-            categoryTitleLabel.text = nil
-            return
-        }
-        categoryTitleLabel.text =
-            visibleCategories[currentCategoryIndex].stripTitle.uppercased()
     }
 
     private func rebuildCategoryStrip() {
@@ -329,7 +333,6 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         guard idx < visibleCategories.count else { return }
         currentCategoryIndex = idx
         updateCategorySelection()
-        updateCategoryTitle()
         guard collectionView.numberOfItems(inSection: idx) > 0 else { return }
         let indexPath = IndexPath(item: 0, section: idx)
         isAnimatingProgrammaticScroll = true
@@ -362,22 +365,71 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             for: indexPath
         ) as! EmojiCell
         cell.configure(
-            with: sectionData[indexPath.section][indexPath.item],
+            with: SkinTonePreferences.shared.display(base(at: indexPath) ?? ""),
             theme: theme
         )
         return cell
     }
 
+    /// The untinted base emoji at `indexPath`, or nil if the path is stale.
+    /// Centralizes the section/item bounds check every tap / highlight /
+    /// long-press path needs, so the `sectionData` shape is asserted once.
+    private func base(at indexPath: IndexPath) -> String? {
+        guard indexPath.section < sectionData.count,
+              indexPath.item < sectionData[indexPath.section].count else { return nil }
+        return sectionData[indexPath.section][indexPath.item]
+    }
+
     // MARK: - UICollectionViewDelegate
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard indexPath.section < sectionData.count,
-              indexPath.item < sectionData[indexPath.section].count else { return }
-        let emoji = sectionData[indexPath.section][indexPath.item]
+        guard let emoji = base(at: indexPath) else { return }
         RecentEmojis.shared.record(emoji)
         delegate?.emojiPicker(self, didSelect: emoji)
         HapticManager.keyTap()
         collectionView.deselectItem(at: indexPath, animated: false)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didHighlightItemAt indexPath: IndexPath) {
+        guard let emoji = base(at: indexPath),
+              let cell = collectionView.cellForItem(at: indexPath) else { return }
+        delegate?.emojiPicker(
+            self, didHighlight: SkinTonePreferences.shared.display(emoji),
+            at: cell.convert(cell.bounds, to: self)
+        )
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didUnhighlightItemAt indexPath: IndexPath) {
+        delegate?.emojiPickerDidUnhighlight(self)
+    }
+
+    // MARK: - Skin tone long-press
+
+    @objc private func handleSkinToneLongPress(_ gr: UILongPressGestureRecognizer) {
+        guard gr.state == .began,
+              let indexPath = collectionView.indexPathForItem(at: gr.location(in: collectionView)),
+              let base = base(at: indexPath),
+              let cell = collectionView.cellForItem(at: indexPath) else { return }
+        // Recognition cancels the collection view's touches, so the cell
+        // unhighlights (hiding the balloon) and never commits a select.
+        delegate?.emojiPicker(
+            self, didLongPressSkinTonable: base,
+            at: cell.convert(cell.bounds, to: self)
+        )
+    }
+
+    // UIView already declares this (for gestures attached to the view
+    // itself), hence the `override`; the same method doubles as our
+    // UIGestureRecognizerDelegate conformance for the collection view's
+    // long-press.
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer === skinToneLongPress else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        guard let indexPath = collectionView.indexPathForItem(
+            at: gestureRecognizer.location(in: collectionView)
+        ), let base = base(at: indexPath) else { return false }
+        return EmojiSkinTones.supports(base)
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -388,7 +440,6 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         if leftSection != currentCategoryIndex {
             currentCategoryIndex = leftSection
             updateCategorySelection()
-            updateCategoryTitle()
         }
     }
 
@@ -553,6 +604,7 @@ private final class EmojiCell: UICollectionViewCell {
     private let label = UILabel()
     private let highlightView = UIView()
     private var theme = KeyboardTheme()
+    private var lastGlyphHeight: CGFloat = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -566,9 +618,6 @@ private final class EmojiCell: UICollectionViewCell {
 
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textAlignment = .center
-        label.font = .systemFont(ofSize: 30)
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.6
         contentView.addSubview(label)
 
         NSLayoutConstraint.activate([
@@ -584,6 +633,18 @@ private final class EmojiCell: UICollectionViewCell {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Glyph scales with the cell. The 0.75 ratio keeps native-sized
+        // ~39pt emojis in 52pt portrait cells while leaving gaps as tight
+        // as the system emoji keyboard's. Only rebuild the font when the
+        // cell height actually changes — layoutSubviews fires repeatedly
+        // and reassigning the font re-lays out the label each time.
+        guard bounds.height != lastGlyphHeight else { return }
+        lastGlyphHeight = bounds.height
+        label.font = .systemFont(ofSize: floor(bounds.height * 0.75))
     }
 
     func configure(with emoji: String, theme: KeyboardTheme) {
@@ -614,24 +675,6 @@ private final class EmojiCell: UICollectionViewCell {
                         : .identity
                 }
             )
-        }
-    }
-}
-
-// MARK: - Category title
-
-private extension EmojiCategory {
-    var stripTitle: String {
-        switch self {
-        case .recents: return "Frequently Used"
-        case .smileys: return "Smileys & People"
-        case .animals: return "Animals & Nature"
-        case .food: return "Food & Drink"
-        case .activity: return "Activity"
-        case .travel: return "Travel & Places"
-        case .objects: return "Objects"
-        case .symbols: return "Symbols"
-        case .flags: return "Flags"
         }
     }
 }

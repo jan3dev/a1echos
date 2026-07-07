@@ -50,7 +50,7 @@ class KeyboardView: UIInputView {
     /// Fires whenever `currentLayout` switches — used by
     /// `EchosKeyboardViewController` to re-evaluate the keyboard height
     /// constraint so the emoji modes get the extra vertical room they need
-    /// for 5 native-sized emoji rows without making the QWERTY mode oversized.
+    /// for 4 native-sized emoji rows without making the QWERTY mode oversized.
     var onLayoutModeChange: ((KeyboardLayout.LayoutMode) -> Void)?
 
     // Inferred from verticalSizeClass rather than bounds.width > bounds.height
@@ -65,7 +65,11 @@ class KeyboardView: UIInputView {
         let rowsHeight: CGFloat
         switch currentLayout {
         case .emoji, .emojiSearch:
-            rowsHeight = isLandscape ? 236 : 366
+            // Portrait 324 makes the picker's grid exactly 4×52pt rows with
+            // insets equal to the 2pt inter-row gap (8+40+8 search band +
+            // 218 grid + 38 strip + 4/8 outer margins), and the search
+            // overlay's 56pt results strip equally snug.
+            rowsHeight = isLandscape ? 236 : 324
         case .numberPad, .decimalPad:
             // Top bar is hidden on numeric pads — return the rows-only budget.
             return isLandscape ? 154 : 212
@@ -83,6 +87,14 @@ class KeyboardView: UIInputView {
     private let topBar = KeyboardTopBar()
     private let keyPreview = KeyPreviewView()
     private let keyVariants = KeyVariantsView()
+    // The emoji grid's balloon — same shape as the QWERTY one but with a
+    // drop shadow (the picker backdrop has no key seams to anchor it) and a
+    // larger glyph cap so the emoji reads bigger than its 39pt grid cell.
+    private let emojiPreview = KeyPreviewView(
+        showsShadow: true, maxLabelFontSize: 44, glyphHeightRatio: 0.78
+    )
+    // Sticky skin-tone popover; non-nil only while presented.
+    private var skinTonePopup: SkinToneVariantsView?
     private let toast = KeyboardToastView()
     private var rowStackView: UIStackView!
     private var emojiPickerView: EmojiPickerView?
@@ -680,6 +692,13 @@ class KeyboardView: UIInputView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let target = super.hitTest(point, with: event)
         if let target = target {
+            // The skin-tone popover covers the whole keyboard and swallows
+            // every touch (it's sticky until a tone is tapped) — it must
+            // win before the rows' body-claim below.
+            if let popup = skinTonePopup,
+               target === popup || target.isDescendant(of: popup) {
+                return target
+            }
             if target === topBar || target.isDescendant(of: topBar) { return target }
             if !keyVariants.isHidden,
                target === keyVariants || target.isDescendant(of: keyVariants) {
@@ -751,7 +770,7 @@ class KeyboardView: UIInputView {
                 // the repeat timer only fires its first tick after a 0.4s hold,
                 // so without this a press feels dead until the hold kicks in.
                 // The owner's release tap is suppressed to avoid a double.
-                delegate?.keyboardViewDidTapDelete(self)
+                performDelete()
                 startDeleteRepeat()
             }
         case .emoji:
@@ -1151,6 +1170,8 @@ class KeyboardView: UIInputView {
         previewHideTimer = nil
         keyPreview.hide()
         keyVariants.hide()
+        emojiPreview.hide()
+        dismissSkinTonePopup()
         setTrackpadBlankOnAllKeys(false)
         stopDeleteRepeat()
     }
@@ -1171,13 +1192,43 @@ class KeyboardView: UIInputView {
     private func startDeleteRepeat() {
         deleteRepeater.onCharRepeat = { [weak self] in
             guard let self else { return }
-            self.delegate?.keyboardViewDidTapDelete(self)
+            self.performDelete()
         }
         deleteRepeater.onWordRepeat = { [weak self] in
             guard let self else { return }
-            self.delegate?.keyboardViewDidHoldDeleteWord(self)
+            self.performDeleteWord()
         }
         deleteRepeater.start()
+    }
+
+    /// All delete paths (key-down first delete, auto-repeat ticks) funnel
+    /// through here so `.emojiSearch` consumes them into the local query
+    /// instead of the host app's text proxy.
+    private func performDelete() {
+        if currentLayout == .emojiSearch {
+            if !emojiSearchQuery.isEmpty {
+                emojiSearchQuery.removeLast()
+                refreshSearchOverlay()
+            }
+            return
+        }
+        delegate?.keyboardViewDidTapDelete(self)
+    }
+
+    private func performDeleteWord() {
+        if currentLayout == .emojiSearch {
+            if !emojiSearchQuery.isEmpty {
+                while emojiSearchQuery.hasSuffix(" ") {
+                    emojiSearchQuery.removeLast()
+                }
+                while let last = emojiSearchQuery.last, last != " " {
+                    emojiSearchQuery.removeLast()
+                }
+                refreshSearchOverlay()
+            }
+            return
+        }
+        delegate?.keyboardViewDidHoldDeleteWord(self)
     }
 
     private func stopDeleteRepeat() {
@@ -1452,7 +1503,26 @@ extension KeyboardView: EmojiPickerViewDelegate {
     }
 
     func emojiPicker(_ view: EmojiPickerView, didSelect emoji: String) {
-        delegate?.keyboardView(self, didTapCharacter: emoji)
+        delegate?.keyboardView(
+            self, didTapCharacter: SkinTonePreferences.shared.display(emoji)
+        )
+    }
+
+    func emojiPicker(_ view: EmojiPickerView, didHighlight emoji: String, at frame: CGRect) {
+        guard skinTonePopup == nil else { return }
+        emojiPreview.show(
+            character: emoji, over: view.convert(frame, to: self), in: self
+        )
+    }
+
+    func emojiPickerDidUnhighlight(_ view: EmojiPickerView) {
+        emojiPreview.hide()
+    }
+
+    func emojiPicker(
+        _ view: EmojiPickerView, didLongPressSkinTonable base: String, at frame: CGRect
+    ) {
+        presentSkinTonePopup(for: base, anchor: view.convert(frame, to: self))
     }
 
     func emojiPickerDidTapABC(_ view: EmojiPickerView) {
@@ -1531,10 +1601,63 @@ extension KeyboardView: EmojiSearchOverlayViewDelegate {
     func emojiSearchOverlay(
         _ view: EmojiSearchOverlayView, didSelect emoji: String
     ) {
-        delegate?.keyboardView(self, didTapCharacter: emoji)
+        // Stay in search after inserting — the user often picks several
+        // emojis from one query; ABC/return are the explicit exits.
+        delegate?.keyboardView(
+            self, didTapCharacter: SkinTonePreferences.shared.display(emoji)
+        )
         RecentEmojis.shared.record(emoji)
-        emojiSearchQuery = ""
-        switchToLayout(.emoji)
+    }
+
+    func emojiSearchOverlay(
+        _ view: EmojiSearchOverlayView,
+        didLongPressSkinTonable base: String, at frame: CGRect
+    ) {
+        presentSkinTonePopup(for: base, anchor: view.convert(frame, to: self))
+    }
+}
+
+// MARK: - Skin tone popover
+
+extension KeyboardView {
+
+    /// Floats the sticky skin-tone popover above `anchor` (own coordinate
+    /// space). Tapping a variant persists the tone for that emoji, inserts
+    /// it, and refreshes whichever emoji surface is showing.
+    fileprivate func presentSkinTonePopup(for base: String, anchor: CGRect) {
+        dismissSkinTonePopup()
+        emojiPreview.hide()
+        let popup = SkinToneVariantsView(
+            base: base,
+            currentTone: SkinTonePreferences.shared.tone(for: base),
+            anchor: anchor
+        )
+        popup.onCancel = { [weak self] in
+            self?.dismissSkinTonePopup()
+        }
+        popup.onSelect = { [weak self] tone in
+            guard let self else { return }
+            self.dismissSkinTonePopup()
+            SkinTonePreferences.shared.setTone(tone, for: base)
+            self.delegate?.keyboardView(
+                self, didTapCharacter: EmojiSkinTones.applying(tone, to: base)
+            )
+            RecentEmojis.shared.record(base)
+            HapticManager.keyTap()
+            self.emojiPickerView?.refreshSkinTones()
+            if self.currentLayout == .emojiSearch {
+                // Stay in search (like a plain result tap) but rebuild the
+                // strip so the result button shows the new tone.
+                self.refreshSearchOverlay()
+            }
+        }
+        popup.present(in: self)
+        skinTonePopup = popup
+    }
+
+    fileprivate func dismissSkinTonePopup() {
+        skinTonePopup?.removeFromSuperview()
+        skinTonePopup = nil
     }
 }
 

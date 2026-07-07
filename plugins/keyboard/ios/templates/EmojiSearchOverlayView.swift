@@ -5,13 +5,29 @@ protocol EmojiSearchOverlayViewDelegate: AnyObject {
     func emojiSearchOverlay(
         _ view: EmojiSearchOverlayView, didSelect emoji: String
     )
+    /// Long-press on a skin-tone-capable result. `base` is the untinted
+    /// emoji; `frame` is the result button's frame in the overlay's
+    /// coordinate space.
+    func emojiSearchOverlay(
+        _ view: EmojiSearchOverlayView,
+        didLongPressSkinTonable base: String, at frame: CGRect
+    )
 }
 
 final class EmojiSearchOverlayView: UIView {
 
-    // 60 portrait / 36 landscape so the overlay fits the shorter landscape keyboard.
+    private static let searchBarHeight: CGFloat = 40
+
+    // 56 portrait (52pt result cells + 2pt breathing room, mirroring the
+    // grid's row gap) / 36 landscape so the overlay fits the shorter
+    // landscape keyboard.
     private var resultsStripHeight: CGFloat {
-        traitCollection.verticalSizeClass == .compact ? 36 : 60
+        traitCollection.verticalSizeClass == .compact ? 36 : 56
+    }
+    // Result cells mirror the picker grid so search feels continuous:
+    // 52pt cells / ~39pt glyphs portrait, 44pt / ~33pt landscape.
+    private var resultCellSide: CGFloat {
+        traitCollection.verticalSizeClass == .compact ? 44 : 52
     }
     private var resultsStripHeightConstraint: NSLayoutConstraint!
 
@@ -26,6 +42,7 @@ final class EmojiSearchOverlayView: UIView {
     private let resultsScroll = ResultsScrollView()
     private let resultsStack = UIStackView()
     private var pillInternals = UIStackView()
+    private var pillLeadingConstraint: NSLayoutConstraint!
 
     init(theme: KeyboardTheme) {
         self.theme = theme
@@ -50,6 +67,11 @@ final class EmojiSearchOverlayView: UIView {
             placeholderLabel.isHidden = true
             clearButton.isHidden = false
         }
+        // With an empty query the cursor sits in front of the placeholder;
+        // pull the pill left by the cursor's footprint (1.5pt + 2pt stack
+        // spacing) so the placeholder stays exactly where the picker's
+        // search field rendered it — no jump on focus.
+        pillLeadingConstraint.constant = query.isEmpty ? 2.5 : 6
         rebuildResults(results, hasQuery: !query.isEmpty)
     }
 
@@ -58,7 +80,7 @@ final class EmojiSearchOverlayView: UIView {
 
         searchBackground.translatesAutoresizingMaskIntoConstraints = false
         searchBackground.backgroundColor = theme.emojiSearchBarFill
-        searchBackground.layer.cornerRadius = 10
+        searchBackground.layer.cornerRadius = EmojiSearchOverlayView.searchBarHeight / 2
         searchBackground.layer.cornerCurve = .continuous
         addSubview(searchBackground)
 
@@ -88,7 +110,7 @@ final class EmojiSearchOverlayView: UIView {
         clearButton.setImage(
             UIImage(systemName: "xmark.circle.fill"), for: .normal
         )
-        clearButton.tintColor = theme.emojiCategoryInactiveTint
+        clearButton.tintColor = theme.emojiSearchClearFill
         clearButton.isHidden = true
         clearButton.addTarget(
             self, action: #selector(handleClearTap), for: .touchUpInside
@@ -107,18 +129,22 @@ final class EmojiSearchOverlayView: UIView {
         searchBackground.addSubview(pillInternals)
         searchBackground.addSubview(clearButton)
 
+        pillLeadingConstraint = pillInternals.leadingAnchor.constraint(
+            equalTo: glass.trailingAnchor, constant: 2.5
+        )
+
         NSLayoutConstraint.activate([
             searchBackground.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             searchBackground.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             searchBackground.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            searchBackground.heightAnchor.constraint(equalToConstant: 32),
+            searchBackground.heightAnchor.constraint(equalToConstant: EmojiSearchOverlayView.searchBarHeight),
 
             glass.leadingAnchor.constraint(equalTo: searchBackground.leadingAnchor, constant: 10),
             glass.centerYAnchor.constraint(equalTo: searchBackground.centerYAnchor),
             glass.widthAnchor.constraint(equalToConstant: 20),
             glass.heightAnchor.constraint(equalToConstant: 20),
 
-            pillInternals.leadingAnchor.constraint(equalTo: glass.trailingAnchor, constant: 6),
+            pillLeadingConstraint,
             pillInternals.trailingAnchor.constraint(lessThanOrEqualTo: clearButton.leadingAnchor, constant: -4),
             pillInternals.centerYAnchor.constraint(equalTo: searchBackground.centerYAnchor),
 
@@ -139,7 +165,7 @@ final class EmojiSearchOverlayView: UIView {
 
         resultsStack.axis = .horizontal
         resultsStack.alignment = .center
-        resultsStack.spacing = 4
+        resultsStack.spacing = 2
         resultsStack.translatesAutoresizingMaskIntoConstraints = false
         resultsScroll.addSubview(resultsStack)
 
@@ -195,18 +221,33 @@ final class EmojiSearchOverlayView: UIView {
         }
         if emojis.isEmpty {
             let empty = UILabel()
-            empty.text = hasQuery ? "No emojis found" : ""
-            empty.font = .systemFont(ofSize: 13)
+            empty.text = hasQuery ? "No Results" : ""
+            empty.font = .systemFont(ofSize: 15)
+            empty.textAlignment = .center
             empty.textColor = theme.emojiCategoryInactiveTint
             resultsStack.addArrangedSubview(empty)
+            // Span the visible strip (minus the stack's 8pt side insets)
+            // so the text centers in the row instead of hugging leading.
+            empty.widthAnchor.constraint(
+                equalTo: resultsScroll.frameLayoutGuide.widthAnchor,
+                constant: -16
+            ).isActive = true
             return
         }
+        let side = resultCellSide
         let capped = emojis.prefix(60)
         for emoji in capped {
-            let btn = SearchResultButton(emoji: emoji)
+            let btn = SearchResultButton(emoji: emoji, fontSize: floor(side * 0.75))
             btn.addTarget(self, action: #selector(handleResultTap(_:)), for: .touchUpInside)
+            if EmojiSkinTones.supports(emoji) {
+                let lp = UILongPressGestureRecognizer(
+                    target: self, action: #selector(handleResultLongPress(_:))
+                )
+                lp.minimumPressDuration = 0.4
+                btn.addGestureRecognizer(lp)
+            }
             resultsStack.addArrangedSubview(btn)
-            btn.widthAnchor.constraint(equalToConstant: 52).isActive = true
+            btn.widthAnchor.constraint(equalToConstant: side).isActive = true
         }
     }
 
@@ -217,6 +258,17 @@ final class EmojiSearchOverlayView: UIView {
     @objc private func handleResultTap(_ sender: SearchResultButton) {
         guard let emoji = sender.emoji else { return }
         delegate?.emojiSearchOverlay(self, didSelect: emoji)
+    }
+
+    @objc private func handleResultLongPress(_ gr: UILongPressGestureRecognizer) {
+        // Recognition cancels the button's touch, so no tap-select fires.
+        guard gr.state == .began,
+              let btn = gr.view as? SearchResultButton,
+              let base = btn.emoji else { return }
+        delegate?.emojiSearchOverlay(
+            self, didLongPressSkinTonable: base,
+            at: btn.convert(btn.bounds, to: self)
+        )
     }
 }
 
@@ -229,13 +281,15 @@ private final class ResultsScrollView: UIScrollView {
 }
 
 private final class SearchResultButton: UIButton {
+    /// The untinted base emoji — selection and skin-tone preferences stay
+    /// keyed by this; only the title shows the remembered tone.
     let emoji: String?
 
-    init(emoji: String) {
+    init(emoji: String, fontSize: CGFloat) {
         self.emoji = emoji
         super.init(frame: .zero)
-        setTitle(emoji, for: .normal)
-        titleLabel?.font = .systemFont(ofSize: 36)
+        setTitle(SkinTonePreferences.shared.display(emoji), for: .normal)
+        titleLabel?.font = .systemFont(ofSize: fontSize)
         adjustsImageWhenHighlighted = false
     }
 

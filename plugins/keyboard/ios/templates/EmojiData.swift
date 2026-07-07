@@ -222,6 +222,82 @@ enum EmojiData {
     }
 }
 
+// MARK: - Skin tones
+
+/// Skin-tone support for the hand/finger emojis. Applying a tone strips the
+/// variation selector (U+FE0F) and appends the Fitzpatrick modifier — the
+/// standard composition for single-person emojis (✌️ → U+270C U+1F3FB).
+enum EmojiSkinTones {
+
+    /// Fitzpatrick modifiers, light → dark.
+    static let tones: [String] = [
+        "\u{1F3FB}", "\u{1F3FC}", "\u{1F3FD}", "\u{1F3FE}", "\u{1F3FF}",
+    ]
+
+    /// The hand/finger emojis from the picker dataset that get the
+    /// long-press skin-tone popover.
+    static let supportedBases: Set<String> = [
+        "👋", "🤚", "✋", "🖖", "👌", "🤏", "✌️", "🤞", "🤟", "🤘",
+        "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍", "👎", "✊",
+        "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "💪",
+    ]
+
+    static func supports(_ emoji: String) -> Bool {
+        supportedBases.contains(emoji)
+    }
+
+    static func applying(_ tone: String?, to base: String) -> String {
+        guard let tone else { return base }
+        // A modifier implies emoji presentation, so the variation selector
+        // must not remain (U+270C U+FE0F U+1F3FB doesn't render as one glyph).
+        return base.replacingOccurrences(of: "\u{FE0F}", with: "") + tone
+    }
+}
+
+/// Remembers the user's skin-tone choice per emoji (not one global tone —
+/// matching native iOS, where each hand emoji keeps its own variant). Same
+/// app-group backing as `RecentEmojis`.
+final class SkinTonePreferences {
+
+    static let shared = SkinTonePreferences()
+
+    private static let storageKey = "EchosKeyboard.emojiSkinTones"
+
+    private let defaults: UserDefaults
+    // Cached in memory so `display(_:)` — called per cell dequeue while
+    // scrolling the grid and per result button on every search keystroke —
+    // doesn't deserialize the whole app-group dictionary on the main thread
+    // each time. The keyboard is the sole writer during a session, so the
+    // cache stays authoritative; `setTone` writes through.
+    private var map: [String: String]
+
+    private init() {
+        let defaults = UserDefaults(suiteName: KeyboardSettings.appGroupID) ?? .standard
+        self.defaults = defaults
+        self.map = defaults.dictionary(forKey: SkinTonePreferences.storageKey)
+            as? [String: String] ?? [:]
+    }
+
+    /// The remembered Fitzpatrick modifier for `base`, or nil for the
+    /// golden default.
+    func tone(for base: String) -> String? {
+        map[base]
+    }
+
+    /// Passing nil resets `base` back to the golden default.
+    func setTone(_ tone: String?, for base: String) {
+        map[base] = tone
+        defaults.set(map, forKey: SkinTonePreferences.storageKey)
+    }
+
+    /// The emoji to render and insert for `base` — its remembered tone
+    /// applied. Data stays keyed by base everywhere (grid, recents, search
+    /// index) so a tone change retints every surface at once.
+    func display(_ base: String) -> String {
+        EmojiSkinTones.applying(tone(for: base), to: base)
+    }
+}
+
 /// Persists the last ~30 emojis the user picked, so the Recents tab feels
 /// useful across keyboard sessions. Backed by the app group's UserDefaults
 /// so the host app can read the same data later if we ever want to.

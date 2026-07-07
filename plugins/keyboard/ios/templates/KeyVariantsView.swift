@@ -200,3 +200,198 @@ final class KeyVariantsView: UIView {
         highlightLayer.fillColor = theme.micButtonBackground.cgColor
     }
 }
+
+// MARK: - Skin tone popover
+
+/// Sticky skin-tone popover for the hand/finger emojis. Unlike
+/// `KeyVariantsView` (track-while-pressed, owner-driven), this covers the
+/// whole keyboard and swallows every touch until the user taps one of the
+/// variants — golden default first, then a divider, then the five
+/// Fitzpatrick tones light → dark.
+final class SkinToneVariantsView: UIView {
+
+    /// Fired with the chosen Fitzpatrick modifier (nil = golden default).
+    var onSelect: ((String?) -> Void)?
+    /// Fired when the user dismisses without picking — a release outside
+    /// every cell. Must not write a preference or insert a glyph.
+    var onCancel: (() -> Void)?
+
+    private let theme = KeyboardTheme()
+    private let bubble = UIView()
+    private let currentPill = UIView()
+    private let hoverPill = UIView()
+    private var cellLabels: [UILabel] = []
+    private var cellFrames: [CGRect] = []
+    /// One entry per cell: nil for the golden default, else the modifier.
+    private let options: [String?]
+    private let base: String
+    private let currentTone: String?
+    private let anchor: CGRect
+
+    private static let cellSide: CGFloat = 38
+    private static let cellSpacing: CGFloat = 2
+    private static let outerPadding: CGFloat = 6
+    /// Horizontal breathing room on each side of the 1pt divider line.
+    private static let dividerGap: CGFloat = 5
+    private static let cornerRadius: CGFloat = 12
+    private static let gapAboveAnchor: CGFloat = 6
+    /// Grid glyphs render at ~39pt; the popover's are slightly smaller.
+    private static let glyphPointSize: CGFloat = 30
+
+    /// `anchor` is the long-pressed emoji's frame in the presenting
+    /// container's coordinate space.
+    init(base: String, currentTone: String?, anchor: CGRect) {
+        self.base = base
+        self.currentTone = currentTone
+        self.anchor = anchor
+        self.options = [nil] + EmojiSkinTones.tones
+        super.init(frame: .zero)
+        backgroundColor = .clear
+        buildBubble()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) not implemented")
+    }
+
+    func present(in container: UIView) {
+        frame = container.bounds
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        container.addSubview(self)
+
+        var x = anchor.midX - bubble.bounds.width / 2
+        x = max(4, min(container.bounds.width - bubble.bounds.width - 4, x))
+        // Prefer floating above the anchor; when there isn't room (top-row
+        // grid emojis, the search-result strip near the top), drop below it
+        // rather than clamping on top of the emoji the user long-pressed.
+        let above = anchor.minY - bubble.bounds.height - Self.gapAboveAnchor
+        let y = above >= 2 ? above : anchor.maxY + Self.gapAboveAnchor
+        bubble.frame.origin = CGPoint(x: x, y: y)
+
+        alpha = 0
+        UIView.animate(withDuration: 0.08) { self.alpha = 1 }
+    }
+
+    // MARK: - Touches
+
+    // The view is sticky by construction: any touch that doesn't end on a
+    // variant cell is simply consumed, so the keyboard beneath stays inert
+    // until a tone is picked.
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        updateHover(touches)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        updateHover(touches)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        hoverPill.isHidden = true
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        hoverPill.isHidden = true
+        guard let touch = touches.first,
+              let index = cellIndex(at: touch.location(in: bubble)) else {
+            // Released outside every cell → dismiss with no insertion or
+            // preference write (matches native tap-outside-to-cancel).
+            onCancel?()
+            return
+        }
+        onSelect?(options[index])
+    }
+
+    private func updateHover(_ touches: Set<UITouch>) {
+        guard let touch = touches.first,
+              let index = cellIndex(at: touch.location(in: bubble)) else {
+            hoverPill.isHidden = true
+            return
+        }
+        hoverPill.frame = cellFrames[index].insetBy(dx: -1, dy: -1)
+        hoverPill.isHidden = false
+    }
+
+    private func cellIndex(at pointInBubble: CGPoint) -> Int? {
+        // Vertical forgiveness for near-misses on the compact cells.
+        // Horizontal is capped at half the inter-cell gap so adjacent hit
+        // rects can't overlap — an overlap would bias seam taps to the
+        // leftmost (lighter) tone via `firstIndex`.
+        cellFrames.firstIndex {
+            $0.insetBy(dx: -Self.cellSpacing / 2, dy: -6).contains(pointInBubble)
+        }
+    }
+
+    // MARK: - Layout
+
+    private func buildBubble() {
+        let side = Self.cellSide
+        let dividerBand = 2 * Self.dividerGap + 1
+        let width = 2 * Self.outerPadding
+            + CGFloat(options.count) * side
+            + CGFloat(options.count - 2) * Self.cellSpacing
+            + dividerBand
+        let height = side + 2 * Self.outerPadding
+
+        bubble.bounds = CGRect(x: 0, y: 0, width: width, height: height)
+        bubble.backgroundColor = theme.keyPopupBackground
+        bubble.layer.cornerRadius = Self.cornerRadius
+        bubble.layer.cornerCurve = .continuous
+        bubble.layer.shadowColor = UIColor.black.cgColor
+        bubble.layer.shadowOpacity = 0.25
+        bubble.layer.shadowRadius = 10
+        bubble.layer.shadowOffset = CGSize(width: 0, height: 4)
+        bubble.layer.shadowPath = UIBezierPath(
+            roundedRect: bubble.bounds, cornerRadius: Self.cornerRadius
+        ).cgPath
+        addSubview(bubble)
+
+        // Selection pill sits under the remembered variant so the user can
+        // see (and re-tap) the current choice.
+        currentPill.backgroundColor = theme.emojiCategorySelectedFill
+        currentPill.layer.cornerRadius = 8
+        currentPill.layer.cornerCurve = .continuous
+        currentPill.isHidden = true
+        bubble.addSubview(currentPill)
+
+        hoverPill.backgroundColor = theme.emojiCellPressedFill
+        hoverPill.layer.cornerRadius = 8
+        hoverPill.layer.cornerCurve = .continuous
+        hoverPill.isHidden = true
+        bubble.addSubview(hoverPill)
+
+        var x = Self.outerPadding
+        for (i, option) in options.enumerated() {
+            let cellFrame = CGRect(
+                x: x, y: Self.outerPadding, width: side, height: side
+            )
+            let label = UILabel(frame: cellFrame)
+            label.text = EmojiSkinTones.applying(option, to: base)
+            label.textAlignment = .center
+            label.font = .systemFont(ofSize: Self.glyphPointSize)
+            bubble.addSubview(label)
+            cellLabels.append(label)
+            cellFrames.append(cellFrame)
+
+            if option == currentTone {
+                currentPill.frame = cellFrame.insetBy(dx: -1, dy: -1)
+                currentPill.isHidden = false
+            }
+
+            if i == 0 {
+                // Grey divider separating the golden default from the tones.
+                let line = UIView(frame: CGRect(
+                    x: x + side + Self.dividerGap,
+                    y: Self.outerPadding + side * 0.2,
+                    width: 1,
+                    height: side * 0.6
+                ))
+                line.backgroundColor = theme.emojiCategoryInactiveTint
+                bubble.addSubview(line)
+                x += side + dividerBand
+            } else {
+                x += side + Self.cellSpacing
+            }
+        }
+    }
+}

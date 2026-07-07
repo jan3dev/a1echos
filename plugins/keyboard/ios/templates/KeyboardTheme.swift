@@ -94,17 +94,20 @@ struct KeyboardTheme {
         return UIColor.black.withAlphaComponent(0.08)
     }
 
-    /// Search-pill fill in the emoji picker. Native iOS 26 renders the
-    /// search field as a tone *lighter* than the keyboard backdrop in
-    /// both appearances — a near-white pill on the light grey backdrop,
-    /// and a subtle lift over the dark backdrop. Using a black overlay
-    /// in light mode makes the field read as recessed/darker, which
-    /// breaks parity with the system emoji keyboard.
+    /// Search-pill fill in the emoji picker. Exact design tokens.
     let emojiSearchBarFill: UIColor = UIColor { traits in
         if traits.userInterfaceStyle == .dark {
-            return UIColor.white.withAlphaComponent(0.18)
+            return UIColor(red: 49 / 255, green: 49 / 255, blue: 51 / 255, alpha: 1)
         }
-        return UIColor.white.withAlphaComponent(0.7)
+        return UIColor(red: 236 / 255, green: 237 / 255, blue: 242 / 255, alpha: 1)
+    }
+
+    /// Circle fill of the search bar's clear (xmark.circle.fill) button.
+    let emojiSearchClearFill: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor(red: 100 / 255, green: 100 / 255, blue: 102 / 255, alpha: 1)
+        }
+        return UIColor(red: 188 / 255, green: 189 / 255, blue: 191 / 255, alpha: 1)
     }
 
     /// Tint for inactive category icons. Active ones use `keyText`.
@@ -114,9 +117,6 @@ struct KeyboardTheme {
         }
         return UIColor.black.withAlphaComponent(0.40)
     }
-
-    /// Caption color above each section block in the emoji scroll view.
-    let emojiSectionHeaderText: UIColor = .secondaryLabel
 
     /// Background flash drawn behind an emoji cell while it's pressed.
     let emojiCellPressedFill: UIColor = UIColor { traits in

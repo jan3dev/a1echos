@@ -155,7 +155,11 @@ class KeyButton: UIControl {
             labelCenterYConstraint = centerY
         }
 
-        if let name = keyDefinition.symbolName {
+        if keyDefinition.type == .emoji {
+            symbolView.image = KeyButton.emojiKeyGlyph
+            symbolView.isHidden = false
+            label.isHidden = true
+        } else if let name = keyDefinition.symbolName {
             symbolView.image = UIImage(systemName: name)
             symbolView.isHidden = false
             label.isHidden = true
@@ -192,6 +196,96 @@ class KeyButton: UIControl {
         if gr.state == .began {
             onLongPress?(self)
         }
+    }
+
+    // Native iOS draws its emoji-key affordance as an open-mouth grin
+    // (teeth included): light theme is an outlined face with a filled
+    // mouth, dark theme a solid disc with the features punched out.
+    // No SF Symbol matches, so render both by hand and pair them in a
+    // UIImageAsset so the image view swaps variants on trait changes.
+    // Template mode so they follow `symbolView.tintColor` like SF glyphs.
+    private static let emojiKeyGlyph: UIImage = {
+        let asset = UIImageAsset()
+        asset.register(
+            makeEmojiKeyGlyph(outlined: true),
+            with: UITraitCollection(userInterfaceStyle: .light)
+        )
+        asset.register(
+            makeEmojiKeyGlyph(outlined: false),
+            with: UITraitCollection(userInterfaceStyle: .dark)
+        )
+        return asset.image(with: UITraitCollection(userInterfaceStyle: .light))
+    }()
+
+    private static func makeEmojiKeyGlyph(outlined: Bool) -> UIImage {
+        // Geometry is authored in 22pt space; rendered at 19pt so the face
+        // sits a touch smaller than the neighboring SF-symbol key glyphs.
+        let side: CGFloat = 22
+        let renderSide: CGFloat = 19
+        // Outlined variant draws the features in; filled variant carves
+        // them out of the solid disc. Same geometry, inverted blends.
+        let featureMode: CGBlendMode = outlined ? .normal : .clear
+        let teethMode: CGBlendMode = outlined ? .clear : .normal
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: renderSide, height: renderSide))
+        let image = renderer.image { ctx in
+            ctx.cgContext.scaleBy(x: renderSide / side, y: renderSide / side)
+            UIColor.black.setFill()
+            UIColor.black.setStroke()
+
+            if outlined {
+                let lineWidth: CGFloat = 1.5
+                let outline = UIBezierPath(ovalIn: CGRect(
+                    x: lineWidth / 2, y: lineWidth / 2,
+                    width: side - lineWidth, height: side - lineWidth
+                ))
+                outline.lineWidth = lineWidth
+                outline.stroke()
+            } else {
+                UIBezierPath(
+                    ovalIn: CGRect(x: 0, y: 0, width: side, height: side)
+                ).fill()
+            }
+
+            for eyeX: CGFloat in [7.4, 14.6] {
+                UIBezierPath(ovalIn: CGRect(
+                    x: eyeX - 1.3, y: 6.2, width: 2.6, height: 3.0
+                )).fill(with: featureMode, alpha: 1)
+            }
+
+            let cx = side / 2
+            let mouthL = CGPoint(x: 5.4, y: 11.4)
+            let mouthR = CGPoint(x: 16.6, y: 11.4)
+            let lipControl = CGPoint(x: cx, y: 13.8)
+
+            // Full open mouth: a lip line whose corners curve up to the
+            // sides, closed by a wide arc below.
+            let mouth = UIBezierPath()
+            mouth.move(to: mouthL)
+            mouth.addQuadCurve(to: mouthR, controlPoint: lipControl)
+            mouth.addArc(
+                withCenter: CGPoint(x: cx, y: 11.4), radius: 5.6,
+                startAngle: 0, endAngle: .pi, clockwise: true
+            )
+            mouth.close()
+            mouth.fill(with: featureMode, alpha: 1)
+
+            // Teeth: a band inset inside the opening, parallel to the lip
+            // line — the untouched rim of the mouth doubles as the lip, so
+            // no stroking (and no asymmetric line caps) is needed.
+            let teeth = UIBezierPath()
+            teeth.move(to: CGPoint(x: mouthL.x + 1.4, y: mouthL.y + 1.3))
+            teeth.addQuadCurve(
+                to: CGPoint(x: mouthR.x - 1.4, y: mouthR.y + 1.3),
+                controlPoint: CGPoint(x: cx, y: lipControl.y + 1.3)
+            )
+            teeth.addQuadCurve(
+                to: CGPoint(x: mouthL.x + 1.4, y: mouthL.y + 1.3),
+                controlPoint: CGPoint(x: cx, y: lipControl.y + 4.1)
+            )
+            teeth.close()
+            teeth.fill(with: teethMode, alpha: 1)
+        }
+        return image.withRenderingMode(.alwaysTemplate)
     }
 
     override func layoutSubviews() {

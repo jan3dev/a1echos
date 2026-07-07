@@ -31,16 +31,36 @@ final class KeyPreviewView: UIView {
     /// Vertical extent of the smooth curve that connects head sides to
     /// shaft sides. Bigger = softer, more drawn-out flow into the key.
     private static let transitionHeight: CGFloat = 22
-    private static let maxLabelFontSize: CGFloat = 32
     private static let minLabelFontSize: CGFloat = 20
 
-    init() {
+    private let showsShadow: Bool
+    private let maxLabelFontSize: CGFloat
+    private let glyphHeightRatio: CGFloat
+
+    /// `showsShadow` adds a soft drop shadow under the balloon — used by the
+    /// emoji-grid preview, whose backdrop has no key seams to anchor it.
+    /// The glyph parameters let that preview scale emojis past the 32pt
+    /// character cap so the balloon glyph reads larger than the grid cell's.
+    init(
+        showsShadow: Bool = false,
+        maxLabelFontSize: CGFloat = 32,
+        glyphHeightRatio: CGFloat = 0.7
+    ) {
+        self.showsShadow = showsShadow
+        self.maxLabelFontSize = maxLabelFontSize
+        self.glyphHeightRatio = glyphHeightRatio
         super.init(frame: .zero)
         isUserInteractionEnabled = false
         isHidden = true
         alpha = 0
         backgroundColor = .clear
 
+        if showsShadow {
+            shapeLayer.shadowColor = UIColor.black.cgColor
+            shapeLayer.shadowOpacity = 0.22
+            shapeLayer.shadowRadius = 7
+            shapeLayer.shadowOffset = CGSize(width: 0, height: 3)
+        }
         layer.addSublayer(shapeLayer)
 
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -60,14 +80,18 @@ final class KeyPreviewView: UIView {
         shapeLayer.fillColor = theme.keyPopupBackground.cgColor
         let path = balloonPath()
         shapeLayer.path = path.cgPath
+        if showsShadow {
+            // Explicit path so Core Animation skips the per-frame alpha mask.
+            shapeLayer.shadowPath = path.cgPath
+        }
 
         // Scale the label font to whatever vertical space the head ended
         // up with — top-row balloons get a smaller head than middle rows
         // because they can't extend above the keyboard, and a fixed 32pt
         // glyph would overflow and end up clipped at the top.
         let fontSize = min(
-            Self.maxLabelFontSize,
-            max(Self.minLabelFontSize, headHeight * 0.7)
+            maxLabelFontSize,
+            max(Self.minLabelFontSize, headHeight * glyphHeightRatio)
         )
         label.font = UIFont.systemFont(ofSize: fontSize, weight: .regular)
 
