@@ -74,11 +74,12 @@ class KeyboardView: UIInputView {
             // Top bar is hidden on numeric pads — return the rows-only budget.
             return isLandscape ? 154 : 212
         default:
-            // +14 pt over the rows-only budget: the extra band between the top
-            // bar and the first key row (see rowStackTopFromTopBar) gives the
-            // top-row key-preview balloon enough headroom to render full size
-            // instead of being clipped at the keyboard's top edge.
-            rowsHeight = isLandscape ? 168 : 226
+            // +4 pt over the rows-only budget: a slim band between the top bar
+            // and the first key row (see rowStackTopFromTopBar) gives the
+            // top-row key-preview balloon a little headroom. The balloon is
+            // sized compact enough to fit this band without being clipped at
+            // the keyboard's top edge.
+            rowsHeight = isLandscape ? 158 : 216
         }
         return rowsHeight + KeyboardTopBar.preferredHeight
     }
@@ -91,7 +92,8 @@ class KeyboardView: UIInputView {
     // drop shadow (the picker backdrop has no key seams to anchor it) and a
     // larger glyph cap so the emoji reads bigger than its 39pt grid cell.
     private let emojiPreview = KeyPreviewView(
-        showsShadow: true, maxLabelFontSize: 44, glyphHeightRatio: 0.78
+        showsShadow: true, maxLabelFontSize: 44, glyphHeightRatio: 0.78,
+        maxHeadHeight: nil, neckHeight: 22
     )
     // Sticky skin-tone popover; non-nil only while presented.
     private var skinTonePopup: SkinToneVariantsView?
@@ -276,7 +278,7 @@ class KeyboardView: UIInputView {
         addSubview(keyPreview)
         addSubview(keyVariants)
         rowStackTopFromTopBar = rowStackView.topAnchor.constraint(
-            equalTo: topBar.bottomAnchor, constant: 18
+            equalTo: topBar.bottomAnchor, constant: 8
         )
         rowStackTopFromContainer = rowStackView.topAnchor.constraint(
             equalTo: topAnchor, constant: 4
@@ -753,7 +755,7 @@ class KeyboardView: UIInputView {
         let location = touch.location(in: self)
         guard let button = hitTestKeyButton(at: location) else { return }
 
-        HapticManager.keyTap()
+        KeyFeedback.keyTap()
         button.setPressed(true)
 
         let state = PointerState(button: button, location: location)
@@ -1256,7 +1258,17 @@ class KeyboardView: UIInputView {
         previewHideTimer?.invalidate()
         previewHideTimer = nil
         let keyFrame = button.convert(button.bounds, to: self)
-        keyPreview.show(character: display, over: keyFrame, in: self)
+        // Let a top-row balloon grow up to the record button's top edge (the
+        // highest a balloon may go before the system clips it) and no further.
+        // Keep a 1 pt margin below that edge so the balloon's top never lands
+        // exactly on the clip boundary.
+        let recordTop = topBar.convert(
+            CGPoint(x: 0, y: topBar.recordButtonTop), to: self
+        ).y
+        let ceiling = max(recordTop, 1)
+        keyPreview.show(
+            character: display, over: keyFrame, in: self, topLimit: ceiling
+        )
     }
 
     private func scheduleDeferredPreviewHide() {
@@ -1461,6 +1473,14 @@ class KeyboardView: UIInputView {
     }
 }
 
+// MARK: - UIInputViewAudioFeedback
+
+extension KeyboardView: UIInputViewAudioFeedback {
+    /// Lets `UIDevice.playInputClick()` (called from `SoundManager.keyTap()`)
+    /// produce the system key-click sound for this input view.
+    var enableInputClicksWhenVisible: Bool { true }
+}
+
 // MARK: - KeyboardTopBarDelegate
 
 extension KeyboardView: KeyboardTopBarDelegate {
@@ -1643,7 +1663,7 @@ extension KeyboardView {
                 self, didTapCharacter: EmojiSkinTones.applying(tone, to: base)
             )
             RecentEmojis.shared.record(base)
-            HapticManager.keyTap()
+            KeyFeedback.keyTap()
             self.emojiPickerView?.refreshSkinTones()
             if self.currentLayout == .emojiSearch {
                 // Stay in search (like a plain result tap) but rebuild the

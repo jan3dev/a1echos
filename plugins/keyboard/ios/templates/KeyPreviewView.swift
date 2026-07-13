@@ -19,23 +19,27 @@ final class KeyPreviewView: UIView {
     private var keyHeight: CGFloat = 0
     private var keyOriginX: CGFloat = 0
     private var headHeight: CGFloat = 0
-    private var transitionH: CGFloat = 22
 
     /// True when the balloon's outer side aligns with the key's outer edge.
     private var leftEdgeStraight: Bool = false
     private var rightEdgeStraight: Bool = false
 
-    private static let widthRatio: CGFloat = 1.8
+    private static let widthRatio: CGFloat = 1.5
     private static let keyCornerRadius: CGFloat = 8
     private static let headCornerRadius: CGFloat = 14
-    /// Vertical extent of the smooth curve that connects head sides to
-    /// shaft sides. Bigger = softer, more drawn-out flow into the key.
-    private static let transitionHeight: CGFloat = 22
     private static let minLabelFontSize: CGFloat = 20
 
     private let showsShadow: Bool
     private let maxLabelFontSize: CGFloat
     private let glyphHeightRatio: CGFloat
+    /// Caps the rounded head's height. The letter keyboard uses a small cap
+    /// so the head + neck fit above the top row without being clipped (and so
+    /// every row gets the same compact balloon); the emoji grid, which has
+    /// ample room above the cells, passes `nil` to leave the head uncapped.
+    private let maxHeadHeight: CGFloat?
+    /// Vertical extent of the smooth curve that connects head sides to shaft
+    /// sides. Bigger = softer, more drawn-out flow into the key.
+    private let neckHeight: CGFloat
 
     /// `showsShadow` adds a soft drop shadow under the balloon — used by the
     /// emoji-grid preview, whose backdrop has no key seams to anchor it.
@@ -44,11 +48,15 @@ final class KeyPreviewView: UIView {
     init(
         showsShadow: Bool = false,
         maxLabelFontSize: CGFloat = 32,
-        glyphHeightRatio: CGFloat = 0.7
+        glyphHeightRatio: CGFloat = 0.7,
+        maxHeadHeight: CGFloat? = 36,
+        neckHeight: CGFloat = 12
     ) {
         self.showsShadow = showsShadow
         self.maxLabelFontSize = maxLabelFontSize
         self.glyphHeightRatio = glyphHeightRatio
+        self.maxHeadHeight = maxHeadHeight
+        self.neckHeight = neckHeight
         super.init(frame: .zero)
         isUserInteractionEnabled = false
         isHidden = true
@@ -104,29 +112,40 @@ final class KeyPreviewView: UIView {
     /// enough room above, the head shrinks. For keys at the left/right edge
     /// of `container`, the flare is pushed entirely to the inner side and
     /// the outer side renders as a straight line.
-    func show(character: String, over keyFrame: CGRect, in container: UIView) {
+    /// `topLimit` is the highest Y (in `container` coords) the balloon may
+    /// reach — the caller passes the record button's top edge so a top-row
+    /// balloon grows right up to it and no further. Defaults to 1 pt below the
+    /// container's top edge for callers (the emoji grid) that have no such
+    /// ceiling.
+    func show(
+        character: String,
+        over keyFrame: CGRect,
+        in container: UIView,
+        topLimit: CGFloat = 1
+    ) {
         label.text = character
 
         let balloonWidth = max(keyFrame.width * Self.widthRatio, 44)
         let shaftH = keyFrame.height
-        let desiredHeadH = max(keyFrame.height * 1.1, 50)
-        let actualTransitionH = Self.transitionHeight
+        // Capped so the letter keyboard's balloon stays compact and uniform on
+        // every row; the emoji grid passes `nil` to keep its larger head.
+        let baseHeadH = max(keyFrame.height * 1.1, 50)
+        let desiredHeadH = maxHeadHeight.map { min($0, baseHeadH) } ?? baseHeadH
 
         // A keyboard extension cannot draw above its input view's top edge —
         // the system clips anything above the keyboard, so a balloon with a
         // negative `minY` gets its head cut off (the bug on top-row keys).
         // Keep the balloon's bottom pinned to the key and, when the full-size
         // head would poke above the keyboard, shrink the head just enough to
-        // fit (`minY >= topInset`). Middle/bottom rows have room and keep the
+        // fit (`minY >= topLimit`). Middle/bottom rows have room and keep the
         // full head. `layoutSubviews` scales the glyph to the resulting head
         // height, so a shrunk top-row head stays legible.
-        let topInset: CGFloat = 1
         var actualHeadH = desiredHeadH
-        var totalH = actualHeadH + actualTransitionH + shaftH
+        var totalH = actualHeadH + neckHeight + shaftH
         var minY = keyFrame.maxY - totalH
-        if minY < topInset {
-            actualHeadH = max(0, keyFrame.maxY - topInset - actualTransitionH - shaftH)
-            totalH = actualHeadH + actualTransitionH + shaftH
+        if minY < topLimit {
+            actualHeadH = max(0, keyFrame.maxY - topLimit - neckHeight - shaftH)
+            totalH = actualHeadH + neckHeight + shaftH
             minY = keyFrame.maxY - totalH
         }
 
@@ -154,7 +173,6 @@ final class KeyPreviewView: UIView {
         keyHeight = keyFrame.height
         keyOriginX = keyFrame.minX - originX
         headHeight = actualHeadH
-        transitionH = actualTransitionH
 
         frame = CGRect(x: originX, y: minY, width: balloonWidth, height: totalH)
 
@@ -194,7 +212,7 @@ final class KeyPreviewView: UIView {
         let kx = keyOriginX
         let kr = Self.keyCornerRadius
         let br = Self.headCornerRadius
-        let tH = transitionH
+        let tH = neckHeight
         // y where the head's straight side ends and the curve into the
         // shaft begins; transitionEndY is where the curve lands on the
         // shaft's straight side.

@@ -12,10 +12,10 @@ protocol KeyboardTopBarDelegate: AnyObject {
 
 final class KeyboardTopBar: UIView {
 
-    /// 8pt padding above + 40pt button + 8pt padding below — matches the
-    /// internal "padding: 8px 24px" the design system uses on the button
-    /// component itself.
-    static let preferredHeight: CGFloat = 56
+    /// ~0pt padding above + 32pt button + 8pt padding below. Kept compact so
+    /// the keyboard adds as little chrome as possible over the key rows; the
+    /// button is bottom-pinned so the slim top edge sits flush at the top.
+    static let preferredHeight: CGFloat = 40
 
     weak var delegate: KeyboardTopBarDelegate?
 
@@ -73,7 +73,7 @@ final class KeyboardTopBar: UIView {
         // rounded stop rectangle (recording).
         recordButton.translatesAutoresizingMaskIntoConstraints = false
         recordButton.backgroundColor = UIColor(hex: 0x707171)
-        recordButton.layer.cornerRadius = 20
+        recordButton.layer.cornerRadius = 16
         recordButton.layer.cornerCurve = .continuous
         recordButton.addTarget(self, action: #selector(recordTapped), for: .touchUpInside)
         recordButton.accessibilityLabel = "Record"
@@ -124,9 +124,9 @@ final class KeyboardTopBar: UIView {
             logoLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
 
             recordButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            recordButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            recordButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
             recordButton.widthAnchor.constraint(equalToConstant: 72),
-            recordButton.heightAnchor.constraint(equalToConstant: 40),
+            recordButton.heightAnchor.constraint(equalToConstant: 32),
 
             recordIcon.centerXAnchor.constraint(equalTo: recordButton.centerXAnchor),
             recordIcon.centerYAnchor.constraint(equalTo: recordButton.centerYAnchor),
@@ -211,6 +211,11 @@ final class KeyboardTopBar: UIView {
     func setAudioLevel(_ level: Double) {
         waveform.setAudioLevel(level)
     }
+
+    /// The record button's top edge in this bar's coordinate space. The
+    /// key-preview balloon uses it (converted to keyboard coords) as the
+    /// ceiling a top-row balloon may grow up to.
+    var recordButtonTop: CGFloat { recordButton.frame.minY }
 
     // MARK: - Private
 

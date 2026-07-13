@@ -30,6 +30,7 @@ final class SuggestionStripView: UIView {
 
     weak var delegate: SuggestionStripViewDelegate?
 
+    private let theme = KeyboardTheme()
     private let stack = UIStackView()
     private var candidateButtons: [UIButton] = []
     private var slots: [SuggestionSlot] = []
@@ -75,8 +76,13 @@ final class SuggestionStripView: UIView {
         candidateButtons.removeAll()
         slots = Array(newSlots.prefix(3))
 
+        // Draw a hairline divider between two slots only when neither is
+        // emphasized, so a highlight pill never has a line butting up against
+        // it while unrelated boundaries keep their divider.
         for (idx, slot) in slots.enumerated() {
-            if idx > 0 { stack.addArrangedSubview(makeDivider()) }
+            if idx > 0 && !slot.isEmphasized && !slots[idx - 1].isEmphasized {
+                stack.addArrangedSubview(makeDivider())
+            }
             let button = makeButton(slot: slot, index: idx)
             stack.addArrangedSubview(button)
             candidateButtons.append(button)
@@ -92,7 +98,7 @@ final class SuggestionStripView: UIView {
     }
 
     private func makeButton(slot: SuggestionSlot, index: Int) -> UIButton {
-        let button = UIButton(type: .system)
+        let button = PillButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         let title = slot.isVerbatim ? "\u{201C}\(slot.text)\u{201D}" : slot.text
         button.setTitle(title, for: .normal)
@@ -101,10 +107,12 @@ final class SuggestionStripView: UIView {
             ofSize: 17, weight: slot.isEmphasized ? .semibold : .regular
         )
         if slot.isEmphasized {
-            // Native-style highlight on the word autocorrect is about to
-            // apply.
-            button.backgroundColor = UIColor.label.withAlphaComponent(0.08)
-            button.layer.cornerRadius = 8
+            // Highlight the word autocorrect is about to apply with the same
+            // fill as the key-preview balloon, rounded into a full pill (the
+            // button rounds itself in its own layout pass, once it has a real
+            // height).
+            button.backgroundColor = theme.keyPopupBackground
+            button.isPill = true
             button.layer.masksToBounds = true
         }
         button.titleLabel?.adjustsFontSizeToFitWidth = true
@@ -127,7 +135,24 @@ final class SuggestionStripView: UIView {
 
     @objc private func candidateTapped(_ sender: UIButton) {
         guard sender.tag >= 0, sender.tag < slots.count else { return }
-        HapticManager.keyTap()
+        KeyFeedback.keyTap()
         delegate?.suggestionStrip(self, didSelect: slots[sender.tag])
+    }
+}
+
+/// A button that renders its background as a full pill (corner radius = half
+/// its height) once `isPill` is set. The radius is applied in `layoutSubviews`
+/// so it tracks the real, laid-out height rather than the zero bounds the
+/// button has when it's first built.
+private final class PillButton: UIButton {
+    var isPill = false {
+        didSet { setNeedsLayout() }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if isPill {
+            layer.cornerRadius = bounds.height / 2
+        }
     }
 }

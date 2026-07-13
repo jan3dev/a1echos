@@ -386,7 +386,7 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         guard let emoji = base(at: indexPath) else { return }
         RecentEmojis.shared.record(emoji)
         delegate?.emojiPicker(self, didSelect: emoji)
-        HapticManager.keyTap()
+        KeyFeedback.keyTap()
         collectionView.deselectItem(at: indexPath, animated: false)
     }
 
