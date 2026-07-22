@@ -1144,9 +1144,10 @@ class KeyboardView: UIInputView {
     }
 
     /// True when a long-press on `label` should open the variants popup —
-    /// either accent variants for a letter, or the punctuation popup on ".".
+    /// either accent variants for a letter, or a punctuation/symbol popup.
     private func hasLongPressVariants(_ label: String) -> Bool {
-        return AccentVariants.hasVariants(for: label) || label == "."
+        return AccentVariants.hasVariants(for: label)
+            || PunctuationVariants.hasVariants(for: label)
     }
 
     /// Long-press variants (accent letters or period punctuation). Scheduled
@@ -1159,8 +1160,8 @@ class KeyboardView: UIInputView {
             guard let self = self, let state = state else { return }
             let label = state.button.keyDefinition.label
             let variants: [String]
-            if label == "." {
-                variants = PunctuationVariants.period
+            if let punctuation = PunctuationVariants.variants(for: label) {
+                variants = punctuation
             } else {
                 variants = AccentVariants.variants(
                     for: label, uppercase: self.shiftState.isShifted

@@ -411,23 +411,23 @@ enum KeyboardLayout {
 enum AccentVariants {
 
     private static let map: [Character: [String]] = [
-        "a": ["à", "á", "â", "ä", "æ", "ã", "å", "ā", "ą"],
+        "a": ["à", "á", "â", "ä", "æ", "ã", "å", "ā", "ą", "ǎ", "ă"],
         "b": ["ḃ"],
         "c": ["ç", "ć", "č", "ċ", "ĉ"],
         "d": ["ð", "đ", "ď", "ḋ"],
-        "e": ["è", "é", "ê", "ë", "ē", "ė", "ę", "ě", "ĕ"],
+        "e": ["è", "é", "ê", "ë", "ē", "ė", "ę", "ě", "ĕ", "ẽ"],
         "g": ["ğ", "ĝ", "ġ", "ģ"],
         "h": ["ĥ", "ħ", "ḣ"],
-        "i": ["î", "ï", "í", "ī", "į", "ì", "ĩ"],
+        "i": ["î", "ï", "í", "ī", "į", "ì", "ĩ", "ǐ", "ı"],
         "j": ["ĵ"],
         "k": ["ķ", "ĸ"],
         "l": ["ł", "ĺ", "ļ", "ľ", "ŀ"],
         "n": ["ñ", "ń", "ņ", "ň", "ŋ"],
-        "o": ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ", "ő"],
+        "o": ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ", "ő", "ǒ"],
         "r": ["ŕ", "ř", "ŗ"],
         "s": ["ß", "ś", "š", "ş", "ŝ", "ș"],
         "t": ["ț", "ť", "ŧ", "ţ", "þ"],
-        "u": ["û", "ü", "ù", "ú", "ū", "ũ", "ů", "ű", "ų"],
+        "u": ["û", "ü", "ù", "ú", "ū", "ũ", "ů", "ű", "ų", "ǔ"],
         "w": ["ŵ", "ẁ", "ẃ", "ẅ"],
         "y": ["ÿ", "ý", "ŷ", "ỳ"],
         "z": ["ž", "ź", "ż"],
@@ -450,11 +450,32 @@ enum AccentVariants {
     }
 }
 
-/// Long-press punctuation surfaced on the period (".") key, mirroring
-/// LatinIME's period `moreKeys`. The "." is first so a no-drag release
-/// re-types a period.
+/// Long-press punctuation/symbol variants surfaced on keys of the numbers and
+/// symbols layouts, mirroring the iOS system keyboard's `moreKeys` popovers.
+/// Each set leads with the pressed key itself so a no-drag release re-types it.
 enum PunctuationVariants {
-    static let period: [String] = [
-        ".", ",", "?", "!", "'", "\"", ":", ";", "-", "(", ")", "/",
+
+    private static let map: [String: [String]] = [
+        ".": [".", "…"],
+        "?": ["?", "¿"],
+        "!": ["!", "¡"],
+        "'": ["'", "‘", "`"],
+        "\"": ["\"", "”", "“", "„", "»", "«"],
+        "&": ["&", "§"],
+        "£": ["£", "€", "$", "¥", "₩", "₽", "¢"],
+        "/": ["/", "\\"],
+        "-": ["-", "–", "—", "•"],
+        "0": ["0", "°"],
+        "%": ["%", "‰"],
+        "=": ["=", "≠", "≈"],
     ]
+
+    /// The variant set for `key`, or `nil` when the key has no popover.
+    static func variants(for key: String) -> [String]? {
+        return map[key]
+    }
+
+    static func hasVariants(for key: String) -> Bool {
+        return map[key] != nil
+    }
 }

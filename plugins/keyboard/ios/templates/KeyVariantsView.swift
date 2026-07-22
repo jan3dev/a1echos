@@ -112,6 +112,7 @@ final class KeyVariantsView: UIView {
         if newIndex != highlightedIndex {
             highlightedIndex = newIndex
             applyHighlightStyles()
+            HapticManager.selectionChanged()
         }
     }
 
