@@ -5,22 +5,20 @@ import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
+import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.util.AttributeSet
 import android.util.Log
 import android.util.SparseArray
 import android.util.TypedValue
 import android.view.Choreographer
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
@@ -37,7 +35,10 @@ class EchosKeyboardView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     interface KeyboardActionListener {
-        fun onKeyPress(char: String)
+        /// [normalizedTouch], when non-null, is the tap location in key-grid
+        /// units (see `KeyAdjacency.center`) for the spatial correction model;
+        /// null for non-letter or synthetic commits.
+        fun onKeyPress(char: String, normalizedTouch: PointF?)
         fun onDeletePress()
         /// Fires while the user holds the delete key past the word-deletion
         /// threshold. Matches the iOS behaviour where long holds escalate
@@ -135,8 +136,11 @@ class EchosKeyboardView @JvmOverloads constructor(
         /// Most recent pointer X in keyboard-view coords. Updated in
         /// `handlePointerDown` and `handleMoveEvent`. Read when the accent
         /// long-press fires so the popup can seed its highlight to whatever
-        /// cell lies under the finger at that exact moment.
+        /// cell lies under the finger at that exact moment, and by the spatial
+        /// correction model to place the tap within the key.
         var lastX: Float,
+        /// Most recent pointer Y in keyboard-view coords (spatial model).
+        var lastY: Float,
         /// NUMPAD operator-column scroll state. When the user presses on
         /// the operator stack (cell 0) and drags vertically, this pointer
         /// owns the scroll: `opScrollStartY` is the touch's Y at down,
@@ -1211,6 +1215,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             val x = event.getX(i)
             val y = event.getY(i)
             state.lastX = x
+            state.lastY = y
 
             // Variants popover takes over the drag for its owning pointer —
             // forward and skip everything else (no row/col re-detection,
@@ -1330,7 +1335,15 @@ class EchosKeyboardView @JvmOverloads constructor(
         val key = keyAt(rowIdx, colIdx) ?: return
         val keyRect = keyRects[rowIdx][colIdx]
 
-        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        KeyFeedback.keyPress(
+            this,
+            when (key.type) {
+                EchosKeyboardLayout.KeyType.DELETE -> AudioManager.FX_KEYPRESS_DELETE
+                EchosKeyboardLayout.KeyType.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
+                EchosKeyboardLayout.KeyType.RETURN -> AudioManager.FX_KEYPRESS_RETURN
+                else -> AudioManager.FX_KEYPRESS_STANDARD
+            },
+        )
 
         val state = PointerState(
             rowIdx = rowIdx,
@@ -1341,6 +1354,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             ownsVariants = false,
             ownsDeleteRepeat = false,
             lastX = x,
+            lastY = y,
         )
         // NUMPAD operator-column: capture the touch's Y at press so a
         // subsequent vertical drag can engage the scroll without
@@ -1430,7 +1444,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             val selected = ov?.selectedVariant()
             ov?.clearVariants()
             if (selected != null) {
-                listener?.onKeyPress(selected)
+                listener?.onKeyPress(selected, null)
                 dropTransientShiftAfterCharacterCommit()
             }
             logTouchLatency(state, key.type)
@@ -1450,7 +1464,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             // Long-press already triggered (globe picker shown): skip
             // the regular tap action.
             state.longPressFired -> Unit
-            else -> handleKeyAction(key)
+            else -> handleKeyAction(key, normalizedTouch(state, key))
         }
 
         logTouchLatency(state, key.type)
@@ -1716,12 +1730,32 @@ class EchosKeyboardView @JvmOverloads constructor(
             label
         }
 
-    private fun handleKeyAction(key: EchosKeyboardLayout.Key) {
+    /// Places the tapped point (view coords) in key-grid units relative to the
+    /// resolved key's known grid center, so the spatial model sees where within
+    /// the key the finger landed. null for non-letter keys (no grid center).
+    private fun normalizedTouch(state: PointerState, key: EchosKeyboardLayout.Key): PointF? {
+        if (key.type != EchosKeyboardLayout.KeyType.CHARACTER) return null
+        val label = (key.output ?: shiftedLabel(key.label)).lowercase()
+        if (label.length != 1) return null
+        val ascii = label[0].code
+        if (ascii >= 128) return null
+        val center = KeyAdjacency.center(ascii.toByte()) ?: return null
+        val rect = keyRectAtOrNull(state.rowIdx, state.colIdx) ?: return null
+        if (rect.width() <= 0f || rect.height() <= 0f) return null
+        return PointF(
+            center.first + (state.lastX - rect.centerX()) / rect.width(),
+            center.second + (state.lastY - rect.centerY()) / rect.height(),
+        )
+    }
+
+    private fun handleKeyAction(
+        key: EchosKeyboardLayout.Key, normalizedTouch: PointF? = null
+    ) {
         when (key.type) {
             EchosKeyboardLayout.KeyType.CHARACTER -> {
                 // `output` lets a key display one thing and emit another — the
                 // phone pad's `Pause`/`Wait` show those words but commit `,`/`;`.
-                listener?.onKeyPress(key.output ?: shiftedLabel(key.label))
+                listener?.onKeyPress(key.output ?: shiftedLabel(key.label), normalizedTouch)
                 dropTransientShiftAfterCharacterCommit()
                 markSymbolTypedIfApplicable()
             }
@@ -1735,12 +1769,12 @@ class EchosKeyboardView @JvmOverloads constructor(
                 autoReturnToLettersIfApplicable()
             }
             EchosKeyboardLayout.KeyType.PERIOD -> {
-                listener?.onKeyPress(".")
+                listener?.onKeyPress(".", null)
                 markSymbolTypedIfApplicable()
             }
             EchosKeyboardLayout.KeyType.MIC -> listener?.onMicRelease()
             EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
-                listener?.onKeyPress(",")
+                listener?.onKeyPress(",", null)
                 markSymbolTypedIfApplicable()
             }
             EchosKeyboardLayout.KeyType.GLOBE -> listener?.onSwitchKeyboard()

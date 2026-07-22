@@ -30,12 +30,16 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
     private object Tuning {
         const val SUB_ADJACENT = 0.6f
         const val SUB_OTHER = 1.0f
+        const val SUB_TOUCH_MIN = 0.35f
+        const val SUB_TOUCH_BASE = 0.25f
+        const val SUB_TOUCH_PER_UNIT = 0.55f
+        const val SUB_TOUCH_DEAD_ZONE = 0.4f
         const val INSERT_DUPLICATE = 0.5f
         const val INSERT_OTHER = 1.0f
         const val DELETION_DUPLICATE = 0.5f
         const val DELETION = 0.9f
         const val TRANSPOSITION = 0.5f
-        const val FIRST_LETTER_SURCHARGE = 0.8f
+        const val FIRST_LETTER_SURCHARGE = 0.5f
         const val APOSTROPHE_RESTORE = 0.15f
         const val WORD_SPLIT = 0.45f
         const val COMPLETION_PER_CHAR = 0.2f
@@ -45,14 +49,15 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         const val AUTOCORRECT_MAX_SCORE_GAP = 0.25f
         const val SHORT_TYPED_MAX_EDIT_COST = 0.9f
         const val FREQ_WEIGHT = 0.35f
-        const val BIGRAM_WEIGHT = 0.25f
+        const val BIGRAM_WEIGHT = 0.4f
         const val MAX_CANDIDATES = 3
         const val MAX_COMPLETIONS = 8
         const val CONFIDENCE_COMMON = 0.6f
         const val CONFIDENCE_RARE = 0.72f
-        const val CONFIDENCE_BIGRAM_BONUS = 0.05f
+        const val CONFIDENCE_BIGRAM_BONUS = 0.08f
         const val COMMON_FREQ_FLOOR = 64
         const val EPSILON = 1e-6f
+        const val PREDICTION_FALLBACK_SCAN = 16
     }
 
     private object Format {
@@ -79,6 +84,16 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         "id" to "I'd",
         "lets" to "Let's",
     )
+
+    /** Curated sentence-openers shown when there is no previous word (empty
+     *  field or just after sentence-terminal punctuation). Lowercase; the
+     *  caller applies sentence casing. Mirrors decoder.js SENTENCE_STARTERS. */
+    private val sentenceStarters = listOf("i", "the", "you", "it", "we", "thanks", "hey")
+
+    /** A key tap in normalized key-grid units (key width = 1.0), matching
+     *  `KeyAdjacency.center`. Fed per typed character to refine substitution
+     *  costs; mirrors decoder.js `touchPoints`. */
+    data class TouchPoint(val x: Float, val y: Float)
 
     data class Evaluation(
         val candidates: List<String>,
@@ -126,6 +141,11 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
     private var bigramCount = 0
     private var contractions: Map<String, String> = emptyMap()
 
+    /** Context-aware confusable entries parsed from bundled `confusables.json`
+     *  (ill -> I'll etc.), keyed by the lowercase plain word. */
+    private class Confusable(val contraction: String, val next: Set<String>)
+    private var confusables: Map<String, Confusable> = emptyMap()
+
     // -- Loading --
 
     /** Loads and validates the bundled binary. Call off the main thread;
@@ -165,11 +185,39 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
                 map[typed] = repl
             }
 
+            confusables = loadConfusables(context)
             bytes = data
             contractions = map
             isLoaded = true
         } catch (_: Exception) {
             // Missing/corrupt asset: engine stays unloaded, checker fallback runs.
+        }
+    }
+
+    /** Parses the bundled confusables table. Independent of the dictionary — a
+     *  missing/invalid file just leaves the feature off. */
+    private fun loadConfusables(context: Context): Map<String, Confusable> {
+        return try {
+            val text = context.assets.open("confusables.json").use {
+                it.readBytes().toString(Charsets.UTF_8)
+            }
+            val json = org.json.JSONObject(text)
+            val map = HashMap<String, Confusable>()
+            for (key in json.keys()) {
+                if (key.startsWith("_")) continue
+                val entry = json.optJSONObject(key) ?: continue
+                val contraction = entry.optString("contraction", "")
+                val nextArr = entry.optJSONArray("next") ?: continue
+                if (contraction.isEmpty()) continue
+                val next = HashSet<String>()
+                for (i in 0 until nextArr.length()) {
+                    next.add(nextArr.getString(i).lowercase())
+                }
+                map[key.lowercase()] = Confusable(contraction, next)
+            }
+            map
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 
@@ -202,25 +250,52 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         return findTerminal(typed) >= 0
     }
 
+    /** Context-aware confusable correction (retroactive). Mirrors decoder.js
+     *  `contextualContraction`: returns the contraction the previous word
+     *  should become given the word that just followed it, or null to leave
+     *  it. Fires only for a lowercase plain word whose follower is in its
+     *  trigger set and whose pair isn't blacklisted. */
+    fun contextualContraction(prevWordRaw: String, nextWord: String): String? {
+        if (!isLoaded || prevWordRaw.isEmpty() || nextWord.isEmpty()) return null
+        val plain = prevWordRaw.lowercase()
+        if (prevWordRaw != plain) return null
+        val entry = confusables[plain] ?: return null
+        if (!entry.next.contains(nextWord.lowercase())) return null
+        if (userLexicon.isBlacklisted(plain, entry.contraction.lowercase())) return null
+        return entry.contraction
+    }
+
     /** Top continuations of [prevWord] — the next-word prediction strip shown
      *  right after a separator. Pairs the user actually types (learned in
      *  [UserLexicon]) lead; the static bigram table fills the rest. Proper
      *  nouns render title-case. */
     fun nextWords(prevWord: String, limit: Int = Tuning.MAX_CANDIDATES): List<String> {
         if (!isLoaded) return emptyList()
-        val prev = asciiBytes(normalize(prevWord)) ?: return emptyList()
+        val normalizedPrev = normalize(prevWord)
+        val prev = if (normalizedPrev.isEmpty()) null else asciiBytes(normalizedPrev)
         val results = ArrayList<String>(limit)
         val seen = HashSet<String>()
+        if (normalizedPrev.isNotEmpty()) seen.add(normalizedPrev.lowercase())
         fun add(word: String) {
-            if (seen.add(word.lowercase())) results.add(word)
+            if (results.size >= limit) return
+            val key = word.lowercase()
+            if (key in seen || (key.length < 2 && key != "i")) return
+            seen.add(key)
+            results.add(word)
         }
-        for (word in userLexicon.nextWords(normalize(prevWord))) {
-            if (results.size >= limit) break
-            add(renderStored(word))
+        if (prev != null) {
+            for (word in userLexicon.nextWords(normalizedPrev)) add(renderStored(word))
+            for ((nextId, _) in bigramRun(prev)) topString(nextId)?.let { add(renderStored(it)) }
+        } else {
+            // No context (sentence start): curated openers.
+            for (starter in sentenceStarters) add(renderStored(starter))
         }
-        for ((nextId, _) in bigramRun(prev)) {
-            if (results.size >= limit) break
-            topString(nextId)?.let { add(renderStored(it)) }
+        // Fill remaining slots from the frequency-ranked word list so the strip
+        // is never left half-empty.
+        var id = 0
+        while (results.size < limit && id < Tuning.PREDICTION_FALLBACK_SCAN) {
+            topString(id)?.let { add(renderStored(it)) }
+            id++
         }
         return results.take(limit)
     }
@@ -263,6 +338,7 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         typedRaw: String,
         previousWord: String?,
         externallyValid: Boolean = false,
+        touchPoints: List<TouchPoint?>? = null,
     ): Evaluation {
         if (!isLoaded) return Evaluation.EMPTY
         val typedString = normalize(typedRaw)
@@ -333,8 +409,9 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
                 }
             }
         }
-        add(fuzzyMatches(typed))
+        add(fuzzyMatches(typed, touchPoints))
         add(apostropheVariants(typed))
+        add(properNounPossessives(typed))
         add(wordSplits(typed))
         if (typed.size >= 2) add(completions(typed))
         add(userLexiconCandidates(typed))
@@ -554,12 +631,38 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         return if (transposedFirstPair) editCost else editCost + Tuning.FIRST_LETTER_SURCHARGE
     }
 
+    /** Substitution cost for consuming candidate byte [c] where the user typed
+     *  [t]. With a touch point, cost scales with the tap's distance from [c]'s
+     *  key center; without one, falls back to the adjacency graph. [center] is
+     *  [c]'s key center; the DP caller resolves it once per candidate byte so
+     *  the inner loop over typed positions doesn't repeat the (allocating)
+     *  lookup. Mirrors decoder.js `substitutionCost`. */
+    private fun substitutionCost(
+        t: Byte, c: Byte, touch: TouchPoint?, center: Pair<Float, Float>?
+    ): Float {
+        if (t == c) return 0f
+        if (touch != null && center != null) {
+            val dx = touch.x - center.first
+            val dy = touch.y - center.second
+            val d = kotlin.math.sqrt(dx * dx + dy * dy)
+            val cost = Tuning.SUB_TOUCH_BASE +
+                Tuning.SUB_TOUCH_PER_UNIT * max(0f, d - Tuning.SUB_TOUCH_DEAD_ZONE)
+            return min(Tuning.SUB_OTHER, max(Tuning.SUB_TOUCH_MIN, cost))
+        }
+        return if (KeyAdjacency.isAdjacent(t, c)) Tuning.SUB_ADJACENT else Tuning.SUB_OTHER
+    }
+
     /** Weighted Damerau-Levenshtein DP over trie descent (see decoder.js
      *  `fuzzyMatches` for the transition-by-transition rationale). */
-    private fun fuzzyMatches(typed: ByteArray): List<Candidate> {
+    private fun fuzzyMatches(
+        typed: ByteArray, touchPoints: List<TouchPoint?>? = null
+    ): List<Candidate> {
         val n = typed.size
         if (n == 0) return emptyList()
         val budget = editBudget(n)
+        // A stale buffer must degrade to the adjacency model, never skew costs
+        // against the wrong characters.
+        val touches = if (touchPoints?.size == n) touchPoints else null
 
         fun insertCost(i: Int): Float =
             if (i >= 2 && typed[i - 1] == typed[i - 2]) {
@@ -595,13 +698,10 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
                 val newRow = FloatArray(n + 1)
                 newRow[0] = prevRow[0] + deleteCost
                 var rowMin = newRow[0]
+                val center = KeyAdjacency.center(c)
                 for (i in 1..n) {
                     val t = typed[i - 1]
-                    val subCost = when {
-                        t == c -> 0f
-                        KeyAdjacency.isAdjacent(t, c) -> Tuning.SUB_ADJACENT
-                        else -> Tuning.SUB_OTHER
-                    }
+                    val subCost = substitutionCost(t, c, touches?.get(i - 1), center)
                     var best = minOf(
                         prevRow[i - 1] + subCost,
                         newRow[i - 1] + insertCost(i),
@@ -705,6 +805,27 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
             }
         }
         return results
+    }
+
+    /** Proper-noun possessive restoration: johns → "John's". Mirrors
+     *  decoder.js `properNounPossessives`. */
+    private fun properNounPossessives(typed: ByteArray): List<Candidate> {
+        val apostrophe = '\''.code.toByte()
+        val sByte = 's'.code.toByte()
+        if (typed.size < 3 || typed.last() != sByte || typed.contains(apostrophe)) {
+            return emptyList()
+        }
+        if (findTerminal(typed) >= 0) return emptyList()
+        val base = typed.copyOfRange(0, typed.size - 1)
+        val node = findTerminal(base)
+        if (node < 0) return emptyList()
+        val flags = nodeFlags(nodePacked(node))
+        if (flags and Format.FLAG_PROPER_NOUN == 0) return emptyList()
+        val word = ByteArray(base.size + 2)
+        base.copyInto(word)
+        word[base.size] = apostrophe
+        word[base.size + 1] = sByte
+        return listOf(Candidate(word, Tuning.APOSTROPHE_RESTORE, nodeFreq(node), flags))
     }
 
     /** Apostrophe restoration: cant → can't (len-1 exact probes). */

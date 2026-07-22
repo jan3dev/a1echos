@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.widget.GridLayout
 import android.widget.HorizontalScrollView
@@ -98,7 +97,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
             isFocusable = true
             contentDescription = "Back to emoji picker"
             setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                KeyFeedback.performKeyHaptic(this)
                 listener?.onLeaveSearch()
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -230,7 +229,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
             }
             visibility = View.GONE
             setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                KeyFeedback.performKeyHaptic(this)
                 listener?.onClearQuery()
             }
         }
@@ -343,7 +342,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                KeyFeedback.keyPress(this)
                 listener?.onEmojiSelected(toned)
             }
             layoutParams = GridLayout.LayoutParams().apply {

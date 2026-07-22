@@ -33,6 +33,14 @@ class KeyButton: UIControl {
     /// visible glyph box — not the font line box — is centered in the key.
     private var labelCenterYConstraint: NSLayoutConstraint?
 
+    /// Upper bounds on the modifier glyph's height, toggled by orientation.
+    /// Landscape keys are much shorter, so the portrait 0.55 cap shrinks the
+    /// shift/delete/return glyphs too far; landscape uses a looser cap so they
+    /// read closer to the native size. Portrait keeps 0.55 (there the point
+    /// size, not the cap, is the binding size).
+    private var symbolHeightCapPortrait: NSLayoutConstraint?
+    private var symbolHeightCapLandscape: NSLayoutConstraint?
+
     // Cached theme state for the pressed/highlighted recomputation.
     private var theme = KeyboardTheme()
     private var micState: MicState = .idle
@@ -133,8 +141,16 @@ class KeyButton: UIControl {
             symbolView.centerXAnchor.constraint(equalTo: centerXAnchor),
             symbolView.centerYAnchor.constraint(equalTo: centerYAnchor),
             symbolView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.6),
-            symbolView.heightAnchor.constraint(lessThanOrEqualTo: heightAnchor, multiplier: 0.55),
         ])
+
+        // Only one of these is active at a time (see `updateAppearance`).
+        symbolHeightCapPortrait = symbolView.heightAnchor.constraint(
+            lessThanOrEqualTo: heightAnchor, multiplier: 0.55
+        )
+        symbolHeightCapLandscape = symbolView.heightAnchor.constraint(
+            lessThanOrEqualTo: heightAnchor, multiplier: 0.75
+        )
+        symbolHeightCapPortrait?.isActive = true
 
         if let sub = keyDefinition.subLabel, !sub.isEmpty {
             // Telephone-keypad digit: nudge the number up and tuck the small
@@ -338,15 +354,18 @@ class KeyButton: UIControl {
         UIView.animate(withDuration: pressed ? 0.02 : 0.12, delay: 0, options: .curveEaseOut) {
             self.applyBackgroundColor(pressed: pressed)
         }
-        // Flat numeric-pad keys (delete, decimal separator) give their press
-        // feedback through the glyph — no background fill. The icon swaps to its
-        // filled (black) variant; a text glyph dims briefly. Driven by the whole
-        // key's press state, so it reacts anywhere in the key, not just the glyph.
-        guard !keyDefinition.rendersIdleBackground else { return }
+        // Glyph inverts to its filled variant while held whenever one is
+        // defined — the delete/back key flips delete.left → delete.left.fill,
+        // so the arrow fills with the key-text color and the × knocks out to
+        // the (pressed) background. This runs alongside the background flash
+        // for keys that also fill (delete), and is the sole feedback for the
+        // flat numeric-pad keys that don't.
         if let pressedSymbol = keyDefinition.pressedSymbolName,
            let restSymbol = keyDefinition.symbolName {
             setDisplaySymbol(pressed ? pressedSymbol : restSymbol)
-        } else {
+        } else if !keyDefinition.rendersIdleBackground {
+            // Flat numeric-pad key with no pressed glyph (decimal separator):
+            // dim the text instead, since it has no background fill.
             label.alpha = pressed ? 0.4 : 1.0
         }
     }
@@ -372,14 +391,18 @@ class KeyButton: UIControl {
 
         // Landscape uses smaller character glyphs (matches native iOS)
         // and bigger SF Symbol icons (shift / delete / return / emoji —
-        // they read as undersized at the portrait 20 pt pointSize when
-        // the keys themselves shrink to 28.75 pt landscape height).
+        // they read as undersized when the keys shrink to the landscape
+        // height). The looser landscape glyph height cap (below) is what
+        // actually lets those symbols grow, since the short keys otherwise
+        // clamp them.
         let isLandscape = traitCollection.verticalSizeClass == .compact
-        let characterFontSize: CGFloat = isLandscape ? 22 : 25
+        let characterFontSize: CGFloat = isLandscape ? 20 : 25
         let symbolPointSize: CGFloat = isLandscape ? 24 : 20
         symbolView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
             pointSize: symbolPointSize, weight: .regular
         )
+        symbolHeightCapPortrait?.isActive = !isLandscape
+        symbolHeightCapLandscape?.isActive = isLandscape
 
         let textColor: UIColor
         let tintColor: UIColor
@@ -438,7 +461,17 @@ class KeyButton: UIControl {
             tintColor = theme.keyText
             // URL-variant `/` and `.com` opt into the smaller modifier-key
             // size so they don't tower over the rest of the row (native iOS).
-            fontSize = keyDefinition.usesCompactLabelFont ? 17 : characterFontSize
+            // Uppercase letters read heavier at a given point size (cap-height
+            // vs x-height), so shave 2pt off shifted letter keys to match the
+            // lowercase visual weight. Gated to actual letters so digit /
+            // symbol character keys ("1", "$") are never affected.
+            let isLetterKey = keyDefinition.type == .character
+                && keyDefinition.label.count == 1
+                && (keyDefinition.label.first?.isLetter ?? false)
+            let uppercaseTrim: CGFloat = (isLetterKey && shiftState.isShifted) ? 2 : 0
+            fontSize = keyDefinition.usesCompactLabelFont
+                ? 17
+                : characterFontSize - uppercaseTrim
             weight = .regular
         }
 
@@ -502,10 +535,14 @@ class KeyButton: UIControl {
             case .transcribing: return theme.micButtonBackground.withAlphaComponent(0.7)
             case .idle: return theme.micButtonBackground
             }
-        case .shift, .delete, .symbolSwitch, .globe, .emoji, .space, .returnKey:
+        case .space, .delete, .returnKey:
+            // The wide action keys flash to `wideKeyPressed` — same as the
+            // modifier grey in light mode, but *lighter* than the idle key in
+            // dark mode (native iOS lifts these on press).
+            return pressed ? theme.wideKeyPressed : theme.keyBackground
+        case .shift, .symbolSwitch, .globe, .emoji:
             // iOS 26 default: every key shares the letter-key fill; the
-            // modifier and space/return keys flash to a darker grey while
-            // held.
+            // modifier keys flash to a darker grey while held.
             return pressed ? theme.specialKeyPressed : theme.keyBackground
         case .modeSwitch:
             // 123 / ABC commits the layout switch immediately, so iOS skips

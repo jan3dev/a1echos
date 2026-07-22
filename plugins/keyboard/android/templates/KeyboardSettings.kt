@@ -25,11 +25,12 @@ object KeyboardSettings {
 
     /** [autocorrect]: when true (default), the engine's confident correction
      *  auto-applies on a separator and the next backspace reverts it (false =
-     *  tap-only). [hapticFeedback]: when true, key presses vibrate (false =
-     *  silent, the default). */
+     *  tap-only). [hapticFeedback]: when true (default), key presses vibrate.
+     *  [keySound]: when true (default), key presses play the system click. */
     data class Settings(
         val autocorrect: Boolean = true,
-        val hapticFeedback: Boolean = false,
+        val hapticFeedback: Boolean = true,
+        val keySound: Boolean = true,
     )
 
     @Volatile
@@ -52,7 +53,8 @@ object KeyboardSettings {
             val json = JSONObject(file.readText(Charsets.UTF_8))
             val settings = Settings(
                 autocorrect = json.optBoolean("autocorrect", true),
-                hapticFeedback = json.optBoolean("hapticFeedback", false),
+                hapticFeedback = json.optBoolean("hapticFeedback", true),
+                keySound = json.optBoolean("keySound", true),
             )
             cached = settings
             cachedMtime = mtime

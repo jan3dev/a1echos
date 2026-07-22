@@ -38,4 +38,33 @@ object KeyAdjacency {
         if (ai >= 128 || bi >= 128) return false
         return table[ai * 128 + bi]
     }
+
+    /** Letter-key centers in key-grid units (key width = 1.0) on the standard
+     *  QWERTY 10/9/7 layout — rows at y 0.5/1.5/2.5, home and bottom rows
+     *  indented by 0.5 and 1.5 key widths. Mirrors `KEY_CENTERS` in decoder.js;
+     *  native key views normalize taps into this same space. Packed as
+     *  [x0, y0, x1, y1, ...] indexed by ASCII code; NaN marks a non-letter. */
+    private val centersX = FloatArray(128) { Float.NaN }
+    private val centersY = FloatArray(128) { Float.NaN }
+
+    init {
+        val rows = listOf(
+            Triple("qwertyuiop", 0.5f, 0.5f),
+            Triple("asdfghjkl", 1.0f, 1.5f),
+            Triple("zxcvbnm", 2.0f, 2.5f),
+        )
+        for ((letters, x0, y) in rows) {
+            for ((i, ch) in letters.withIndex()) {
+                centersX[ch.code] = x0 + i
+                centersY[ch.code] = y
+            }
+        }
+    }
+
+    /** Returns the key center as (x, y) in grid units, or null for non-letters. */
+    fun center(a: Byte): Pair<Float, Float>? {
+        val ai = a.toInt() and 0xFF
+        if (ai >= 128 || centersX[ai].isNaN()) return null
+        return centersX[ai] to centersY[ai]
+    }
 }

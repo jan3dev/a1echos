@@ -21,7 +21,10 @@ class EchosKeyboardViewController: UIInputViewController {
     private lazy var correctionEngine = CorrectionEngine(userLexicon: userLexicon)
     private lazy var suggestionEngine = SuggestionEngine(correctionEngine: correctionEngine)
     private var settings = KeyboardSettings.load() {
-        didSet { HapticManager.isEnabled = settings.hapticFeedback }
+        didSet {
+            HapticManager.isEnabled = settings.hapticFeedback
+            SoundManager.isEnabled = settings.keySound
+        }
     }
     /// Pending autocorrect revert target (§5.4): set when a correction
     /// auto-applied on a separator, consumed by the next backspace (which
@@ -37,6 +40,13 @@ class EchosKeyboardViewController: UIInputViewController {
     /// autocorrect must not fire on it when the separator lands. Cleared on
     /// cursor moves and whenever the composing word ends.
     private var autocorrectSuppressedWord: String?
+    /// Per-character tap coordinates for the in-progress word (spatial
+    /// correction model, §5.10). One entry per composing character, appended on
+    /// key-down, popped on backspace, and reset whenever the composing word
+    /// ends or the cursor/text changes out from under us. Fed to the engine
+    /// only when its length matches the reconstructed word — a mismatch falls
+    /// back to the static adjacency model rather than skewing costs.
+    private var currentWordTouches: [CorrectionEngine.TouchPoint?] = []
     /// Punctuation that commits a pending autocorrect, like space does.
     private static let autocorrectTriggers: Set<Character> = [
         ".", ",", "!", "?", ";", ":",
@@ -212,7 +222,9 @@ class EchosKeyboardViewController: UIInputViewController {
         // state matches the cursor position. Cheap (read cached
         // documentContextBeforeInput, walk back ~10 chars).
         applyAutoCap()
-        // Host-driven edits (e.g. autofill) change the composing word too.
+        // Host-driven edits (e.g. autofill) change the composing word too, so
+        // the per-key touch buffer can no longer be trusted to align with it.
+        currentWordTouches.removeAll()
         refreshSuggestions()
     }
 
@@ -263,14 +275,16 @@ class EchosKeyboardViewController: UIInputViewController {
         guard !word.isEmpty else {
             suggestionRefreshWork?.cancel()
             autocorrectSuppressedWord = nil
-            // Next-word prediction (§5.12): the cursor sits right after a
-            // space that follows a word — offer its most likely continuations.
-            if before.hasSuffix(" "),
-               let prev = SuggestionEngine.previousWord(
-                   beforeCursor: before, currentWord: ""
-               ) {
+            // Next-word prediction (§5.12): after a word (possibly across a
+            // comma) offer its likely continuations; at a sentence start or
+            // empty field offer curated openers. Only at an actual word
+            // boundary — never glued right after unspaced punctuation.
+            let prev = SuggestionEngine.previousWord(
+                beforeCursor: before, currentWord: ""
+            )
+            if before.isEmpty || before.hasSuffix(" ") || prev != nil {
                 let predictions = suggestionEngine.predictions(
-                    afterWord: prev, casing: currentCasing()
+                    afterWord: prev ?? "", casing: currentCasing()
                 )
                 if !predictions.isEmpty {
                     keyboardView.showSuggestions(
@@ -290,11 +304,15 @@ class EchosKeyboardViewController: UIInputViewController {
             beforeCursor: before, currentWord: word
         )
         let casing = Self.casing(forTyped: word)
+        let touches = touchPoints(matching: word)
         suggestionRefreshWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             let result = self.suggestionEngine.suggestions(
-                for: word, previousWord: previousWord, casing: casing
+                for: word,
+                previousWord: previousWord,
+                casing: casing,
+                touchPoints: touches
             )
             let slots = Self.suggestionSlots(for: result)
             if slots.isEmpty {
@@ -330,6 +348,72 @@ class EchosKeyboardViewController: UIInputViewController {
             slots.append(.candidate(runnerUp))
         }
         return slots
+    }
+
+    /// Records the tap for a committed character into the composing-word touch
+    /// buffer: a point for a letter (spatial model), nil for other in-word
+    /// characters (apostrophe, hyphen), and a reset for word separators or
+    /// multi-character commits (emoji), which end the word.
+    private func recordTouch(forCommitted char: String, at point: CGPoint?) {
+        guard char.count == 1, let c = char.first,
+              !SpacingAndPunctuations.isWordSeparator(c) else {
+            currentWordTouches.removeAll()
+            return
+        }
+        if let point, c.isLetter {
+            currentWordTouches.append(
+                CorrectionEngine.TouchPoint(x: Float(point.x), y: Float(point.y))
+            )
+        } else {
+            currentWordTouches.append(nil)
+        }
+    }
+
+    /// The composing-word touch buffer, but only when it lines up with the
+    /// word the engine will actually score — otherwise nil, so a desynced
+    /// buffer falls back to the static adjacency model.
+    private func touchPoints(
+        matching word: String
+    ) -> [CorrectionEngine.TouchPoint?]? {
+        currentWordTouches.count == word.count ? currentWordTouches : nil
+    }
+
+    /// After a word + separator commits, retroactively fix a confusable
+    /// previous word using the just-committed word as context ("ill be" ->
+    /// "I'll be"). Gated under the autocorrect setting; only rewrites a
+    /// single-space-separated pair whose exact text is still present before the
+    /// cursor, so a host that rewrote the field can never misfire it.
+    private func applyContextualContraction(separator: String) {
+        guard settings.autocorrect, !separator.isEmpty else { return }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        guard before.hasSuffix(separator) else { return }
+        let afterW2 = String(before.dropLast(separator.count)) // "...P W2"
+        let w2 = Self.trailingWord(afterW2)
+        guard !w2.isEmpty else { return }
+        let afterSpace = String(afterW2.dropLast(w2.count)) // "...P "
+        guard afterSpace.hasSuffix(" ") else { return } // single space only
+        let beforeSpace = String(afterSpace.dropLast(1)) // "...P"
+        // More than one separator between the two words: not a plain "P W2".
+        if let last = beforeSpace.last,
+           SpacingAndPunctuations.isWordSeparator(last) { return }
+        let prev = Self.trailingWord(beforeSpace)
+        guard !prev.isEmpty,
+              let contraction = correctionEngine.contextualContraction(
+                  prevWordRaw: prev, nextWord: w2
+              ) else { return }
+        let deleteCount = separator.count + w2.count + 1 + prev.count
+        for _ in 0..<deleteCount { textDocumentProxy.deleteBackward() }
+        textDocumentProxy.insertText(contraction + " " + w2 + separator)
+    }
+
+    /// The trailing run of non-separator characters in `text` (its last word).
+    private static func trailingWord(_ text: String) -> String {
+        var chars: [Character] = []
+        for ch in text.reversed() {
+            if SpacingAndPunctuations.isWordSeparator(ch) { break }
+            chars.append(ch)
+        }
+        return String(chars.reversed())
     }
 
     /// Maps the live shift state to the casing suggestion candidates should
@@ -446,14 +530,19 @@ class EchosKeyboardViewController: UIInputViewController {
 
 extension EchosKeyboardViewController: KeyboardViewDelegate {
 
-    func keyboardView(_ view: KeyboardView, didTapCharacter char: String) {
+    func keyboardView(
+        _ view: KeyboardView, didTapCharacter char: String, at normalizedTouch: CGPoint?
+    ) {
         // Any non-space, non-backspace input invalidates the smart
         // double-space window. Letters / digits / accents all reset.
         doubleSpacePeriod.reset()
         // Sentence punctuation commits a pending autocorrect exactly like
-        // space does ("teh." becomes "the.").
+        // space does ("teh." becomes "the."). The commit reads the word's
+        // touch buffer, so only reset it once the word has ended.
         if char.count == 1, let c = char.first, Self.autocorrectTriggers.contains(c),
            commitWithAutocorrect(separator: char) {
+            currentWordTouches.removeAll()
+            applyContextualContraction(separator: char)
             applyAutoCap()
             refreshSuggestions()
             return
@@ -465,7 +554,15 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         // Typing past an autocorrect ends its one-shot revert window.
         lastAutocorrect = nil
         pendingRevert = nil
+        recordTouch(forCommitted: char, at: normalizedTouch)
         textDocumentProxy.insertText(char)
+        // A separator ends the previous word too, so it can trigger a
+        // context-aware confusable fix even when the current word wasn't
+        // autocorrected ("ill be." — "be" is valid, so no commit fired above).
+        if char.count == 1, let c = char.first,
+           SpacingAndPunctuations.isWordSeparator(c) {
+            applyContextualContraction(separator: char)
+        }
         // iOS does NOT call `textDidChange` after our own `insertText`
         // (only for host-driven changes), so we run the auto-cap pass
         // inline here. Without this, typing ". " in the numbers layout
@@ -493,7 +590,10 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             beforeCursor: before, currentWord: word
         )
         let result = suggestionEngine.suggestions(
-            for: word, previousWord: previousWord, casing: Self.casing(forTyped: word)
+            for: word,
+            previousWord: previousWord,
+            casing: Self.casing(forTyped: word),
+            touchPoints: touchPoints(matching: word)
         )
         // Exact compare: case-only corrections (i -> I, france -> France)
         // must apply too.
@@ -549,6 +649,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             // confirm before mutating.
             let before = textDocumentProxy.documentContextBeforeInput ?? ""
             if before.hasSuffix(". ") {
+                currentWordTouches.removeAll()
                 textDocumentProxy.deleteBackward()
                 textDocumentProxy.deleteBackward()
                 textDocumentProxy.insertText("  ")
@@ -565,6 +666,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             let before = textDocumentProxy.documentContextBeforeInput ?? ""
             if !last.separator.isEmpty,
                before.hasSuffix(last.corrected + last.separator) {
+                currentWordTouches.removeAll()
                 textDocumentProxy.deleteBackward()
                 pendingRevert = last
                 applyAutoCap()
@@ -573,6 +675,9 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             }
         }
         pendingRevert = nil
+        // Keep the touch buffer aligned with the shrinking word; if it was
+        // already empty or desynced, the length-match guard handles it.
+        if !currentWordTouches.isEmpty { currentWordTouches.removeLast() }
         textDocumentProxy.deleteBackward()
         applyAutoCap()
         refreshSuggestions()
@@ -581,6 +686,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     func keyboardViewDidHoldDeleteWord(_ view: KeyboardView) {
         lastAutocorrect = nil
         pendingRevert = nil
+        currentWordTouches.removeAll()
         deleteWordBackward()
         applyAutoCap()
         refreshSuggestions()
@@ -627,6 +733,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         if doubleSpacePeriod.shouldCommitPeriod(previousChars: tail) {
             lastAutocorrect = nil
             pendingRevert = nil
+            currentWordTouches.removeAll()
             textDocumentProxy.deleteBackward()
             textDocumentProxy.insertText(". ")
             doubleSpacePeriod.markPeriodCommitted()
@@ -634,8 +741,11 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             refreshSuggestions()
             return
         }
-        // Autocorrect-on-space (§5.10) — only when the user enabled it.
+        // Autocorrect-on-space (§5.10) — only when the user enabled it. The
+        // commit reads the word's touch buffer, so reset it only afterwards.
         if commitWithAutocorrect(separator: " ") {
+            currentWordTouches.removeAll()
+            applyContextualContraction(separator: " ")
             doubleSpacePeriod.recordSpaceCommit()
             applyAutoCap()
             refreshSuggestions()
@@ -644,7 +754,9 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         observeSeparatorCommit()
         lastAutocorrect = nil
         pendingRevert = nil
+        currentWordTouches.removeAll()
         textDocumentProxy.insertText(" ")
+        applyContextualContraction(separator: " ")
         doubleSpacePeriod.recordSpaceCommit()
         applyAutoCap()
         refreshSuggestions()
@@ -655,6 +767,8 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         // Return commits a pending autocorrect too, then still performs the
         // newline.
         if commitWithAutocorrect(separator: "\n") {
+            currentWordTouches.removeAll()
+            applyContextualContraction(separator: "\n")
             applyAutoCap()
             refreshSuggestions()
             return
@@ -662,7 +776,9 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
         observeSeparatorCommit()
         lastAutocorrect = nil
         pendingRevert = nil
+        currentWordTouches.removeAll()
         textDocumentProxy.insertText("\n")
+        applyContextualContraction(separator: "\n")
         applyAutoCap()
         refreshSuggestions()
     }
@@ -678,6 +794,9 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// next-word prediction: insert the word plus a space. During a revert
     /// offer the verbatim slot swaps the correction back to the typed word.
     func keyboardView(_ view: KeyboardView, didSelectSuggestion slot: SuggestionSlot) {
+        // Selecting a slot replaces or ends the composing word; its per-key
+        // touch buffer no longer applies.
+        currentWordTouches.removeAll()
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
         let after = textDocumentProxy.documentContextAfterInput ?? ""
         if let revert = pendingRevert, slot.isVerbatim {
@@ -722,6 +841,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
 
     /// Spacebar cursor-drag (§5.1): move the caret without inserting a space.
     func keyboardView(_ view: KeyboardView, moveCursorBy offset: Int) {
+        currentWordTouches.removeAll()
         textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
     }
 
@@ -730,6 +850,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// best-effort basis, preserving the caret's column where the target line
     /// is long enough. Soft-wrapped visual lines are invisible to us.
     func keyboardView(_ view: KeyboardView, moveCursorVerticallyBy lines: Int) {
+        currentWordTouches.removeAll()
         guard lines != 0 else { return }
         for _ in 0..<abs(lines) {
             if lines < 0 { moveCaretUpOneLine() } else { moveCaretDownOneLine() }
@@ -839,6 +960,7 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
     /// reach the app, so we check that first and point the user at the real
     /// fix instead of a misleading "open Echos" prompt.
     func keyboardViewDidToggleRecord(_ view: KeyboardView) {
+        currentWordTouches.removeAll()
         if isCurrentlyRecording {
             // Hand off to the main app to stop + transcribe. The result (or a
             // timeout) flows back through ipcClient's result/error callbacks.

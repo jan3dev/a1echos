@@ -35,6 +35,15 @@ Emoji picker,EMJ-03,Skin-tone variants,Long-press 👍 in picker,Skin-tone popup
 Emoji picker,EMJ-04,Search filter,"Activate search, type ""smile""",Grinning emojis appear,iOS+Android,,,
 Emoji picker,EMJ-05,ABC returns to QWERTY,Tap ABC inside picker,Returns to letters layout,iOS+Android,,,
 Emoji picker,EMJ-06,Delete works inside picker,Tap backspace inside picker,Deletes from host text field,iOS+Android,,,
+Keyboard feedback,FBK-01,Haptics on by default,Fresh install — type any key without changing settings,A light tick haptic fires on each key press,iOS+Android,,,Default flipped on; iOS needs Full Access
+Keyboard feedback,FBK-02,Haptic toggle silences (both platforms),In Echos ▸ Advanced Settings toggle Keyboard Haptics off then type,No vibration on either platform,iOS+Android,,,Android toggle previously had no effect
+Keyboard feedback,FBK-03,Key sound on by default,Fresh install — type any key,An audible key click plays on each press,iOS+Android,,,New setting; iOS needs Full Access + ringer on
+Keyboard feedback,FBK-04,Key sound toggle silences,In Echos ▸ Advanced Settings toggle Keyboard Sounds off then type,No key click plays,iOS+Android,,,
+Keyboard feedback,FBK-05,iOS sound needs Full Access,With the keyboard's Full Access off type a key,No click plays and no crash,iOS,,,AudioServicesPlaySystemSound requires Open Access
+Keyboard feedback,FBK-06,Sound respects OS mute,"Silence the ringer (iOS) or disable system touch sounds (Android), then type with Key Sounds on",No click plays (defers to the OS mute),iOS+Android,,,
+Keyboard feedback,FBK-07,Distinct click per key type,"Tap a letter, then delete, then space / Return",Delete and modifier/space keys play their own click variant,iOS+Android,,,iOS 1104/1155/1156; Android FX_KEYPRESS_*
+Keyboard feedback,FBK-08,Feedback on suggestion + emoji taps,Tap a suggestion-strip slot and an emoji,Haptic + click fire (Android strip previously had none),iOS+Android,,,
+Keyboard feedback,FBK-09,Settings persist,"Toggle Keyboard Haptics and Keyboard Sounds, quit and reopen Echos",Both values persist across launches,iOS+Android,,,
 Field-type layouts,FLD-01,iOS numbers-and-punctuation auto-open,Focus a numbers-and-punctuation field,Keyboard opens directly to the numbers/symbols page,iOS,,,§9.1
 Field-type layouts,FLD-02,iOS numbers-and-punctuation ABC persists,"On a numbers-and-punctuation field tap ABC to reach letters, then type",Stays on letters (not forced back to numbers on the next keystroke),iOS,,,§9.1
 Field-type layouts,FLD-03,iOS URL field variant,Focus a URL field,QWERTY with . / .com in the bottom row and no spacebar; Go return,iOS,,,§9.1
@@ -71,7 +80,7 @@ Misc / robustness,MISC-01,Rapid Shift double-tap then letter,"Double-tap Shift, 
 Misc / robustness,MISC-02,Mode switch mid-press,Hold a letter; with another finger tap 123,Layout switches; stale key not committed on release,iOS+Android,,,
 Misc / robustness,MISC-03,Backgrounded mid-record,Send app to background while recording,Recording stops cleanly; no stuck UI,iOS+Android,,,
 Misc / robustness,MISC-04,Numeric input field,Focus a number-only field,Keyboard opens directly to the compact numeric pad (see NUM-*),iOS+Android,,,§9
-Misc / robustness,MISC-05,Haptic feedback on key tap,Tap any key with haptics on,Tick haptic per press,iOS+Android,,,
+Misc / robustness,MISC-05,Haptic feedback on key tap,Tap any key,Tick haptic per press,iOS+Android,,,Haptics default on — detail in FBK-*
 Numeric pad layouts,NUM-01,iOS numberPad layout,Focus a number-pad field,"Telephone-style pad — digits 1-9 with ABC/DEF… letters beneath 2-9, 0 and delete on the bottom row; no decimal key, no return key",iOS,,,§9.1
 Numeric pad layouts,NUM-02,iOS numeric pad drops top bar,Focus a number-pad field,No logo / mic / suggestion strip; the pad fills the keyboard area (compact native look),iOS,,,§9.1
 Numeric pad layouts,NUM-03,iOS decimalPad separator,Focus a decimal-pad field,Bottom-left slot shows the locale decimal separator instead of the numberPad's empty spacer,iOS,,,§9.1
@@ -140,7 +149,7 @@ Autocorrect engine,ACE-07,Word split,"Type ""alot"" then space","Commits ""a lot
 Autocorrect engine,ACE-08,Contraction split,"Type ""imnot"" then space","Commits ""I'm not """,iOS+Android,,,
 Autocorrect engine,ACE-09,ALL-CAPS acronym untouched,"Type ""TEH"" then space",No autocorrect (short ALL-CAPS treated as acronym),iOS+Android,,,
 Autocorrect engine,ACE-10,Hyphenated token untouched,"Type ""well-knwn"" then space",No autocorrect on hyphenated tokens (suggestions may still show),iOS+Android,,,
-Autocorrect engine,ACE-11,Punctuation trigger,"Type ""teh"" then period","Commits ""the.""",iOS+Android,,,Autocorrect fires on . , ! ? ; :
+Autocorrect engine,ACE-11,Punctuation trigger,"Type ""teh"" then period","Commits ""the.""",iOS+Android,,,"Autocorrect fires on . , ! ? ; :"
 Autocorrect engine,ACE-12,Return trigger,"Type ""teh"" then Return","Commits ""the"" + newline",iOS+Android,,,
 Autocorrect engine,ACE-13,Backspace after autocorrect offers revert,Backspace once right after an autocorrect,"Only the space is deleted (correction stays); strip shows the quoted original word",iOS+Android,,,Native-style revert affordance
 Autocorrect engine,ACE-14,Revert tap restores + blacklists,"Backspace after an autocorrect, tap the quoted original, retype the same word later + space","Original word restored exactly; the same pair never auto-applies again",iOS+Android,,,Learned blacklist
@@ -161,6 +170,16 @@ Autocorrect engine,ACE-28,Proper-noun casing,"Type ""franve"" + space; also type
 Autocorrect engine,ACE-29,Prediction learning,"Type the same two-word pair (e.g. ""stack sats"") a few times, then type the first word + space",The learned continuation leads the prediction strip,iOS+Android,,,User bigrams (keyboard-user-lexicon.json)
 Autocorrect engine,ACE-30,Correction casing mirrors typed word,"Type ""Teh"" (auto-capped) then space","Commits ""The "" (not ""the "")",iOS+Android,,,
 Autocorrect engine,ACE-31,Lowercase proper noun self-corrects,"Type ""france"" then space; also ""google"" + space","Commit ""France "" / ""Google ""; strip offers the quoted lowercase form to keep",iOS+Android,,,Case-only corrections apply
+Autocorrect engine,ACE-32,Touch-position aware correction,"Deliberately fat-finger one key toward its neighbor (e.g. aim for h but land on g in ""tge"") then space","Commits the intended word (""the "") — tap position guides the fix",iOS+Android,,,Spatial model (touchPoints)
+Autocorrect engine,ACE-33,First-letter fat-finger,"Start a word landing just off the first key toward the intended one (e.g. hit y aiming for t → ""yhe""), finish and space","Corrects to the intended word (""the "")",iOS+Android,,,firstLetterSurcharge lowered so touch can overcome it
+Autocorrect engine,ACE-34,Touch buffer survives backspace,"Type a word, backspace one letter, retype it, then space",Correction still applies correctly (no mis-fix / no crash),iOS+Android,,,currentWordTouches popped on backspace
+Autocorrect engine,ACE-35,Stale touch falls back safely,"Paste a word or edit the field via the host, then keep typing and space",No mis-correction from stale tap data (falls back to key-adjacency),iOS+Android,,,Buffer cleared on host edit / cursor move
+Autocorrect engine,ACE-36,Context survives comma,"Type ""apples, appl"" and pause","Suggestion still boosted by ""apples"" (context crosses the comma)",iOS+Android,,,Only . ! ? and newline reset context
+Autocorrect engine,ACE-37,Sentence-start predictions,Focus an empty text field,"Strip shows curated openers (""I"" ""The"" ""You"")",iOS+Android,,,Next-word starters
+Autocorrect engine,ACE-38,Predictions after sentence end,"Type ""Done. """,Strip shows capitalized sentence openers,iOS+Android,,,
+Autocorrect engine,ACE-39,Prediction fallback fills strip,After a word with no known continuations press space,Strip still shows common words (never left empty),iOS+Android,,,Unigram fallback
+Autocorrect engine,ACE-40,Proper-noun possessive,"Type ""londons"" then space","Commits ""London's """,iOS+Android,,,Base is a proper noun and not itself a word
+Autocorrect engine,ACE-41,Plural not made possessive,"Type ""dogs"" then space","Stays ""dogs"" (no ""dog's"")",iOS+Android,,,Possessive gated to proper nouns
 Voice transcription,VOX-01,Tap mic to record,Tap top-bar mic,Records; waveform animates with real input level,iOS+Android,,,
 Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recording,Stops recording; transcription inserted at cursor,iOS+Android,,,
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,

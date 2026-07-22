@@ -100,7 +100,10 @@ class SuggestionStripView(context: Context) : LinearLayout(context) {
                 )
                 setBackgroundResource(ripple.resourceId)
             }
-            setOnClickListener { listener?.onSlotTapped(slot) }
+            setOnClickListener {
+                KeyFeedback.keyPress(this)
+                listener?.onSlotTapped(slot)
+            }
         }
     }
 

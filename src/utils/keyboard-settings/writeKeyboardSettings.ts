@@ -13,9 +13,12 @@ export interface KeyboardSettingsConfig {
   /** When true, the keyboard auto-applies the top spelling guess on space
    *  (with backspace-revert). When false, suggestions are tap-only. */
   autocorrect: boolean;
-  /** When true, the keyboard plays a light haptic on each key press. When
-   *  false (default), it's silent — matching the iOS native default. */
+  /** When true (default), the keyboard plays a light haptic on each key
+   *  press. */
   hapticFeedback: boolean;
+  /** When true (default), the keyboard plays a key-click sound on each key
+   *  press. On iOS the click also requires Full Access. */
+  keySound: boolean;
   /** How long (seconds) a keyboard voice-typing session stays armed in the
    *  background after the user starts it from an external app. iOS forbids the
    *  extension from recording, so the main app captures on its behalf and must
@@ -36,6 +39,7 @@ export const writeKeyboardSettings = (config: KeyboardSettingsConfig): void => {
     {
       autocorrect: config.autocorrect,
       hapticFeedback: config.hapticFeedback,
+      keySound: config.keySound,
       micTimeoutSeconds: config.micTimeoutSeconds,
     },
     { flag: FeatureFlag.settings, label: "keyboard settings" },

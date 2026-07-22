@@ -48,6 +48,9 @@ struct KeyboardTheme {
     /// Secondary label (sub-label on number rows etc.).
     let keyTextSecondary: UIColor = .secondaryLabel
 
+    /// Shared light-mode pressed grey (~#ADB3B8) for special and wide keys.
+    private static let pressedGreyLight = UIColor(red: 0.68, green: 0.70, blue: 0.72, alpha: 1.0)
+
     /// Pressed-state fill for modifier keys (shift / delete / #+= / globe /
     /// emoji). On iOS 26 every key shares the same idle fill, and these
     /// modifier keys flash to this darker grey only while held.
@@ -56,8 +59,18 @@ struct KeyboardTheme {
             // ~#47494B
             return UIColor(red: 0.28, green: 0.29, blue: 0.30, alpha: 1.0)
         }
-        // ~#ADB3B8
-        return UIColor(red: 0.68, green: 0.70, blue: 0.72, alpha: 1.0)
+        return KeyboardTheme.pressedGreyLight
+    }
+
+    /// Pressed-state fill for the wide action keys (space / delete / return).
+    /// Matches `specialKeyPressed` in light mode, but in dark mode flashes to a
+    /// *lighter* grey than the idle key — native iOS lifts these keys on press
+    /// rather than darkening them the way the modifier keys flash.
+    let wideKeyPressed: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.38)
+        }
+        return KeyboardTheme.pressedGreyLight
     }
 
     /// Brand accent — return key fill and top-bar record button idle.
@@ -76,12 +89,12 @@ struct KeyboardTheme {
     /// than the system keys so the QWERTY rows read as a continuous band of
     /// pill cells — matches the visual hierarchy KeyboardKit and stock iOS 26
     /// use to separate "letter" from "function" affordances.
-    let cornerRadiusCharacter: CGFloat = 6
+    let cornerRadiusCharacter: CGFloat = 7
 
     /// Corner radius for system keys (shift / delete / 123 / return / mic).
     /// A touch larger than `cornerRadiusCharacter` so the rounder shape reads
     /// as the action affordance.
-    let cornerRadiusSystem: CGFloat = 8
+    let cornerRadiusSystem: CGFloat = 9
 
     // MARK: - Emoji picker tokens
 
@@ -124,6 +137,15 @@ struct KeyboardTheme {
             return UIColor.white.withAlphaComponent(0.10)
         }
         return UIColor.black.withAlphaComponent(0.06)
+    }
+
+    /// Track drawn behind the whole category section while the user scrubs a
+    /// finger across it, mirroring the native slide-to-browse affordance.
+    let emojiCategoryScrubTrack: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.07)
+        }
+        return UIColor.black.withAlphaComponent(0.05)
     }
 }
 

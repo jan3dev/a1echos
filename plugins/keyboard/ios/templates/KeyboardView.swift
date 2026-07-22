@@ -3,7 +3,13 @@ import UIKit
 
 /// Delegate protocol for keyboard actions.
 protocol KeyboardViewDelegate: AnyObject {
-    func keyboardView(_ view: KeyboardView, didTapCharacter char: String)
+    /// A character was committed. `normalizedTouch`, when non-nil, is the tap
+    /// location in key-grid units (see `KeyAdjacency.center`) for the spatial
+    /// correction model; nil for non-letter or synthetic commits (emoji,
+    /// variants popup, shifted symbols).
+    func keyboardView(
+        _ view: KeyboardView, didTapCharacter char: String, at normalizedTouch: CGPoint?
+    )
     func keyboardViewDidTapDelete(_ view: KeyboardView)
     /// Fired by the delete key's hold-to-repeat timer once the user has held
     /// past the word-deletion threshold (matches native iOS behaviour where
@@ -65,21 +71,21 @@ class KeyboardView: UIInputView {
         let rowsHeight: CGFloat
         switch currentLayout {
         case .emoji, .emojiSearch:
-            // Portrait 324 makes the picker's grid exactly 4×52pt rows with
-            // insets equal to the 2pt inter-row gap (8+40+8 search band +
-            // 218 grid + 38 strip + 4/8 outer margins), and the search
-            // overlay's 56pt results strip equally snug.
-            rowsHeight = isLandscape ? 236 : 324
+            // The picker occupies `rowsHeight − 4 (top band) − 2 (bottom
+            // margin)`. Portrait keeps its 4×52pt grid; landscape is taller
+            // (242) so its 3-row grid gets ~44pt cells — big enough for the
+            // larger emoji glyph without tightening the gaps between them.
+            rowsHeight = isLandscape ? 252 : 319
         case .numberPad, .decimalPad:
-            // Top bar is hidden on numeric pads — return the rows-only budget.
-            return isLandscape ? 154 : 212
+            // Top bar is hidden on numeric pads — return the rows-only budget
+            // (4 pt top band + rowStack height + 2 pt bottom margin).
+            return isLandscape ? 140 : 214
         default:
-            // +4 pt over the rows-only budget: a slim band between the top bar
-            // and the first key row (see rowStackTopFromTopBar) gives the
-            // top-row key-preview balloon a little headroom. The balloon is
-            // sized compact enough to fit this band without being clipped at
-            // the keyboard's top edge.
-            rowsHeight = isLandscape ? 158 : 216
+            // Budget = 8 pt top band (rowStackTopFromTopBar, gives the top-row
+            // key-preview balloon headroom) + the fixed rowStack height + the
+            // bottom margin. Portrait uses a slim 2 pt margin; landscape uses
+            // 4 pt so the keys sit a touch higher off the screen edge.
+            rowsHeight = isLandscape ? 146 : 218
         }
         return rowsHeight + KeyboardTopBar.preferredHeight
     }
@@ -114,10 +120,13 @@ class KeyboardView: UIInputView {
     private var rowStackHeightConstraint: NSLayoutConstraint!
 
     /// Height the rowStack should occupy in any QWERTY-style mode.
-    /// Portrait: 200 pt = 4 rows × ~41.75 pt + 3 × 11 pt spacing.
-    /// Landscape: 142 pt = 4 rows × ~28.75 pt + 3 × 9 pt spacing.
+    /// Portrait: 208 pt = 4 rows × ~43.75 pt + 3 × 11 pt spacing.
+    /// Landscape: 134 pt = 4 rows × ~26.75 pt + 3 × 9 pt spacing.
+    /// Portrait keys run 2 pt taller than the earlier 41.75 to match stock
+    /// iOS; landscape keys are shorter still (26.75) — they read too tall
+    /// otherwise. The 9 pt inter-row gap is unchanged.
     private var qwertyRowStackHeight: CGFloat {
-        isPhoneLandscape ? 142 : 200
+        isPhoneLandscape ? 134 : 208
     }
 
     private var rowStackInterRowSpacing: CGFloat {
@@ -292,7 +301,7 @@ class KeyboardView: UIInputView {
         // the slack lands as a bottom margin instead of resizing keys.
         rowStackHeightConstraint.priority = .required
         let rowStackBottom = rowStackView.bottomAnchor.constraint(
-            equalTo: bottomAnchor, constant: -8
+            equalTo: bottomAnchor, constant: -2
         )
         rowStackBottom.priority = .defaultHigh - 1
         NSLayoutConstraint.activate([
@@ -301,8 +310,8 @@ class KeyboardView: UIInputView {
             topBar.topAnchor.constraint(equalTo: topAnchor),
             topBar.heightAnchor.constraint(equalToConstant: KeyboardTopBar.preferredHeight),
 
-            rowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            rowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            rowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 7),
+            rowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
             rowStackTopFromTopBar,
             rowStackBottom,
             rowStackHeightConstraint,
@@ -755,7 +764,7 @@ class KeyboardView: UIInputView {
         let location = touch.location(in: self)
         guard let button = hitTestKeyButton(at: location) else { return }
 
-        KeyFeedback.keyTap()
+        KeyFeedback.keyTap(for: button.keyDefinition.type)
         button.setPressed(true)
 
         let state = PointerState(button: button, location: location)
@@ -901,7 +910,7 @@ class KeyboardView: UIInputView {
             let selected = keyVariants.selectedVariant()
             keyVariants.hide()
             if let variant = selected {
-                delegate?.keyboardView(self, didTapCharacter: variant)
+                delegate?.keyboardView(self, didTapCharacter: variant, at: nil)
                 dropTransientShiftAfterCharacterCommit()
             }
             return
@@ -925,7 +934,27 @@ class KeyboardView: UIInputView {
             return
         }
 
-        handleKeyAction(state.button.keyDefinition)
+        handleKeyAction(
+            state.button.keyDefinition,
+            normalizedTouch: normalizedTouch(for: state.button, at: state.lastLocation)
+        )
+    }
+
+    /// Places `location` (self coords) in key-grid units relative to the tapped
+    /// key's known grid center, so the spatial model sees where within the key
+    /// the finger actually landed. nil for non-letter keys (no grid center).
+    private func normalizedTouch(for button: KeyButton, at location: CGPoint) -> CGPoint? {
+        guard button.keyDefinition.type == .character else { return nil }
+        let label = shiftedLabel(button.keyDefinition.label).lowercased()
+        guard label.count == 1,
+              let ascii = label.unicodeScalars.first.map({ UInt8($0.value & 0xFF) }),
+              let center = KeyAdjacency.center(ascii) else { return nil }
+        let frame = button.convert(button.bounds, to: self)
+        guard frame.width > 0, frame.height > 0 else { return nil }
+        return CGPoint(
+            x: CGFloat(center.x) + (location.x - frame.midX) / frame.width,
+            y: CGFloat(center.y) + (location.y - frame.midY) / frame.height
+        )
     }
 
     // The key whose hit tile contains `point`. The tiles cover the keyboard
@@ -1315,7 +1344,7 @@ class KeyboardView: UIInputView {
             // (back to letters, not the picker).
             let results = emojiSearchIndex.search(emojiSearchQuery)
             if let first = results.first {
-                delegate?.keyboardView(self, didTapCharacter: first)
+                delegate?.keyboardView(self, didTapCharacter: first, at: nil)
                 RecentEmojis.shared.record(first)
             }
             emojiSearchQuery = ""
@@ -1340,7 +1369,9 @@ class KeyboardView: UIInputView {
         }
     }
 
-    private func handleKeyAction(_ key: KeyboardLayout.KeyDefinition) {
+    private func handleKeyAction(
+        _ key: KeyboardLayout.KeyDefinition, normalizedTouch: CGPoint? = nil
+    ) {
         // In `.emojiSearch`, character / delete / space / return are routed
         // into the local search query instead of the host's text proxy, so
         // typing on the QWERTY rows filters emoji results live. The mode-
@@ -1351,7 +1382,9 @@ class KeyboardView: UIInputView {
         }
         switch key.type {
         case .character:
-            delegate?.keyboardView(self, didTapCharacter: shiftedLabel(key.label))
+            delegate?.keyboardView(
+                self, didTapCharacter: shiftedLabel(key.label), at: normalizedTouch
+            )
             dropTransientShiftAfterCharacterCommit()
             markSymbolTypedIfApplicable()
         case .delete:
@@ -1395,10 +1428,10 @@ class KeyboardView: UIInputView {
             default: break
             }
         case .comma:
-            delegate?.keyboardView(self, didTapCharacter: ",")
+            delegate?.keyboardView(self, didTapCharacter: ",", at: nil)
             markSymbolTypedIfApplicable()
         case .period:
-            delegate?.keyboardView(self, didTapCharacter: ".")
+            delegate?.keyboardView(self, didTapCharacter: ".", at: nil)
             markSymbolTypedIfApplicable()
         case .spacer:
             // Unreachable — spacers don't have KeyButtons that can fire
@@ -1473,14 +1506,6 @@ class KeyboardView: UIInputView {
     }
 }
 
-// MARK: - UIInputViewAudioFeedback
-
-extension KeyboardView: UIInputViewAudioFeedback {
-    /// Lets `UIDevice.playInputClick()` (called from `SoundManager.keyTap()`)
-    /// produce the system key-click sound for this input view.
-    var enableInputClicksWhenVisible: Bool { true }
-}
-
 // MARK: - KeyboardTopBarDelegate
 
 extension KeyboardView: KeyboardTopBarDelegate {
@@ -1514,7 +1539,7 @@ extension KeyboardView: EmojiPickerViewDelegate {
             picker.leadingAnchor.constraint(equalTo: leadingAnchor),
             picker.trailingAnchor.constraint(equalTo: trailingAnchor),
             picker.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 4),
-            picker.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            picker.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
         ])
         // Keep the popups (preview / variants) above the picker.
         bringSubviewToFront(keyPreview)
@@ -1524,7 +1549,7 @@ extension KeyboardView: EmojiPickerViewDelegate {
 
     func emojiPicker(_ view: EmojiPickerView, didSelect emoji: String) {
         delegate?.keyboardView(
-            self, didTapCharacter: SkinTonePreferences.shared.display(emoji)
+            self, didTapCharacter: SkinTonePreferences.shared.display(emoji), at: nil
         )
     }
 
@@ -1624,7 +1649,7 @@ extension KeyboardView: EmojiSearchOverlayViewDelegate {
         // Stay in search after inserting — the user often picks several
         // emojis from one query; ABC/return are the explicit exits.
         delegate?.keyboardView(
-            self, didTapCharacter: SkinTonePreferences.shared.display(emoji)
+            self, didTapCharacter: SkinTonePreferences.shared.display(emoji), at: nil
         )
         RecentEmojis.shared.record(emoji)
     }
@@ -1660,7 +1685,7 @@ extension KeyboardView {
             self.dismissSkinTonePopup()
             SkinTonePreferences.shared.setTone(tone, for: base)
             self.delegate?.keyboardView(
-                self, didTapCharacter: EmojiSkinTones.applying(tone, to: base)
+                self, didTapCharacter: EmojiSkinTones.applying(tone, to: base), at: nil
             )
             RecentEmojis.shared.record(base)
             KeyFeedback.keyTap()

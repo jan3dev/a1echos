@@ -17,8 +17,10 @@ import {
   useKeyboardAutocorrect,
   useKeyboardHaptic,
   useKeyboardMicTimeout,
+  useKeyboardSound,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
+  useSetKeyboardSound,
   useSetSmartSplitEnabled,
   useShowKeyboardPrompt,
   useSmartSplitEnabled,
@@ -40,6 +42,8 @@ export default function AdvancedSettingsScreen() {
   const setKeyboardAutocorrect = useSetKeyboardAutocorrect();
   const keyboardHaptic = useKeyboardHaptic();
   const setKeyboardHaptic = useSetKeyboardHaptic();
+  const keyboardSound = useKeyboardSound();
+  const setKeyboardSound = useSetKeyboardSound();
   const keyboardMicTimeout = useKeyboardMicTimeout();
   const showKeyboardPrompt = useShowKeyboardPrompt();
 
@@ -55,6 +59,10 @@ export default function AdvancedSettingsScreen() {
 
   const handleHapticToggle = (next: boolean) => {
     void setKeyboardHaptic(next);
+  };
+
+  const handleSoundToggle = (next: boolean) => {
+    void setKeyboardSound(next);
   };
 
   return (
@@ -113,6 +121,19 @@ export default function AdvancedSettingsScreen() {
               />
             }
             onPress={() => handleHapticToggle(!keyboardHaptic)}
+          />
+          <ListItem
+            testID={TestID.SettingsKeyboardSoundToggle}
+            title={loc.keyboardSoundTitle}
+            subtitle={loc.keyboardSoundDescription}
+            iconTrailing={
+              <Toggle
+                value={keyboardSound}
+                onValueChange={handleSoundToggle}
+                accessibilityLabel={loc.keyboardSoundTitle}
+              />
+            }
+            onPress={() => handleSoundToggle(!keyboardSound)}
           />
           {/* The keyboard mic timeout only affects the iOS keyboard's hot-mic
               session; it has no effect on Android, so hide the row there. */}

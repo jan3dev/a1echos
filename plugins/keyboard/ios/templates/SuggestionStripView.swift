@@ -121,16 +121,50 @@ final class SuggestionStripView: UIView {
         button.accessibilityLabel = slot.isVerbatim
             ? "Keep \(slot.text)" : slot.text
         button.tag = index
+        // While a plain candidate is pressed (tap or long-press hold) it takes
+        // on the same pill as the emphasized autocorrect slot, and its adjacent
+        // dividers hide so no hairline butts against the pill.
+        button.onHighlightChanged = { [weak self, weak button] pressed in
+            guard let self, let button else { return }
+            self.setCandidatePressed(button, pressed: pressed)
+        }
         button.addTarget(self, action: #selector(candidateTapped(_:)), for: .touchUpInside)
         return button
     }
 
     private func makeDivider() -> UIView {
         let divider = UIView()
+        divider.tag = SuggestionStripView.dividerTag
         divider.translatesAutoresizingMaskIntoConstraints = false
         divider.backgroundColor = UIColor.label.withAlphaComponent(0.15)
         divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
         return divider
+    }
+
+    /// Applies the pressed pill to a non-emphasized candidate and hides the
+    /// dividers on either side of it. Emphasized slots already own the pill and
+    /// have no adjacent dividers, so they're left untouched.
+    private func setCandidatePressed(_ button: PillButton, pressed: Bool) {
+        let idx = button.tag
+        guard idx >= 0, idx < slots.count, !slots[idx].isEmphasized else { return }
+        button.backgroundColor = pressed ? theme.keyPopupBackground : .clear
+        button.isPill = pressed
+        button.layer.masksToBounds = true
+        setAdjacentDividers(of: button, hidden: pressed)
+    }
+
+    /// Toggles (via alpha, so layout doesn't shift) the dividers immediately
+    /// before and after `button` in the stack.
+    private func setAdjacentDividers(of button: UIView, hidden: Bool) {
+        let views = stack.arrangedSubviews
+        guard let i = views.firstIndex(of: button) else { return }
+        let alpha: CGFloat = hidden ? 0 : 1
+        if i > 0, views[i - 1].tag == SuggestionStripView.dividerTag {
+            views[i - 1].alpha = alpha
+        }
+        if i + 1 < views.count, views[i + 1].tag == SuggestionStripView.dividerTag {
+            views[i + 1].alpha = alpha
+        }
     }
 
     @objc private func candidateTapped(_ sender: UIButton) {
@@ -138,6 +172,11 @@ final class SuggestionStripView: UIView {
         KeyFeedback.keyTap()
         delegate?.suggestionStrip(self, didSelect: slots[sender.tag])
     }
+
+    // Sentinel `tag` marking a hairline divider (candidate buttons use their
+    // slot index, 0–2), so `setAdjacentDividers` can pick dividers out of the
+    // stack's arranged subviews.
+    private static let dividerTag = 777
 }
 
 /// A button that renders its background as a full pill (corner radius = half
@@ -147,6 +186,16 @@ final class SuggestionStripView: UIView {
 private final class PillButton: UIButton {
     var isPill = false {
         didSet { setNeedsLayout() }
+    }
+
+    /// Fired when the pressed (highlighted) state flips — the strip uses it to
+    /// swap in the pressed pill and hide adjacent dividers.
+    var onHighlightChanged: ((Bool) -> Void)?
+
+    override var isHighlighted: Bool {
+        didSet {
+            if oldValue != isHighlighted { onHighlightChanged?(isHighlighted) }
+        }
     }
 
     override func layoutSubviews() {

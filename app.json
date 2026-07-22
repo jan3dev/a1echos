@@ -8,7 +8,7 @@
     "scheme": "echos",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "buildNumber": "8",
+      "buildNumber": "9",
       "supportsTablet": true,
       "deploymentTarget": "16.0",
       "infoPlist": {

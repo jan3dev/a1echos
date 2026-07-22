@@ -18,10 +18,12 @@ import {
   useKeyboardAutocorrect,
   useKeyboardHaptic,
   useKeyboardMicTimeout,
+  useKeyboardSound,
   useMarkKeyboardPromptSeen,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
   useSetKeyboardMicTimeout,
+  useSetKeyboardSound,
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
@@ -71,6 +73,7 @@ const initialState = {
   smartSplitEnabled: true,
   keyboardAutocorrect: false,
   keyboardHaptic: false,
+  keyboardSound: false,
   keyboardMicTimeoutSeconds: 300,
   hasSeenWelcome: false,
 };
@@ -515,6 +518,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
@@ -532,6 +536,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
@@ -557,11 +562,13 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: true,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
@@ -578,7 +585,8 @@ describe("settingsStore", () => {
       // initialize() mirrors the loaded values to the keyboard config.
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
-        hapticFeedback: false,
+        hapticFeedback: true,
+        keySound: true,
         micTimeoutSeconds: 300,
       });
     });
@@ -596,8 +604,13 @@ describe("settingsStore", () => {
   });
 
   describe("setKeyboardHaptic()", () => {
-    it("defaults to false in the store", () => {
-      expect(useSettingsStore.getState().keyboardHaptic).toBe(false);
+    it("defaults to true when nothing is stored", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async () => null);
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(true);
     });
 
     it("enables, persists 'true', and mirrors both keyboard flags", async () => {
@@ -611,6 +624,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: true,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
@@ -623,6 +637,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
         hapticFeedback: true,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
@@ -647,27 +662,30 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: false,
         hapticFeedback: true,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });
 
-    it("initialize() treats only the string 'true' as enabled", async () => {
+    it("initialize() treats only the string 'false' as disabled", async () => {
       const AS: any = AsyncStorage;
       (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
-        key === "keyboard_haptic" ? "true" : null,
+        key === "keyboard_haptic" ? "false" : null,
       );
 
       await useSettingsStore.getState().initialize();
 
-      expect(useSettingsStore.getState().keyboardHaptic).toBe(true);
+      expect(useSettingsStore.getState().keyboardHaptic).toBe(false);
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: true,
-        hapticFeedback: true,
+        hapticFeedback: false,
+        keySound: true,
         micTimeoutSeconds: 300,
       });
     });
@@ -680,6 +698,92 @@ describe("settingsStore", () => {
 
     it("useSetKeyboardHaptic returns the action", () => {
       const { result } = renderHook(() => useSetKeyboardHaptic());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("setKeyboardSound()", () => {
+    it("defaults to true when nothing is stored", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async () => null);
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardSound).toBe(true);
+    });
+
+    it("enables, persists 'true', and mirrors to the keyboard config", async () => {
+      await useSettingsStore.getState().setKeyboardSound(true);
+
+      expect(useSettingsStore.getState().keyboardSound).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "keyboard_sound",
+        "true",
+      );
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: false,
+        hapticFeedback: false,
+        keySound: true,
+        micTimeoutSeconds: 300,
+      });
+    });
+
+    it("is a no-op when the value is unchanged", async () => {
+      await useSettingsStore.getState().setKeyboardSound(false);
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      expect(writeKeyboardSettings).not.toHaveBeenCalled();
+    });
+
+    it("rolls back state and mirror on persist failure", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().setKeyboardSound(true),
+      ).rejects.toThrow("write fail");
+
+      expect(useSettingsStore.getState().keyboardSound).toBe(false);
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
+        autocorrect: false,
+        hapticFeedback: false,
+        keySound: true,
+        micTimeoutSeconds: 300,
+      });
+      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
+        autocorrect: false,
+        hapticFeedback: false,
+        keySound: false,
+        micTimeoutSeconds: 300,
+      });
+    });
+
+    it("initialize() treats only the string 'false' as disabled", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "keyboard_sound" ? "false" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().keyboardSound).toBe(false);
+      expect(writeKeyboardSettings).toHaveBeenCalledWith({
+        autocorrect: true,
+        hapticFeedback: true,
+        keySound: false,
+        micTimeoutSeconds: 300,
+      });
+    });
+
+    it("useKeyboardSound selector reflects state", () => {
+      useSettingsStore.setState({ keyboardSound: true });
+      const { result } = renderHook(() => useKeyboardSound());
+      expect(result.current).toBe(true);
+    });
+
+    it("useSetKeyboardSound returns the action", () => {
+      const { result } = renderHook(() => useSetKeyboardSound());
       expect(typeof result.current).toBe("function");
     });
   });
@@ -700,6 +804,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 1200,
       });
     });
@@ -715,6 +820,7 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenCalledWith({
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 0,
       });
     });
@@ -739,11 +845,13 @@ describe("settingsStore", () => {
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(1, {
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 60,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 300,
       });
     });

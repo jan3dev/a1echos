@@ -33,6 +33,8 @@ export {
   useSetKeyboardAutocorrect,
   useKeyboardHaptic,
   useSetKeyboardHaptic,
+  useKeyboardSound,
+  useSetKeyboardSound,
   useKeyboardMicTimeout,
   useSetKeyboardMicTimeout,
   useHasSeenWelcome,

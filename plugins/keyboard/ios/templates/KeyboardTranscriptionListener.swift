@@ -59,6 +59,7 @@ import UIKit
     /// Must match `KeyboardSettings.swift` in the extension.
     private let autocorrectDefaultsKey = "EchosKeyboard.autocorrect"
     private let hapticDefaultsKey = "EchosKeyboard.hapticFeedback"
+    private let keySoundDefaultsKey = "EchosKeyboard.keySound"
     private var lifecycleObservers: [NSObjectProtocol] = []
 
     /// Grace-window assertion that keeps the app alive for a short spell after
@@ -595,9 +596,9 @@ import UIKit
     // MARK: - Keyboard Settings Mirror
 
     /// Reads `keyboard-settings.json` from the app's Documents directory and
-    /// copies the `autocorrect` and `hapticFeedback` flags into the App Group
-    /// `UserDefaults` the keyboard extension reads via `KeyboardSettings.load()`.
-    /// Autocorrect defaults on (matching native keyboards); haptics stay off.
+    /// copies the `autocorrect`, `hapticFeedback` and `keySound` flags into the
+    /// App Group `UserDefaults` the keyboard extension reads via
+    /// `KeyboardSettings.load()`. All three default on.
     private func mirrorKeyboardSettings() {
         guard let docsDir = NSSearchPathForDirectoriesInDomains(
             .documentDirectory, .userDomainMask, true
@@ -605,16 +606,19 @@ import UIKit
         let path = (docsDir as NSString).appendingPathComponent(keyboardSettingsFilename)
 
         var autocorrect = true
-        var hapticFeedback = false
+        var hapticFeedback = true
+        var keySound = true
         if FileManager.default.fileExists(atPath: path),
            let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             autocorrect = (json["autocorrect"] as? Bool) ?? true
-            hapticFeedback = (json["hapticFeedback"] as? Bool) ?? false
+            hapticFeedback = (json["hapticFeedback"] as? Bool) ?? true
+            keySound = (json["keySound"] as? Bool) ?? true
         }
         let defaults = UserDefaults(suiteName: appGroupID)
         defaults?.set(autocorrect, forKey: autocorrectDefaultsKey)
         defaults?.set(hapticFeedback, forKey: hapticDefaultsKey)
+        defaults?.set(keySound, forKey: keySoundDefaultsKey)
     }
 
     /// Reads the configured microphone-timeout (session length) in seconds from

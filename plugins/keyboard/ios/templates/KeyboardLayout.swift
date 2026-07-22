@@ -171,7 +171,8 @@ enum KeyboardLayout {
         KeyDefinition(label: "m"),
         KeyDefinition(label: "", type: .spacer, widthWeight: 0.01),
         KeyDefinition(label: "", type: .delete, widthWeight: 1.4,
-                      accessibilityLabel: "Delete", symbolName: "delete.left"),
+                      accessibilityLabel: "Delete", symbolName: "delete.left",
+                      pressedSymbolName: "delete.left.fill"),
     ]
 
     static let lettersRow4: [KeyDefinition] = [
@@ -214,7 +215,8 @@ enum KeyboardLayout {
         KeyDefinition(label: "!"),
         KeyDefinition(label: "'"),
         KeyDefinition(label: "", type: .delete, widthWeight: 1.5,
-                      accessibilityLabel: "Delete", symbolName: "delete.left"),
+                      accessibilityLabel: "Delete", symbolName: "delete.left",
+                      pressedSymbolName: "delete.left.fill"),
     ]
 
     static let numbersRow4: [KeyDefinition] = [
@@ -247,7 +249,8 @@ enum KeyboardLayout {
         KeyDefinition(label: "!"),
         KeyDefinition(label: "'"),
         KeyDefinition(label: "", type: .delete, widthWeight: 1.5,
-                      accessibilityLabel: "Delete", symbolName: "delete.left"),
+                      accessibilityLabel: "Delete", symbolName: "delete.left",
+                      pressedSymbolName: "delete.left.fill"),
     ]
 
     static let symbolsRow4 = numbersRow4
@@ -399,22 +402,34 @@ enum KeyboardLayout {
     }
 }
 
-/// Long-press accent variants for letter keys, mirroring the set the iOS
-/// stock keyboard surfaces on the English layout. The original character
-/// is prepended so the popover defaults to a no-op release.
+/// Long-press accent variants for letter keys. Superset of the iOS stock
+/// English layout, extended toward the international Latin diacritics the
+/// system surfaces once additional Latin-script languages are enabled (e.g.
+/// the `t` → `ț ť ŧ ţ` set), so more accented characters are reachable
+/// without switching layouts. The original character is prepended so the
+/// popover defaults to a no-op release.
 enum AccentVariants {
 
     private static let map: [Character: [String]] = [
-        "a": ["à", "á", "â", "ä", "æ", "ã", "å", "ā"],
-        "c": ["ç", "ć", "č"],
-        "e": ["è", "é", "ê", "ë", "ē", "ė", "ę"],
-        "i": ["î", "ï", "í", "ī", "į", "ì"],
-        "l": ["ł"],
-        "n": ["ñ", "ń"],
-        "o": ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ"],
-        "s": ["ß", "ś", "š"],
-        "u": ["û", "ü", "ù", "ú", "ū"],
-        "y": ["ÿ"],
+        "a": ["à", "á", "â", "ä", "æ", "ã", "å", "ā", "ą"],
+        "b": ["ḃ"],
+        "c": ["ç", "ć", "č", "ċ", "ĉ"],
+        "d": ["ð", "đ", "ď", "ḋ"],
+        "e": ["è", "é", "ê", "ë", "ē", "ė", "ę", "ě", "ĕ"],
+        "g": ["ğ", "ĝ", "ġ", "ģ"],
+        "h": ["ĥ", "ħ", "ḣ"],
+        "i": ["î", "ï", "í", "ī", "į", "ì", "ĩ"],
+        "j": ["ĵ"],
+        "k": ["ķ", "ĸ"],
+        "l": ["ł", "ĺ", "ļ", "ľ", "ŀ"],
+        "n": ["ñ", "ń", "ņ", "ň", "ŋ"],
+        "o": ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ", "ő"],
+        "r": ["ŕ", "ř", "ŗ"],
+        "s": ["ß", "ś", "š", "ş", "ŝ", "ș"],
+        "t": ["ț", "ť", "ŧ", "ţ", "þ"],
+        "u": ["û", "ü", "ù", "ú", "ū", "ũ", "ů", "ű", "ų"],
+        "w": ["ŵ", "ẁ", "ẃ", "ẅ"],
+        "y": ["ÿ", "ý", "ŷ", "ỳ"],
         "z": ["ž", "ź", "ż"],
     ]
 

@@ -62,6 +62,19 @@ const DICTIONARY_SOURCE = path.join(
   DICTIONARY_FILE,
 );
 
+// Curated context-aware confusable table (ill -> I'll etc.); a small JSON the
+// engine parses at load. Ships as a bundle resource alongside the dictionary.
+const CONFUSABLES_FILE = "confusables.json";
+const CONFUSABLES_SOURCE = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "data",
+  "keyboard-dictionary",
+  CONFUSABLES_FILE,
+);
+
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -91,7 +104,11 @@ function withKeyboardXcodeTarget(config) {
     );
 
     // Create a PBX group for the extension source files + bundled resources
-    const groupFiles = [...EXTENSION_SWIFT_FILES, DICTIONARY_FILE];
+    const groupFiles = [
+      ...EXTENSION_SWIFT_FILES,
+      DICTIONARY_FILE,
+      CONFUSABLES_FILE,
+    ];
     const extensionGroup = proj.addPbxGroup(groupFiles, targetName, targetName);
 
     // The xcode lib guesses `lastKnownFileType` poorly for the unknown .echd
@@ -348,6 +365,13 @@ function withKeyboardExtensionFiles(config) {
       fs.copyFileSync(
         DICTIONARY_SOURCE,
         path.join(extensionDir, DICTIONARY_FILE),
+      );
+
+      // Copy the confusables table next to the sources; the Xcode target adds
+      // it to the extension's Resources phase (any non-.swift group file).
+      fs.copyFileSync(
+        CONFUSABLES_SOURCE,
+        path.join(extensionDir, CONFUSABLES_FILE),
       );
 
       // Write extension Info.plist

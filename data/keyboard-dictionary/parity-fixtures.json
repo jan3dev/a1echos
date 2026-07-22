@@ -1,0 +1,1649 @@
+{
+  "dictionary": "keyboard_dictionary.echd",
+  "evaluate": [
+    {
+      "typed": "teh",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "the",
+        "eth",
+        "ten"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "teh"
+    },
+    {
+      "typed": "hte",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "the",
+        "hts",
+        "hate"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "hte"
+    },
+    {
+      "typed": "taht",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "that",
+        "taut",
+        "tahr"
+      ],
+      "topIsCorrection": true,
+      "replacement": "that",
+      "verbatim": "taht"
+    },
+    {
+      "typed": "thsi",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "this",
+        "Thai"
+      ],
+      "topIsCorrection": true,
+      "replacement": "this",
+      "verbatim": "thsi"
+    },
+    {
+      "typed": "tihs",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "this",
+        "tins",
+        "tips"
+      ],
+      "topIsCorrection": true,
+      "replacement": "this",
+      "verbatim": "tihs"
+    },
+    {
+      "typed": "waht",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "what",
+        "want",
+        "wait"
+      ],
+      "topIsCorrection": true,
+      "replacement": "what",
+      "verbatim": "waht"
+    },
+    {
+      "typed": "adn",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "and",
+        "dan",
+        "adj"
+      ],
+      "topIsCorrection": true,
+      "replacement": "and",
+      "verbatim": "adn"
+    },
+    {
+      "typed": "woudl",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "would",
+        "world",
+        "wold"
+      ],
+      "topIsCorrection": true,
+      "replacement": "would",
+      "verbatim": "woudl"
+    },
+    {
+      "typed": "helo",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "hello",
+        "help",
+        "hell"
+      ],
+      "topIsCorrection": true,
+      "replacement": "hello",
+      "verbatim": "helo"
+    },
+    {
+      "typed": "helllo",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "hello",
+        "hell",
+        "help"
+      ],
+      "topIsCorrection": true,
+      "replacement": "hello",
+      "verbatim": "helllo"
+    },
+    {
+      "typed": "hellp",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "help",
+        "hello",
+        "hell"
+      ],
+      "topIsCorrection": true,
+      "replacement": "help",
+      "verbatim": "hellp"
+    },
+    {
+      "typed": "aboutt",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "about",
+        "abbott",
+        "abort"
+      ],
+      "topIsCorrection": true,
+      "replacement": "about",
+      "verbatim": "aboutt"
+    },
+    {
+      "typed": "tomorow",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "tomorrow",
+        "tomorrows"
+      ],
+      "topIsCorrection": true,
+      "replacement": "tomorrow",
+      "verbatim": "tomorow"
+    },
+    {
+      "typed": "occured",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "occurred",
+        "occurs",
+        "occluded"
+      ],
+      "topIsCorrection": true,
+      "replacement": "occurred",
+      "verbatim": "occured"
+    },
+    {
+      "typed": "untill",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "until",
+        "unroll",
+        "untie"
+      ],
+      "topIsCorrection": true,
+      "replacement": "until",
+      "verbatim": "untill"
+    },
+    {
+      "typed": "begining",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "beginning",
+        "beginnings",
+        "Beijing"
+      ],
+      "topIsCorrection": true,
+      "replacement": "beginning",
+      "verbatim": "begining"
+    },
+    {
+      "typed": "comming",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "coming",
+        "com ming",
+        "commingle"
+      ],
+      "topIsCorrection": true,
+      "replacement": "coming",
+      "verbatim": "comming"
+    },
+    {
+      "typed": "mornign",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "morning",
+        "morn ign",
+        "mornings"
+      ],
+      "topIsCorrection": true,
+      "replacement": "morning",
+      "verbatim": "mornign"
+    },
+    {
+      "typed": "goverment",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "government",
+        "governments",
+        "governing"
+      ],
+      "topIsCorrection": true,
+      "replacement": "government",
+      "verbatim": "goverment"
+    },
+    {
+      "typed": "enviroment",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "environment",
+        "environments"
+      ],
+      "topIsCorrection": true,
+      "replacement": "environment",
+      "verbatim": "enviroment"
+    },
+    {
+      "typed": "calender",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "calenders",
+        "calendered",
+        "calendering"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "febuary",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "February"
+      ],
+      "topIsCorrection": true,
+      "replacement": "February",
+      "verbatim": "febuary"
+    },
+    {
+      "typed": "recieve",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "receive",
+        "relieve",
+        "recurve"
+      ],
+      "topIsCorrection": true,
+      "replacement": "receive",
+      "verbatim": "recieve"
+    },
+    {
+      "typed": "beleive",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "believe",
+        "believed",
+        "believes"
+      ],
+      "topIsCorrection": true,
+      "replacement": "believe",
+      "verbatim": "beleive"
+    },
+    {
+      "typed": "seperate",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "separate",
+        "sewerage",
+        "serrate"
+      ],
+      "topIsCorrection": true,
+      "replacement": "separate",
+      "verbatim": "seperate"
+    },
+    {
+      "typed": "definately",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "definitely",
+        "defiantly",
+        "delicately"
+      ],
+      "topIsCorrection": true,
+      "replacement": "definitely",
+      "verbatim": "definately"
+    },
+    {
+      "typed": "wierd",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "weird",
+        "wired",
+        "wield"
+      ],
+      "topIsCorrection": true,
+      "replacement": "weird",
+      "verbatim": "wierd"
+    },
+    {
+      "typed": "freind",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "friend",
+        "friends",
+        "fried"
+      ],
+      "topIsCorrection": true,
+      "replacement": "friend",
+      "verbatim": "freind"
+    },
+    {
+      "typed": "thier",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "their",
+        "thief",
+        "tier"
+      ],
+      "topIsCorrection": true,
+      "replacement": "their",
+      "verbatim": "thier"
+    },
+    {
+      "typed": "becuase",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "because",
+        "became"
+      ],
+      "topIsCorrection": true,
+      "replacement": "because",
+      "verbatim": "becuase"
+    },
+    {
+      "typed": "wich",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "wichita",
+        "which",
+        "with"
+      ],
+      "topIsCorrection": true,
+      "replacement": "which",
+      "verbatim": "wich"
+    },
+    {
+      "typed": "adress",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "address",
+        "a dress",
+        "dares"
+      ],
+      "topIsCorrection": true,
+      "replacement": "address",
+      "verbatim": "adress"
+    },
+    {
+      "typed": "worls",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "world",
+        "works",
+        "worlds"
+      ],
+      "topIsCorrection": true,
+      "replacement": "world",
+      "verbatim": "worls"
+    },
+    {
+      "typed": "jelo",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "jello",
+        "jell",
+        "jolo"
+      ],
+      "topIsCorrection": true,
+      "replacement": "jello",
+      "verbatim": "jelo"
+    },
+    {
+      "typed": "tge",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "the",
+        "tue",
+        "tie"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "tge"
+    },
+    {
+      "typed": "wprd",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "word",
+        "ward"
+      ],
+      "topIsCorrection": true,
+      "replacement": "word",
+      "verbatim": "wprd"
+    },
+    {
+      "typed": "ypu",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "you",
+        "yup"
+      ],
+      "topIsCorrection": true,
+      "replacement": "you",
+      "verbatim": "ypu"
+    },
+    {
+      "typed": "yuo",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "you",
+        "yup",
+        "yuk"
+      ],
+      "topIsCorrection": true,
+      "replacement": "you",
+      "verbatim": "yuo"
+    },
+    {
+      "typed": "gor",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "gore",
+        "gory",
+        "gorge"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "thw",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "the",
+        "thwart",
+        "thwack"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "thw"
+    },
+    {
+      "typed": "amd",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "and",
+        "mad",
+        "adm"
+      ],
+      "topIsCorrection": true,
+      "replacement": "and",
+      "verbatim": "amd"
+    },
+    {
+      "typed": "yhe",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "sata",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "satan",
+        "satay",
+        "sat a"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "keyb",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "keyboard",
+        "keyboards",
+        "key"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "congratul",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "congratulate",
+        "congratulated",
+        "congratulates"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "unfortunat",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "unfortunate",
+        "unfortunates",
+        "unfortunately"
+      ],
+      "topIsCorrection": true,
+      "replacement": "unfortunate",
+      "verbatim": "unfortunat"
+    },
+    {
+      "typed": "becaus",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "because",
+        "beaus",
+        "became"
+      ],
+      "topIsCorrection": true,
+      "replacement": "because",
+      "verbatim": "becaus"
+    },
+    {
+      "typed": "tomorr",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "tomorrow",
+        "tom orr",
+        "tomorrows"
+      ],
+      "topIsCorrection": true,
+      "replacement": "tomorrow",
+      "verbatim": "tomorr"
+    },
+    {
+      "typed": "fuk",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "fum",
+        "fukien",
+        "fukuoka"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "thx",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "tux",
+        "the",
+        "tax"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "pls",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "plz",
+        "pos",
+        "plus"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "cant",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "can't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "can't",
+      "verbatim": "cant"
+    },
+    {
+      "typed": "wont",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "won't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "won't",
+      "verbatim": "wont"
+    },
+    {
+      "typed": "dont",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "don't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "don't",
+      "verbatim": "dont"
+    },
+    {
+      "typed": "im",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I'm"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'm",
+      "verbatim": "im"
+    },
+    {
+      "typed": "ive",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I've"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I've",
+      "verbatim": "ive"
+    },
+    {
+      "typed": "shouldnt",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "shouldn't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "shouldn't",
+      "verbatim": "shouldnt"
+    },
+    {
+      "typed": "couldnt",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "couldn't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "couldn't",
+      "verbatim": "couldnt"
+    },
+    {
+      "typed": "didnt",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "didn't"
+      ],
+      "topIsCorrection": true,
+      "replacement": "didn't",
+      "verbatim": "didnt"
+    },
+    {
+      "typed": "youre",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "you're"
+      ],
+      "topIsCorrection": true,
+      "replacement": "you're",
+      "verbatim": "youre"
+    },
+    {
+      "typed": "theyre",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "they're"
+      ],
+      "topIsCorrection": true,
+      "replacement": "they're",
+      "verbatim": "theyre"
+    },
+    {
+      "typed": "whos",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "who's"
+      ],
+      "topIsCorrection": true,
+      "replacement": "who's",
+      "verbatim": "whos"
+    },
+    {
+      "typed": "alot",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "a lot",
+        "alto",
+        "allot"
+      ],
+      "topIsCorrection": true,
+      "replacement": "a lot",
+      "verbatim": "alot"
+    },
+    {
+      "typed": "imnot",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I'm not",
+        "minot",
+        "minor"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'm not",
+      "verbatim": "imnot"
+    },
+    {
+      "typed": "maybe",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "maybes",
+        "may be",
+        "mauve"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "cannot",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "can not",
+        "cannon",
+        "canto"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "atleast",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "at least",
+        "atlas",
+        "atheist"
+      ],
+      "topIsCorrection": true,
+      "replacement": "at least",
+      "verbatim": "atleast"
+    },
+    {
+      "typed": "aswell",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "as well",
+        "a swell",
+        "aspell"
+      ],
+      "topIsCorrection": true,
+      "replacement": "as well",
+      "verbatim": "aswell"
+    },
+    {
+      "typed": "i",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I",
+      "verbatim": "i"
+    },
+    {
+      "typed": "Its",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "It's"
+      ],
+      "topIsCorrection": true,
+      "replacement": "It's",
+      "verbatim": "Its"
+    },
+    {
+      "typed": "Ill",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I'll"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'll",
+      "verbatim": "Ill"
+    },
+    {
+      "typed": "Id",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "I'd"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'd",
+      "verbatim": "Id"
+    },
+    {
+      "typed": "Lets",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Let's"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Let's",
+      "verbatim": "Lets"
+    },
+    {
+      "typed": "its",
+      "prevWord": "like",
+      "touches": null,
+      "candidates": [
+        "it's",
+        "itself",
+        "ifs"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "ill",
+      "prevWord": "feel",
+      "touches": null,
+      "candidates": [
+        "i'll",
+        "illus",
+        "ilk"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "its",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "it's",
+        "itself",
+        "ifs"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "Its",
+      "prevWord": "like",
+      "touches": null,
+      "candidates": [
+        "it's",
+        "itself",
+        "ifs"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "france",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "France"
+      ],
+      "topIsCorrection": true,
+      "replacement": "France",
+      "verbatim": "france"
+    },
+    {
+      "typed": "monday",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Monday"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Monday",
+      "verbatim": "monday"
+    },
+    {
+      "typed": "google",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Google"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Google",
+      "verbatim": "google"
+    },
+    {
+      "typed": "january",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "January"
+      ],
+      "topIsCorrection": true,
+      "replacement": "January",
+      "verbatim": "january"
+    },
+    {
+      "typed": "london",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "London"
+      ],
+      "topIsCorrection": true,
+      "replacement": "London",
+      "verbatim": "london"
+    },
+    {
+      "typed": "christmas",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Christmas"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Christmas",
+      "verbatim": "christmas"
+    },
+    {
+      "typed": "the",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "they",
+        "them",
+        "then"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "hello",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "hellos",
+        "hell",
+        "help"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "form",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "forms",
+        "former",
+        "format"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "there",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "the re",
+        "thereof",
+        "thereby"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "were",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "we're",
+        "weer",
+        "weren't"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "bitcoin",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "bitcoins",
+        "bitching"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "wifi",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "wife",
+        "wiki",
+        "wii"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "lol",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "lola",
+        "loll",
+        "lolly"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "TWA",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "twas",
+        "twain",
+        "twang"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "NASA",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "nasal",
+        "nasals",
+        "nasally"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "e-mail",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "email",
+        "emails",
+        "emil"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "self-made",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "selfsame"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "x2",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "2x",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "goign",
+      "prevWord": "am",
+      "touches": null,
+      "candidates": [
+        "going",
+        "go ign",
+        "goings"
+      ],
+      "topIsCorrection": true,
+      "replacement": "going",
+      "verbatim": "goign"
+    },
+    {
+      "typed": "hoem",
+      "prevWord": "go",
+      "touches": null,
+      "candidates": [
+        "home",
+        "hem",
+        "hoe"
+      ],
+      "topIsCorrection": true,
+      "replacement": "home",
+      "verbatim": "hoem"
+    },
+    {
+      "typed": "te",
+      "prevWord": "of",
+      "touches": null,
+      "candidates": [
+        "tex",
+        "text",
+        "ter"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "te"
+    },
+    {
+      "typed": "tim",
+      "prevWord": "on",
+      "touches": null,
+      "candidates": [
+        "time",
+        "times",
+        "timer"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "thw",
+      "prevWord": "of",
+      "touches": null,
+      "candidates": [
+        "the",
+        "thwart",
+        "thwack"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "thw"
+    },
+    {
+      "typed": "johns",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "johnson",
+        "johnston",
+        "john"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "marys",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "marts",
+        "mary",
+        "marks"
+      ],
+      "topIsCorrection": true,
+      "replacement": "marts",
+      "verbatim": "marys"
+    },
+    {
+      "typed": "cae",
+      "prevWord": null,
+      "touches": [
+        null,
+        null,
+        {
+          "x": 3.3,
+          "y": 0.6
+        }
+      ],
+      "candidates": [
+        "car",
+        "caen",
+        "ace"
+      ],
+      "topIsCorrection": true,
+      "replacement": "car",
+      "verbatim": "cae"
+    },
+    {
+      "typed": "cae",
+      "prevWord": null,
+      "touches": [
+        null,
+        null,
+        {
+          "x": 2.7,
+          "y": 0.4
+        }
+      ],
+      "candidates": [
+        "caen",
+        "car",
+        "ace"
+      ],
+      "topIsCorrection": true,
+      "replacement": "car",
+      "verbatim": "cae"
+    },
+    {
+      "typed": "tge",
+      "prevWord": null,
+      "touches": [
+        null,
+        {
+          "x": 5.8,
+          "y": 1.5
+        },
+        null
+      ],
+      "candidates": [
+        "the",
+        "tue",
+        "thee"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "tge"
+    },
+    {
+      "typed": "teh",
+      "prevWord": null,
+      "touches": [
+        {
+          "x": 4.5,
+          "y": 0.5
+        },
+        {
+          "x": 2.5,
+          "y": 0.5
+        },
+        {
+          "x": 6.5,
+          "y": 1.5
+        }
+      ],
+      "candidates": [
+        "the",
+        "eth",
+        "ten"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "teh"
+    },
+    {
+      "typed": "hoem",
+      "prevWord": "go",
+      "touches": [
+        {
+          "x": 6.5,
+          "y": 1.5
+        },
+        {
+          "x": 8.5,
+          "y": 0.5
+        },
+        {
+          "x": 2.6,
+          "y": 0.5
+        },
+        {
+          "x": 7.5,
+          "y": 2.5
+        }
+      ],
+      "candidates": [
+        "home",
+        "horn",
+        "hem"
+      ],
+      "topIsCorrection": true,
+      "replacement": "home",
+      "verbatim": "hoem"
+    },
+    {
+      "typed": "londons",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "London's",
+        "lon dons",
+        "London"
+      ],
+      "topIsCorrection": true,
+      "replacement": "London's",
+      "verbatim": "londons"
+    },
+    {
+      "typed": "yhe",
+      "prevWord": null,
+      "touches": [
+        {
+          "x": 4.8,
+          "y": 0.5
+        },
+        null,
+        null
+      ],
+      "candidates": [
+        "the"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "yhe"
+    }
+  ],
+  "nextWords": [
+    {
+      "prevWord": "I",
+      "predictions": [
+        "have",
+        "am",
+        "was"
+      ]
+    },
+    {
+      "prevWord": "the",
+      "predictions": [
+        "same",
+        "first",
+        "following"
+      ]
+    },
+    {
+      "prevWord": "good",
+      "predictions": [
+        "for",
+        "to",
+        "and"
+      ]
+    },
+    {
+      "prevWord": "thank",
+      "predictions": [
+        "you",
+        "the",
+        "all"
+      ]
+    },
+    {
+      "prevWord": "how",
+      "predictions": [
+        "to",
+        "the",
+        "much"
+      ]
+    },
+    {
+      "prevWord": "see",
+      "predictions": [
+        "the",
+        "your",
+        "if"
+      ]
+    },
+    {
+      "prevWord": "want",
+      "predictions": [
+        "to",
+        "it",
+        "the"
+      ]
+    },
+    {
+      "prevWord": "new",
+      "predictions": [
+        "window",
+        "and",
+        "topic"
+      ]
+    },
+    {
+      "prevWord": "please",
+      "predictions": [
+        "contact",
+        "use",
+        "click"
+      ]
+    },
+    {
+      "prevWord": "zygote",
+      "predictions": [
+        "the",
+        "of",
+        "and"
+      ]
+    },
+    {
+      "prevWord": "",
+      "predictions": [
+        "i",
+        "the",
+        "you"
+      ]
+    }
+  ],
+  "confusables": [
+    {
+      "prevWord": "ill",
+      "nextWord": "be",
+      "contraction": "I'll"
+    },
+    {
+      "prevWord": "ill",
+      "nextWord": "go",
+      "contraction": "I'll"
+    },
+    {
+      "prevWord": "ill",
+      "nextWord": "call",
+      "contraction": "I'll"
+    },
+    {
+      "prevWord": "ill",
+      "nextWord": "health",
+      "contraction": null
+    },
+    {
+      "prevWord": "ill",
+      "nextWord": "effects",
+      "contraction": null
+    },
+    {
+      "prevWord": "id",
+      "nextWord": "like",
+      "contraction": "I'd"
+    },
+    {
+      "prevWord": "id",
+      "nextWord": "rather",
+      "contraction": "I'd"
+    },
+    {
+      "prevWord": "id",
+      "nextWord": "guess",
+      "contraction": "I'd"
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "been",
+      "contraction": "it's"
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "a",
+      "contraction": "it's"
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "not",
+      "contraction": "it's"
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "own",
+      "contraction": null
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "going",
+      "contraction": null
+    },
+    {
+      "prevWord": "lets",
+      "nextWord": "see",
+      "contraction": "let's"
+    },
+    {
+      "prevWord": "lets",
+      "nextWord": "do",
+      "contraction": "let's"
+    },
+    {
+      "prevWord": "lets",
+      "nextWord": "go",
+      "contraction": null
+    },
+    {
+      "prevWord": "wed",
+      "nextWord": "better",
+      "contraction": "we'd"
+    },
+    {
+      "prevWord": "hell",
+      "nextWord": "be",
+      "contraction": "he'll"
+    },
+    {
+      "prevWord": "hell",
+      "nextWord": "yeah",
+      "contraction": null
+    },
+    {
+      "prevWord": "shell",
+      "nextWord": "be",
+      "contraction": "she'll"
+    },
+    {
+      "prevWord": "shell",
+      "nextWord": "out",
+      "contraction": null
+    },
+    {
+      "prevWord": "were",
+      "nextWord": "going",
+      "contraction": null
+    },
+    {
+      "prevWord": "well",
+      "nextWord": "be",
+      "contraction": null
+    },
+    {
+      "prevWord": "Ill",
+      "nextWord": "be",
+      "contraction": null
+    }
+  ]
+}

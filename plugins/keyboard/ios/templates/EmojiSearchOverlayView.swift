@@ -18,16 +18,21 @@ final class EmojiSearchOverlayView: UIView {
 
     private static let searchBarHeight: CGFloat = 40
 
-    // 56 portrait (52pt result cells + 2pt breathing room, mirroring the
-    // grid's row gap) / 36 landscape so the overlay fits the shorter
-    // landscape keyboard.
+    // Cell-sized strip so the (grid-matched) glyph isn't clipped: 56 portrait
+    // (52pt cell + 4pt breathing room), 44 landscape (matches the 44pt grid
+    // cell that holds the 38pt landscape glyph).
     private var resultsStripHeight: CGFloat {
-        traitCollection.verticalSizeClass == .compact ? 36 : 56
+        traitCollection.verticalSizeClass == .compact ? 44 : 56
     }
     // Result cells mirror the picker grid so search feels continuous:
-    // 52pt cells / ~39pt glyphs portrait, 44pt / ~33pt landscape.
+    // 52pt cells / ~39pt glyphs portrait, 44pt / ~38pt landscape.
     private var resultCellSide: CGFloat {
         traitCollection.verticalSizeClass == .compact ? 44 : 52
+    }
+    // Glyph-to-cell ratio, matching the grid's `EmojiCell` so search-result
+    // emojis are exactly the grid size (0.88 landscape, 0.75 portrait).
+    private var resultGlyphRatio: CGFloat {
+        traitCollection.verticalSizeClass == .compact ? 0.88 : 0.75
     }
     private var resultsStripHeightConstraint: NSLayoutConstraint!
 
@@ -235,9 +240,10 @@ final class EmojiSearchOverlayView: UIView {
             return
         }
         let side = resultCellSide
+        let glyphSize = floor(side * resultGlyphRatio)
         let capped = emojis.prefix(60)
         for emoji in capped {
-            let btn = SearchResultButton(emoji: emoji, fontSize: floor(side * 0.75))
+            let btn = SearchResultButton(emoji: emoji, fontSize: glyphSize)
             btn.addTarget(self, action: #selector(handleResultTap(_:)), for: .touchUpInside)
             if EmojiSkinTones.supports(emoji) {
                 let lp = UILongPressGestureRecognizer(

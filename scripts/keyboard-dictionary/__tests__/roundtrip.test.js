@@ -51,7 +51,8 @@ describe("decode roundtrip (small corpus)", () => {
   it("looks up bigrams sorted by frequency", () => {
     const nexts = model.bigramsFor("the").map((bg) => bg.word);
     expect(nexts).toEqual(["world"]);
-    expect(nextWords(model, "of")).toEqual(["the"]);
+    // Bigram continuation leads; frequency fallback tops up the rest.
+    expect(nextWords(model, "of")[0]).toBe("the");
     expect(model.bigramsFor("hello").map((bg) => bg.word)).toEqual(["world"]);
   });
 

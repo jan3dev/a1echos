@@ -37,12 +37,23 @@ const AMBIGUOUS_SENTENCE_INITIAL = {
 const TUNING = {
   subAdjacent: 0.6,
   subOther: 1.0,
+  // Touch-model substitution cost: a tap within `subTouchDeadZone` key-widths
+  // of the candidate key's center costs `subTouchMin`; beyond that the cost
+  // grows by `subTouchPerUnit` per key-width, capped at `subOther`. A tap
+  // dead-center on an adjacent key (d = 1.0) prices close to `subAdjacent`.
+  subTouchMin: 0.35,
+  subTouchBase: 0.25,
+  subTouchPerUnit: 0.55,
+  subTouchDeadZone: 0.4,
   insertDuplicate: 0.5,
   insertOther: 1.0,
   deletionDuplicate: 0.5,
   deletion: 0.9,
   transposition: 0.5,
-  firstLetterSurcharge: 0.8,
+  // First-letter typos are rarer than mid-word ones, so they carry a surcharge
+  // — but not so steep that a clear touch signal near the intended first key
+  // (spatial model) can't overcome it ("yhe" with the first tap by 't' -> the).
+  firstLetterSurcharge: 0.5,
   apostropheRestore: 0.15,
   wordSplit: 0.45,
   completionPerChar: 0.2,
@@ -55,14 +66,25 @@ const TUNING = {
   autocorrectMaxScoreGap: 0.25,
   shortTypedMaxEditCost: 0.9,
   freqWeight: 0.35,
-  bigramWeight: 0.25,
+  bigramWeight: 0.4,
   maxCandidates: 3,
   maxCompletions: 8,
   confidenceCommon: 0.6,
   confidenceRare: 0.72,
-  confidenceBigramBonus: 0.05,
+  confidenceBigramBonus: 0.08,
   commonFreqFloor: 64,
+  // Next-word prediction: how far down the frequency-ranked word list to scan
+  // when filling prediction slots the bigram table left empty.
+  predictionFallbackScan: 16,
 };
+
+/**
+ * Curated sentence-openers shown when there is no previous word (empty field
+ * or just after sentence-terminal punctuation), where the bigram table has no
+ * context to work from. Lowercase; the caller applies sentence casing.
+ * Mirrored verbatim in the native engines.
+ */
+const SENTENCE_STARTERS = ["i", "the", "you", "it", "we", "thanks", "hey"];
 
 const KEY_ADJACENCY = {
   q: "wa",
@@ -96,6 +118,51 @@ const KEY_ADJACENCY = {
 function isAdjacent(a, b) {
   const neighbors = KEY_ADJACENCY[a];
   return neighbors !== undefined && neighbors.includes(b);
+}
+
+/**
+ * Letter-key centers in key-grid units (key width = 1.0) on the standard
+ * QWERTY 10/9/7 layout: row y at 0.5/1.5/2.5, with the home and bottom rows
+ * indented by half and one-and-a-half key widths. Native key views normalize
+ * their tap coordinates into this same space.
+ */
+const KEY_CENTERS = (() => {
+  const rows = [
+    ["qwertyuiop", 0.5, 0.5],
+    ["asdfghjkl", 1.0, 1.5],
+    ["zxcvbnm", 2.0, 2.5],
+  ];
+  const centers = {};
+  for (const [letters, x0, y] of rows) {
+    for (let i = 0; i < letters.length; i++) {
+      centers[letters[i]] = { x: x0 + i, y };
+    }
+  }
+  return centers;
+})();
+
+/**
+ * Substitution cost for consuming candidate char `c` where the user typed
+ * `t`. With a touch point, cost scales with the tap's distance from `c`'s key
+ * center — a borderline tap is cheap to reinterpret, a distant one is not.
+ * Without touch data, falls back to the static adjacency graph. `center` is
+ * `c`'s key center; the DP caller resolves it once per candidate char so the
+ * inner loop over typed positions doesn't repeat the lookup.
+ */
+function substitutionCost(t, c, touchPoint, center = KEY_CENTERS[c]) {
+  if (t === c) return 0;
+  if (touchPoint) {
+    if (center) {
+      const dx = touchPoint.x - center.x;
+      const dy = touchPoint.y - center.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      const cost =
+        TUNING.subTouchBase +
+        TUNING.subTouchPerUnit * Math.max(0, d - TUNING.subTouchDeadZone);
+      return Math.min(TUNING.subOther, Math.max(TUNING.subTouchMin, cost));
+    }
+  }
+  return isAdjacent(t, c) ? TUNING.subAdjacent : TUNING.subOther;
 }
 
 function editBudget(typedLength) {
@@ -307,10 +374,15 @@ function applyFirstLetterSurcharge(typed, word, editCost) {
 
 /**
  * Weighted Damerau-Levenshtein DP over trie descent. Returns fuzzy full-word
- * candidates as { word, editCost, freq, flags }.
+ * candidates as { word, editCost, freq, flags }. `touchPoints`, when given,
+ * holds one normalized tap per typed char (null per char without data) and
+ * refines substitution costs via the spatial model.
  */
-function fuzzyMatches(model, typed) {
+function fuzzyMatches(model, typed, touchPoints = null) {
   const n = typed.length;
+  // A stale buffer must degrade to the static adjacency model, never skew
+  // costs against the wrong characters.
+  const touches = touchPoints && touchPoints.length === n ? touchPoints : null;
   const budget = editBudget(n);
   const insertCost = (i) =>
     i >= 2 && typed[i - 1] === typed[i - 2]
@@ -345,10 +417,15 @@ function fuzzyMatches(model, typed) {
       const newRow = new Array(n + 1);
       newRow[0] = prevRow[0] + deleteCost;
       let rowMin = newRow[0];
+      const center = KEY_CENTERS[c];
       for (let i = 1; i <= n; i++) {
         const t = typed[i - 1];
-        const subCost =
-          t === c ? 0 : isAdjacent(t, c) ? TUNING.subAdjacent : TUNING.subOther;
+        const subCost = substitutionCost(
+          t,
+          c,
+          touches && touches[i - 1],
+          center,
+        );
         let best = Math.min(
           prevRow[i - 1] + subCost,
           newRow[i - 1] + insertCost(i),
@@ -471,6 +548,29 @@ function apostropheVariants(model, typed) {
 }
 
 /**
+ * Proper-noun possessive restoration (johns -> "John's"): when the typed word
+ * ends in `s`, is not itself a dictionary word, and dropping the `s` yields a
+ * known proper noun, offer the possessive. The not-in-dictionary + proper-noun
+ * gate keeps ordinary plurals (dogs) untouched.
+ */
+function properNounPossessives(model, typed) {
+  if (typed.length < 3 || !typed.endsWith("s") || typed.includes("'"))
+    return [];
+  if (model.find(typed)) return [];
+  const base = typed.slice(0, -1);
+  const node = model.find(base);
+  if (!node || (node.flags & FLAG_PROPER_NOUN) === 0) return [];
+  return [
+    {
+      word: base + "'s",
+      editCost: TUNING.apostropheRestore,
+      freq: node.freq,
+      flags: node.flags,
+    },
+  ];
+}
+
+/**
  * Missing-space restoration (alot -> "a lot"): split the typed run at each
  * interior position and offer the pair when both halves are common words.
  */
@@ -518,7 +618,7 @@ function wordSplits(model, typed) {
 }
 
 /** Merged fuzzy + completion candidates, deduped keeping the lowest cost. */
-function search(model, typedRaw) {
+function search(model, typedRaw, touchPoints = null) {
   const typed = typedRaw.toLowerCase();
   if (!typed || typed.length > 32) return [];
   const merged = new Map();
@@ -528,8 +628,9 @@ function search(model, typedRaw) {
       if (!existing || c.editCost < existing.editCost) merged.set(c.word, c);
     }
   };
-  addAll(fuzzyMatches(model, typed));
+  addAll(fuzzyMatches(model, typed, touchPoints));
   addAll(apostropheVariants(model, typed));
+  addAll(properNounPossessives(model, typed));
   addAll(wordSplits(model, typed));
   if (typed.length >= 2) addAll(completions(model, typed));
   return [...merged.values()];
@@ -564,7 +665,11 @@ function scoreCandidates(model, rawCandidates, prevWord) {
  * models the learned "don't correct X to Y" pairs.
  */
 function evaluate(model, typedRaw, prevWord = null, options = {}) {
-  const { knownValid = false, blacklisted = () => false } = options;
+  const {
+    knownValid = false,
+    blacklisted = () => false,
+    touchPoints = null,
+  } = options;
   const typed = typedRaw.toLowerCase();
   const empty = {
     candidates: [],
@@ -630,7 +735,7 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
     }
   }
 
-  const raw = search(model, typed).filter(
+  const raw = search(model, typed, touchPoints).filter(
     (c) => c.editCost === 0 || (c.flags & FLAG_NEVER_CORRECT_TO) === 0,
   );
   const scored = scoreCandidates(model, raw, prevWord).filter(
@@ -711,23 +816,96 @@ function renderCandidate(word, flags) {
   return word[0].toUpperCase() + word.slice(1);
 }
 
+/**
+ * Parses the bundled `confusables.json` into a lookup map. Each entry keys a
+ * valid plain word (which the engine would otherwise never correct) to its
+ * contraction and the set of following words that imply the contraction
+ * reading. Keys/triggers are lowercased.
+ */
+function parseConfusables(json) {
+  const map = new Map();
+  for (const [plain, entry] of Object.entries(json)) {
+    if (plain.startsWith("_") || !entry || typeof entry !== "object") continue;
+    if (!entry.contraction || !Array.isArray(entry.next)) continue;
+    map.set(plain.toLowerCase(), {
+      contraction: entry.contraction,
+      next: new Set(entry.next.map((w) => w.toLowerCase())),
+    });
+  }
+  return map;
+}
+
+/**
+ * Context-aware confusable correction (retroactive). Given the previous
+ * committed word (as typed) and the word that just followed it, returns the
+ * contraction the previous word should become — or null to leave it. Fires
+ * only for a lowercase plain word whose follower is in its trigger set, and
+ * never for a blacklisted pair. The caller applies the rewrite and is
+ * responsible for confirming the two words were separated by a single space.
+ */
+function contextualContraction(
+  confusables,
+  prevWordRaw,
+  nextWord,
+  blacklisted = () => false,
+) {
+  if (!prevWordRaw || !nextWord) return null;
+  const plain = prevWordRaw.toLowerCase();
+  // Only touch a word the user typed all-lowercase; a leading capital is the
+  // sentence-initial rule's job (or a deliberate proper noun).
+  if (prevWordRaw !== plain) return null;
+  const entry = confusables.get(plain);
+  if (!entry) return null;
+  if (!entry.next.has(nextWord.toLowerCase())) return null;
+  if (blacklisted(plain, entry.contraction.toLowerCase())) return null;
+  return entry.contraction;
+}
+
+/**
+ * Next-word predictions: bigram continuations of `prevWord` (or curated
+ * sentence-openers when there is none), topped up from the most frequent words
+ * so the strip is never left half-empty. Words are returned lowercase-keyed but
+ * rendered with proper-noun casing; the caller applies sentence casing.
+ */
 function nextWords(model, prevWord, limit = 3) {
-  return model
-    .bigramsFor(prevWord)
-    .slice(0, limit)
-    .map((bg) => {
-      if (!bg.word) return null;
-      const node = model.find(bg.word);
-      return renderCandidate(bg.word, node ? node.flags : 0);
-    })
-    .filter(Boolean);
+  const out = [];
+  const seen = new Set();
+  const prev = prevWord ? prevWord.toLowerCase() : null;
+  if (prev) seen.add(prev);
+  const add = (word) => {
+    if (out.length >= limit || !word) return;
+    const key = word.toLowerCase();
+    if (seen.has(key) || (key.length < 2 && key !== "i")) return;
+    seen.add(key);
+    const node = model.find(key);
+    out.push(renderCandidate(word, node ? node.flags : 0));
+  };
+
+  if (prev) {
+    for (const bg of model.bigramsFor(prev)) add(bg.word);
+  } else {
+    for (const starter of SENTENCE_STARTERS) add(starter);
+  }
+  // Fill any remaining slots from the frequency-ranked word list so a word
+  // with few or no bigrams still yields a useful strip.
+  for (
+    let i = 0;
+    out.length < limit && i < TUNING.predictionFallbackScan;
+    i++
+  ) {
+    add(model.topString(i));
+  }
+  return out;
 }
 
 module.exports = {
   TUNING,
   KEY_ADJACENCY,
+  KEY_CENTERS,
+  SENTENCE_STARTERS,
   AMBIGUOUS_SENTENCE_INITIAL,
   isAdjacent,
+  substitutionCost,
   editBudget,
   decode,
   fuzzyMatches,
@@ -737,4 +915,6 @@ module.exports = {
   scoreCandidates,
   evaluate,
   nextWords,
+  parseConfusables,
+  contextualContraction,
 };

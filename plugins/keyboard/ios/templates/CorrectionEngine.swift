@@ -20,12 +20,16 @@ final class CorrectionEngine {
     private enum Tuning {
         static let subAdjacent: Float = 0.6
         static let subOther: Float = 1.0
+        static let subTouchMin: Float = 0.35
+        static let subTouchBase: Float = 0.25
+        static let subTouchPerUnit: Float = 0.55
+        static let subTouchDeadZone: Float = 0.4
         static let insertDuplicate: Float = 0.5
         static let insertOther: Float = 1.0
         static let deletionDuplicate: Float = 0.5
         static let deletion: Float = 0.9
         static let transposition: Float = 0.5
-        static let firstLetterSurcharge: Float = 0.8
+        static let firstLetterSurcharge: Float = 0.5
         static let apostropheRestore: Float = 0.15
         static let wordSplit: Float = 0.45
         static let completionPerChar: Float = 0.2
@@ -35,15 +39,23 @@ final class CorrectionEngine {
         static let autocorrectMaxScoreGap: Float = 0.25
         static let shortTypedMaxEditCost: Float = 0.9
         static let freqWeight: Float = 0.35
-        static let bigramWeight: Float = 0.25
+        static let bigramWeight: Float = 0.4
         static let maxCandidates = 3
         static let maxCompletions = 8
         static let confidenceCommon: Float = 0.6
         static let confidenceRare: Float = 0.72
-        static let confidenceBigramBonus: Float = 0.05
+        static let confidenceBigramBonus: Float = 0.08
         static let commonFreqFloor: UInt8 = 64
         static let epsilon: Float = 1e-6
+        static let predictionFallbackScan = 16
     }
+
+    /// Curated sentence-openers shown when there is no previous word (empty
+    /// field or just after sentence-terminal punctuation). Lowercase; the
+    /// caller applies sentence casing. Mirrors decoder.js SENTENCE_STARTERS.
+    private static let sentenceStarters = [
+        "i", "the", "you", "it", "we", "thanks", "hey",
+    ]
 
     private enum Format {
         static let headerSize = 64
@@ -68,6 +80,14 @@ final class CorrectionEngine {
         "id": "I'd",
         "lets": "Let's",
     ]
+
+    /// A key tap in normalized key-grid units (key width = 1.0), matching
+    /// `KeyAdjacency.center`. Fed per typed character to refine substitution
+    /// costs; mirrors decoder.js `touchPoints`.
+    struct TouchPoint {
+        let x: Float
+        let y: Float
+    }
 
     struct Evaluation {
         let candidates: [String]
@@ -108,6 +128,14 @@ final class CorrectionEngine {
     private var bigramsOffset = 0
     private var bigramCount = 0
     private var contractions: [String: String] = [:]
+
+    /// Context-aware confusable entries parsed from bundled `confusables.json`
+    /// (ill -> I'll etc.), keyed by the lowercase plain word.
+    private struct Confusable {
+        let contraction: String
+        let next: Set<String>
+    }
+    private var confusables: [String: Confusable] = [:]
 
     let userLexicon: UserLexicon
 
@@ -157,9 +185,37 @@ final class CorrectionEngine {
             map[typed] = repl
         }
 
+        loadConfusables()
         bytes = data
         contractions = map
         isLoaded = true
+    }
+
+    /// Parses the bundled confusables table. Independent of the dictionary — a
+    /// missing/invalid file just leaves the feature off.
+    private func loadConfusables() {
+        guard
+            let url = Bundle.main.url(
+                forResource: "confusables", withExtension: "json"
+            ),
+            let data = try? Data(contentsOf: url),
+            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        var map: [String: Confusable] = [:]
+        for (key, value) in obj {
+            if key.hasPrefix("_") { continue }
+            guard
+                let entry = value as? [String: Any],
+                let contraction = entry["contraction"] as? String,
+                !contraction.isEmpty,
+                let next = entry["next"] as? [String]
+            else { continue }
+            map[key.lowercased()] = Confusable(
+                contraction: contraction,
+                next: Set(next.map { $0.lowercased() })
+            )
+        }
+        confusables = map
     }
 
     private func readU16(_ data: Data, _ offset: Int) -> UInt16 {
@@ -193,32 +249,62 @@ final class CorrectionEngine {
         }
     }
 
+    /// Context-aware confusable correction (retroactive). Mirrors decoder.js
+    /// `contextualContraction`: returns the contraction the previous word
+    /// should become given the word that just followed it, or nil to leave it.
+    /// Fires only for a lowercase plain word whose follower is in its trigger
+    /// set and whose pair isn't blacklisted.
+    func contextualContraction(prevWordRaw: String, nextWord: String) -> String? {
+        guard isLoaded, !prevWordRaw.isEmpty, !nextWord.isEmpty else { return nil }
+        let plain = prevWordRaw.lowercased()
+        guard prevWordRaw == plain, let entry = confusables[plain] else { return nil }
+        guard entry.next.contains(nextWord.lowercased()) else { return nil }
+        if userLexicon.isBlacklisted(
+            typed: plain, corrected: entry.contraction.lowercased()
+        ) {
+            return nil
+        }
+        return entry.contraction
+    }
+
     /// Top continuations of `prevWord` — the next-word prediction strip shown
     /// right after a separator. Pairs the user actually types (learned in
     /// `UserLexicon`) lead; the static bigram table fills the rest. Proper
     /// nouns render title-case.
     func nextWords(after prevWord: String, limit: Int = Tuning.maxCandidates) -> [String] {
-        guard isLoaded, let prev = asciiBytes(Self.normalize(prevWord)) else {
-            return []
-        }
+        guard isLoaded else { return [] }
+        let normalizedPrev = Self.normalize(prevWord)
+        let prevBytes = normalizedPrev.isEmpty ? nil : asciiBytes(normalizedPrev)
         var results: [String] = []
         var seen = Set<String>()
+        if !normalizedPrev.isEmpty { seen.insert(normalizedPrev.lowercased()) }
         func add(_ word: String) {
+            guard results.count < limit else { return }
             let key = word.lowercased()
-            guard !seen.contains(key) else { return }
+            guard !seen.contains(key), key.count >= 2 || key == "i" else { return }
             seen.insert(key)
             results.append(word)
         }
         bytes.withUnsafeBytes { raw in
-            for word in userLexicon.nextWords(after: Self.normalize(prevWord)) {
-                if results.count >= limit { break }
-                add(renderStored(raw, word: word))
-            }
-            for entry in bigramRun(raw, prevWord: prev) {
-                if results.count >= limit { break }
-                if let word = topString(raw, id: entry.nextId) {
+            if let prev = prevBytes {
+                for word in userLexicon.nextWords(after: normalizedPrev) {
                     add(renderStored(raw, word: word))
                 }
+                for entry in bigramRun(raw, prevWord: prev) {
+                    if let word = topString(raw, id: entry.nextId) {
+                        add(renderStored(raw, word: word))
+                    }
+                }
+            } else {
+                // No context (sentence start): curated openers.
+                for starter in Self.sentenceStarters { add(renderStored(raw, word: starter)) }
+            }
+            // Fill remaining slots from the frequency-ranked word list so the
+            // strip is never left half-empty.
+            var id: UInt32 = 0
+            while results.count < limit, id < UInt32(Tuning.predictionFallbackScan) {
+                if let word = topString(raw, id: id) { add(renderStored(raw, word: word)) }
+                id += 1
             }
         }
         return Array(results.prefix(limit))
@@ -244,7 +330,8 @@ final class CorrectionEngine {
     func evaluate(
         typedRaw: String,
         previousWord: String?,
-        checkerSaysValid: Bool
+        checkerSaysValid: Bool,
+        touchPoints: [TouchPoint?]? = nil
     ) -> Evaluation {
         guard isLoaded else { return .empty }
         let typedString = Self.normalize(typedRaw)
@@ -312,8 +399,9 @@ final class CorrectionEngine {
                     merged[key] = c
                 }
             }
-            add(fuzzyMatches(raw, typed: typed))
+            add(fuzzyMatches(raw, typed: typed, touchPoints: touchPoints))
             add(apostropheVariants(raw, typed: typed))
+            add(properNounPossessives(raw, typed: typed))
             add(wordSplits(raw, typed: typed))
             if typed.count >= 2 { add(completions(raw, typed: typed)) }
             add(userLexiconCandidates(typed: typed))
@@ -589,13 +677,37 @@ final class CorrectionEngine {
         return transposedFirstPair ? editCost : editCost + Tuning.firstLetterSurcharge
     }
 
+    /// Substitution cost for consuming candidate byte `c` where the user typed
+    /// `t`. With a touch point, cost scales with the tap's distance from `c`'s
+    /// key center; without one, falls back to the adjacency graph. `center` is
+    /// `c`'s key center; the DP caller resolves it once per candidate byte so
+    /// the inner loop over typed positions doesn't repeat the lookup. Mirrors
+    /// decoder.js `substitutionCost`.
+    private func substitutionCost(
+        _ t: UInt8, _ c: UInt8, _ touch: TouchPoint?, _ center: (x: Float, y: Float)?
+    ) -> Float {
+        if t == c { return 0 }
+        if let touch, let center {
+            let dx = touch.x - center.x
+            let dy = touch.y - center.y
+            let d = (dx * dx + dy * dy).squareRoot()
+            let cost = Tuning.subTouchBase
+                + Tuning.subTouchPerUnit * max(0, d - Tuning.subTouchDeadZone)
+            return min(Tuning.subOther, max(Tuning.subTouchMin, cost))
+        }
+        return KeyAdjacency.isAdjacent(t, c) ? Tuning.subAdjacent : Tuning.subOther
+    }
+
     /// Weighted Damerau-Levenshtein DP over trie descent (see decoder.js
     /// `fuzzyMatches` for the transition-by-transition rationale).
     private func fuzzyMatches(
-        _ raw: UnsafeRawBufferPointer, typed: [UInt8]
+        _ raw: UnsafeRawBufferPointer, typed: [UInt8], touchPoints: [TouchPoint?]? = nil
     ) -> [Candidate] {
         let n = typed.count
         let budget = editBudget(n)
+        // A stale buffer must degrade to the adjacency model, never skew costs
+        // against the wrong characters.
+        let touches = touchPoints?.count == n ? touchPoints : nil
 
         func insertCost(_ i: Int) -> Float {
             i >= 2 && typed[i - 1] == typed[i - 2]
@@ -626,12 +738,10 @@ final class CorrectionEngine {
                 var newRow = [Float](repeating: 0, count: n + 1)
                 newRow[0] = prevRow[0] + deleteCost
                 var rowMin = newRow[0]
+                let center = KeyAdjacency.center(c)
                 for i in 1...n {
                     let t = typed[i - 1]
-                    let subCost: Float = t == c
-                        ? 0
-                        : (KeyAdjacency.isAdjacent(t, c)
-                            ? Tuning.subAdjacent : Tuning.subOther)
+                    let subCost = substitutionCost(t, c, touches?[i - 1] ?? nil, center)
                     var best = min(
                         prevRow[i - 1] + subCost,
                         newRow[i - 1] + insertCost(i),
@@ -762,6 +872,31 @@ final class CorrectionEngine {
             }
         }
         return results
+    }
+
+    /// Proper-noun possessive restoration: johns → "John's". Mirrors
+    /// decoder.js `properNounPossessives`.
+    private func properNounPossessives(
+        _ raw: UnsafeRawBufferPointer, typed: [UInt8]
+    ) -> [Candidate] {
+        let apostrophe = UInt8(ascii: "'")
+        let sByte = UInt8(ascii: "s")
+        guard typed.count >= 3, typed.last == sByte,
+              !typed.contains(apostrophe) else { return [] }
+        if findTerminal(raw, typed) != nil { return [] }
+        let base = Array(typed[0..<(typed.count - 1)])
+        guard let node = findTerminal(raw, base) else { return [] }
+        let flags = nodeFlags(nodePacked(raw, node))
+        guard flags & Format.flagProperNoun != 0 else { return [] }
+        var word = base
+        word.append(apostrophe)
+        word.append(sByte)
+        return [Candidate(
+            word: word,
+            editCost: Tuning.apostropheRestore,
+            freq: nodeFreq(raw, node),
+            flags: flags
+        )]
     }
 
     /// Missing-space restoration: alot → "a lot", imnot → "I'm not".

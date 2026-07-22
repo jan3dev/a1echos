@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.PointF
 import android.inputmethodservice.InputMethodService
 import android.os.Handler
 import android.os.Looper
@@ -86,6 +87,13 @@ class EchosInputMethodService : InputMethodService(),
     /// swaps the correction back and blacklists the pair. Mirrors the native
     /// iOS revert affordance. Cleared by any other input or cursor move.
     private var pendingRevert: LastComposedWord? = null
+    /// Per-character tap coordinates for the in-progress word (spatial
+    /// correction model, §5.10). One entry per composing character, appended on
+    /// key-down, popped on backspace, and reset whenever the composing word
+    /// ends or the cursor/text changes out from under us. Fed to the engine
+    /// only when its length matches the reconstructed word — a mismatch falls
+    /// back to the static adjacency model rather than skewing costs.
+    private val currentWordTouches = ArrayList<CorrectionEngine.TouchPoint?>()
     private val suggestionRunnable = Runnable { performSuggestionLookup() }
     /// One-time nudge guard (§5.5): HyperOS and several OEM builds ship the
     /// system spell checker disabled/absent, so [SuggestionEngine] never gets a
@@ -255,6 +263,7 @@ class EchosInputMethodService : InputMethodService(),
         super.onStartInputView(info, restarting)
         currentEditorAction = info.imeOptions and EditorInfo.IME_MASK_ACTION
         currentEditorInfo = info
+        currentWordTouches.clear()
         keyboardView.updateReturnKeyType(currentEditorAction)
         showKeyboardLayout()
 
@@ -383,6 +392,7 @@ class EchosInputMethodService : InputMethodService(),
             lastAutoCorrected = null
             pendingRevert = null
             autocorrectSuppressedWord = null
+            currentWordTouches.clear()
             refreshSuggestions()
         }
         applyAutoCap()
@@ -469,7 +479,7 @@ class EchosInputMethodService : InputMethodService(),
 
     // -- KeyboardActionListener --
 
-    override fun onKeyPress(char: String) {
+    override fun onKeyPress(char: String, normalizedTouch: PointF?) {
         if (emojiSearchActive) {
             emojiSearchQuery += char.lowercase()
             refreshEmojiSearchOverlay()
@@ -479,8 +489,11 @@ class EchosInputMethodService : InputMethodService(),
         // double-space window. Letters / digits / accents all reset.
         doubleSpacePeriod.reset()
         // Sentence punctuation commits a pending autocorrect exactly like
-        // space does ("teh." becomes "the.").
+        // space does ("teh." becomes "the."). The commit reads the word's
+        // touch buffer, so reset it only once the word has ended.
         if (char in autocorrectTriggers && commitWithAutocorrect(char)) {
+            currentWordTouches.clear()
+            applyContextualContraction(char)
             applyAutoCap()
             refreshSuggestions()
             return
@@ -491,9 +504,77 @@ class EchosInputMethodService : InputMethodService(),
         // Typing past an autocorrect ends its one-shot revert window.
         lastAutoCorrected = null
         pendingRevert = null
+        recordTouch(char, normalizedTouch)
         icCommitText(char)
+        // A separator ends the previous word too, so it can trigger a
+        // context-aware confusable fix even when the current word wasn't
+        // autocorrected ("ill be." — "be" is valid, so no commit fired above).
+        if (char.length == 1 && SpacingAndPunctuations.isWordSeparator(char[0])) {
+            applyContextualContraction(char)
+        }
         applyAutoCap()
         refreshSuggestions()
+    }
+
+    /// Records the tap for a committed character into the composing-word touch
+    /// buffer: a point for a letter, null for other in-word characters, and a
+    /// reset for word separators or multi-character commits (emoji).
+    private fun recordTouch(char: String, point: PointF?) {
+        val c = char.singleOrNull()
+        if (c == null || SpacingAndPunctuations.isWordSeparator(c)) {
+            currentWordTouches.clear()
+            return
+        }
+        currentWordTouches.add(
+            if (point != null && c.isLetter()) {
+                CorrectionEngine.TouchPoint(point.x, point.y)
+            } else {
+                null
+            }
+        )
+    }
+
+    /// The composing-word touch buffer, but only when it lines up with the
+    /// word the engine will score — otherwise null, so a desynced buffer falls
+    /// back to the static adjacency model.
+    private fun touchPointsMatching(word: String): List<CorrectionEngine.TouchPoint?>? =
+        if (currentWordTouches.size == word.length) ArrayList(currentWordTouches) else null
+
+    /**
+     * After a word + separator commits, retroactively fix a confusable
+     * previous word using the just-committed word as context ("ill be" ->
+     * "I'll be"). Gated under the autocorrect setting; only rewrites a
+     * single-space-separated pair whose exact text is still present before the
+     * cursor, so a host that rewrote the field can never misfire it.
+     */
+    private fun applyContextualContraction(separator: String) {
+        if (!keyboardSettings.autocorrect || separator.isEmpty()) return
+        val ic = currentInputConnection ?: return
+        val before = ic.getTextBeforeCursor(64, 0)?.toString() ?: return
+        if (!before.endsWith(separator)) return
+        val afterW2 = before.dropLast(separator.length) // "...P W2"
+        val w2 = trailingWord(afterW2)
+        if (w2.isEmpty()) return
+        val afterSpace = afterW2.dropLast(w2.length) // "...P "
+        if (!afterSpace.endsWith(" ")) return // single space only
+        val beforeSpace = afterSpace.dropLast(1) // "...P"
+        val lastCh = beforeSpace.lastOrNull()
+        if (lastCh != null && SpacingAndPunctuations.isWordSeparator(lastCh)) return
+        val prev = trailingWord(beforeSpace)
+        if (prev.isEmpty()) return
+        val contraction = correctionEngine.contextualContraction(prev, w2) ?: return
+        val deleteCount = separator.length + w2.length + 1 + prev.length
+        icDeleteSurroundingText(deleteCount, 0)
+        icCommitText(contraction + " " + w2 + separator)
+    }
+
+    /** The trailing run of non-separator characters in [text] (its last word). */
+    private fun trailingWord(text: String): String {
+        var start = text.length
+        while (start > 0 && !SpacingAndPunctuations.isWordSeparator(text[start - 1])) {
+            start--
+        }
+        return text.substring(start)
     }
 
     /**
@@ -522,7 +603,7 @@ class EchosInputMethodService : InputMethodService(),
         val previous = SuggestionEngine.previousWordBefore(before, word)
         val corrected: String? = if (suggestionEngine.usesBundledEngine) {
             // Synchronous lookup — the decision can never be stale.
-            val result = suggestionEngine.lookupNow(word, previous)
+            val result = suggestionEngine.lookupNow(word, previous, touchPointsMatching(word))
             if (result.topIsCorrection) result.replacement else null
         } else {
             // Legacy checker path: consult the cached async result.
@@ -590,6 +671,7 @@ class EchosInputMethodService : InputMethodService(),
             val ic = currentInputConnection
             val before = ic?.getTextBeforeCursor(2, 0)?.toString().orEmpty()
             if (ic != null && before == ". ") {
+                currentWordTouches.clear()
                 icDeleteSurroundingText(2, 0)
                 icCommitText("  ")
                 applyAutoCap()
@@ -607,6 +689,7 @@ class EchosInputMethodService : InputMethodService(),
             val expected = auto.corrected + auto.separator
             val before = ic?.getTextBeforeCursor(expected.length, 0)?.toString().orEmpty()
             if (ic != null && auto.separator.isNotEmpty() && before == expected) {
+                currentWordTouches.clear()
                 icDeleteSurroundingText(auto.separator.length, 0)
                 pendingRevert = auto
                 applyAutoCap()
@@ -615,6 +698,9 @@ class EchosInputMethodService : InputMethodService(),
             }
         }
         pendingRevert = null
+        // Keep the touch buffer aligned with the shrinking word; the
+        // length-match guard covers any residual desync.
+        if (currentWordTouches.isNotEmpty()) currentWordTouches.removeAt(currentWordTouches.size - 1)
         deleteOneGrapheme()
         applyAutoCap()
         refreshSuggestions()
@@ -630,6 +716,7 @@ class EchosInputMethodService : InputMethodService(),
         }
         lastAutoCorrected = null
         pendingRevert = null
+        currentWordTouches.clear()
         deleteWordBackward()
         clearSuggestions()
     }
@@ -671,6 +758,7 @@ class EchosInputMethodService : InputMethodService(),
         if (ic != null && doubleSpacePeriod.shouldCommitPeriod(before)) {
             lastAutoCorrected = null
             pendingRevert = null
+            currentWordTouches.clear()
             icDeleteSurroundingText(1, 0)
             icCommitText(". ")
             doubleSpacePeriod.markPeriodCommitted()
@@ -678,8 +766,11 @@ class EchosInputMethodService : InputMethodService(),
             clearSuggestions()
             return
         }
-        // Autocorrect-on-space (§5.10) — only when the user enabled it.
+        // Autocorrect-on-space (§5.10) — only when the user enabled it. The
+        // commit reads the word's touch buffer, so reset it only afterwards.
         if (commitWithAutocorrect(" ")) {
+            currentWordTouches.clear()
+            applyContextualContraction(" ")
             doubleSpacePeriod.recordSpaceCommit()
             applyAutoCap()
             refreshSuggestions()
@@ -688,7 +779,9 @@ class EchosInputMethodService : InputMethodService(),
         observeSeparatorCommit()
         lastAutoCorrected = null
         pendingRevert = null
+        currentWordTouches.clear()
         icCommitText(" ")
+        applyContextualContraction(" ")
         doubleSpacePeriod.recordSpaceCommit()
         applyAutoCap()
         refreshSuggestions()
@@ -712,6 +805,7 @@ class EchosInputMethodService : InputMethodService(),
             // the terminator. The revert check tolerates a vanished field —
             // the before-text comparison simply fails.
             commitWithAutocorrect("")
+            currentWordTouches.clear()
             // performEditorAction may dismiss the field entirely — we
             // don't try to predict the cursor, the onUpdateSelection
             // echo will reseed it.
@@ -722,6 +816,8 @@ class EchosInputMethodService : InputMethodService(),
         }
         // Return commits a pending autocorrect too, then still newlines.
         if (commitWithAutocorrect("\n")) {
+            currentWordTouches.clear()
+            applyContextualContraction("\n")
             applyAutoCap()
             refreshSuggestions()
             return
@@ -729,7 +825,9 @@ class EchosInputMethodService : InputMethodService(),
         observeSeparatorCommit()
         lastAutoCorrected = null
         pendingRevert = null
+        currentWordTouches.clear()
         icCommitText("\n")
+        applyContextualContraction("\n")
         applyAutoCap()
         clearSuggestions()
     }
@@ -810,6 +908,7 @@ class EchosInputMethodService : InputMethodService(),
     /// the auto-cap state so the shift indicator tracks the new cursor.
     private fun commitEmoji(emoji: String) {
         doubleSpacePeriod.reset()
+        currentWordTouches.clear()
         icCommitText(emoji)
         applyAutoCap()
     }
@@ -961,6 +1060,9 @@ class EchosInputMethodService : InputMethodService(),
 
     override fun onSuggestionTapped(slot: SuggestionSlot) {
         val ic = currentInputConnection ?: return
+        // Selecting a slot replaces or ends the composing word; its per-key
+        // touch buffer no longer applies.
+        currentWordTouches.clear()
         val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
         // During a revert offer the verbatim slot swaps the correction back
         // to the typed word and blacklists the pair.
@@ -1077,18 +1179,24 @@ class EchosInputMethodService : InputMethodService(),
         val word = SuggestionEngine.currentWordBefore(before)
         if (word.isEmpty()) {
             autocorrectSuppressedWord = null
-            // Next-word prediction (§5.12): the cursor sits right after a
-            // space that follows a word — offer its likely continuations.
-            if (before.endsWith(" ")) {
-                val previous = SuggestionEngine.previousWordBefore(before, "")
-                if (previous != null) {
-                    val predictions = suggestionEngine.predictions(previous)
-                    if (predictions.isNotEmpty()) {
-                        topBar.setSuggestions(
-                            predictions.map { SuggestionSlot.candidate(it) },
-                        )
-                        return
+            // Next-word prediction (§5.12): after a word (possibly across a
+            // comma) offer its likely continuations; at a sentence start or
+            // empty field offer curated openers, capitalized. Only at an
+            // actual word boundary — never glued right after unspaced
+            // punctuation.
+            val previous = SuggestionEngine.previousWordBefore(before, "")
+            if (before.isEmpty() || before.endsWith(" ") || previous != null) {
+                var predictions = suggestionEngine.predictions(previous ?: "")
+                if (previous == null) {
+                    predictions = predictions.map {
+                        it.replaceFirstChar { c -> c.uppercase() }
                     }
+                }
+                if (predictions.isNotEmpty()) {
+                    topBar.setSuggestions(
+                        predictions.map { SuggestionSlot.candidate(it) },
+                    )
+                    return
                 }
             }
             clearSuggestions()
@@ -1108,7 +1216,11 @@ class EchosInputMethodService : InputMethodService(),
             maybeShowSpellCheckerHint()
             return
         }
-        suggestionEngine.request(word, SuggestionEngine.previousWordBefore(before, word))
+        suggestionEngine.request(
+            word,
+            SuggestionEngine.previousWordBefore(before, word),
+            touchPointsMatching(word),
+        )
     }
 
     /**
@@ -1197,6 +1309,7 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     private fun toggleRecording() {
+        currentWordTouches.clear()
         when (micState) {
             MicState.RECORDING -> {
                 setMicState(MicState.TRANSCRIBING)

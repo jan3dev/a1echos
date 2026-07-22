@@ -10,7 +10,6 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.util.AttributeSet
 import android.view.Gravity
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -147,7 +146,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                KeyFeedback.performKeyHaptic(this)
                 listener?.onBackToLetters()
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -171,7 +170,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                KeyFeedback.performKeyHaptic(this)
                 listener?.onActivateSearch()
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -506,7 +505,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
                             val initialIndex = indexForTone(currentTone)
                             val pointerX = anchor.left + downX
                             popupView.show(anchor, variants, initialIndex, pointerX)
-                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            KeyFeedback.performLongPressHaptic(v)
                         }
                         longPressRunnable = runnable
                         cell.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
@@ -575,7 +574,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
     /// Handles a regular tap commit. The cell's text already reflects
     /// the current tone, so we commit that directly.
     private fun commitFromTap(cell: TextView, baseEmoji: String) {
-        cell.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        KeyFeedback.keyPress(cell)
         val committed = cell.text?.toString().takeUnless { it.isNullOrEmpty() }
             ?: SkinTone.applyTone(baseEmoji, currentTone)
         RecentEmojis.record(context, SkinTone.stripTone(committed))
@@ -592,7 +591,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
             SkinTonePreference.set(context, newTone)
             retoneAllCells()
         }
-        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        KeyFeedback.keyPress(this)
         RecentEmojis.record(context, SkinTone.stripTone(selected))
         listener?.onEmojiSelected(selected)
     }

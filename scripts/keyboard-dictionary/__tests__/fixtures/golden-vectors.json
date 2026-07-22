@@ -1,0 +1,1431 @@
+{
+  "evaluate": [
+    {
+      "typed": "teh",
+      "expect": {
+        "candidates": [
+          "the",
+          "eth",
+          "ten"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "hte",
+      "expect": {
+        "candidates": [
+          "the",
+          "hts",
+          "hate"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "taht",
+      "expect": {
+        "candidates": [
+          "that",
+          "taut",
+          "tahr"
+        ],
+        "topIsCorrection": true,
+        "replacement": "that"
+      }
+    },
+    {
+      "typed": "thsi",
+      "expect": {
+        "candidates": [
+          "this",
+          "Thai"
+        ],
+        "topIsCorrection": true,
+        "replacement": "this"
+      }
+    },
+    {
+      "typed": "tihs",
+      "expect": {
+        "candidates": [
+          "this",
+          "tins",
+          "tips"
+        ],
+        "topIsCorrection": true,
+        "replacement": "this"
+      }
+    },
+    {
+      "typed": "waht",
+      "expect": {
+        "candidates": [
+          "what",
+          "want",
+          "wait"
+        ],
+        "topIsCorrection": true,
+        "replacement": "what"
+      }
+    },
+    {
+      "typed": "adn",
+      "expect": {
+        "candidates": [
+          "and",
+          "dan",
+          "adj"
+        ],
+        "topIsCorrection": true,
+        "replacement": "and"
+      }
+    },
+    {
+      "typed": "woudl",
+      "expect": {
+        "candidates": [
+          "would",
+          "world",
+          "wold"
+        ],
+        "topIsCorrection": true,
+        "replacement": "would"
+      }
+    },
+    {
+      "typed": "helo",
+      "expect": {
+        "candidates": [
+          "hello",
+          "help",
+          "hell"
+        ],
+        "topIsCorrection": true,
+        "replacement": "hello"
+      }
+    },
+    {
+      "typed": "helllo",
+      "expect": {
+        "candidates": [
+          "hello",
+          "hell",
+          "help"
+        ],
+        "topIsCorrection": true,
+        "replacement": "hello"
+      }
+    },
+    {
+      "typed": "hellp",
+      "expect": {
+        "candidates": [
+          "help",
+          "hello",
+          "hell"
+        ],
+        "topIsCorrection": true,
+        "replacement": "help"
+      }
+    },
+    {
+      "typed": "aboutt",
+      "expect": {
+        "candidates": [
+          "about",
+          "abbott",
+          "abort"
+        ],
+        "topIsCorrection": true,
+        "replacement": "about"
+      }
+    },
+    {
+      "typed": "tomorow",
+      "expect": {
+        "candidates": [
+          "tomorrow",
+          "tomorrows"
+        ],
+        "topIsCorrection": true,
+        "replacement": "tomorrow"
+      }
+    },
+    {
+      "typed": "occured",
+      "expect": {
+        "candidates": [
+          "occurred",
+          "occurs",
+          "occluded"
+        ],
+        "topIsCorrection": true,
+        "replacement": "occurred"
+      }
+    },
+    {
+      "typed": "untill",
+      "expect": {
+        "candidates": [
+          "until",
+          "unroll",
+          "untie"
+        ],
+        "topIsCorrection": true,
+        "replacement": "until"
+      }
+    },
+    {
+      "typed": "begining",
+      "expect": {
+        "candidates": [
+          "beginning",
+          "beginnings",
+          "Beijing"
+        ],
+        "topIsCorrection": true,
+        "replacement": "beginning"
+      }
+    },
+    {
+      "typed": "comming",
+      "expect": {
+        "candidates": [
+          "coming",
+          "com ming",
+          "commingle"
+        ],
+        "topIsCorrection": true,
+        "replacement": "coming"
+      }
+    },
+    {
+      "typed": "mornign",
+      "expect": {
+        "candidates": [
+          "morning",
+          "morn ign",
+          "mornings"
+        ],
+        "topIsCorrection": true,
+        "replacement": "morning"
+      }
+    },
+    {
+      "typed": "goverment",
+      "expect": {
+        "candidates": [
+          "government",
+          "governments",
+          "governing"
+        ],
+        "topIsCorrection": true,
+        "replacement": "government"
+      }
+    },
+    {
+      "typed": "enviroment",
+      "expect": {
+        "candidates": [
+          "environment",
+          "environments"
+        ],
+        "topIsCorrection": true,
+        "replacement": "environment"
+      }
+    },
+    {
+      "typed": "calender",
+      "expect": {
+        "candidates": [
+          "calenders",
+          "calendered",
+          "calendering"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "febuary",
+      "expect": {
+        "candidates": [
+          "February"
+        ],
+        "topIsCorrection": true,
+        "replacement": "February"
+      }
+    },
+    {
+      "typed": "recieve",
+      "expect": {
+        "candidates": [
+          "receive",
+          "relieve",
+          "recurve"
+        ],
+        "topIsCorrection": true,
+        "replacement": "receive"
+      }
+    },
+    {
+      "typed": "beleive",
+      "expect": {
+        "candidates": [
+          "believe",
+          "believed",
+          "believes"
+        ],
+        "topIsCorrection": true,
+        "replacement": "believe"
+      }
+    },
+    {
+      "typed": "seperate",
+      "expect": {
+        "candidates": [
+          "separate",
+          "sewerage",
+          "serrate"
+        ],
+        "topIsCorrection": true,
+        "replacement": "separate"
+      }
+    },
+    {
+      "typed": "definately",
+      "expect": {
+        "candidates": [
+          "definitely",
+          "defiantly",
+          "delicately"
+        ],
+        "topIsCorrection": true,
+        "replacement": "definitely"
+      }
+    },
+    {
+      "typed": "wierd",
+      "expect": {
+        "candidates": [
+          "weird",
+          "wired",
+          "wield"
+        ],
+        "topIsCorrection": true,
+        "replacement": "weird"
+      }
+    },
+    {
+      "typed": "freind",
+      "expect": {
+        "candidates": [
+          "friend",
+          "friends",
+          "fried"
+        ],
+        "topIsCorrection": true,
+        "replacement": "friend"
+      }
+    },
+    {
+      "typed": "thier",
+      "expect": {
+        "candidates": [
+          "their",
+          "thief",
+          "tier"
+        ],
+        "topIsCorrection": true,
+        "replacement": "their"
+      }
+    },
+    {
+      "typed": "becuase",
+      "expect": {
+        "candidates": [
+          "because",
+          "became"
+        ],
+        "topIsCorrection": true,
+        "replacement": "because"
+      }
+    },
+    {
+      "typed": "wich",
+      "expect": {
+        "candidates": [
+          "wichita",
+          "which",
+          "with"
+        ],
+        "topIsCorrection": true,
+        "replacement": "which"
+      }
+    },
+    {
+      "typed": "adress",
+      "expect": {
+        "candidates": [
+          "address",
+          "a dress",
+          "dares"
+        ],
+        "topIsCorrection": true,
+        "replacement": "address"
+      }
+    },
+    {
+      "typed": "worls",
+      "expect": {
+        "candidates": [
+          "world",
+          "works",
+          "worlds"
+        ],
+        "topIsCorrection": true,
+        "replacement": "world"
+      }
+    },
+    {
+      "typed": "jelo",
+      "expect": {
+        "candidates": [
+          "jello",
+          "jell",
+          "jolo"
+        ],
+        "topIsCorrection": true,
+        "replacement": "jello"
+      }
+    },
+    {
+      "typed": "tge",
+      "expect": {
+        "candidates": [
+          "the",
+          "tue",
+          "tie"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "wprd",
+      "expect": {
+        "candidates": [
+          "word",
+          "ward"
+        ],
+        "topIsCorrection": true,
+        "replacement": "word"
+      }
+    },
+    {
+      "typed": "ypu",
+      "expect": {
+        "candidates": [
+          "you",
+          "yup"
+        ],
+        "topIsCorrection": true,
+        "replacement": "you"
+      }
+    },
+    {
+      "typed": "yuo",
+      "expect": {
+        "candidates": [
+          "you",
+          "yup",
+          "yuk"
+        ],
+        "topIsCorrection": true,
+        "replacement": "you"
+      }
+    },
+    {
+      "typed": "gor",
+      "expect": {
+        "candidates": [
+          "gore",
+          "gory",
+          "gorge"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "thw",
+      "expect": {
+        "candidates": [
+          "the",
+          "thwart",
+          "thwack"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "amd",
+      "expect": {
+        "candidates": [
+          "and",
+          "mad",
+          "adm"
+        ],
+        "topIsCorrection": true,
+        "replacement": "and"
+      }
+    },
+    {
+      "typed": "yhe",
+      "expect": {
+        "candidates": [],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "sata",
+      "expect": {
+        "candidates": [
+          "satan",
+          "satay",
+          "sat a"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "keyb",
+      "expect": {
+        "candidates": [
+          "keyboard",
+          "keyboards",
+          "key"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "congratul",
+      "expect": {
+        "candidates": [
+          "congratulate",
+          "congratulated",
+          "congratulates"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "unfortunat",
+      "expect": {
+        "candidates": [
+          "unfortunate",
+          "unfortunates",
+          "unfortunately"
+        ],
+        "topIsCorrection": true,
+        "replacement": "unfortunate"
+      }
+    },
+    {
+      "typed": "becaus",
+      "expect": {
+        "candidates": [
+          "because",
+          "beaus",
+          "became"
+        ],
+        "topIsCorrection": true,
+        "replacement": "because"
+      }
+    },
+    {
+      "typed": "tomorr",
+      "expect": {
+        "candidates": [
+          "tomorrow",
+          "tom orr",
+          "tomorrows"
+        ],
+        "topIsCorrection": true,
+        "replacement": "tomorrow"
+      }
+    },
+    {
+      "typed": "fuk",
+      "expect": {
+        "candidates": [
+          "fum",
+          "fukien",
+          "fukuoka"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "thx",
+      "expect": {
+        "candidates": [
+          "tux",
+          "the",
+          "tax"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "pls",
+      "expect": {
+        "candidates": [
+          "plz",
+          "pos",
+          "plus"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "cant",
+      "expect": {
+        "candidates": [
+          "can't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "can't"
+      }
+    },
+    {
+      "typed": "wont",
+      "expect": {
+        "candidates": [
+          "won't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "won't"
+      }
+    },
+    {
+      "typed": "dont",
+      "expect": {
+        "candidates": [
+          "don't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "don't"
+      }
+    },
+    {
+      "typed": "im",
+      "expect": {
+        "candidates": [
+          "I'm"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I'm"
+      }
+    },
+    {
+      "typed": "ive",
+      "expect": {
+        "candidates": [
+          "I've"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I've"
+      }
+    },
+    {
+      "typed": "shouldnt",
+      "expect": {
+        "candidates": [
+          "shouldn't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "shouldn't"
+      }
+    },
+    {
+      "typed": "couldnt",
+      "expect": {
+        "candidates": [
+          "couldn't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "couldn't"
+      }
+    },
+    {
+      "typed": "didnt",
+      "expect": {
+        "candidates": [
+          "didn't"
+        ],
+        "topIsCorrection": true,
+        "replacement": "didn't"
+      }
+    },
+    {
+      "typed": "youre",
+      "expect": {
+        "candidates": [
+          "you're"
+        ],
+        "topIsCorrection": true,
+        "replacement": "you're"
+      }
+    },
+    {
+      "typed": "theyre",
+      "expect": {
+        "candidates": [
+          "they're"
+        ],
+        "topIsCorrection": true,
+        "replacement": "they're"
+      }
+    },
+    {
+      "typed": "whos",
+      "expect": {
+        "candidates": [
+          "who's"
+        ],
+        "topIsCorrection": true,
+        "replacement": "who's"
+      }
+    },
+    {
+      "typed": "alot",
+      "expect": {
+        "candidates": [
+          "a lot",
+          "alto",
+          "allot"
+        ],
+        "topIsCorrection": true,
+        "replacement": "a lot"
+      }
+    },
+    {
+      "typed": "imnot",
+      "expect": {
+        "candidates": [
+          "I'm not",
+          "minot",
+          "minor"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I'm not"
+      }
+    },
+    {
+      "typed": "maybe",
+      "expect": {
+        "candidates": [
+          "maybes",
+          "may be",
+          "mauve"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "cannot",
+      "expect": {
+        "candidates": [
+          "can not",
+          "cannon",
+          "canto"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "atleast",
+      "expect": {
+        "candidates": [
+          "at least",
+          "atlas",
+          "atheist"
+        ],
+        "topIsCorrection": true,
+        "replacement": "at least"
+      }
+    },
+    {
+      "typed": "aswell",
+      "expect": {
+        "candidates": [
+          "as well",
+          "a swell",
+          "aspell"
+        ],
+        "topIsCorrection": true,
+        "replacement": "as well"
+      }
+    },
+    {
+      "typed": "i",
+      "expect": {
+        "candidates": [
+          "I"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I"
+      }
+    },
+    {
+      "typed": "Its",
+      "expect": {
+        "candidates": [
+          "It's"
+        ],
+        "topIsCorrection": true,
+        "replacement": "It's"
+      }
+    },
+    {
+      "typed": "Ill",
+      "expect": {
+        "candidates": [
+          "I'll"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I'll"
+      }
+    },
+    {
+      "typed": "Id",
+      "expect": {
+        "candidates": [
+          "I'd"
+        ],
+        "topIsCorrection": true,
+        "replacement": "I'd"
+      }
+    },
+    {
+      "typed": "Lets",
+      "expect": {
+        "candidates": [
+          "Let's"
+        ],
+        "topIsCorrection": true,
+        "replacement": "Let's"
+      }
+    },
+    {
+      "typed": "its",
+      "prevWord": "like",
+      "expect": {
+        "candidates": [
+          "it's",
+          "itself",
+          "ifs"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "ill",
+      "prevWord": "feel",
+      "expect": {
+        "candidates": [
+          "i'll",
+          "illus",
+          "ilk"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "its",
+      "expect": {
+        "candidates": [
+          "it's",
+          "itself",
+          "ifs"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "Its",
+      "prevWord": "like",
+      "expect": {
+        "candidates": [
+          "it's",
+          "itself",
+          "ifs"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "france",
+      "expect": {
+        "candidates": [
+          "France"
+        ],
+        "topIsCorrection": true,
+        "replacement": "France"
+      }
+    },
+    {
+      "typed": "monday",
+      "expect": {
+        "candidates": [
+          "Monday"
+        ],
+        "topIsCorrection": true,
+        "replacement": "Monday"
+      }
+    },
+    {
+      "typed": "google",
+      "expect": {
+        "candidates": [
+          "Google"
+        ],
+        "topIsCorrection": true,
+        "replacement": "Google"
+      }
+    },
+    {
+      "typed": "january",
+      "expect": {
+        "candidates": [
+          "January"
+        ],
+        "topIsCorrection": true,
+        "replacement": "January"
+      }
+    },
+    {
+      "typed": "london",
+      "expect": {
+        "candidates": [
+          "London"
+        ],
+        "topIsCorrection": true,
+        "replacement": "London"
+      }
+    },
+    {
+      "typed": "christmas",
+      "expect": {
+        "candidates": [
+          "Christmas"
+        ],
+        "topIsCorrection": true,
+        "replacement": "Christmas"
+      }
+    },
+    {
+      "typed": "the",
+      "expect": {
+        "candidates": [
+          "they",
+          "them",
+          "then"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "hello",
+      "expect": {
+        "candidates": [
+          "hellos",
+          "hell",
+          "help"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "form",
+      "prevWord": "the",
+      "expect": {
+        "candidates": [
+          "forms",
+          "former",
+          "format"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "there",
+      "expect": {
+        "candidates": [
+          "the re",
+          "thereof",
+          "thereby"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "were",
+      "expect": {
+        "candidates": [
+          "we're",
+          "weer",
+          "weren't"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "bitcoin",
+      "expect": {
+        "candidates": [
+          "bitcoins",
+          "bitching"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "wifi",
+      "expect": {
+        "candidates": [
+          "wife",
+          "wiki",
+          "wii"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "lol",
+      "expect": {
+        "candidates": [
+          "lola",
+          "loll",
+          "lolly"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "TWA",
+      "expect": {
+        "candidates": [
+          "twas",
+          "twain",
+          "twang"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "NASA",
+      "expect": {
+        "candidates": [
+          "nasal",
+          "nasals",
+          "nasally"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "e-mail",
+      "expect": {
+        "candidates": [
+          "email",
+          "emails",
+          "emil"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "self-made",
+      "expect": {
+        "candidates": [
+          "selfsame"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "x2",
+      "expect": {
+        "candidates": [],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "2x",
+      "expect": {
+        "candidates": [],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "goign",
+      "prevWord": "am",
+      "expect": {
+        "candidates": [
+          "going",
+          "go ign",
+          "goings"
+        ],
+        "topIsCorrection": true,
+        "replacement": "going"
+      }
+    },
+    {
+      "typed": "hoem",
+      "prevWord": "go",
+      "expect": {
+        "candidates": [
+          "home",
+          "hem",
+          "hoe"
+        ],
+        "topIsCorrection": true,
+        "replacement": "home"
+      }
+    },
+    {
+      "typed": "te",
+      "prevWord": "of",
+      "expect": {
+        "candidates": [
+          "tex",
+          "text",
+          "ter"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "tim",
+      "prevWord": "on",
+      "expect": {
+        "candidates": [
+          "time",
+          "times",
+          "timer"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "thw",
+      "prevWord": "of",
+      "expect": {
+        "candidates": [
+          "the",
+          "thwart",
+          "thwack"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "johns",
+      "expect": {
+        "candidates": [
+          "johnson",
+          "johnston",
+          "john"
+        ],
+        "topIsCorrection": false,
+        "replacement": null
+      }
+    },
+    {
+      "typed": "marys",
+      "expect": {
+        "candidates": [
+          "marts",
+          "mary",
+          "marks"
+        ],
+        "topIsCorrection": true,
+        "replacement": "marts"
+      }
+    },
+    {
+      "typed": "cae",
+      "touches": [
+        null,
+        null,
+        {
+          "x": 3.3,
+          "y": 0.6
+        }
+      ],
+      "expect": {
+        "candidates": [
+          "car",
+          "caen",
+          "ace"
+        ],
+        "topIsCorrection": true,
+        "replacement": "car"
+      }
+    },
+    {
+      "typed": "cae",
+      "touches": [
+        null,
+        null,
+        {
+          "x": 2.7,
+          "y": 0.4
+        }
+      ],
+      "expect": {
+        "candidates": [
+          "caen",
+          "car",
+          "ace"
+        ],
+        "topIsCorrection": true,
+        "replacement": "car"
+      }
+    },
+    {
+      "typed": "tge",
+      "touches": [
+        null,
+        {
+          "x": 5.8,
+          "y": 1.5
+        },
+        null
+      ],
+      "expect": {
+        "candidates": [
+          "the",
+          "tue",
+          "thee"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "teh",
+      "touches": [
+        {
+          "x": 4.5,
+          "y": 0.5
+        },
+        {
+          "x": 2.5,
+          "y": 0.5
+        },
+        {
+          "x": 6.5,
+          "y": 1.5
+        }
+      ],
+      "expect": {
+        "candidates": [
+          "the",
+          "eth",
+          "ten"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    },
+    {
+      "typed": "hoem",
+      "prevWord": "go",
+      "touches": [
+        {
+          "x": 6.5,
+          "y": 1.5
+        },
+        {
+          "x": 8.5,
+          "y": 0.5
+        },
+        {
+          "x": 2.6,
+          "y": 0.5
+        },
+        {
+          "x": 7.5,
+          "y": 2.5
+        }
+      ],
+      "expect": {
+        "candidates": [
+          "home",
+          "horn",
+          "hem"
+        ],
+        "topIsCorrection": true,
+        "replacement": "home"
+      }
+    },
+    {
+      "typed": "londons",
+      "expect": {
+        "candidates": [
+          "London's",
+          "lon dons",
+          "London"
+        ],
+        "topIsCorrection": true,
+        "replacement": "London's"
+      }
+    },
+    {
+      "typed": "yhe",
+      "touches": [
+        {
+          "x": 4.8,
+          "y": 0.5
+        },
+        null,
+        null
+      ],
+      "expect": {
+        "candidates": [
+          "the"
+        ],
+        "topIsCorrection": true,
+        "replacement": "the"
+      }
+    }
+  ],
+  "nextWords": [
+    {
+      "prevWord": "I",
+      "expect": [
+        "have",
+        "am",
+        "was"
+      ]
+    },
+    {
+      "prevWord": "the",
+      "expect": [
+        "same",
+        "first",
+        "following"
+      ]
+    },
+    {
+      "prevWord": "good",
+      "expect": [
+        "for",
+        "to",
+        "and"
+      ]
+    },
+    {
+      "prevWord": "thank",
+      "expect": [
+        "you",
+        "the",
+        "all"
+      ]
+    },
+    {
+      "prevWord": "how",
+      "expect": [
+        "to",
+        "the",
+        "much"
+      ]
+    },
+    {
+      "prevWord": "see",
+      "expect": [
+        "the",
+        "your",
+        "if"
+      ]
+    },
+    {
+      "prevWord": "want",
+      "expect": [
+        "to",
+        "it",
+        "the"
+      ]
+    },
+    {
+      "prevWord": "new",
+      "expect": [
+        "window",
+        "and",
+        "topic"
+      ]
+    },
+    {
+      "prevWord": "please",
+      "expect": [
+        "contact",
+        "use",
+        "click"
+      ]
+    },
+    {
+      "prevWord": "zygote",
+      "expect": [
+        "the",
+        "of",
+        "and"
+      ]
+    },
+    {
+      "prevWord": "",
+      "expect": [
+        "i",
+        "the",
+        "you"
+      ]
+    }
+  ]
+}

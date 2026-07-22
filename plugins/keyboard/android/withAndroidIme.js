@@ -174,6 +174,18 @@ function withImeSources(config) {
         path.join(assetsDir, "keyboard_dictionary.echd"),
       );
 
+      // Bundle the confusables table (ill -> I'll etc.); CorrectionEngine
+      // parses it at load for context-aware confusable correction.
+      fs.copyFileSync(
+        path.join(
+          projectRoot,
+          "data",
+          "keyboard-dictionary",
+          "confusables.json",
+        ),
+        path.join(assetsDir, "confusables.json"),
+      );
+
       // Write XML resources
       const resDir = path.join(androidRoot, "res");
 

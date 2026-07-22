@@ -45,6 +45,7 @@ jest.mock("@/hooks", () => ({
 const mockSetSmartSplitEnabled = jest.fn();
 const mockSetKeyboardAutocorrect = jest.fn();
 const mockSetKeyboardHaptic = jest.fn();
+const mockSetKeyboardSound = jest.fn();
 const mockShowKeyboardPrompt = jest.fn();
 jest.mock("@/stores", () => ({
   useSmartSplitEnabled: jest.fn(() => true),
@@ -53,6 +54,8 @@ jest.mock("@/stores", () => ({
   useSetKeyboardAutocorrect: jest.fn(() => mockSetKeyboardAutocorrect),
   useKeyboardHaptic: jest.fn(() => false),
   useSetKeyboardHaptic: jest.fn(() => mockSetKeyboardHaptic),
+  useKeyboardSound: jest.fn(() => false),
+  useSetKeyboardSound: jest.fn(() => mockSetKeyboardSound),
   useKeyboardMicTimeout: jest.fn(() => 300),
   useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
 }));
@@ -110,17 +113,21 @@ describe("AdvancedSettingsScreen", () => {
     mockSetKeyboardAutocorrect.mockResolvedValue(undefined);
     mockSetKeyboardHaptic.mockReset();
     mockSetKeyboardHaptic.mockResolvedValue(undefined);
+    mockSetKeyboardSound.mockReset();
+    mockSetKeyboardSound.mockResolvedValue(undefined);
     mockShowKeyboardPrompt.mockReset();
     mockPush.mockReset();
     const {
       useSmartSplitEnabled,
       useKeyboardAutocorrect,
       useKeyboardHaptic,
+      useKeyboardSound,
       useKeyboardMicTimeout,
     } = require("@/stores");
     (useSmartSplitEnabled as jest.Mock).mockReturnValue(true);
     (useKeyboardAutocorrect as jest.Mock).mockReturnValue(false);
     (useKeyboardHaptic as jest.Mock).mockReturnValue(false);
+    (useKeyboardSound as jest.Mock).mockReturnValue(false);
     (useKeyboardMicTimeout as jest.Mock).mockReturnValue(300);
   });
 
@@ -232,6 +239,32 @@ describe("AdvancedSettingsScreen", () => {
     fireEvent.press(getByTestId(TestID.SettingsKeyboardHapticToggle));
     await waitFor(() => {
       expect(mockSetKeyboardHaptic).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("renders the keyboard sound row", () => {
+    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByTestId(TestID.SettingsKeyboardSoundToggle)).toBeTruthy();
+    expect(getByText("keyboardSoundTitle")).toBeTruthy();
+    expect(getByText("keyboardSoundDescription")).toBeTruthy();
+    expect(getByTestId("toggle-value-keyboardSoundTitle")).toHaveTextContent(
+      "off",
+    );
+  });
+
+  it("pressing the sound toggle persists the flipped value", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId("toggle-keyboardSoundTitle"));
+    await waitFor(() => {
+      expect(mockSetKeyboardSound).toHaveBeenCalledWith(true);
+    });
+  });
+
+  it("pressing the sound row also flips the toggle", async () => {
+    const { getByTestId } = render(<AdvancedSettingsScreen />);
+    fireEvent.press(getByTestId(TestID.SettingsKeyboardSoundToggle));
+    await waitFor(() => {
+      expect(mockSetKeyboardSound).toHaveBeenCalledWith(true);
     });
   });
 

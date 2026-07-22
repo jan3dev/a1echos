@@ -100,6 +100,8 @@ export const useLocalization = () => {
       keyboardAutocorrectDescription: t("keyboardAutocorrectDescription"),
       keyboardHapticTitle: t("keyboardHapticTitle"),
       keyboardHapticDescription: t("keyboardHapticDescription"),
+      keyboardSoundTitle: t("keyboardSoundTitle"),
+      keyboardSoundDescription: t("keyboardSoundDescription"),
       micTimeoutTitle: t("micTimeoutTitle"),
       micTimeoutDescription: t("micTimeoutDescription"),
       micTimeoutOff: t("micTimeoutOff"),

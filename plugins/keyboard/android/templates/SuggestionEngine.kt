@@ -87,7 +87,12 @@ class SuggestionEngine(
                 end -= currentWord.length
             }
             while (end > 0 && SpacingAndPunctuations.isWordSeparator(textBeforeCursor[end - 1])) {
-                if (textBeforeCursor[end - 1] != ' ') return null
+                // Sentence-terminal punctuation ends the context; commas /
+                // semicolons / colons (and spaces) do not — native keyboards
+                // keep predicting across them ("apples, oran" still boosts
+                // from "apples").
+                val ch = textBeforeCursor[end - 1]
+                if (ch == '.' || ch == '!' || ch == '?' || ch == '\n') return null
                 end--
             }
             var start = end
@@ -184,9 +189,15 @@ class SuggestionEngine(
      * space/punctuation commit path so the autocorrect decision can never be
      * stale. Returns [Result.EMPTY] when the engine doesn't serve this locale.
      */
-    fun lookupNow(word: String, previousWord: String?): Result {
+    fun lookupNow(
+        word: String,
+        previousWord: String?,
+        touchPoints: List<CorrectionEngine.TouchPoint?>? = null,
+    ): Result {
         if (!usesBundledEngine || word.isEmpty()) return Result.EMPTY
-        val evaluation = correctionEngine.evaluate(word, previousWord)
+        val evaluation = correctionEngine.evaluate(
+            word, previousWord, touchPoints = touchPoints
+        )
         return Result(
             candidates = evaluation.candidates.map { matchCase(word, it) },
             topIsCorrection = evaluation.topIsCorrection,
@@ -207,10 +218,14 @@ class SuggestionEngine(
      * main thread — synchronously (bundled engine) or async (system checker).
      * Caller is expected to debounce.
      */
-    fun request(word: String, previousWord: String?) {
+    fun request(
+        word: String,
+        previousWord: String?,
+        touchPoints: List<CorrectionEngine.TouchPoint?>? = null,
+    ) {
         if (word.isEmpty()) return
         if (usesBundledEngine) {
-            onResults(word, lookupNow(word, previousWord))
+            onResults(word, lookupNow(word, previousWord, touchPoints))
             return
         }
         val s = session ?: return

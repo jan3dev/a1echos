@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
   KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
   KEYBOARD_HAPTIC: "keyboard_haptic",
+  KEYBOARD_SOUND: "keyboard_sound",
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
   HAS_SEEN_WELCOME: "has_seen_welcome",
 };
@@ -66,9 +67,11 @@ interface SettingsStore {
   /** Keyboard: auto-apply the top spelling guess on space (default off =
    *  tap-to-apply suggestions only). */
   keyboardAutocorrect: boolean;
-  /** Keyboard: play a light haptic on each key press (default off, matching
-   *  the iOS native keyboard). */
+  /** Keyboard: play a light haptic on each key press (default on). */
   keyboardHaptic: boolean;
+  /** Keyboard: play a key-click sound on each key press (default on). On iOS
+   *  the click also requires the keyboard's Full Access permission. */
+  keyboardSound: boolean;
   /** Keyboard: how long (seconds) a voice-typing session stays armed in the
    *  background after being started from an external app. `0` = Off. */
   keyboardMicTimeoutSeconds: number;
@@ -88,6 +91,7 @@ interface SettingsStore {
   markKeyboardPromptSeen: () => Promise<void>;
   setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
+  setKeyboardSound: (enabled: boolean) => Promise<void>;
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
 }
@@ -137,11 +141,16 @@ const parseModelModes = (raw: string | null): ModelModes => {
  * no need to thread the other flags' values through by hand.
  */
 const syncKeyboardConfig = (get: () => SettingsStore): void => {
-  const { keyboardAutocorrect, keyboardHaptic, keyboardMicTimeoutSeconds } =
-    get();
+  const {
+    keyboardAutocorrect,
+    keyboardHaptic,
+    keyboardSound,
+    keyboardMicTimeoutSeconds,
+  } = get();
   writeKeyboardSettings({
     autocorrect: keyboardAutocorrect,
     hapticFeedback: keyboardHaptic,
+    keySound: keyboardSound,
     micTimeoutSeconds: keyboardMicTimeoutSeconds,
   });
 };
@@ -157,7 +166,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   smartSplitEnabled: true,
   hasSeenKeyboardPrompt: false,
   keyboardAutocorrect: true,
-  keyboardHaptic: false,
+  keyboardHaptic: true,
+  keyboardSound: true,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
   hasSeenWelcome: false,
 
@@ -175,6 +185,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardPromptValue,
         keyboardAutocorrectValue,
         keyboardHapticValue,
+        keyboardSoundValue,
         keyboardMicTimeoutValue,
         hasSeenWelcomeValue,
       ] = await Promise.all([
@@ -189,6 +200,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_AUTOCORRECT),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_SOUND),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
       ]);
@@ -254,8 +266,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       // Default true (matching native keyboards) — only the explicit string
       // "false" disables autocorrect.
       const keyboardAutocorrect = keyboardAutocorrectValue !== "false";
-      // Default false — only the explicit string "true" enables haptics.
-      const keyboardHaptic = keyboardHapticValue === "true";
+      // Default true — only the explicit string "false" disables haptics.
+      const keyboardHaptic = keyboardHapticValue !== "false";
+      // Default true — only the explicit string "false" disables key sounds.
+      const keyboardSound = keyboardSoundValue !== "false";
       const keyboardMicTimeoutSeconds = parseMicTimeout(
         keyboardMicTimeoutValue,
       );
@@ -273,6 +287,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         hasSeenKeyboardPrompt,
         keyboardAutocorrect,
         keyboardHaptic,
+        keyboardSound,
         keyboardMicTimeoutSeconds,
         hasSeenWelcome,
       });
@@ -297,7 +312,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         smartSplitEnabled: true,
         hasSeenKeyboardPrompt: false,
         keyboardAutocorrect: true,
-        keyboardHaptic: false,
+        keyboardHaptic: true,
+        keyboardSound: true,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
         hasSeenWelcome: false,
       });
@@ -556,6 +572,28 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
+  setKeyboardSound: async (enabled: boolean) => {
+    const previousValue = get().keyboardSound;
+    if (previousValue === enabled) return;
+    set({ keyboardSound: enabled });
+    // Mirror to the keyboard config file optimistically.
+    syncKeyboardConfig(get);
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.KEYBOARD_SOUND,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save keyboard sound preference",
+      });
+      set({ keyboardSound: previousValue });
+      syncKeyboardConfig(get);
+      throw error;
+    }
+  },
+
   setKeyboardMicTimeout: async (seconds: number) => {
     const previousValue = get().keyboardMicTimeoutSeconds;
     if (previousValue === seconds) return;
@@ -628,6 +666,9 @@ export const useKeyboardHaptic = () =>
   useSettingsStore((s) => s.keyboardHaptic);
 export const useSetKeyboardHaptic = () =>
   useSettingsStore((s) => s.setKeyboardHaptic);
+export const useKeyboardSound = () => useSettingsStore((s) => s.keyboardSound);
+export const useSetKeyboardSound = () =>
+  useSettingsStore((s) => s.setKeyboardSound);
 export const useKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.keyboardMicTimeoutSeconds);
 export const useSetKeyboardMicTimeout = () =>

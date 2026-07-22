@@ -91,6 +91,8 @@
   "keyboardAutocorrectDescription": "Automatically fix misspellings as you type on the Echos keyboard.",
   "keyboardHapticTitle": "Keyboard Haptics",
   "keyboardHapticDescription": "Vibrate on each key press on the Echos keyboard.",
+  "keyboardSoundTitle": "Keyboard Sounds",
+  "keyboardSoundDescription": "Play a click on each key press on the Echos keyboard. On iOS this needs Full Access.",
   "micTimeoutTitle": "Microphone Timeout",
   "micTimeoutDescription": "How long voice typing stays ready in the background after you start it from another app.",
   "micTimeoutOff": "Off",

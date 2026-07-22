@@ -133,9 +133,13 @@ final class SuggestionEngine {
             remaining.removeLast(currentWord.count)
         }
         while let last = remaining.last, SpacingAndPunctuations.isWordSeparator(last) {
-            // Sentence punctuation ends the context — "Hi. teh" has no
-            // previous word worth boosting by.
-            if last != " " { return nil }
+            // Sentence-terminal punctuation ends the context ("Hi. teh" has no
+            // previous word worth boosting by); commas / semicolons / colons
+            // (and spaces) do not — native keyboards keep predicting across
+            // them ("apples, oran" still boosts from "apples").
+            if last == "." || last == "!" || last == "?" || last == "\n" {
+                return nil
+            }
             remaining.removeLast()
         }
         var reversed = ""
@@ -153,12 +157,18 @@ final class SuggestionEngine {
     /// autocorrect verdict. Synchronous and fast (<5 ms): safe on both the
     /// debounced strip path and the space/punctuation commit path.
     func suggestions(
-        for word: String, previousWord: String? = nil, casing: Casing
+        for word: String,
+        previousWord: String? = nil,
+        casing: Casing,
+        touchPoints: [CorrectionEngine.TouchPoint?]? = nil
     ) -> Result {
         guard !word.isEmpty else { return .empty }
         if usesCorrectionEngine {
             return engineSuggestions(
-                for: word, previousWord: previousWord, casing: casing
+                for: word,
+                previousWord: previousWord,
+                casing: casing,
+                touchPoints: touchPoints
             )
         }
         return checkerSuggestions(for: word, casing: casing)
@@ -173,12 +183,16 @@ final class SuggestionEngine {
     }
 
     private func engineSuggestions(
-        for word: String, previousWord: String?, casing: Casing
+        for word: String,
+        previousWord: String?,
+        casing: Casing,
+        touchPoints: [CorrectionEngine.TouchPoint?]?
     ) -> Result {
         let evaluation = correctionEngine.evaluate(
             typedRaw: word,
             previousWord: previousWord,
-            checkerSaysValid: checkerRecognizes(word)
+            checkerSaysValid: checkerRecognizes(word),
+            touchPoints: touchPoints
         )
         let candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
         return Result(

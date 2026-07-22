@@ -30,6 +30,7 @@ describe("writeKeyboardSettings", () => {
     writeKeyboardSettings({
       autocorrect: true,
       hapticFeedback: true,
+      keySound: true,
       micTimeoutSeconds: 300,
     });
 
@@ -42,6 +43,7 @@ describe("writeKeyboardSettings", () => {
       JSON.stringify({
         autocorrect: true,
         hapticFeedback: true,
+        keySound: true,
         micTimeoutSeconds: 300,
       }),
     );
@@ -53,6 +55,7 @@ describe("writeKeyboardSettings", () => {
     writeKeyboardSettings({
       autocorrect: false,
       hapticFeedback: false,
+      keySound: false,
       micTimeoutSeconds: 0,
     });
 
@@ -61,6 +64,7 @@ describe("writeKeyboardSettings", () => {
       JSON.stringify({
         autocorrect: false,
         hapticFeedback: false,
+        keySound: false,
         micTimeoutSeconds: 0,
       }),
     );
@@ -70,6 +74,7 @@ describe("writeKeyboardSettings", () => {
     writeKeyboardSettings({
       autocorrect: true,
       hapticFeedback: false,
+      keySound: true,
       micTimeoutSeconds: 300,
     });
 
@@ -96,6 +101,7 @@ describe("writeKeyboardSettings", () => {
     writeKeyboardSettings({
       autocorrect: true,
       hapticFeedback: false,
+      keySound: true,
       micTimeoutSeconds: 300,
     });
 
@@ -114,6 +120,7 @@ describe("writeKeyboardSettings", () => {
       writeKeyboardSettings({
         autocorrect: true,
         hapticFeedback: false,
+        keySound: true,
         micTimeoutSeconds: 300,
       }),
     ).not.toThrow();
