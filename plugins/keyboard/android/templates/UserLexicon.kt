@@ -17,7 +17,9 @@ import org.json.JSONObject
  *  - tapping the verbatim strip slot learns immediately,
  *  - reverting an autocorrect blacklists that exact typed→corrected pair.
  */
-class UserLexicon(context: Context) {
+class UserLexicon(baseDir: File) {
+
+    constructor(context: Context) : this(context.applicationContext.filesDir)
 
     companion object {
         const val MAX_WORDS = 5000
@@ -41,7 +43,7 @@ class UserLexicon(context: Context) {
 
     private data class Entry(var count: Int, var lastUsed: Long)
 
-    private val file = File(context.applicationContext.filesDir, FILENAME)
+    private val file = File(baseDir, FILENAME)
     private val words = HashMap<String, Entry>()
     private val blacklist = HashMap<String, Long>()
 

@@ -153,11 +153,34 @@ final class CorrectionEngine {
         guard
             let url = Bundle.main.url(
                 forResource: "keyboard_dictionary", withExtension: "echd"
-            ),
-            let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+            )
+        else { return }
+        load(
+            dictionaryURL: url,
+            confusablesURL: Bundle.main.url(
+                forResource: "confusables", withExtension: "json"
+            )
+        )
+    }
+
+    /// Bundle-independent load from explicit file URLs — the entry point the
+    /// parity runner uses. The header is always validated; a corrupt file
+    /// leaves the engine unloaded.
+    ///
+    /// `verifyChecksum` additionally checks the body CRC. Off for the bundled
+    /// load on purpose: the CRC is a byte-at-a-time scan of the whole ~2.8 MB
+    /// body (tens of ms on device), and it would fault in every page of the
+    /// mapping, defeating the lazy paging this loader is built around. The
+    /// shipped `.echd` is a code-signed bundle resource, and the magic,
+    /// version and section-bounds checks already reject a wrong or truncated
+    /// file. The parity harness loads an arbitrary path, so it opts in.
+    func load(dictionaryURL: URL, confusablesURL: URL?, verifyChecksum: Bool = false) {
+        guard
+            let data = try? Data(contentsOf: dictionaryURL, options: .mappedIfSafe),
             data.count >= Format.headerSize,
             data[0] == 0x45, data[1] == 0x43, data[2] == 0x48, data[3] == 0x44, // "ECHD"
-            readU16(data, 4) == 1
+            readU16(data, 4) == 1,
+            !verifyChecksum || readU32(data, 52) == Self.crc32(data, from: Format.headerSize)
         else { return }
 
         nodesOffset = Int(readU32(data, 16))
@@ -185,7 +208,7 @@ final class CorrectionEngine {
             map[typed] = repl
         }
 
-        loadConfusables()
+        loadConfusables(url: confusablesURL)
         bytes = data
         contractions = map
         isLoaded = true
@@ -193,11 +216,9 @@ final class CorrectionEngine {
 
     /// Parses the bundled confusables table. Independent of the dictionary — a
     /// missing/invalid file just leaves the feature off.
-    private func loadConfusables() {
+    private func loadConfusables(url: URL?) {
         guard
-            let url = Bundle.main.url(
-                forResource: "confusables", withExtension: "json"
-            ),
+            let url,
             let data = try? Data(contentsOf: url),
             let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
@@ -216,6 +237,24 @@ final class CorrectionEngine {
             )
         }
         confusables = map
+    }
+
+    private static let crcTable: [UInt32] = (0..<256).map { i in
+        var c = UInt32(i)
+        for _ in 0..<8 { c = (c & 1) != 0 ? 0xEDB8_8320 ^ (c >> 1) : c >> 1 }
+        return c
+    }
+
+    /// CRC-32 (reflected IEEE, the same polynomial as encoder.js `crc32`) over
+    /// `data` from byte `from` to the end.
+    private static func crc32(_ data: Data, from: Int) -> UInt32 {
+        var crc: UInt32 = 0xFFFF_FFFF
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            for i in from..<raw.count {
+                crc = crcTable[Int((crc ^ UInt32(raw[i])) & 0xFF)] ^ (crc >> 8)
+            }
+        }
+        return crc ^ 0xFFFF_FFFF
     }
 
     private func readU16(_ data: Data, _ offset: Int) -> UInt16 {
@@ -308,6 +347,41 @@ final class CorrectionEngine {
             }
         }
         return Array(results.prefix(limit))
+    }
+
+    /// Next-character weights for the in-progress prefix, from the trie's
+    /// maxSubtreeFreq — the signal behind invisible key-target resizing.
+    /// Lowercase letter byte → weight in (0, 1], normalized to the strongest
+    /// continuation and rounded to 4 decimals; empty when the prefix has left
+    /// the trie. Mirrors decoder.js `nextCharWeights`.
+    func nextCharWeights(prefix: String) -> [UInt8: Float] {
+        guard isLoaded else { return [:] }
+        let normalized = Self.normalize(prefix)
+        guard !normalized.isEmpty, normalized.count <= 24,
+              let prefixBytes = asciiBytes(normalized) else { return [:] }
+        var weights: [UInt8: Float] = [:]
+        bytes.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            guard let hit = walk(raw, prefixBytes) else { return }
+            func add(_ ch: UInt8, _ freq: UInt8) {
+                guard ch >= UInt8(ascii: "a"), ch <= UInt8(ascii: "z") else { return }
+                let f = Float(freq)
+                if weights[ch] ?? 0 < f { weights[ch] = f }
+            }
+            if hit.labelRestLength > 0 {
+                add(raw[hit.labelRestOffset], nodeMaxSubtreeFreq(raw, hit.node))
+            } else {
+                let firstChild = nodeFirstChild(raw, hit.node)
+                if firstChild != Format.leaf {
+                    for c in 0..<nodeChildCount(raw, hit.node) {
+                        let child = Int(firstChild) + c
+                        let (labelOffset, _) = nodeLabelRange(raw, child)
+                        add(raw[labelOffset], nodeMaxSubtreeFreq(raw, child))
+                    }
+                }
+            }
+        }
+        guard let maxWeight = weights.values.max(), maxWeight > 0 else { return [:] }
+        return weights.mapValues { ($0 / maxWeight * 10000).rounded() / 10000 }
     }
 
     /// Renders a dictionary-stored (lowercase) word for display: proper nouns
@@ -899,6 +973,20 @@ final class CorrectionEngine {
         )]
     }
 
+    /// The expansion to use when a split half is itself a forced-replacement
+    /// entry, or nil when it is not eligible. Real contractions always expand
+    /// to an apostrophe form (build.js asserts this); forced corrections
+    /// (calender → calendar) never do, and their typed form is an ordinary
+    /// misspelling, so a split around it is not self-evident and must earn
+    /// bigram evidence like any other split. Mirrors decoder.js
+    /// `splitContraction`.
+    private func splitContraction(_ half: String) -> String? {
+        guard let expansion = contractions[half], expansion.contains("'") else {
+            return nil
+        }
+        return expansion
+    }
+
     /// Missing-space restoration: alot → "a lot", imnot → "I'm not".
     private func wordSplits(
         _ raw: UnsafeRawBufferPointer, typed: [UInt8]
@@ -913,8 +1001,8 @@ final class CorrectionEngine {
             let rightBytes = Array(typed[i...])
             let leftString = String(decoding: leftBytes, as: UTF8.self)
             let rightString = String(decoding: rightBytes, as: UTF8.self)
-            let leftContraction = contractions[leftString]
-            let rightContraction = contractions[rightString]
+            let leftContraction = splitContraction(leftString)
+            let rightContraction = splitContraction(rightString)
             let leftNode = findTerminal(raw, leftBytes)
             let rightNode = findTerminal(raw, rightBytes)
             let leftFreq = leftNode.map { nodeFreq(raw, $0) }

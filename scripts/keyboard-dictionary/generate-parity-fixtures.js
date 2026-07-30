@@ -19,9 +19,30 @@ const {
   decode,
   evaluate,
   nextWords,
+  nextCharWeights,
   parseConfusables,
   contextualContraction,
 } = require("./decoder");
+
+// Prefixes exercising the key-target-resizing signal: deep/shallow trie
+// walks, mid-label landings (calenda), apostrophe continuations filtered
+// out (can), off-trie prefixes (zz), a typographic apostrophe that must fold
+// to ASCII ("can’" — pins decoder.js and the natives to one normalization),
+// and mixed case.
+const NEXT_CHAR_PREFIXES = [
+  "t",
+  "th",
+  "the",
+  "hel",
+  "q",
+  "a",
+  "calenda",
+  "can",
+  "can’",
+  "The",
+  "zz",
+  "x",
+];
 
 const DICTIONARY = path.join(
   __dirname,
@@ -57,6 +78,14 @@ const CONFUSABLE_CASES = [
   ["were", "going"],
   ["well", "be"],
   ["Ill", "be"],
+  ["shed", "like"],
+  ["shed", "light"],
+  ["its", "just"],
+  ["its", "time"],
+  ["ill", "circle"],
+  ["wed", "all"],
+  ["lets", "sync"],
+  ["hell", "know"],
 ];
 const VECTORS_PATH = path.join(
   __dirname,
@@ -97,6 +126,10 @@ function main() {
       if (update) v.expect = predictions;
       return { prevWord: v.prevWord, predictions };
     }),
+    nextCharWeights: NEXT_CHAR_PREFIXES.map((prefix) => ({
+      prefix,
+      weights: Object.fromEntries(nextCharWeights(model, prefix)),
+    })),
     confusables: (() => {
       const table = parseConfusables(
         JSON.parse(fs.readFileSync(CONFUSABLES_PATH, "utf8")),
@@ -115,7 +148,8 @@ function main() {
   }
   console.log(
     `Wrote ${fixtures.evaluate.length} evaluate + ${fixtures.nextWords.length} ` +
-      `nextWords + ${fixtures.confusables.length} confusable fixtures to ` +
+      `nextWords + ${fixtures.confusables.length} confusable + ` +
+      `${fixtures.nextCharWeights.length} nextCharWeights fixtures to ` +
       `${path.relative(process.cwd(), OUTPUT)}` +
       (update ? " (golden vectors updated)" : ""),
   );

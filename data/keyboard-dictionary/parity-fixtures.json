@@ -263,13 +263,11 @@
       "prevWord": null,
       "touches": null,
       "candidates": [
-        "calenders",
-        "calendered",
-        "calendering"
+        "calendar"
       ],
-      "topIsCorrection": false,
-      "replacement": null,
-      "verbatim": null
+      "topIsCorrection": true,
+      "replacement": "calendar",
+      "verbatim": "calender"
     },
     {
       "typed": "febuary",
@@ -1119,7 +1117,7 @@
       "prevWord": null,
       "touches": null,
       "candidates": [
-        "lola",
+        "Lola",
         "loll",
         "lolly"
       ],
@@ -1265,9 +1263,9 @@
       "prevWord": null,
       "touches": null,
       "candidates": [
-        "johnson",
+        "Johnson",
         "johnston",
-        "john"
+        "John"
       ],
       "topIsCorrection": false,
       "replacement": null,
@@ -1278,12 +1276,12 @@
       "prevWord": null,
       "touches": null,
       "candidates": [
+        "Mary's",
         "marts",
-        "mary",
-        "marks"
+        "Mary"
       ],
       "topIsCorrection": true,
-      "replacement": "marts",
+      "replacement": "Mary's",
       "verbatim": "marys"
     },
     {
@@ -1432,6 +1430,394 @@
       "topIsCorrection": true,
       "replacement": "the",
       "verbatim": "yhe"
+    },
+    {
+      "typed": "sarahs",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Sarah's",
+        "Sarah",
+        "scarabs"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Sarah's",
+      "verbatim": "sarahs"
+    },
+    {
+      "typed": "davids",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "davidson",
+        "davies",
+        "David"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "jamse",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "James",
+        "Jamie",
+        "jams"
+      ],
+      "topIsCorrection": true,
+      "replacement": "James",
+      "verbatim": "jamse"
+    },
+    {
+      "typed": "james",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "James"
+      ],
+      "topIsCorrection": true,
+      "replacement": "James",
+      "verbatim": "james"
+    },
+    {
+      "typed": "ann",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Ann"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Ann",
+      "verbatim": "ann"
+    },
+    {
+      "typed": "itll",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "it'll"
+      ],
+      "topIsCorrection": true,
+      "replacement": "it'll",
+      "verbatim": "itll"
+    },
+    {
+      "typed": "yall",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "y'all"
+      ],
+      "topIsCorrection": true,
+      "replacement": "y'all",
+      "verbatim": "yall"
+    },
+    {
+      "typed": "oclock",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "o'clock"
+      ],
+      "topIsCorrection": true,
+      "replacement": "o'clock",
+      "verbatim": "oclock"
+    },
+    {
+      "typed": "maam",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "ma'am"
+      ],
+      "topIsCorrection": true,
+      "replacement": "ma'am",
+      "verbatim": "maam"
+    },
+    {
+      "typed": "whens",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "when's"
+      ],
+      "topIsCorrection": true,
+      "replacement": "when's",
+      "verbatim": "whens"
+    },
+    {
+      "typed": "howd",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "how'd"
+      ],
+      "topIsCorrection": true,
+      "replacement": "how'd",
+      "verbatim": "howd"
+    },
+    {
+      "typed": "hed",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "he'd"
+      ],
+      "topIsCorrection": true,
+      "replacement": "he'd",
+      "verbatim": "hed"
+    },
+    {
+      "typed": "mustve",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "must've"
+      ],
+      "topIsCorrection": true,
+      "replacement": "must've",
+      "verbatim": "mustve"
+    },
+    {
+      "typed": "nvm",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "nam",
+        "nom",
+        "npm"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "wtf",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "whf"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "bday",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "bray",
+        "bay",
+        "baddy"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "msg",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "msgr",
+        "mag",
+        "meg"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "chatgpt",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "chatbot",
+        "catgut"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "linkedin",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Linkedin"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Linkedin",
+      "verbatim": "linkedin"
+    },
+    {
+      "typed": "mondya",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "Monday",
+        "moneys",
+        "mondays"
+      ],
+      "topIsCorrection": true,
+      "replacement": "Monday",
+      "verbatim": "mondya"
+    },
+    {
+      "typed": "wether",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "whether"
+      ],
+      "topIsCorrection": true,
+      "replacement": "whether",
+      "verbatim": "wether"
+    },
+    {
+      "typed": "loosing",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "losing"
+      ],
+      "topIsCorrection": true,
+      "replacement": "losing",
+      "verbatim": "loosing"
+    },
+    {
+      "typed": "payed",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "paid"
+      ],
+      "topIsCorrection": true,
+      "replacement": "paid",
+      "verbatim": "payed"
+    },
+    {
+      "typed": "heather",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "heathers",
+        "heater",
+        "heathen"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "jasmine",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "Janine",
+        "jawline",
+        "Jamie"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "sally",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "silly",
+        "sadly",
+        "salt"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "nelson",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "nelsons",
+        "nelsen",
+        "nilsson"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "henry",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "henri",
+        "heart",
+        "horny"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "morgan",
+      "prevWord": "the",
+      "touches": null,
+      "candidates": [
+        "morgans",
+        "morganite",
+        "moran"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "wetherman",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "wet herman",
+        "weatherman",
+        "weathermen"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "payedup",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "calenderyear",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "Calender",
+      "prevWord": null,
+      "touches": null,
+      "candidates": [
+        "calendar"
+      ],
+      "topIsCorrection": true,
+      "replacement": "calendar",
+      "verbatim": "Calender"
     }
   ],
   "nextWords": [
@@ -1522,6 +1908,200 @@
         "the",
         "you"
       ]
+    }
+  ],
+  "nextCharWeights": [
+    {
+      "prefix": "t",
+      "weights": {
+        "a": 0.6902,
+        "b": 0.5098,
+        "c": 0.2824,
+        "e": 0.6941,
+        "h": 1,
+        "i": 0.7765,
+        "l": 0.4157,
+        "o": 0.9569,
+        "r": 0.6941,
+        "s": 0.4275,
+        "t": 0.349,
+        "u": 0.6078,
+        "v": 0.4784,
+        "w": 0.7255,
+        "y": 0.6902,
+        "z": 0.0824
+      }
+    },
+    {
+      "prefix": "th",
+      "weights": {
+        "a": 0.8667,
+        "e": 1,
+        "i": 0.8627,
+        "o": 0.6902,
+        "r": 0.7059,
+        "u": 0.5961,
+        "w": 0.2667,
+        "x": 0.5098,
+        "y": 0.4627
+      }
+    },
+    {
+      "prefix": "the",
+      "weights": {
+        "a": 0.7107,
+        "b": 0.2741,
+        "c": 0.0609,
+        "e": 0.5838,
+        "f": 0.6193,
+        "i": 0.9898,
+        "l": 0.3604,
+        "m": 0.9289,
+        "n": 0.9239,
+        "o": 0.7462,
+        "r": 0.9797,
+        "s": 0.9594,
+        "t": 0.5381,
+        "u": 0.066,
+        "w": 0.1827,
+        "y": 1
+      }
+    },
+    {
+      "prefix": "hel",
+      "weights": {
+        "a": 0.0838,
+        "d": 0.8063,
+        "e": 0.6126,
+        "g": 0.3141,
+        "i": 0.5602,
+        "l": 0.7277,
+        "m": 0.5707,
+        "o": 0.1937,
+        "p": 1,
+        "s": 0.5288,
+        "v": 0.1937
+      }
+    },
+    {
+      "prefix": "q",
+      "weights": {
+        "a": 0.6529,
+        "i": 0.3941,
+        "o": 0.1294,
+        "t": 0.7588,
+        "u": 1,
+        "w": 0.4118
+      }
+    },
+    {
+      "prefix": "a",
+      "weights": {
+        "a": 0.4939,
+        "b": 0.8286,
+        "c": 0.702,
+        "d": 0.7469,
+        "e": 0.4531,
+        "f": 0.7429,
+        "g": 0.6776,
+        "h": 0.5551,
+        "i": 0.6816,
+        "j": 0.4163,
+        "k": 0.5306,
+        "l": 0.8653,
+        "m": 0.7755,
+        "n": 1,
+        "o": 0.3265,
+        "p": 0.6776,
+        "q": 0.4531,
+        "r": 0.8776,
+        "s": 0.8735,
+        "t": 0.8735,
+        "u": 0.6898,
+        "v": 0.7429,
+        "w": 0.6571,
+        "x": 0.498,
+        "y": 0.4612,
+        "z": 0.449
+      }
+    },
+    {
+      "prefix": "calenda",
+      "weights": {
+        "r": 1
+      }
+    },
+    {
+      "prefix": "can",
+      "weights": {
+        "a": 1,
+        "b": 0.6272,
+        "c": 0.8935,
+        "d": 0.7811,
+        "e": 0.5858,
+        "f": 0.4024,
+        "i": 0.5503,
+        "k": 0.3314,
+        "n": 0.6331,
+        "o": 0.8462,
+        "s": 0.5799,
+        "t": 0.6095,
+        "u": 0.4556,
+        "v": 0.7041,
+        "y": 0.7101,
+        "z": 0.3136
+      }
+    },
+    {
+      "prefix": "can’",
+      "weights": {
+        "t": 1
+      }
+    },
+    {
+      "prefix": "The",
+      "weights": {
+        "a": 0.7107,
+        "b": 0.2741,
+        "c": 0.0609,
+        "e": 0.5838,
+        "f": 0.6193,
+        "i": 0.9898,
+        "l": 0.3604,
+        "m": 0.9289,
+        "n": 0.9239,
+        "o": 0.7462,
+        "r": 0.9797,
+        "s": 0.9594,
+        "t": 0.5381,
+        "u": 0.066,
+        "w": 0.1827,
+        "y": 1
+      }
+    },
+    {
+      "prefix": "zz",
+      "weights": {
+        "z": 1
+      }
+    },
+    {
+      "prefix": "x",
+      "weights": {
+        "a": 0.6507,
+        "c": 0.0479,
+        "e": 0.7466,
+        "h": 0.3425,
+        "i": 0.6644,
+        "m": 0.6918,
+        "o": 0.4726,
+        "r": 0.5068,
+        "t": 0.4726,
+        "u": 0.1301,
+        "v": 0.6096,
+        "x": 1,
+        "y": 0.3836
+      }
     }
   ],
   "confusables": [
@@ -1644,6 +2224,46 @@
       "prevWord": "Ill",
       "nextWord": "be",
       "contraction": null
+    },
+    {
+      "prevWord": "shed",
+      "nextWord": "like",
+      "contraction": "she'd"
+    },
+    {
+      "prevWord": "shed",
+      "nextWord": "light",
+      "contraction": null
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "just",
+      "contraction": "it's"
+    },
+    {
+      "prevWord": "its",
+      "nextWord": "time",
+      "contraction": null
+    },
+    {
+      "prevWord": "ill",
+      "nextWord": "circle",
+      "contraction": "I'll"
+    },
+    {
+      "prevWord": "wed",
+      "nextWord": "all",
+      "contraction": null
+    },
+    {
+      "prevWord": "lets",
+      "nextWord": "sync",
+      "contraction": "let's"
+    },
+    {
+      "prevWord": "hell",
+      "nextWord": "know",
+      "contraction": "he'll"
     }
   ]
 }

@@ -81,6 +81,13 @@ class EchosKeyboardViewController: UIInputViewController {
             self.correctionEngine.load()
             DispatchQueue.main.async { self.refreshSuggestions() }
         }
+        // Contact names + user text replacements — the private lexicon iOS
+        // grants keyboard extensions. Arrives async, like the dictionary.
+        requestSupplementaryLexicon { [weak self] lexicon in
+            DispatchQueue.main.async {
+                self?.suggestionEngine.setSupplementaryLexicon(lexicon)
+            }
+        }
 
         keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
@@ -253,6 +260,7 @@ class EchosKeyboardViewController: UIInputViewController {
               suggestionsAllowed(for: textDocumentProxy) else {
             suggestionRefreshWork?.cancel()
             keyboardView.hideSuggestions()
+            keyboardView.setKeyTargetWeights([:])
             return
         }
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
@@ -272,17 +280,23 @@ class EchosKeyboardViewController: UIInputViewController {
             pendingRevert = nil
         }
         let word = SuggestionEngine.currentWord(beforeCursor: before, afterCursor: after)
+        // Key-target resizing: synchronous — the trie walk is microseconds
+        // and the next tap can land before the debounced strip refresh runs.
+        keyboardView.setKeyTargetWeights(
+            suggestionEngine.keyTargetWeights(forPrefix: word)
+        )
         guard !word.isEmpty else {
             suggestionRefreshWork?.cancel()
             autocorrectSuppressedWord = nil
             // Next-word prediction (§5.12): after a word (possibly across a
-            // comma) offer its likely continuations; at a sentence start or
-            // empty field offer curated openers. Only at an actual word
-            // boundary — never glued right after unspaced punctuation.
+            // comma) offer its likely continuations; after sentence-terminal
+            // punctuation plus a space offer curated openers. An empty field
+            // or fresh line (empty paragraph-bounded context) keeps the
+            // record button instead.
             let prev = SuggestionEngine.previousWord(
                 beforeCursor: before, currentWord: ""
             )
-            if before.isEmpty || before.hasSuffix(" ") || prev != nil {
+            if before.hasSuffix(" ") || prev != nil {
                 let predictions = suggestionEngine.predictions(
                     afterWord: prev ?? "", casing: currentCasing()
                 )

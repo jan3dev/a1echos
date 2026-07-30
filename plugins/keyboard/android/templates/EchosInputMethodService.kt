@@ -152,10 +152,18 @@ class EchosInputMethodService : InputMethodService(),
                 topBar.setSuggestions(emptyList())
             }
         }
-        // Both loads read files (assets + JSON) — keep them off the keystroke
-        // path. `isLoaded` flips once and only ever true afterwards, so the
-        // main thread simply keeps using the checker fallback until then.
+        // These loads read files (assets + JSON) and a ContentProvider — keep
+        // them off the keystroke path. `isLoaded` flips once and only ever true
+        // afterwards, so the main thread simply keeps using the checker
+        // fallback until then.
+        //
+        // Order matters: the personal dictionary is a cheap query that gates
+        // shortcut expansion, which runs *ahead* of engine routing, so it goes
+        // first rather than queueing behind the ~2.8 MB asset read. (Contacts
+        // have no Android equivalent an IME may read; the user dictionary is
+        // the system-provided signal.)
         Thread {
+            suggestionEngine.loadPersonalDictionary()
             userLexicon.load()
             correctionEngine.load(this)
         }.start()
@@ -1136,11 +1144,32 @@ class EchosInputMethodService : InputMethodService(),
         mainHandler.removeCallbacks(suggestionRunnable)
         if (micState != MicState.IDLE || !suggestionsAllowed || emojiSearchActive) {
             clearSuggestions()
+            keyboardView.setKeyTargetWeights(emptyMap())
             return
         }
+        updateKeyTargets()
         // Coalesce rapid keystrokes — the async spell-check request can
         // outlive several taps; the engine's word guard drops stale results.
         mainHandler.postDelayed(suggestionRunnable, 120L)
+    }
+
+    /** Key-target resizing: synchronous, unlike the debounced strip lookup —
+     *  during a fast roll-type burst the debounce never fires, and the next
+     *  tap must see the current prefix's weights. This costs one extra
+     *  InputConnection read per text change, which is the price of not lagging
+     *  a keystroke behind; the trie walk itself is microseconds. */
+    private fun updateKeyTargets() {
+        val ic = currentInputConnection
+        val before = ic?.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        // The mid-word guard matters here as much as for the strip: biasing hit
+        // targets from a prefix the user is editing into would commit the wrong
+        // letter (hel|lo + a tap near o/p -> "helplo").
+        val after = ic?.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        keyboardView.setKeyTargetWeights(
+            suggestionEngine.keyTargetWeights(
+                SuggestionEngine.currentWord(before, after),
+            ),
+        )
     }
 
     private fun performSuggestionLookup() {
@@ -1180,12 +1209,11 @@ class EchosInputMethodService : InputMethodService(),
         if (word.isEmpty()) {
             autocorrectSuppressedWord = null
             // Next-word prediction (§5.12): after a word (possibly across a
-            // comma) offer its likely continuations; at a sentence start or
-            // empty field offer curated openers, capitalized. Only at an
-            // actual word boundary — never glued right after unspaced
-            // punctuation.
+            // comma) offer its likely continuations; after sentence-terminal
+            // punctuation plus a space offer curated openers, capitalized.
+            // An empty field or fresh line keeps the record button instead.
             val previous = SuggestionEngine.previousWordBefore(before, "")
-            if (before.isEmpty() || before.endsWith(" ") || previous != null) {
+            if (before.endsWith(" ") || previous != null) {
                 var predictions = suggestionEngine.predictions(previous ?: "")
                 if (previous == null) {
                     predictions = predictions.map {

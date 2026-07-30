@@ -53,8 +53,37 @@ final class SuggestionEngine {
 
     private let correctionEngine: CorrectionEngine
 
+    /// Contact names and user text replacements the host grants keyboard
+    /// extensions (`requestSupplementaryLexicon`) — the same private signal
+    /// the system keyboard uses, and the only slice of Apple's lexicon
+    /// third-party keyboards get. Names keep their canonical casing, appear
+    /// as tap-only completions, and veto autocorrect; shortcuts expand like
+    /// native text replacements. Replaced wholesale on the main thread.
+    private var supplementaryWords: [String: String] = [:]
+    private var supplementaryShortcuts: [String: String] = [:]
+
     init(correctionEngine: CorrectionEngine) {
         self.correctionEngine = correctionEngine
+    }
+
+    /// Ingests the host-provided lexicon. Entries whose input and output are
+    /// the same token (contact names) become known words with canonical
+    /// casing; the rest (user text replacements) become shortcut expansions.
+    func setSupplementaryLexicon(_ lexicon: UILexicon) {
+        var words: [String: String] = [:]
+        var shortcuts: [String: String] = [:]
+        for entry in lexicon.entries {
+            let input = entry.userInput
+            let output = entry.documentText
+            guard !input.isEmpty, !output.isEmpty else { continue }
+            if input.lowercased() == output.lowercased() {
+                words[input.lowercased()] = output
+            } else {
+                shortcuts[input.lowercased()] = output
+            }
+        }
+        supplementaryWords = words
+        supplementaryShortcuts = shortcuts
     }
 
     /// Width of the suggestion strip (matches LatinIME's 3-wide strip).
@@ -163,6 +192,23 @@ final class SuggestionEngine {
         touchPoints: [CorrectionEngine.TouchPoint?]? = nil
     ) -> Result {
         guard !word.isEmpty else { return .empty }
+        // User text replacements expand exactly like the native keyboard —
+        // before any engine routing, in every language. A reverted expansion
+        // is blacklisted and thereafter never auto-applies again.
+        // Shortcuts that merely restate the word are routed to
+        // `supplementaryWords` instead (see setSupplementaryLexicon), so no
+        // same-token guard is needed here.
+        if let expansion = supplementaryShortcuts[word.lowercased()],
+           !correctionEngine.userLexicon.isBlacklisted(
+               typed: word.lowercased(), corrected: expansion.lowercased()
+           ) {
+            return Result(
+                candidates: [expansion],
+                topIsCorrection: true,
+                verbatim: word,
+                replacement: expansion
+            )
+        }
         if usesCorrectionEngine {
             return engineSuggestions(
                 for: word,
@@ -182,25 +228,66 @@ final class SuggestionEngine {
             .map { Self.applyCasing(casing, to: $0) }
     }
 
+    /// Next-key weights for invisible key-target resizing; empty (targets
+    /// stay at visible geometry) unless the bundled engine serves this locale.
+    func keyTargetWeights(forPrefix prefix: String) -> [UInt8: Float] {
+        guard usesCorrectionEngine else { return [:] }
+        return correctionEngine.nextCharWeights(prefix: prefix)
+    }
+
     private func engineSuggestions(
         for word: String,
         previousWord: String?,
         casing: Casing,
         touchPoints: [CorrectionEngine.TouchPoint?]?
     ) -> Result {
+        let isContactWord = supplementaryWords[word.lowercased()] != nil
         let evaluation = correctionEngine.evaluate(
             typedRaw: word,
             previousWord: previousWord,
-            checkerSaysValid: checkerRecognizes(word),
+            checkerSaysValid: isContactWord || checkerRecognizes(word),
             touchPoints: touchPoints
         )
-        let candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
+        var candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
+        // Contact-name matches lead the strip with canonical casing — tap-only,
+        // never the autocorrect replacement.
+        let contacts = supplementaryMatches(for: word)
+        if !contacts.isEmpty {
+            var seen = Set(candidates.map { $0.lowercased() })
+            var leading: [String] = []
+            for contact in contacts where seen.insert(contact.lowercased()).inserted {
+                leading.append(contact)
+            }
+            candidates = Array((leading + candidates).prefix(Self.maxCandidates))
+        }
         return Result(
             candidates: candidates,
             topIsCorrection: evaluation.topIsCorrection,
             verbatim: evaluation.verbatim,
             replacement: evaluation.replacement.map { Self.applyCasing(casing, to: $0) }
         )
+    }
+
+    /// Contact names matching the typed prefix, exact (recased) match first,
+    /// then shorter completions before longer. Linear scan — the supplementary
+    /// lexicon is small and lookups run at typing cadence.
+    private func supplementaryMatches(for word: String) -> [String] {
+        guard !supplementaryWords.isEmpty, word.count >= 2 else { return [] }
+        let key = word.lowercased()
+        var exact: String?
+        var completions: [String] = []
+        for (stored, display) in supplementaryWords {
+            if stored == key {
+                if display != word { exact = display }
+            } else if stored.hasPrefix(key) {
+                completions.append(display)
+            }
+        }
+        // utf16.count, not count: Kotlin's String.length is UTF-16 units, so
+        // grapheme counting here would order emoji/non-BMP names differently.
+        completions.sort { ($0.utf16.count, $0) < ($1.utf16.count, $1) }
+        let ordered = (exact.map { [$0] } ?? []) + completions
+        return Array(ordered.prefix(2))
     }
 
     /// The veto oracle: does Apple's checker consider the word spelled

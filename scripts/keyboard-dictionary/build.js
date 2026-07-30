@@ -23,6 +23,54 @@ const DATA_DIR = path.join(
 );
 const OUTPUT = path.join(DATA_DIR, "keyboard_dictionary.echd");
 
+/**
+ * The forced-replacement table: apostrophe contractions (im -> "I'm") plus
+ * valid-but-almost-never-intended words (calender, wether, loosing, payed).
+ * Both share one runtime path — the typed form is deleted from the unigram set
+ * and always corrected, and a revert blacklists the pair.
+ *
+ * A general "valid-but-rare" override was evaluated and rejected: with a
+ * 1-byte quantized unigram and top-100k bigram table, every frequency-gap
+ * threshold that admits calender->calendar also admits brandy->brand,
+ * facet->fact and chirp->chip, and common previous words ("the", "a") provide
+ * bigram support for all of them.
+ *
+ * The two kinds stay distinguishable at runtime by apostrophe, which
+ * `decoder.js splitContraction` relies on to keep forced corrections out of
+ * the self-evident word-split path. Asserted here so the encoding cannot
+ * silently drift.
+ */
+function readForcedReplacements() {
+  const read = (name) =>
+    JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), "utf8"));
+  const contractions = read("contractions.json");
+  const forced = read("forced_corrections.json");
+
+  for (const [typed, expansion] of Object.entries(contractions)) {
+    if (!expansion.includes("'")) {
+      throw new Error(
+        `contractions.json: "${typed}" -> "${expansion}" has no apostrophe; ` +
+          "wordSplits would treat it as a self-evident split half. Move it " +
+          "to forced_corrections.json.",
+      );
+    }
+  }
+  for (const [typed, expansion] of Object.entries(forced)) {
+    if (expansion.includes("'")) {
+      throw new Error(
+        `forced_corrections.json: "${typed}" -> "${expansion}" contains an ` +
+          "apostrophe; move it to contractions.json.",
+      );
+    }
+    if (typed in contractions) {
+      throw new Error(
+        `forced_corrections.json: "${typed}" also in contractions.json.`,
+      );
+    }
+  }
+  return { ...contractions, ...forced };
+}
+
 function readSources() {
   return {
     unigramText:
@@ -38,9 +86,7 @@ function readSources() {
       path.join(DATA_DIR, "frequency_bigramdictionary_en_243_342.txt"),
       "utf8",
     ),
-    contractions: JSON.parse(
-      fs.readFileSync(path.join(DATA_DIR, "contractions.json"), "utf8"),
-    ),
+    contractions: readForcedReplacements(),
     neverCorrectTo: fs
       .readFileSync(path.join(DATA_DIR, "never_correct_to.txt"), "utf8")
       .split("\n")

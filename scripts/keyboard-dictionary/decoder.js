@@ -571,6 +571,18 @@ function properNounPossessives(model, typed) {
 }
 
 /**
+ * The expansion to use when a split half is itself a forced-replacement entry,
+ * or undefined when it is not eligible. Real contractions always expand to an
+ * apostrophe form (build.js asserts this); forced corrections never do.
+ */
+function splitContraction(model, half) {
+  const expansion = model.contractions.get(half);
+  return expansion !== undefined && expansion.includes("'")
+    ? expansion
+    : undefined;
+}
+
+/**
  * Missing-space restoration (alot -> "a lot"): split the typed run at each
  * interior position and offer the pair when both halves are common words.
  */
@@ -583,9 +595,14 @@ function wordSplits(model, typed) {
   for (let i = 1; i < typed.length; i++) {
     const leftWord = typed.slice(0, i);
     const rightWord = typed.slice(i);
-    // A half may be a contraction typed-form: imnot -> "I'm not".
-    const leftContraction = model.contractions.get(leftWord);
-    const rightContraction = model.contractions.get(rightWord);
+    // A half may be a contraction typed-form: imnot -> "I'm not". Only real
+    // apostrophe forms count: the same table also carries forced corrections
+    // (calender -> calendar), whose typed form is an ordinary misspelling, so
+    // a split around it is not self-evident and must earn bigram evidence
+    // below like any other split. Without this, wetherman would autocorrect
+    // to "whether man" ahead of weatherman.
+    const leftContraction = splitContraction(model, leftWord);
+    const rightContraction = splitContraction(model, rightWord);
     const left = model.find(leftWord);
     const right = model.find(rightWord);
     if (!leftContraction && (!left || left.freq < TUNING.commonFreqFloor)) {
@@ -617,9 +634,19 @@ function wordSplits(model, typed) {
   return results;
 }
 
+/**
+ * Canonical form of a user-typed token: lowercased, with the typographic
+ * apostrophe folded to ASCII so `dont`/`don’t` reach the same trie path. Keep
+ * in sync with `CorrectionEngine.normalize` on both platforms — every entry
+ * point that receives raw user text must go through this.
+ */
+function normalizeToken(word) {
+  return word.toLowerCase().replace(/’/g, "'");
+}
+
 /** Merged fuzzy + completion candidates, deduped keeping the lowest cost. */
 function search(model, typedRaw, touchPoints = null) {
-  const typed = typedRaw.toLowerCase();
+  const typed = normalizeToken(typedRaw);
   if (!typed || typed.length > 32) return [];
   const merged = new Map();
   const addAll = (list) => {
@@ -670,7 +697,7 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
     blacklisted = () => false,
     touchPoints = null,
   } = options;
-  const typed = typedRaw.toLowerCase();
+  const typed = normalizeToken(typedRaw);
   const empty = {
     candidates: [],
     topIsCorrection: false,
@@ -862,6 +889,43 @@ function contextualContraction(
 }
 
 /**
+ * Next-character weights for the in-progress prefix, from the trie's
+ * maxSubtreeFreq — the signal behind invisible key-target resizing (the
+ * pre-iOS-17 Apple keyboard's biggest error-prevention lever, US8232973).
+ * Returns a Map of lowercase letter -> weight in (0, 1], normalized to the
+ * strongest continuation, rounded to 4 decimals so the Float32 native
+ * engines can pin identical fixtures. Empty when the prefix has left the
+ * trie (a typo in progress) — hit targets then stay at visible geometry.
+ */
+function nextCharWeights(model, prefixRaw) {
+  const prefix = normalizeToken(prefixRaw);
+  const weights = new Map();
+  if (!prefix || prefix.length > 24) return weights;
+  const hit = model.walk(prefix);
+  if (!hit) return weights;
+  const add = (ch, freq) => {
+    if (ch < "a" || ch > "z") return; // only letter keys resize
+    const existing = weights.get(ch);
+    if (existing === undefined || freq > existing) weights.set(ch, freq);
+  };
+  if (hit.labelRest.length > 0) {
+    add(hit.labelRest[0], hit.node.maxSubtreeFreq);
+  } else if (hit.node.firstChildIndex !== LEAF) {
+    for (let c = 0; c < hit.node.childCount; c++) {
+      const child = model.node(hit.node.firstChildIndex + c);
+      add(child.label[0], child.maxSubtreeFreq);
+    }
+  }
+  let max = 0;
+  for (const f of weights.values()) max = Math.max(max, f);
+  if (max === 0) return new Map();
+  for (const [ch, f] of weights) {
+    weights.set(ch, Math.round((f / max) * 10000) / 10000);
+  }
+  return weights;
+}
+
+/**
  * Next-word predictions: bigram continuations of `prevWord` (or curated
  * sentence-openers when there is none), topped up from the most frequent words
  * so the strip is never left half-empty. Words are returned lowercase-keyed but
@@ -870,7 +934,7 @@ function contextualContraction(
 function nextWords(model, prevWord, limit = 3) {
   const out = [];
   const seen = new Set();
-  const prev = prevWord ? prevWord.toLowerCase() : null;
+  const prev = prevWord ? normalizeToken(prevWord) : null;
   if (prev) seen.add(prev);
   const add = (word) => {
     if (out.length >= limit || !word) return;
@@ -915,6 +979,8 @@ module.exports = {
   scoreCandidates,
   evaluate,
   nextWords,
+  nextCharWeights,
+  normalizeToken,
   parseConfusables,
   contextualContraction,
 };

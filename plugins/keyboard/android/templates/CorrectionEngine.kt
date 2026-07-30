@@ -23,7 +23,7 @@ import kotlin.math.min
  * Unlike iOS there is no system fallback lexicon here, so this engine also
  * closes the OEM gap where no system spell checker exists at all.
  */
-class CorrectionEngine(private val userLexicon: UserLexicon) {
+class CorrectionEngine(val userLexicon: UserLexicon) {
 
     // -- Tuning (mirror of decoder.js TUNING) --
 
@@ -154,6 +154,30 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
     fun load(context: Context) {
         try {
             val data = context.assets.open(Format.ASSET_NAME).use { it.readBytes() }
+            val confusablesJson = try {
+                context.assets.open("confusables.json").use {
+                    it.readBytes().toString(Charsets.UTF_8)
+                }
+            } catch (_: Exception) {
+                null
+            }
+            load(data, confusablesJson)
+        } catch (_: Exception) {
+            // Missing/corrupt asset: engine stays unloaded, checker fallback runs.
+        }
+    }
+
+    /** Asset-independent load from raw bytes — the entry point the parity
+     *  suite uses. The header is always validated; a corrupt payload leaves
+     *  the engine unloaded.
+     *
+     *  [verifyChecksum] additionally checks the body CRC. Off for the bundled
+     *  load, mirroring iOS: the shipped `.echd` is a packaged asset, and the
+     *  magic, version and section-bounds checks already reject a wrong or
+     *  truncated file. The parity suite loads an arbitrary payload, so it
+     *  opts in. */
+    fun load(data: ByteArray, confusablesJson: String?, verifyChecksum: Boolean = false) {
+        try {
             if (data.size < Format.HEADER_SIZE) return
             if (data[0] != 'E'.code.toByte() || data[1] != 'C'.code.toByte() ||
                 data[2] != 'H'.code.toByte() || data[3] != 'D'.code.toByte()
@@ -161,6 +185,11 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
                 return
             }
             if (readU16(data, 4) != 1) return
+            if (verifyChecksum) {
+                val crc = java.util.zip.CRC32()
+                crc.update(data, Format.HEADER_SIZE, data.size - Format.HEADER_SIZE)
+                if (crc.value != (readU32(data, 52).toLong() and 0xFFFF_FFFFL)) return
+            }
 
             nodesOffset = readU32(data, 16)
             labelsOffset = readU32(data, 20)
@@ -185,22 +214,20 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
                 map[typed] = repl
             }
 
-            confusables = loadConfusables(context)
+            confusables = parseConfusables(confusablesJson)
             bytes = data
             contractions = map
             isLoaded = true
         } catch (_: Exception) {
-            // Missing/corrupt asset: engine stays unloaded, checker fallback runs.
+            // Corrupt payload: engine stays unloaded, checker fallback runs.
         }
     }
 
     /** Parses the bundled confusables table. Independent of the dictionary — a
-     *  missing/invalid file just leaves the feature off. */
-    private fun loadConfusables(context: Context): Map<String, Confusable> {
+     *  missing/invalid payload just leaves the feature off. */
+    private fun parseConfusables(text: String?): Map<String, Confusable> {
+        if (text == null) return emptyMap()
         return try {
-            val text = context.assets.open("confusables.json").use {
-                it.readBytes().toString(Charsets.UTF_8)
-            }
             val json = org.json.JSONObject(text)
             val map = HashMap<String, Confusable>()
             for (key in json.keys()) {
@@ -298,6 +325,47 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
             id++
         }
         return results.take(limit)
+    }
+
+    /** Next-character weights for the in-progress prefix, from the trie's
+     *  maxSubtreeFreq — the signal behind invisible key-target resizing.
+     *  Lowercase letter → weight in (0, 1], normalized to the strongest
+     *  continuation and rounded to 4 decimals; empty when the prefix has
+     *  left the trie. Mirrors decoder.js `nextCharWeights`. */
+    fun nextCharWeights(prefix: String): Map<Char, Float> {
+        if (!isLoaded) return emptyMap()
+        val normalized = normalize(prefix)
+        if (normalized.isEmpty() || normalized.length > 24) return emptyMap()
+        val prefixBytes = asciiBytes(normalized) ?: return emptyMap()
+        val hit = walk(prefixBytes) ?: return emptyMap()
+        val weights = HashMap<Char, Float>()
+        fun add(byte: Byte, freq: Int) {
+            val ch = byte.toInt().toChar()
+            if (ch < 'a' || ch > 'z') return
+            val f = freq.toFloat()
+            if ((weights[ch] ?: 0f) < f) weights[ch] = f
+        }
+        val (node, labelRestOffset, labelRestLength) = hit
+        if (labelRestLength > 0) {
+            add(bytes[labelRestOffset], nodeMaxSubtreeFreq(node))
+        } else {
+            val firstChild = nodeFirstChild(node)
+            if (firstChild != Format.LEAF) {
+                for (c in 0 until nodeChildCount(node)) {
+                    val child = firstChild + c
+                    add(bytes[nodeLabelOffset(child)], nodeMaxSubtreeFreq(child))
+                }
+            }
+        }
+        val max = weights.values.maxOrNull()?.takeIf { it > 0f } ?: return emptyMap()
+        // java.lang.Math.round, NOT kotlin.math.round: the latter is rint
+        // (ties-to-even), while decoder.js Math.round and Swift .rounded() both
+        // break ties away from zero. On a tie that costs exactly one quantum
+        // (1e-4), which is more than the parity suites' tolerance allows.
+        for (ch in weights.keys.toList()) {
+            weights[ch] = Math.round(weights.getValue(ch) / max * 10000f) / 10000f
+        }
+        return weights
     }
 
     /** Renders a dictionary-stored (lowercase) word for display: proper nouns
@@ -853,6 +921,16 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
         return results
     }
 
+    /** The expansion to use when a split half is itself a forced-replacement
+     *  entry, or null when it is not eligible. Real contractions always expand
+     *  to an apostrophe form (build.js asserts this); forced corrections
+     *  (calender → calendar) never do, and their typed form is an ordinary
+     *  misspelling, so a split around it is not self-evident and must earn
+     *  bigram evidence like any other split. Mirrors decoder.js
+     *  `splitContraction`. */
+    private fun splitContraction(half: String): String? =
+        contractions[half]?.takeIf { it.contains('\'') }
+
     /** Missing-space restoration: alot → "a lot", imnot → "I'm not". */
     private fun wordSplits(typed: ByteArray): List<Candidate> {
         if (typed.size < 3 ||
@@ -868,8 +946,8 @@ class CorrectionEngine(private val userLexicon: UserLexicon) {
             val rightBytes = typed.copyOfRange(i, typed.size)
             val leftString = String(leftBytes, Charsets.UTF_8)
             val rightString = String(rightBytes, Charsets.UTF_8)
-            val leftContraction = contractions[leftString]
-            val rightContraction = contractions[rightString]
+            val leftContraction = splitContraction(leftString)
+            val rightContraction = splitContraction(rightString)
             val leftNode = findTerminal(leftBytes)
             val rightNode = findTerminal(rightBytes)
             val leftFreq = if (leftNode >= 0) nodeFreq(leftNode) else null

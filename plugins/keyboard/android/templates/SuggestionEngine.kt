@@ -77,6 +77,19 @@ class SuggestionEngine(
         }
 
         /**
+         * [currentWordBefore] plus the mid-word guard: empty when the cursor
+         * sits inside a word (the next character is not a separator), because
+         * neither suggestions nor key-target resizing may act on a partial
+         * prefix the user is editing into. Mirrors the iOS
+         * `currentWord(beforeCursor:afterCursor:)`.
+         */
+        fun currentWord(textBeforeCursor: String, textAfterCursor: String): String {
+            val next = textAfterCursor.firstOrNull()
+            if (next != null && !SpacingAndPunctuations.isWordSeparator(next)) return ""
+            return currentWordBefore(textBeforeCursor)
+        }
+
+        /**
          * The committed word before the in-progress one — bigram context for
          * ranking and next-word prediction. Returns null when sentence
          * punctuation (not a plain space) separates them.
@@ -125,6 +138,90 @@ class SuggestionEngine(
 
     private val appContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** The system personal dictionary (Settings → Personal dictionary) —
+     *  readable by enabled IMEs without any permission. Words keep their
+     *  canonical casing, appear as tap-only completions, and veto
+     *  autocorrect; the SHORTCUT column expands like a text replacement.
+     *  Loaded off the keystroke path; replaced wholesale. */
+    @Volatile private var personalWords: Map<String, String> = emptyMap()
+    @Volatile private var personalShortcuts: Map<String, String> = emptyMap()
+
+    /** Reads UserDictionary.Words. Call off the main thread. Some OEMs
+     *  restrict the provider — any failure just leaves the feature off. */
+    fun loadPersonalDictionary() {
+        try {
+            val words = HashMap<String, String>()
+            val shortcuts = HashMap<String, String>()
+            appContext.contentResolver.query(
+                android.provider.UserDictionary.Words.CONTENT_URI,
+                arrayOf(
+                    android.provider.UserDictionary.Words.WORD,
+                    android.provider.UserDictionary.Words.SHORTCUT,
+                ),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                // Both columns are in the projection above, so a missing index
+                // is a broken provider — let the throw land in the catch.
+                val wordCol =
+                    cursor.getColumnIndexOrThrow(android.provider.UserDictionary.Words.WORD)
+                val shortcutCol =
+                    cursor.getColumnIndexOrThrow(android.provider.UserDictionary.Words.SHORTCUT)
+                while (cursor.moveToNext()) {
+                    val word = cursor.getString(wordCol)
+                    if (word.isNullOrBlank()) continue
+                    words[word.lowercase()] = word
+                    val shortcut = cursor.getString(shortcutCol)
+                    if (!shortcut.isNullOrBlank() && !shortcut.equals(word, ignoreCase = true)) {
+                        shortcuts[shortcut.lowercase()] = word
+                    }
+                }
+            }
+            personalWords = words
+            personalShortcuts = shortcuts
+        } catch (e: Exception) {
+            Log.w(TAG, "loadPersonalDictionary: unavailable (${e.javaClass.simpleName})")
+        }
+    }
+
+    /** Personal-dictionary shortcut expansion (mirrors the iOS supplementary
+     *  lexicon path): fires before any engine routing, in every locale. A
+     *  reverted expansion is blacklisted and never auto-applies again. */
+    private fun personalShortcutResult(word: String): Result? {
+        val key = word.lowercase()
+        // Shortcuts that merely restate the word never enter the map (see
+        // loadPersonalDictionary), so no same-token guard is needed here.
+        val expansion = personalShortcuts[key] ?: return null
+        if (correctionEngine.userLexicon.isBlacklisted(key, expansion.lowercase())) {
+            return null
+        }
+        return Result(
+            candidates = listOf(expansion),
+            topIsCorrection = true,
+            verbatim = word,
+            replacement = expansion,
+        )
+    }
+
+    /** Personal-dictionary words matching the typed prefix, exact (recased)
+     *  match first, then shorter completions before longer. */
+    private fun personalMatches(word: String): List<String> {
+        if (personalWords.isEmpty() || word.length < 2) return emptyList()
+        val key = word.lowercase()
+        var exact: String? = null
+        val completions = ArrayList<String>()
+        for ((stored, display) in personalWords) {
+            if (stored == key) {
+                if (display != word) exact = display
+            } else if (stored.startsWith(key)) {
+                completions.add(display)
+            }
+        }
+        completions.sortWith(compareBy({ it.length }, { it }))
+        return (listOfNotNull(exact) + completions).take(2)
+    }
 
     private var session: SpellCheckerSession? = null
     private var currentLocale: Locale? = null
@@ -185,6 +282,14 @@ class SuggestionEngine(
     }
 
     /**
+     * Next-key weights for invisible key-target resizing; empty (targets stay
+     * at visible geometry) unless the bundled engine serves this locale.
+     * Mirrors the iOS `keyTargetWeights(forPrefix:)`.
+     */
+    fun keyTargetWeights(prefix: String): Map<Char, Float> =
+        if (usesBundledEngine) correctionEngine.nextCharWeights(prefix) else emptyMap()
+
+    /**
      * Synchronous lookup via the bundled engine — used directly on the
      * space/punctuation commit path so the autocorrect decision can never be
      * stale. Returns [Result.EMPTY] when the engine doesn't serve this locale.
@@ -194,12 +299,26 @@ class SuggestionEngine(
         previousWord: String?,
         touchPoints: List<CorrectionEngine.TouchPoint?>? = null,
     ): Result {
-        if (!usesBundledEngine || word.isEmpty()) return Result.EMPTY
+        if (word.isEmpty()) return Result.EMPTY
+        personalShortcutResult(word)?.let { return it }
+        if (!usesBundledEngine) return Result.EMPTY
         val evaluation = correctionEngine.evaluate(
-            word, previousWord, touchPoints = touchPoints
+            word,
+            previousWord,
+            externallyValid = personalWords.containsKey(word.lowercase()),
+            touchPoints = touchPoints,
         )
+        var candidates = evaluation.candidates.map { matchCase(word, it) }
+        // Personal-dictionary matches lead the strip with canonical casing —
+        // tap-only, never the autocorrect replacement.
+        val personal = personalMatches(word)
+        if (personal.isNotEmpty()) {
+            val seen = HashSet(candidates.map { it.lowercase() })
+            val leading = personal.filter { seen.add(it.lowercase()) }
+            candidates = (leading + candidates).take(MAX_CANDIDATES)
+        }
         return Result(
-            candidates = evaluation.candidates.map { matchCase(word, it) },
+            candidates = candidates,
             topIsCorrection = evaluation.topIsCorrection,
             verbatim = evaluation.verbatim,
             replacement = evaluation.replacement?.let { matchCase(word, it) },
@@ -226,6 +345,10 @@ class SuggestionEngine(
         if (word.isEmpty()) return
         if (usesBundledEngine) {
             onResults(word, lookupNow(word, previousWord, touchPoints))
+            return
+        }
+        personalShortcutResult(word)?.let {
+            onResults(word, it)
             return
         }
         val s = session ?: return

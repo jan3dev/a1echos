@@ -11,7 +11,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
-    "build:dictionary": "node scripts/keyboard-dictionary/build.js"
+    "build:dictionary": "node scripts/keyboard-dictionary/build.js",
+    "test:parity:ios": "scripts/keyboard-dictionary/parity/run-swift-parity.sh",
+    "test:parity:android": "cd android && ./gradlew :app:testDebugUnitTest --tests \"com.a1lab.echos.ime.CorrectionEngineParityTest\""
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -1631,7 +1631,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             if (band != null && (y < band.top || y > band.bottom)) continue
             for (colIdx in hitRects[rowIdx].indices) {
                 if (hitRects[rowIdx][colIdx].contains(x, y)) {
-                    return (rowIdx shl 16) or colIdx
+                    return weightedKey(x, y, rowIdx, colIdx)
                 }
             }
         }
@@ -1678,6 +1678,106 @@ class EchosKeyboardView @JvmOverloads constructor(
         if (bestDistSq > cap * cap) return -1
 
         return (candidateRow shl 16) or bestCol
+    }
+
+    /// Per-letter next-key weights in (0, 1], pushed by the service after
+    /// every text change (`CorrectionEngine.nextCharWeights`) — drives the
+    /// invisible key-target resizing in [weightedKey]. Empty map = resizing
+    /// off; hit geometry is exactly the tiles.
+    private var keyTargetWeights: Map<Char, Float> = emptyMap()
+
+    /// Widest contested strip along a shared tile edge, as a fraction of the
+    /// winner's visible key dimension, reached only at weight delta 1.0.
+    private val maxTargetShiftFraction = 0.25f
+
+    /// Slack for "these two tiles abut", in px. Tiles tile the keyboard
+    /// exactly, so a shared edge means one's far side meets the other's near
+    /// side within this.
+    private val edgeTolerance = 0.5f
+
+    fun setKeyTargetWeights(weights: Map<Char, Float>) {
+        keyTargetWeights = weights
+    }
+
+    /// The coordinate of the tile edge a neighbour shares with the winner along
+    /// one axis, or null when the two do not abut on it.
+    private fun sharedEdge(
+        near: Float,
+        far: Float,
+        neighborNear: Float,
+        neighborFar: Float,
+    ): Float? = when {
+        kotlin.math.abs(neighborFar - near) < edgeTolerance -> near
+        kotlin.math.abs(neighborNear - far) < edgeTolerance -> far
+        else -> null
+    }
+
+    /// The next-key weight for a single-letter character key; null for every
+    /// other key (only letter keys trade hit area — space/shift/delete/return
+    /// never grow and are never stolen from).
+    private fun letterWeight(rowIdx: Int, colIdx: Int): Float? {
+        val key = keyAt(rowIdx, colIdx) ?: return null
+        if (key.type != EchosKeyboardLayout.KeyType.CHARACTER) return null
+        if (key.label.length != 1) return null
+        val ch = key.label[0].lowercaseChar()
+        if (ch < 'a' || ch > 'z') return null
+        return keyTargetWeights[ch] ?: 0f
+    }
+
+    /// Invisible key-target resizing (Apple's pre-iOS-17 keyboard, patent
+    /// US8232973), mirroring the iOS `weightedKeyButton`: the tile boundary
+    /// between two letter keys effectively shifts toward the less likely one.
+    /// When the touch lands inside the winner's tile but within the contested
+    /// strip along an edge shared with a likelier letter key, that key claims
+    /// the touch. The strip width is [maxTargetShiftFraction] of the winner's
+    /// visible dimension scaled by the weight difference, so a tap near a
+    /// key's center is never stolen — and the raw touch point (which the
+    /// spatial decoder buffers) is unaffected, only the resolved key changes.
+    private fun weightedKey(x: Float, y: Float, rowIdx: Int, colIdx: Int): Int {
+        val packed = (rowIdx shl 16) or colIdx
+        if (keyTargetWeights.isEmpty()) return packed
+        val winnerWeight = letterWeight(rowIdx, colIdx) ?: return packed
+        val tile = hitRects[rowIdx][colIdx]
+        val visible = keyRects.getOrNull(rowIdx)?.getOrNull(colIdx) ?: return packed
+        var best = packed
+        var bestScore = 0f
+        for (nRow in hitRects.indices) {
+            for (nCol in hitRects[nRow].indices) {
+                if (nRow == rowIdx && nCol == colIdx) continue
+                val candidateWeight = letterWeight(nRow, nCol) ?: continue
+                if (candidateWeight <= winnerWeight) continue
+                val n = hitRects[nRow][nCol]
+                val edgeX = sharedEdge(tile.left, tile.right, n.left, n.right)
+                val edgeY = sharedEdge(tile.top, tile.bottom, n.top, n.bottom)
+                val distToEdge: Float
+                val span: Float
+                if (edgeX != null &&
+                    y >= kotlin.math.max(tile.top, n.top) &&
+                    y <= kotlin.math.min(tile.bottom, n.bottom)
+                ) {
+                    distToEdge = kotlin.math.abs(x - edgeX)
+                    span = visible.width()
+                } else if (edgeY != null &&
+                    x >= kotlin.math.max(tile.left, n.left) &&
+                    x <= kotlin.math.min(tile.right, n.right)
+                ) {
+                    distToEdge = kotlin.math.abs(y - edgeY)
+                    span = visible.height()
+                } else {
+                    continue
+                }
+                // `score > bestScore` (starting at 0) already implies
+                // distToEdge < shift.
+                val score =
+                    maxTargetShiftFraction * span * (candidateWeight - winnerWeight) -
+                        distToEdge
+                if (score > bestScore) {
+                    bestScore = score
+                    best = (nRow shl 16) or nCol
+                }
+            }
+        }
+        return best
     }
 
     /// Index of the row whose vertical span best matches `y`; falls back

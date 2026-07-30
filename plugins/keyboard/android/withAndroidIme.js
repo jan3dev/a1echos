@@ -270,6 +270,60 @@ function withImeSources(config) {
         );
       }
 
+      // JVM parity suite (templates/test/) + the fixtures it replays: proves
+      // CorrectionEngine.kt matches decoder.js. Run via
+      // `./gradlew :app:testDebugUnitTest`.
+      const testJavaDir = path.join(
+        projectRoot,
+        "android",
+        "app",
+        "src",
+        "test",
+        "java",
+        "com",
+        "a1lab",
+        "echos",
+        "ime",
+      );
+      ensureDir(testJavaDir);
+      // No existsSync guard: a missing parity suite must fail prebuild loudly
+      // rather than silently ship without it.
+      const testSource = path.join(
+        TEMPLATES_DIR,
+        "test",
+        "CorrectionEngineParityTest.kt",
+      );
+      fs.writeFileSync(
+        path.join(testJavaDir, "CorrectionEngineParityTest.kt"),
+        fs.readFileSync(testSource, "utf8"),
+      );
+      // The dictionary/confusables/fixtures are NOT copied here — the test
+      // sourceSet points straight at data/keyboard-dictionary (see
+      // withImeTestDeps), so the suite always replays the bytes the repo
+      // currently has instead of whatever a previous prebuild happened to
+      // stage. Avoids a second 2.8 MB copy in the generated tree, and the
+      // staleness where `npm run build:dictionary` and the parity run disagree.
+      //
+      // Earlier versions of this plugin did stage them. On a non-clean prebuild
+      // those stale copies would still be on the test resource path and shadow
+      // the real data, so drop them.
+      const legacyTestResources = path.join(
+        projectRoot,
+        "android",
+        "app",
+        "src",
+        "test",
+        "resources",
+      );
+      for (const file of [
+        "keyboard_dictionary.echd",
+        "confusables.json",
+        "parity-fixtures.json",
+      ]) {
+        const stale = path.join(legacyTestResources, file);
+        if (fs.existsSync(stale)) fs.rmSync(stale);
+      }
+
       return config;
     },
   ]);
@@ -285,30 +339,69 @@ function withImeSources(config) {
  * Gradle produces the JAR before our `:app:compileDebugKotlin` runs.
  */
 function withImeGradleDeps(config) {
-  return withAppBuildGradle(config, (config) => {
-    if (config.modResults.language !== "groovy") {
-      console.warn(
-        "withAndroidIme: app build.gradle is not Groovy; skipping sherpa-onnx classes injection.",
-      );
-      return config;
-    }
-    const marker =
-      "// Echos IME — expose sherpa-onnx Kotlin API to app sources";
-    if (config.modResults.contents.includes(marker)) {
-      return config;
-    }
-    // Escape `\${...}` so JS template-literal interpolation doesn't eat the
-    // Groovy `${rootProject.projectDir}` reference.
-    const block = `
-${marker}
-dependencies {
+  // Escape `\${...}` so JS template-literal interpolation doesn't eat the
+  // Groovy `${rootProject.projectDir}` reference.
+  return appendAppGradleBlock(
+    config,
+    "// Echos IME — expose sherpa-onnx Kotlin API to app sources",
+    `dependencies {
     implementation fileTree(
         dir: "\${rootProject.projectDir}/../node_modules/react-native-sherpa-onnx/android/build/sherpa-onnx-classes",
         include: ["*.jar"],
     ).builtBy(":react-native-sherpa-onnx:extractSherpaOnnxClasses")
+}`,
+    "sherpa-onnx classes",
+  );
 }
-`;
-    config.modResults.contents = config.modResults.contents.trimEnd() + block;
+
+/**
+ * Test-only wiring for the correction-engine parity suite
+ * (src/test/java/com/a1lab/echos/ime/CorrectionEngineParityTest.kt): JUnit 4
+ * and the real org.json (android.jar only ships throwing stubs to JVM unit
+ * tests). Neither ships in the app.
+ *
+ * The suite's fixtures are read straight out of data/keyboard-dictionary
+ * rather than copied into the generated tree, so it can never replay a stale
+ * dictionary against fresh fixtures (or vice versa).
+ */
+function withImeTestDeps(config) {
+  return appendAppGradleBlock(
+    config,
+    // Marker describes the block's current contents: changing it re-injects on
+    // an incremental prebuild instead of leaving an older block in place.
+    "// Echos IME — correction-engine parity suite: deps + fixture sourceSet",
+    `dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.json:json:20240303"
+}
+android {
+    sourceSets {
+        test {
+            resources.srcDirs += ["\${rootProject.projectDir}/../data/keyboard-dictionary"]
+        }
+    }
+}`,
+    "parity-test deps",
+  );
+}
+
+/**
+ * Appends a marker-guarded Groovy block to the app build.gradle, once. The
+ * marker makes it idempotent across repeated prebuilds.
+ */
+function appendAppGradleBlock(config, marker, body, what) {
+  return withAppBuildGradle(config, (config) => {
+    if (config.modResults.language !== "groovy") {
+      console.warn(
+        `withAndroidIme: app build.gradle is not Groovy; skipping ${what} injection.`,
+      );
+      return config;
+    }
+    if (config.modResults.contents.includes(marker)) {
+      return config;
+    }
+    config.modResults.contents =
+      config.modResults.contents.trimEnd() + `\n${marker}\n${body}\n`;
     return config;
   });
 }
@@ -320,6 +413,7 @@ function withAndroidIme(config) {
   config = withImeManifest(config);
   config = withImeSources(config);
   config = withImeGradleDeps(config);
+  config = withImeTestDeps(config);
   return config;
 }
 

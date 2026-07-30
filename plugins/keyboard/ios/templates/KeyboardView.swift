@@ -977,7 +977,7 @@ class KeyboardView: UIInputView {
             rebuildKeyFrames()
         }
         for (idx, frame) in keyFrames.enumerated() where frame.contains(point) {
-            return keyFramesFlat[idx]
+            return weightedKeyButton(at: point, winnerIdx: idx)
         }
         // Nearest-key fallback: any tap on the keyboard body must resolve to a
         // key (native iOS), even when the tile cache didn't cover this point.
@@ -986,6 +986,98 @@ class KeyboardView: UIInputView {
         // keeps the finger on its current key.
         guard !rowStackView.isHidden, bounds.contains(point) else { return nil }
         return nearestKeyButton(to: point)
+    }
+
+    // MARK: - Invisible key-target resizing
+
+    /// Per-letter next-key weights in (0, 1], pushed by the controller after
+    /// every text change (`CorrectionEngine.nextCharWeights`). Empty map =
+    /// resizing off; hit geometry is exactly the tiles.
+    private var keyTargetWeights: [UInt8: Float] = [:]
+
+    /// Widest contested strip along a shared tile edge, as a fraction of the
+    /// winner's visible key dimension, reached only at weight delta 1.0.
+    private static let maxTargetShiftFraction: CGFloat = 0.25
+
+    func setKeyTargetWeights(_ weights: [UInt8: Float]) {
+        keyTargetWeights = weights
+    }
+
+    /// The next-key weight for a single-letter character key; nil for every
+    /// other key (only letter keys trade hit area — space/shift/delete/return
+    /// never grow and are never stolen from).
+    private func letterWeight(_ button: KeyButton) -> Float? {
+        guard button.keyDefinition.type == .character else { return nil }
+        let label = button.keyDefinition.label.lowercased()
+        guard label.count == 1,
+              let scalar = label.unicodeScalars.first,
+              scalar.value >= UInt8(ascii: "a"), scalar.value <= UInt8(ascii: "z")
+        else { return nil }
+        return keyTargetWeights[UInt8(scalar.value)] ?? 0
+    }
+
+    /// The coordinate of the tile edge `neighbor` shares with `tile` along the
+    /// given axis, or nil when the two tiles do not abut on it. Tiles tile the
+    /// keyboard exactly, so a shared edge means one's far side meets the
+    /// other's near side within `edgeTolerance`.
+    private static func sharedEdge(
+        near: CGFloat, far: CGFloat, neighborNear: CGFloat, neighborFar: CGFloat
+    ) -> CGFloat? {
+        if abs(neighborFar - near) < edgeTolerance { return near }
+        if abs(neighborNear - far) < edgeTolerance { return far }
+        return nil
+    }
+
+    /// Invisible key-target resizing (Apple's pre-iOS-17 keyboard, patent
+    /// US8232973): the tile boundary between two letter keys effectively
+    /// shifts toward the less likely one. When the touch lands inside the
+    /// winner's tile but within the contested strip along an edge shared with
+    /// a likelier letter key, that key claims the touch. The strip width is
+    /// `maxTargetShiftFraction` of the winner's visible dimension scaled by
+    /// the weight difference, so a tap near a key's center is never stolen
+    /// and the raw touch point (which the spatial decoder buffers) is
+    /// unaffected — only the resolved key changes.
+    private func weightedKeyButton(at point: CGPoint, winnerIdx: Int) -> KeyButton {
+        let winner = keyFramesFlat[winnerIdx]
+        guard !keyTargetWeights.isEmpty,
+              let winnerWeight = letterWeight(winner) else { return winner }
+        let tile = keyFrames[winnerIdx]
+        let visible = winner.convert(winner.bounds, to: self)
+        var best: KeyButton?
+        var bestScore: CGFloat = 0
+        for (idx, neighborTile) in keyFrames.enumerated() where idx != winnerIdx {
+            let candidate = keyFramesFlat[idx]
+            guard let candidateWeight = letterWeight(candidate),
+                  candidateWeight > winnerWeight else { continue }
+            let distToEdge: CGFloat?
+            let span: CGFloat
+            if let edgeX = Self.sharedEdge(
+                near: tile.minX, far: tile.maxX,
+                neighborNear: neighborTile.minX, neighborFar: neighborTile.maxX
+            ), point.y >= max(tile.minY, neighborTile.minY),
+               point.y <= min(tile.maxY, neighborTile.maxY) {
+                distToEdge = abs(point.x - edgeX)
+                span = visible.width
+            } else if let edgeY = Self.sharedEdge(
+                near: tile.minY, far: tile.maxY,
+                neighborNear: neighborTile.minY, neighborFar: neighborTile.maxY
+            ), point.x >= max(tile.minX, neighborTile.minX),
+               point.x <= min(tile.maxX, neighborTile.maxX) {
+                distToEdge = abs(point.y - edgeY)
+                span = visible.height
+            } else {
+                continue
+            }
+            guard let dist = distToEdge else { continue }
+            // `score > bestScore` (starting at 0) already implies dist < shift.
+            let score = Self.maxTargetShiftFraction * span
+                * CGFloat(candidateWeight - winnerWeight) - dist
+            if score > bestScore {
+                bestScore = score
+                best = candidate
+            }
+        }
+        return best ?? winner
     }
 
     /// Squared distance from `point` to the nearest edge of `rect` (0 when the

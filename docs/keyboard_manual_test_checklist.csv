@@ -62,6 +62,9 @@ Hit detection & layout,HIT-07,Edge-key hitbox left/right,Tap the outer margin ju
 Hit detection & layout,HIT-08,Edge-key hitbox top,Tap the thin band just above the top letter row,A top-row key commits,iOS+Android,no,,Phase 2 §1.4
 Hit detection & layout,HIT-09,Edge-key hitbox bottom,Tap just below the bottom (space) row,Nearest bottom-row key commits,iOS,no,,Phase 2 §1.4 iOS
 Hit detection & layout,HIT-10,Per-row sweet-spot bias,Tap into the gap just above the bottom letter row (z-m),Resolves to bottom row (no snap up to a-l),iOS+Android,no,,Phase 2 §1.5
+Hit detection & layout,HIT-11,Key-target resizing favors likely next key,"Type ""t"", then tap the h/g border slightly on the g side","Commits ""h"" (after t the trie strongly predicts h; boundary shifted ≤25% of key width toward g)",iOS+Android,,,nextCharWeights contested-strip steal; letter keys only
+Hit detection & layout,HIT-12,Key-target resizing never steals center taps,"Type ""t"", then tap dead-center on g","Commits ""g"" (resizing only trades the border strip, never a key's core)",iOS+Android,,,
+Hit detection & layout,HIT-13,Resizing off outside a word,"With no word in progress (after a space), tap key borders","Plain tile geometry — no probability bias (weights cleared when prefix empty, mic active, or engine off)",iOS+Android,,,Also off for non-letter keys (space/shift/delete never grow or shrink)
 Layout switching,LAY-01,123 ↔ letters,Tap 123 then ABC,Switches between numbers/symbols and letters,iOS+Android,,,
 Layout switching,LAY-02,#+= ↔ 123,Within symbols toggle the page key,Switches between symbol pages,iOS+Android,,,
 Layout switching,LAY-03,Emoji key opens picker,Tap smiley,In-keyboard emoji picker appears,iOS+Android,,,
@@ -139,6 +142,11 @@ Suggestions & autocorrect,SUG-12,Autocorrect backspace revert,Press backspace im
 Suggestions & autocorrect,SUG-13,Autocorrect respects field opt-out,With autocorrect on type in a password/URL field then space,No autocorrection is applied,iOS+Android,,,Phase 3 §5.10
 Suggestions & autocorrect,SUG-14,No system spell checker (Android non-English),Set a non-English device language + disable all system spell checkers then type,One-time toast points to the spell-checker setting; English needs no system checker (bundled engine),Android,,,Bundled engine closes the OEM gap for English
 Suggestions & autocorrect,SUG-15,Autocorrect chains auto-cap,With autocorrect on autocorrect the first word of a sentence,Auto-cap still capitalizes the next sentence start,iOS+Android,,,Phase 3 §5.10
+Suggestions & autocorrect,SUG-16,Contact name vetoes autocorrect (iOS),"Add a contact with an unusual name (e.g. ""Wupperfeld""), type it + space",Name is not autocorrected,iOS,,,UILexicon via requestSupplementaryLexicon
+Suggestions & autocorrect,SUG-17,Contact name completion leads strip,Type the first 3+ letters of a contact's name,Strip leads with the contact's name in canonical casing (tap-only; space never auto-commits it),iOS,,,
+Suggestions & autocorrect,SUG-18,Text replacement expands,"Create a text replacement (Settings → General → Keyboard, e.g. omw → On my way!), type the shortcut + space",Expansion auto-applies; backspace offers the revert; reverting blacklists the pair permanently,iOS,,,Expansion works in every language (before engine routing)
+Suggestions & autocorrect,SUG-19,Personal dictionary word respected (Android),Add a word in Settings → System → Languages → Personal dictionary then type it + space,Word is not autocorrected and leads the strip when prefix-typed,Android,,,UserDictionary.Words; loaded at IME start (re-open keyboard after adding)
+Suggestions & autocorrect,SUG-20,Personal dictionary shortcut expands (Android),Add a personal-dictionary entry with a shortcut then type the shortcut + space,Expansion auto-applies; revert blacklists the pair,Android,,,Restricted OEM providers fail silently (feature off)
 Autocorrect engine,ACE-01,Adjacent-key typo,"Type ""wrold"" then space","Commits ""world """,iOS+Android,,,QWERTY-proximity edit distance
 Autocorrect engine,ACE-02,Transposition,"Type ""teh"" then space","Commits ""the """,iOS+Android,,,
 Autocorrect engine,ACE-03,Doubled-letter omission,"Type ""helo"" then space","Commits ""help """,iOS+Android,,,
@@ -175,11 +183,24 @@ Autocorrect engine,ACE-33,First-letter fat-finger,"Start a word landing just off
 Autocorrect engine,ACE-34,Touch buffer survives backspace,"Type a word, backspace one letter, retype it, then space",Correction still applies correctly (no mis-fix / no crash),iOS+Android,,,currentWordTouches popped on backspace
 Autocorrect engine,ACE-35,Stale touch falls back safely,"Paste a word or edit the field via the host, then keep typing and space",No mis-correction from stale tap data (falls back to key-adjacency),iOS+Android,,,Buffer cleared on host edit / cursor move
 Autocorrect engine,ACE-36,Context survives comma,"Type ""apples, appl"" and pause","Suggestion still boosted by ""apples"" (context crosses the comma)",iOS+Android,,,Only . ! ? and newline reset context
-Autocorrect engine,ACE-37,Sentence-start predictions,Focus an empty text field,"Strip shows curated openers (""I"" ""The"" ""You"")",iOS+Android,,,Next-word starters
+Autocorrect engine,ACE-37,Empty field keeps record button,Focus an empty text field,Top bar shows logo + record button (no suggestion strip),iOS+Android,,,No curated openers on empty context
 Autocorrect engine,ACE-38,Predictions after sentence end,"Type ""Done. """,Strip shows capitalized sentence openers,iOS+Android,,,
+Autocorrect engine,ACE-38b,New line keeps record button,"Type ""Hello"" then press return",Strip clears; top bar shows logo + record button,iOS+Android,,,Newline resets prediction context
 Autocorrect engine,ACE-39,Prediction fallback fills strip,After a word with no known continuations press space,Strip still shows common words (never left empty),iOS+Android,,,Unigram fallback
 Autocorrect engine,ACE-40,Proper-noun possessive,"Type ""londons"" then space","Commits ""London's """,iOS+Android,,,Base is a proper noun and not itself a word
 Autocorrect engine,ACE-41,Plural not made possessive,"Type ""dogs"" then space","Stays ""dogs"" (no ""dog's"")",iOS+Android,,,Possessive gated to proper nouns
+Autocorrect engine,ACE-42,Forced correction of valid-word typos,"Type ""calender"" then space; also ""wether"", ""loosing"", ""payed""","Commits ""calendar"" / ""whether"" / ""losing"" / ""paid""",iOS+Android,,,forced_corrections.json rides the contraction table; revert blacklists
+Autocorrect engine,ACE-43,Forced correction casing,"Type ""Calender"" (sentence start) then space","Commits ""Calendar "" (casing mirrors typed word)",iOS+Android,,,
+Autocorrect engine,ACE-44,New contractions,"Type ""itll"", ""hed"", ""thatll"", ""whens"", ""howd"", ""yall"" each + space","it'll / he'd / that'll / when's / how'd / y'all",iOS+Android,,,Also itd/oclock/maam/mustve
+Autocorrect engine,ACE-45,First name title-cased,"Type ""james"" then space; also ""sarah""","Commits ""James "" / ""Sarah """,iOS+Android,,,~780 names/brands added as proper nouns
+Autocorrect engine,ACE-46,Name possessive,"Type ""sarahs"" then space","Commits ""Sarah's """,iOS+Android,,,
+Autocorrect engine,ACE-47,Name-colliding words untouched,"Type ""will"", ""mark"", ""bill"", ""grace"", ""heather"", ""jasmine"", ""sally"", ""nelson"", ""henry"", ""morgan"" each + space",All stay lowercase (never title-cased),iOS+Android,,,Dual-use words excluded from the name list; pinned by golden vectors
+Autocorrect engine,ACE-47b,Unambiguous names still capitalize,"Type ""john"", ""david"", ""monday"", ""france"" each + space",Each becomes title-cased,iOS+Android,,,Guards against over-pruning the name list
+Autocorrect engine,ACE-48,Forced corrections do not split run-ons,"Type ""wetherman"" + space, then ""payedup"" + space","""wetherman"" is left alone (not ""whether man""); ""payedup"" left alone",iOS+Android,,,Forced corrections are excluded from the self-evident word-split path
+Autocorrect engine,ACE-49,Wednesday abbreviation not contracted,"Type ""wed all day"", ""wed still works"", ""an id check""",No we'd/I'd rewrite in any of them,iOS+Android,,,Wednesday/ID-noun collisions removed from confusable triggers
+Autocorrect engine,ACE-48,she'd confusable,"Type ""shed like"" then space","Retroactively becomes ""she'd like""; ""shed light"" stays untouched",iOS+Android,,,Context-aware confusable
+Autocorrect engine,ACE-49,its extended triggers,"Type ""its just"" then space","Becomes ""it's just""; possessive ""its own"" stays",iOS+Android,,,
+Autocorrect engine,ACE-50,Informal words survive,"Type ""nvm"", ""wtf"", ""bday"", ""msg"", ""chatgpt"" each + space",None are autocorrected,iOS+Android,,,Added to extra_words.txt
 Voice transcription,VOX-01,Tap mic to record,Tap top-bar mic,Records; waveform animates with real input level,iOS+Android,,,
 Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recording,Stops recording; transcription inserted at cursor,iOS+Android,,,
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,
