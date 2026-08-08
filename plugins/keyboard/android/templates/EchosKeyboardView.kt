@@ -249,9 +249,19 @@ class EchosKeyboardView @JvmOverloads constructor(
     private val longPressHandler = Handler(Looper.getMainLooper())
     private var overlay: KeyOverlayView? = null
 
+    /// Held rather than allocated per release so `removeCallbacks` can
+    /// actually cancel a pending hide — a fresh lambda each time would be a
+    /// different Runnable identity and never match.
+    private val previewHideRunnable = Runnable { overlay?.clearPreview() }
+
     private companion object {
         // Accent / emoji long-press default — 300 ms matches LatinIME.
         private const val LONG_PRESS_THRESHOLD_MS = 300L
+
+        /// Grace period before the typewriter balloon disappears on release,
+        /// matching iOS's `KeyboardView.previewHideDelay` (0.07s). See
+        /// [schedulePreviewHide].
+        private const val PREVIEW_HIDE_DELAY_MS = 70L
 
         /// LatinIME's `keyboard_lock_timeout` — long-press shift this long
         /// jumps straight to caps lock, bypassing the regular tap cycle.
@@ -1293,9 +1303,10 @@ class EchosKeyboardView @JvmOverloads constructor(
             needsRedraw = true
 
             val newKeyRect = keyRects[newRow][newCol]
-            overlay?.showPreview(shiftedLabel(newKey.label), newKeyRect)
+            showKeyPreview(shiftedLabel(newKey.label), newKeyRect)
 
-            if (newKey.type == EchosKeyboardLayout.KeyType.CHARACTER &&
+            if (currentCells == null &&
+                newKey.type == EchosKeyboardLayout.KeyType.CHARACTER &&
                 AccentVariants.hasVariants(newKey.label) &&
                 !anyPointerOwnsVariants()
             ) {
@@ -1380,7 +1391,12 @@ class EchosKeyboardView @JvmOverloads constructor(
                     deleteRepeater.start()
                 }
             }
-            EchosKeyboardLayout.KeyType.GLOBE -> scheduleGlobeLongPress(state)
+            EchosKeyboardLayout.KeyType.GLOBE -> scheduleKeyboardPickerLongPress(state)
+            // Long-press space is the picker's second affordance (LatinIME
+            // §3.9) — the layouts that drop the globe key (numbers, symbols,
+            // the pads) still keep a spacebar, so this is the only way to
+            // reach the picker from them.
+            EchosKeyboardLayout.KeyType.SPACE -> scheduleKeyboardPickerLongPress(state)
             EchosKeyboardLayout.KeyType.EMOJI_COMMA -> {
                 // Short tap commits a comma; long-press opens the emoji
                 // picker. Suppress the typewriter balloon on press so
@@ -1397,9 +1413,17 @@ class EchosKeyboardView @JvmOverloads constructor(
                 val showPreview = currentCells == null ||
                     (!isNumericPadMode && key.label == ",")
                 if (showPreview) {
-                    overlay?.showPreview(ch, keyRect)
+                    showKeyPreview(ch, keyRect)
                 }
-                if (AccentVariants.hasVariants(key.label) && !anyPointerOwnsVariants()) {
+                // Long-press variants belong to the row-based letter/number/
+                // symbol pages only. The cell-grid pads share glyphs with the
+                // variant tables (`-` and `/` on the phone pad, `0` on the
+                // numeric pad, `N` in a dial string) where an accent or a
+                // typographic dash is never what the field wants.
+                if (currentCells == null &&
+                    AccentVariants.hasVariants(key.label) &&
+                    !anyPointerOwnsVariants()
+                ) {
                     scheduleAccentLongPress(state, keyRect, key)
                 }
             }
@@ -1410,7 +1434,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 // (LatinIME §3.11); a short tap still types ".".
                 if (!isNumericPadMode) {
                     if (currentCells != null) {
-                        overlay?.showPreview(".", keyRect)
+                        showKeyPreview(".", keyRect)
                     } else if (!anyPointerOwnsVariants()) {
                         schedulePunctuationLongPress(state, keyRect)
                     }
@@ -1434,7 +1458,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         // releases keep it up so the user still sees feedback for whatever
         // finger is still on the keyboard.
         if (pointers.size() == 0) {
-            overlay?.clearPreview()
+            schedulePreviewHide()
         }
 
         // Variants popup release: only the owning pointer commits the
@@ -1461,13 +1485,35 @@ class EchosKeyboardView @JvmOverloads constructor(
                 state.ownsDeleteRepeat = false
                 if (!didRepeat) listener?.onDeletePress()
             }
-            // Long-press already triggered (globe picker shown): skip
-            // the regular tap action.
+            // Long-press already triggered (picker shown from globe or
+            // space, caps-lock from shift): skip the regular tap action.
             state.longPressFired -> Unit
             else -> handleKeyAction(key, normalizedTouch(state, key))
         }
 
         logTouchLatency(state, key.type)
+    }
+
+    /// Shows the typewriter balloon, cancelling any hide left pending from a
+    /// previous key. Without the cancel, the deferred hide scheduled by the
+    /// last release would blank the balloon a beat after this one appeared.
+    private fun showKeyPreview(text: String, keyRect: RectF) {
+        cancelPreviewHide()
+        overlay?.showPreview(text, keyRect)
+    }
+
+    /// Defers the balloon's disappearance by [PREVIEW_HIDE_DELAY_MS] instead
+    /// of clearing on the spot. Roll-typing lands the next key well inside
+    /// that window, so the balloon retargets to the new key rather than
+    /// strobing off and on between every letter. Mirrors iOS's
+    /// `KeyboardView.previewHideDelay` (0.07s).
+    private fun schedulePreviewHide() {
+        cancelPreviewHide()
+        longPressHandler.postDelayed(previewHideRunnable, PREVIEW_HIDE_DELAY_MS)
+    }
+
+    private fun cancelPreviewHide() {
+        longPressHandler.removeCallbacks(previewHideRunnable)
     }
 
     private fun cancelAllPointers() {
@@ -1476,6 +1522,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
         }
         pointers.clear()
+        cancelPreviewHide()
         overlay?.clearAll()
         deleteRepeater.cancel()
     }
@@ -1492,6 +1539,7 @@ class EchosKeyboardView @JvmOverloads constructor(
             state.longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
         }
         pointers.clear()
+        cancelPreviewHide()
         overlay?.clearAll()
         deleteRepeater.cancel()
     }
@@ -1534,6 +1582,7 @@ class EchosKeyboardView @JvmOverloads constructor(
                 // releases its pressed-state highlight.
                 state.longPressFired = true
                 state.ownsVariants = true
+                KeyFeedback.performLongPressHaptic(this)
                 overlay?.showVariants(anchorRect, variants, state.lastX)
                 invalidate()
             }
@@ -1549,6 +1598,7 @@ class EchosKeyboardView @JvmOverloads constructor(
         val runnable = Runnable {
             state.longPressFired = true
             state.ownsVariants = true
+            KeyFeedback.performLongPressHaptic(this)
             overlay?.showVariants(anchorRect, AccentVariants.punctuationForPeriod(), state.lastX)
             invalidate()
         }
@@ -1556,9 +1606,13 @@ class EchosKeyboardView @JvmOverloads constructor(
         longPressHandler.postDelayed(runnable, LONG_PRESS_THRESHOLD_MS)
     }
 
-    private fun scheduleGlobeLongPress(state: PointerState) {
+    /// Long-press the globe *or* the spacebar -> system IME picker
+    /// (LatinIME §3.9). `handlePointerUp` skips the tap action once
+    /// `longPressFired` is set, so no space is typed on the way out.
+    private fun scheduleKeyboardPickerLongPress(state: PointerState) {
         val runnable = Runnable {
             state.longPressFired = true
+            KeyFeedback.performLongPressHaptic(this)
             listener?.onShowKeyboardPicker()
         }
         state.longPressRunnable = runnable

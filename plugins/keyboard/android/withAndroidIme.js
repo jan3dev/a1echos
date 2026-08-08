@@ -9,6 +9,16 @@ const {
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 
+// LM reranker (context-aware autocorrect): prebuilt llama.cpp static libs,
+// produced locally by scripts/keyboard-lm/build-llama-android.sh
+// (git-ignored). When absent the native module is skipped entirely and
+// LmReranker.kt degrades at runtime — the keyboard builds exactly as before.
+const LM_VENDOR_DIR = path.join(__dirname, "vendor", "keyboard-lm");
+
+function lmEnabled() {
+  return fs.existsSync(LM_VENDOR_DIR);
+}
+
 /**
  * Ensures a directory exists, creating it recursively if needed.
  */
@@ -147,6 +157,9 @@ function withImeSources(config) {
         "CorrectionEngine.kt",
         "KeyAdjacency.kt",
         "UserLexicon.kt",
+        // Ships unconditionally: degrades to "model unavailable" when the
+        // libechoslm.so native module isn't in the build (see below).
+        "LmReranker.kt",
       ];
 
       for (const file of ktFiles) {
@@ -157,6 +170,36 @@ function withImeSources(config) {
             fs.readFileSync(templatePath, "utf8"),
           );
         }
+      }
+
+      // LM reranker native module (context-aware autocorrect): staged only
+      // when the llama.cpp static libs were built locally
+      // (scripts/keyboard-lm/build-llama-android.sh). The CMake project
+      // compiles a stub for ABIs without vendor libs, and without the module
+      // at all LmReranker.kt degrades at runtime, so nothing else is
+      // conditional.
+      if (lmEnabled()) {
+        const cppDir = path.join(androidRoot, "cpp", "keyboard-lm");
+        // Wiped rather than merged: this directory doubles as RN's app CMake
+        // dir, which globs `*.cpp` next to CMakeLists.txt and swaps RN's own
+        // OnLoad.cpp for whatever it finds. A source left behind by an earlier
+        // layout would silently drop OnLoad.cpp from libappmodules.so.
+        fs.rmSync(cppDir, { recursive: true, force: true });
+        const echosLmDir = path.join(cppDir, "echoslm");
+        ensureDir(echosLmDir);
+        fs.copyFileSync(
+          path.join(TEMPLATES_DIR, "cpp", "CMakeLists.txt"),
+          path.join(cppDir, "CMakeLists.txt"),
+        );
+        for (const file of ["llama_jni.cpp", "CMakeLists.txt"]) {
+          fs.copyFileSync(
+            path.join(TEMPLATES_DIR, "cpp", "echoslm", file),
+            path.join(echosLmDir, file),
+          );
+        }
+        fs.cpSync(LM_VENDOR_DIR, path.join(echosLmDir, "vendor"), {
+          recursive: true,
+        });
       }
 
       // Bundle the compiled correction dictionary (committed artifact — see
@@ -407,6 +450,26 @@ function appendAppGradleBlock(config, marker, body, what) {
 }
 
 /**
+ * Wires the keyboard-lm CMake project (libechoslm.so JNI bridge) into the
+ * app build — only when the vendor static libs exist locally.
+ */
+function withImeLmNativeBuild(config) {
+  if (!lmEnabled()) return config;
+  return appendAppGradleBlock(
+    config,
+    "// Echos IME — keyboard LM reranker native module (llama.cpp JNI)",
+    `android {
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/keyboard-lm/CMakeLists.txt"
+        }
+    }
+}`,
+    "keyboard-lm native build",
+  );
+}
+
+/**
  * Composes Android IME manifest registration and source file generation.
  */
 function withAndroidIme(config) {
@@ -414,6 +477,7 @@ function withAndroidIme(config) {
   config = withImeSources(config);
   config = withImeGradleDeps(config);
   config = withImeTestDeps(config);
+  config = withImeLmNativeBuild(config);
   return config;
 }
 

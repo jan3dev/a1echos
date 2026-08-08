@@ -999,6 +999,10 @@ class KeyboardView: UIInputView {
     /// winner's visible key dimension, reached only at weight delta 1.0.
     private static let maxTargetShiftFraction: CGFloat = 0.25
 
+    /// Tile edges are computed, not authored — allow sub-point float drift
+    /// when matching shared edges (mirrors EchosKeyboardView.kt).
+    private static let edgeTolerance: CGFloat = 0.5
+
     func setKeyTargetWeights(_ weights: [UInt8: Float]) {
         keyTargetWeights = weights
     }

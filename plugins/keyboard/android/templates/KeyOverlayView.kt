@@ -175,6 +175,7 @@ class KeyOverlayView @JvmOverloads constructor(
         }
         if (bestIdx >= 0 && bestIdx != state.selectedIndex) {
             state.selectedIndex = bestIdx
+            KeyFeedback.performTickHaptic(this)
             invalidate()
         }
     }

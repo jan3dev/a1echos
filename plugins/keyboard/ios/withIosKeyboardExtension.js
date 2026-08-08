@@ -75,6 +75,54 @@ const CONFUSABLES_SOURCE = path.join(
   CONFUSABLES_FILE,
 );
 
+// LM reranker (context-aware autocorrect): the llama.cpp runtime and
+// LmReranker.swift are wired into the build only when the locally-built
+// vendor artifact exists (scripts/keyboard-lm/build-llama-xcframework.sh);
+// the same condition defines ECHOS_LM for the Swift sources. Without it the
+// keyboard builds exactly as before, LM code excluded. A local
+// data/keyboard-lm/keyboard_lm.gguf (dev convenience, git-ignored)
+// additionally ships as a bundle resource; production devices get the model
+// via the in-app download instead.
+const LLAMA_XCFRAMEWORK = "llama.xcframework";
+const LLAMA_XCFRAMEWORK_SOURCE = path.join(
+  __dirname,
+  "vendor",
+  LLAMA_XCFRAMEWORK,
+);
+const LM_RERANKER_SWIFT_FILE = "LmReranker.swift";
+const LM_MODEL_FILE = "keyboard_lm.gguf";
+const LM_MODEL_SOURCE = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "data",
+  "keyboard-lm",
+  LM_MODEL_FILE,
+);
+
+function lmEnabled() {
+  return fs.existsSync(LLAMA_XCFRAMEWORK_SOURCE);
+}
+
+/**
+ * Adds `value` (plus any `extras`) to a space-separated Xcode build setting,
+ * preserving whatever is already there. Xcode settings are strings, and
+ * assigning a bare value silently discards `$(inherited)` and anything a
+ * previous mod contributed.
+ */
+function appendBuildSetting(current, value, extras = []) {
+  const existing = String(current ?? "")
+    .replace(/^"|"$/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!existing.includes("$(inherited)")) existing.unshift("$(inherited)");
+  for (const token of [...extras, value]) {
+    if (!existing.includes(token)) existing.push(token);
+  }
+  return `"${existing.join(" ")}"`;
+}
+
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -109,14 +157,27 @@ function withKeyboardXcodeTarget(config) {
       DICTIONARY_FILE,
       CONFUSABLES_FILE,
     ];
+    if (lmEnabled()) {
+      groupFiles.push(LM_RERANKER_SWIFT_FILE, LLAMA_XCFRAMEWORK);
+      if (fs.existsSync(LM_MODEL_SOURCE)) {
+        groupFiles.push(LM_MODEL_FILE);
+      }
+    }
     const extensionGroup = proj.addPbxGroup(groupFiles, targetName, targetName);
 
-    // The xcode lib guesses `lastKnownFileType` poorly for the unknown .echd
-    // extension — mark it as raw data so Xcode doesn't try to compile it.
+    // The xcode lib guesses `lastKnownFileType` poorly for extensions it
+    // doesn't know — mark the raw binaries as data and the xcframework as a
+    // wrapper so Xcode doesn't try to compile them.
     const fileRefSection = proj.hash.project.objects["PBXFileReference"];
+    const fileTypeOverrides = {
+      [DICTIONARY_FILE]: "file",
+      [LM_MODEL_FILE]: "file",
+      [LLAMA_XCFRAMEWORK]: "wrapper.xcframework",
+    };
     for (const child of extensionGroup.pbxGroup.children) {
-      if (child.comment === DICTIONARY_FILE && fileRefSection[child.value]) {
-        fileRefSection[child.value].lastKnownFileType = "file";
+      const override = fileTypeOverrides[child.comment];
+      if (override && fileRefSection[child.value]) {
+        fileRefSection[child.value].lastKnownFileType = override;
         delete fileRefSection[child.value].explicitFileType;
       }
     }
@@ -185,18 +246,30 @@ function withKeyboardXcodeTarget(config) {
     ];
 
     // Route group children by extension: .swift compiles in Sources, the
-    // dictionary binary copies in Resources (feeding it to Sources would
+    // llama.xcframework links in Frameworks, everything else (dictionary
+    // binary, gguf) copies in Resources (feeding those to Sources would
     // break the build).
     const sourcesPhase =
       proj.hash.project.objects["PBXSourcesBuildPhase"][sourcePhaseUuid];
     const resourcesPhase =
       proj.hash.project.objects["PBXResourcesBuildPhase"][resourcesPhaseUuid];
+    const frameworksPhase =
+      proj.hash.project.objects["PBXFrameworksBuildPhase"][frameworkPhaseUuid];
     for (const child of extensionGroup.pbxGroup.children) {
       const fileRefUuid = child.value;
       const fileName = child.comment;
       const isSource = fileName.endsWith(".swift");
-      const phase = isSource ? sourcesPhase : resourcesPhase;
-      const phaseName = isSource ? "Sources" : "Resources";
+      const isFramework = fileName.endsWith(".xcframework");
+      const phase = isSource
+        ? sourcesPhase
+        : isFramework
+          ? frameworksPhase
+          : resourcesPhase;
+      const phaseName = isSource
+        ? "Sources"
+        : isFramework
+          ? "Frameworks"
+          : "Resources";
       const buildFileUuid = proj.generateUuid();
 
       buildFileSection[buildFileUuid] = {
@@ -214,14 +287,22 @@ function withKeyboardXcodeTarget(config) {
 
     // Add system frameworks to the extension target
     const frameworks = ["AVFoundation", "UIKit", "AudioToolbox"];
+    if (lmEnabled()) {
+      // ggml is built with GGML_ACCELERATE=ON and is C++.
+      frameworks.push("Accelerate");
+    }
     for (const fw of frameworks) {
       proj.addFramework(`${fw}.framework`, { target: target.uuid });
     }
 
     // Configure build settings for the extension target.
-    // First, read main app's version settings so the extension matches.
+    // First, read main app's version + signing settings so the extension
+    // matches (the team comes from app.json ios.appleTeamId via prebuild;
+    // addTarget creates the extension without one, which breaks device
+    // signing).
     let mainAppVersion = "1.0";
     let mainAppBuildNumber = "1";
+    let mainAppTeam = null;
     const configurations = proj.pbxXCBuildConfigurationSection();
     for (const key in configurations) {
       const c = configurations[key];
@@ -233,6 +314,7 @@ function withKeyboardXcodeTarget(config) {
       if (bid === "com.a1lab.echos" && c.buildSettings.MARKETING_VERSION) {
         mainAppVersion = c.buildSettings.MARKETING_VERSION;
         mainAppBuildNumber = c.buildSettings.CURRENT_PROJECT_VERSION || "1";
+        mainAppTeam = c.buildSettings.DEVELOPMENT_TEAM || null;
         break;
       }
     }
@@ -256,6 +338,26 @@ function withKeyboardXcodeTarget(config) {
         config_entry.buildSettings.MARKETING_VERSION = mainAppVersion;
         config_entry.buildSettings.CURRENT_PROJECT_VERSION = mainAppBuildNumber;
         config_entry.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
+        if (mainAppTeam) {
+          config_entry.buildSettings.DEVELOPMENT_TEAM = mainAppTeam;
+        }
+        if (lmEnabled()) {
+          // Append rather than assign: a bare value would drop $(inherited)
+          // (and anything an earlier mod or Expo set), silently changing how
+          // the extension links / which flags are defined.
+          config_entry.buildSettings.OTHER_LDFLAGS = appendBuildSetting(
+            config_entry.buildSettings.OTHER_LDFLAGS,
+            "-lc++",
+          );
+          // Gates the LmReranker references in the always-compiled sources
+          // (EchosKeyboardViewController) on the runtime being linked.
+          config_entry.buildSettings.SWIFT_ACTIVE_COMPILATION_CONDITIONS =
+            appendBuildSetting(
+              config_entry.buildSettings.SWIFT_ACTIVE_COMPILATION_CONDITIONS,
+              "ECHOS_LM",
+              config_entry.name === "Debug" ? ["DEBUG"] : [],
+            );
+        }
       }
     }
 
@@ -373,6 +475,29 @@ function withKeyboardExtensionFiles(config) {
         CONFUSABLES_SOURCE,
         path.join(extensionDir, CONFUSABLES_FILE),
       );
+
+      // TEMPORARY (LM spike): stage the llama.cpp runtime, harness, and
+      // placeholder model when the vendor artifact has been built locally.
+      if (lmEnabled()) {
+        fs.writeFileSync(
+          path.join(extensionDir, LM_RERANKER_SWIFT_FILE),
+          fs.readFileSync(
+            path.join(TEMPLATES_DIR, LM_RERANKER_SWIFT_FILE),
+            "utf8",
+          ),
+        );
+        fs.cpSync(
+          LLAMA_XCFRAMEWORK_SOURCE,
+          path.join(extensionDir, LLAMA_XCFRAMEWORK),
+          { recursive: true },
+        );
+        if (fs.existsSync(LM_MODEL_SOURCE)) {
+          fs.copyFileSync(
+            LM_MODEL_SOURCE,
+            path.join(extensionDir, LM_MODEL_FILE),
+          );
+        }
+      }
 
       // Write extension Info.plist
       const infoPlist = {

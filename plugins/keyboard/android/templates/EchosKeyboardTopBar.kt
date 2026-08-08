@@ -186,7 +186,10 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             setPadding(padH, padV, padH, padV)
             contentDescription = "Start recording"
             setImageResource(drawable("ic_mic"))
-            setOnClickListener { listener?.onRecordClick() }
+            setOnClickListener {
+                KeyFeedback.performKeyHaptic(it)
+                listener?.onRecordClick()
+            }
         }
         recordContainer.addView(recordButton)
 

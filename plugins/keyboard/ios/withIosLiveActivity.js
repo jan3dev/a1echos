@@ -274,9 +274,12 @@ function withLiveActivityXcodeTarget(config) {
       proj.addFramework(`${fw}.framework`, { target: target.uuid });
     }
 
-    // Match the main app's version, like the keyboard target does.
+    // Match the main app's version + signing team, like the keyboard target
+    // does (addTarget creates the widget without a team, which breaks device
+    // signing on a clean prebuild).
     let mainAppVersion = "1.0";
     let mainAppBuildNumber = "1";
+    let mainAppTeam = null;
     const configurations = proj.pbxXCBuildConfigurationSection();
     for (const key in configurations) {
       const c = configurations[key];
@@ -288,6 +291,7 @@ function withLiveActivityXcodeTarget(config) {
       if (bid === MAIN_BUNDLE_ID && c.buildSettings.MARKETING_VERSION) {
         mainAppVersion = c.buildSettings.MARKETING_VERSION;
         mainAppBuildNumber = c.buildSettings.CURRENT_PROJECT_VERSION || "1";
+        mainAppTeam = c.buildSettings.DEVELOPMENT_TEAM || null;
         break;
       }
     }
@@ -311,6 +315,9 @@ function withLiveActivityXcodeTarget(config) {
         c.buildSettings.MARKETING_VERSION = mainAppVersion;
         c.buildSettings.CURRENT_PROJECT_VERSION = mainAppBuildNumber;
         c.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
+        if (mainAppTeam) {
+          c.buildSettings.DEVELOPMENT_TEAM = mainAppTeam;
+        }
       }
     }
 

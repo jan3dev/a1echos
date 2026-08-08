@@ -8,7 +8,8 @@
     "scheme": "echos",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "buildNumber": "10",
+      "appleTeamId": "8KC4F7DWTY",
+      "buildNumber": "11",
       "supportsTablet": true,
       "deploymentTarget": "16.0",
       "infoPlist": {

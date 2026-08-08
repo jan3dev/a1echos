@@ -25,6 +25,12 @@ export interface KeyboardSettingsConfig {
    *  stay resident for this window. `0` = Off (no background session). Read by
    *  the iOS main-app transcription listener to size the session timer. */
   micTimeoutSeconds: number;
+  /** When true, the keyboard blends the on-device language model's
+   *  sentence-context evidence into autocorrect ranking (requires the
+   *  downloaded keyboard LM; default off). */
+  contextAwareAutocorrect: boolean;
+  /** How strongly LM evidence weighs against the classical score (0…2). */
+  lmStrength: number;
 }
 
 /**
@@ -41,6 +47,8 @@ export const writeKeyboardSettings = (config: KeyboardSettingsConfig): void => {
       hapticFeedback: config.hapticFeedback,
       keySound: config.keySound,
       micTimeoutSeconds: config.micTimeoutSeconds,
+      contextAwareAutocorrect: config.contextAwareAutocorrect,
+      lmStrength: config.lmStrength,
     },
     { flag: FeatureFlag.settings, label: "keyboard settings" },
   );

@@ -1,0 +1,122 @@
+package com.a1lab.echos.ime
+
+import android.util.Log
+import java.io.File
+import java.util.concurrent.locks.ReentrantLock
+
+/**
+ * llama.cpp-backed implementation of [LmRerankerProviding]; the JNI side
+ * (llama_jni.cpp) mirrors LmReranker.swift. The native library ships only
+ * when the vendor static libs were built locally (scripts/keyboard-lm/
+ * build-llama-android.sh) — otherwise [libLoaded] is false and every call
+ * degrades to "model unavailable", leaving the classical ranking untouched.
+ *
+ * Loading runs once, off the UI thread; [scores] runs synchronously on the
+ * caller's thread (~3ms p95 measured on A16-class hardware for 8 candidates)
+ * and returns null while loading, after failure, or when another thread
+ * holds the model.
+ */
+class LmReranker : LmRerankerProviding {
+
+    companion object {
+        private const val TAG = "EchosLmReranker"
+
+        private val libLoaded: Boolean = try {
+            System.loadLibrary("echoslm")
+            true
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    private val lock = ReentrantLock()
+    private var handle: Long = 0
+    private var state = State.IDLE
+    /** Bumped by [unload] so a load already in flight frees its result instead
+     *  of publishing (or latching FAILED over) it. */
+    private var loadGeneration: Long = 0
+
+    private enum class State { IDLE, LOADING, READY, FAILED }
+
+    /** Starts the one-time background load; safe to call repeatedly. */
+    fun loadIfNeeded(modelPath: String) {
+        if (!libLoaded) return
+        val generation: Long
+        lock.lock()
+        try {
+            if (state != State.IDLE) return
+            state = State.LOADING
+            generation = loadGeneration
+        } finally {
+            lock.unlock()
+        }
+        Thread {
+            val loaded = if (File(modelPath).exists()) {
+                nativeInit(modelPath)
+            } else {
+                0L
+            }
+            var superseded = false
+            lock.lock()
+            try {
+                if (generation != loadGeneration) {
+                    // unload() ran while we were loading — don't publish over
+                    // the released state; free below, outside the lock.
+                    superseded = true
+                } else if (loaded != 0L) {
+                    handle = loaded
+                    state = State.READY
+                } else {
+                    state = State.FAILED
+                    Log.i(TAG, "model unavailable — reranker disabled")
+                }
+            } finally {
+                lock.unlock()
+            }
+            if (superseded && loaded != 0L) nativeFree(loaded)
+        }.apply {
+            name = "EchosLmLoad"
+            priority = Thread.MIN_PRIORITY
+            start()
+        }
+    }
+
+    /**
+     * Releases the model (memory pressure); the next [loadIfNeeded] reloads.
+     * Safe to call mid-load: the in-flight load is invalidated, so it frees its
+     * result rather than leaking it behind our back (and rather than leaving
+     * LOADING state that blocks a reload).
+     */
+    fun unload() {
+        lock.lock()
+        try {
+            loadGeneration++
+            if (handle != 0L) nativeFree(handle)
+            handle = 0
+            state = State.IDLE
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    override fun scores(leftContext: String, words: List<String>): FloatArray? {
+        if (!libLoaded || words.isEmpty()) return null
+        if (!lock.tryLock()) return null
+        try {
+            if (state != State.READY || handle == 0L) return null
+            return nativeScores(handle, leftContext, words.toTypedArray())
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    private external fun nativeInit(modelPath: String): Long
+
+    private external fun nativeScores(
+        handle: Long,
+        leftContext: String,
+        words: Array<String>,
+    ): FloatArray?
+
+    private external fun nativeFree(handle: Long)
+}

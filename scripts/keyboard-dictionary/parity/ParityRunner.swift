@@ -27,7 +27,8 @@ struct ParityRunner {
             let evaluateFixtures = fixtures["evaluate"] as? [[String: Any]],
             let nextWordsFixtures = fixtures["nextWords"] as? [[String: Any]],
             let confusableFixtures = fixtures["confusables"] as? [[String: Any]],
-            let nextCharFixtures = fixtures["nextCharWeights"] as? [[String: Any]]
+            let nextCharFixtures = fixtures["nextCharWeights"] as? [[String: Any]],
+            let lmRerankFixtures = fixtures["lmRerank"] as? [[String: Any]]
         else {
             die("could not parse \(args[3])")
         }
@@ -38,6 +39,7 @@ struct ParityRunner {
             ("nextWords", nextWordsFixtures.count),
             ("confusables", confusableFixtures.count),
             ("nextCharWeights", nextCharFixtures.count),
+            ("lmRerank", lmRerankFixtures.count),
         ] where count == 0 {
             die("fixture section '\(name)' is empty")
         }
@@ -122,17 +124,65 @@ struct ParityRunner {
                    expected: expected, actual: rendered)
         }
 
+        for v in lmRerankFixtures {
+            guard
+                let typed = v["typed"] as? String,
+                let leftContext = v["leftContext"] as? String,
+                let lmStrength = v["lmStrength"] as? Double,
+                let stub = v["stub"] as? [String: [String: Double]]
+            else { die("malformed lmRerank fixture: \(v)") }
+            let prevWord = v["prevWord"] as? String
+            let r = engine.evaluate(
+                typedRaw: typed,
+                previousWord: prevWord,
+                checkerSaysValid: false,
+                leftContext: leftContext,
+                reranker: StubReranker(table: stub),
+                lmStrength: Float(lmStrength)
+            )
+            let label = "lmRerank(\(typed), ctx=\(leftContext), λ=\(lmStrength))"
+            expect(label, "candidates",
+                   expected: v["candidates"] as? [String] ?? [],
+                   actual: r.candidates)
+            expect(label, "topIsCorrection",
+                   expected: v["topIsCorrection"] as? Bool ?? false,
+                   actual: r.topIsCorrection)
+            expect(label, "replacement",
+                   expected: v["replacement"] as? String,
+                   actual: r.replacement)
+            expect(label, "verbatim",
+                   expected: v["verbatim"] as? String,
+                   actual: r.verbatim)
+        }
+
         if failures > 0 {
             die("\(failures)/\(checked) parity checks FAILED")
         }
         print("Swift parity: \(checked) checks passed "
             + "(\(evaluateFixtures.count) evaluate, \(nextWordsFixtures.count) nextWords, "
             + "\(confusableFixtures.count) confusables, "
-            + "\(nextCharFixtures.count) nextCharWeights)")
+            + "\(nextCharFixtures.count) nextCharWeights, "
+            + "\(lmRerankFixtures.count) lmRerank)")
     }
 
     static func die(_ message: String, code: Int32 = 1) -> Never {
         FileHandle.standardError.write(Data((message + "\n").utf8))
         exit(code)
+    }
+}
+
+/// Deterministic stand-in for the llama.cpp reranker, mirroring the stub in
+/// generate-parity-fixtures.js: context -> word -> logprob, unknown word -10,
+/// unknown context -> nil ("model unavailable").
+final class StubReranker: LmRerankerProviding {
+    private let table: [String: [String: Double]]
+
+    init(table: [String: [String: Double]]) {
+        self.table = table
+    }
+
+    func scores(leftContext: String, words: [String]) -> [Float]? {
+        guard let row = table[leftContext] else { return nil }
+        return words.map { Float(row[$0] ?? -10) }
     }
 }

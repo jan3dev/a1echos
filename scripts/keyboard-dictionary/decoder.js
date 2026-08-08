@@ -76,6 +76,16 @@ const TUNING = {
   // Next-word prediction: how far down the frequency-ranked word list to scan
   // when filling prediction slots the bigram table left empty.
   predictionFallbackScan: 16,
+  // Neural reranker (optional): the top `lmTopCandidates` scored candidates
+  // get their word-level logprobs (length-normalized, given the left
+  // context) softmaxed into probabilities, each worth up to `lmStrength`
+  // score points — enough to reorder near-ties but not to resurrect a
+  // distant edit. For the sentence-initial confusables (ill/its/id/lets)
+  // the contraction must beat the literal reading's logprob by
+  // `lmConfusableMargin` or the word is left alone.
+  lmTopCandidates: 5,
+  lmStrength: 1.0,
+  lmConfusableMargin: 0,
 };
 
 /**
@@ -682,20 +692,62 @@ function scoreCandidates(model, rawCandidates, prevWord) {
           (TUNING.bigramWeight * bigramFreq) / 255,
       };
     })
-    .sort((a, b) => b.score - a.score || (a.word < b.word ? -1 : 1));
+    .sort(byScoreThenWord);
+}
+
+/**
+ * Canonical candidate ordering: score descending, ties broken by word
+ * ascending. The tie-break is pinned by the parity fixtures, so the Swift
+ * (`CorrectionEngine.candidateOrder`) and Kotlin (`candidateOrder`) mirrors
+ * must match it exactly.
+ */
+function byScoreThenWord(a, b) {
+  return b.score - a.score || (a.word < b.word ? -1 : 1);
+}
+
+/**
+ * Blends neural language-model evidence into the classical ranking. The
+ * reranker scores each candidate word as a continuation of `leftContext`
+ * (length-normalized logprob); those become a softmax distribution over the
+ * top candidates, worth up to `lmStrength` score points each. Candidates
+ * outside the top-N keep their scores and re-sort alongside. A reranker
+ * returning null (model not loaded, over budget) leaves the ranking
+ * untouched — with `reranker` absent this function is the identity, which
+ * the parity fixtures pin.
+ */
+function applyLmRerank(scored, leftContext, reranker, lmStrength) {
+  if (!reranker || scored.length < 2) return scored;
+  const n = Math.min(TUNING.lmTopCandidates, scored.length);
+  const words = scored.slice(0, n).map((c) => renderCandidate(c.word, c.flags));
+  const logProbs = reranker.scores(leftContext ?? "", words);
+  if (!logProbs || logProbs.length !== n) return scored;
+  const maxLp = Math.max(...logProbs);
+  const exps = logProbs.map((lp) => Math.exp(lp - maxLp));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  const out = scored.slice();
+  for (let i = 0; i < n; i++) {
+    out[i] = { ...out[i], score: out[i].score + (lmStrength * exps[i]) / sum };
+  }
+  return out.sort(byScoreThenWord);
 }
 
 /**
  * Full reference evaluation mirroring the native engines' public behavior.
  * `typedRaw` keeps original casing (for the ALL-CAPS gate). `knownValid`
  * models the platform vetoes (user lexicon / UITextChecker); `blacklisted`
- * models the learned "don't correct X to Y" pairs.
+ * models the learned "don't correct X to Y" pairs. `leftContext` is the
+ * text before the typed word (may span sentence boundaries); `reranker`
+ * exposes `scores(leftContext, words) -> logProbs|null` backed by the
+ * on-device LM.
  */
 function evaluate(model, typedRaw, prevWord = null, options = {}) {
   const {
     knownValid = false,
     blacklisted = () => false,
     touchPoints = null,
+    leftContext = null,
+    reranker = null,
+    lmStrength = TUNING.lmStrength,
   } = options;
   const typed = normalizeToken(typedRaw);
   const empty = {
@@ -725,6 +777,24 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
     typedRaw === typed[0].toUpperCase() + typed.slice(1) &&
     !blacklisted(typed, ambiguous.toLowerCase())
   ) {
+    // With an LM available this stops being a blind rule: the contraction
+    // must actually read better than the literal word in context ("Ill be
+    // there" contracts, "Ill patients need rest" stays).
+    if (reranker) {
+      const lps = reranker.scores(leftContext ?? "", [typedRaw, ambiguous]);
+      if (
+        lps &&
+        lps.length === 2 &&
+        lps[1] - lps[0] <= TUNING.lmConfusableMargin
+      ) {
+        return {
+          candidates: [ambiguous],
+          topIsCorrection: false,
+          verbatim: null,
+          replacement: null,
+        };
+      }
+    }
     return {
       candidates: [ambiguous],
       topIsCorrection: true,
@@ -765,8 +835,11 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
   const raw = search(model, typed, touchPoints).filter(
     (c) => c.editCost === 0 || (c.flags & FLAG_NEVER_CORRECT_TO) === 0,
   );
-  const scored = scoreCandidates(model, raw, prevWord).filter(
-    (c) => c.word !== typed,
+  const scored = applyLmRerank(
+    scoreCandidates(model, raw, prevWord).filter((c) => c.word !== typed),
+    leftContext,
+    reranker,
+    lmStrength,
   );
   const top3 = scored
     .slice(0, TUNING.maxCandidates)
@@ -983,4 +1056,5 @@ module.exports = {
   normalizeToken,
   parseConfusables,
   contextualContraction,
+  applyLmRerank,
 };

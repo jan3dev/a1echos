@@ -44,6 +44,18 @@ object KeyFeedback {
         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 
+    /**
+     * Tick for a selection *changing* under a still-held finger — dragging
+     * across the accent popup, scrubbing the emoji category strip. The
+     * counterpart of iOS's `UISelectionFeedbackGenerator`; `CLOCK_TICK` is
+     * what the platform's own pickers use and is lighter than `KEYBOARD_TAP`,
+     * which would feel like typing a key on every cell crossed.
+     */
+    fun performTickHaptic(view: View) {
+        if (!KeyboardSettings.load(view.context).hapticFeedback) return
+        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+    }
+
     /** System key-click, if the user's setting and system sounds allow it. */
     fun performKeySound(
         context: Context,

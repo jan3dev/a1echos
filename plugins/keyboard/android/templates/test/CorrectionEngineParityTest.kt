@@ -138,6 +138,58 @@ class CorrectionEngineParityTest {
         }
     }
 
+    /**
+     * Deterministic stand-in for the llama.cpp reranker, mirroring the stub
+     * in generate-parity-fixtures.js: context -> word -> logprob, unknown
+     * word -10, unknown context -> null ("model unavailable").
+     */
+    private class StubReranker(
+        private val table: Map<String, Map<String, Double>>,
+    ) : LmRerankerProviding {
+        override fun scores(leftContext: String, words: List<String>): FloatArray? {
+            val row = table[leftContext] ?: return null
+            return FloatArray(words.size) { (row[words[it]] ?: -10.0).toFloat() }
+        }
+    }
+
+    @Test
+    fun lmRerankMatchesReference() {
+        val vectors = fixtures.getJSONArray("lmRerank")
+        check(vectors.length() > 0) { "fixture section 'lmRerank' is empty" }
+        for (i in 0 until vectors.length()) {
+            val v = vectors.getJSONObject(i)
+            val typed = v.getString("typed")
+            val leftContext = v.getString("leftContext")
+            val stubJson = v.getJSONObject("stub")
+            val table = stubJson.keys().asSequence().associateWith { ctx ->
+                val row = stubJson.getJSONObject(ctx)
+                row.keys().asSequence().associateWith { row.getDouble(it) }
+            }
+            val label = "lmRerank($typed, ctx=$leftContext)"
+            val r = engine.evaluate(
+                typed,
+                v.stringOrNull("prevWord"),
+                externallyValid = false,
+                touchPoints = null,
+                leftContext = leftContext,
+                reranker = StubReranker(table),
+                lmStrength = v.getDouble("lmStrength").toFloat(),
+            )
+            assertEquals(
+                "$label candidates",
+                v.getJSONArray("candidates").strings(),
+                r.candidates,
+            )
+            assertEquals(
+                "$label topIsCorrection",
+                v.getBoolean("topIsCorrection"),
+                r.topIsCorrection,
+            )
+            assertEquals("$label replacement", v.stringOrNull("replacement"), r.replacement)
+            assertEquals("$label verbatim", v.stringOrNull("verbatim"), r.verbatim)
+        }
+    }
+
     @Test
     fun confusablesMatchReference() {
         val vectors = fixtures.getJSONArray("confusables")

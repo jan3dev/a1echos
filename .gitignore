@@ -58,3 +58,8 @@ coverage/
 .claude/*
 !.claude/agents/
 !.claude/commands/
+# Keyboard LM artifacts (built locally — see scripts/keyboard-lm/)
+.build/
+plugins/keyboard/ios/vendor/
+plugins/keyboard/android/vendor/
+data/keyboard-lm/*.gguf

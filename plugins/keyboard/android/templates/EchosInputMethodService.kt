@@ -1,6 +1,7 @@
 package com.a1lab.echos.ime
 
 import android.Manifest
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -18,8 +19,16 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import java.io.File
 import java.text.BreakIterator
 import java.util.Locale
+
+/**
+ * How much text before the cursor the correction path reads. 256 rather than
+ * the previous 48 because the LM reranker scores candidates against full
+ * sentence context, not just the previous word.
+ */
+private const val LM_CONTEXT_LOOKBEHIND_CHARS = 256
 
 /**
  * Echos system keyboard with voice transcription.
@@ -64,6 +73,10 @@ class EchosInputMethodService : InputMethodService(),
     /// then [SuggestionEngine] falls back to the system spell checker.
     private lateinit var correctionEngine: CorrectionEngine
     private var keyboardSettings = KeyboardSettings.Settings()
+    /// Neural reranker for context-aware autocorrect (§5.13). Attached to
+    /// the suggestion engine only while the setting is on, so LM-off stays
+    /// bit-identical to the classical engine. Mirrors the iOS VC wiring.
+    private val lmReranker = LmReranker()
     /// Word the user explicitly kept by tapping the verbatim strip slot —
     /// autocorrect must not fire on it when the separator lands. Cleared on
     /// cursor moves and whenever the composing word ends.
@@ -324,6 +337,7 @@ class EchosInputMethodService : InputMethodService(),
         // whether this field allows suggestions, ensure the spell-checker
         // session is up for the current language, and clear any stale strip.
         keyboardSettings = KeyboardSettings.load(this)
+        applyLmSettings()
         suggestionsAllowed = computeSuggestionsAllowed(info)
         ensureSuggestionEngineStarted()
         lastAutoCorrected = null
@@ -331,6 +345,39 @@ class EchosInputMethodService : InputMethodService(),
         clearSuggestions()
 
         applyAutoCap()
+    }
+
+    /**
+     * Attaches/detaches the neural reranker per the current settings. The
+     * downloaded model lands in `<filesDir>/models/keyboard_lm/` (same
+     * process — no copy step, unlike iOS).
+     */
+    private fun applyLmSettings() {
+        suggestionEngine.lmStrength = keyboardSettings.lmStrength
+        if (keyboardSettings.contextAwareAutocorrect) {
+            lmReranker.loadIfNeeded(
+                File(filesDir, "models/keyboard_lm/keyboard_lm.gguf").absolutePath,
+            )
+            suggestionEngine.lmReranker = lmReranker
+        } else {
+            suggestionEngine.lmReranker = null
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // The two TRIM_MEMORY scales interleave — the "running" levels
+        // (RUNNING_CRITICAL = 15) sit *below* the background ones
+        // (UI_HIDDEN = 20 … COMPLETE = 80), so `level >= RUNNING_CRITICAL`
+        // would also fire on every routine keyboard dismissal and make us
+        // re-mmap the model on each show/hide cycle. Only drop it under real
+        // pressure: critical while running, or the deepest background level.
+        val underPressure =
+            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+                level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+        if (underPressure) {
+            lmReranker.unload()
+        }
     }
 
     /**
@@ -603,7 +650,8 @@ class EchosInputMethodService : InputMethodService(),
         if (after.isNotEmpty() && !SpacingAndPunctuations.isWordSeparator(after[0])) {
             return false
         }
-        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val before =
+            ic.getTextBeforeCursor(LM_CONTEXT_LOOKBEHIND_CHARS, 0)?.toString().orEmpty()
         val word = SuggestionEngine.currentWordBefore(before)
         if (word.isEmpty() || word.equals(autocorrectSuppressedWord, ignoreCase = true)) {
             return false
@@ -611,7 +659,12 @@ class EchosInputMethodService : InputMethodService(),
         val previous = SuggestionEngine.previousWordBefore(before, word)
         val corrected: String? = if (suggestionEngine.usesBundledEngine) {
             // Synchronous lookup — the decision can never be stale.
-            val result = suggestionEngine.lookupNow(word, previous, touchPointsMatching(word))
+            val result = suggestionEngine.lookupNow(
+                word,
+                previous,
+                touchPointsMatching(word),
+                SuggestionEngine.leftContext(before, word),
+            )
             if (result.topIsCorrection) result.replacement else null
         } else {
             // Legacy checker path: consult the cached async result.
@@ -1204,7 +1257,8 @@ class EchosInputMethodService : InputMethodService(),
             clearSuggestions()
             return
         }
-        val before = ic.getTextBeforeCursor(48, 0)?.toString().orEmpty()
+        val before =
+            ic.getTextBeforeCursor(LM_CONTEXT_LOOKBEHIND_CHARS, 0)?.toString().orEmpty()
         val word = SuggestionEngine.currentWordBefore(before)
         if (word.isEmpty()) {
             autocorrectSuppressedWord = null
@@ -1248,6 +1302,7 @@ class EchosInputMethodService : InputMethodService(),
             word,
             SuggestionEngine.previousWordBefore(before, word),
             touchPointsMatching(word),
+            SuggestionEngine.leftContext(before, word),
         )
     }
 

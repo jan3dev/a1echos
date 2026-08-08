@@ -6,6 +6,7 @@ import chipGallery from "@/components/ui/chip/Chip.gallery";
 import ctaModuleGallery from "@/components/ui/cta-module/CTAModule.gallery";
 import dimmerGallery from "@/components/ui/modal/Dimmer.gallery";
 import dividerGallery from "@/components/ui/divider/Divider.gallery";
+import downloadProgressBarGallery from "@/components/ui/download-progress-bar/DownloadProgressBar.gallery";
 import flagIconGallery from "@/components/ui/icon/FlagIcon.gallery";
 import glassIconButtonGallery from "@/components/ui/glass-icon-button/GlassIconButton.gallery";
 import iconGallery from "@/components/ui/icon/Icon.gallery";
@@ -65,6 +66,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   glassIconButtonGallery,
   iconGallery,
   modalGallery,
+  downloadProgressBarGallery,
   progressGallery,
   radioGallery,
   subScreenNavbarGallery,

@@ -1,5 +1,13 @@
 import Foundation
 
+/// Scoring interface of the on-device neural reranker (LmReranker, llama.cpp
+/// backed; stubbed in parity tests). Returns one length-normalized logprob
+/// per word — the word read as a continuation of `leftContext` — or nil when
+/// the model is unavailable, which leaves the classical ranking untouched.
+protocol LmRerankerProviding: AnyObject {
+    func scores(leftContext: String, words: [String]) -> [Float]?
+}
+
 /// On-device correction/completion engine over the bundled "ECHD" dictionary
 /// binary (compiled by `scripts/keyboard-dictionary/build.js` from an
 /// 82k-word frequency lexicon + bigrams + contractions).
@@ -48,6 +56,11 @@ final class CorrectionEngine {
         static let commonFreqFloor: UInt8 = 64
         static let epsilon: Float = 1e-6
         static let predictionFallbackScan = 16
+        // Neural reranker blend — mirrors decoder.js TUNING (lmTopCandidates
+        // / lmStrength / lmConfusableMargin); see there for rationale.
+        static let lmTopCandidates = 5
+        static let lmStrength: Float = 1.0
+        static let lmConfusableMargin: Float = 0
     }
 
     /// Curated sentence-openers shown when there is no previous word (empty
@@ -405,7 +418,10 @@ final class CorrectionEngine {
         typedRaw: String,
         previousWord: String?,
         checkerSaysValid: Bool,
-        touchPoints: [TouchPoint?]? = nil
+        touchPoints: [TouchPoint?]? = nil,
+        leftContext: String? = nil,
+        reranker: LmRerankerProviding? = nil,
+        lmStrength: Float = Tuning.lmStrength
     ) -> Evaluation {
         guard isLoaded else { return .empty }
         let typedString = Self.normalize(typedRaw)
@@ -431,6 +447,21 @@ final class CorrectionEngine {
            previousWord == nil,
            typedRaw == typedString.prefix(1).uppercased() + typedString.dropFirst(),
            !userLexicon.isBlacklisted(typed: typedString, corrected: ambiguous) {
+            // With an LM available this stops being a blind rule: the
+            // contraction must actually read better than the literal word in
+            // context (mirrors decoder.js).
+            if let reranker,
+               let lps = reranker.scores(
+                   leftContext: leftContext ?? "", words: [typedRaw, ambiguous]),
+               lps.count == 2,
+               lps[1] - lps[0] <= Tuning.lmConfusableMargin {
+                return Evaluation(
+                    candidates: [ambiguous],
+                    topIsCorrection: false,
+                    verbatim: nil,
+                    replacement: nil
+                )
+            }
             return Evaluation(
                 candidates: [ambiguous],
                 topIsCorrection: true,
@@ -506,11 +537,13 @@ final class CorrectionEngine {
         }
 
         scored.removeAll { String(decoding: $0.word, as: UTF8.self) == typedString }
-        scored.sort {
-            if $0.score != $1.score { return $0.score > $1.score }
-            return String(decoding: $0.word, as: UTF8.self)
-                < String(decoding: $1.word, as: UTF8.self)
-        }
+        scored.sort(by: Self.candidateOrder)
+        scored = applyLmRerank(
+            scored,
+            leftContext: leftContext,
+            reranker: reranker,
+            lmStrength: lmStrength
+        )
 
         let display = scored.prefix(Tuning.maxCandidates).map {
             Self.renderCandidate(
@@ -574,6 +607,45 @@ final class CorrectionEngine {
             verbatim: topIsCorrection ? typedRaw : nil,
             replacement: replacement
         )
+    }
+
+    /// Score-descending, then lexicographic — the deterministic tie-break the
+    /// parity fixtures pin (mirrors decoder.js `scoreCandidates`).
+    private static func candidateOrder(_ a: Candidate, _ b: Candidate) -> Bool {
+        if a.score != b.score { return a.score > b.score }
+        return String(decoding: a.word, as: UTF8.self)
+            < String(decoding: b.word, as: UTF8.self)
+    }
+
+    /// Blends LM evidence into the classical ranking — mirrors decoder.js
+    /// `applyLmRerank`: softmax the top candidates' length-normalized
+    /// logprobs, each worth up to `lmStrength` score points. A nil reranker
+    /// or nil score vector is the identity.
+    private func applyLmRerank(
+        _ scored: [Candidate],
+        leftContext: String?,
+        reranker: LmRerankerProviding?,
+        lmStrength: Float
+    ) -> [Candidate] {
+        guard let reranker, scored.count >= 2 else { return scored }
+        let n = min(Tuning.lmTopCandidates, scored.count)
+        let words = scored.prefix(n).map {
+            Self.renderCandidate(
+                String(decoding: $0.word, as: UTF8.self), flags: $0.flags
+            )
+        }
+        guard
+            let logProbs = reranker.scores(
+                leftContext: leftContext ?? "", words: words),
+            logProbs.count == n
+        else { return scored }
+        let maxLp = logProbs.max() ?? 0
+        let exps = logProbs.map { expf($0 - maxLp) }
+        let sum = exps.reduce(0, +)
+        var out = scored
+        for i in 0..<n { out[i].score += lmStrength * exps[i] / sum }
+        out.sort(by: Self.candidateOrder)
+        return out
     }
 
     /// Title-case form of `word` when the dictionary flags it a proper noun,

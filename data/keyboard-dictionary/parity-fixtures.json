@@ -2265,5 +2265,174 @@
       "nextWord": "know",
       "contraction": "he'll"
     }
+  ],
+  "lmRerank": [
+    {
+      "typed": "thw",
+      "prevWord": "to",
+      "leftContext": "He tried to",
+      "lmStrength": 1,
+      "stub": {
+        "He tried to": {
+          "thwart": -0.5,
+          "the": -4,
+          "thaw": -6
+        }
+      },
+      "candidates": [
+        "thwart",
+        "the",
+        "thwack"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "teh",
+      "prevWord": null,
+      "leftContext": "Open",
+      "lmStrength": 1,
+      "stub": {
+        "Open": {
+          "the": -0.5,
+          "ten": -5,
+          "eth": -3
+        }
+      },
+      "candidates": [
+        "the",
+        "eth",
+        "ten"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "teh"
+    },
+    {
+      "typed": "sata",
+      "prevWord": "the",
+      "leftContext": "We grilled the",
+      "lmStrength": 1,
+      "stub": {
+        "We grilled the": {
+          "satay": -0.5,
+          "saga": -5,
+          "satan": -6
+        }
+      },
+      "candidates": [
+        "satay",
+        "satan",
+        "sat a"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "thw",
+      "prevWord": "to",
+      "leftContext": "He tried to",
+      "lmStrength": 0,
+      "stub": {
+        "He tried to": {
+          "thwart": -0.5,
+          "the": -4
+        }
+      },
+      "candidates": [
+        "the",
+        "thwart",
+        "thwack"
+      ],
+      "topIsCorrection": true,
+      "replacement": "the",
+      "verbatim": "thw"
+    },
+    {
+      "typed": "thw",
+      "prevWord": "to",
+      "leftContext": "He tried to",
+      "lmStrength": 2,
+      "stub": {
+        "He tried to": {
+          "thwart": -0.5,
+          "the": -4
+        }
+      },
+      "candidates": [
+        "thwart",
+        "the",
+        "thwack"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "",
+      "lmStrength": 1,
+      "stub": {
+        "": {
+          "Ill": -4,
+          "I'll": -0.5
+        }
+      },
+      "candidates": [
+        "I'll"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'll",
+      "verbatim": "Ill"
+    },
+    {
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "The doctor said.",
+      "lmStrength": 1,
+      "stub": {
+        "The doctor said.": {
+          "Ill": -0.5,
+          "I'll": -4
+        }
+      },
+      "candidates": [
+        "I'll"
+      ],
+      "topIsCorrection": false,
+      "replacement": null,
+      "verbatim": null
+    },
+    {
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "context the stub does not know",
+      "lmStrength": 1,
+      "stub": {},
+      "candidates": [
+        "I'll"
+      ],
+      "topIsCorrection": true,
+      "replacement": "I'll",
+      "verbatim": "Ill"
+    },
+    {
+      "typed": "helko",
+      "prevWord": null,
+      "leftContext": "context the stub does not know",
+      "lmStrength": 1,
+      "stub": {},
+      "candidates": [
+        "hello",
+        "help",
+        "helios"
+      ],
+      "topIsCorrection": true,
+      "replacement": "hello",
+      "verbatim": "helko"
+    }
   ]
 }

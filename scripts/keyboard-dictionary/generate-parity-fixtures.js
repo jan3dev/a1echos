@@ -22,7 +22,9 @@ const {
   nextCharWeights,
   parseConfusables,
   contextualContraction,
+  TUNING,
 } = require("./decoder");
+const { makeStubReranker } = require("./lm-stub");
 
 // Prefixes exercising the key-target-resizing signal: deep/shallow trie
 // walks, mid-label landings (calenda), apostrophe continuations filtered
@@ -87,6 +89,73 @@ const CONFUSABLE_CASES = [
   ["lets", "sync"],
   ["hell", "know"],
 ];
+// LM-reranker blend vectors: a deterministic stub reranker (context ->
+// word -> length-normalized logprob; unknown word -10, unknown context ->
+// null i.e. "model unavailable") drives evaluate()'s blend path so all three
+// implementations can replay identical neural evidence without a model.
+// Stub logprobs are kept >=0.5 apart so Float vs double softmax can't flip
+// an ordering. Cases cover: a near-tie flipped by the LM, an LM too weak to
+// resurrect a distant candidate, strength 0 (blend is a no-op) and 2, the
+// sentence-initial confusable in both directions, and the null fallback.
+const LM_RERANK_CASES = [
+  {
+    typed: "thw",
+    prevWord: "to",
+    leftContext: "He tried to",
+    stub: { "He tried to": { thwart: -0.5, the: -4.0, thaw: -6.0 } },
+  },
+  {
+    typed: "teh",
+    prevWord: null,
+    leftContext: "Open",
+    stub: { Open: { the: -0.5, ten: -5.0, eth: -3.0 } },
+  },
+  {
+    typed: "sata",
+    prevWord: "the",
+    leftContext: "We grilled the",
+    stub: { "We grilled the": { satay: -0.5, saga: -5.0, satan: -6.0 } },
+  },
+  {
+    typed: "thw",
+    prevWord: "to",
+    leftContext: "He tried to",
+    lmStrength: 0,
+    stub: { "He tried to": { thwart: -0.5, the: -4.0 } },
+  },
+  {
+    typed: "thw",
+    prevWord: "to",
+    leftContext: "He tried to",
+    lmStrength: 2,
+    stub: { "He tried to": { thwart: -0.5, the: -4.0 } },
+  },
+  {
+    typed: "Ill",
+    prevWord: null,
+    leftContext: "",
+    stub: { "": { Ill: -4.0, "I'll": -0.5 } },
+  },
+  {
+    typed: "Ill",
+    prevWord: null,
+    leftContext: "The doctor said.",
+    stub: { "The doctor said.": { Ill: -0.5, "I'll": -4.0 } },
+  },
+  {
+    typed: "Ill",
+    prevWord: null,
+    leftContext: "context the stub does not know",
+    stub: {},
+  },
+  {
+    typed: "helko",
+    prevWord: null,
+    leftContext: "context the stub does not know",
+    stub: {},
+  },
+];
+
 const VECTORS_PATH = path.join(
   __dirname,
   "__tests__/fixtures/golden-vectors.json",
@@ -140,6 +209,25 @@ function main() {
         contraction: contextualContraction(table, prev, next),
       }));
     })(),
+    lmRerank: LM_RERANK_CASES.map((c) => {
+      const lmStrength = c.lmStrength ?? TUNING.lmStrength;
+      const r = evaluate(model, c.typed, c.prevWord ?? null, {
+        leftContext: c.leftContext,
+        reranker: makeStubReranker(c.stub),
+        lmStrength,
+      });
+      return {
+        typed: c.typed,
+        prevWord: c.prevWord ?? null,
+        leftContext: c.leftContext,
+        lmStrength,
+        stub: c.stub,
+        candidates: r.candidates,
+        topIsCorrection: r.topIsCorrection,
+        replacement: r.replacement,
+        verbatim: r.verbatim,
+      };
+    }),
   };
 
   fs.writeFileSync(OUTPUT, JSON.stringify(fixtures, null, 2) + "\n");
@@ -149,7 +237,8 @@ function main() {
   console.log(
     `Wrote ${fixtures.evaluate.length} evaluate + ${fixtures.nextWords.length} ` +
       `nextWords + ${fixtures.confusables.length} confusable + ` +
-      `${fixtures.nextCharWeights.length} nextCharWeights fixtures to ` +
+      `${fixtures.nextCharWeights.length} nextCharWeights + ` +
+      `${fixtures.lmRerank.length} lmRerank fixtures to ` +
       `${path.relative(process.cwd(), OUTPUT)}` +
       (update ? " (golden vectors updated)" : ""),
   );

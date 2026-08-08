@@ -20,11 +20,40 @@ class EchosKeyboardViewController: UIInputViewController {
     /// then `SuggestionEngine` falls back to `UITextChecker`.
     private lazy var correctionEngine = CorrectionEngine(userLexicon: userLexicon)
     private lazy var suggestionEngine = SuggestionEngine(correctionEngine: correctionEngine)
+    /// Neural reranker for context-aware autocorrect. Compiled in only when
+    /// the llama.xcframework vendor artifact exists (the config plugin adds
+    /// the ECHOS_LM compilation condition alongside it). The instance is
+    /// cheap until `loadIfNeeded` runs; attached to the suggestion engine
+    /// only while the setting is on, so LM-off stays bit-identical to the
+    /// classical engine.
+    #if ECHOS_LM
+    private let lmReranker = LmReranker()
+    #endif
     private var settings = KeyboardSettings.load() {
         didSet {
             HapticManager.isEnabled = settings.hapticFeedback
             SoundManager.isEnabled = settings.keySound
+            applyLmSettings()
         }
+    }
+
+    private func applyLmSettings() {
+        suggestionEngine.lmStrength = settings.lmStrength
+        #if ECHOS_LM
+        if settings.contextAwareAutocorrect {
+            lmReranker.loadIfNeeded()
+            suggestionEngine.lmReranker = lmReranker
+        } else {
+            suggestionEngine.lmReranker = nil
+        }
+        #endif
+    }
+
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        #if ECHOS_LM
+        lmReranker.unload()
+        #endif
     }
     /// Pending autocorrect revert target (§5.4): set when a correction
     /// auto-applied on a separator, consumed by the next backspace (which
@@ -88,6 +117,10 @@ class EchosKeyboardViewController: UIInputViewController {
                 self?.suggestionEngine.setSupplementaryLexicon(lexicon)
             }
         }
+
+        // Initial property assignment bypasses `didSet` — attach the LM
+        // reranker (and start its background load) per the mirrored settings.
+        applyLmSettings()
 
         keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
@@ -326,7 +359,10 @@ class EchosKeyboardViewController: UIInputViewController {
                 for: word,
                 previousWord: previousWord,
                 casing: casing,
-                touchPoints: touches
+                touchPoints: touches,
+                leftContext: SuggestionEngine.leftContext(
+                    beforeCursor: before, currentWord: word
+                )
             )
             let slots = Self.suggestionSlots(for: result)
             if slots.isEmpty {
@@ -607,7 +643,10 @@ extension EchosKeyboardViewController: KeyboardViewDelegate {
             for: word,
             previousWord: previousWord,
             casing: Self.casing(forTyped: word),
-            touchPoints: touchPoints(matching: word)
+            touchPoints: touchPoints(matching: word),
+            leftContext: SuggestionEngine.leftContext(
+                beforeCursor: before, currentWord: word
+            )
         )
         // Exact compare: case-only corrections (i -> I, france -> France)
         // must apply too.

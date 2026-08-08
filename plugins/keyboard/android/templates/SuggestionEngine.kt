@@ -35,6 +35,15 @@ class SuggestionEngine(
 ) : SpellCheckerSession.SpellCheckerSessionListener {
 
     /**
+     * Neural reranker for context-aware autocorrect. null (setting off /
+     * model absent) keeps ranking bit-identical to the classical engine.
+     * Set by the service from KeyboardSettings; consulted only on the
+     * bundled-engine path. Mirrors the iOS SuggestionEngine properties.
+     */
+    var lmReranker: LmRerankerProviding? = null
+    var lmStrength: Float = 1.0f
+
+    /**
      * One lookup's result. [topIsCorrection] is true when the typed word
      * looks like a typo and [replacement] is safe for autocorrect on a
      * separator. [verbatim] (the typed word) is set only in that case and
@@ -88,6 +97,19 @@ class SuggestionEngine(
             if (next != null && !SpacingAndPunctuations.isWordSeparator(next)) return ""
             return currentWordBefore(textBeforeCursor)
         }
+
+        /**
+         * Text before the in-progress word — the LM reranker's context
+         * window. Unlike [previousWordBefore] this deliberately crosses
+         * sentence boundaries (that's the point of a neural context model);
+         * bounded to the trailing [limit] characters to cap tokenization
+         * cost. Mirrors the Swift twin.
+         */
+        fun leftContext(
+            textBeforeCursor: String,
+            currentWord: String,
+            limit: Int = 192,
+        ): String = textBeforeCursor.dropLast(currentWord.length).takeLast(limit)
 
         /**
          * The committed word before the in-progress one — bigram context for
@@ -298,6 +320,7 @@ class SuggestionEngine(
         word: String,
         previousWord: String?,
         touchPoints: List<CorrectionEngine.TouchPoint?>? = null,
+        leftContext: String? = null,
     ): Result {
         if (word.isEmpty()) return Result.EMPTY
         personalShortcutResult(word)?.let { return it }
@@ -307,6 +330,9 @@ class SuggestionEngine(
             previousWord,
             externallyValid = personalWords.containsKey(word.lowercase()),
             touchPoints = touchPoints,
+            leftContext = leftContext,
+            reranker = lmReranker,
+            lmStrength = lmStrength,
         )
         var candidates = evaluation.candidates.map { matchCase(word, it) }
         // Personal-dictionary matches lead the strip with canonical casing —
@@ -341,10 +367,11 @@ class SuggestionEngine(
         word: String,
         previousWord: String?,
         touchPoints: List<CorrectionEngine.TouchPoint?>? = null,
+        leftContext: String? = null,
     ) {
         if (word.isEmpty()) return
         if (usesBundledEngine) {
-            onResults(word, lookupNow(word, previousWord, touchPoints))
+            onResults(word, lookupNow(word, previousWord, touchPoints, leftContext))
             return
         }
         personalShortcutResult(word)?.let {

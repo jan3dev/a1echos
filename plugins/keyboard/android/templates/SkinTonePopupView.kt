@@ -130,6 +130,7 @@ class SkinTonePopupView @JvmOverloads constructor(
             if (x >= r.left && x <= r.right) {
                 if (i != s.selectedIndex) {
                     s.selectedIndex = i
+                    KeyFeedback.performTickHaptic(this)
                     invalidate()
                 }
                 return
@@ -187,6 +188,7 @@ class SkinTonePopupView @JvmOverloads constructor(
                     val idx = cellIndexAt(event.x, s)
                     if (idx >= 0 && idx != s.selectedIndex) {
                         s.selectedIndex = idx
+                        KeyFeedback.performTickHaptic(this)
                         invalidate()
                     }
                 }

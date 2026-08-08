@@ -4,6 +4,7 @@ export * from "./checkbox";
 export * from "./chip";
 export * from "./cta-module";
 export * from "./divider";
+export * from "./download-progress-bar";
 export * from "./glass-blur-background";
 export * from "./glass-icon-button";
 export * from "./icon";

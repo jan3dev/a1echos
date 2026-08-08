@@ -60,7 +60,14 @@ import UIKit
     private let autocorrectDefaultsKey = "EchosKeyboard.autocorrect"
     private let hapticDefaultsKey = "EchosKeyboard.hapticFeedback"
     private let keySoundDefaultsKey = "EchosKeyboard.keySound"
+    private let contextAwareDefaultsKey = "EchosKeyboard.contextAwareAutocorrect"
+    private let lmStrengthDefaultsKey = "EchosKeyboard.lmStrength"
     private var lifecycleObservers: [NSObjectProtocol] = []
+    /// Serializes the LM model mirror. willResignActive and
+    /// didEnterBackground both fire on a single backgrounding, so without this
+    /// two 33MB copies would race on the same destination path.
+    private let lmMirrorQueue = DispatchQueue(
+        label: "com.a1lab.echos.lmMirror", qos: .utility)
 
     /// Grace-window assertion that keeps the app alive for a short spell after
     /// it backgrounds. iOS suspends a backgrounded app within seconds, and a
@@ -224,6 +231,7 @@ import UIKit
         // Re-mirror when the app backgrounds so a toggle made mid-session
         // reaches the keyboard before the user switches to another app.
         mirrorKeyboardSettings()
+        mirrorKeyboardLm()
         let nc = NotificationCenter.default
         for name in [
             UIApplication.willResignActiveNotification,
@@ -231,6 +239,7 @@ import UIKit
         ] {
             let token = nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 self?.mirrorKeyboardSettings()
+                self?.mirrorKeyboardLm()
             }
             lifecycleObservers.append(token)
         }
@@ -608,17 +617,70 @@ import UIKit
         var autocorrect = true
         var hapticFeedback = true
         var keySound = true
+        var contextAwareAutocorrect = false
+        var lmStrength = 1.0
         if FileManager.default.fileExists(atPath: path),
            let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             autocorrect = (json["autocorrect"] as? Bool) ?? true
             hapticFeedback = (json["hapticFeedback"] as? Bool) ?? true
             keySound = (json["keySound"] as? Bool) ?? true
+            contextAwareAutocorrect =
+                (json["contextAwareAutocorrect"] as? Bool) ?? false
+            lmStrength = (json["lmStrength"] as? NSNumber)?.doubleValue ?? 1.0
         }
         let defaults = UserDefaults(suiteName: appGroupID)
         defaults?.set(autocorrect, forKey: autocorrectDefaultsKey)
         defaults?.set(hapticFeedback, forKey: hapticDefaultsKey)
         defaults?.set(keySound, forKey: keySoundDefaultsKey)
+        defaults?.set(contextAwareAutocorrect, forKey: contextAwareDefaultsKey)
+        defaults?.set(lmStrength, forKey: lmStrengthDefaultsKey)
+    }
+
+    /// Copies the downloaded keyboard LM (Documents/models/keyboard_lm/) into
+    /// the App Group container where the extension's LmReranker mmaps it —
+    /// the extension can't read the app sandbox. ~33MB, so only when the
+    /// source exists and the destination is missing or differs in size.
+    /// Copies the downloaded LM into the App Group so the keyboard extension
+    /// (which cannot read the app's Documents) can mmap it. A ~33MB file
+    /// compare/copy, so it runs off the caller's thread on a serial queue; the
+    /// same-size early-out makes the steady-state check cheap.
+    private func mirrorKeyboardLm() {
+        lmMirrorQueue.async { [weak self] in
+            self?.mirrorKeyboardLmNow()
+        }
+    }
+
+    private func mirrorKeyboardLmNow() {
+        guard let docsDir = NSSearchPathForDirectoriesInDomains(
+            .documentDirectory, .userDomainMask, true
+        ).first else { return }
+        let source = URL(fileURLWithPath: docsDir)
+            .appendingPathComponent("models/keyboard_lm/keyboard_lm.gguf")
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: source.path),
+              let container = fm.containerURL(
+                  forSecurityApplicationGroupIdentifier: appGroupID
+              )
+        else { return }
+        let destDir = container.appendingPathComponent("keyboard-lm")
+        let dest = destDir.appendingPathComponent("keyboard_lm.gguf")
+
+        let sizeOf = { (url: URL) -> Int64 in
+            (try? fm.attributesOfItem(atPath: url.path))?[.size] as? Int64 ?? -1
+        }
+        if fm.fileExists(atPath: dest.path), sizeOf(dest) == sizeOf(source) {
+            return
+        }
+        do {
+            try fm.createDirectory(at: destDir, withIntermediateDirectories: true)
+            if fm.fileExists(atPath: dest.path) {
+                try fm.removeItem(at: dest)
+            }
+            try fm.copyItem(at: source, to: dest)
+        } catch {
+            NSLog("EchosListener: keyboard LM mirror failed: \(error)")
+        }
     }
 
     /// Reads the configured microphone-timeout (session length) in seconds from

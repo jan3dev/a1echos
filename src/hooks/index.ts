@@ -1,3 +1,4 @@
+export { useEnsureModelDownloaded } from "./use-ensure-model-downloaded/useEnsureModelDownloaded";
 export { useKeyboardHeight } from "./use-keyboard-height/useKeyboardHeight";
 export { useLocalization } from "./use-localization/useLocalization";
 export { useMicPermission } from "./use-mic-permission/useMicPermission";

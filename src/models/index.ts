@@ -19,6 +19,7 @@ export { ModelId, ModelType, TranscriptionMode } from "./model-type/ModelType";
 
 export {
   getAllModels,
+  getAsrModels,
   getBundledModels,
   getDownloadableModels,
   getModelInfo,

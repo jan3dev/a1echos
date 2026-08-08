@@ -1,7 +1,14 @@
 import { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { Chip, Icon, IconName, Radio, Text } from "@/components/ui";
+import {
+  Chip,
+  DownloadProgressBar,
+  Icon,
+  IconName,
+  Radio,
+  Text,
+} from "@/components/ui";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { useLocalization } from "@/hooks";
 import { TranscriptionMode } from "@/models";
@@ -313,22 +320,7 @@ function DownloadProgressSection({
         onLanguagesPress={onLanguagesPress}
       />
 
-      <View
-        style={[
-          styles.progressBarBg,
-          { backgroundColor: colors.accentBrandTransparent },
-        ]}
-      >
-        <View
-          style={[
-            styles.progressBarFill,
-            {
-              backgroundColor: colors.accentBrand,
-              width: `${percent}%`,
-            },
-          ]}
-        />
-      </View>
+      <DownloadProgressBar ratio={progress.progressRatio} />
 
       <View style={styles.progressRow}>
         <View style={styles.progressMeta}>
@@ -746,15 +738,6 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     gap: 12,
-  },
-  progressBarBg: {
-    height: 4,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: 4,
-    borderRadius: 8,
   },
   progressRow: {
     flexDirection: "row",

@@ -44,6 +44,13 @@ Keyboard feedback,FBK-06,Sound respects OS mute,"Silence the ringer (iOS) or dis
 Keyboard feedback,FBK-07,Distinct click per key type,"Tap a letter, then delete, then space / Return",Delete and modifier/space keys play their own click variant,iOS+Android,,,iOS 1104/1155/1156; Android FX_KEYPRESS_*
 Keyboard feedback,FBK-08,Feedback on suggestion + emoji taps,Tap a suggestion-strip slot and an emoji,Haptic + click fire (Android strip previously had none),iOS+Android,,,
 Keyboard feedback,FBK-09,Settings persist,"Toggle Keyboard Haptics and Keyboard Sounds, quit and reopen Echos",Both values persist across launches,iOS+Android,,,
+Keyboard feedback,FBK-10,Variant highlight tick,"Long-press a letter and drag slowly across the popup cells",A light tick fires each time the highlight moves to a new cell,iOS+Android,,,Android gap — CLOCK_TICK vs iOS selection generator
+Keyboard feedback,FBK-11,Variant popup open haptic,Long-press a letter or the period key,A long-press haptic fires as the popup appears,Android,,,
+Keyboard feedback,FBK-12,Emoji category tick,Tap through the emoji category icons,A tick fires per category selected,iOS+Android,,,Android gap; strip pans so drag is not a scrub
+Keyboard feedback,FBK-13,Skin-tone popup tick,"Open the skin-tone popup and drag across the tones",A tick fires per tone crossed,Android,,,
+Keyboard feedback,FBK-14,Record button haptic,Tap the mic button in the keyboard top bar,A haptic fires on press,Android,,,
+Keyboard feedback,FBK-15,iOS emoji search feedback,"Tap the search field, tap a result, tap the clear ×, long-press a result",Each action fires haptic + click,iOS,,,Android already had these
+Keyboard feedback,FBK-16,New feedback honors the toggle,"Turn Keyboard Haptics off, then repeat FBK-10 through FBK-15",Every one of the above is silent,iOS+Android,,,
 Field-type layouts,FLD-01,iOS numbers-and-punctuation auto-open,Focus a numbers-and-punctuation field,Keyboard opens directly to the numbers/symbols page,iOS,,,§9.1
 Field-type layouts,FLD-02,iOS numbers-and-punctuation ABC persists,"On a numbers-and-punctuation field tap ABC to reach letters, then type",Stays on letters (not forced back to numbers on the next keystroke),iOS,,,§9.1
 Field-type layouts,FLD-03,iOS URL field variant,Focus a URL field,QWERTY with . / .com in the bottom row and no spacebar; Go return,iOS,,,§9.1
@@ -79,6 +86,11 @@ Long-press behaviors,LP-05,Long-press globe (Android),Android only — long-pres
 Long-press behaviors,LP-06,Long-press timing 300ms,Long-press a letter,Accent popup appears at ~300ms,iOS+Android,,,Phase 2 §3.1
 Long-press behaviors,LP-07,Period punctuation popup,Long-press the period key then drag and release,Popup shows punctuation marks; slide-pick commits the chosen one,iOS+Android,,,Phase 2 §3.11
 Long-press behaviors,LP-08,Multi-row accent popup,Long-press o then drag across and down,Popup wraps to 2 rows; horizontal and vertical slide-pick both track; release commits,iOS+Android,,,Phase 2 §3.3
+Long-press behaviors,LP-09,Expanded accent set matches iOS,"Long-press each of b d g h j k r t w on Android",Popup opens with the same variants iOS shows (previously no popup at all),Android,,,Ported from iOS AccentVariants
+Long-press behaviors,LP-10,Symbol popovers on Android,"Numbers page: long-press ? ! ' "" & / - 0 ; symbols page: long-press £ % =",Each opens its iOS variant set (¿ ¡ ‘ ” § \\ – ° ‰ ≠ …); slide-pick commits,Android,,,Mirrors iOS PunctuationVariants
+Long-press behaviors,LP-11,No popovers on the pads,"Long-press − and 0 on the numeric pad; − / N on the phone pad",No variant popup appears — pads share glyphs with the variant tables,Android,,,Guarded on currentCells == null
+Long-press behaviors,LP-12,Long-press space → picker,"Long-press the spacebar on the letters page and again on the numbers page",Opens system keyboard picker with a long-press haptic; no space is typed,Android,,,LatinIME §3.9; iOS space is cursor-drag
+Long-press behaviors,LP-13,Short tap space unaffected,"After LP-12, tap space once, then tap it twice quickly",Single tap types a space; double tap still produces '. ',Android,,,Regression guard for LP-12
 Misc / robustness,MISC-01,Rapid Shift double-tap then letter,"Double-tap Shift, immediately type a letter",Caps lock engages and letter commits uppercase,iOS+Android,,,
 Misc / robustness,MISC-02,Mode switch mid-press,Hold a letter; with another finger tap 123,Layout switches; stale key not committed on release,iOS+Android,,,
 Misc / robustness,MISC-03,Backgrounded mid-record,Send app to background while recording,Recording stops cleanly; no stuck UI,iOS+Android,,,
@@ -108,6 +120,7 @@ Key preview (typewriter balloon),PRV-02,Honors shift case,Press a with Shift on,
 Key preview (typewriter balloon),PRV-03,Drag retargets preview,Drag from q to w,Balloon moves with finger,iOS+Android,,,
 Key preview (typewriter balloon),PRV-04,No preview on modifiers,Press Shift/Delete/Return/Space,No balloon appears,iOS+Android,,,
 Key preview (typewriter balloon),PRV-05,Preview hides on release,Lift last finger,Balloon disappears after brief delay,iOS+Android,,,
+Key preview (typewriter balloon),PRV-06,Balloon lingers between keys,Type a word quickly (roll-typing),Balloon retargets key to key without blinking off in between,iOS+Android,,,70ms deferred hide; Android previously cleared instantly
 Recapitalize on selection,RCP-01,Lowercase to Title,Select a lowercase word then tap Shift,Selection becomes Title case,Android,,,Phase 2 §4.7
 Recapitalize on selection,RCP-02,Title to UPPER,Tap Shift again without moving the cursor,Selection becomes ALL UPPERCASE,Android,,,Phase 2 §4.7
 Recapitalize on selection,RCP-03,UPPER to lower,Tap Shift a third time,Selection becomes all lowercase (cycle wraps),Android,,,Phase 2 §4.7
@@ -206,3 +219,15 @@ Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recordin
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,
 Voice transcription,VOX-04,Mic permission missing,Android only — revoke RECORD_AUDIO permission,Toast appears and main app launches to grant permission,Android,,,
 Voice transcription,VOX-05,Recording lock,Have main Echos app recording then try IME mic,IME shows toast and refuses to start,iOS,,,
+Context-aware autocorrect,LM-01,Toggle waits for the model,Enable Context-Aware Autocorrect in Advanced settings with the model not yet downloaded,Toggle stays off and greys out; a progress bar + percent replaces the description; toggle flips on by itself only once the 34 MB download completes,iOS+Android,,,Toggle used to flip immediately with no model behind it
+Context-aware autocorrect,LM-09,Description fits the row,Open Advanced settings and read the Context-Aware Autocorrect row,Description reads in full with no ellipsis; shows the 34 MB download hint only while the model is absent,iOS+Android,,,Was clipped after 3 lines
+Context-aware autocorrect,LM-10,Failed download leaves it off,"Enable the toggle with airplane mode on, or cancel the download mid-flight",Error toast (or silent cancel); toggle returns to off; strength row does not appear,iOS+Android,,,Setting must never read on with no model on disk
+Context-aware autocorrect,LM-11,Row is inert mid-download,While the progress bar is showing tap the row and the switch,Neither does anything; download continues,iOS+Android,,,
+Context-aware autocorrect,LM-12,Strength options are explained,Open Correction Strength with the toggle on,Each of Subtle / Balanced / Strong / Maximum shows a one-line description under its name,iOS+Android,,,Names alone said nothing
+Context-aware autocorrect,LM-02,Context flips confusable,"With LM on, type ""Ill be there"" as a fresh sentence",Sentence-initial Ill contracts to I'll on space,iOS+Android,,,
+Context-aware autocorrect,LM-03,Context preserves literal,"With LM on, after ""The patient looked."" type ""Ill patients need rest""",Ill stays uncorrected; I'll offered tap-only in the strip,iOS+Android,,,
+Context-aware autocorrect,LM-04,LM-off is classical,"Disable the toggle, retype LM-02/LM-03 inputs",Behavior identical to pre-LM keyboard (blind contraction),iOS+Android,,,
+Context-aware autocorrect,LM-05,Strength picker,Change Correction Strength to each option and type,No crashes; stronger settings visibly reorder near-tie suggestions,iOS+Android,,,
+Context-aware autocorrect,LM-06,Model missing fallback,"Enable toggle, cancel/interrupt the download, type normally",Keyboard behaves classically; no errors or lag,iOS+Android,,,
+Context-aware autocorrect,LM-07,Latency feel,"With LM on, type fast full sentences",No perceptible added latency on word commits,iOS+Android,,,
+Context-aware autocorrect,LM-08,Memory stability,"With LM on, 15-minute typing session in Messages/WhatsApp",No keyboard restarts (iOS jetsam) or dropped keystrokes,iOS,,,

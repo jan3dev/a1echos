@@ -53,6 +53,13 @@ final class SuggestionEngine {
 
     private let correctionEngine: CorrectionEngine
 
+    /// Neural reranker for context-aware autocorrect. nil (setting off /
+    /// model absent) keeps ranking bit-identical to the classical engine.
+    /// Set by the view controller from KeyboardSettings; consulted only on
+    /// the bundled-engine path.
+    var lmReranker: LmRerankerProviding?
+    var lmStrength: Float = 1.0
+
     /// Contact names and user text replacements the host grants keyboard
     /// extensions (`requestSupplementaryLexicon`) — the same private signal
     /// the system keyboard uses, and the only slice of Apple's lexicon
@@ -180,6 +187,17 @@ final class SuggestionEngine {
         return word.isEmpty ? nil : word
     }
 
+    /// Text before the in-progress word — the LM reranker's context window.
+    /// Unlike `previousWord` this deliberately crosses sentence boundaries
+    /// (that's the point of a neural context model); bounded to the trailing
+    /// `limit` characters to cap tokenization cost. Mirrors the Kotlin twin.
+    static func leftContext(
+        beforeCursor: String, currentWord: String, limit: Int = 192
+    ) -> String {
+        let trimmed = String(beforeCursor.dropLast(currentWord.count))
+        return String(trimmed.suffix(limit))
+    }
+
     // MARK: - Lookup
 
     /// Builds up-to-3 candidates for `word`, cased per `casing`, plus the
@@ -189,7 +207,8 @@ final class SuggestionEngine {
         for word: String,
         previousWord: String? = nil,
         casing: Casing,
-        touchPoints: [CorrectionEngine.TouchPoint?]? = nil
+        touchPoints: [CorrectionEngine.TouchPoint?]? = nil,
+        leftContext: String? = nil
     ) -> Result {
         guard !word.isEmpty else { return .empty }
         // User text replacements expand exactly like the native keyboard —
@@ -214,7 +233,8 @@ final class SuggestionEngine {
                 for: word,
                 previousWord: previousWord,
                 casing: casing,
-                touchPoints: touchPoints
+                touchPoints: touchPoints,
+                leftContext: leftContext
             )
         }
         return checkerSuggestions(for: word, casing: casing)
@@ -239,14 +259,18 @@ final class SuggestionEngine {
         for word: String,
         previousWord: String?,
         casing: Casing,
-        touchPoints: [CorrectionEngine.TouchPoint?]?
+        touchPoints: [CorrectionEngine.TouchPoint?]?,
+        leftContext: String?
     ) -> Result {
         let isContactWord = supplementaryWords[word.lowercased()] != nil
         let evaluation = correctionEngine.evaluate(
             typedRaw: word,
             previousWord: previousWord,
             checkerSaysValid: isContactWord || checkerRecognizes(word),
-            touchPoints: touchPoints
+            touchPoints: touchPoints,
+            leftContext: leftContext,
+            reranker: lmReranker,
+            lmStrength: lmStrength
         )
         var candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
         // Contact-name matches lead the strip with canonical casing — tap-only,

@@ -11,7 +11,7 @@ jest.mock("./BackgroundRecordingService", () => {
   const TASK_ID = "echos_recording_task";
 
   let isRegistered = false;
-  let notificationPermissionRequested = false;
+  let notificationPermissionGranted: boolean | null = null;
 
   const getForegroundService = () => {
     if (Platform.OS !== "android") return null;
@@ -19,23 +19,19 @@ jest.mock("./BackgroundRecordingService", () => {
   };
 
   const requestNotificationPermission = async (): Promise<boolean> => {
-    if (Platform.OS !== "android" || notificationPermissionRequested)
-      return true;
-    if (Platform.Version >= 33) {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-        );
-        notificationPermissionRequested = true;
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          return false;
-        }
-        return true;
-      } catch {
-        return false;
-      }
+    if (Platform.OS !== "android" || Platform.Version < 33) return true;
+    if (notificationPermissionGranted !== null)
+      return notificationPermissionGranted;
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      );
+      notificationPermissionGranted =
+        granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      notificationPermissionGranted = false;
     }
-    return true;
+    return notificationPermissionGranted;
   };
 
   const registerForegroundService = async (): Promise<void> => {
@@ -64,8 +60,7 @@ jest.mock("./BackgroundRecordingService", () => {
           isServiceRunning = true;
           return true;
         }
-        const hasNotificationPermission = await requestNotificationPermission();
-        if (!hasNotificationPermission) return false;
+        await requestNotificationPermission();
         await registerForegroundService();
         service.add_task(() => Promise.resolve(), {
           delay: 10000,
@@ -127,7 +122,7 @@ jest.mock("./BackgroundRecordingService", () => {
     __resetForTesting: () => {
       isServiceRunning = false;
       isRegistered = false;
-      notificationPermissionRequested = false;
+      notificationPermissionGranted = null;
     },
   };
 });
@@ -185,17 +180,37 @@ describe("BackgroundRecordingService", () => {
       );
     });
 
-    it("startBackgroundService returns false when notification permission denied", async () => {
+    it("startBackgroundService still starts the service when notification permission denied", async () => {
       const { PermissionsAndroid } = require("react-native");
       jest
         .spyOn(PermissionsAndroid, "request")
         .mockResolvedValueOnce(PermissionsAndroid.RESULTS.DENIED);
 
+      const ForegroundService =
+        require("@supersami/rn-foreground-service").default;
       const {
         backgroundRecordingService,
       } = require("./BackgroundRecordingService");
       const result = await backgroundRecordingService.startBackgroundService();
-      expect(result).toBe(false);
+
+      expect(result).toBe(true);
+      expect(ForegroundService.start).toHaveBeenCalled();
+    });
+
+    it("startBackgroundService does not re-prompt after a denial", async () => {
+      const { PermissionsAndroid } = require("react-native");
+      jest
+        .spyOn(PermissionsAndroid, "request")
+        .mockResolvedValue(PermissionsAndroid.RESULTS.DENIED);
+
+      const {
+        backgroundRecordingService,
+      } = require("./BackgroundRecordingService");
+      await backgroundRecordingService.startBackgroundService();
+      await backgroundRecordingService.stopBackgroundService();
+      await backgroundRecordingService.startBackgroundService();
+
+      expect(PermissionsAndroid.request).toHaveBeenCalledTimes(1);
     });
 
     it("startBackgroundService registers and starts foreground service", async () => {

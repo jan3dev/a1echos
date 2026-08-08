@@ -633,7 +633,9 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
               let base = base(at: indexPath),
               let cell = collectionView.cellForItem(at: indexPath) else { return }
         // Recognition cancels the collection view's touches, so the cell
-        // unhighlights (hiding the balloon) and never commits a select.
+        // unhighlights (hiding the balloon) and never commits a select —
+        // which also means the press produced no feedback of its own yet.
+        HapticManager.keyTap()
         delegate?.emojiPicker(
             self, didLongPressSkinTonable: base,
             at: cell.convert(cell.bounds, to: self)
@@ -688,6 +690,7 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
     // The search field is never actually focused — the picker hands the tap
     // to KeyboardView which switches into .emojiSearch instead.
     func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        KeyFeedback.keyTap(.modifier)
         delegate?.emojiPickerDidActivateSearch(self)
         return false
     }

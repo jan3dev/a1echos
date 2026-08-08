@@ -30,6 +30,8 @@ const STORAGE_KEYS = {
   KEYBOARD_HAPTIC: "keyboard_haptic",
   KEYBOARD_SOUND: "keyboard_sound",
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
+  KEYBOARD_CONTEXT_AWARE_AUTOCORRECT: "keyboard_context_aware_autocorrect",
+  KEYBOARD_LM_STRENGTH: "keyboard_lm_strength",
   HAS_SEEN_WELCOME: "has_seen_welcome",
 };
 
@@ -50,6 +52,22 @@ const parseMicTimeout = (raw: string | null): number => {
   return (KEYBOARD_MIC_TIMEOUT_OPTIONS as readonly number[]).includes(value)
     ? value
     : DEFAULT_MIC_TIMEOUT_SECONDS;
+};
+
+/** Selectable weights for how strongly the keyboard's neural language model
+ *  reranks autocorrect candidates against the classical score. */
+export const KEYBOARD_LM_STRENGTH_OPTIONS = [0.5, 1.0, 1.5, 2.0] as const;
+
+/** Matches decoder.js TUNING.lmStrength. */
+const DEFAULT_LM_STRENGTH = 1.0;
+
+/** Clamps a persisted/raw value to a known option, falling back to the default. */
+const parseLmStrength = (raw: string | null): number => {
+  if (raw === null) return DEFAULT_LM_STRENGTH;
+  const value = Number(raw);
+  return (KEYBOARD_LM_STRENGTH_OPTIONS as readonly number[]).includes(value)
+    ? value
+    : DEFAULT_LM_STRENGTH;
 };
 
 interface SettingsStore {
@@ -75,6 +93,13 @@ interface SettingsStore {
   /** Keyboard: how long (seconds) a voice-typing session stays armed in the
    *  background after being started from an external app. `0` = Off. */
   keyboardMicTimeoutSeconds: number;
+  /** Keyboard: blend the on-device language model's sentence-context
+   *  evidence into autocorrect ranking (default off while the placeholder
+   *  model ships; requires the downloaded keyboard LM). */
+  keyboardContextAwareAutocorrect: boolean;
+  /** Keyboard: how strongly LM evidence weighs against the classical score
+   *  (one of KEYBOARD_LM_STRENGTH_OPTIONS). */
+  keyboardLmStrength: number;
   /** Whether the one-time first-launch welcome screen has been shown. */
   hasSeenWelcome: boolean;
 
@@ -93,6 +118,8 @@ interface SettingsStore {
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
   setKeyboardSound: (enabled: boolean) => Promise<void>;
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
+  setKeyboardContextAwareAutocorrect: (enabled: boolean) => Promise<void>;
+  setKeyboardLmStrength: (strength: number) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
 }
 
@@ -146,13 +173,63 @@ const syncKeyboardConfig = (get: () => SettingsStore): void => {
     keyboardHaptic,
     keyboardSound,
     keyboardMicTimeoutSeconds,
+    keyboardContextAwareAutocorrect,
+    keyboardLmStrength,
   } = get();
   writeKeyboardSettings({
     autocorrect: keyboardAutocorrect,
     hapticFeedback: keyboardHaptic,
     keySound: keyboardSound,
     micTimeoutSeconds: keyboardMicTimeoutSeconds,
+    contextAwareAutocorrect: keyboardContextAwareAutocorrect,
+    lmStrength: keyboardLmStrength,
   });
+};
+
+/** The `set`/`get` pair zustand hands the store creator. */
+interface SettingsStoreApi {
+  set: (partial: Partial<SettingsStore>) => void;
+  get: () => SettingsStore;
+}
+
+/** Keyboard preference fields — the ones mirrored to the native config file. */
+type KeyboardSettingField =
+  | "keyboardAutocorrect"
+  | "keyboardHaptic"
+  | "keyboardSound"
+  | "keyboardMicTimeoutSeconds"
+  | "keyboardContextAwareAutocorrect"
+  | "keyboardLmStrength";
+
+/**
+ * Persists one keyboard preference: optimistically applies it and mirrors it
+ * to the native config file (so the keyboards pick it up on next field focus),
+ * then rolls both back and rethrows if the write fails. Every keyboard setter
+ * shares this shape — the rollback must re-sync, or the config file keeps a
+ * value the store no longer holds.
+ */
+const persistKeyboardSetting = async <F extends KeyboardSettingField>(
+  { set, get }: SettingsStoreApi,
+  field: F,
+  storageKey: string,
+  value: SettingsStore[F],
+  label: string,
+): Promise<void> => {
+  const previousValue = get()[field];
+  if (previousValue === value) return;
+  set({ [field]: value } as Pick<SettingsStore, F>);
+  syncKeyboardConfig(get);
+  try {
+    await AsyncStorage.setItem(storageKey, String(value));
+  } catch (error) {
+    logError(error, {
+      flag: FeatureFlag.settings,
+      message: `Failed to save ${label} preference`,
+    });
+    set({ [field]: previousValue } as Pick<SettingsStore, F>);
+    syncKeyboardConfig(get);
+    throw error;
+  }
 };
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -169,6 +246,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardHaptic: true,
   keyboardSound: true,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
+  keyboardContextAwareAutocorrect: false,
+  keyboardLmStrength: DEFAULT_LM_STRENGTH,
   hasSeenWelcome: false,
 
   initialize: async () => {
@@ -187,6 +266,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHapticValue,
         keyboardSoundValue,
         keyboardMicTimeoutValue,
+        keyboardContextAwareValue,
+        keyboardLmStrengthValue,
         hasSeenWelcomeValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
@@ -202,6 +283,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_SOUND),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_CONTEXT_AWARE_AUTOCORRECT),
+        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_LM_STRENGTH),
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
       ]);
 
@@ -222,7 +305,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
       if (
         modelIdValue &&
-        Object.values(ModelId).includes(modelIdValue as ModelId)
+        Object.values(ModelId).includes(modelIdValue as ModelId) &&
+        // The keyboard LM shares ModelId for the download pipeline but is
+        // never a valid transcription selection.
+        modelIdValue !== ModelId.KEYBOARD_LM
       ) {
         selectedModelId = modelIdValue as ModelId;
         selectedTranscriptionMode =
@@ -273,6 +359,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const keyboardMicTimeoutSeconds = parseMicTimeout(
         keyboardMicTimeoutValue,
       );
+      // Default false — the neural reranker is opt-in until the custom model
+      // ships; only the explicit string "true" enables it.
+      const keyboardContextAwareAutocorrect =
+        keyboardContextAwareValue === "true";
+      const keyboardLmStrength = parseLmStrength(keyboardLmStrengthValue);
       const hasSeenWelcome = hasSeenWelcomeValue === "true";
 
       set({
@@ -289,6 +380,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHaptic,
         keyboardSound,
         keyboardMicTimeoutSeconds,
+        keyboardContextAwareAutocorrect,
+        keyboardLmStrength,
         hasSeenWelcome,
       });
 
@@ -315,6 +408,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHaptic: true,
         keyboardSound: true,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
+        keyboardContextAwareAutocorrect: false,
+        keyboardLmStrength: DEFAULT_LM_STRENGTH,
         hasSeenWelcome: false,
       });
     }
@@ -527,94 +622,59 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
-  setKeyboardAutocorrect: async (enabled: boolean) => {
-    const previousValue = get().keyboardAutocorrect;
-    if (previousValue === enabled) return;
-    set({ keyboardAutocorrect: enabled });
-    // Push the new preference to the keyboard config file optimistically so
-    // the native keyboards pick it up on next field focus.
-    syncKeyboardConfig(get);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.KEYBOARD_AUTOCORRECT,
-        enabled.toString(),
-      );
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save keyboard autocorrect preference",
-      });
-      set({ keyboardAutocorrect: previousValue });
-      syncKeyboardConfig(get);
-      throw error;
-    }
-  },
+  setKeyboardAutocorrect: async (enabled: boolean) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardAutocorrect",
+      STORAGE_KEYS.KEYBOARD_AUTOCORRECT,
+      enabled,
+      "keyboard autocorrect",
+    ),
 
-  setKeyboardHaptic: async (enabled: boolean) => {
-    const previousValue = get().keyboardHaptic;
-    if (previousValue === enabled) return;
-    set({ keyboardHaptic: enabled });
-    // Mirror to the keyboard config file optimistically.
-    syncKeyboardConfig(get);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.KEYBOARD_HAPTIC,
-        enabled.toString(),
-      );
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save keyboard haptic preference",
-      });
-      set({ keyboardHaptic: previousValue });
-      syncKeyboardConfig(get);
-      throw error;
-    }
-  },
+  setKeyboardHaptic: async (enabled: boolean) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardHaptic",
+      STORAGE_KEYS.KEYBOARD_HAPTIC,
+      enabled,
+      "keyboard haptic",
+    ),
 
-  setKeyboardSound: async (enabled: boolean) => {
-    const previousValue = get().keyboardSound;
-    if (previousValue === enabled) return;
-    set({ keyboardSound: enabled });
-    // Mirror to the keyboard config file optimistically.
-    syncKeyboardConfig(get);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.KEYBOARD_SOUND,
-        enabled.toString(),
-      );
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save keyboard sound preference",
-      });
-      set({ keyboardSound: previousValue });
-      syncKeyboardConfig(get);
-      throw error;
-    }
-  },
+  setKeyboardSound: async (enabled: boolean) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardSound",
+      STORAGE_KEYS.KEYBOARD_SOUND,
+      enabled,
+      "keyboard sound",
+    ),
 
-  setKeyboardMicTimeout: async (seconds: number) => {
-    const previousValue = get().keyboardMicTimeoutSeconds;
-    if (previousValue === seconds) return;
-    set({ keyboardMicTimeoutSeconds: seconds });
-    // Mirror to the keyboard config file optimistically.
-    syncKeyboardConfig(get);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT,
-        seconds.toString(),
-      );
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save keyboard mic timeout preference",
-      });
-      set({ keyboardMicTimeoutSeconds: previousValue });
-      syncKeyboardConfig(get);
-      throw error;
-    }
-  },
+  setKeyboardMicTimeout: async (seconds: number) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardMicTimeoutSeconds",
+      STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT,
+      seconds,
+      "keyboard mic timeout",
+    ),
+
+  setKeyboardContextAwareAutocorrect: async (enabled: boolean) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardContextAwareAutocorrect",
+      STORAGE_KEYS.KEYBOARD_CONTEXT_AWARE_AUTOCORRECT,
+      enabled,
+      "context-aware autocorrect",
+    ),
+
+  setKeyboardLmStrength: async (strength: number) =>
+    persistKeyboardSetting(
+      { set, get },
+      "keyboardLmStrength",
+      STORAGE_KEYS.KEYBOARD_LM_STRENGTH,
+      strength,
+      "keyboard LM strength",
+    ),
 
   markWelcomeSeen: async () => {
     set({ hasSeenWelcome: true });
@@ -673,6 +733,14 @@ export const useKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.keyboardMicTimeoutSeconds);
 export const useSetKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.setKeyboardMicTimeout);
+export const useKeyboardContextAwareAutocorrect = () =>
+  useSettingsStore((s) => s.keyboardContextAwareAutocorrect);
+export const useSetKeyboardContextAwareAutocorrect = () =>
+  useSettingsStore((s) => s.setKeyboardContextAwareAutocorrect);
+export const useKeyboardLmStrength = () =>
+  useSettingsStore((s) => s.keyboardLmStrength);
+export const useSetKeyboardLmStrength = () =>
+  useSettingsStore((s) => s.setKeyboardLmStrength);
 export const useHasSeenWelcome = () =>
   useSettingsStore((s) => s.hasSeenWelcome);
 export const useMarkWelcomeSeen = () =>

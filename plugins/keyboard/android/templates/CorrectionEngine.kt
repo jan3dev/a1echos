@@ -2,8 +2,20 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+
+/**
+ * Scoring interface of the on-device neural reranker (LmReranker, llama.cpp
+ * backed; stubbed in parity tests). Returns one length-normalized logprob
+ * per word — the word read as a continuation of [leftContext] — or null when
+ * the model is unavailable, which leaves the classical ranking untouched.
+ * Mirrors LmRerankerProviding in CorrectionEngine.swift.
+ */
+interface LmRerankerProviding {
+    fun scores(leftContext: String, words: List<String>): FloatArray?
+}
 
 /**
  * On-device correction/completion engine over the bundled "ECHD" dictionary
@@ -58,6 +70,12 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
         const val COMMON_FREQ_FLOOR = 64
         const val EPSILON = 1e-6f
         const val PREDICTION_FALLBACK_SCAN = 16
+
+        // Neural reranker blend — mirrors decoder.js TUNING (lmTopCandidates
+        // / lmStrength / lmConfusableMargin); see there for rationale.
+        const val LM_TOP_CANDIDATES = 5
+        const val LM_STRENGTH = 1.0f
+        const val LM_CONFUSABLE_MARGIN = 0f
     }
 
     private object Format {
@@ -407,6 +425,9 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
         previousWord: String?,
         externallyValid: Boolean = false,
         touchPoints: List<TouchPoint?>? = null,
+        leftContext: String? = null,
+        reranker: LmRerankerProviding? = null,
+        lmStrength: Float = Tuning.LM_STRENGTH,
     ): Evaluation {
         if (!isLoaded) return Evaluation.EMPTY
         val typedString = normalize(typedRaw)
@@ -432,6 +453,22 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
             typedRaw == typedString.replaceFirstChar { it.uppercase() } &&
             !userLexicon.isBlacklisted(typedString, ambiguous)
         ) {
+            // With an LM available this stops being a blind rule: the
+            // contraction must actually read better than the literal word in
+            // context (mirrors decoder.js).
+            if (reranker != null) {
+                val lps = reranker.scores(leftContext ?: "", listOf(typedRaw, ambiguous))
+                if (lps != null && lps.size == 2 &&
+                    lps[1] - lps[0] <= Tuning.LM_CONFUSABLE_MARGIN
+                ) {
+                    return Evaluation(
+                        candidates = listOf(ambiguous),
+                        topIsCorrection = false,
+                        verbatim = null,
+                        replacement = null,
+                    )
+                }
+            }
             return Evaluation(
                 candidates = listOf(ambiguous),
                 topIsCorrection = true,
@@ -503,11 +540,14 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
                 Tuning.BIGRAM_WEIGHT * c.bigramFreq / 255f
         }
 
-        val scored = kept
-            .filter { it.wordString != typedString }
-            .sortedWith(
-                compareByDescending<Candidate> { it.score }.thenBy { it.wordString },
-            )
+        val scored = applyLmRerank(
+            kept
+                .filter { it.wordString != typedString }
+                .sortedWith(candidateOrder),
+            leftContext,
+            reranker,
+            lmStrength,
+        )
 
         val display = scored.take(Tuning.MAX_CANDIDATES).map {
             renderCandidate(it.wordString, it.flags)
@@ -571,6 +611,44 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
             verbatim = if (topIsCorrection) typedRaw else null,
             replacement = replacement,
         )
+    }
+
+    /**
+     * Score-descending, then lexicographic — the deterministic tie-break the
+     * parity fixtures pin (mirrors decoder.js `scoreCandidates`).
+     */
+    private val candidateOrder =
+        compareByDescending<Candidate> { it.score }.thenBy { it.wordString }
+
+    /**
+     * Blends LM evidence into the classical ranking — mirrors decoder.js
+     * `applyLmRerank`: softmax the top candidates' length-normalized
+     * logprobs, each worth up to [lmStrength] score points. A null reranker
+     * or null score vector is the identity.
+     */
+    private fun applyLmRerank(
+        scored: List<Candidate>,
+        leftContext: String?,
+        reranker: LmRerankerProviding?,
+        lmStrength: Float,
+    ): List<Candidate> {
+        if (reranker == null || scored.size < 2) return scored
+        val n = min(Tuning.LM_TOP_CANDIDATES, scored.size)
+        val words = scored.take(n).map { renderCandidate(it.wordString, it.flags) }
+        val logProbs = reranker.scores(leftContext ?: "", words) ?: return scored
+        if (logProbs.size != n) return scored
+        val maxLp = logProbs.max()
+        val exps = FloatArray(n) { exp(logProbs[it] - maxLp) }
+        val sum = exps.sum()
+        // Mutates in place, where the Swift twin copies (its Candidate is a
+        // struct) and decoder.js spreads. That is only sound because `score` is
+        // *assigned* — never accumulated — at the start of every scoring pass,
+        // so a bonus can't compound across calls even though these instances
+        // are shared with the caller's list. Copying instead would allocate
+        // per keystroke and discard the memoized `wordString` that both sorts
+        // rely on. If scoring ever switches to `score +=`, this must copy.
+        for (i in 0 until n) scored[i].score += lmStrength * exps[i] / sum
+        return scored.sortedWith(candidateOrder)
     }
 
     // -- Trie primitives --

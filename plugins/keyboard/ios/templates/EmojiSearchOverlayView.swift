@@ -258,11 +258,13 @@ final class EmojiSearchOverlayView: UIView {
     }
 
     @objc private func handleClearTap() {
+        KeyFeedback.keyTap(.modifier)
         delegate?.emojiSearchOverlayDidClearQuery(self)
     }
 
     @objc private func handleResultTap(_ sender: SearchResultButton) {
         guard let emoji = sender.emoji else { return }
+        KeyFeedback.keyTap()
         delegate?.emojiSearchOverlay(self, didSelect: emoji)
     }
 
@@ -271,6 +273,7 @@ final class EmojiSearchOverlayView: UIView {
         guard gr.state == .began,
               let btn = gr.view as? SearchResultButton,
               let base = btn.emoji else { return }
+        HapticManager.keyTap()
         delegate?.emojiSearchOverlay(
             self, didLongPressSkinTonable: base,
             at: btn.convert(btn.bounds, to: self)

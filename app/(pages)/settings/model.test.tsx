@@ -45,7 +45,9 @@ jest.mock("@/theme", () => ({
   })),
 }));
 
+const mockEnsureModelDownloaded = jest.fn(() => Promise.resolve(true));
 jest.mock("@/hooks", () => ({
+  useEnsureModelDownloaded: jest.fn(() => mockEnsureModelDownloaded),
   useScrollSurface: jest.fn(() => ({
     scrolled: false,
     contentBelow: false,
@@ -98,6 +100,7 @@ jest.mock("@/models", () => ({
   },
   TranscriptionMode: { FILE: "file", REALTIME: "realtime" },
   getAllModels: jest.fn(() => [whisperModel, parakeetModel]),
+  getAsrModels: jest.fn(() => [whisperModel, parakeetModel]),
   getModelInfo: jest.fn((id: string) =>
     id === "whisper_tiny" ? whisperModel : parakeetModel,
   ),
@@ -251,14 +254,14 @@ describe("ModelSettingsScreen", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-select"));
     await waitFor(() => {
-      expect(mockDownloadStore.startDownload).toHaveBeenCalledWith(
+      expect(mockEnsureModelDownloaded).toHaveBeenCalledWith(
         "nemo_parakeet_v3",
       );
     });
   });
 
   it("download success auto-selects the model", async () => {
-    mockDownloadStore.startDownload.mockResolvedValue(true);
+    mockEnsureModelDownloaded.mockResolvedValue(true);
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
     await waitFor(() => {
@@ -268,7 +271,7 @@ describe("ModelSettingsScreen", () => {
 
   it("download failure logs error when auto-select throws", async () => {
     const { logError } = require("@/utils");
-    mockDownloadStore.startDownload.mockResolvedValue(true);
+    mockEnsureModelDownloaded.mockResolvedValue(true);
     mockSetModelId.mockRejectedValueOnce(new Error("nope"));
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
@@ -277,22 +280,16 @@ describe("ModelSettingsScreen", () => {
     });
   });
 
-  it("shows a warning tooltip and skips startDownload when disk space is insufficient", async () => {
-    mockCheckDiskSpace.mockResolvedValueOnce({
-      available: 50_000_000,
-      required: 670_000_000,
-      sufficient: false,
-    });
+  // The disk-space pre-check and the already-downloading guard live in
+  // useEnsureModelDownloaded and are covered by its own suite.
+  it("does not auto-select the model when the download did not succeed", async () => {
+    mockEnsureModelDownloaded.mockResolvedValue(false);
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-download"));
     await waitFor(() => {
-      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
-        expect.stringContaining("insufficientSpace"),
-        "error",
-        5000,
-      );
+      expect(mockEnsureModelDownloaded).toHaveBeenCalled();
     });
-    expect(mockDownloadStore.startDownload).not.toHaveBeenCalled();
+    expect(mockSetModelId).not.toHaveBeenCalled();
   });
 
   it("skips download when model is currently downloading", async () => {
@@ -320,11 +317,11 @@ describe("ModelSettingsScreen", () => {
     );
   });
 
-  it("retry tap calls startDownload", async () => {
+  it("retry tap starts the download again", async () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-retry"));
     await waitFor(() => {
-      expect(mockDownloadStore.startDownload).toHaveBeenCalledWith(
+      expect(mockEnsureModelDownloaded).toHaveBeenCalledWith(
         "nemo_parakeet_v3",
       );
     });

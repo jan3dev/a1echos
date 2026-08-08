@@ -39,8 +39,10 @@ Citations are `file:line` relative to the LatinIME repo unless noted.
 2. **Remaining capabilities, in rough priority order:** field-type adaptive
    layouts are now done (§9 — numeric/decimal pads, contextual letter rows,
    iOS twitter/webSearch, Android two-page phone pad; datetime deferred);
-   shift-chord detection (§4.1), sliding modifier
-   input (§3.5), long-press space → IME picker (§3.9), locale-aware accent
+   long-press space → IME picker is now done on Android (§3.9, skipped on iOS)
+   and the accent/symbol popover tables are iOS-matched on both platforms
+   (§3.3). Remaining: shift-chord detection (§4.1), sliding modifier
+   input (§3.5), locale-aware accent
    variants (§3.3), phantom space (§4.4) + smart punctuation (§4.6), next-word
    prediction (§5.6) + personal-dictionary learning (§5.8/§5.9), gesture
    typing (§2).
@@ -240,8 +242,11 @@ itself). Cite this section if we ever decide to take it on.
 - Detector slide-allowance: 63.36 dp portrait / 53.76 dp landscape.
 
 **Our state**: `KeyVariantsView` (iOS) / `KeyOverlayView` (Android) with
-slide-pick and **multi-row wrapping** are shipped. Variants are still
-hard-coded to an English-ish set in `AccentVariants.swift` / `.kt`.
+slide-pick and **multi-row wrapping** are shipped. Both platforms now carry
+the same table (20 letters / 105 accents plus the 11 symbol popovers) —
+Android's `AccentVariants.kt` was expanded to match
+`KeyboardLayout.swift`'s `AccentVariants` + `PunctuationVariants`. The set is
+still hard-coded to English-with-international-Latin, not locale-driven.
 
 **Action** (remaining):
 
@@ -286,9 +291,11 @@ _letter_ pointer, then drop shift back to `.off`.
   modifiers, etc.).
 - `config-common.xml:35-42`, `KeyPreviewChoreographer.java:144-167`.
 
-**Our state**: iOS `KeyPreviewView` with `previewHideDelay: 0.05`
-(50 ms). Android `KeyOverlayView` similar. No suppression
-post-gesture (we have no gesture).
+**Our state**: iOS `KeyPreviewView` with `previewHideDelay: 0.07`
+(70 ms). Android `KeyOverlayView` now matches via
+`EchosKeyboardView.PREVIEW_HIDE_DELAY_MS` (it used to clear the balloon the
+instant the last pointer lifted, which strobed during roll-typing). No
+suppression post-gesture (we have no gesture).
 
 **Action**: Add the "no preview after gesture" gate when we add
 gesture typing. Verify our show-up time isn't longer than LatinIME's
@@ -341,14 +348,14 @@ auto-correction. Adds complexity; small isolated value.
 system IME picker.
 `PointerTracker.java:1035`, `key_styles_common.xml:105`.
 
-**Our state**: iOS has no long-press on space (the emoji key
-long-press opens the keyboard picker via `handleInputModeList`).
-Android has a globe key with long-press → keyboard picker.
+**Our state**: Android ships it — `KeyType.SPACE` schedules the same
+`scheduleKeyboardPickerLongPress` as the globe key, which matters because the
+numbers/symbols pages and the pads drop the globe but keep a spacebar. iOS
+does **not**: its 0.3 s space long-press is already the cursor-drag /
+trackpad gesture, and the emoji-key long-press covers the picker there.
 
-**Action**: Consider adding long-press on space → keyboard picker as
-a _secondary_ affordance on both platforms. Users moving from stock
-Android/Gboard will look for this.
-**Priority**: P2.
+**Action**: Done on Android; iOS deliberately skipped (gesture conflict).
+**Priority**: DONE (Android) / SKIP (iOS).
 
 ---
 
@@ -523,7 +530,7 @@ when `PHANTOM` space is pending.
 | --------------------- | --------------- | ---------- | ------------------- |
 | Long-press in sliding | × 3             | n/a        | Add when §3.5 lands |
 | Key preview show-up   | 17 ms           | unmeasured | Verify              |
-| Key preview linger    | 70 ms           | 50 ms      | Bump to 70 ms       |
+| Key preview linger    | 70 ms           | 70 ms      | DONE (both)         |
 | Touch-noise time/dist | 40 ms / 12.6 dp | n/a        | P2                  |
 | Proximity grid        | 32 × 16         | linear     | Defer until gesture |
 
@@ -550,7 +557,8 @@ when `PHANTOM` space is pending.
 5. Phantom space (§4.4) + smart punctuation (§4.6) on strip picks.
 6. Next-word prediction (§5.6) + personal dictionary (§5.8/§5.9).
 7. Locale-aware accent variants (§3.3).
-8. Long-press space → IME picker (§3.9).
+8. ~~Long-press space → IME picker (§3.9)~~ — DONE on Android; iOS skipped
+   (space long-press is the cursor-drag gesture there).
 
 **Gesture typing (P2):**
 

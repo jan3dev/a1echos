@@ -63,10 +63,14 @@ const createModelDownloadService = () => {
     const dir = new Directory(modelDir);
     if (!dir.exists) return false;
 
-    // Check all files exist
+    // Every file must be present *and* complete. Existence alone is not
+    // enough: an interrupted download — or an HTTP error body written to the
+    // destination — leaves a short file that would otherwise read as
+    // "downloaded" forever, so the model could never be re-fetched. Uses the
+    // same size test as the resume/skip guard in `downloadModel`.
     return modelInfo.files.every((file) => {
       const f = new File(`${modelDir}/${file.name}`);
-      return f.exists;
+      return f.exists && (f.size ?? 0) >= file.sizeBytes;
     });
   };
 
@@ -225,6 +229,16 @@ const createModelDownloadService = () => {
 
         if (!result) {
           throw new Error(`Download cancelled or failed for ${fileInfo.name}`);
+        }
+
+        // `downloadAsync` resolves for HTTP errors too, having written the
+        // error body to disk. Without this check a 401/404 looks like a
+        // successful download: the file exists, so `isModelDownloaded` reports
+        // the model as present forever and it can never be re-fetched.
+        if (result.status < 200 || result.status >= 300) {
+          throw new Error(
+            `Download failed for ${fileInfo.name}: HTTP ${result.status}`,
+          );
         }
 
         // Update total with actual completed file size

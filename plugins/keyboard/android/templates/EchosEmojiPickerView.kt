@@ -633,7 +633,16 @@ class EchosEmojiPickerView @JvmOverloads constructor(
                 isFocusable = true
                 val ip = dp(8f).toInt()
                 setPadding(ip, ip, ip, ip)
-                setOnClickListener { scrollToCategory(idx) }
+                // Tick rather than a key tap: this is a selection changing,
+                // not a character being typed (iOS uses its selection
+                // generator here). Deliberately only on tap — the strip is a
+                // pannable HorizontalScrollView, so a drag across it belongs
+                // to the pan, unlike iOS where the cluster is fixed-width and
+                // free to own the slide.
+                setOnClickListener {
+                    KeyFeedback.performTickHaptic(it)
+                    scrollToCategory(idx)
+                }
                 layoutParams = LinearLayout.LayoutParams(
                     dp(CATEGORY_BUTTON_WIDTH_DP).toInt(),
                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -774,9 +783,10 @@ class EchosEmojiPickerView @JvmOverloads constructor(
         // the strip counts; large enough that fingers casually grazing
         // the strip don't accidentally collapse it.
         private const val COLLAPSE_TRIGGER_DP: Float = 12f
-        // Matches `EchosKeyboardView.LONG_PRESS_THRESHOLD_MS` (400ms) so
-        // the picker's skin-tone popup opens on the same dwell time as
-        // the letter keyboard's accent picker.
+        // Deliberately longer than the letter keyboard's 300ms accent dwell
+        // (`EchosKeyboardView.LONG_PRESS_THRESHOLD_MS`): emoji cells are
+        // browsed with a moving finger, so the popup needs a firmer hold to
+        // not fire mid-scroll. iOS splits the two the same way (0.3s vs 0.4s).
         private const val LONG_PRESS_THRESHOLD_MS: Long = 400L
     }
 }

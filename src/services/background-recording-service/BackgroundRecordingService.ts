@@ -6,7 +6,7 @@ const NOTIFICATION_ID = 1001;
 const TASK_ID = "echos_recording_task";
 
 let isRegistered = false;
-let notificationPermissionRequested = false;
+let notificationPermissionGranted: boolean | null = null;
 let ForegroundService:
   | typeof import("@supersami/rn-foreground-service").default
   | null = null;
@@ -22,35 +22,33 @@ const getForegroundService = async () => {
   return ForegroundService;
 };
 
+// Advisory only. Android starts a foreground service without POST_NOTIFICATIONS
+// (13+/API 33+ runtime permission) — it just hides the notification, so
+// recording must never be gated on the answer. Cached per session so a denial
+// doesn't re-prompt on every recording.
 const requestNotificationPermission = async (): Promise<boolean> => {
-  if (Platform.OS !== "android" || notificationPermissionRequested) {
+  if (Platform.OS !== "android" || Platform.Version < 33) {
     return true;
   }
-
-  // Android 13+ (API 33+) requires POST_NOTIFICATIONS permission
-  if (Platform.Version >= 33) {
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-      );
-      notificationPermissionRequested = true;
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        logWarn("Notification permission not granted", {
-          flag: FeatureFlag.service,
-        });
-        return false;
-      }
-      return true;
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.service,
-        message: "Failed to request notification permission",
-      });
-      return false;
-    }
+  if (notificationPermissionGranted !== null) {
+    return notificationPermissionGranted;
   }
 
-  return true;
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    notificationPermissionGranted =
+      granted === PermissionsAndroid.RESULTS.GRANTED;
+  } catch (error) {
+    logError(error, {
+      flag: FeatureFlag.service,
+      message: "Failed to request notification permission",
+    });
+    notificationPermissionGranted = false;
+  }
+
+  return notificationPermissionGranted;
 };
 
 export const registerForegroundService = async (): Promise<void> => {
@@ -97,12 +95,11 @@ const createBackgroundRecordingService = () => {
           return true;
         }
 
-        const hasNotificationPermission = await requestNotificationPermission();
-        if (!hasNotificationPermission) {
-          logError("Background recording requires notification permission", {
-            flag: FeatureFlag.service,
-          });
-          return false;
+        if (!(await requestNotificationPermission())) {
+          logWarn(
+            "Notification permission denied; recording continues in the background without a visible notification",
+            { flag: FeatureFlag.service },
+          );
         }
 
         await registerForegroundService();

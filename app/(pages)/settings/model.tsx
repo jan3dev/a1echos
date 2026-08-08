@@ -13,15 +13,18 @@ import {
 import { Toast } from "@/components/ui/toast/Toast";
 import { useToast } from "@/components/ui/toast/useToast";
 import { AppConstants, Routes } from "@/constants";
-import { useLocalization, useScrollSurface } from "@/hooks";
+import {
+  useEnsureModelDownloaded,
+  useLocalization,
+  useScrollSurface,
+} from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
   ModelId,
   TranscriptionMode,
-  getAllModels,
+  getAsrModels,
   getModelInfo,
 } from "@/models";
-import { modelDownloadService } from "@/services";
 import {
   useModelDownloadStore,
   useModelModes,
@@ -47,6 +50,7 @@ export default function ModelSettingsScreen() {
 
   const downloadStore = useModelDownloadStore();
   const showGlobalTooltip = useShowGlobalTooltip();
+  const ensureModelDownloaded = useEnsureModelDownloaded();
   const [isSaving, setIsSaving] = useState(false);
   const {
     show: showDeleteToast,
@@ -54,7 +58,7 @@ export default function ModelSettingsScreen() {
     toastState: deleteToastState,
   } = useToast();
 
-  const models = getAllModels();
+  const models = getAsrModels();
   const { downloadedSection, availableSection } = useMemo(() => {
     const downloaded: ModelInfo[] = [];
     const available: ModelInfo[] = [];
@@ -76,23 +80,9 @@ export default function ModelSettingsScreen() {
 
   const handleDownload = useCallback(
     async (modelId: ModelId) => {
-      const progress = downloadStore.getProgress(modelId);
-      if (progress?.status === "downloading") return;
-
-      const diskCheck = await modelDownloadService.checkDiskSpace(modelId);
-      if (!diskCheck.sufficient) {
-        showGlobalTooltip(
-          loc.insufficientSpace(
-            formatBytes(diskCheck.required),
-            formatBytes(diskCheck.available),
-          ),
-          "error",
-          5000,
-        );
-        return;
-      }
-
-      const success = await downloadStore.startDownload(modelId);
+      // Disk-space pre-check, in-flight guard and failure toast all live in the
+      // hook, shared with the context-aware autocorrect toggle.
+      const success = await ensureModelDownloaded(modelId);
       if (success) {
         try {
           await setModelId(modelId);
@@ -104,7 +94,7 @@ export default function ModelSettingsScreen() {
         }
       }
     },
-    [downloadStore, setModelId, loc, showGlobalTooltip],
+    [ensureModelDownloaded, setModelId],
   );
 
   const handleSelectModel = useCallback(
