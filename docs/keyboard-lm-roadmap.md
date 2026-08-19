@@ -114,8 +114,10 @@ Goal: noticeably better contextual feel within days, no architecture change.
   A100/4090.
 - Keep tokenizer/architecture unchanged → same GGUF conversion pipeline
   (`build-spike-model.sh`), drop-in replacement, bump the registry version.
-- Exit criterion: sentence-initial confusables and strip reordering feel
-  reliable in dogfooding; if not worth it, skip straight to M2.
+- Exit criterion: `python3 scripts/keyboard-lm/bench.py --model <ft>
+  --baseline EleutherAI/pythia-31m` improves pairwise preference and
+  confusable e2e without dropping `dont-flip`; dogfood the rest. If not
+  worth it, skip straight to M2.
 
 ## 🔮 M2 — the real model (custom ~30M decoder)
 
@@ -152,9 +154,11 @@ is disproportionate at this scale and mmap makes memory ~free), quality-gate
 any lower quant. Registry version bump + staged rollout behind the existing
 toggle.
 
-**Eval harness (build first):** golden set of context-dependent corrections
-(confusables, homophone near-ties, register) + perplexity on held-out typing
-data; compare pythia-31m vs M1.5 vs M2 before flipping the default ON.
+**Eval harness:** `python3 scripts/keyboard-lm/bench.py --model <hf-or-gguf>
+[--baseline EleutherAI/pythia-31m]`. Golden set of context-dependent
+corrections (confusables, homophone near-ties, register) + perplexity on
+`scripts/keyboard-lm/bench/typing-eval.txt`. Compare pythia-31m vs M1.5 vs
+M2 before flipping the default ON.
 
 ## 🔮 M3 — beyond parity (candidates, unordered)
 

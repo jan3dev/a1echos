@@ -1,0 +1,1019 @@
+{
+  "_comment": "Golden set for the keyboard LM reranker. Pairwise items ask whether the model assigns a higher length-normalized logprob to `gold` than to each distractor given `leftContext` (the same score LmReranker.swift/llama_jni.cpp feed applyLmRerank). E2E items run the canonical decoder.evaluate() with those real scores. Slices: confusable-contract/literal (I'll/Ill etc.), homophone, near-tie, register-casual, dont-flip.",
+  "pairwise": [
+    {
+      "id": "pw-ill-empty",
+      "slice": "confusable-contract",
+      "leftContext": "",
+      "gold": "I'll",
+      "distractors": ["Ill"],
+      "note": "bare sentence start"
+    },
+    {
+      "id": "pw-ill-yeah",
+      "slice": "confusable-contract",
+      "leftContext": "Yeah.",
+      "gold": "I'll",
+      "distractors": ["Ill"]
+    },
+    {
+      "id": "pw-ill-ok",
+      "slice": "confusable-contract",
+      "leftContext": "Ok.",
+      "gold": "I'll",
+      "distractors": ["Ill"]
+    },
+    {
+      "id": "pw-ill-sure",
+      "slice": "confusable-contract",
+      "leftContext": "Sure,",
+      "gold": "I'll",
+      "distractors": ["Ill"]
+    },
+    {
+      "id": "pw-its-empty",
+      "slice": "confusable-contract",
+      "leftContext": "",
+      "gold": "It's",
+      "distractors": ["Its"]
+    },
+    {
+      "id": "pw-its-wow",
+      "slice": "confusable-contract",
+      "leftContext": "Wow.",
+      "gold": "It's",
+      "distractors": ["Its"]
+    },
+    {
+      "id": "pw-its-hey",
+      "slice": "confusable-contract",
+      "leftContext": "Hey.",
+      "gold": "It's",
+      "distractors": ["Its"]
+    },
+    {
+      "id": "pw-id-empty",
+      "slice": "confusable-contract",
+      "leftContext": "",
+      "gold": "I'd",
+      "distractors": ["Id"]
+    },
+    {
+      "id": "pw-id-honestly",
+      "slice": "confusable-contract",
+      "leftContext": "Honestly,",
+      "gold": "I'd",
+      "distractors": ["Id"]
+    },
+    {
+      "id": "pw-id-tbh",
+      "slice": "confusable-contract",
+      "leftContext": "Tbh",
+      "gold": "I'd",
+      "distractors": ["Id"]
+    },
+    {
+      "id": "pw-lets-empty",
+      "slice": "confusable-contract",
+      "leftContext": "",
+      "gold": "Let's",
+      "distractors": ["Lets"]
+    },
+    {
+      "id": "pw-lets-come-on",
+      "slice": "confusable-contract",
+      "leftContext": "Come on.",
+      "gold": "Let's",
+      "distractors": ["Lets"]
+    },
+    {
+      "id": "pw-lets-ok",
+      "slice": "confusable-contract",
+      "leftContext": "Ok",
+      "gold": "Let's",
+      "distractors": ["Lets"]
+    },
+    {
+      "id": "pw-ill-patients",
+      "slice": "confusable-literal",
+      "leftContext": "The doctor examined several",
+      "gold": "Ill",
+      "distractors": ["I'll"],
+      "note": "medical adjective, sentence-initial capital"
+    },
+    {
+      "id": "pw-ill-ward",
+      "slice": "confusable-literal",
+      "leftContext": "Ward 4 is full of",
+      "gold": "Ill",
+      "distractors": ["I'll"]
+    },
+    {
+      "id": "pw-ill-outbreak",
+      "slice": "confusable-literal",
+      "leftContext": "After the outbreak.",
+      "gold": "Ill",
+      "distractors": ["I'll"]
+    },
+    {
+      "id": "pw-its-tail",
+      "slice": "confusable-literal",
+      "leftContext": "The cat cleaned",
+      "gold": "Its",
+      "distractors": ["It's"]
+    },
+    {
+      "id": "pw-its-day",
+      "slice": "confusable-literal",
+      "leftContext": "Every dog has",
+      "gold": "Its",
+      "distractors": ["It's"]
+    },
+    {
+      "id": "pw-its-own",
+      "slice": "confusable-literal",
+      "leftContext": "The company announced",
+      "gold": "Its",
+      "distractors": ["It's"]
+    },
+    {
+      "id": "pw-id-card",
+      "slice": "confusable-literal",
+      "leftContext": "Please show your",
+      "gold": "Id",
+      "distractors": ["I'd"]
+    },
+    {
+      "id": "pw-id-badge",
+      "slice": "confusable-literal",
+      "leftContext": "This is my",
+      "gold": "Id",
+      "distractors": ["I'd"]
+    },
+    {
+      "id": "pw-id-check",
+      "slice": "confusable-literal",
+      "leftContext": "They asked for an",
+      "gold": "Id",
+      "distractors": ["I'd"]
+    },
+    {
+      "id": "pw-lets-coach",
+      "slice": "confusable-literal",
+      "leftContext": "A good coach never",
+      "gold": "Lets",
+      "distractors": ["Let's"]
+    },
+    {
+      "id": "pw-lets-rule",
+      "slice": "confusable-literal",
+      "leftContext": "The rule rarely",
+      "gold": "Lets",
+      "distractors": ["Let's"]
+    },
+    {
+      "id": "pw-lets-lease",
+      "slice": "confusable-literal",
+      "leftContext": "The standard lease never",
+      "gold": "Lets",
+      "distractors": ["Let's"]
+    },
+    {
+      "id": "pw-there-parked",
+      "slice": "homophone",
+      "leftContext": "I parked over",
+      "gold": "there",
+      "distractors": ["their", "they're"]
+    },
+    {
+      "id": "pw-there-go",
+      "slice": "homophone",
+      "leftContext": "Let's go over",
+      "gold": "there",
+      "distractors": ["their", "they're"]
+    },
+    {
+      "id": "pw-there-sit",
+      "slice": "homophone",
+      "leftContext": "Please sit",
+      "gold": "there",
+      "distractors": ["their"]
+    },
+    {
+      "id": "pw-their-lost",
+      "slice": "homophone",
+      "leftContext": "They lost",
+      "gold": "their",
+      "distractors": ["there", "they're"]
+    },
+    {
+      "id": "pw-their-keys",
+      "slice": "homophone",
+      "leftContext": "I borrowed",
+      "gold": "their",
+      "distractors": ["there", "they're"]
+    },
+    {
+      "id": "pw-their-house",
+      "slice": "homophone",
+      "leftContext": "We stayed at",
+      "gold": "their",
+      "distractors": ["there"]
+    },
+    {
+      "id": "pw-theyre-coming",
+      "slice": "homophone",
+      "leftContext": "I heard",
+      "gold": "they're",
+      "distractors": ["their", "there"]
+    },
+    {
+      "id": "pw-theyre-late",
+      "slice": "homophone",
+      "leftContext": "Don't wait,",
+      "gold": "they're",
+      "distractors": ["their", "there"]
+    },
+    {
+      "id": "pw-your-jacket",
+      "slice": "homophone",
+      "leftContext": "I found",
+      "gold": "your",
+      "distractors": ["you're"]
+    },
+    {
+      "id": "pw-your-phone",
+      "slice": "homophone",
+      "leftContext": "Is this",
+      "gold": "your",
+      "distractors": ["you're"]
+    },
+    {
+      "id": "pw-youre-welcome",
+      "slice": "homophone",
+      "leftContext": "",
+      "gold": "You're",
+      "distractors": ["Your"]
+    },
+    {
+      "id": "pw-youre-right",
+      "slice": "homophone",
+      "leftContext": "I think",
+      "gold": "you're",
+      "distractors": ["your"]
+    },
+    {
+      "id": "pw-youre-late",
+      "slice": "homophone",
+      "leftContext": "Hurry,",
+      "gold": "you're",
+      "distractors": ["your"]
+    },
+    {
+      "id": "pw-to-want",
+      "slice": "homophone",
+      "leftContext": "I want",
+      "gold": "to",
+      "distractors": ["too", "two"]
+    },
+    {
+      "id": "pw-to-need",
+      "slice": "homophone",
+      "leftContext": "We need",
+      "gold": "to",
+      "distractors": ["too", "two"]
+    },
+    {
+      "id": "pw-too-much",
+      "slice": "homophone",
+      "leftContext": "This is",
+      "gold": "too",
+      "distractors": ["to", "two"]
+    },
+    {
+      "id": "pw-too-late",
+      "slice": "homophone",
+      "leftContext": "It's",
+      "gold": "too",
+      "distractors": ["to", "two"]
+    },
+    {
+      "id": "pw-two-minutes",
+      "slice": "homophone",
+      "leftContext": "Give me",
+      "gold": "two",
+      "distractors": ["to", "too"]
+    },
+    {
+      "id": "pw-two-people",
+      "slice": "homophone",
+      "leftContext": "Table for",
+      "gold": "two",
+      "distractors": ["to", "too"]
+    },
+    {
+      "id": "pw-than-better",
+      "slice": "homophone",
+      "leftContext": "This is better",
+      "gold": "than",
+      "distractors": ["then"]
+    },
+    {
+      "id": "pw-than-rather",
+      "slice": "homophone",
+      "leftContext": "I'd rather",
+      "gold": "than",
+      "distractors": ["then"]
+    },
+    {
+      "id": "pw-then-ok",
+      "slice": "homophone",
+      "leftContext": "Ok,",
+      "gold": "then",
+      "distractors": ["than"]
+    },
+    {
+      "id": "pw-then-and",
+      "slice": "homophone",
+      "leftContext": "We ate and",
+      "gold": "then",
+      "distractors": ["than"]
+    },
+    {
+      "id": "pw-whether-know",
+      "slice": "homophone",
+      "leftContext": "I don't know",
+      "gold": "whether",
+      "distractors": ["weather"]
+    },
+    {
+      "id": "pw-whether-or",
+      "slice": "homophone",
+      "leftContext": "Tell me",
+      "gold": "whether",
+      "distractors": ["weather"]
+    },
+    {
+      "id": "pw-weather-nice",
+      "slice": "homophone",
+      "leftContext": "The",
+      "gold": "weather",
+      "distractors": ["whether"]
+    },
+    {
+      "id": "pw-weather-check",
+      "slice": "homophone",
+      "leftContext": "Did you check the",
+      "gold": "weather",
+      "distractors": ["whether"]
+    },
+    {
+      "id": "pw-affect-will",
+      "slice": "homophone",
+      "leftContext": "This will",
+      "gold": "affect",
+      "distractors": ["effect"]
+    },
+    {
+      "id": "pw-effect-side",
+      "slice": "homophone",
+      "leftContext": "The side",
+      "gold": "effect",
+      "distractors": ["affect"]
+    },
+    {
+      "id": "pw-lose-dont",
+      "slice": "homophone",
+      "leftContext": "Don't",
+      "gold": "lose",
+      "distractors": ["loose"]
+    },
+    {
+      "id": "pw-loose-too",
+      "slice": "homophone",
+      "leftContext": "This shirt is too",
+      "gold": "loose",
+      "distractors": ["lose"]
+    },
+    {
+      "id": "pw-its-mid-tail",
+      "slice": "homophone",
+      "leftContext": "the dog wagged",
+      "gold": "its",
+      "distractors": ["it's"]
+    },
+    {
+      "id": "pw-its-mid-raining",
+      "slice": "homophone",
+      "leftContext": "I think",
+      "gold": "it's",
+      "distractors": ["its"]
+    },
+    {
+      "id": "pw-here-come",
+      "slice": "homophone",
+      "leftContext": "I'm over",
+      "gold": "here",
+      "distractors": ["hear"]
+    },
+    {
+      "id": "pw-hear-cant",
+      "slice": "homophone",
+      "leftContext": "I can't",
+      "gold": "hear",
+      "distractors": ["here"]
+    },
+    {
+      "id": "pw-where-you",
+      "slice": "homophone",
+      "leftContext": "Do you know",
+      "gold": "where",
+      "distractors": ["were"]
+    },
+    {
+      "id": "pw-were-we",
+      "slice": "homophone",
+      "leftContext": "We",
+      "gold": "were",
+      "distractors": ["where"]
+    },
+    {
+      "id": "pw-right-youre",
+      "slice": "homophone",
+      "leftContext": "Yeah you're",
+      "gold": "right",
+      "distractors": ["write"]
+    },
+    {
+      "id": "pw-write-please",
+      "slice": "homophone",
+      "leftContext": "Can you",
+      "gold": "write",
+      "distractors": ["right"]
+    },
+    {
+      "id": "pw-accept-please",
+      "slice": "homophone",
+      "leftContext": "Please",
+      "gold": "accept",
+      "distractors": ["except"]
+    },
+    {
+      "id": "pw-except-all",
+      "slice": "homophone",
+      "leftContext": "Everyone",
+      "gold": "except",
+      "distractors": ["accept"]
+    },
+    {
+      "id": "pw-from-came",
+      "slice": "near-tie",
+      "leftContext": "I came",
+      "gold": "from",
+      "distractors": ["form", "fem"]
+    },
+    {
+      "id": "pw-form-fill",
+      "slice": "near-tie",
+      "leftContext": "Please fill out this",
+      "gold": "form",
+      "distractors": ["from"]
+    },
+    {
+      "id": "pw-which-know",
+      "slice": "near-tie",
+      "leftContext": "I do not know",
+      "gold": "which",
+      "distractors": ["wichita", "witch"]
+    },
+    {
+      "id": "pw-satay-grilled",
+      "slice": "near-tie",
+      "leftContext": "We grilled the",
+      "gold": "satay",
+      "distractors": ["satan", "saga"]
+    },
+    {
+      "id": "pw-time-this",
+      "slice": "near-tie",
+      "leftContext": "Sorry I'm late this",
+      "gold": "time",
+      "distractors": ["item"]
+    },
+    {
+      "id": "pw-item-last",
+      "slice": "near-tie",
+      "leftContext": "The last",
+      "gold": "item",
+      "distractors": ["time"]
+    },
+    {
+      "id": "pw-who-know",
+      "slice": "near-tie",
+      "leftContext": "I know",
+      "gold": "who",
+      "distractors": ["how"]
+    },
+    {
+      "id": "pw-how-know",
+      "slice": "near-tie",
+      "leftContext": "Do you know",
+      "gold": "how",
+      "distractors": ["who"]
+    },
+    {
+      "id": "pw-there-theri",
+      "slice": "near-tie",
+      "leftContext": "I parked over",
+      "gold": "there",
+      "distractors": ["their", "teri"]
+    },
+    {
+      "id": "pw-whether-wheather",
+      "slice": "near-tie",
+      "leftContext": "I do not know",
+      "gold": "whether",
+      "distractors": ["weather", "wheat"]
+    },
+    {
+      "id": "pw-weather-wheather",
+      "slice": "near-tie",
+      "leftContext": "I love this",
+      "gold": "weather",
+      "distractors": ["whether"]
+    },
+    {
+      "id": "pw-on-turn",
+      "slice": "near-tie",
+      "leftContext": "Can you turn",
+      "gold": "on",
+      "distractors": ["in", "an"]
+    },
+    {
+      "id": "pw-yeah-works",
+      "slice": "register-casual",
+      "leftContext": "yeah that",
+      "gold": "works",
+      "distractors": ["work", "words"]
+    },
+    {
+      "id": "pw-ok-sounds",
+      "slice": "register-casual",
+      "leftContext": "ok",
+      "gold": "sounds",
+      "distractors": ["sound", "souls"]
+    },
+    {
+      "id": "pw-hey-are",
+      "slice": "register-casual",
+      "leftContext": "hey",
+      "gold": "are",
+      "distractors": ["our", "area"]
+    },
+    {
+      "id": "pw-gonna-be",
+      "slice": "register-casual",
+      "leftContext": "I'm gonna",
+      "gold": "be",
+      "distractors": ["bee", "by"]
+    },
+    {
+      "id": "pw-wanna-grab",
+      "slice": "register-casual",
+      "leftContext": "wanna",
+      "gold": "grab",
+      "distractors": ["gray", "great"]
+    },
+    {
+      "id": "pw-tbh-i",
+      "slice": "register-casual",
+      "leftContext": "tbh",
+      "gold": "I",
+      "distractors": ["it", "a"]
+    },
+    {
+      "id": "pw-lol-thats",
+      "slice": "register-casual",
+      "leftContext": "lol",
+      "gold": "that's",
+      "distractors": ["thats", "this"]
+    },
+    {
+      "id": "pw-omw-now",
+      "slice": "register-casual",
+      "leftContext": "omw",
+      "gold": "now",
+      "distractors": ["not", "know"]
+    },
+    {
+      "id": "pw-thanks-so",
+      "slice": "register-casual",
+      "leftContext": "thanks",
+      "gold": "so",
+      "distractors": ["to", "see"]
+    },
+    {
+      "id": "pw-np-i",
+      "slice": "register-casual",
+      "leftContext": "np",
+      "gold": "I",
+      "distractors": ["it", "a"]
+    },
+    {
+      "id": "pw-gonna-go",
+      "slice": "register-casual",
+      "leftContext": "gonna",
+      "gold": "go",
+      "distractors": ["got", "good"]
+    },
+    {
+      "id": "pw-haha-yeah",
+      "slice": "register-casual",
+      "leftContext": "haha",
+      "gold": "yeah",
+      "distractors": ["year", "yes"]
+    },
+    {
+      "id": "pw-the-turn-on",
+      "slice": "dont-flip",
+      "leftContext": "Turn on",
+      "gold": "the",
+      "distractors": ["ten", "eth", "tea"]
+    },
+    {
+      "id": "pw-just-i",
+      "slice": "dont-flip",
+      "leftContext": "I",
+      "gold": "just",
+      "distractors": ["jut", "jest"]
+    },
+    {
+      "id": "pw-receive-please",
+      "slice": "dont-flip",
+      "leftContext": "please",
+      "gold": "receive",
+      "distractors": ["relieve", "recurve"]
+    },
+    {
+      "id": "pw-because-left",
+      "slice": "dont-flip",
+      "leftContext": "I left",
+      "gold": "because",
+      "distractors": ["became"]
+    },
+    {
+      "id": "pw-that-know",
+      "slice": "dont-flip",
+      "leftContext": "I know",
+      "gold": "that",
+      "distractors": ["taut", "tahr"]
+    },
+    {
+      "id": "pw-and-you",
+      "slice": "dont-flip",
+      "leftContext": "you",
+      "gold": "and",
+      "distractors": ["dan", "adj"]
+    },
+    {
+      "id": "pw-want-i",
+      "slice": "dont-flip",
+      "leftContext": "I",
+      "gold": "want",
+      "distractors": ["what", "went"]
+    },
+    {
+      "id": "pw-until-wait",
+      "slice": "dont-flip",
+      "leftContext": "wait",
+      "gold": "until",
+      "distractors": ["unroll", "untie"]
+    },
+    {
+      "id": "pw-about-talk",
+      "slice": "dont-flip",
+      "leftContext": "talk",
+      "gold": "about",
+      "distractors": ["abbott", "abbot"]
+    },
+    {
+      "id": "pw-definitely-i",
+      "slice": "dont-flip",
+      "leftContext": "I",
+      "gold": "definitely",
+      "distractors": ["defiantly", "delicately"]
+    },
+    {
+      "id": "pw-occurred-it",
+      "slice": "dont-flip",
+      "leftContext": "it",
+      "gold": "occurred",
+      "distractors": ["occurs", "occluded"]
+    },
+    {
+      "id": "pw-separate-keep",
+      "slice": "dont-flip",
+      "leftContext": "keep them",
+      "gold": "separate",
+      "distractors": ["sewerage", "serrate"]
+    }
+  ],
+  "e2e": [
+    {
+      "id": "e2e-ill-contract",
+      "slice": "confusable-contract",
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "",
+      "expectReplacement": "I'll",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-ill-contract-yeah",
+      "slice": "confusable-contract",
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "Yeah.",
+      "expectReplacement": "I'll",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-its-contract",
+      "slice": "confusable-contract",
+      "typed": "Its",
+      "prevWord": null,
+      "leftContext": "",
+      "expectReplacement": "It's",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-its-contract-wow",
+      "slice": "confusable-contract",
+      "typed": "Its",
+      "prevWord": null,
+      "leftContext": "Wow.",
+      "expectReplacement": "It's",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-id-contract",
+      "slice": "confusable-contract",
+      "typed": "Id",
+      "prevWord": null,
+      "leftContext": "",
+      "expectReplacement": "I'd",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-id-contract-honestly",
+      "slice": "confusable-contract",
+      "typed": "Id",
+      "prevWord": null,
+      "leftContext": "Honestly,",
+      "expectReplacement": "I'd",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-lets-contract",
+      "slice": "confusable-contract",
+      "typed": "Lets",
+      "prevWord": null,
+      "leftContext": "",
+      "expectReplacement": "Let's",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-lets-contract-come-on",
+      "slice": "confusable-contract",
+      "typed": "Lets",
+      "prevWord": null,
+      "leftContext": "Come on.",
+      "expectReplacement": "Let's",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-ill-literal",
+      "slice": "confusable-literal",
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "The doctor examined several",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false,
+      "note": "LM must prefer Ill over I'll so the sentence-initial rule stands down"
+    },
+    {
+      "id": "e2e-ill-literal-outbreak",
+      "slice": "confusable-literal",
+      "typed": "Ill",
+      "prevWord": null,
+      "leftContext": "After the outbreak.",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-its-literal",
+      "slice": "confusable-literal",
+      "typed": "Its",
+      "prevWord": null,
+      "leftContext": "The cat cleaned",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-its-literal-company",
+      "slice": "confusable-literal",
+      "typed": "Its",
+      "prevWord": null,
+      "leftContext": "The company announced",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-id-literal",
+      "slice": "confusable-literal",
+      "typed": "Id",
+      "prevWord": null,
+      "leftContext": "Please show your",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-id-literal-badge",
+      "slice": "confusable-literal",
+      "typed": "Id",
+      "prevWord": null,
+      "leftContext": "This is my",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-lets-literal",
+      "slice": "confusable-literal",
+      "typed": "Lets",
+      "prevWord": null,
+      "leftContext": "A good coach never",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-lets-literal-lease",
+      "slice": "confusable-literal",
+      "typed": "Lets",
+      "prevWord": null,
+      "leftContext": "The standard lease never",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false
+    },
+    {
+      "id": "e2e-frm-from",
+      "slice": "near-tie",
+      "typed": "frm",
+      "prevWord": "came",
+      "leftContext": "I came",
+      "expectReplacement": "from",
+      "expectTopIsCorrection": true,
+      "note": "classical prefers fem; gap ~0.12 so λ=1 can flip to from"
+    },
+    {
+      "id": "e2e-theri-there",
+      "slice": "near-tie",
+      "typed": "theri",
+      "prevWord": "over",
+      "leftContext": "I parked over",
+      "expectReplacement": "there",
+      "expectTopIsCorrection": true,
+      "note": "classical prefers their; gap ~0.51"
+    },
+    {
+      "id": "e2e-tiem-time",
+      "slice": "near-tie",
+      "typed": "tiem",
+      "prevWord": "this",
+      "leftContext": "Sorry I'm late this",
+      "expectReplacement": "time",
+      "expectTopIsCorrection": true,
+      "note": "classical prefers item; gap ~0.02"
+    },
+    {
+      "id": "e2e-hwo-who",
+      "slice": "near-tie",
+      "typed": "hwo",
+      "prevWord": "know",
+      "leftContext": "I know",
+      "expectReplacement": "who",
+      "expectTopIsCorrection": true,
+      "note": "classical prefers how; gap ~0.06"
+    },
+    {
+      "id": "e2e-sata-satay",
+      "slice": "near-tie",
+      "typed": "sata",
+      "prevWord": "the",
+      "leftContext": "We grilled the",
+      "expectReplacement": null,
+      "expectTopIsCorrection": false,
+      "expectTopCandidate": "satay",
+      "note": "classical leads the strip with satan; not an auto-apply. LM should put satay first."
+    },
+    {
+      "id": "e2e-wich-which-strip",
+      "slice": "near-tie",
+      "typed": "wich",
+      "prevWord": "the",
+      "leftContext": "I do not know the",
+      "expectReplacement": "which",
+      "expectTopCandidate": "which",
+      "note": "auto-apply is already which (wichita is a long completion); strip still leads with wichita"
+    },
+    {
+      "id": "e2e-wheather-whether",
+      "slice": "near-tie",
+      "typed": "wheather",
+      "prevWord": "know",
+      "leftContext": "I do not know",
+      "expectTopCandidate": "whether",
+      "note": "classical leads with the split 'wheat her'; weather/whether are a 0.002 near-tie behind it"
+    },
+    {
+      "id": "e2e-wheather-weather",
+      "slice": "near-tie",
+      "typed": "wheather",
+      "prevWord": "this",
+      "leftContext": "I love this",
+      "expectTopCandidate": "weather"
+    },
+    {
+      "id": "e2e-teh-the",
+      "slice": "dont-flip",
+      "typed": "teh",
+      "prevWord": "on",
+      "leftContext": "Turn on",
+      "expectReplacement": "the",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-recieve",
+      "slice": "dont-flip",
+      "typed": "recieve",
+      "prevWord": "please",
+      "leftContext": "please",
+      "expectReplacement": "receive",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-alot",
+      "slice": "dont-flip",
+      "typed": "alot",
+      "prevWord": "have",
+      "leftContext": "I have",
+      "expectReplacement": "a lot",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-becuase",
+      "slice": "dont-flip",
+      "typed": "becuase",
+      "prevWord": "left",
+      "leftContext": "I left",
+      "expectReplacement": "because",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-seperate",
+      "slice": "dont-flip",
+      "typed": "seperate",
+      "prevWord": "keep",
+      "leftContext": "keep them",
+      "expectReplacement": "separate",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-definately",
+      "slice": "dont-flip",
+      "typed": "definately",
+      "prevWord": "I",
+      "leftContext": "I",
+      "expectReplacement": "definitely",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-jsut",
+      "slice": "dont-flip",
+      "typed": "jsut",
+      "prevWord": "I",
+      "leftContext": "I",
+      "expectReplacement": "just",
+      "expectTopIsCorrection": true
+    },
+    {
+      "id": "e2e-youre",
+      "slice": "dont-flip",
+      "typed": "youre",
+      "prevWord": "think",
+      "leftContext": "I think",
+      "expectReplacement": "you're",
+      "expectTopIsCorrection": true,
+      "note": "contraction path, no LM involvement — classical must stay correct"
+    }
+  ]
+}
