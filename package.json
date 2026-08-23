@@ -13,6 +13,7 @@
     "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
     "build:dictionary": "node scripts/keyboard-dictionary/build.js",
     "bench:keyboard-lm": "python3 scripts/keyboard-lm/bench.py",
+    "distill:keyboard-lm": "python3 scripts/keyboard-lm/distill-generate.py",
     "test:parity:ios": "scripts/keyboard-dictionary/parity/run-swift-parity.sh",
     "test:parity:android": "cd android && ./gradlew :app:testDebugUnitTest --tests \"com.a1lab.echos.ime.CorrectionEngineParityTest\""
   },

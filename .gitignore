@@ -63,3 +63,9 @@ coverage/
 plugins/keyboard/ios/vendor/
 plugins/keyboard/android/vendor/
 data/keyboard-lm/*.gguf
+data/keyboard-lm/*.jsonl
+data/keyboard-lm/*.sqlite
+data/keyboard-lm/*.sqlite-shm
+data/keyboard-lm/*.sqlite-wal
+data/keyboard-lm/*.stats.json
+data/keyboard-lm/*.parse-fail.txt
