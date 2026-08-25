@@ -33,7 +33,7 @@ Target mix for **~1.2B tokens after filtering** (1B is the floor):
 | ----------------------------- | ------ | ------------------------------------------------------------ |
 | WildChat-1M **user turns only** | 250M | `allenai/WildChat-1M`, drop assistant, keep English          |
 | SODA                          | 250M   | `allenai/soda`, flatten to speaker turns                     |
-| Register-filtered FineWeb/C4  | 350M   | classifier trained on SODA + WildChat-user + NUS-SMS positives; **not** FineWeb-Edu |
+| Register-filtered FineWeb/C4  | 350M   | `extract-fineweb.py` on `sample-10BT` (do not download FineWeb); **not** FineWeb-Edu |
 | DeepSeek-V4-Flash synthetic   | 250M   | prompts in this file; generate ~400M, keep ~250M             |
 | NUS SMS + Tatoeba (en)        | 50M    | upsample the tiny real SMS set; hold out 5k SMS for eval     |
 | Targeted confusable/homophone | 50M    | oversample both sides of I'll/Ill, its/it's, there/their/…   |
@@ -451,6 +451,21 @@ matters more than more DeepSeek tokens):
 - Binary classifier (even a linear bag-of-ngrams works). Keep web
   documents with p(messaging) > 0.7. This is how you get the 350M
   FineWeb/C4 slice; do not skip it.
+
+FineWeb is ~15–18T tokens. Stream the official 10B-token sample, train
+the classifier on the local WildChat/SODA JSONL, and stop at 350M kept
+tokens. Never download the full dump. Never use FineWeb-Edu (its filter
+strips the casual register we want).
+
+```
+python3 scripts/keyboard-lm/extract-fineweb.py --self-test
+python3 scripts/keyboard-lm/extract-fineweb.py --dry-run 20
+python3 scripts/keyboard-lm/extract-fineweb.py \
+    --out data/keyboard-lm/fineweb-register.jsonl --target-tokens 350000000
+```
+
+If `sample-10BT` undershoots 350M kept tokens, re-run with
+`--subset sample-100BT` (still streaming, still not the full dataset).
 
 ## 6. Seed banks
 
