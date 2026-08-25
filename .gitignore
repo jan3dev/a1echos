@@ -69,3 +69,6 @@ data/keyboard-lm/*.sqlite-shm
 data/keyboard-lm/*.sqlite-wal
 data/keyboard-lm/*.stats.json
 data/keyboard-lm/*.parse-fail.txt
+data/keyboard-lm/openings.txt
+data/keyboard-lm/sms-eval.txt
+data/keyboard-lm/raw/

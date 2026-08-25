@@ -35,8 +35,20 @@ Target mix for **~1.2B tokens after filtering** (1B is the floor):
 | SODA                          | 250M   | `allenai/soda`, flatten to speaker turns                     |
 | Register-filtered FineWeb/C4  | 350M   | `extract-fineweb.py` on `sample-10BT` (do not download FineWeb); **not** FineWeb-Edu |
 | DeepSeek-V4-Flash synthetic   | 250M   | prompts in this file; generate ~400M, keep ~250M             |
-| NUS SMS + Tatoeba (en)        | 50M    | upsample the tiny real SMS set; hold out 5k SMS for eval     |
+| NUS SMS + Tatoeba (en)        | 50M    | `extract-sms-tatoeba.py`; upsample SMS; hold out 5k SMS for eval |
 | Targeted confusable/homophone | 50M    | oversample both sides of I'll/Ill, its/it's, there/their/…   |
+
+```
+python3 scripts/keyboard-lm/extract-sms-tatoeba.py --self-test
+python3 scripts/keyboard-lm/extract-sms-tatoeba.py --dry-run 8
+python3 scripts/keyboard-lm/extract-sms-tatoeba.py \
+    --sms ~/Downloads/smsCorpus_en_2015.03.09_all.json \
+    --tatoeba ~/Downloads/eng_sentences.tsv \
+    --tatoeba-cc0 ~/Downloads/eng_sentences_CC0.tsv \
+    --out data/keyboard-lm/sms-tatoeba.jsonl --target-tokens 50000000
+```
+
+Put the dumps in `data/keyboard-lm/raw/` (or `~/Downloads`) to omit the path flags. CC0 sentences are tagged and not duplicated; `--cc0-only` drops the CC BY remainder. Held-out SMS is `data/keyboard-lm/sms-eval.txt` (`bench.py --corpus`). Continuation seeds: `--openings data/keyboard-lm/openings.txt`.
 
 If you insist on a teacher-heavy run, cap DeepSeek at **≤40%**. Past
 that you are paying to clone one model's style, not to cover the

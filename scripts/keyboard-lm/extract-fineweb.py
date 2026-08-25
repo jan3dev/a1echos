@@ -40,6 +40,7 @@ DEFAULT_OUT = REPO_ROOT / "data" / "keyboard-lm" / "fineweb-register.jsonl"
 DEFAULT_POSITIVES = (
     REPO_ROOT / "data" / "keyboard-lm" / "wildchat-user-en.jsonl",
     REPO_ROOT / "data" / "keyboard-lm" / "soda-turns.jsonl",
+    REPO_ROOT / "data" / "keyboard-lm" / "sms-tatoeba.jsonl",
     REPO_ROOT / "data" / "keyboard-lm" / "synthetic.jsonl",
 )
 HF_DATASET = "HuggingFaceFW/fineweb"
@@ -897,7 +898,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         nargs="+",
         default=list(DEFAULT_POSITIVES),
-        help="JSONL files of typing-register positives (WildChat/SODA/synthetic)",
+        help="JSONL files of typing-register positives (WildChat/SODA/SMS/Tatoeba/synthetic)",
     )
     p.add_argument("--max-docs", type=int, default=0, help="Stop after N FineWeb docs (0 = no cap)")
     p.add_argument("--seed", type=int, default=0)
