@@ -19,6 +19,10 @@ Examples::
     python3 scripts/keyboard-lm/extract-fineweb.py --dry-run 20
     python3 scripts/keyboard-lm/extract-fineweb.py \\
         --out data/keyboard-lm/fineweb-register.jsonl --target-tokens 350000000
+
+Existing ``--out`` is appended (dups skipped). Raising ``--target-tokens``
+continues the stream; it does not rewrite the file. Pass ``--overwrite``
+to start from scratch.
 """
 
 from __future__ import annotations
@@ -269,6 +273,87 @@ def crush(text: str) -> str:
 
 def estimate_tokens(text: str) -> int:
     return max(1, (len(text.encode("utf-8")) + 3) // 4)
+
+
+def stats_path_for(out: Path) -> Path:
+    return Path(str(out) + ".stats.json")
+
+
+def load_existing_jsonl(path: Path) -> tuple[int, int, set[str]]:
+    """Return (tokens, rows, crushed-text keys) from an existing JSONL."""
+    tokens = 0
+    rows = 0
+    seen: set[str] = set()
+    if not path.is_file():
+        return 0, 0, seen
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            text = (row.get("text") or "").strip()
+            if not text:
+                continue
+            rows += 1
+            tokens += estimate_tokens(text)
+            seen.add(crush(text))
+    return tokens, rows, seen
+
+
+def load_prev_stats(out: Path) -> dict | None:
+    path = stats_path_for(out)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def resume_skip_docs(
+    prev: dict | None, file_tokens: int, file_rows: int = 0
+) -> int:
+    """Skip already-consumed FineWeb docs only when stats match the file.
+
+    A truncated JSONL with a stale stats.json must not skip.
+    Prefer row counts: kept-token accounting uses FineWeb token_count,
+    which will not match a utf-8/4 recount of the JSONL.
+    """
+    if not prev:
+        return 0
+    prev_docs = int(prev.get("docs") or 0)
+    if prev_docs <= 0:
+        return 0
+    prev_rows = int(prev.get("chunks_kept") or 0)
+    prev_tokens = int(prev.get("tokens") or 0)
+    if file_rows and prev_rows:
+        if file_rows < int(prev_rows * 0.95):
+            return 0
+        return prev_docs
+    if prev_tokens <= 0 or file_tokens <= 0:
+        return 0
+    if file_tokens < int(prev_tokens * 0.95):
+        return 0
+    return prev_docs
+
+
+def skip_stream_docs(docs: Iterator[dict], n: int) -> int:
+    if n <= 0:
+        return 0
+    log(f"resume: skipping {n} already-consumed FineWeb docs")
+    skipped = 0
+    for _ in docs:
+        skipped += 1
+        if skipped >= n:
+            break
+        if skipped % 100000 == 0:
+            log(f"  skipped {skipped}")
+    return skipped
 
 
 def word_count(text: str) -> int:
@@ -723,16 +808,58 @@ def extract(args: argparse.Namespace) -> int:
     rng = random.Random(args.seed)
     positives = [] if args.heuristic_only else load_positives(args.positives, args.pos_per_source)
     stats = Stats()
+    existing_tokens = existing_rows = 0
+    seen: set[str] = set()
+    skip_n = 0
+    append = False
+
+    if args.out.is_file() and not args.overwrite and not args.dry_run:
+        existing_tokens, existing_rows, seen = load_existing_jsonl(args.out)
+        prev = load_prev_stats(args.out)
+        skip_n = resume_skip_docs(prev, existing_tokens, existing_rows)
+        append = True
+        if skip_n and prev:
+            stats.tokens = int(prev.get("tokens") or existing_tokens)
+            stats.chunks_kept = int(prev.get("chunks_kept") or existing_rows)
+        else:
+            stats.tokens = existing_tokens
+            stats.chunks_kept = existing_rows
+        log(
+            f"resume {args.out} existing_tokens={stats.tokens} "
+            f"rows={existing_rows} skip_docs={skip_n}"
+        )
+        if skip_n == 0 and prev and int(prev.get("chunks_kept") or 0) > existing_rows:
+            log(
+                "stats.json is stale vs the JSONL (file was rewritten). "
+                "Not skipping the stream; duplicate texts still dropped."
+            )
+        if stats.tokens >= args.target_tokens:
+            log("target already met; pass a higher --target-tokens to append")
+            return 0
+    elif args.overwrite and args.out.is_file() and not args.dry_run:
+        log(f"overwrite {args.out}")
+        args.out.unlink()
+
     ds = load_fineweb(args.subset)
     docs = iter_docs(ds)
-    clf, _boot = collect_negatives_and_train(docs, positives, stats, args, rng)
+    skipped = skip_stream_docs(docs, skip_n)
+    stats.docs = skipped
+    if skip_n and positives and not args.heuristic_only:
+        clf, acc = train_clf(positives, [normalize(t) for t in BUILTIN_FORMAL], rng)
+        stats.clf_holdout_acc = acc
+        stats.n_pos = len(positives)
+        stats.n_neg = len(BUILTIN_FORMAL)
+        log(f"resume clf holdout acc={acc:.3f} pos={len(positives)} (no FineWeb bootstrap)")
+        _boot = 0
+    else:
+        clf, _boot = collect_negatives_and_train(docs, positives, stats, args, rng)
 
     if args.dry_run:
         n = max(1, args.dry_run)
-        seen: set[str] = set()
+        dry_seen: set[str] = set()
         for row in docs:
-            process_doc(row, clf, args, stats, seen, None, dry_run=True)
-            if stats.docs - _boot >= n:
+            process_doc(row, clf, args, stats, dry_seen, None, dry_run=True)
+            if stats.docs - skipped - _boot >= n:
                 break
         log(
             f"dry-run docs={n} scored={stats.chunks_scored} "
@@ -741,14 +868,17 @@ def extract(args: argparse.Namespace) -> int:
         return 0
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    seen: set[str] = set()
-    log(f"filtering → {args.out} target_tokens={args.target_tokens} threshold={args.threshold}")
-    with args.out.open("w", encoding="utf-8") as handle:
+    mode = "a" if append else "w"
+    log(
+        f"filtering → {args.out} mode={mode} target_tokens={args.target_tokens} "
+        f"threshold={args.threshold}"
+    )
+    with args.out.open(mode, encoding="utf-8") as handle:
         for row in docs:
             process_doc(row, clf, args, stats, seen, handle, dry_run=False)
             if stats.tokens >= args.target_tokens:
                 break
-            if args.max_docs and stats.docs >= args.max_docs:
+            if args.max_docs and (stats.docs - skipped) >= args.max_docs:
                 break
             if stats.docs % 5000 == 0:
                 keep = stats.chunks_kept / max(stats.chunks_scored, 1)
@@ -775,8 +905,10 @@ def extract(args: argparse.Namespace) -> int:
         "rejects": stats.rejects,
         "out": str(args.out),
         "hit_target": stats.tokens >= args.target_tokens,
+        "resumed": append,
+        "existing_tokens": existing_tokens,
     }
-    stats_path = Path(str(args.out) + ".stats.json")
+    stats_path = stats_path_for(args.out)
     stats_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     log(
         f"done docs={stats.docs} wrote={stats.chunks_kept} tokens={stats.tokens} "
@@ -867,6 +999,31 @@ def self_test() -> int:
     p_news = register_p(clf, news)
     check(p_news < 0.5, f"news should drop p={p_news:.3f}")
 
+    check(
+        resume_skip_docs({"tokens": 350_000_000, "docs": 1000, "chunks_kept": 7000}, 1, 7000)
+        == 1000,
+        "resume skip match rows",
+    )
+    check(
+        resume_skip_docs({"tokens": 350_000_000, "docs": 1000, "chunks_kept": 7000}, 1, 200)
+        == 0,
+        "stale stats no skip",
+    )
+    check(resume_skip_docs(None, 100) == 0, "no stats no skip")
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "out.jsonl"
+        path.write_text(
+            json.dumps({"text": "yeah I'll be there in ten if you still want to go"})
+            + "\n",
+            encoding="utf-8",
+        )
+        tokens, rows, keys = load_existing_jsonl(path)
+        check(rows == 1 and tokens >= 1, "load existing jsonl")
+        check(crush("yeah I'll be there in ten if you still want to go") in keys, "seen key")
+
     if failures:
         log("self-test FAILED:")
         for msg in failures:
@@ -906,6 +1063,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--heuristic-only",
         action="store_true",
         help="Skip the trained classifier; keep chunks with heuristic p >= threshold",
+    )
+    p.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Delete existing JSONL and start over (default is to append)",
     )
     p.add_argument(
         "--dry-run",

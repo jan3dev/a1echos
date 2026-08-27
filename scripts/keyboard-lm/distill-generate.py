@@ -15,9 +15,16 @@ Examples::
     python3 scripts/keyboard-lm/distill-generate.py --dry-run 4
     python3 scripts/keyboard-lm/distill-generate.py \\
         --out data/keyboard-lm/synthetic.jsonl --target-tokens 250000000
+    python3 scripts/keyboard-lm/distill-generate.py \\
+        --out data/keyboard-lm/synthetic.jsonl --only literal --add-tokens 3000000
+    python3 scripts/keyboard-lm/distill-generate.py \\
+        --out data/keyboard-lm/synthetic.jsonl --upsample 4
 
 Requires ``OPENROUTER_API_KEY`` for live generation. Resumes by appending
-and skipping crushed-text hashes already in the JSONL.
+and skipping crushed-text hashes already in the JSONL. ``--target-tokens``
+is an absolute cap on the file (or on ``--only`` tasks). ``--add-tokens``
+generates that many new tokens this run. ``--upsample N`` appends shuffled
+copies of unique rows until unique_tokens * N (no API calls).
 """
 
 from __future__ import annotations
@@ -55,6 +62,7 @@ DEFAULT_TOP_P = 0.92
 DEFAULT_MAX_TOKENS = 900
 USD_PER_M_IN = 0.14
 USD_PER_M_OUT = 0.28
+MAX_UPSAMPLE_COPIES = 20
 
 # --- prompts (keep in sync with distill-prompts.md) ---
 
@@ -997,11 +1005,12 @@ class Seen:
             self.conn.commit()
         return fresh
 
-    def ingest_jsonl(self, path: Path) -> int:
+    def ingest_jsonl(self, path: Path) -> tuple[int, Counter[str]]:
         tokens = 0
+        tokens_by_task: Counter[str] = Counter()
         batch: list[str] = []
         if not path.is_file():
-            return 0
+            return 0, tokens_by_task
         with path.open(encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()
@@ -1014,14 +1023,18 @@ class Seen:
                 text = row.get("text")
                 if not isinstance(text, str) or not text.strip():
                     continue
-                tokens += estimate_tokens(text)
+                n = estimate_tokens(text)
+                tokens += n
+                task = row.get("task")
+                if isinstance(task, str) and task:
+                    tokens_by_task[task] += n
                 batch.append(text)
                 if len(batch) >= 1000:
                     self.add_many(batch)
                     batch = []
         if batch:
             self.add_many(batch)
-        return tokens
+        return tokens, tokens_by_task
 
     def close(self) -> None:
         self.conn.close()
@@ -1182,6 +1195,7 @@ class Stats:
     completion_tokens: int = 0
     reasons: Counter[str] = field(default_factory=Counter)
     by_task: Counter[str] = field(default_factory=Counter)
+    tokens_by_task: Counter[str] = field(default_factory=Counter)
 
 
 def process_messages(
@@ -1219,9 +1233,15 @@ def process_messages(
 
 
 def existing_tokens(path: Path) -> int:
+    total, _by_task = existing_token_counts(path)
+    return total
+
+
+def existing_token_counts(path: Path) -> tuple[int, Counter[str]]:
     if not path.is_file():
-        return 0
+        return 0, Counter()
     total = 0
+    by_task: Counter[str] = Counter()
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -1232,9 +1252,131 @@ def existing_tokens(path: Path) -> int:
             except json.JSONDecodeError:
                 continue
             text = row.get("text")
-            if isinstance(text, str) and text:
-                total += estimate_tokens(text)
-    return total
+            if not isinstance(text, str) or not text:
+                continue
+            n = estimate_tokens(text)
+            total += n
+            task = row.get("task")
+            if isinstance(task, str) and task:
+                by_task[task] += n
+    return total, by_task
+
+
+def scoped_tokens(stats: Stats, only: set[str] | None) -> int:
+    if only:
+        return sum(stats.tokens_by_task[t] for t in only)
+    return stats.tokens
+
+
+def load_unique_rows(path: Path) -> tuple[list[dict[str, Any]], int, int, int]:
+    unique: list[dict[str, Any]] = []
+    unique_tokens = 0
+    file_tokens = 0
+    n_up = 0
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            text = row.get("text")
+            if not isinstance(text, str) or not text.strip():
+                continue
+            n = estimate_tokens(text)
+            file_tokens += n
+            if row.get("upsample"):
+                n_up += 1
+                continue
+            unique.append(row)
+            unique_tokens += n
+    return unique, unique_tokens, file_tokens, n_up
+
+
+def dump_synth_row(handle: Any, row: dict[str, Any], upsample: int = 0) -> None:
+    out = {k: v for k, v in row.items() if k != "upsample"}
+    if upsample:
+        out["upsample"] = upsample
+    handle.write(json.dumps(out, ensure_ascii=False) + "\n")
+
+
+def upsample_jsonl(
+    src: Path, dst: Path, factor: float, seed: int, target_tokens: int = 0
+) -> int:
+    if not src.is_file():
+        die(f"not found: {src}")
+    if factor < 1:
+        die("--upsample must be >= 1")
+    unique, unique_tokens, file_tokens, n_up = load_unique_rows(src)
+    if not unique:
+        die("no unique rows to upsample")
+    if target_tokens <= 0:
+        target_tokens = int(unique_tokens * factor)
+    log(
+        f"upsample {src} unique_rows={len(unique)} unique_tokens={unique_tokens} "
+        f"file_tokens={file_tokens} already_upsampled={n_up} "
+        f"target_tokens={target_tokens}"
+    )
+    if file_tokens >= target_tokens:
+        log("target already met")
+        return 0
+
+    rng = random.Random(seed)
+    copies = 0
+    extra_rows = 0
+    in_place = src.resolve() == dst.resolve()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+
+    def append_copies(handle: Any) -> None:
+        nonlocal copies, extra_rows, file_tokens
+        while copies < MAX_UPSAMPLE_COPIES and file_tokens < target_tokens:
+            copies += 1
+            order = list(unique)
+            rng.shuffle(order)
+            for row in order:
+                if file_tokens >= target_tokens:
+                    break
+                dump_synth_row(handle, row, copies)
+                file_tokens += estimate_tokens(str(row.get("text") or ""))
+                extra_rows += 1
+
+    if in_place:
+        with dst.open("a", encoding="utf-8") as handle:
+            append_copies(handle)
+    else:
+        with dst.open("w", encoding="utf-8") as handle:
+            for row in unique:
+                dump_synth_row(handle, row, 0)
+            append_copies(handle)
+
+    log(
+        f"done extra_rows={extra_rows} copies={copies} "
+        f"tokens={file_tokens} out={dst}"
+    )
+    stats_path = Path(str(dst) + ".stats.json")
+    prev: dict[str, Any] = {}
+    if stats_path.is_file():
+        try:
+            loaded = json.loads(stats_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                prev = loaded
+        except json.JSONDecodeError:
+            prev = {}
+    prev.update(
+        {
+            "tokens": file_tokens,
+            "unique_tokens": unique_tokens,
+            "unique_rows": len(unique),
+            "upsample_factor": factor,
+            "upsample_copies": copies,
+            "upsample_extra_rows": extra_rows,
+        }
+    )
+    stats_path.write_text(json.dumps(prev, indent=2) + "\n", encoding="utf-8")
+    log(f"wrote {stats_path}")
+    return 0
 
 
 def print_progress(stats: Stats, prefix: str = "") -> None:
@@ -1273,9 +1415,26 @@ def run_generate(args: argparse.Namespace) -> int:
     stats = Stats()
     if out_path.is_file():
         log(f"resuming {out_path}")
-        stats.tokens = seen.ingest_jsonl(out_path)
-        log(f"already have ~{stats.tokens} tokens")
-    if stats.tokens >= args.target_tokens:
+        stats.tokens, stats.tokens_by_task = seen.ingest_jsonl(out_path)
+        if only:
+            scoped = scoped_tokens(stats, only)
+            parts = ", ".join(f"{t}={stats.tokens_by_task[t]}" for t in sorted(only))
+            log(f"already have ~{stats.tokens} tokens ({parts}; scoped={scoped})")
+        else:
+            log(f"already have ~{stats.tokens} tokens")
+    start_scoped = scoped_tokens(stats, only)
+
+    def budget_hit() -> bool:
+        scoped = scoped_tokens(stats, only)
+        if args.target_tokens > 0 and scoped >= args.target_tokens:
+            return True
+        if args.add_tokens > 0 and (scoped - start_scoped) >= args.add_tokens:
+            return True
+        if args.max_calls > 0 and stats.calls >= args.max_calls:
+            return True
+        return False
+
+    if budget_hit():
         log("target already met")
         seen.close()
         return 0
@@ -1353,7 +1512,9 @@ def run_generate(args: argparse.Namespace) -> int:
             for _, reason in rejects:
                 stats.reasons[reason] += 1
             for row in rows:
-                stats.tokens += estimate_tokens(row["text"])
+                n_tok = estimate_tokens(row["text"])
+                stats.tokens += n_tok
+                stats.tokens_by_task[spec.task] += n_tok
         if rows:
             write_jsonl(handle, rows, write_lock)
         if rejects_handle is not None and rejects:
@@ -1369,10 +1530,7 @@ def run_generate(args: argparse.Namespace) -> int:
         rng = random.Random(args.seed + worker_id * 9973)
         while not stop.is_set():
             with stats_lock:
-                if stats.tokens >= args.target_tokens:
-                    stop.set()
-                    return
-                if args.max_calls and stats.calls >= args.max_calls:
+                if budget_hit():
                     stop.set()
                     return
             one_call(rng)
@@ -1410,6 +1568,7 @@ def run_generate(args: argparse.Namespace) -> int:
         ),
         "reasons": dict(stats.reasons),
         "by_task": dict(stats.by_task),
+        "tokens_by_task": dict(stats.tokens_by_task),
     }
     stats_path = Path(str(out_path) + ".stats.json")
     stats_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -1636,6 +1795,44 @@ def self_test() -> int:
     assert defaults.base_url == DEFAULT_BASE_URL
     assert defaults.model == DEFAULT_MODEL
     assert defaults.api_key_env == DEFAULT_API_KEY_ENV
+    assert defaults.add_tokens == 0
+    scoped = Stats(tokens=100, tokens_by_task=Counter({"literal": 10, "sms": 90}))
+    assert scoped_tokens(scoped, None) == 100
+    assert scoped_tokens(scoped, {"literal"}) == 10
+    add_args = parse_args(["--add-tokens", "3000000", "--only", "literal"])
+    assert add_args.add_tokens == 3_000_000 and add_args.only == ["literal"]
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "syn.jsonl"
+        rows = [
+            {
+                "text": "the cat cleaned its paws on the rug",
+                "source": "synthetic-literal",
+                "slice": "confusable-literal",
+                "task": "literal",
+            },
+            {
+                "text": "Yeah I'll be there in ten",
+                "source": "synthetic-contract",
+                "slice": "confusable-contract",
+                "task": "contract",
+            },
+        ]
+        with path.open("w", encoding="utf-8") as handle:
+            for row in rows:
+                handle.write(json.dumps(row) + "\n")
+        unique, uniq_tok, file_tok, n_up = load_unique_rows(path)
+        assert len(unique) == 2 and n_up == 0
+        target = uniq_tok * 3
+        assert upsample_jsonl(path, path, 3, seed=1, target_tokens=target) == 0
+        unique2, uniq_tok2, file_tok2, n_up2 = load_unique_rows(path)
+        assert len(unique2) == 2 and uniq_tok2 == uniq_tok
+        assert file_tok2 >= target and n_up2 > 0
+        assert upsample_jsonl(path, path, 3, seed=1, target_tokens=target) == 0
+        _u, _ut, file_tok3, _n = load_unique_rows(path)
+        assert file_tok3 == file_tok2
     log("self-test ok")
     return 0
 
@@ -1656,7 +1853,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--target-tokens",
         type=int,
         default=0,
-        help="Stop after writing this many estimated tokens (utf-8 bytes/4)",
+        help="Stop when the file (or --only tasks) reaches this many tokens",
+    )
+    p.add_argument(
+        "--upsample",
+        type=float,
+        default=0,
+        help="Append shuffled unique-row copies until unique_tokens * N (no API)",
+    )
+    p.add_argument(
+        "--add-tokens",
+        type=int,
+        default=0,
+        help="Generate this many additional tokens this run (counts --only tasks if set)",
     )
     p.add_argument(
         "--max-calls",
@@ -1684,7 +1893,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--top-p", type=float, default=DEFAULT_TOP_P)
     p.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     p.add_argument("--timeout", type=float, default=60.0)
-    p.add_argument("--concurrency", type=int, default=8)
+    p.add_argument("--concurrency", type=int, default=128)
     p.add_argument("--seed", type=int, default=1)
     p.add_argument(
         "--overwrite",
@@ -1717,8 +1926,12 @@ def main(argv: list[str] | None = None) -> int:
         return self_test()
     if args.dry_run:
         return dry_run(args)
-    if args.target_tokens <= 0 and args.max_calls <= 0:
-        die("pass --target-tokens and/or --max-calls (or --dry-run / --self-test)")
+    if args.upsample:
+        return upsample_jsonl(
+            args.out, args.out, args.upsample, args.seed, args.target_tokens
+        )
+    if args.target_tokens <= 0 and args.max_calls <= 0 and args.add_tokens <= 0:
+        die("pass --target-tokens, --add-tokens, and/or --max-calls (or --dry-run / --self-test)")
     return run_generate(args)
 
 

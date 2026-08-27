@@ -10,9 +10,12 @@ python3 scripts/keyboard-lm/distill-generate.py --self-test
 python3 scripts/keyboard-lm/distill-generate.py --dry-run 4
 python3 scripts/keyboard-lm/distill-generate.py \
     --out data/keyboard-lm/synthetic.jsonl --target-tokens 250000000
+python3 scripts/keyboard-lm/distill-generate.py \
+    --out data/keyboard-lm/synthetic.jsonl --only literal --add-tokens 3000000
 ```
 
 Requires `OPENROUTER_API_KEY`. Restrict slices with `--only literal homophone`.
+`--target-tokens` is a cap on the whole file (or on `--only` tasks). `--add-tokens` appends that many new tokens this run.
 Drop `--rejects data/keyboard-lm/synthetic.rejects.jsonl` to debug keep-rate.
 
 The on-device model is not a chatbot and not a spellchecker. At
@@ -474,6 +477,9 @@ python3 scripts/keyboard-lm/extract-fineweb.py --self-test
 python3 scripts/keyboard-lm/extract-fineweb.py --dry-run 20
 python3 scripts/keyboard-lm/extract-fineweb.py \
     --out data/keyboard-lm/fineweb-register.jsonl --target-tokens 350000000
+# later: raise the cap; the existing JSONL is appended, not rewritten
+python3 scripts/keyboard-lm/extract-fineweb.py \
+    --out data/keyboard-lm/fineweb-register.jsonl --target-tokens 550000000
 ```
 
 If `sample-10BT` undershoots 350M kept tokens, re-run with
