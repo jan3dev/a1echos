@@ -116,6 +116,26 @@ Checkpoints every 50M tokens under
 `train_log.jsonl` has SMS + typing-eval perplexity. If SMS ppl rises for two
 evals in a row, stop and use the previous `step-*` folder.
 
+Interrupted run — resume from the latest eval checkpoint (not mid-step;
+you lose at most 50M tokens). Same `--out` and `--data`. `--resume` with no
+path picks the highest `step-*`:
+
+```
+ls data/keyboard-lm/pythia-31m-keyboard/
+python3 scripts/keyboard-lm/train.py \
+  --data data/keyboard-lm/mix.jsonl \
+  --out data/keyboard-lm/pythia-31m-keyboard \
+  --microbatch 16 \
+  --resume
+# or a specific step:
+#   --resume data/keyboard-lm/pythia-31m-keyboard/step-000095
+```
+
+Older checkpoints that only have weights (no `optimizer.pt`) still resume:
+weights + cosine step + data skip, fresh Adam. Pull this `train.py` onto
+the pod first — earlier copies ignore `--resume`. If you die before the
+first `step-*` save, there is nothing to resume; start over (the pack stays).
+
 Optional: pack at home (no GPU) so the upload is 2.2GB instead of 7GB:
 
 ```

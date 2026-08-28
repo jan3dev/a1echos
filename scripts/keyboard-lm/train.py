@@ -8,6 +8,7 @@ Full-parameter causal LM. Not LoRA, not Unsloth — 31M params fit in ~2GB.
     python3 scripts/keyboard-lm/train.py \\
         --data data/keyboard-lm/mix.jsonl \\
         --out data/keyboard-lm/pythia-31m-keyboard
+    python3 scripts/keyboard-lm/train.py --resume   # latest step-* under --out
 
 Packs documents with pythia's EOS into 512-token sequences (cached as
 ``mix.packed.bin`` next to --data). See scripts/keyboard-lm/finetune.md.
@@ -279,14 +280,52 @@ def evaluate_ppl(model, tokenizer, device, lines: list[str], max_len: int) -> di
     }
 
 
-def save_ckpt(model, tokenizer, out: Path, tag: str, meta: dict) -> Path:
+def save_ckpt(model, tokenizer, out: Path, tag: str, meta: dict, opt=None) -> Path:
     dest = out / tag
     dest.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(dest)
     tokenizer.save_pretrained(dest)
     (dest / "train_meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    if opt is not None:
+        import torch
+
+        torch.save(opt.state_dict(), dest / "optimizer.pt")
     log(f"saved {dest}")
     return dest
+
+
+def find_resume(out: Path, spec: str) -> Path:
+    if spec != "auto":
+        path = Path(spec)
+        if not (path / "config.json").is_file():
+            die(f"not a checkpoint (missing config.json): {path}")
+        return path
+    cands = sorted(
+        p for p in out.glob("step-*") if p.is_dir() and (p / "config.json").is_file()
+    )
+    if not cands:
+        die(f"no step-* checkpoints in {out}")
+    return cands[-1]
+
+
+def replay_cursor(seed: int, n_packs: int, packs_consumed: int):
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    order = rng.permutation(n_packs)
+    cursor = 0
+    epoch = 0
+    left = packs_consumed
+    while left > 0:
+        take = min(left, n_packs - cursor)
+        if take <= 0:
+            epoch += 1
+            order = rng.permutation(n_packs)
+            cursor = 0
+            continue
+        cursor += take
+        left -= take
+    return rng, order, cursor, epoch
 
 
 def train(args: argparse.Namespace) -> int:
@@ -309,11 +348,13 @@ def train(args: argparse.Namespace) -> int:
     log(f"device={device} model={args.model}")
 
     dtype = autocast_dtype(device)
-    log(f"load {args.model} dtype={dtype}")
+    resume_dir = find_resume(args.out, args.resume) if args.resume else None
+    load_from = str(resume_dir) if resume_dir else args.model
+    log(f"load {load_from} dtype={dtype}")
     try:
-        model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(load_from, dtype=dtype)
     except TypeError:
-        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(load_from, torch_dtype=dtype)
     model.to(device)
     model.train()
     model.config.use_cache = False
@@ -364,12 +405,28 @@ def train(args: argparse.Namespace) -> int:
     eval_paths = [Path(p) for p in args.eval_corpus if Path(p).is_file()]
     eval_sets = {p.name: load_eval_lines(p) for p in eval_paths}
 
-    rng = np.random.default_rng(args.seed)
-    order = rng.permutation(n_packs)
-    cursor = 0
-    epoch = 0
+    step = 0
     tokens_seen = 0
-    next_eval = args.eval_every
+    if resume_dir is not None:
+        meta_path = resume_dir / "train_meta.json"
+        if not meta_path.is_file():
+            die(f"checkpoint missing train_meta.json: {resume_dir}")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        step = int(meta["step"])
+        tokens_seen = int(meta["tokens"])
+        opt_path = resume_dir / "optimizer.pt"
+        if opt_path.is_file():
+            opt.load_state_dict(torch.load(opt_path, map_location=device, weights_only=True))
+            log(f"resume optimizer {opt_path}")
+        else:
+            log("no optimizer.pt in checkpoint; continuing with a fresh Adam")
+        log(f"resume {resume_dir} step={step} tokens={tokens_seen:,}")
+        if tokens_seen >= tokens_total:
+            die("checkpoint already finished this run")
+    rng, order, cursor, epoch = replay_cursor(
+        args.seed, n_packs, tokens_seen // seq_len
+    )
+    next_eval = ((tokens_seen // args.eval_every) + 1) * args.eval_every
     args.out.mkdir(parents=True, exist_ok=True)
     log_path = args.out / "train_log.jsonl"
     t0 = time.time()
@@ -407,10 +464,9 @@ def train(args: argparse.Namespace) -> int:
             log(f"eval {name} ppl={ppl:.2f}" if ppl else f"eval {name} ppl=n/a")
         with log_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(meta) + "\n")
-        save_ckpt(model, tokenizer, args.out, f"step-{step:06d}", meta)
+        save_ckpt(model, tokenizer, args.out, f"step-{step:06d}", meta, opt)
         return meta
 
-    step = 0
     use_amp = dtype in (torch.bfloat16, torch.float16) and device == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=dtype == torch.float16)
     while tokens_seen < tokens_total:
@@ -462,7 +518,7 @@ def train(args: argparse.Namespace) -> int:
             running_n = 0
 
     meta = run_eval(step)
-    save_ckpt(model, tokenizer, args.out, "final", {**meta, "pack": pack_stats})
+    save_ckpt(model, tokenizer, args.out, "final", {**meta, "pack": pack_stats}, opt)
     log("done")
     return 0
 
@@ -506,6 +562,19 @@ def self_test() -> int:
         eval_file = root / "eval.txt"
         eval_file.write_text("# skip\nhello world\n\n", encoding="utf-8")
         assert load_eval_lines(eval_file) == ["hello world"]
+        rng, order, cursor, epoch = replay_cursor(seed=1, n_packs=10, packs_consumed=0)
+        assert cursor == 0 and epoch == 0 and len(order) == 10
+        rng2, order2, cursor2, epoch2 = replay_cursor(seed=1, n_packs=10, packs_consumed=25)
+        assert epoch2 == 2 and cursor2 == 5
+        rng3, order3, cursor3, epoch3 = replay_cursor(seed=1, n_packs=10, packs_consumed=0)
+        for _ in range(25):
+            if cursor3 >= 10:
+                epoch3 += 1
+                order3 = rng3.permutation(10)
+                cursor3 = 0
+            cursor3 += 1
+        assert epoch3 == epoch2 and cursor3 == cursor2
+        assert list(order3) == list(order2)
     log("self-test ok")
     return 0
 
@@ -536,6 +605,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--device", default="auto")
     p.add_argument("--pack-only", action="store_true")
     p.add_argument("--overwrite-pack", action="store_true")
+    p.add_argument(
+        "--resume",
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Resume from a step-* dir. Bare --resume uses the latest under --out.",
+    )
     p.add_argument("--self-test", action="store_true")
     return p.parse_args(argv)
 
