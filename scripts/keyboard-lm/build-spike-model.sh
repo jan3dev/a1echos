@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Produces the placeholder LM for the keyboard reranker spike:
-#   EleutherAI/pythia-31m (Apache-2.0) -> GGUF F16 -> Q8_0
+# Produces the keyboard reranker GGUF:
+#   EleutherAI/pythia-31m (or a local HF checkpoint) -> GGUF F16 -> Q8_0
 # Output: data/keyboard-lm/keyboard_lm.gguf (git-ignored; ~33MB)
+#
+#   ./scripts/keyboard-lm/build-spike-model.sh
+#   ./scripts/keyboard-lm/build-spike-model.sh data/keyboard-lm/pythia-31m-keyboard/final
 #
 # Requires a python env with torch/gguf and transformers 4.x — the GGUF
 # converter is incompatible with transformers >=5 (it drops the legacy
@@ -14,13 +17,18 @@ set -euo pipefail
 
 require_tools cmake
 
-HF_MODEL="EleutherAI/pythia-31m"
+HF_MODEL="${1:-EleutherAI/pythia-31m}"
 HOST_BUILD_DIR="$BUILD_ROOT/build-host"
-MODEL_DIR="$BUILD_ROOT/pythia-31m"
 OUT_DIR="$REPO_ROOT/data/keyboard-lm"
 PYTHON="${SPIKE_PYTHON:-python3}"
 
 ensure_llama_source
+
+if [[ -d "$HF_MODEL" && -f "$HF_MODEL/config.json" ]]; then
+  MODEL_DIR="$HF_MODEL"
+else
+  MODEL_DIR="$BUILD_ROOT/pythia-31m"
+fi
 
 # Host tools: llama-quantize for the Q8_0 pass, llama-completion for a
 # sanity run (this tag's replacement for the old llama-cli).

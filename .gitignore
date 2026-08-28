@@ -64,6 +64,10 @@ plugins/keyboard/ios/vendor/
 plugins/keyboard/android/vendor/
 data/keyboard-lm/*.gguf
 data/keyboard-lm/*.jsonl
+data/keyboard-lm/*.bin
+data/keyboard-lm/*.packed.json
+data/keyboard-lm/*.shards/
+data/keyboard-lm/pythia-31m-keyboard/
 data/keyboard-lm/*.sqlite
 data/keyboard-lm/*.sqlite-shm
 data/keyboard-lm/*.sqlite-wal

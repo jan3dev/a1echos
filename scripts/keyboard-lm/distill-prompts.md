@@ -616,6 +616,18 @@ dialogue utterances.
 
 ## 8. Train recipe (so the file is complete)
 
+First-timer GPU walkthrough (what to rent, why not Unsloth, copy-paste):
+`scripts/keyboard-lm/finetune.md`.
+
+```
+python3 scripts/keyboard-lm/concat-mix.py --self-test
+python3 scripts/keyboard-lm/concat-mix.py
+python3 scripts/keyboard-lm/train.py --self-test
+python3 scripts/keyboard-lm/train.py \
+  --data data/keyboard-lm/mix.jsonl \
+  --out data/keyboard-lm/pythia-31m-keyboard
+```
+
 ```
 model:        EleutherAI/pythia-31m
 objective:    causal LM, full-parameter continue-pretrain
@@ -647,6 +659,10 @@ A fine-tune is a success when pairwise and `confusable-literal` move
 up and `dont-flip` does not drop. Then `build-spike-model.sh` against
 the HF checkpoint (same tokenizer → same GGUF path), bump
 `ModelRegistry`.
+
+```
+./scripts/keyboard-lm/build-spike-model.sh data/keyboard-lm/pythia-31m-keyboard/final
+```
 
 ## 9. Eval hygiene
 

@@ -111,9 +111,12 @@ Goal: noticeably better contextual feel within days, no architecture change.
   ~25% WildChat user turns (upsampled), ~25% SODA, ~30% register-filtered
   C4 (classifier trained on SODA/WildChat/NUS-SMS positives — the Gboard
   trick), ~15% synthetic chat, ~5% SMS/Tatoeba. A few GPU-hours on one
-  A100/4090.
+  A100/4090. Concat with `scripts/keyboard-lm/concat-mix.py`; train with
+  `scripts/keyboard-lm/train.py` (full FT, not Unsloth — see
+  `scripts/keyboard-lm/finetune.md`).
 - Keep tokenizer/architecture unchanged → same GGUF conversion pipeline
-  (`build-spike-model.sh`), drop-in replacement, bump the registry version.
+  (`build-spike-model.sh [hf-checkpoint-dir]`), drop-in replacement, bump
+  the registry version.
 - Exit criterion: `python3 scripts/keyboard-lm/bench.py --model <ft>
   --baseline EleutherAI/pythia-31m` improves pairwise preference and
   confusable e2e without dropping `dont-flip`; dogfood the rest. If not
