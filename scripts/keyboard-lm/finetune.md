@@ -49,9 +49,9 @@ Do **not** pick A100/H100 to “be safe”. This model is 6 layers × 256 dim;
 kernel launch, not FLOPs, is the limit. A 4090 with a 0.5M-token batch is
 faster per dollar.
 
-VRAM used: weights + Adam + activations ≈ **2–4GB** at microbatch 64. The
-other 20GB is so you can raise `--microbatch` (128 or 256) and keep the GPU
-busy.
+VRAM used: weights + Adam are tiny (~0.5GB). The 50k-vocab cross-entropy
+on `B × 512` is the hog (`B=128` asks for another 12GB and OOMs a 4090).
+`--microbatch 16` (or 32) plus gradient accum keeps the 0.5M-token step.
 
 **Host:** [RunPod](https://www.runpod.io) GPU Cloud, community, **RTX 4090**,
 **PyTorch 2.x + CUDA 12** template, **50–80GB** disk, enable SSH. Vast.ai is
@@ -95,7 +95,7 @@ python3 scripts/keyboard-lm/train.py --self-test
 python3 scripts/keyboard-lm/train.py \
   --data data/keyboard-lm/mix.jsonl \
   --out data/keyboard-lm/pythia-31m-keyboard \
-  --microbatch 128
+  --microbatch 16
 ```
 
 First run tokenizes and writes `mix.jsonl.packed.bin` (~2.2GB). That is CPU
@@ -107,8 +107,9 @@ Logs look like:
 step 20/2100 loss=4.12 lr=9.5e-05 tok=10,485,760 85,000 tok/s eta=3.5h
 ```
 
-Expect **50k–150k tokens/s** on a 4090. If you see <20k, raise `--microbatch`
-to 256. If you OOM, the script halves it and continues.
+Expect **50k–150k tokens/s** on a 4090. If you see <20k, try `--microbatch 32`.
+Do not jump to 128 — the loss allocates `B×512×50304` fp32. If you OOM, the
+script halves microbatch on a labels+backward probe and continues.
 
 Checkpoints every 50M tokens under
 `data/keyboard-lm/pythia-31m-keyboard/step-XXXXXX/` plus `final/`.

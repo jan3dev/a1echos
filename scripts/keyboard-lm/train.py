@@ -337,23 +337,28 @@ def train(args: argparse.Namespace) -> int:
         f"steps={steps:,} micro={micro} accum={accum} warmup={warmup_steps}"
     )
 
+    # Probe must include labels + backward: CE on the 50k vocab is the
+    # memory peak, not the 31M weights. A no-grad forward misses it.
     while True:
         try:
             probe = torch.zeros((micro, seq_len), dtype=torch.long, device=device)
-            with torch.no_grad():
-                model(input_ids=probe)
-            del probe
+            loss = model(input_ids=probe, labels=probe).loss
+            loss.backward()
+            model.zero_grad(set_to_none=True)
+            del probe, loss
             if device == "cuda":
                 torch.cuda.empty_cache()
             break
         except torch.cuda.OutOfMemoryError:
             if device == "cuda":
                 torch.cuda.empty_cache()
+            model.zero_grad(set_to_none=True)
             micro //= 2
             if micro < 1:
                 die("OOM even at microbatch 1 — pick a GPU with more VRAM")
             accum = max(1, math.ceil(packs_per_step / micro))
             log(f"OOM on probe, microbatch now {micro} accum={accum}")
+    log(f"using micro={micro} accum={accum}")
 
     opt = AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd, betas=(0.9, 0.95))
     eval_paths = [Path(p) for p in args.eval_corpus if Path(p).is_file()]
@@ -512,7 +517,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--seq-len", type=int, default=DEFAULT_SEQ_LEN)
     p.add_argument("--tokens-per-step", type=int, default=DEFAULT_TOKENS_PER_STEP)
-    p.add_argument("--microbatch", type=int, default=64)
+    p.add_argument(
+        "--microbatch",
+        type=int,
+        default=16,
+        help="Sequences per forward. 128 OOMs on 24GB: CE materializes "
+        "B×512×50k logits. 16–32 is the 4090 range; accum keeps the token batch.",
+    )
     p.add_argument("--lr", type=float, default=DEFAULT_LR)
     p.add_argument("--min-lr", type=float, default=DEFAULT_MIN_LR)
     p.add_argument("--warmup", type=float, default=DEFAULT_WARMUP)
