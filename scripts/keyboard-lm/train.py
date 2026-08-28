@@ -205,17 +205,37 @@ def load_or_pack(
     return arr, stats
 
 
-def pick_device(requested: str) -> str:
-    if requested != "auto":
-        return requested
+def cuda_status() -> tuple[bool, str]:
+    import torch
+
+    build = getattr(torch.version, "cuda", None) or "none"
     try:
-        import torch
-    except ImportError:
+        if not torch.cuda.is_available():
+            return False, (
+                f"torch {torch.__version__} (built for CUDA {build}) does not see a GPU. "
+                "The pod driver is CUDA 12.8 — install a matching wheel:\n"
+                "  pip install --force-reinstall torch "
+                "--index-url https://download.pytorch.org/whl/cu128"
+            )
+        name = torch.cuda.get_device_name(0)
+        return True, f"cuda:{name} torch={torch.__version__} cuda_build={build}"
+    except Exception as exc:
+        return False, (
+            f"CUDA init failed: {exc}\n"
+            "  pip install --force-reinstall torch "
+            "--index-url https://download.pytorch.org/whl/cu128"
+        )
+
+
+def pick_device(requested: str) -> str:
+    if requested == "cpu":
         return "cpu"
-    if torch.cuda.is_available():
+    ok, detail = cuda_status()
+    if ok:
+        log(detail)
         return "cuda"
-    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-        return "cpu"  # tiny model, MPS bf16/AdamW is more trouble than it's worth
+    if requested == "cuda" or requested == "auto":
+        die(detail)
     return "cpu"
 
 
@@ -275,8 +295,6 @@ def train(args: argparse.Namespace) -> int:
     from torch.optim import AdamW
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    device = pick_device(args.device)
-    log(f"device={device} model={args.model}")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     eos_id = tokenizer.eos_token_id
     if eos_id is None:
@@ -287,13 +305,15 @@ def train(args: argparse.Namespace) -> int:
     if args.pack_only:
         log("pack-only done")
         return 0
-    if device == "cpu" and args.device == "auto":
-        log("warning: no CUDA GPU detected; 1.1B tokens on CPU will take days")
-        log("rent a 4090 and follow scripts/keyboard-lm/finetune.md")
+    device = pick_device(args.device)
+    log(f"device={device} model={args.model}")
 
     dtype = autocast_dtype(device)
     log(f"load {args.model} dtype={dtype}")
-    model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype)
+    try:
+        model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype)
+    except TypeError:
+        model = AutoModelForCausalLM.from_pretrained(args.model, torch_dtype=dtype)
     model.to(device)
     model.train()
     model.config.use_cache = False
@@ -387,7 +407,7 @@ def train(args: argparse.Namespace) -> int:
 
     step = 0
     use_amp = dtype in (torch.bfloat16, torch.float16) and device == "cuda"
-    scaler = torch.cuda.amp.GradScaler(enabled=dtype == torch.float16)
+    scaler = torch.amp.GradScaler("cuda", enabled=dtype == torch.float16)
     while tokens_seen < tokens_total:
         lr = cosine_lr(step, steps, warmup_steps, args.lr, args.min_lr)
         for group in opt.param_groups:

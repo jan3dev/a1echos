@@ -86,6 +86,11 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -U pip
 pip install torch transformers==4.57.6 numpy
 
+# Pod driver is CUDA 12.8. `pip install torch` grabs a newer wheel and
+# CUDA init fails → the trainer would otherwise fall back to CPU.
+pip install --force-reinstall torch --index-url https://download.pytorch.org/whl/cu128
+python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+
 python3 scripts/keyboard-lm/train.py --self-test
 python3 scripts/keyboard-lm/train.py \
   --data data/keyboard-lm/mix.jsonl \
