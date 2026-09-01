@@ -48,6 +48,10 @@ interface UIStore {
   showVoiceSessionHint: () => void;
   hideVoiceSessionHint: () => void;
 
+  largerModelSuggestionVisible: boolean;
+  showLargerModelSuggestion: () => void;
+  hideLargerModelSuggestion: () => void;
+
   setRecordingControlsEnabled: (enabled: boolean) => void;
   setRecordingControlsVisible: (visible: boolean) => void;
   setRecordingCallbacks: (
@@ -130,6 +134,16 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   hideVoiceSessionHint: () => {
     set({ voiceSessionHintVisible: false });
+  },
+
+  largerModelSuggestionVisible: false,
+
+  showLargerModelSuggestion: () => {
+    set({ largerModelSuggestionVisible: true });
+  },
+
+  hideLargerModelSuggestion: () => {
+    set({ largerModelSuggestionVisible: false });
   },
 
   setRecordingControlsEnabled: (enabled: boolean) => {
@@ -312,5 +326,12 @@ export const useShowVoiceSessionHint = () =>
   useUIStore((s) => s.showVoiceSessionHint);
 export const useHideVoiceSessionHint = () =>
   useUIStore((s) => s.hideVoiceSessionHint);
+
+export const useLargerModelSuggestionVisible = () =>
+  useUIStore((s) => s.largerModelSuggestionVisible);
+export const useShowLargerModelSuggestion = () =>
+  useUIStore((s) => s.showLargerModelSuggestion);
+export const useHideLargerModelSuggestion = () =>
+  useUIStore((s) => s.hideLargerModelSuggestion);
 
 export default useUIStore;

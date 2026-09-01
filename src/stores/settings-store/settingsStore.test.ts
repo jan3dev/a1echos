@@ -14,6 +14,8 @@ import {
   KEYBOARD_LM_STRENGTH_OPTIONS,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useHasSeenKeyboardPrompt,
+  useHasSeenLargerModelSuggestion,
+  useMarkLargerModelSuggestionSeen,
   useHasSeenWelcome,
   useMarkWelcomeSeen,
   useIsIncognitoMode,
@@ -451,6 +453,64 @@ describe("settingsStore", () => {
 
     it("useMarkKeyboardPromptSeen returns the action", () => {
       const { result } = renderHook(() => useMarkKeyboardPromptSeen());
+      expect(typeof result.current).toBe("function");
+    });
+  });
+
+  describe("markLargerModelSuggestionSeen()", () => {
+    it("defaults to false in the store", () => {
+      expect(useSettingsStore.getState().hasSeenLargerModelSuggestion).toBe(
+        false,
+      );
+    });
+
+    it("sets true and persists", async () => {
+      await useSettingsStore.getState().markLargerModelSuggestionSeen();
+
+      expect(useSettingsStore.getState().hasSeenLargerModelSuggestion).toBe(
+        true,
+      );
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "larger_model_suggestion_seen",
+        "true",
+      );
+    });
+
+    it("does NOT throw on persist failure (fire-and-forget)", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await expect(
+        useSettingsStore.getState().markLargerModelSuggestionSeen(),
+      ).resolves.toBeUndefined();
+
+      expect(useSettingsStore.getState().hasSeenLargerModelSuggestion).toBe(
+        true,
+      );
+    });
+
+    it("initialize() reads persisted true value", async () => {
+      const AS: any = AsyncStorage;
+      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
+        key === "larger_model_suggestion_seen" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().hasSeenLargerModelSuggestion).toBe(
+        true,
+      );
+    });
+
+    it("useHasSeenLargerModelSuggestion selector reflects state", () => {
+      useSettingsStore.setState({ hasSeenLargerModelSuggestion: true });
+      const { result } = renderHook(() => useHasSeenLargerModelSuggestion());
+      expect(result.current).toBe(true);
+    });
+
+    it("useMarkLargerModelSuggestionSeen returns the action", () => {
+      const { result } = renderHook(() => useMarkLargerModelSuggestionSeen());
       expect(typeof result.current).toBe("function");
     });
   });

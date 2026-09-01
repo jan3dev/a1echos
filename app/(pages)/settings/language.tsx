@@ -16,13 +16,16 @@ import { useLocalization, useScrollSurface } from "@/hooks";
 import {
   getCountryCode,
   getModelInfo,
+  ModelId,
   SpokenLanguage,
   SupportedLanguages,
 } from "@/models";
 import {
+  useHasSeenLargerModelSuggestion,
   useSelectedLanguage,
   useSelectedModelId,
   useSetLanguage,
+  useShowLargerModelSuggestion,
 } from "@/stores";
 import { useTheme } from "@/theme";
 import { delay, FeatureFlag, logError } from "@/utils";
@@ -38,6 +41,8 @@ export default function LanguageSettingsScreen() {
   const selectedLanguage = useSelectedLanguage();
   const selectedModelId = useSelectedModelId();
   const setLanguage = useSetLanguage();
+  const hasSeenLargerModelSuggestion = useHasSeenLargerModelSuggestion();
+  const showLargerModelSuggestion = useShowLargerModelSuggestion();
 
   const [pendingLanguageCode, setPendingLanguageCode] = useState<string | null>(
     null,
@@ -59,6 +64,16 @@ export default function LanguageSettingsScreen() {
     try {
       await setLanguage(language);
       await feedback;
+      // The bundled model is much weaker outside English, so nudge the user
+      // toward a bigger one — once, and only while they're still on it. The
+      // sheet is rendered globally because this screen unmounts on `back()`.
+      if (
+        language.code !== SupportedLanguages.defaultLanguage.code &&
+        selectedModelId === ModelId.WHISPER_TINY &&
+        !hasSeenLargerModelSuggestion
+      ) {
+        showLargerModelSuggestion();
+      }
       router.back();
     } catch (error) {
       setPendingLanguageCode(null);

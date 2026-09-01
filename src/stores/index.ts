@@ -29,6 +29,8 @@ export {
   useSmartSplitEnabled,
   useHasSeenKeyboardPrompt,
   useMarkKeyboardPromptSeen,
+  useHasSeenLargerModelSuggestion,
+  useMarkLargerModelSuggestionSeen,
   useKeyboardAutocorrect,
   useSetKeyboardAutocorrect,
   useKeyboardHaptic,
@@ -98,6 +100,9 @@ export {
   useVoiceSessionHintVisible,
   useShowVoiceSessionHint,
   useHideVoiceSessionHint,
+  useLargerModelSuggestionVisible,
+  useShowLargerModelSuggestion,
+  useHideLargerModelSuggestion,
 } from "./ui-store/uiStore";
 export type {
   GlobalTooltipAction,

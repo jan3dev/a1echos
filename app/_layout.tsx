@@ -2,7 +2,7 @@ import "@/localization";
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
 import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
-import { Stack, usePathname } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,6 +15,7 @@ import {
   AppErrorBoundary,
   Icon,
   KeyboardPromptModal,
+  LargerModelSuggestionModal,
   RecordingControlsView,
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
@@ -22,7 +23,7 @@ import {
   VoiceSessionHintModal,
 } from "@/components";
 import { useVoiceSessionHint } from "@/hooks";
-import { AppConstants } from "@/constants";
+import { AppConstants, Routes } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
 import migrationsBundle from "@/db/migrations/migrations.js";
 import {
@@ -40,11 +41,15 @@ import {
   useGlobalTooltip,
   useHideGlobalTooltip,
   useHideKeyboardPrompt,
+  useHideLargerModelSuggestion,
   useIsEngineInitializing,
   useIsSessionSelectionMode,
   useIsTranscriptionSelectionMode,
   useHideVoiceSessionHint,
   useKeyboardPromptVisible,
+  useLargerModelSuggestionVisible,
+  useMarkLargerModelSuggestionSeen,
+  useSelectedLanguage,
   useMarkKeyboardPromptSeen,
   useVoiceSessionHintVisible,
   useOnRecordingStart,
@@ -255,6 +260,36 @@ function GlobalKeyboardPromptRenderer() {
   );
 }
 
+function GlobalLargerModelSuggestionRenderer() {
+  const router = useRouter();
+  const visible = useLargerModelSuggestionVisible();
+  const hide = useHideLargerModelSuggestion();
+  const markSeen = useMarkLargerModelSuggestionSeen();
+  // By the time the sheet is shown the store already holds the language the
+  // user just picked — that's what triggered it.
+  const language = useSelectedLanguage();
+
+  const handleConfirm = useCallback(() => {
+    void markSeen();
+    hide();
+    router.push(Routes.settingsModel);
+  }, [hide, markSeen, router]);
+
+  const handleDismiss = useCallback(() => {
+    void markSeen();
+    hide();
+  }, [hide, markSeen]);
+
+  return (
+    <LargerModelSuggestionModal
+      visible={visible}
+      languageName={language.name}
+      onConfirm={handleConfirm}
+      onDismiss={handleDismiss}
+    />
+  );
+}
+
 function GlobalVoiceSessionHintRenderer() {
   const visible = useVoiceSessionHintVisible();
   const hide = useHideVoiceSessionHint();
@@ -445,6 +480,7 @@ export default function RootLayout() {
         <GlobalTooltipRenderer />
         <GlobalKeyboardPromptRenderer />
         <GlobalVoiceSessionHintRenderer />
+        <GlobalLargerModelSuggestionRenderer />
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

@@ -209,6 +209,10 @@ class EchosKeyboardView @JvmOverloads constructor(
     private var numberLabelTextSize = 0f
     private var numberLabelOffsetRight = 0f
     private var numberLabelOffsetTop = 0f
+    /// Half the measured width of the spacebar's "ECHOS" brand hint. Measured
+    /// once at init so the draw loop doesn't call `measureText` every frame
+    /// just to right-align a string that never changes.
+    private var spacebarBrandHalfWidth = 0f
     /// Gap between a phone-pad key's digit and its trailing hint ("2"/"ABC").
     /// Derived from the sublabel paint size; computed once so the draw loop
     /// doesn't recompute it per sublabeled key per frame.
@@ -255,6 +259,11 @@ class EchosKeyboardView @JvmOverloads constructor(
     private val previewHideRunnable = Runnable { overlay?.clearPreview() }
 
     private companion object {
+        /// Printed small in the spacebar's bottom-right corner where native
+        /// keyboards print the active input languages. Deliberately not
+        /// localized — it's the product name, not a language code.
+        private const val SPACEBAR_BRAND_LABEL = "ECHOS"
+
         // Accent / emoji long-press default — 300 ms matches LatinIME.
         private const val LONG_PRESS_THRESHOLD_MS = 300L
 
@@ -382,6 +391,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         keyTextPaintRegular.textSize = keyTextSize
         keyTextPaintSpecial.textSize = keyTextSizeSpecial
         keyTextPaintNumber.textSize = numberLabelTextSize
+        spacebarBrandHalfWidth =
+            keyTextPaintNumber.measureText(SPACEBAR_BRAND_LABEL) / 2f
         subLabelGap = numberLabelTextSize * 0.4f
         keyTextPaintNumericPad.textSize = keyTextSize * 1.45f
         regularBaselineOffset =
@@ -991,6 +1002,24 @@ class EchosKeyboardView @JvmOverloads constructor(
             canvas.drawText(subLabel, textX + total / 2f - subW / 2f, textY, keyTextPaintNumber)
         } else {
             canvas.drawText(displayLabel, textX, textY, labelPaint)
+        }
+
+        // Native keyboards print the active input languages on the spacebar
+        // ("DE EN"). Echos is English-only for now, so there are no codes worth
+        // printing — but the spacebar is still the one place a user can tell
+        // *which* keyboard is currently up, so print the product name. The
+        // icon-based numeric-pad space cells returned at the icon path above,
+        // so this only ever lands on the wide QWERTY-style spacebar.
+        if (key.type == EchosKeyboardLayout.KeyType.SPACE) {
+            keyTextPaintNumber.color = theme.keyTextSecondary
+            // The paint is `Align.CENTER`, so offset by half the string width
+            // to sit the right edge at the same inset the number hint uses.
+            canvas.drawText(
+                SPACEBAR_BRAND_LABEL,
+                rect.right - numberLabelOffsetRight - spacebarBrandHalfWidth,
+                rect.bottom - numberLabelOffsetRight,
+                keyTextPaintNumber,
+            )
         }
 
         // Top-row letters carry a small number in the top-right corner so the

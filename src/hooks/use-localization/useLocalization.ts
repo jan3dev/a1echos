@@ -135,6 +135,11 @@ export const useLocalization = () => {
       voiceSessionHintTitle: t("voiceSessionHintTitle"),
       voiceSessionHintBody: t("voiceSessionHintBody"),
       voiceSessionHintCta: t("voiceSessionHintCta"),
+      largerModelSuggestionTitle: t("largerModelSuggestionTitle"),
+      largerModelSuggestionBody: (language: string) =>
+        t("largerModelSuggestionBody", { language }),
+      largerModelSuggestionCta: t("largerModelSuggestionCta"),
+      largerModelSuggestionDismiss: t("largerModelSuggestionDismiss"),
       advancedSettingsAddKeyboardTitle: t("advancedSettingsAddKeyboardTitle"),
       advancedSettingsAddKeyboardDescription: t(
         "advancedSettingsAddKeyboardDescription",

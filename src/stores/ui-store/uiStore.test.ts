@@ -25,6 +25,9 @@ import {
   useVoiceSessionHintVisible,
   useShowVoiceSessionHint,
   useHideVoiceSessionHint,
+  useLargerModelSuggestionVisible,
+  useShowLargerModelSuggestion,
+  useHideLargerModelSuggestion,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useOnRecordingStart,
@@ -435,6 +438,30 @@ describe("uiStore", () => {
         result.current();
       });
       expect(useUIStore.getState().voiceSessionHintVisible).toBe(false);
+    });
+  });
+
+  describe("Larger model suggestion visibility", () => {
+    it("defaults to hidden", () => {
+      const { result } = renderHook(() => useLargerModelSuggestionVisible());
+      expect(result.current).toBe(false);
+    });
+
+    it("showLargerModelSuggestion flips visibility to true", () => {
+      const { result } = renderHook(() => useShowLargerModelSuggestion());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().largerModelSuggestionVisible).toBe(true);
+    });
+
+    it("hideLargerModelSuggestion flips visibility back to false", () => {
+      useUIStore.setState({ largerModelSuggestionVisible: true });
+      const { result } = renderHook(() => useHideLargerModelSuggestion());
+      act(() => {
+        result.current();
+      });
+      expect(useUIStore.getState().largerModelSuggestionVisible).toBe(false);
     });
   });
 });

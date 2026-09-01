@@ -33,6 +33,7 @@ const STORAGE_KEYS = {
   KEYBOARD_CONTEXT_AWARE_AUTOCORRECT: "keyboard_context_aware_autocorrect",
   KEYBOARD_LM_STRENGTH: "keyboard_lm_strength",
   HAS_SEEN_WELCOME: "has_seen_welcome",
+  LARGER_MODEL_SUGGESTION_SEEN: "larger_model_suggestion_seen",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -102,6 +103,10 @@ interface SettingsStore {
   keyboardLmStrength: number;
   /** Whether the one-time first-launch welcome screen has been shown. */
   hasSeenWelcome: boolean;
+  /** Whether the one-time "try a larger model" sheet has been shown. Offered
+   *  the first time a non-English language is picked while still on the small
+   *  bundled model, which transcribes other languages noticeably worse. */
+  hasSeenLargerModelSuggestion: boolean;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -121,6 +126,7 @@ interface SettingsStore {
   setKeyboardContextAwareAutocorrect: (enabled: boolean) => Promise<void>;
   setKeyboardLmStrength: (strength: number) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
+  markLargerModelSuggestionSeen: () => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -249,6 +255,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardContextAwareAutocorrect: false,
   keyboardLmStrength: DEFAULT_LM_STRENGTH,
   hasSeenWelcome: false,
+  hasSeenLargerModelSuggestion: false,
 
   initialize: async () => {
     try {
@@ -269,6 +276,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardContextAwareValue,
         keyboardLmStrengthValue,
         hasSeenWelcomeValue,
+        largerModelSuggestionValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -286,6 +294,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_CONTEXT_AWARE_AUTOCORRECT),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_LM_STRENGTH),
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
+        AsyncStorage.getItem(STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN),
       ]);
 
       const selectedTheme = themeValue
@@ -365,6 +374,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardContextAwareValue === "true";
       const keyboardLmStrength = parseLmStrength(keyboardLmStrengthValue);
       const hasSeenWelcome = hasSeenWelcomeValue === "true";
+      const hasSeenLargerModelSuggestion = largerModelSuggestionValue === "true";
 
       set({
         selectedTheme,
@@ -383,6 +393,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardContextAwareAutocorrect,
         keyboardLmStrength,
         hasSeenWelcome,
+        hasSeenLargerModelSuggestion,
       });
 
       // Mirror the preferences to the keyboard config file so the native
@@ -411,6 +422,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardContextAwareAutocorrect: false,
         keyboardLmStrength: DEFAULT_LM_STRENGTH,
         hasSeenWelcome: false,
+        hasSeenLargerModelSuggestion: false,
       });
     }
   },
@@ -687,6 +699,21 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
+
+  markLargerModelSuggestionSeen: async () => {
+    set({ hasSeenLargerModelSuggestion: true });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN,
+        "true",
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save larger model suggestion flag",
+      });
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -745,6 +772,10 @@ export const useHasSeenWelcome = () =>
   useSettingsStore((s) => s.hasSeenWelcome);
 export const useMarkWelcomeSeen = () =>
   useSettingsStore((s) => s.markWelcomeSeen);
+export const useHasSeenLargerModelSuggestion = () =>
+  useSettingsStore((s) => s.hasSeenLargerModelSuggestion);
+export const useMarkLargerModelSuggestionSeen = () =>
+  useSettingsStore((s) => s.markLargerModelSuggestionSeen);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

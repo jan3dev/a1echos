@@ -51,18 +51,24 @@ jest.mock("@/hooks", () => ({
 jest.mock("@/models", () => ({
   getCountryCode: jest.fn((lang: any) => `flag_${lang.code}`),
   getModelInfo: jest.fn(() => ({ supportedLanguageCodes: undefined })),
+  ModelId: { WHISPER_TINY: "whisper_tiny" },
   SupportedLanguages: {
     get all() {
       return mockLanguages;
     },
     forCodes: jest.fn(() => mockLanguages),
+    defaultLanguage: { code: "en", name: "English" },
   },
 }));
+
+const mockShowLargerModelSuggestion = jest.fn();
 
 jest.mock("@/stores", () => ({
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
   useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSetLanguage: jest.fn(() => mockSetLanguage),
+  useHasSeenLargerModelSuggestion: jest.fn(() => false),
+  useShowLargerModelSuggestion: jest.fn(() => mockShowLargerModelSuggestion),
 }));
 
 jest.mock("@/utils", () => ({
@@ -218,6 +224,88 @@ describe("LanguageSettingsScreen", () => {
         code: "es",
         name: "Spanish",
       });
+    });
+  });
+
+  describe("larger model suggestion", () => {
+    beforeEach(() => {
+      mockShowLargerModelSuggestion.mockClear();
+      mockSetLanguage.mockResolvedValue(undefined);
+      const {
+        useSelectedModelId,
+        useHasSeenLargerModelSuggestion,
+      } = require("@/stores");
+      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
+      (useHasSeenLargerModelSuggestion as jest.Mock).mockReturnValue(false);
+    });
+
+    it("shows for a non-English language on the bundled model", async () => {
+      const { getByTestId } = render(<LanguageSettingsScreen />);
+      fireEvent.press(getByTestId("list-item-French"));
+
+      await waitFor(() => {
+        expect(mockShowLargerModelSuggestion).toHaveBeenCalled();
+      });
+    });
+
+    it("does not show when English is selected", async () => {
+      const { useSelectedLanguage } = require("@/stores");
+      (useSelectedLanguage as jest.Mock).mockReturnValue({
+        code: "fr",
+        name: "French",
+      });
+
+      const { getByTestId } = render(<LanguageSettingsScreen />);
+      fireEvent.press(getByTestId("list-item-English"));
+
+      await waitFor(() => {
+        expect(mockSetLanguage).toHaveBeenCalled();
+      });
+      expect(mockShowLargerModelSuggestion).not.toHaveBeenCalled();
+
+      (useSelectedLanguage as jest.Mock).mockReturnValue({
+        code: "en",
+        name: "English",
+      });
+    });
+
+    it("does not show when already on a larger model", async () => {
+      const { useSelectedModelId } = require("@/stores");
+      (useSelectedModelId as jest.Mock).mockReturnValue("nemo_parakeet_v3");
+
+      const { getByTestId } = render(<LanguageSettingsScreen />);
+      fireEvent.press(getByTestId("list-item-French"));
+
+      await waitFor(() => {
+        expect(mockSetLanguage).toHaveBeenCalled();
+      });
+      expect(mockShowLargerModelSuggestion).not.toHaveBeenCalled();
+    });
+
+    it("does not show when it has already been seen", async () => {
+      const { useHasSeenLargerModelSuggestion } = require("@/stores");
+      (useHasSeenLargerModelSuggestion as jest.Mock).mockReturnValue(true);
+
+      const { getByTestId } = render(<LanguageSettingsScreen />);
+      fireEvent.press(getByTestId("list-item-French"));
+
+      await waitFor(() => {
+        expect(mockSetLanguage).toHaveBeenCalled();
+      });
+      expect(mockShowLargerModelSuggestion).not.toHaveBeenCalled();
+    });
+
+    it("does not show when setLanguage fails", async () => {
+      mockSetLanguage.mockRejectedValue(new Error("language error"));
+      const { logError } = require("@/utils");
+
+      const { getByTestId } = render(<LanguageSettingsScreen />);
+      fireEvent.press(getByTestId("list-item-French"));
+
+      await waitFor(() => {
+        expect(logError).toHaveBeenCalled();
+      });
+      expect(mockShowLargerModelSuggestion).not.toHaveBeenCalled();
     });
   });
 });

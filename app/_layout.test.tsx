@@ -4,7 +4,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import React from "react";
 
-import { TestID } from "@/constants";
+import { Routes, TestID } from "@/constants";
 import {
   initializeSessionStore,
   initializeSettingsStore,
@@ -70,6 +70,12 @@ jest.mock("@/stores", () => ({
   ),
   useVoiceSessionHintVisible: jest.fn(() => false),
   useHideVoiceSessionHint: jest.fn(() => jest.fn()),
+  useLargerModelSuggestionVisible: jest.fn(() => false),
+  useHideLargerModelSuggestion: jest.fn(() => jest.fn()),
+  useMarkLargerModelSuggestionSeen: jest.fn(() =>
+    jest.fn().mockResolvedValue(undefined),
+  ),
+  useSelectedLanguage: jest.fn(() => ({ code: "de", name: "German" })),
 }));
 
 jest.mock("@/services", () => ({
@@ -123,6 +129,22 @@ jest.mock("@/components", () => {
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
     TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
+    LargerModelSuggestionModal: ({
+      visible,
+      languageName,
+      onConfirm,
+      onDismiss,
+    }: any) => {
+      const { TouchableOpacity, Text } = require("react-native");
+      if (!visible) return null;
+      return (
+        <View testID={TID.LargerModelSuggestionModal}>
+          <Text>{languageName}</Text>
+          <TouchableOpacity testID="lms-confirm" onPress={onConfirm} />
+          <TouchableOpacity testID="lms-dismiss" onPress={onDismiss} />
+        </View>
+      );
+    },
     VoiceSessionHintModal: ({ visible, onDismiss }: any) => {
       const { TouchableOpacity } = require("react-native");
       if (!visible) return null;
@@ -151,6 +173,7 @@ jest.mock("expo-router", () => {
       },
     ),
     usePathname: jest.fn(() => "/"),
+    useRouter: jest.fn(() => ({ push: jest.fn() })),
   };
 });
 
@@ -692,6 +715,75 @@ describe("RootLayout", () => {
         fireEvent.press(getByTestId("vsh-dismiss"));
       });
       expect(mockHide).toHaveBeenCalled();
+    });
+  });
+
+  describe("GlobalLargerModelSuggestionRenderer", () => {
+    it("does not render when largerModelSuggestionVisible is false", async () => {
+      const { useLargerModelSuggestionVisible } = require("@/stores");
+      (useLargerModelSuggestionVisible as jest.Mock).mockReturnValue(false);
+
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.LargerModelSuggestionModal)).toBeNull();
+    });
+
+    it("renders the selected language name when visible", async () => {
+      const { useLargerModelSuggestionVisible } = require("@/stores");
+      (useLargerModelSuggestionVisible as jest.Mock).mockReturnValue(true);
+
+      const { getByTestId, getByText } = await renderAndWaitForInit();
+      expect(getByTestId(TestID.LargerModelSuggestionModal)).toBeTruthy();
+      expect(getByText("German")).toBeTruthy();
+    });
+
+    it("confirm marks seen, hides, and navigates to the model screen", async () => {
+      const mockHide = jest.fn();
+      const mockMark = jest.fn().mockResolvedValue(undefined);
+      const mockPush = jest.fn();
+      const {
+        useLargerModelSuggestionVisible,
+        useHideLargerModelSuggestion,
+        useMarkLargerModelSuggestionSeen,
+      } = require("@/stores");
+      const { useRouter } = require("expo-router");
+      (useLargerModelSuggestionVisible as jest.Mock).mockReturnValue(true);
+      (useHideLargerModelSuggestion as jest.Mock).mockReturnValue(mockHide);
+      (useMarkLargerModelSuggestionSeen as jest.Mock).mockReturnValue(mockMark);
+      (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("lms-confirm"));
+      });
+
+      expect(mockMark).toHaveBeenCalled();
+      expect(mockHide).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith(Routes.settingsModel);
+    });
+
+    it("dismiss marks seen and hides without navigating", async () => {
+      const mockHide = jest.fn();
+      const mockMark = jest.fn().mockResolvedValue(undefined);
+      const mockPush = jest.fn();
+      const {
+        useLargerModelSuggestionVisible,
+        useHideLargerModelSuggestion,
+        useMarkLargerModelSuggestionSeen,
+      } = require("@/stores");
+      const { useRouter } = require("expo-router");
+      (useLargerModelSuggestionVisible as jest.Mock).mockReturnValue(true);
+      (useHideLargerModelSuggestion as jest.Mock).mockReturnValue(mockHide);
+      (useMarkLargerModelSuggestionSeen as jest.Mock).mockReturnValue(mockMark);
+      (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("lms-dismiss"));
+      });
+
+      expect(mockMark).toHaveBeenCalled();
+      expect(mockHide).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 

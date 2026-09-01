@@ -152,7 +152,25 @@ class KeyButton: UIControl {
         )
         symbolHeightCapPortrait?.isActive = true
 
-        if let sub = keyDefinition.subLabel, !sub.isEmpty {
+        if keyDefinition.type == .space {
+            // Native keyboards print the active input languages here ("DE EN").
+            // Echos is English-only for now, so there are no codes worth
+            // printing — but the spacebar is still the one place a user can
+            // tell *which* keyboard is currently up, so print the product name.
+            let centerY = label.centerYAnchor.constraint(equalTo: centerYAnchor)
+            centerY.isActive = true
+            labelCenterYConstraint = centerY
+
+            subLabel.isHidden = false
+            subLabel.attributedText = NSAttributedString(
+                string: "ECHOS",
+                attributes: [.kern: 0.6]
+            )
+            NSLayoutConstraint.activate([
+                subLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+                subLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -5),
+            ])
+        } else if let sub = keyDefinition.subLabel, !sub.isEmpty {
             // Telephone-keypad digit: nudge the number up and tuck the small
             // letters just beneath it, mirroring the native numeric pad.
             subLabel.isHidden = false
@@ -376,6 +394,7 @@ class KeyButton: UIControl {
     /// disturbing) the color state owned by `updateAppearance`.
     func setTrackpadBlank(_ blank: Bool) {
         label.alpha = blank ? 0 : 1
+        subLabel.alpha = blank ? 0 : 1
         symbolView.alpha = blank ? 0 : 1
         backgroundView.alpha = blank ? 0.4 : 1
     }
@@ -477,6 +496,9 @@ class KeyButton: UIControl {
 
         label.textColor = textColor
         label.font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+        // `subLabel`'s color is otherwise fixed at init, so a theme swap would
+        // leave the spacebar / numeric-pad hints on the previous palette.
+        subLabel.textColor = theme.keyTextSecondary
         updateLabelOpticalCentering()
         symbolView.tintColor = tintColor
         applyBackgroundColor(pressed: false)
