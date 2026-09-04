@@ -76,7 +76,7 @@ export const LongText = () => {
       variant: "error",
       titleMaxLines: 3,
       messageMaxLines: 5,
-      primaryButtonText: "Got it",
+      primaryButtonText: "Got It",
       onPrimaryButtonTap: () => console.log("Got it tapped"),
     });
   };

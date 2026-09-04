@@ -160,7 +160,6 @@ export const Modal = ({
                   color={colors.textSecondary}
                   numberOfLines={messageMaxLines}
                   align="center"
-                  style={styles.messageText}
                 >
                   {message}
                 </Text>
@@ -232,9 +231,6 @@ const styles = StyleSheet.create({
   },
   messageSpacing: {
     height: 8,
-  },
-  messageText: {
-    lineHeight: 19.2,
   },
   buttonsSpacing: {
     height: 32,

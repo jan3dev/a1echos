@@ -58,7 +58,7 @@ export const LongText = () => {
       message:
         "This is a very long message with lots of descriptive text that will definitely wrap to multiple lines to demonstrate the layout behavior in the modal.",
       primaryButton: {
-        text: "Got it",
+        text: "Got It",
         onTap: () => console.log("Got it"),
       },
       secondaryButton: {
