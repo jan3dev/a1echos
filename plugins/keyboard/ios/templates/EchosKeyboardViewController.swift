@@ -129,21 +129,29 @@ class EchosKeyboardViewController: UIInputViewController {
         }
 
         view.addSubview(keyboardView)
-        NSLayoutConstraint.activate([
-            keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            keyboardView.topAnchor.constraint(equalTo: view.topAnchor),
-            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
-        // Install the height constraint before the first layout pass — created
-        // lazily in `viewWillLayoutSubviews` the first frame renders at the
-        // system default height and then snaps to ours.
+        // On every appearance the host briefly hands `view` an oversized frame
+        // (full-screen, then stock height) before it settles on the height our
+        // constraint requests, and those frames are rendered. Pin the keyboard
+        // to the BOTTOM with a breakable top pin so the keys keep their real
+        // size and on-screen position through the transient frames instead of
+        // stretching to fill them. `view` is kept clear so the transient extra
+        // space shows the host's own blur, not an opaque slab from our root.
+        view.backgroundColor = .clear
+        let topPin = keyboardView.topAnchor.constraint(equalTo: view.topAnchor)
+        topPin.priority = .defaultHigh - 1
         let heightConstraint = keyboardView.heightAnchor.constraint(
             equalToConstant: keyboardView.preferredHeight
         )
         heightConstraint.priority = .defaultHigh
-        heightConstraint.isActive = true
         keyboardView.heightConstraint = heightConstraint
+        NSLayoutConstraint.activate([
+            keyboardView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            keyboardView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            keyboardView.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor),
+            topPin,
+            keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            heightConstraint,
+        ])
 
         // Listen for transcription results from the main app
         ipcClient.onTranscriptionResult = { [weak self] text in
