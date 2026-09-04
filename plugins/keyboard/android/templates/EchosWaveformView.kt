@@ -384,8 +384,8 @@ class EchosWaveformView @JvmOverloads constructor(
 
     /// When non-zero, fades the waveform's alpha from 0 at each horizontal
     /// edge to fully opaque at `edgeFadeFraction` from the edge. Used when
-    /// the wave spans the full keyboard header so the logo and record
-    /// button sit on a transparent fall-off behind them.
+    /// the wave spans the full keyboard header so the record button sits
+    /// on a transparent fall-off behind it.
     private var edgeFadeFraction: Float = 0f
     private val maskPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)

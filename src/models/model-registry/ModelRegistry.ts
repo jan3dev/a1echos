@@ -20,9 +20,6 @@ export interface ModelInfo {
   languages: number;
   /** Language codes supported by this model. Undefined means all languages in SupportedLanguages. */
   supportedLanguageCodes?: string[];
-  /** What the model is for. Absent means "asr" (transcription). The keyboard
-   *  LM shares the download pipeline but never appears in ASR model lists. */
-  kind?: "asr" | "keyboard-lm";
 }
 
 /** The 99 language codes Whisper supports, plus the zh-hant UI variant. */
@@ -285,41 +282,20 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
     languages: QWEN3_LANGUAGES.length,
     supportedLanguageCodes: QWEN3_LANGUAGES,
   },
-  [ModelId.KEYBOARD_LM]: {
-    id: ModelId.KEYBOARD_LM,
-    name: "Context-Aware Autocorrect",
-    description: "Keyboard language model for sentence-aware corrections",
-    sizeBytes: 34_233_856,
-    supportedModes: [],
-    isBundled: false,
-    downloadBaseUrl:
-      "https://huggingface.co/jan3com/echos-keyboard-lm/resolve/main",
-    sherpaModelType: "",
-    files: [{ name: "keyboard_lm.gguf", sizeBytes: 34_233_856 }],
-    languages: 1,
-    supportedLanguageCodes: ["en"],
-    kind: "keyboard-lm",
-  },
 };
 
 export const getModelInfo = (modelId: ModelId): ModelInfo =>
   MODEL_REGISTRY[modelId];
 
-export const getAllModels = (): ModelInfo[] => Object.values(MODEL_REGISTRY);
+/** The registry is a module constant, so the list is computed once. A fresh
+ *  array per call would give callers a new identity every render and defeat
+ *  the `useMemo`s that partition it. */
+const ALL_MODELS: ModelInfo[] = Object.values(MODEL_REGISTRY);
 
-/** The registry is a module constant, so the ASR subset is computed once. A
- *  fresh array per call would give callers a new identity every render and
- *  defeat the `useMemo`s that partition it. */
-const ASR_MODELS: ModelInfo[] = getAllModels().filter(
-  (m) => (m.kind ?? "asr") === "asr",
-);
-
-/** Transcription models only — every user-facing ASR list must use this, not
- *  getAllModels, so the keyboard LM never shows up as a speech model. */
-export const getAsrModels = (): ModelInfo[] => ASR_MODELS;
+export const getAllModels = (): ModelInfo[] => ALL_MODELS;
 
 export const getDownloadableModels = (): ModelInfo[] =>
-  getAsrModels().filter((m) => !m.isBundled);
+  getAllModels().filter((m) => !m.isBundled);
 
 export const getBundledModels = (): ModelInfo[] =>
-  getAsrModels().filter((m) => m.isBundled);
+  getAllModels().filter((m) => m.isBundled);

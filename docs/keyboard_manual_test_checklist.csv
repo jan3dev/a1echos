@@ -36,6 +36,7 @@ Emoji picker,EMJ-04,Search filter,"Activate search, type ""smile""",Grinning emo
 Emoji picker,EMJ-05,ABC returns to QWERTY,Tap ABC inside picker,Returns to letters layout,iOS+Android,,,
 Emoji picker,EMJ-06,Delete works inside picker,Tap backspace inside picker,Deletes from host text field,iOS+Android,,,
 Keyboard feedback,FBK-01,Haptics on by default,Fresh install — type any key without changing settings,A light tick haptic fires on each key press,iOS+Android,,,Default flipped on; iOS needs Full Access
+Keyboard feedback,FBK-17,iOS haptic matches the stock keyboard,"Type a few words on the Echos keyboard, then switch to the stock keyboard (haptic feedback on) and type the same",Echos tick feels as short and light as the stock one — not longer or heavier; the very first key after the keyboard appears ticks without lag,iOS,,,.rigid at 0.55 intensity; generators prepared on appear
 Keyboard feedback,FBK-02,Haptic toggle silences (both platforms),In Echos ▸ Advanced Settings toggle Keyboard Haptics off then type,No vibration on either platform,iOS+Android,,,Android toggle previously had no effect
 Keyboard feedback,FBK-03,Key sound on by default,Fresh install — type any key,An audible key click plays on each press,iOS+Android,,,New setting; iOS needs Full Access + ringer on
 Keyboard feedback,FBK-04,Key sound toggle silences,In Echos ▸ Advanced Settings toggle Keyboard Sounds off then type,No key click plays,iOS+Android,,,
@@ -95,9 +96,11 @@ Misc / robustness,MISC-01,Rapid Shift double-tap then letter,"Double-tap Shift, 
 Misc / robustness,MISC-02,Mode switch mid-press,Hold a letter; with another finger tap 123,Layout switches; stale key not committed on release,iOS+Android,,,
 Misc / robustness,MISC-03,Backgrounded mid-record,Send app to background while recording,Recording stops cleanly; no stuck UI,iOS+Android,,,
 Misc / robustness,MISC-04,Numeric input field,Focus a number-only field,Keyboard opens directly to the compact numeric pad (see NUM-*),iOS+Android,,,§9
+Misc / robustness,MISC-13,No height jump on keyboard switch (iOS),"In a text field on the stock keyboard, tap the globe to switch to Echos",Echos appears at its final height immediately — no resize/snap after the first frame,iOS,,,Height constraint now installed in viewDidLoad
+Misc / robustness,MISC-14,No height jump on keyboard switch (Android),"In a text field on Gboard, switch to Echos via the keyboard picker",Any movement is only the system inset transition between the two IMEs' heights; the Echos view itself does not resize after it is shown,Android,,,Report if a real in-IME resize remains
 Misc / robustness,MISC-05,Haptic feedback on key tap,Tap any key,Tick haptic per press,iOS+Android,,,Haptics default on — detail in FBK-*
 Numeric pad layouts,NUM-01,iOS numberPad layout,Focus a number-pad field,"Telephone-style pad — digits 1-9 with ABC/DEF… letters beneath 2-9, 0 and delete on the bottom row; no decimal key, no return key",iOS,,,§9.1
-Numeric pad layouts,NUM-02,iOS numeric pad drops top bar,Focus a number-pad field,No logo / mic / suggestion strip; the pad fills the keyboard area (compact native look),iOS,,,§9.1
+Numeric pad layouts,NUM-02,iOS numeric pad drops top bar,Focus a number-pad field,No mic / suggestion strip; the pad fills the keyboard area (compact native look),iOS,,,§9.1
 Numeric pad layouts,NUM-03,iOS decimalPad separator,Focus a decimal-pad field,Bottom-left slot shows the locale decimal separator instead of the numberPad's empty spacer,iOS,,,§9.1
 Numeric pad layouts,NUM-04,iOS decimal separator follows locale,Set device region to one that uses a comma separator (e.g. Germany) then focus a decimal-pad field,Decimal key shows a comma instead of a period,iOS,,,§9.1
 Numeric pad layouts,NUM-05,iOS digit press flash,Tap a digit on the numeric pad,Key flashes to the pressed fill; no typewriter balloon appears,iOS,,,§9.1
@@ -109,7 +112,7 @@ Numeric pad layouts,NUM-10,Android full key set regardless of flags,"Focus a dec
 Numeric pad layouts,NUM-11,Android minus inserts ASCII hyphen,Tap the − key on the numeric pad,"Inserts ""-"" (ASCII hyphen-minus)",Android,,,§9.2
 Numeric pad layouts,NUM-12,Android enter is a checkmark,Inspect the bottom-right key on the numeric pad,Shows a checkmark glyph (not a return arrow); tapping commits / advances the field,Android,,,§9.2
 Numeric pad layouts,NUM-13,Android space key on numeric pad,Tap the space key (row 2 right column),Inserts a space,Android,,,§9.2
-Numeric pad layouts,NUM-14,Android numeric pad hides top bar,Focus a numeric field,Top bar (logo / mic / suggestion strip) is hidden; the pad starts at the very top of the keyboard area,Android,,,§9.2
+Numeric pad layouts,NUM-14,Android numeric pad hides top bar,Focus a numeric field,Top bar (mic / suggestion strip) is hidden; the pad starts at the very top of the keyboard area,Android,,,§9.2
 Numeric pad layouts,NUM-15,Android phone field keeps number page,Focus a phone-pad field,"Shows the existing row-based NUMBER page, NOT the new 4x4 pad (dedicated phone pad is deferred)",Android,,,§9.2
 Numeric pad layouts,NUM-16,Android calculator NUMPAD unchanged,"On the symbols page tap ""1234""",Scrollable 5-column calculator pad opens (separate layout; unaffected by the auto 4x4 pad),Android,,,§9.2
 Numeric pad layouts,NUM-17,Delete on numeric pad,Type digits on the numeric pad then tap delete,Deletes one character from the host field,iOS+Android,,,§9
@@ -160,6 +163,9 @@ Suggestions & autocorrect,SUG-17,Contact name completion leads strip,Type the fi
 Suggestions & autocorrect,SUG-18,Text replacement expands,"Create a text replacement (Settings → General → Keyboard, e.g. omw → On my way!), type the shortcut + space",Expansion auto-applies; backspace offers the revert; reverting blacklists the pair permanently,iOS,,,Expansion works in every language (before engine routing)
 Suggestions & autocorrect,SUG-19,Personal dictionary word respected (Android),Add a word in Settings → System → Languages → Personal dictionary then type it + space,Word is not autocorrected and leads the strip when prefix-typed,Android,,,UserDictionary.Words; loaded at IME start (re-open keyboard after adding)
 Suggestions & autocorrect,SUG-20,Personal dictionary shortcut expands (Android),Add a personal-dictionary entry with a shortcut then type the shortcut + space,Expansion auto-applies; revert blacklists the pair,Android,,,Restricted OEM providers fail silently (feature off)
+Suggestions & autocorrect,SUG-21,Record button stays while suggesting,Type a partial word so the strip shows,Record button remains pinned top-right; up to 3 suggestions fill the space to its left; no Echos logo or wordmark anywhere in the top bar,iOS+Android,,,Logo removed; strip no longer replaces the button
+Suggestions & autocorrect,SUG-22,Recording clears the strip,"With suggestions showing, tap the record button; then stop",Strip hides and the waveform owns the bar while recording/transcribing; strip returns on the next keystroke after the result lands,iOS+Android,,,
+Suggestions & autocorrect,SUG-23,Narrow-screen strip fits,On a small phone (iPhone SE / 360dp Android) type a word with three long candidates,All three slots render left of the record button; text scales or truncates instead of overlapping the button,iOS+Android,,,
 Autocorrect engine,ACE-01,Adjacent-key typo,"Type ""wrold"" then space","Commits ""world """,iOS+Android,,,QWERTY-proximity edit distance
 Autocorrect engine,ACE-02,Transposition,"Type ""teh"" then space","Commits ""the """,iOS+Android,,,
 Autocorrect engine,ACE-03,Doubled-letter omission,"Type ""helo"" then space","Commits ""help """,iOS+Android,,,
@@ -196,9 +202,9 @@ Autocorrect engine,ACE-33,First-letter fat-finger,"Start a word landing just off
 Autocorrect engine,ACE-34,Touch buffer survives backspace,"Type a word, backspace one letter, retype it, then space",Correction still applies correctly (no mis-fix / no crash),iOS+Android,,,currentWordTouches popped on backspace
 Autocorrect engine,ACE-35,Stale touch falls back safely,"Paste a word or edit the field via the host, then keep typing and space",No mis-correction from stale tap data (falls back to key-adjacency),iOS+Android,,,Buffer cleared on host edit / cursor move
 Autocorrect engine,ACE-36,Context survives comma,"Type ""apples, appl"" and pause","Suggestion still boosted by ""apples"" (context crosses the comma)",iOS+Android,,,Only . ! ? and newline reset context
-Autocorrect engine,ACE-37,Empty field keeps record button,Focus an empty text field,Top bar shows logo + record button (no suggestion strip),iOS+Android,,,No curated openers on empty context
+Autocorrect engine,ACE-37,Empty field keeps record button,Focus an empty text field,Top bar shows only the record button (no suggestion strip),iOS+Android,,,No curated openers on empty context
 Autocorrect engine,ACE-38,Predictions after sentence end,"Type ""Done. """,Strip shows capitalized sentence openers,iOS+Android,,,
-Autocorrect engine,ACE-38b,New line keeps record button,"Type ""Hello"" then press return",Strip clears; top bar shows logo + record button,iOS+Android,,,Newline resets prediction context
+Autocorrect engine,ACE-38b,New line keeps record button,"Type ""Hello"" then press return",Strip clears; top bar shows only the record button,iOS+Android,,,Newline resets prediction context
 Autocorrect engine,ACE-39,Prediction fallback fills strip,After a word with no known continuations press space,Strip still shows common words (never left empty),iOS+Android,,,Unigram fallback
 Autocorrect engine,ACE-40,Proper-noun possessive,"Type ""londons"" then space","Commits ""London's """,iOS+Android,,,Base is a proper noun and not itself a word
 Autocorrect engine,ACE-41,Plural not made possessive,"Type ""dogs"" then space","Stays ""dogs"" (no ""dog's"")",iOS+Android,,,Possessive gated to proper nouns
@@ -219,15 +225,9 @@ Voice transcription,VOX-02,Tap again to stop + transcribe,Tap mic while recordin
 Voice transcription,VOX-03,Main app force-killed banner,Force-quit Echos then tap mic in IME,"Surfaces ""Open Echos to enable voice typing""",iOS,,,
 Voice transcription,VOX-04,Mic permission missing,Android only — revoke RECORD_AUDIO permission,Toast appears and main app launches to grant permission,Android,,,
 Voice transcription,VOX-05,Recording lock,Have main Echos app recording then try IME mic,IME shows toast and refuses to start,iOS,,,
-Context-aware autocorrect,LM-01,Toggle waits for the model,Enable Context-Aware Autocorrect in Advanced settings with the model not yet downloaded,Toggle stays off and greys out; a progress bar + percent replaces the description; toggle flips on by itself only once the 34 MB download completes,iOS+Android,,,Toggle used to flip immediately with no model behind it
-Context-aware autocorrect,LM-09,Description fits the row,Open Advanced settings and read the Context-Aware Autocorrect row,Description reads in full with no ellipsis; shows the 34 MB download hint only while the model is absent,iOS+Android,,,Was clipped after 3 lines
-Context-aware autocorrect,LM-10,Failed download leaves it off,"Enable the toggle with airplane mode on, or cancel the download mid-flight",Error toast (or silent cancel); toggle returns to off; strength row does not appear,iOS+Android,,,Setting must never read on with no model on disk
-Context-aware autocorrect,LM-11,Row is inert mid-download,While the progress bar is showing tap the row and the switch,Neither does anything; download continues,iOS+Android,,,
-Context-aware autocorrect,LM-12,Strength options are explained,Open Correction Strength with the toggle on,Each of Subtle / Balanced / Strong / Maximum shows a one-line description under its name,iOS+Android,,,Names alone said nothing
-Context-aware autocorrect,LM-02,Context flips confusable,"With LM on, type ""Ill be there"" as a fresh sentence",Sentence-initial Ill contracts to I'll on space,iOS+Android,,,
-Context-aware autocorrect,LM-03,Context preserves literal,"With LM on, after ""The patient looked."" type ""Ill patients need rest""",Ill stays uncorrected; I'll offered tap-only in the strip,iOS+Android,,,
-Context-aware autocorrect,LM-04,LM-off is classical,"Disable the toggle, retype LM-02/LM-03 inputs",Behavior identical to pre-LM keyboard (blind contraction),iOS+Android,,,
-Context-aware autocorrect,LM-05,Strength picker,Change Correction Strength to each option and type,No crashes; stronger settings visibly reorder near-tie suggestions,iOS+Android,,,
-Context-aware autocorrect,LM-06,Model missing fallback,"Enable toggle, cancel/interrupt the download, type normally",Keyboard behaves classically; no errors or lag,iOS+Android,,,
-Context-aware autocorrect,LM-07,Latency feel,"With LM on, type fast full sentences",No perceptible added latency on word commits,iOS+Android,,,
-Context-aware autocorrect,LM-08,Memory stability,"With LM on, 15-minute typing session in Messages/WhatsApp",No keyboard restarts (iOS jetsam) or dropped keystrokes,iOS,,,
+Context-aware autocorrect,LM-01,LM works out of the box,"Fresh install, open Advanced settings, then type ""Ill be there"" as a fresh sentence in any app",No Context-Aware Autocorrect or Correction Strength rows exist; Ill contracts to I'll on space with no download or setting,iOS+Android,,,Model is bundled (32 MB) and always on
+Context-aware autocorrect,LM-04,Android stages the bundled model once,"Fresh install, open the keyboard and type a sentence; then swipe-kill the app and open the keyboard again",filesDir/models/keyboard_lm/keyboard_lm.gguf appears after the first show (logcat EchosLmReranker shows no ""model unavailable""); second launch does not re-copy,Android,,,Asset copied to filesDir because llama.cpp opens by path
+Context-aware autocorrect,LM-02,Context flips confusable,"Type ""Ill be there"" as a fresh sentence",Sentence-initial Ill contracts to I'll on space,iOS+Android,,,
+Context-aware autocorrect,LM-03,Context preserves literal,"After ""The patient looked."" type ""Ill patients need rest""",Ill stays uncorrected; I'll offered tap-only in the strip,iOS+Android,,,
+Context-aware autocorrect,LM-07,Latency feel,Type fast full sentences,No perceptible added latency on word commits,iOS+Android,,,
+Context-aware autocorrect,LM-08,Memory stability,15-minute typing session in Messages/WhatsApp,No keyboard restarts (iOS jetsam) or dropped keystrokes,iOS,,,

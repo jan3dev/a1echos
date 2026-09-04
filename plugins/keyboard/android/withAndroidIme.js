@@ -14,6 +14,7 @@ const TEMPLATES_DIR = path.join(__dirname, "templates");
 // (git-ignored). When absent the native module is skipped entirely and
 // LmReranker.kt degrades at runtime — the keyboard builds exactly as before.
 const LM_VENDOR_DIR = path.join(__dirname, "vendor", "keyboard-lm");
+const LM_MODEL_FILE = "keyboard_lm.gguf";
 
 function lmEnabled() {
   return fs.existsSync(LM_VENDOR_DIR);
@@ -216,6 +217,15 @@ function withImeSources(config) {
         ),
         path.join(assetsDir, "keyboard_dictionary.echd"),
       );
+
+      // Bundle the keyboard LM (committed artifact). LmReranker stages it
+      // from assets/ into filesDir on first load — llama.cpp opens by path.
+      if (lmEnabled()) {
+        fs.copyFileSync(
+          path.join(projectRoot, "data", "keyboard-lm", LM_MODEL_FILE),
+          path.join(assetsDir, LM_MODEL_FILE),
+        );
+      }
 
       // Bundle the confusables table (ill -> I'll etc.); CorrectionEngine
       // parses it at load for context-aware confusable correction.
@@ -457,12 +467,17 @@ function withImeLmNativeBuild(config) {
   if (!lmEnabled()) return config;
   return appendAppGradleBlock(
     config,
-    "// Echos IME — keyboard LM reranker native module (llama.cpp JNI)",
+    // Marker describes the block's contents: changing it re-injects on an
+    // incremental prebuild instead of leaving an older block in place.
+    "// Echos IME — keyboard LM reranker native module (llama.cpp JNI) + uncompressed gguf asset",
     `android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/keyboard-lm/CMakeLists.txt"
         }
+    }
+    androidResources {
+        noCompress += "gguf"
     }
 }`,
     "keyboard-lm native build",

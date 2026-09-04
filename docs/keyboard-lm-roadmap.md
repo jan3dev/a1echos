@@ -39,18 +39,15 @@ lmStrength)`; softmax of length-normalized word logprobs over the top-5
   `scripts/keyboard-lm/build-llama-{xcframework,android}.sh` into git-ignored
   `plugins/keyboard/{ios,android}/vendor/`; everything degrades cleanly when
   the vendor artifacts are absent.
-- Settings: Context-Aware Autocorrect toggle (default OFF) + strength picker
-  (0.5–2.0), mirrored to both keyboards; download-on-enable via ModelRegistry
-  (`ModelId.KEYBOARD_LM`); iOS listener copies the model into the App Group.
+- Shipping (2026-09-04): the GGUF is committed at
+  `data/keyboard-lm/keyboard_lm.gguf` and bundled by the config plugins — an
+  extension resource on iOS, an APK asset (staged to filesDir on first load)
+  on Android. Always on, `lmStrength` fixed at 1.0; no setting, no download.
 - Verified: 1852 jest tests, Swift parity 667 checks, Kotlin parity suite,
   coverage 96/92/96/97, manual checklist rows LM-01…08.
 
 ### Open items (before M1 ships)
 
-- [x] Upload the placeholder GGUF to `huggingface.co/jan3com/echos-keyboard-lm`
-      and point `ModelRegistry.ts` at its `resolve/main` URL. **The repo must
-      be public** — `ModelDownloadService` sends no auth header, so a private
-      repo 401s and the app falls back to dev-only (bundled model) behaviour.
 - [ ] On-device validation on an A13/A14-class iPhone and a mid-range
       Android; 30-min Messages session (jetsam), vmmap capture.
 - [ ] Android on-device smoke test (arm64 device or emulator).

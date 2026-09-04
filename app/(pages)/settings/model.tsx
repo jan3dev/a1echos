@@ -22,7 +22,7 @@ import type { ModelInfo } from "@/models";
 import {
   ModelId,
   TranscriptionMode,
-  getAsrModels,
+  getAllModels,
   getModelInfo,
 } from "@/models";
 import {
@@ -58,7 +58,7 @@ export default function ModelSettingsScreen() {
     toastState: deleteToastState,
   } = useToast();
 
-  const models = getAsrModels();
+  const models = getAllModels();
   const { downloadedSection, availableSection } = useMemo(() => {
     const downloaded: ModelInfo[] = [];
     const available: ModelInfo[] = [];

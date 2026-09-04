@@ -31,8 +31,8 @@ data class SuggestionSlot(
 }
 
 /**
- * Up-to-3 tappable word candidates shown in place of the top bar's logo +
- * record chrome while the user composes a word (§5.5). Tapping a candidate
+ * Up-to-3 tappable word candidates shown left of the top bar's record
+ * button while the user composes a word (§5.5). Tapping a candidate
  * asks the listener to replace the in-progress word (or keep it, for the
  * verbatim slot). Mirrors the iOS `SuggestionStripView` so both platforms
  * read as the same product.

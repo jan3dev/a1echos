@@ -21,8 +21,8 @@ protocol SuggestionStripViewDelegate: AnyObject {
     func suggestionStrip(_ strip: SuggestionStripView, didSelect slot: SuggestionSlot)
 }
 
-/// Up-to-3 tappable word candidates shown in place of the top bar's
-/// logo/record chrome while the user composes a word (§5.5). Tapping a
+/// Up-to-3 tappable word candidates shown left of the top bar's record
+/// button while the user composes a word (§5.5). Tapping a
 /// candidate asks the delegate to replace the in-progress word (or keep it,
 /// for the verbatim slot). The strip is hidden whenever there are no
 /// candidates or the bar is busy recording.

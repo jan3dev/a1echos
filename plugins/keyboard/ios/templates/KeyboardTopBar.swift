@@ -1,9 +1,9 @@
 import CoreImage
 import UIKit
 
-/// Top bar pinned above the key rows. Shows the Echos logo on the left and a
-/// record / stop button on the right. In a later phase the space between them
-/// will host the three-wave-lines recording visualizer.
+/// Top bar pinned above the key rows. The record / stop button is always
+/// pinned top-right; the suggestion strip fills the space to its left while
+/// composing, and the three-wave-lines visualizer spans the bar while recording.
 protocol KeyboardTopBarDelegate: AnyObject {
     func topBarDidTapRecord(_ topBar: KeyboardTopBar)
     /// A suggestion candidate in the strip was tapped (§5.5).
@@ -19,8 +19,6 @@ final class KeyboardTopBar: UIView {
 
     weak var delegate: KeyboardTopBarDelegate?
 
-    private let logoView = EchosLogoView()
-    private let logoLabel = UILabel()
     private let recordButton = UIButton(type: .system)
     private let recordIcon = RecordButtonIconView()
     /// Replaces the waveform animation while transcribing. Renders the
@@ -54,19 +52,6 @@ final class KeyboardTopBar: UIView {
     private func setup() {
         translatesAutoresizingMaskIntoConstraints = false
         backgroundColor = .clear
-
-        logoView.translatesAutoresizingMaskIntoConstraints = false
-        logoView.contentMode = .scaleAspectFit
-        logoView.tintColor = .label
-        logoView.isUserInteractionEnabled = false
-        addSubview(logoView)
-
-        logoLabel.translatesAutoresizingMaskIntoConstraints = false
-        logoLabel.text = "Echos"
-        logoLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        logoLabel.textColor = .label
-        logoLabel.isUserInteractionEnabled = false
-        addSubview(logoLabel)
 
         // Record button — gray capsule (Figma "Echos Button"). The custom
         // icon view inside swaps between a microphone glyph (idle) and a
@@ -102,27 +87,17 @@ final class KeyboardTopBar: UIView {
         waveform.translatesAutoresizingMaskIntoConstraints = false
         waveform.isUserInteractionEnabled = false
         waveform.isHidden = true
-        // Insert the waveform behind the logo and record button so it can
-        // span the full width of the header while the foreground controls
-        // sit on top of its faded edges.
+        // Insert the waveform behind the record button so it can span the
+        // full width of the header while the button sits on its faded edge.
         insertSubview(waveform, at: 0)
         waveform.installEdgeFadeMask()
 
-        // Added last so it renders above the logo / record button / waveform
-        // when suggestions take over the bar.
+        // Added last so it renders above the waveform.
         suggestionStrip.delegate = self
         suggestionStrip.isHidden = true
         addSubview(suggestionStrip)
 
         NSLayoutConstraint.activate([
-            logoView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            logoView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            logoView.widthAnchor.constraint(equalToConstant: 18),
-            logoView.heightAnchor.constraint(equalToConstant: 24),
-
-            logoLabel.leadingAnchor.constraint(equalTo: logoView.trailingAnchor, constant: 6),
-            logoLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-
             recordButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             recordButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
             recordButton.widthAnchor.constraint(equalToConstant: 72),
@@ -144,7 +119,9 @@ final class KeyboardTopBar: UIView {
             waveform.heightAnchor.constraint(equalToConstant: RecordingWaveformView.preferredHeight),
 
             suggestionStrip.leadingAnchor.constraint(equalTo: leadingAnchor),
-            suggestionStrip.trailingAnchor.constraint(equalTo: trailingAnchor),
+            suggestionStrip.trailingAnchor.constraint(
+                equalTo: recordButton.leadingAnchor, constant: -8
+            ),
             suggestionStrip.topAnchor.constraint(equalTo: topAnchor),
             suggestionStrip.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
@@ -175,14 +152,14 @@ final class KeyboardTopBar: UIView {
         guard state != micState else { return }
         micState = state
         // Recording / transcribing always owns the bar — clear any suggestion
-        // overlay and restore the idle chrome before applying the mic visuals.
+        // strip before applying the mic visuals.
         hideSuggestions()
         applyMicState()
     }
 
-    /// Shows the suggestion strip in place of the logo + record button while
-    /// the user composes a word. No-op while recording / transcribing so voice
-    /// capture always owns the bar.
+    /// Shows the suggestion strip left of the record button while the user
+    /// composes a word. No-op while recording / transcribing so voice capture
+    /// always owns the bar.
     func showSuggestions(_ slots: [SuggestionSlot]) {
         guard micState == .idle, !slots.isEmpty else {
             hideSuggestions()
@@ -190,18 +167,10 @@ final class KeyboardTopBar: UIView {
         }
         suggestionStrip.setSlots(slots)
         suggestionStrip.isHidden = false
-        logoView.isHidden = true
-        logoLabel.isHidden = true
-        recordButton.isHidden = true
     }
 
-    /// Hides the suggestion strip and restores the idle chrome. The record
-    /// button's enabled/spinner state is governed separately by `applyMicState`.
     func hideSuggestions() {
         suggestionStrip.isHidden = true
-        logoView.isHidden = false
-        logoLabel.isHidden = false
-        recordButton.isHidden = false
     }
 
     /// Latest recorder amplitude (0…1) — drives the wave lines' phase
@@ -298,91 +267,6 @@ final class KeyboardTopBar: UIView {
 extension KeyboardTopBar: SuggestionStripViewDelegate {
     func suggestionStrip(_ strip: SuggestionStripView, didSelect slot: SuggestionSlot) {
         delegate?.topBar(self, didSelectSuggestion: slot)
-    }
-}
-
-// MARK: - Echos Logo
-
-/// Draws the three-wave Echos mark from the app's `echos_icon.svg` (17 × 24).
-/// Uses the view's `tintColor` as the fill so it adapts to light/dark.
-final class EchosLogoView: UIView {
-
-    override var tintColor: UIColor! {
-        didSet { setNeedsDisplay() }
-    }
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .clear
-        isOpaque = false
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) not implemented")
-    }
-
-    override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext() else { return }
-
-        // Fit the 17×24 viewBox into the given rect preserving aspect.
-        let scale = min(rect.width / 17.0, rect.height / 24.0)
-        let tx = (rect.width - 17.0 * scale) / 2
-        let ty = (rect.height - 24.0 * scale) / 2
-        ctx.saveGState()
-        ctx.translateBy(x: tx, y: ty)
-        ctx.scaleBy(x: scale, y: scale)
-
-        tintColor.setFill()
-
-        // Path 1 — tallest wave, rightmost.
-        let p1 = UIBezierPath()
-        p1.move(to: CGPoint(x: 11.2321, y: 0.246083))
-        p1.addCurve(to: CGPoint(x: 11.6493, y: 0.0703058),
-                    controlPoint1: CGPoint(x: 11.2322, y: 0.0285701),
-                    controlPoint2: CGPoint(x: 11.4934, y: -0.0814099))
-        p1.addLine(to: CGPoint(x: 11.8403, y: 0.255457))
-        p1.addCurve(to: CGPoint(x: 11.6399, y: 23.9338),
-                    controlPoint1: CGPoint(x: 18.5274, y: 6.76556),
-                    controlPoint2: CGPoint(x: 18.4363, y: 17.5378))
-        p1.addCurve(to: CGPoint(x: 11.2321, y: 23.758),
-                    controlPoint1: CGPoint(x: 11.4855, y: 24.0789),
-                    controlPoint2: CGPoint(x: 11.2325, y: 23.9699))
-        p1.close()
-        p1.fill()
-
-        // Path 2 — middle wave.
-        let p2 = UIBezierPath()
-        p2.move(to: CGPoint(x: 5.12565, y: 2.81243))
-        p2.addCurve(to: CGPoint(x: 5.5276, y: 2.62845),
-                    controlPoint1: CGPoint(x: 5.12565, y: 2.60438),
-                    controlPoint2: CGPoint(x: 5.37003, y: 2.49261))
-        p2.addLine(to: CGPoint(x: 5.67525, y: 2.755))
-        p2.addCurve(to: CGPoint(x: 5.51939, y: 21.4178),
-                    controlPoint1: CGPoint(x: 11.3973, y: 7.6893),
-                    controlPoint2: CGPoint(x: 11.3233, y: 16.58))
-        p2.addCurve(to: CGPoint(x: 5.12565, y: 21.2338),
-                    controlPoint1: CGPoint(x: 5.36327, y: 21.5478),
-                    controlPoint2: CGPoint(x: 5.12601, y: 21.4369))
-        p2.close()
-        p2.fill()
-
-        // Path 3 — innermost wave (leftmost).
-        let p3 = UIBezierPath()
-        p3.move(to: CGPoint(x: 0.130075, y: 7.2795))
-        p3.addCurve(to: CGPoint(x: 0.128903, y: 17.0996),
-                    controlPoint1: CGPoint(x: 5.00437, y: 8.74904),
-                    controlPoint2: CGPoint(x: 5.01631, y: 15.6748))
-        p3.addCurve(to: CGPoint(x: 0, y: 17.0035),
-                    controlPoint1: CGPoint(x: 0.0648451, y: 17.1182),
-                    controlPoint2: CGPoint(x: 0.000189691, y: 17.0701))
-        p3.addLine(to: CGPoint(x: 0, y: 7.37559))
-        p3.addCurve(to: CGPoint(x: 0.130075, y: 7.2795),
-                    controlPoint1: CGPoint(x: 0.0, y: 7.30818),
-                    controlPoint2: CGPoint(x: 0.0655311, y: 7.26005))
-        p3.close()
-        p3.fill()
-
-        ctx.restoreGState()
     }
 }
 
@@ -876,8 +760,8 @@ final class RecordingWaveformView: UIView {
 
     /// Install a horizontal alpha gradient that fades the wave to
     /// transparent at the left/right edges. Used when the waveform spans
-    /// the full header width so the wave reads cleanly behind the logo
-    /// and record button.
+    /// the full header width so the wave reads cleanly behind the record
+    /// button.
     func installEdgeFadeMask(insetFraction: CGFloat = 0.32) {
         guard edgeFadeMask == nil else { return }
         let mask = CAGradientLayer()

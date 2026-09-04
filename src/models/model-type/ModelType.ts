@@ -10,10 +10,6 @@ export enum ModelId {
   WHISPER_SMALL = "whisper_small",
   NEMO_PARAKEET_V3 = "nemo_parakeet_v3",
   QWEN3_ASR = "qwen3_asr",
-  /** Keyboard autocorrect language model (GGUF), not an ASR model — never a
-   *  valid transcription selection. The id doubles as the download directory
-   *  name the native keyboards read from (`models/keyboard_lm/`). */
-  KEYBOARD_LM = "keyboard_lm",
 }
 
 export enum TranscriptionMode {

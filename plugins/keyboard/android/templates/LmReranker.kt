@@ -1,5 +1,6 @@
 package com.a1lab.echos.ime
 
+import android.content.Context
 import android.util.Log
 import java.io.File
 import java.util.concurrent.locks.ReentrantLock
@@ -20,6 +21,7 @@ class LmReranker : LmRerankerProviding {
 
     companion object {
         private const val TAG = "EchosLmReranker"
+        private const val MODEL_ASSET = "keyboard_lm.gguf"
 
         private val libLoaded: Boolean = try {
             System.loadLibrary("echoslm")
@@ -39,7 +41,7 @@ class LmReranker : LmRerankerProviding {
     private enum class State { IDLE, LOADING, READY, FAILED }
 
     /** Starts the one-time background load; safe to call repeatedly. */
-    fun loadIfNeeded(modelPath: String) {
+    fun loadIfNeeded(context: Context) {
         if (!libLoaded) return
         val generation: Long
         lock.lock()
@@ -50,12 +52,9 @@ class LmReranker : LmRerankerProviding {
         } finally {
             lock.unlock()
         }
+        val appContext = context.applicationContext
         Thread {
-            val loaded = if (File(modelPath).exists()) {
-                nativeInit(modelPath)
-            } else {
-                0L
-            }
+            val loaded = stagedModelPath(appContext)?.let { nativeInit(it) } ?: 0L
             var superseded = false
             lock.lock()
             try {
@@ -96,6 +95,35 @@ class LmReranker : LmRerankerProviding {
             state = State.IDLE
         } finally {
             lock.unlock()
+        }
+    }
+
+    /**
+     * llama.cpp opens the model by filesystem path and an APK asset has none,
+     * so the bundled gguf is copied into filesDir once (skipped while the
+     * on-disk copy matches the asset's length).
+     */
+    // ponytail: 32 MB one-time copy; mmap via AssetManager.openFd offset
+    // needs a new JNI entry if disk ever matters.
+    private fun stagedModelPath(context: Context): String? {
+        val dest = File(context.filesDir, "models/keyboard_lm/$MODEL_ASSET")
+        return try {
+            val assetLength = context.assets.openFd(MODEL_ASSET).use { it.length }
+            if (!dest.exists() || dest.length() != assetLength) {
+                dest.parentFile?.mkdirs()
+                val tmp = File(dest.parentFile, "$MODEL_ASSET.tmp")
+                context.assets.open(MODEL_ASSET).use { input ->
+                    tmp.outputStream().use { input.copyTo(it) }
+                }
+                if (!tmp.renameTo(dest)) {
+                    tmp.delete()
+                    return null
+                }
+            }
+            dest.absolutePath
+        } catch (e: java.io.IOException) {
+            Log.i(TAG, "bundled model unavailable: ${e.message}")
+            null
         }
     }
 

@@ -35,13 +35,12 @@ class SuggestionEngine(
 ) : SpellCheckerSession.SpellCheckerSessionListener {
 
     /**
-     * Neural reranker for context-aware autocorrect. null (setting off /
-     * model absent) keeps ranking bit-identical to the classical engine.
-     * Set by the service from KeyboardSettings; consulted only on the
-     * bundled-engine path. Mirrors the iOS SuggestionEngine properties.
+     * Neural reranker for context-aware autocorrect. null (model absent /
+     * native lib not built) keeps ranking bit-identical to the classical
+     * engine. Consulted only on the bundled-engine path. Mirrors the iOS
+     * SuggestionEngine property.
      */
     var lmReranker: LmRerankerProviding? = null
-    var lmStrength: Float = 1.0f
 
     /**
      * One lookup's result. [topIsCorrection] is true when the typed word
@@ -332,7 +331,6 @@ class SuggestionEngine(
             touchPoints = touchPoints,
             leftContext = leftContext,
             reranker = lmReranker,
-            lmStrength = lmStrength,
         )
         var candidates = evaluation.candidates.map { matchCase(word, it) }
         // Personal-dictionary matches lead the strip with canonical casing —

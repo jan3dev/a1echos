@@ -19,7 +19,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import java.io.File
 import java.text.BreakIterator
 import java.util.Locale
 
@@ -34,7 +33,7 @@ private const val LM_CONTEXT_LOOKBEHIND_CHARS = 256
  * Echos system keyboard with voice transcription.
  *
  * Layout (vertical):
- *   1. Echos top bar — logo + record/stop button driving transcription.
+ *   1. Echos top bar — suggestion strip + record/stop button driving transcription.
  *   2. Echos keyboard view — the key grid.
  *
  * Transcription runs in the same process as the main app, via
@@ -318,7 +317,7 @@ class EchosInputMethodService : InputMethodService(),
             else -> keyboardView.showLetterLayout()
         }
 
-        // The numeric pads drop the top bar (logo / mic / suggestion strip)
+        // The numeric pads drop the top bar (mic / suggestion strip)
         // for the compact native look, mirroring iOS (§9.1); the keyboard then
         // starts at the very top, so the overlay's key-Y offset is zero.
         topBar.visibility = if (isCompactPad) View.GONE else View.VISIBLE
@@ -337,7 +336,7 @@ class EchosInputMethodService : InputMethodService(),
         // whether this field allows suggestions, ensure the spell-checker
         // session is up for the current language, and clear any stale strip.
         keyboardSettings = KeyboardSettings.load(this)
-        applyLmSettings()
+        attachLmReranker()
         suggestionsAllowed = computeSuggestionsAllowed(info)
         ensureSuggestionEngineStarted()
         lastAutoCorrected = null
@@ -347,21 +346,10 @@ class EchosInputMethodService : InputMethodService(),
         applyAutoCap()
     }
 
-    /**
-     * Attaches/detaches the neural reranker per the current settings. The
-     * downloaded model lands in `<filesDir>/models/keyboard_lm/` (same
-     * process — no copy step, unlike iOS).
-     */
-    private fun applyLmSettings() {
-        suggestionEngine.lmStrength = keyboardSettings.lmStrength
-        if (keyboardSettings.contextAwareAutocorrect) {
-            lmReranker.loadIfNeeded(
-                File(filesDir, "models/keyboard_lm/keyboard_lm.gguf").absolutePath,
-            )
-            suggestionEngine.lmReranker = lmReranker
-        } else {
-            suggestionEngine.lmReranker = null
-        }
+    /** Attaches the neural reranker; a failed load leaves ranking classical. */
+    private fun attachLmReranker() {
+        lmReranker.loadIfNeeded(this)
+        suggestionEngine.lmReranker = lmReranker
     }
 
     override fun onTrimMemory(level: Int) {

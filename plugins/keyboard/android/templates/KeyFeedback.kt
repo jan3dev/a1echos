@@ -2,10 +2,6 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import android.media.AudioManager
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import android.view.View
@@ -17,8 +13,6 @@ import android.view.View
  * preference (and play on the system stream, so silent mode mutes them).
  */
 object KeyFeedback {
-
-    private const val VIBRATION_DURATION_MS = 5L
 
     /** Haptic + key-click for a committed key press. Loads the settings
      *  snapshot once and shares it, so a single press doesn't re-read the
@@ -68,32 +62,6 @@ object KeyFeedback {
         audioManager?.playSoundEffect(effect, -1f)
     }
 
-    /**
-     * Performs a stronger haptic for special actions (mic press, delete long-press).
-     */
-    fun performSpecialHaptic(context: Context) {
-        if (!KeyboardSettings.load(context).hapticFeedback) return
-        val vibrator = getVibrator(context) ?: return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                VibrationEffect.createOneShot(
-                    VIBRATION_DURATION_MS * 2,
-                    VibrationEffect.DEFAULT_AMPLITUDE,
-                )
-            )
-        }
-    }
-
     private fun systemSoundEffectsEnabled(context: Context): Boolean =
         Settings.System.getInt(context.contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 1) == 1
-
-    private fun getVibrator(context: Context): Vibrator? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            manager?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
-    }
 }

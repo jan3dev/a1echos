@@ -32,8 +32,6 @@ describe("writeKeyboardSettings", () => {
       hapticFeedback: true,
       keySound: true,
       micTimeoutSeconds: 300,
-      contextAwareAutocorrect: false,
-      lmStrength: 1,
     });
 
     // Two File handles created: the tmp sibling, then the target.
@@ -47,8 +45,6 @@ describe("writeKeyboardSettings", () => {
         hapticFeedback: true,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       }),
     );
     expect(tmp.move).toHaveBeenCalledWith(settings);
@@ -61,8 +57,6 @@ describe("writeKeyboardSettings", () => {
       hapticFeedback: false,
       keySound: false,
       micTimeoutSeconds: 0,
-      contextAwareAutocorrect: false,
-      lmStrength: 1,
     });
 
     const tmp = FileMock.mock.results[0].value as MockFile;
@@ -72,8 +66,6 @@ describe("writeKeyboardSettings", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 0,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       }),
     );
   });
@@ -84,8 +76,6 @@ describe("writeKeyboardSettings", () => {
       hapticFeedback: true,
       keySound: true,
       micTimeoutSeconds: 300,
-      contextAwareAutocorrect: true,
-      lmStrength: 1.5,
     });
 
     const tmp = FileMock.mock.results[0].value as MockFile;
@@ -95,8 +85,6 @@ describe("writeKeyboardSettings", () => {
         hapticFeedback: true,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: true,
-        lmStrength: 1.5,
       }),
     );
   });
@@ -107,8 +95,6 @@ describe("writeKeyboardSettings", () => {
       hapticFeedback: false,
       keySound: true,
       micTimeoutSeconds: 300,
-      contextAwareAutocorrect: false,
-      lmStrength: 1,
     });
 
     // The global mock reports exists: true, so both delete branches run.
@@ -136,8 +122,6 @@ describe("writeKeyboardSettings", () => {
       hapticFeedback: false,
       keySound: true,
       micTimeoutSeconds: 300,
-      contextAwareAutocorrect: false,
-      lmStrength: 1,
     });
 
     expect(tmp.delete).not.toHaveBeenCalled();
@@ -157,8 +141,6 @@ describe("writeKeyboardSettings", () => {
         hapticFeedback: false,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       }),
     ).not.toThrow();
     // Only one File handle was attempted before the failure aborted the write.

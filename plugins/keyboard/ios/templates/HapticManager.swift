@@ -4,25 +4,24 @@ import UIKit
 /// Provides haptic feedback for keyboard interactions.
 enum HapticManager {
 
-    private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
-    private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    /// `.rigid` is the shortest, sharpest transient UIKit offers; the stock
+    /// keyboard's tick is a crisp click, and `.light` at full intensity reads
+    /// longer and heavier next to it.
+    private static let keyGenerator = UIImpactFeedbackGenerator(style: .rigid)
     private static let selectionGenerator = UISelectionFeedbackGenerator()
+
+    // ponytail: tuned by feel against the stock keyboard; adjust here only.
+    static var keyTapIntensity: CGFloat = 0.55
 
     /// Gates all feedback. Defaults on; the view controller sets it from the
     /// user's `KeyboardSettings.hapticFeedback` preference whenever settings
     /// load. Requires Full Access — without it the generators are inert.
     static var isEnabled = true
 
-    /// Light tap for regular key presses.
+    /// Short, light tick for key presses.
     static func keyTap() {
         guard isEnabled else { return }
-        lightGenerator.impactOccurred()
-    }
-
-    /// Medium impact for special actions (mic press, shift).
-    static func specialTap() {
-        guard isEnabled else { return }
-        mediumGenerator.impactOccurred()
+        keyGenerator.impactOccurred(intensity: keyTapIntensity)
     }
 
     /// Light selection tick — used while scrubbing across the emoji category
@@ -35,8 +34,7 @@ enum HapticManager {
 
     /// Prepare generators for low-latency feedback.
     static func prepare() {
-        lightGenerator.prepare()
-        mediumGenerator.prepare()
+        keyGenerator.prepare()
         selectionGenerator.prepare()
     }
 }

@@ -100,7 +100,6 @@ jest.mock("@/models", () => ({
   },
   TranscriptionMode: { FILE: "file", REALTIME: "realtime" },
   getAllModels: jest.fn(() => [whisperModel, parakeetModel]),
-  getAsrModels: jest.fn(() => [whisperModel, parakeetModel]),
   getModelInfo: jest.fn((id: string) =>
     id === "whisper_tiny" ? whisperModel : parakeetModel,
   ),

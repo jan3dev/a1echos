@@ -53,12 +53,10 @@ final class SuggestionEngine {
 
     private let correctionEngine: CorrectionEngine
 
-    /// Neural reranker for context-aware autocorrect. nil (setting off /
-    /// model absent) keeps ranking bit-identical to the classical engine.
-    /// Set by the view controller from KeyboardSettings; consulted only on
-    /// the bundled-engine path.
+    /// Neural reranker for context-aware autocorrect. nil (model absent /
+    /// build without ECHOS_LM) keeps ranking bit-identical to the classical
+    /// engine. Consulted only on the bundled-engine path.
     var lmReranker: LmRerankerProviding?
-    var lmStrength: Float = 1.0
 
     /// Contact names and user text replacements the host grants keyboard
     /// extensions (`requestSupplementaryLexicon`) — the same private signal
@@ -269,8 +267,7 @@ final class SuggestionEngine {
             checkerSaysValid: isContactWord || checkerRecognizes(word),
             touchPoints: touchPoints,
             leftContext: leftContext,
-            reranker: lmReranker,
-            lmStrength: lmStrength
+            reranker: lmReranker
         )
         var candidates = evaluation.candidates.map { Self.applyCasing(casing, to: $0) }
         // Contact-name matches lead the strip with canonical casing — tap-only,

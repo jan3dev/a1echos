@@ -30,8 +30,6 @@ const STORAGE_KEYS = {
   KEYBOARD_HAPTIC: "keyboard_haptic",
   KEYBOARD_SOUND: "keyboard_sound",
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
-  KEYBOARD_CONTEXT_AWARE_AUTOCORRECT: "keyboard_context_aware_autocorrect",
-  KEYBOARD_LM_STRENGTH: "keyboard_lm_strength",
   HAS_SEEN_WELCOME: "has_seen_welcome",
   LARGER_MODEL_SUGGESTION_SEEN: "larger_model_suggestion_seen",
 };
@@ -53,22 +51,6 @@ const parseMicTimeout = (raw: string | null): number => {
   return (KEYBOARD_MIC_TIMEOUT_OPTIONS as readonly number[]).includes(value)
     ? value
     : DEFAULT_MIC_TIMEOUT_SECONDS;
-};
-
-/** Selectable weights for how strongly the keyboard's neural language model
- *  reranks autocorrect candidates against the classical score. */
-export const KEYBOARD_LM_STRENGTH_OPTIONS = [0.5, 1.0, 1.5, 2.0] as const;
-
-/** Matches decoder.js TUNING.lmStrength. */
-const DEFAULT_LM_STRENGTH = 1.0;
-
-/** Clamps a persisted/raw value to a known option, falling back to the default. */
-const parseLmStrength = (raw: string | null): number => {
-  if (raw === null) return DEFAULT_LM_STRENGTH;
-  const value = Number(raw);
-  return (KEYBOARD_LM_STRENGTH_OPTIONS as readonly number[]).includes(value)
-    ? value
-    : DEFAULT_LM_STRENGTH;
 };
 
 interface SettingsStore {
@@ -94,13 +76,6 @@ interface SettingsStore {
   /** Keyboard: how long (seconds) a voice-typing session stays armed in the
    *  background after being started from an external app. `0` = Off. */
   keyboardMicTimeoutSeconds: number;
-  /** Keyboard: blend the on-device language model's sentence-context
-   *  evidence into autocorrect ranking (default off while the placeholder
-   *  model ships; requires the downloaded keyboard LM). */
-  keyboardContextAwareAutocorrect: boolean;
-  /** Keyboard: how strongly LM evidence weighs against the classical score
-   *  (one of KEYBOARD_LM_STRENGTH_OPTIONS). */
-  keyboardLmStrength: number;
   /** Whether the one-time first-launch welcome screen has been shown. */
   hasSeenWelcome: boolean;
   /** Whether the one-time "try a larger model" sheet has been shown. Offered
@@ -123,8 +98,6 @@ interface SettingsStore {
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
   setKeyboardSound: (enabled: boolean) => Promise<void>;
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
-  setKeyboardContextAwareAutocorrect: (enabled: boolean) => Promise<void>;
-  setKeyboardLmStrength: (strength: number) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
   markLargerModelSuggestionSeen: () => Promise<void>;
 }
@@ -179,16 +152,12 @@ const syncKeyboardConfig = (get: () => SettingsStore): void => {
     keyboardHaptic,
     keyboardSound,
     keyboardMicTimeoutSeconds,
-    keyboardContextAwareAutocorrect,
-    keyboardLmStrength,
   } = get();
   writeKeyboardSettings({
     autocorrect: keyboardAutocorrect,
     hapticFeedback: keyboardHaptic,
     keySound: keyboardSound,
     micTimeoutSeconds: keyboardMicTimeoutSeconds,
-    contextAwareAutocorrect: keyboardContextAwareAutocorrect,
-    lmStrength: keyboardLmStrength,
   });
 };
 
@@ -203,9 +172,7 @@ type KeyboardSettingField =
   | "keyboardAutocorrect"
   | "keyboardHaptic"
   | "keyboardSound"
-  | "keyboardMicTimeoutSeconds"
-  | "keyboardContextAwareAutocorrect"
-  | "keyboardLmStrength";
+  | "keyboardMicTimeoutSeconds";
 
 /**
  * Persists one keyboard preference: optimistically applies it and mirrors it
@@ -252,8 +219,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardHaptic: true,
   keyboardSound: true,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
-  keyboardContextAwareAutocorrect: false,
-  keyboardLmStrength: DEFAULT_LM_STRENGTH,
   hasSeenWelcome: false,
   hasSeenLargerModelSuggestion: false,
 
@@ -273,8 +238,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHapticValue,
         keyboardSoundValue,
         keyboardMicTimeoutValue,
-        keyboardContextAwareValue,
-        keyboardLmStrengthValue,
         hasSeenWelcomeValue,
         largerModelSuggestionValue,
       ] = await Promise.all([
@@ -291,8 +254,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_HAPTIC),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_SOUND),
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
-        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_CONTEXT_AWARE_AUTOCORRECT),
-        AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_LM_STRENGTH),
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
         AsyncStorage.getItem(STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN),
       ]);
@@ -314,10 +275,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
       if (
         modelIdValue &&
-        Object.values(ModelId).includes(modelIdValue as ModelId) &&
-        // The keyboard LM shares ModelId for the download pipeline but is
-        // never a valid transcription selection.
-        modelIdValue !== ModelId.KEYBOARD_LM
+        Object.values(ModelId).includes(modelIdValue as ModelId)
       ) {
         selectedModelId = modelIdValue as ModelId;
         selectedTranscriptionMode =
@@ -368,11 +326,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const keyboardMicTimeoutSeconds = parseMicTimeout(
         keyboardMicTimeoutValue,
       );
-      // Default false — the neural reranker is opt-in until the custom model
-      // ships; only the explicit string "true" enables it.
-      const keyboardContextAwareAutocorrect =
-        keyboardContextAwareValue === "true";
-      const keyboardLmStrength = parseLmStrength(keyboardLmStrengthValue);
       const hasSeenWelcome = hasSeenWelcomeValue === "true";
       const hasSeenLargerModelSuggestion = largerModelSuggestionValue === "true";
 
@@ -390,8 +343,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHaptic,
         keyboardSound,
         keyboardMicTimeoutSeconds,
-        keyboardContextAwareAutocorrect,
-        keyboardLmStrength,
         hasSeenWelcome,
         hasSeenLargerModelSuggestion,
       });
@@ -419,8 +370,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardHaptic: true,
         keyboardSound: true,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
-        keyboardContextAwareAutocorrect: false,
-        keyboardLmStrength: DEFAULT_LM_STRENGTH,
         hasSeenWelcome: false,
         hasSeenLargerModelSuggestion: false,
       });
@@ -670,24 +619,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       "keyboard mic timeout",
     ),
 
-  setKeyboardContextAwareAutocorrect: async (enabled: boolean) =>
-    persistKeyboardSetting(
-      { set, get },
-      "keyboardContextAwareAutocorrect",
-      STORAGE_KEYS.KEYBOARD_CONTEXT_AWARE_AUTOCORRECT,
-      enabled,
-      "context-aware autocorrect",
-    ),
-
-  setKeyboardLmStrength: async (strength: number) =>
-    persistKeyboardSetting(
-      { set, get },
-      "keyboardLmStrength",
-      STORAGE_KEYS.KEYBOARD_LM_STRENGTH,
-      strength,
-      "keyboard LM strength",
-    ),
-
   markWelcomeSeen: async () => {
     set({ hasSeenWelcome: true });
     try {
@@ -760,14 +691,6 @@ export const useKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.keyboardMicTimeoutSeconds);
 export const useSetKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.setKeyboardMicTimeout);
-export const useKeyboardContextAwareAutocorrect = () =>
-  useSettingsStore((s) => s.keyboardContextAwareAutocorrect);
-export const useSetKeyboardContextAwareAutocorrect = () =>
-  useSettingsStore((s) => s.setKeyboardContextAwareAutocorrect);
-export const useKeyboardLmStrength = () =>
-  useSettingsStore((s) => s.keyboardLmStrength);
-export const useSetKeyboardLmStrength = () =>
-  useSettingsStore((s) => s.setKeyboardLmStrength);
 export const useHasSeenWelcome = () =>
   useSettingsStore((s) => s.hasSeenWelcome);
 export const useMarkWelcomeSeen = () =>

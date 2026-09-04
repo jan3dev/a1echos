@@ -33,19 +33,9 @@ final class LmReranker: LmRerankerProviding {
         case idle, loading, ready, failed
     }
 
-    /// The downloaded model, mirrored into the App Group by the main app;
-    /// the bundled copy (dev builds staged by the config plugin when
-    /// data/keyboard-lm/keyboard_lm.gguf exists locally) takes precedence.
+    /// The model the config plugin bundles into the extension.
     static func modelURL() -> URL? {
-        if let bundled = Bundle.main.url(
-            forResource: "keyboard_lm", withExtension: "gguf")
-        {
-            return bundled
-        }
-        guard let container = IPCClient.sharedContainerURL() else { return nil }
-        let url = container.appendingPathComponent(
-            "keyboard-lm/keyboard_lm.gguf")
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        Bundle.main.url(forResource: "keyboard_lm", withExtension: "gguf")
     }
 
     /// Starts the one-time background load; safe to call repeatedly.

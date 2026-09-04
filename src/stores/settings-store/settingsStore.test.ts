@@ -11,7 +11,6 @@ import {
 
 import {
   initializeSettingsStore,
-  KEYBOARD_LM_STRENGTH_OPTIONS,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useHasSeenKeyboardPrompt,
   useHasSeenLargerModelSuggestion,
@@ -20,16 +19,12 @@ import {
   useMarkWelcomeSeen,
   useIsIncognitoMode,
   useKeyboardAutocorrect,
-  useKeyboardContextAwareAutocorrect,
   useKeyboardHaptic,
-  useKeyboardLmStrength,
   useKeyboardMicTimeout,
   useKeyboardSound,
   useMarkKeyboardPromptSeen,
   useSetKeyboardAutocorrect,
-  useSetKeyboardContextAwareAutocorrect,
   useSetKeyboardHaptic,
-  useSetKeyboardLmStrength,
   useSetKeyboardMicTimeout,
   useSetKeyboardSound,
   useModelModes,
@@ -83,8 +78,6 @@ const initialState = {
   keyboardHaptic: false,
   keyboardSound: false,
   keyboardMicTimeoutSeconds: 300,
-  keyboardContextAwareAutocorrect: false,
-  keyboardLmStrength: 1.0,
   hasSeenWelcome: false,
 };
 
@@ -588,8 +581,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -608,8 +599,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -636,16 +625,12 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -664,8 +649,6 @@ describe("settingsStore", () => {
         hapticFeedback: true,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -704,8 +687,6 @@ describe("settingsStore", () => {
         hapticFeedback: true,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -719,8 +700,6 @@ describe("settingsStore", () => {
         hapticFeedback: true,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -746,16 +725,12 @@ describe("settingsStore", () => {
         hapticFeedback: true,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -773,8 +748,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -813,8 +786,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -840,16 +811,12 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: true,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -867,8 +834,6 @@ describe("settingsStore", () => {
         hapticFeedback: true,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -902,8 +867,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 1200,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -920,8 +883,6 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 0,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -947,16 +908,12 @@ describe("settingsStore", () => {
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 60,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
       expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
         autocorrect: false,
         hapticFeedback: false,
         keySound: false,
         micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
       });
     });
 
@@ -990,179 +947,6 @@ describe("settingsStore", () => {
 
     it("useSetKeyboardMicTimeout returns the action", () => {
       const { result } = renderHook(() => useSetKeyboardMicTimeout());
-      expect(typeof result.current).toBe("function");
-    });
-  });
-
-  describe("setKeyboardContextAwareAutocorrect()", () => {
-    it("defaults to false when nothing is stored", async () => {
-      await useSettingsStore.getState().initialize();
-
-      expect(useSettingsStore.getState().keyboardContextAwareAutocorrect).toBe(
-        false,
-      );
-    });
-
-    it("enables, persists 'true', and mirrors to the keyboard config", async () => {
-      await useSettingsStore
-        .getState()
-        .setKeyboardContextAwareAutocorrect(true);
-
-      expect(useSettingsStore.getState().keyboardContextAwareAutocorrect).toBe(
-        true,
-      );
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "keyboard_context_aware_autocorrect",
-        "true",
-      );
-      expect(writeKeyboardSettings).toHaveBeenCalledWith({
-        autocorrect: false,
-        hapticFeedback: false,
-        keySound: false,
-        micTimeoutSeconds: 300,
-        contextAwareAutocorrect: true,
-        lmStrength: 1,
-      });
-    });
-
-    it("is a no-op when the value is unchanged", async () => {
-      await useSettingsStore
-        .getState()
-        .setKeyboardContextAwareAutocorrect(false);
-
-      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-      expect(writeKeyboardSettings).not.toHaveBeenCalled();
-    });
-
-    it("rolls back state and mirror on persist failure", async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
-        new Error("write fail"),
-      );
-
-      await expect(
-        useSettingsStore.getState().setKeyboardContextAwareAutocorrect(true),
-      ).rejects.toThrow("write fail");
-
-      expect(useSettingsStore.getState().keyboardContextAwareAutocorrect).toBe(
-        false,
-      );
-      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
-        autocorrect: false,
-        hapticFeedback: false,
-        keySound: false,
-        micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
-      });
-    });
-
-    it("initialize() treats only the string 'true' as enabled", async () => {
-      const AS: any = AsyncStorage;
-      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
-        key === "keyboard_context_aware_autocorrect" ? "true" : null,
-      );
-
-      await useSettingsStore.getState().initialize();
-
-      expect(useSettingsStore.getState().keyboardContextAwareAutocorrect).toBe(
-        true,
-      );
-    });
-
-    it("useKeyboardContextAwareAutocorrect selector reflects state", () => {
-      useSettingsStore.setState({ keyboardContextAwareAutocorrect: true });
-      const { result } = renderHook(() => useKeyboardContextAwareAutocorrect());
-      expect(result.current).toBe(true);
-    });
-
-    it("useSetKeyboardContextAwareAutocorrect returns the action", () => {
-      const { result } = renderHook(() =>
-        useSetKeyboardContextAwareAutocorrect(),
-      );
-      expect(typeof result.current).toBe("function");
-    });
-  });
-
-  describe("setKeyboardLmStrength()", () => {
-    it("defaults to 1.0 in the store", () => {
-      expect(useSettingsStore.getState().keyboardLmStrength).toBe(1.0);
-    });
-
-    it("updates, persists the strength, and mirrors all keyboard flags", async () => {
-      await useSettingsStore.getState().setKeyboardLmStrength(1.5);
-
-      expect(useSettingsStore.getState().keyboardLmStrength).toBe(1.5);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "keyboard_lm_strength",
-        "1.5",
-      );
-      expect(writeKeyboardSettings).toHaveBeenCalledWith({
-        autocorrect: false,
-        hapticFeedback: false,
-        keySound: false,
-        micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1.5,
-      });
-    });
-
-    it("is a no-op when the value is unchanged", async () => {
-      await useSettingsStore.getState().setKeyboardLmStrength(1.0);
-
-      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
-      expect(writeKeyboardSettings).not.toHaveBeenCalled();
-    });
-
-    it("rolls back state and mirror on persist failure", async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
-        new Error("write fail"),
-      );
-
-      await expect(
-        useSettingsStore.getState().setKeyboardLmStrength(2.0),
-      ).rejects.toThrow("write fail");
-
-      expect(useSettingsStore.getState().keyboardLmStrength).toBe(1.0);
-      expect(writeKeyboardSettings).toHaveBeenNthCalledWith(2, {
-        autocorrect: false,
-        hapticFeedback: false,
-        keySound: false,
-        micTimeoutSeconds: 300,
-        contextAwareAutocorrect: false,
-        lmStrength: 1,
-      });
-    });
-
-    it("initialize() clamps an unknown stored value to the default", async () => {
-      const AS: any = AsyncStorage;
-      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
-        key === "keyboard_lm_strength" ? "7" : null,
-      );
-
-      await useSettingsStore.getState().initialize();
-
-      expect(useSettingsStore.getState().keyboardLmStrength).toBe(1.0);
-    });
-
-    it("initialize() loads a valid stored value", async () => {
-      const AS: any = AsyncStorage;
-      (AS.getItem as jest.Mock).mockImplementation(async (key: string) =>
-        key === "keyboard_lm_strength" ? "0.5" : null,
-      );
-
-      await useSettingsStore.getState().initialize();
-
-      expect(useSettingsStore.getState().keyboardLmStrength).toBe(0.5);
-    });
-
-    it("useKeyboardLmStrength selector reflects state", () => {
-      useSettingsStore.setState({ keyboardLmStrength: 2.0 });
-      const { result } = renderHook(() => useKeyboardLmStrength());
-      expect(result.current).toBe(2.0);
-    });
-
-    it("useSetKeyboardLmStrength returns the action", () => {
-      const { result } = renderHook(() => useSetKeyboardLmStrength());
       expect(typeof result.current).toBe("function");
     });
   });
@@ -1438,14 +1222,6 @@ describe("settingsStore", () => {
     // the persisted-value parsers clamp against them.
     it("KEYBOARD_MIC_TIMEOUT_OPTIONS lists the supported durations", () => {
       expect(KEYBOARD_MIC_TIMEOUT_OPTIONS).toEqual([0, 60, 300, 1200, 3600]);
-    });
-
-    it("KEYBOARD_LM_STRENGTH_OPTIONS lists the supported blend weights", () => {
-      expect(KEYBOARD_LM_STRENGTH_OPTIONS).toEqual([0.5, 1.0, 1.5, 2.0]);
-    });
-
-    it("the default LM strength is one of the options", () => {
-      expect(KEYBOARD_LM_STRENGTH_OPTIONS).toContain(1.0);
     });
   });
 });

@@ -26,17 +26,11 @@ object KeyboardSettings {
     /** [autocorrect]: when true (default), the engine's confident correction
      *  auto-applies on a separator and the next backspace reverts it (false =
      *  tap-only). [hapticFeedback]: when true (default), key presses vibrate.
-     *  [keySound]: when true (default), key presses play the system click.
-     *  [contextAwareAutocorrect]: when true (default OFF while the
-     *  placeholder model ships), the neural reranker blends sentence-context
-     *  evidence into autocorrect ranking. [lmStrength]: how strongly LM
-     *  evidence weighs against the classical score (0…2). */
+     *  [keySound]: when true (default), key presses play the system click. */
     data class Settings(
         val autocorrect: Boolean = true,
         val hapticFeedback: Boolean = true,
         val keySound: Boolean = true,
-        val contextAwareAutocorrect: Boolean = false,
-        val lmStrength: Float = 1.0f,
     )
 
     @Volatile
@@ -61,10 +55,6 @@ object KeyboardSettings {
                 autocorrect = json.optBoolean("autocorrect", true),
                 hapticFeedback = json.optBoolean("hapticFeedback", true),
                 keySound = json.optBoolean("keySound", true),
-                contextAwareAutocorrect =
-                    json.optBoolean("contextAwareAutocorrect", false),
-                lmStrength = json.optDouble("lmStrength", 1.0)
-                    .toFloat().coerceIn(0f, 2f),
             )
             cached = settings
             cachedMtime = mtime

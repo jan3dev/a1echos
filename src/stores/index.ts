@@ -39,14 +39,9 @@ export {
   useSetKeyboardSound,
   useKeyboardMicTimeout,
   useSetKeyboardMicTimeout,
-  useKeyboardContextAwareAutocorrect,
-  useSetKeyboardContextAwareAutocorrect,
-  useKeyboardLmStrength,
-  useSetKeyboardLmStrength,
   useHasSeenWelcome,
   useMarkWelcomeSeen,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
-  KEYBOARD_LM_STRENGTH_OPTIONS,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,

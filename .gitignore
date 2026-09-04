@@ -62,7 +62,6 @@ coverage/
 .build/
 plugins/keyboard/ios/vendor/
 plugins/keyboard/android/vendor/
-data/keyboard-lm/*.gguf
 data/keyboard-lm/*.jsonl
 data/keyboard-lm/*.bin
 data/keyboard-lm/*.packed.json

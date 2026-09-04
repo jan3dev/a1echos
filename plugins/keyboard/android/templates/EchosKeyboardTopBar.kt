@@ -21,13 +21,12 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.TextView
 
 /**
- * Horizontal bar rendered above the key rows. Left: Echos wave-mark logo +
- * "Echos" wordmark. Center: animated three-wave-lines visualizer. Right:
- * record / stop button that drives transcription. Mirrors the iOS
- * `KeyboardTopBar` so both platforms stay visually in sync.
+ * Horizontal bar rendered above the key rows. Right: record / stop button
+ * that drives transcription, always visible. Left of it: the suggestion strip
+ * while composing. Behind both: the animated three-wave-lines visualizer while
+ * recording. Mirrors the iOS `KeyboardTopBar` so both platforms stay in sync.
  */
 class EchosKeyboardTopBar @JvmOverloads constructor(
     context: Context,
@@ -40,8 +39,6 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         fun onSuggestionTapped(slot: SuggestionSlot)
     }
 
-    private val logoView: ImageView
-    private val labelView: TextView
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
     private val recordSpinner: ImageView
@@ -50,11 +47,10 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     /// see when the keyboard will auto-stop and transcribe. Mirrors the iOS
     /// `KeyboardTopBar.countdownRing`.
     private val countdownRing: CountdownRingView
-    /// Foreground row (logo + label + spacer + record). Hidden while the
-    /// suggestion strip takes over the bar.
+    /// Foreground row (suggestion strip + record button).
     private val foreground: LinearLayout
-    /// Suggestion strip overlay (§5.5). Hidden by default; shown over the idle
-    /// chrome while composing a word, never while recording.
+    /// Suggestion strip (§5.5). Invisible by default; shown left of the record
+    /// button while composing a word, never while recording.
     private val suggestionStrip: SuggestionStripView
     /// Continuous rotation that drives the loading-spinner glyph while
     /// transcribing. Started/stopped with the view's visibility so the
@@ -72,18 +68,17 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     private val pillColor: Int = Color.parseColor("#707171")
 
     init {
-        // Paint the same opaque keyboard background under the logo +
-        // record button so the bar never goes transparent when the host
-        // app sits behind it (some apps, and light-mode transitions,
-        // would otherwise let host content bleed through here).
+        // Paint the same opaque keyboard background under the bar so it
+        // never goes transparent when the host app sits behind it (some
+        // apps, and light-mode transitions, would otherwise let host content
+        // bleed through here).
         setBackgroundColor(theme.keyboardBackground)
 
         val paddingPx = dim("keyboard_top_bar_horizontal_padding", 8)
-        val logoLeftPaddingPx = dim("keyboard_top_bar_logo_left_padding", 16)
 
         // Three-wave visualizer spans the full width of the bar so it can
-        // sit behind the logo and record button — the foreground row is
-        // added last so it draws on top. 36dp matches the iOS waveform
+        // sit behind the record button — the foreground row is added last
+        // so it draws on top. 36dp matches the iOS waveform
         // height so amplitude clamping reads the same on both platforms.
         val waveformHeight = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, 36f, resources.displayMetrics,
@@ -94,61 +89,34 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             )
             visibility = INVISIBLE
             // Fade to transparent at both edges so the wave reads cleanly
-            // behind the logo and record button. 0.32 mirrors the iOS
+            // behind the record button. 0.32 mirrors the iOS
             // `installEdgeFadeMask` default — the fade BEGINS well inside
-            // of the logo/button so the wave is already mostly transparent
-            // by the time it reaches the foreground controls.
+            // of the button so the wave is already mostly transparent by
+            // the time it reaches it.
             setEdgeFadeFraction(0.32f)
         }
         addView(waveform)
 
-        // Foreground row: logo + wordmark on the left, record button on
-        // the right. Wrapped in a horizontal `LinearLayout` so the inner
-        // gravity stays consistent regardless of waveform state.
+        // Foreground row: suggestion strip fills the left, record button on
+        // the right.
         foreground = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(logoLeftPaddingPx, 0, paddingPx, 0)
+            setPadding(paddingPx, 0, paddingPx, 0)
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
             )
         }
         addView(foreground)
 
-        val logoWidth = dim("keyboard_top_bar_logo_width", 18)
-        val logoHeight = dim("keyboard_top_bar_logo_height", 24)
-        logoView = ImageView(context).apply {
-            layoutParams = LinearLayout.LayoutParams(logoWidth, logoHeight)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            setImageResource(drawable("ic_echos_logo"))
-            imageTintList = android.content.res.ColorStateList.valueOf(theme.keyText)
-        }
-        foreground.addView(logoView)
-
-        labelView = TextView(context).apply {
-            text = "Echos"
-            setTextColor(theme.keyText)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            typeface = android.graphics.Typeface.create(
-                android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD,
-            )
-            val lp = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
-            lp.leftMargin = dim("key_horizontal_gap", 6)
-            layoutParams = lp
-        }
-        foreground.addView(labelView)
-
-        // Spacer pushes the record button to the right edge — the waveform
-        // beneath stays full-width so it spans the entire header.
-        val spacer = View(context).apply {
+        suggestionStrip = SuggestionStripView(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.MATCH_PARENT, 1f,
-            )
+            ).apply { marginEnd = paddingPx }
+            visibility = INVISIBLE
+            setListener { slot -> listener?.onSuggestionTapped(slot) }
         }
-        foreground.addView(spacer)
+        foreground.addView(suggestionStrip)
 
         // 72×40 pill with 20dp corner radius — matches the iOS record button
         // shape so the keyboard reads as the same product on both platforms.
@@ -222,17 +190,6 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
             visibility = INVISIBLE
         }
         recordContainer.addView(recordSpinner)
-
-        // Added last so it draws on top of the foreground row when suggestions
-        // take over the bar.
-        suggestionStrip = SuggestionStripView(context).apply {
-            layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
-            )
-            visibility = GONE
-            setListener { slot -> listener?.onSuggestionTapped(slot) }
-        }
-        addView(suggestionStrip)
     }
 
     fun setListener(listener: Listener) {
@@ -240,28 +197,26 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     }
 
     /**
-     * Shows the suggestion strip over the logo + record button while the user
-     * composes a word. Hides it (restoring the chrome) for an empty list or
-     * while recording / transcribing — voice capture always owns the bar.
+     * Shows the suggestion strip left of the record button while the user
+     * composes a word. Hides it for an empty list or while recording /
+     * transcribing — voice capture always owns the bar. INVISIBLE (not GONE)
+     * so the record button never shifts.
      */
     fun setSuggestions(slots: List<SuggestionSlot>) {
         if (slots.isEmpty() || micState != MicState.IDLE) {
-            suggestionStrip.visibility = GONE
-            foreground.visibility = VISIBLE
+            suggestionStrip.visibility = INVISIBLE
             return
         }
         suggestionStrip.setSlots(slots)
         suggestionStrip.visibility = VISIBLE
-        foreground.visibility = INVISIBLE
     }
 
     fun setMicState(state: MicState) {
         if (state == micState) return
         micState = state
-        // Recording / transcribing always owns the bar — clear any suggestion
-        // overlay and restore the foreground chrome before applying visuals.
-        suggestionStrip.visibility = GONE
-        foreground.visibility = VISIBLE
+        // Recording / transcribing always owns the bar — clear the suggestion
+        // strip before applying visuals.
+        suggestionStrip.visibility = INVISIBLE
         // Pill stays gray across all states (matches iOS); only the glyph
         // and its alpha change.
         recordBackground.setColor(pillColor)

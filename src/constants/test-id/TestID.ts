@@ -69,9 +69,6 @@ export enum TestID {
   SettingsKeyboardHapticToggle = "settings-keyboard-haptic-toggle",
   SettingsKeyboardSoundToggle = "settings-keyboard-sound-toggle",
   SettingsMicTimeoutRow = "settings-mic-timeout-row",
-  SettingsContextAwareAutocorrectToggle = "settings-context-aware-autocorrect-toggle",
-  SettingsContextAwareAutocorrectProgress = "settings-context-aware-autocorrect-progress",
-  SettingsLmStrengthRow = "settings-lm-strength-row",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
   KeyboardPromptModal = "keyboard-prompt-modal",
   KeyboardPromptImageIos = "keyboard-prompt-image-ios",
@@ -88,7 +85,6 @@ export enum TestID {
   MicTimeoutOption = "mic-timeout-option",
 
   // --- Keyboard LM Strength Settings ---
-  LmStrengthOption = "lm-strength-option",
 
   // --- Model Settings ---
   ModelWhisperFile = "model-whisper-file",

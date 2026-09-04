@@ -79,10 +79,8 @@ const CONFUSABLES_SOURCE = path.join(
 // LmReranker.swift are wired into the build only when the locally-built
 // vendor artifact exists (scripts/keyboard-lm/build-llama-xcframework.sh);
 // the same condition defines ECHOS_LM for the Swift sources. Without it the
-// keyboard builds exactly as before, LM code excluded. A local
-// data/keyboard-lm/keyboard_lm.gguf (dev convenience, git-ignored)
-// additionally ships as a bundle resource; production devices get the model
-// via the in-app download instead.
+// keyboard builds exactly as before, LM code excluded. With it, the committed
+// data/keyboard-lm/keyboard_lm.gguf ships as an extension bundle resource.
 const LLAMA_XCFRAMEWORK = "llama.xcframework";
 const LLAMA_XCFRAMEWORK_SOURCE = path.join(
   __dirname,
@@ -158,10 +156,7 @@ function withKeyboardXcodeTarget(config) {
       CONFUSABLES_FILE,
     ];
     if (lmEnabled()) {
-      groupFiles.push(LM_RERANKER_SWIFT_FILE, LLAMA_XCFRAMEWORK);
-      if (fs.existsSync(LM_MODEL_SOURCE)) {
-        groupFiles.push(LM_MODEL_FILE);
-      }
+      groupFiles.push(LM_RERANKER_SWIFT_FILE, LLAMA_XCFRAMEWORK, LM_MODEL_FILE);
     }
     const extensionGroup = proj.addPbxGroup(groupFiles, targetName, targetName);
 
@@ -476,9 +471,14 @@ function withKeyboardExtensionFiles(config) {
         path.join(extensionDir, CONFUSABLES_FILE),
       );
 
-      // TEMPORARY (LM spike): stage the llama.cpp runtime, harness, and
-      // placeholder model when the vendor artifact has been built locally.
+      // Stage the llama.cpp runtime, harness, and bundled model when the
+      // vendor artifact has been built locally.
       if (lmEnabled()) {
+        if (!fs.existsSync(LM_MODEL_SOURCE)) {
+          throw new Error(
+            `withIosKeyboardExtension: ${LM_MODEL_SOURCE} is missing — the keyboard LM is bundled, not downloaded.`,
+          );
+        }
         fs.writeFileSync(
           path.join(extensionDir, LM_RERANKER_SWIFT_FILE),
           fs.readFileSync(
@@ -491,12 +491,7 @@ function withKeyboardExtensionFiles(config) {
           path.join(extensionDir, LLAMA_XCFRAMEWORK),
           { recursive: true },
         );
-        if (fs.existsSync(LM_MODEL_SOURCE)) {
-          fs.copyFileSync(
-            LM_MODEL_SOURCE,
-            path.join(extensionDir, LM_MODEL_FILE),
-          );
-        }
+        fs.copyFileSync(LM_MODEL_SOURCE, path.join(extensionDir, LM_MODEL_FILE));
       }
 
       // Write extension Info.plist

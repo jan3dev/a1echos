@@ -27,21 +27,10 @@ enum KeyboardSettings {
     /// The click needs Full Access — without it the tap is silently dropped.
     private static let keySoundKey = "EchosKeyboard.keySound"
 
-    /// When true (default OFF while the placeholder model ships), the neural
-    /// reranker blends sentence-context evidence into autocorrect ranking.
-    private static let contextAwareAutocorrectKey =
-        "EchosKeyboard.contextAwareAutocorrect"
-
-    /// How strongly LM evidence weighs against the classical score (0…2,
-    /// FUTO-style strength slider); 1.0 matches decoder.js TUNING.lmStrength.
-    private static let lmStrengthKey = "EchosKeyboard.lmStrength"
-
     struct Values {
         var autocorrect: Bool = true
         var hapticFeedback: Bool = true
         var keySound: Bool = true
-        var contextAwareAutocorrect: Bool = false
-        var lmStrength: Float = 1.0
     }
 
     static func load() -> Values {
@@ -51,16 +40,10 @@ enum KeyboardSettings {
         // `bool(forKey:)` returns false for a missing key, which would flip
         // the on-by-default flags — read the raw object so absence keeps the
         // default.
-        let lmStrength = (defaults.object(forKey: lmStrengthKey) as? NSNumber)
-            .map { min(max($0.floatValue, 0), 2) } ?? 1.0
         return Values(
             autocorrect: (defaults.object(forKey: autocorrectKey) as? Bool) ?? true,
             hapticFeedback: (defaults.object(forKey: hapticKey) as? Bool) ?? true,
-            keySound: (defaults.object(forKey: keySoundKey) as? Bool) ?? true,
-            contextAwareAutocorrect:
-                (defaults.object(forKey: contextAwareAutocorrectKey) as? Bool)
-                ?? false,
-            lmStrength: lmStrength
+            keySound: (defaults.object(forKey: keySoundKey) as? Bool) ?? true
         )
     }
 }

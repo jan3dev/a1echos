@@ -22,10 +22,9 @@ class EchosKeyboardViewController: UIInputViewController {
     private lazy var suggestionEngine = SuggestionEngine(correctionEngine: correctionEngine)
     /// Neural reranker for context-aware autocorrect. Compiled in only when
     /// the llama.xcframework vendor artifact exists (the config plugin adds
-    /// the ECHOS_LM compilation condition alongside it). The instance is
-    /// cheap until `loadIfNeeded` runs; attached to the suggestion engine
-    /// only while the setting is on, so LM-off stays bit-identical to the
-    /// classical engine.
+    /// the ECHOS_LM compilation condition alongside it and bundles the
+    /// model). Always attached; a failed load leaves ranking bit-identical
+    /// to the classical engine.
     #if ECHOS_LM
     private let lmReranker = LmReranker()
     #endif
@@ -33,19 +32,13 @@ class EchosKeyboardViewController: UIInputViewController {
         didSet {
             HapticManager.isEnabled = settings.hapticFeedback
             SoundManager.isEnabled = settings.keySound
-            applyLmSettings()
         }
     }
 
-    private func applyLmSettings() {
-        suggestionEngine.lmStrength = settings.lmStrength
+    private func attachLmReranker() {
         #if ECHOS_LM
-        if settings.contextAwareAutocorrect {
-            lmReranker.loadIfNeeded()
-            suggestionEngine.lmReranker = lmReranker
-        } else {
-            suggestionEngine.lmReranker = nil
-        }
+        lmReranker.loadIfNeeded()
+        suggestionEngine.lmReranker = lmReranker
         #endif
     }
 
@@ -118,9 +111,7 @@ class EchosKeyboardViewController: UIInputViewController {
             }
         }
 
-        // Initial property assignment bypasses `didSet` — attach the LM
-        // reranker (and start its background load) per the mirrored settings.
-        applyLmSettings()
+        attachLmReranker()
 
         keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
@@ -147,6 +138,10 @@ class EchosKeyboardViewController: UIInputViewController {
             keyboardView.topAnchor.constraint(equalTo: view.topAnchor),
             keyboardView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        // Install the height constraint before the first layout pass — created
+        // lazily in `viewWillLayoutSubviews` the first frame renders at the
+        // system default height and then snaps to ours.
+        applyPreferredKeyboardHeight()
 
         applyKeyboardAppearance()
 
@@ -188,6 +183,8 @@ class EchosKeyboardViewController: UIInputViewController {
         // the checker language so a host-locale change is picked up.
         settings = KeyboardSettings.load()
         suggestionEngine.resolveLanguage()
+        applyKeyboardAppearance()
+        HapticManager.prepare()
         // A freshly-shown keyboard should always start in the field-appropriate
         // layout, so forget the last-applied type before re-applying.
         lastAppliedKeyboardType = nil
@@ -284,7 +281,7 @@ class EchosKeyboardViewController: UIInputViewController {
     // MARK: - Suggestions (§5.5)
 
     /// Recomputes the top-bar suggestion strip for the current composing word.
-    /// Hides the strip (restoring the logo + record button) when there's no
+    /// Hides the strip when there's no
     /// word, the field disallows suggestions, or the bar is busy recording.
     private func refreshSuggestions() {
         // The cheap gating stays synchronous so the strip hides immediately and

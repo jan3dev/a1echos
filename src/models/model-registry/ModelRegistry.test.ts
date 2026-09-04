@@ -1,6 +1,5 @@
 import {
   getAllModels,
-  getAsrModels,
   getBundledModels,
   getDownloadableModels,
   getModelInfo,
@@ -42,41 +41,5 @@ describe("ModelRegistry", () => {
         /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/main$/,
       );
     }
-  });
-  describe("ASR filtering", () => {
-    // The keyboard LM reuses ModelInfo and the download pipeline but is not a
-    // transcription model. Without these, dropping the `kind` filter would
-    // silently offer it as a speech model in every picker.
-    it("getAsrModels excludes the keyboard LM", () => {
-      const ids = getAsrModels().map((m) => m.id);
-      expect(ids).not.toContain(ModelId.KEYBOARD_LM);
-      expect(ids.length).toBe(getAllModels().length - 1);
-    });
-
-    it("getAsrModels returns every non-LM entry", () => {
-      expect(getAsrModels().every((m) => (m.kind ?? "asr") === "asr")).toBe(
-        true,
-      );
-    });
-
-    it("getDownloadableModels excludes the keyboard LM", () => {
-      expect(getDownloadableModels().map((m) => m.id)).not.toContain(
-        ModelId.KEYBOARD_LM,
-      );
-    });
-
-    it("getBundledModels excludes the keyboard LM", () => {
-      expect(getBundledModels().map((m) => m.id)).not.toContain(
-        ModelId.KEYBOARD_LM,
-      );
-    });
-
-    it("the keyboard LM is still reachable for downloading", () => {
-      const info = getModelInfo(ModelId.KEYBOARD_LM);
-      expect(info.kind).toBe("keyboard-lm");
-      expect(info.isBundled).toBe(false);
-      expect(info.files).toHaveLength(1);
-      expect(info.downloadBaseUrl).toBeTruthy();
-    });
   });
 });
