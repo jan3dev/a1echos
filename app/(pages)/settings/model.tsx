@@ -81,7 +81,7 @@ export default function ModelSettingsScreen() {
   const handleDownload = useCallback(
     async (modelId: ModelId) => {
       // Disk-space pre-check, in-flight guard and failure toast all live in the
-      // hook, shared with the context-aware autocorrect toggle.
+      // hook.
       const success = await ensureModelDownloaded(modelId);
       if (success) {
         try {

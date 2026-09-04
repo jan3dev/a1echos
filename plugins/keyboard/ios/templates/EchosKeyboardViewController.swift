@@ -35,12 +35,6 @@ class EchosKeyboardViewController: UIInputViewController {
         }
     }
 
-    private func attachLmReranker() {
-        #if ECHOS_LM
-        lmReranker.loadIfNeeded()
-        suggestionEngine.lmReranker = lmReranker
-        #endif
-    }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -111,7 +105,10 @@ class EchosKeyboardViewController: UIInputViewController {
             }
         }
 
-        attachLmReranker()
+        #if ECHOS_LM
+        lmReranker.loadIfNeeded()
+        suggestionEngine.lmReranker = lmReranker
+        #endif
 
         keyboardView = KeyboardView()
         keyboardView.translatesAutoresizingMaskIntoConstraints = false
@@ -141,9 +138,12 @@ class EchosKeyboardViewController: UIInputViewController {
         // Install the height constraint before the first layout pass — created
         // lazily in `viewWillLayoutSubviews` the first frame renders at the
         // system default height and then snaps to ours.
-        applyPreferredKeyboardHeight()
-
-        applyKeyboardAppearance()
+        let heightConstraint = keyboardView.heightAnchor.constraint(
+            equalToConstant: keyboardView.preferredHeight
+        )
+        heightConstraint.priority = .defaultHigh
+        heightConstraint.isActive = true
+        keyboardView.heightConstraint = heightConstraint
 
         // Listen for transcription results from the main app
         ipcClient.onTranscriptionResult = { [weak self] text in
@@ -185,6 +185,11 @@ class EchosKeyboardViewController: UIInputViewController {
         suggestionEngine.resolveLanguage()
         applyKeyboardAppearance()
         HapticManager.prepare()
+        // Idempotent; re-mmaps the model after `didReceiveMemoryWarning`
+        // unloaded it.
+        #if ECHOS_LM
+        lmReranker.loadIfNeeded()
+        #endif
         // A freshly-shown keyboard should always start in the field-appropriate
         // layout, so forget the last-applied type before re-applying.
         lastAppliedKeyboardType = nil
@@ -211,15 +216,7 @@ class EchosKeyboardViewController: UIInputViewController {
     /// QWERTY ≈ 44pt key / ~32pt key; emoji modes ≈ 32pt cells × 5 rows +
     /// search + strip.
     private func applyPreferredKeyboardHeight() {
-        let height = keyboardView.preferredHeight
-        if let constraint = keyboardView.heightConstraint {
-            constraint.constant = height
-        } else {
-            let constraint = keyboardView.heightAnchor.constraint(equalToConstant: height)
-            constraint.priority = .defaultHigh
-            constraint.isActive = true
-            keyboardView.heightConstraint = constraint
-        }
+        keyboardView.heightConstraint?.constant = keyboardView.preferredHeight
     }
 
     /// Cursor moves are an out-of-band signal to abandon any in-flight
@@ -281,8 +278,8 @@ class EchosKeyboardViewController: UIInputViewController {
     // MARK: - Suggestions (§5.5)
 
     /// Recomputes the top-bar suggestion strip for the current composing word.
-    /// Hides the strip when there's no
-    /// word, the field disallows suggestions, or the bar is busy recording.
+    /// Hides the strip when there's no word, the field disallows suggestions,
+    /// or the bar is busy recording.
     private func refreshSuggestions() {
         // The cheap gating stays synchronous so the strip hides immediately and
         // we never schedule a spell-check the field doesn't want.

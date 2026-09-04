@@ -3,6 +3,7 @@ package com.a1lab.echos.ime
 import android.content.Context
 import android.util.Log
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -29,6 +30,10 @@ class LmReranker : LmRerankerProviding {
         } catch (t: Throwable) {
             false
         }
+
+        /** False on builds without the native lib — callers skip the reranker
+         *  entirely so the engine's null path stays the zero-cost one. */
+        val isAvailable: Boolean get() = libLoaded
     }
 
     private val lock = ReentrantLock()
@@ -100,28 +105,32 @@ class LmReranker : LmRerankerProviding {
 
     /**
      * llama.cpp opens the model by filesystem path and an APK asset has none,
-     * so the bundled gguf is copied into filesDir once (skipped while the
-     * on-disk copy matches the asset's length).
+     * so the bundled gguf is copied into filesDir once per app version. The
+     * staged file is named by versionCode: a retrained model of identical
+     * size would defeat a length check, and every install bumps the code.
      */
     // ponytail: 32 MB one-time copy; mmap via AssetManager.openFd offset
     // needs a new JNI entry if disk ever matters.
     private fun stagedModelPath(context: Context): String? {
-        val dest = File(context.filesDir, "models/keyboard_lm/$MODEL_ASSET")
+        val dir = File(context.filesDir, "models/keyboard_lm")
+        @Suppress("DEPRECATION")
+        val versionCode = context.packageManager
+            .getPackageInfo(context.packageName, 0).versionCode
+        val dest = File(dir, "keyboard_lm-$versionCode.gguf")
+        if (dest.exists()) return dest.absolutePath
         return try {
-            val assetLength = context.assets.openFd(MODEL_ASSET).use { it.length }
-            if (!dest.exists() || dest.length() != assetLength) {
-                dest.parentFile?.mkdirs()
-                val tmp = File(dest.parentFile, "$MODEL_ASSET.tmp")
-                context.assets.open(MODEL_ASSET).use { input ->
-                    tmp.outputStream().use { input.copyTo(it) }
-                }
-                if (!tmp.renameTo(dest)) {
-                    tmp.delete()
-                    return null
-                }
+            dir.mkdirs()
+            dir.listFiles()?.forEach { it.delete() }
+            val tmp = File(dir, "$MODEL_ASSET.tmp")
+            context.assets.open(MODEL_ASSET).use { input ->
+                tmp.outputStream().use { input.copyTo(it) }
+            }
+            if (!tmp.renameTo(dest)) {
+                tmp.delete()
+                return null
             }
             dest.absolutePath
-        } catch (e: java.io.IOException) {
+        } catch (e: IOException) {
             Log.i(TAG, "bundled model unavailable: ${e.message}")
             null
         }

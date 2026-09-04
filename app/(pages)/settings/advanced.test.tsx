@@ -13,11 +13,6 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn(), push: mockPush }),
 }));
 
-jest.mock("@/utils", () => ({
-  ...jest.requireActual("@/utils"),
-  logError: jest.fn(),
-}));
-
 jest.mock("@/theme", () => ({
   useTheme: jest.fn(() => ({
     theme: {
@@ -70,12 +65,10 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
-    Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
     ListItem: ({
       title,
       subtitle,
-      contentWidget,
       titleTrailing,
       onPress,
       iconTrailing,
@@ -88,24 +81,18 @@ jest.mock("@/components", () => {
       >
         <RNText>{String(title)}</RNText>
         {subtitle && <RNText testID="subtitle">{String(subtitle)}</RNText>}
-        {contentWidget}
         {titleTrailing && <RNText>{String(titleTrailing)}</RNText>}
         {iconTrailing}
       </TouchableOpacity>
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
-    Text: ({ children }: any) => <RNText>{String(children)}</RNText>,
-    Toggle: ({ value, onValueChange, accessibilityLabel, enabled }: any) => (
+    Toggle: ({ value, onValueChange, accessibilityLabel }: any) => (
       <TouchableOpacity
         testID={`toggle-${accessibilityLabel}`}
         onPress={() => onValueChange?.(!value)}
-        disabled={enabled === false}
       >
         <RNText testID={`toggle-value-${accessibilityLabel}`}>
           {value ? "on" : "off"}
-        </RNText>
-        <RNText testID={`toggle-enabled-${accessibilityLabel}`}>
-          {enabled === false ? "disabled" : "enabled"}
         </RNText>
       </TouchableOpacity>
     ),

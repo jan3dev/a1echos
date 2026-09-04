@@ -19,8 +19,6 @@ export { ModelId, ModelType, TranscriptionMode } from "./model-type/ModelType";
 
 export {
   getAllModels,
-  getBundledModels,
-  getDownloadableModels,
   getModelInfo,
   MODEL_REGISTRY,
 } from "./model-registry/ModelRegistry";

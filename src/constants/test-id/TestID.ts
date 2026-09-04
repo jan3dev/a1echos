@@ -84,8 +84,6 @@ export enum TestID {
   // --- Microphone Timeout Settings ---
   MicTimeoutOption = "mic-timeout-option",
 
-  // --- Keyboard LM Strength Settings ---
-
   // --- Model Settings ---
   ModelWhisperFile = "model-whisper-file",
   ModelWhisperRealtime = "model-whisper-realtime",

@@ -72,8 +72,8 @@ class EchosInputMethodService : InputMethodService(),
     /// then [SuggestionEngine] falls back to the system spell checker.
     private lateinit var correctionEngine: CorrectionEngine
     private var keyboardSettings = KeyboardSettings.Settings()
-    /// Neural reranker for context-aware autocorrect (§5.13). Attached to
-    /// the suggestion engine only while the setting is on, so LM-off stays
+    /// Neural reranker for context-aware autocorrect (§5.13). Attached only
+    /// when the native lib shipped; a missing/failed model leaves ranking
     /// bit-identical to the classical engine. Mirrors the iOS VC wiring.
     private val lmReranker = LmReranker()
     /// Word the user explicitly kept by tapping the verbatim strip slot —
@@ -164,6 +164,9 @@ class EchosInputMethodService : InputMethodService(),
                 topBar.setSuggestions(emptyList())
             }
         }
+        // Skip the reranker entirely on builds without the native lib, so the
+        // engine's null path stays the zero-cost one.
+        if (LmReranker.isAvailable) suggestionEngine.lmReranker = lmReranker
         // These loads read files (assets + JSON) and a ContentProvider — keep
         // them off the keystroke path. `isLoaded` flips once and only ever true
         // afterwards, so the main thread simply keeps using the checker
@@ -336,7 +339,7 @@ class EchosInputMethodService : InputMethodService(),
         // whether this field allows suggestions, ensure the spell-checker
         // session is up for the current language, and clear any stale strip.
         keyboardSettings = KeyboardSettings.load(this)
-        attachLmReranker()
+        lmReranker.loadIfNeeded(this)
         suggestionsAllowed = computeSuggestionsAllowed(info)
         ensureSuggestionEngineStarted()
         lastAutoCorrected = null
@@ -344,12 +347,6 @@ class EchosInputMethodService : InputMethodService(),
         clearSuggestions()
 
         applyAutoCap()
-    }
-
-    /** Attaches the neural reranker; a failed load leaves ranking classical. */
-    private fun attachLmReranker() {
-        lmReranker.loadIfNeeded(this)
-        suggestionEngine.lmReranker = lmReranker
     }
 
     override fun onTrimMemory(level: Int) {

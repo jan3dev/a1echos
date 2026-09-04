@@ -293,9 +293,3 @@ export const getModelInfo = (modelId: ModelId): ModelInfo =>
 const ALL_MODELS: ModelInfo[] = Object.values(MODEL_REGISTRY);
 
 export const getAllModels = (): ModelInfo[] => ALL_MODELS;
-
-export const getDownloadableModels = (): ModelInfo[] =>
-  getAllModels().filter((m) => !m.isBundled);
-
-export const getBundledModels = (): ModelInfo[] =>
-  getAllModels().filter((m) => m.isBundled);

@@ -9,9 +9,7 @@ export interface DownloadProgressBarProps {
 }
 
 /**
- * Determinate track+fill bar for a download in flight. Shared by the model
- * card and the Advanced-settings context-aware autocorrect row so the two
- * read as the same control rather than two similar-looking bars.
+ * Determinate track+fill bar for a download in flight.
  *
  * Deliberately dumb: no percentage text, no cancel affordance. Callers own
  * the surrounding layout because a card and a list row need different ones.

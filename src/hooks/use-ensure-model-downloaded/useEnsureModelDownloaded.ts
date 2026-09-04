@@ -16,7 +16,7 @@ import { useLocalization } from "../use-localization/useLocalization";
  *
  * Resolves `true` only when the model is present afterwards, so callers can
  * chain follow-up work (selecting the model, enabling a feature) on real
- * success. Shared by the model picker and the context-aware autocorrect toggle.
+ * success.
  */
 export const useEnsureModelDownloaded = () => {
   const downloadStore = useModelDownloadStore();

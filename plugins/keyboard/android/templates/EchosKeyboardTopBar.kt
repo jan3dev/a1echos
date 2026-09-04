@@ -47,8 +47,6 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     /// see when the keyboard will auto-stop and transcribe. Mirrors the iOS
     /// `KeyboardTopBar.countdownRing`.
     private val countdownRing: CountdownRingView
-    /// Foreground row (suggestion strip + record button).
-    private val foreground: LinearLayout
     /// Suggestion strip (§5.5). Invisible by default; shown left of the record
     /// button while composing a word, never while recording.
     private val suggestionStrip: SuggestionStripView
@@ -99,7 +97,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
 
         // Foreground row: suggestion strip fills the left, record button on
         // the right.
-        foreground = LinearLayout(context).apply {
+        val foreground = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(paddingPx, 0, paddingPx, 0)
@@ -204,11 +202,15 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
      */
     fun setSuggestions(slots: List<SuggestionSlot>) {
         if (slots.isEmpty() || micState != MicState.IDLE) {
-            suggestionStrip.visibility = INVISIBLE
+            hideSuggestions()
             return
         }
         suggestionStrip.setSlots(slots)
         suggestionStrip.visibility = VISIBLE
+    }
+
+    private fun hideSuggestions() {
+        suggestionStrip.visibility = INVISIBLE
     }
 
     fun setMicState(state: MicState) {
@@ -216,7 +218,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         micState = state
         // Recording / transcribing always owns the bar — clear the suggestion
         // strip before applying visuals.
-        suggestionStrip.visibility = INVISIBLE
+        hideSuggestions()
         // Pill stays gray across all states (matches iOS); only the glyph
         // and its alpha change.
         recordBackground.setColor(pillColor)

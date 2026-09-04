@@ -38,8 +38,8 @@ export interface OptionPickerScreenProps<T extends string | number> {
 
 /**
  * Single-select settings picker: a list of radio rows that persists on tap and
- * navigates back. Shared by the theme / mic-timeout / LM-strength style
- * screens, which differ only in their options, labels and setter.
+ * navigates back. Shared by the theme / mic-timeout style screens, which
+ * differ only in their options, labels and setter.
  *
  * Taps are ignored while a save is in flight, and the chosen row shows as
  * selected immediately (optimistically) so the picker never looks unresponsive.

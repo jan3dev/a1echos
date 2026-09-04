@@ -11,7 +11,7 @@ enum HapticManager {
     private static let selectionGenerator = UISelectionFeedbackGenerator()
 
     // ponytail: tuned by feel against the stock keyboard; adjust here only.
-    static var keyTapIntensity: CGFloat = 0.55
+    static let keyTapIntensity: CGFloat = 0.55
 
     /// Gates all feedback. Defaults on; the view controller sets it from the
     /// user's `KeyboardSettings.hapticFeedback` preference whenever settings

@@ -20,7 +20,6 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "<rootDir>/app/\\(dev\\)/design-system/",
-    "<rootDir>/.build/",
   ],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
@@ -58,6 +57,6 @@ module.exports = {
       statements: 95,
     },
   },
-  modulePathIgnorePatterns: ["<rootDir>/.yoyo/"],
+  modulePathIgnorePatterns: ["<rootDir>/.yoyo/", "<rootDir>/.build/"],
   clearMocks: true,
 };

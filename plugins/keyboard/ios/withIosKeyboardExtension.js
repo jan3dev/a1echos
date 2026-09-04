@@ -474,11 +474,6 @@ function withKeyboardExtensionFiles(config) {
       // Stage the llama.cpp runtime, harness, and bundled model when the
       // vendor artifact has been built locally.
       if (lmEnabled()) {
-        if (!fs.existsSync(LM_MODEL_SOURCE)) {
-          throw new Error(
-            `withIosKeyboardExtension: ${LM_MODEL_SOURCE} is missing — the keyboard LM is bundled, not downloaded.`,
-          );
-        }
         fs.writeFileSync(
           path.join(extensionDir, LM_RERANKER_SWIFT_FILE),
           fs.readFileSync(

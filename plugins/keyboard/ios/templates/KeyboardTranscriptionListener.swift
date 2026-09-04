@@ -224,6 +224,7 @@ import UIKit
         // Re-mirror when the app backgrounds so a toggle made mid-session
         // reaches the keyboard before the user switches to another app.
         mirrorKeyboardSettings()
+        removeLegacyKeyboardLmCopies()
         let nc = NotificationCenter.default
         for name in [
             UIApplication.willResignActiveNotification,
@@ -619,6 +620,24 @@ import UIKit
         defaults?.set(autocorrect, forKey: autocorrectDefaultsKey)
         defaults?.set(hapticFeedback, forKey: hapticDefaultsKey)
         defaults?.set(keySound, forKey: keySoundDefaultsKey)
+    }
+
+    /// The LM used to be downloaded into Documents and mirrored into the App
+    /// Group; it now ships inside the extension. Drop both ~33MB orphans.
+    private func removeLegacyKeyboardLmCopies() {
+        let fm = FileManager.default
+        var stale: [URL] = []
+        if let docsDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
+            stale.append(docsDir.appendingPathComponent("models/keyboard_lm"))
+        }
+        if let container = fm.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) {
+            stale.append(container.appendingPathComponent("keyboard-lm"))
+        }
+        for url in stale where fm.fileExists(atPath: url.path) {
+            try? fm.removeItem(at: url)
+        }
     }
 
     /// Reads the configured microphone-timeout (session length) in seconds from

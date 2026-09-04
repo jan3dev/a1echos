@@ -35,7 +35,7 @@ enum KeyboardLayout {
         /// routed to the search query instead of the host's text proxy.
         case emojiSearch
         /// Apple-minimal numeric pad for `UIKeyboardType.numberPad`. The
-        /// top bar (logo / mic / suggestion strip) is dropped for the compact
+        /// top bar (mic / suggestion strip) is dropped for the compact
         /// native look; a globe key keeps the required keyboard-switch
         /// affordance. See §9.1.
         case numberPad

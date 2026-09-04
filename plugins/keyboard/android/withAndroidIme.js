@@ -283,7 +283,7 @@ function withImeSources(config) {
         );
       }
 
-      // res/drawable/ — vector icons for the keyboard (logo, mic, stop, emoji)
+      // res/drawable/ — vector icons for the keyboard (mic, stop, emoji)
       const drawableDir = path.join(resDir, "drawable");
       ensureDir(drawableDir);
       const drawableSrc = path.join(TEMPLATES_DIR, "res", "drawable");
@@ -467,17 +467,12 @@ function withImeLmNativeBuild(config) {
   if (!lmEnabled()) return config;
   return appendAppGradleBlock(
     config,
-    // Marker describes the block's contents: changing it re-injects on an
-    // incremental prebuild instead of leaving an older block in place.
-    "// Echos IME — keyboard LM reranker native module (llama.cpp JNI) + uncompressed gguf asset",
+    "// Echos IME — keyboard LM reranker native module (llama.cpp JNI)",
     `android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/keyboard-lm/CMakeLists.txt"
         }
-    }
-    androidResources {
-        noCompress += "gguf"
     }
 }`,
     "keyboard-lm native build",

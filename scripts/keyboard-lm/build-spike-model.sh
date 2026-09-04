@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Produces the keyboard reranker GGUF:
 #   EleutherAI/pythia-31m (or a local HF checkpoint) -> GGUF F16 -> Q8_0
-# Output: data/keyboard-lm/keyboard_lm.gguf (git-ignored; ~33MB)
+# Output: data/keyboard-lm/keyboard_lm.gguf (tracked; ~33MB — commit it deliberately)
 #
 #   ./scripts/keyboard-lm/build-spike-model.sh
 #   ./scripts/keyboard-lm/build-spike-model.sh data/keyboard-lm/pythia-31m-keyboard/final
