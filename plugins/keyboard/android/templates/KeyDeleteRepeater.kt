@@ -18,7 +18,7 @@ class KeyDeleteRepeater(
 ) {
 
     companion object {
-        private const val INITIAL_DELAY_MS = 400L
+        private const val INITIAL_DELAY_MS = 300L
         private const val CHAR_INTERVAL_MS = 80L
         private const val WORD_THRESHOLD_MS = 1500L
         private const val WORD_INTERVAL_MS = 200L

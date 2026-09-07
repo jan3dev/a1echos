@@ -37,11 +37,14 @@ final class KeyVariantsView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         backgroundLayer.fillColor = theme.keyPopupBackground.cgColor
         let path = UIBezierPath(roundedRect: bounds, cornerRadius: Self.cornerRadius)
         backgroundLayer.path = path.cgPath
         backgroundLayer.frame = bounds
         highlightLayer.frame = bounds
+        CATransaction.commit()
     }
 
     /// Lays out the variant cells, positions the popover above `keyFrame`,

@@ -795,14 +795,13 @@ private final class StripDeleteButton: UIButton {
         )
         // Dim the glyph while held for press feedback (no background tile).
         adjustsImageWhenHighlighted = true
-        // Each repeat clicks like the native delete key; the initial press
-        // (handleDown) supplies the haptic, so repeats stay sound-only.
+        // Each repeat clicks and ticks like the native delete key.
         repeater.onCharRepeat = { [weak self] in
-            SoundManager.deleteTap()
+            KeyFeedback.keyTap(.delete)
             self?.onDelete?()
         }
         repeater.onWordRepeat = { [weak self] in
-            SoundManager.deleteTap()
+            KeyFeedback.keyTap(.delete)
             self?.onDeleteWord?()
         }
         addTarget(self, action: #selector(handleDown), for: .touchDown)

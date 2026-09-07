@@ -320,8 +320,14 @@ class EchosKeyboardView @JvmOverloads constructor(
     // after a 0.4 s hold, escalating to word-rate past ~1.5 s. Suppresses the
     // trailing single-tap delete on `ACTION_UP` if a repeat already fired.
     private val deleteRepeater = KeyDeleteRepeater(
-        onCharDelete = { listener?.onDeletePress() },
-        onWordDelete = { listener?.onDeleteWord() },
+        onCharDelete = {
+            KeyFeedback.keyPress(this, AudioManager.FX_KEYPRESS_DELETE)
+            listener?.onDeletePress()
+        },
+        onWordDelete = {
+            KeyFeedback.keyPress(this, AudioManager.FX_KEYPRESS_DELETE)
+            listener?.onDeleteWord()
+        },
     )
 
     enum class LayoutMode { LETTERS, NUMBERS, SYMBOLS, NUMPAD, NUMERIC_PAD, NUMERIC_PAD_PASSWORD, PHONE_PAD, PHONE_SYMBOLS_PAD, EMAIL, URI }

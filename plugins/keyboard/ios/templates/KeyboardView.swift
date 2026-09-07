@@ -208,12 +208,6 @@ class KeyboardView: UIInputView {
     // the shift → caps-lock long-press is separate (`shiftLongPressDuration`).
     private static let longPressDuration: TimeInterval = 0.3
 
-    // Brief hide-delay so the preview balloon retargets to a new finger
-    // landing in the interim instead of flickering off and back on. 70 ms
-    // matches LatinIME's key-preview linger.
-    private static let previewHideDelay: TimeInterval = 0.07
-    private var previewHideTimer: Timer?
-
     // Spacebar cursor-drag (§5.1, iOS convention). Hold space this long to
     // enter cursor mode; thereafter every this-many points of horizontal
     // travel nudges the caret by one character.
@@ -891,11 +885,9 @@ class KeyboardView: UIInputView {
         state.button.setPressed(false)
 
         // Hide the preview balloon only when the last finger lifts so other
-        // simultaneously-held fingers still get visible feedback. The hide
-        // itself is deferred — see `previewHideDelay` — so rapid roll-typing
-        // retargets the balloon instead of strobing it off and on.
+        // simultaneously-held fingers still get visible feedback.
         if pointers.isEmpty {
-            scheduleDeferredPreviewHide()
+            keyPreview.hide()
         }
 
         if cancelled {
@@ -1294,8 +1286,6 @@ class KeyboardView: UIInputView {
             state.button.setPressed(false)
         }
         pointers.removeAll(keepingCapacity: true)
-        previewHideTimer?.invalidate()
-        previewHideTimer = nil
         keyPreview.hide()
         keyVariants.hide()
         emojiPreview.hide()
@@ -1320,10 +1310,12 @@ class KeyboardView: UIInputView {
     private func startDeleteRepeat() {
         deleteRepeater.onCharRepeat = { [weak self] in
             guard let self else { return }
+            KeyFeedback.keyTap(.delete)
             self.performDelete()
         }
         deleteRepeater.onWordRepeat = { [weak self] in
             guard let self else { return }
+            KeyFeedback.keyTap(.delete)
             self.performDeleteWord()
         }
         deleteRepeater.start()
@@ -1379,10 +1371,6 @@ class KeyboardView: UIInputView {
         case .period: display = "."
         default: return
         }
-        // A new preview cancels any pending hide so rapid retargeting doesn't
-        // disappear the existing balloon for a frame.
-        previewHideTimer?.invalidate()
-        previewHideTimer = nil
         let keyFrame = button.convert(button.bounds, to: self)
         // Let a top-row balloon grow up to the record button's top edge (the
         // highest a balloon may go before the system clips it) and no further.
@@ -1395,22 +1383,6 @@ class KeyboardView: UIInputView {
         keyPreview.show(
             character: display, over: keyFrame, in: self, topLimit: ceiling
         )
-    }
-
-    private func scheduleDeferredPreviewHide() {
-        previewHideTimer?.invalidate()
-        previewHideTimer = Timer.scheduledTimer(
-            withTimeInterval: KeyboardView.previewHideDelay,
-            repeats: false
-        ) { [weak self] _ in
-            guard let self = self else { return }
-            // If a new pointer-down arrived in the interim, leave the
-            // balloon alone — that pointer's `showPreviewIfCharacter` has
-            // already retargeted it.
-            if self.pointers.isEmpty {
-                self.keyPreview.hide()
-            }
-        }
     }
 
     /// Intercepts keystrokes while `.emojiSearch` is active. Returns true

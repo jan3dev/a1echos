@@ -22,6 +22,9 @@ enum HapticManager {
     static func keyTap() {
         guard isEnabled else { return }
         keyGenerator.impactOccurred(intensity: keyTapIntensity)
+        // The Taptic Engine only stays armed for a few seconds after
+        // `prepare()`; re-arming after each tick keeps the next one on time.
+        keyGenerator.prepare()
     }
 
     /// Light selection tick — used while scrubbing across the emoji category

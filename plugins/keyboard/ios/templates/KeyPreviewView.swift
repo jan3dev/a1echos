@@ -84,6 +84,11 @@ final class KeyPreviewView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // Standalone sublayer: without this every frame/path change implicitly
+        // animates over 0.25 s and the balloon morphs between keys instead of
+        // snapping like the native popup.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         shapeLayer.frame = bounds
         shapeLayer.fillColor = theme.keyPopupBackground.cgColor
         let path = balloonPath()
@@ -92,6 +97,7 @@ final class KeyPreviewView: UIView {
             // Explicit path so Core Animation skips the per-frame alpha mask.
             shapeLayer.shadowPath = path.cgPath
         }
+        CATransaction.commit()
 
         // Scale the label font to whatever vertical space the head ended
         // up with — top-row balloons get a smaller head than middle rows
@@ -183,14 +189,16 @@ final class KeyPreviewView: UIView {
             container.bringSubviewToFront(self)
         }
 
+        // Cancel an in-flight fade-out so a rapid retap doesn't flicker.
+        layer.removeAllAnimations()
         isHidden = false
-        UIView.animate(withDuration: 0.04) { self.alpha = 1 }
+        alpha = 1
     }
 
     /// Fades the preview out. Safe to call when already hidden.
     func hide() {
         UIView.animate(
-            withDuration: 0.12,
+            withDuration: 0.06,
             animations: { self.alpha = 0 },
             completion: { [weak self] _ in
                 if self?.alpha == 0 { self?.isHidden = true }
