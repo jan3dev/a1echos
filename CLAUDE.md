@@ -29,6 +29,17 @@ Boots the app directly into the in-app component gallery. Each component has a s
 npm run lint          # Run ESLint
 ```
 
+### Keyboard Dictionary
+
+```bash
+npm run build:dictionary     # Recompile data/keyboard-dictionary/keyboard_dictionary.echd from the vendored word lists
+npm run bench:dictionary     # Accuracy benchmark of the reference engine (Wikipedia misspellings, synthetic fat-finger typos, OOV false positives)
+npm run test:parity:ios      # Replay the parity fixtures through the Swift engine (swiftc)
+npm run test:parity:android  # Replay them through the Kotlin engine (gradle; needs android/ prebuilt and a JDK 17)
+```
+
+`scripts/keyboard-dictionary/decoder.js` is the canonical engine spec; `CorrectionEngine.swift` and `CorrectionEngine.kt` mirror it 1:1, so every tuning or gate change lands in all three, then `node scripts/keyboard-dictionary/generate-parity-fixtures.js --update` re-blesses the golden vectors. Judge tuning changes with `npm run bench:dictionary --tune key=value` before and after, never by eye.
+
 ### Testing
 
 ```bash

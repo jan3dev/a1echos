@@ -341,15 +341,15 @@ function withImeSources(config) {
       ensureDir(testJavaDir);
       // No existsSync guard: a missing parity suite must fail prebuild loudly
       // rather than silently ship without it.
-      const testSource = path.join(
-        TEMPLATES_DIR,
-        "test",
+      for (const testFile of [
         "CorrectionEngineParityTest.kt",
-      );
-      fs.writeFileSync(
-        path.join(testJavaDir, "CorrectionEngineParityTest.kt"),
-        fs.readFileSync(testSource, "utf8"),
-      );
+        "UserLexiconTest.kt",
+      ]) {
+        fs.writeFileSync(
+          path.join(testJavaDir, testFile),
+          fs.readFileSync(path.join(TEMPLATES_DIR, "test", testFile), "utf8"),
+        );
+      }
       // The dictionary/confusables/fixtures are NOT copied here — the test
       // sourceSet points straight at data/keyboard-dictionary (see
       // withImeTestDeps), so the suite always replays the bytes the repo

@@ -12,7 +12,8 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { encode } = require("./encoder");
+const zlib = require("node:zlib");
+const { encode, parseUnigrams } = require("./encoder");
 
 const DATA_DIR = path.join(
   __dirname,
@@ -71,17 +72,63 @@ function readForcedReplacements() {
   return { ...contractions, ...forced };
 }
 
+/**
+ * The AOSP LatinIME en_US keyboard dictionary (Apache-2.0, see
+ * LICENSE-aosp-latinime.md), folded onto the SymSpell frequency scale. The
+ * SymSpell list is Google-Books English with a British slant: it lacks about
+ * half of the American spellings (favorite, theater, mom, neighbor, canceled)
+ * and 40k more everyday inflections, so on Android — which has no system
+ * spell-checker veto — those valid words were autocorrected into their UK
+ * twins. Every lowercase alphabetic AOSP entry becomes a valid word here.
+ *
+ * AOSP's `f` byte is mapped to our quantized byte with q = 1.3·f − 39, a
+ * least-squares fit over the 52k words in both lists (f ≥ 48; mean abs error
+ * 15), then expressed as a pseudo-count on the SymSpell log scale so the
+ * existing quantizer reproduces q exactly and every pre-existing word keeps
+ * its byte. Words in both lists take the larger of the two (the keyboard
+ * corpus ranks conversational words like "hi" far above the book corpus).
+ */
+function aospUnigramLines(baseCounts) {
+  let min = Infinity;
+  let max = 0;
+  for (const c of baseCounts.values()) {
+    if (c < min) min = c;
+    if (c > max) max = c;
+  }
+  const lnMin = Math.log(min);
+  const range = Math.log(max) - lnMin;
+  const text = zlib
+    .gunzipSync(
+      fs.readFileSync(path.join(DATA_DIR, "en_US_wordlist.combined.gz")),
+    )
+    .toString("utf8");
+  const lines = [];
+  for (const line of text.split("\n")) {
+    const m = /^ word=([a-z]+),f=(\d+)(.*)$/.exec(line);
+    if (!m || m[3].includes("not_a_word=true")) continue;
+    const q = Math.max(8, Math.min(255, Math.round(1.3 * Number(m[2]) - 39)));
+    const count = Math.min(
+      max,
+      Math.round(Math.exp(lnMin + (q / 255) * range)),
+    );
+    lines.push(`${m[1]} ${count}`);
+  }
+  return lines.join("\n");
+}
+
 function readSources() {
+  const symspellText =
+    fs.readFileSync(
+      path.join(DATA_DIR, "frequency_dictionary_en_82_765.txt"),
+      "utf8",
+    ) +
+    "\n" +
+    // Modern/informal vocabulary SCOWL lacks (ok, lol, wifi, bitcoin, ...);
+    // without these autocorrect would mangle them.
+    fs.readFileSync(path.join(DATA_DIR, "extra_words.txt"), "utf8");
   return {
     unigramText:
-      fs.readFileSync(
-        path.join(DATA_DIR, "frequency_dictionary_en_82_765.txt"),
-        "utf8",
-      ) +
-      "\n" +
-      // Modern/informal vocabulary SCOWL lacks (ok, lol, wifi, bitcoin, ...);
-      // without these autocorrect would mangle them.
-      fs.readFileSync(path.join(DATA_DIR, "extra_words.txt"), "utf8"),
+      symspellText + "\n" + aospUnigramLines(parseUnigrams(symspellText)),
     bigramText: fs.readFileSync(
       path.join(DATA_DIR, "frequency_bigramdictionary_en_243_342.txt"),
       "utf8",

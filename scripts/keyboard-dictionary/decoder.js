@@ -45,27 +45,47 @@ const TUNING = {
   subTouchBase: 0.25,
   subTouchPerUnit: 0.55,
   subTouchDeadZone: 0.4,
-  insertDuplicate: 0.5,
+  // A doubled-letter slip (helo, helllo) is the cheapest keystroke error —
+  // priced with the spatial model's best-case substitution so a much more
+  // frequent neighbor (help) cannot outrank the obvious reading (hello).
+  insertDuplicate: 0.35,
   insertOther: 1.0,
-  deletionDuplicate: 0.5,
+  deletionDuplicate: 0.35,
   deletion: 0.9,
-  transposition: 0.5,
+  // Swapped neighbors (peice, thsi) sit between a doubled letter and an
+  // adjacent-key slip; at 0.5 the far more frequent "price" outranked "piece".
+  transposition: 0.4,
   // First-letter typos are rarer than mid-word ones, so they carry a surcharge
   // — but not so steep that a clear touch signal near the intended first key
   // (spatial model) can't overcome it ("yhe" with the first tap by 't' -> the).
   firstLetterSurcharge: 0.5,
   apostropheRestore: 0.15,
-  wordSplit: 0.45,
+  // A missing space is priced like a swapped pair, with evidenced splits
+  // ranking by their pair frequency (see wordSplits): dearer and "alot" loses
+  // "a lot" to "alto", cheaper and "afair" becomes "a fair" ahead of "affair".
+  // A contraction split (imnot -> I'm not) is self-evident and stays cheap.
+  wordSplit: 0.5,
+  wordSplitContraction: 0.45,
   completionPerChar: 0.2,
   completionCap: 0.9,
   // Completions may drive autocorrect-on-space only when the typed prefix is
   // long, the tail short, and the word common; everything else stays a
-  // tap-only suggestion (sata must not become satan).
+  // tap-only suggestion (sata must not become satan). A four-letter prefix
+  // qualifies only for a very common word (clas -> class, doub -> doubt).
   autocorrectMaxCompletionExtra: 2,
   autocorrectCompletionMinTyped: 5,
+  autocorrectShortCompletionMinTyped: 4,
+  autocorrectShortCompletionMinFreq: 128,
   autocorrectMaxScoreGap: 0.25,
+  // Autocorrect never replaces a word with one this obscure (the bottom of
+  // the frequency scale: payedup must not become pageful); it stays tap-only.
+  autocorrectMinTargetFreq: 24,
   shortTypedMaxEditCost: 0.9,
-  freqWeight: 0.35,
+  // The whole log-frequency range is worth one full edit: at 0.35 a rare word
+  // one cheap edit away beat a very common word one slightly dearer edit away
+  // (freom -> freon, haved -> haves). Benchmarked 2026-09: +4.6 top-1 on
+  // Wikipedia misspellings, +3.3 on synthetic fat-finger typos, precision up.
+  freqWeight: 1.0,
   bigramWeight: 0.4,
   maxCandidates: 3,
   maxCompletions: 8,
@@ -457,15 +477,16 @@ function fuzzyMatches(model, typed, touchPoints = null) {
     if (!pruned) {
       if (current.terminal && pathChars.length > 0) {
         const word = pathChars.join("");
-        const editCost = applyFirstLetterSurcharge(
-          typed,
-          word,
-          rows[rows.length - 1][n],
-        );
-        if (editCost <= budget + 1e-6) {
+        // The budget bounds keystroke edits; the first-letter surcharge is a
+        // ranking penalty on top, never a pruning one — a short word with an
+        // adjacent-key slip on its first letter (sll -> all, rhey -> they)
+        // costs 0.6 + 0.5 against a 1.0 budget and would otherwise never be
+        // matched at all.
+        const rawCost = rows[rows.length - 1][n];
+        if (rawCost <= budget + 1e-6) {
           results.push({
             word,
-            editCost,
+            editCost: applyFirstLetterSurcharge(typed, word, rawCost),
             freq: current.freq,
             flags: current.flags,
           });
@@ -622,10 +643,11 @@ function wordSplits(model, typed) {
       continue;
     }
     const contractionHalf = Boolean(leftContraction || rightContraction);
-    const hasBigram =
-      !contractionHalf &&
-      right !== null &&
-      model.bigramsFor(leftWord).some((bg) => bg.nextId === right.wordId);
+    const bigram =
+      !contractionHalf && right !== null
+        ? model.bigramsFor(leftWord).find((bg) => bg.nextId === right.wordId)
+        : undefined;
+    const hasBigram = bigram !== undefined;
     if (typedIsValid && !hasBigram) continue;
     const renderHalf = (w, contraction) => contraction ?? (w === "i" ? "I" : w);
     results.push({
@@ -633,8 +655,17 @@ function wordSplits(model, typed) {
         renderHalf(leftWord, leftContraction) +
         " " +
         renderHalf(rightWord, rightContraction),
-      editCost: TUNING.wordSplit,
-      freq: Math.min(left?.freq ?? 255, right?.freq ?? 255),
+      editCost: contractionHalf
+        ? TUNING.wordSplitContraction
+        : TUNING.wordSplit,
+      // An evidenced split ranks by how common the restored pair is ("a lot"
+      // beats "alto", "a fair" loses to "affair"); a contraction split by its
+      // rarer half; a split the corpus has never seen is a last resort.
+      freq: bigram
+        ? bigram.freq
+        : contractionHalf
+          ? Math.min(left?.freq ?? 255, right?.freq ?? 255)
+          : 0,
       flags: (left?.flags ?? 0) | (right?.flags ?? 0),
       // Contraction splits are self-evident; plain splits need corpus
       // evidence before autocorrect may apply them.
@@ -846,28 +877,21 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
     .map((c) => renderCandidate(c.word, c.flags));
 
   // Autocorrect considers the best candidate that is safe to apply blindly:
-  // speculative completions (long tail / rare / short prefix) and splits the
-  // corpus has never seen stay tap-only, so the strip may lead with
-  // "wichita" while space still commits "which". The fallback may not walk
-  // far down the ranking (sata must not fall through satan to sara), and
-  // short typed words demand tight edits (keyb must not become key).
-  const acTop = scored.find((c) => {
-    if (scored[0].score - c.score > TUNING.autocorrectMaxScoreGap) return false;
-    const extra = c.completionExtra ?? 0;
-    if (extra > TUNING.autocorrectMaxCompletionExtra) return false;
-    if (
-      extra > 0 &&
-      (c.freq < TUNING.commonFreqFloor ||
-        typed.length < TUNING.autocorrectCompletionMinTyped)
-    ) {
-      return false;
-    }
-    if (c.splitHasBigram === false) return false;
-    if (typed.length <= 4 && c.editCost > TUNING.shortTypedMaxEditCost) {
-      return false;
-    }
-    return true;
-  });
+  // speculative completions (long tail / rare / short prefix), splits the
+  // corpus has never seen and obscure words are tap-only by nature, so the
+  // strip may lead with "wichita" while space still commits "which". The
+  // fallback may not walk far down the ranking (sata must not fall through
+  // satan to sara). A short typed word demanding a loose edit is different:
+  // the best reading is implausible, so nothing below it may fire either
+  // (sll shows "all" but must not commit "sol").
+  let acTop;
+  for (const c of scored) {
+    if (scored[0].score - c.score > TUNING.autocorrectMaxScoreGap) break;
+    if (isTapOnly(c, typed)) continue;
+    if (typed.length <= 4 && c.editCost > TUNING.shortTypedMaxEditCost) break;
+    acTop = c;
+    break;
+  }
 
   const isAllCapsAcronym =
     typedRaw.length <= 5 &&
@@ -907,6 +931,26 @@ function evaluate(model, typedRaw, prevWord = null, options = {}) {
       ? renderCandidate(acTop.word, acTop.flags)
       : null,
   };
+}
+
+/** Candidates the strip may offer but autocorrect must never apply. */
+function isTapOnly(c, typed) {
+  const extra = c.completionExtra ?? 0;
+  if (extra > TUNING.autocorrectMaxCompletionExtra) return true;
+  if (extra > 0) {
+    if (c.freq < TUNING.commonFreqFloor) return true;
+    if (typed.length < TUNING.autocorrectCompletionMinTyped) {
+      if (typed.length < TUNING.autocorrectShortCompletionMinTyped) return true;
+      if (c.freq < TUNING.autocorrectShortCompletionMinFreq) return true;
+    }
+  }
+  if (c.splitHasBigram === false) return true;
+  // Curated proper nouns are correctable by intent even when no corpus has
+  // seen them (rebeca -> Rebecca).
+  return (
+    c.freq < TUNING.autocorrectMinTargetFreq &&
+    (c.flags & FLAG_PROPER_NOUN) === 0
+  );
 }
 
 /** Proper nouns (France, Monday, Google) render title-case; split candidates

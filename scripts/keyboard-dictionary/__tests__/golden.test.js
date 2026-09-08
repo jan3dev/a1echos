@@ -70,8 +70,12 @@ describe("golden vectors (shipped dictionary)", () => {
       const nearR = evaluate(model, "cae", null, {
         touchPoints: [null, null, { x: 3.3, y: 0.6 }],
       });
-      expect(noTouch.replacement).toBe("ace");
+      const nearD = evaluate(model, "cae", null, {
+        touchPoints: [null, null, { x: 3.0, y: 1.5 }],
+      });
+      expect(noTouch.replacement).toBe("car");
       expect(nearR.replacement).toBe("car");
+      expect(nearD.replacement).toBe("cad");
     });
   });
 

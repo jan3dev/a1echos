@@ -8,7 +8,9 @@ import Foundation
 /// Learning rules (mirrored by `UserLexicon.kt`):
 ///  - an unknown word committed with a separator twice is learned,
 ///  - tapping the verbatim strip slot learns immediately,
-///  - reverting an autocorrect blacklists that exact typed→corrected pair.
+///  - reverting an autocorrect blacklists that exact typed→corrected pair,
+///  - every committed dictionary word tallies a usage count that boosts its
+///    frequency in ranking (someone's everyday word may be rare in print).
 final class UserLexicon {
 
     private struct Entry: Codable {
@@ -21,13 +23,18 @@ final class UserLexicon {
         var words: [String: Entry] = [:]
         var blacklist: [String: TimeInterval] = [:]
         /// Word pairs the user actually types, keyed "prev next" — feeds
-        /// next-word prediction ahead of the static bigram table.
+        /// next-word prediction and correction ranking ahead of the static
+        /// bigram table.
         var bigrams: [String: Entry] = [:]
+        /// Dictionary words the user has committed, with counts. Optional so
+        /// lexicon files written before it existed still decode.
+        var usage: [String: Entry]?
     }
 
     static let maxWords = 5000
     static let maxBlacklist = 500
     static let maxBigrams = 2000
+    static let maxUsage = 3000
     private static let learnAfterCommits = 2
     private static let flushAfterMutations = 20
     private static let fileName = "keyboard-user-lexicon.json"
@@ -92,7 +99,27 @@ final class UserLexicon {
     /// log-quantized byte: starts a bit below common words and grows with use.
     func freqQ(_ word: String) -> UInt8? {
         guard loaded, let entry = store.words[word.lowercased()] else { return nil }
-        return UInt8(min(255, 96 + 16 * entry.c))
+        return Self.boost(entry.c)
+    }
+
+    /// Personal frequency for any word the user types — the learned-word
+    /// weight, or the usage tally of a dictionary word. Ranking takes the max
+    /// of this and the dictionary byte.
+    func usageFreqQ(_ word: String) -> UInt8? {
+        guard loaded else { return nil }
+        let key = word.lowercased()
+        guard let entry = store.words[key] ?? store.usage?[key] else { return nil }
+        return Self.boost(entry.c)
+    }
+
+    /// How many times the user has committed `word` right after `previous`.
+    func bigramCount(previous: String, word: String) -> Int? {
+        guard loaded else { return nil }
+        return store.bigrams[previous.lowercased() + " " + word.lowercased()]?.c
+    }
+
+    private static func boost(_ commits: Int) -> UInt8 {
+        UInt8(min(255, 96 + 16 * commits))
     }
 
     func isBlacklisted(typed: String, corrected: String) -> Bool {
@@ -130,7 +157,10 @@ final class UserLexicon {
             bump(key)
             return
         }
-        if isInDictionary { return }
+        if isInDictionary {
+            recordUsage(key)
+            return
+        }
         let seen = (pendingWords[key] ?? 0) + 1
         if seen >= Self.learnAfterCommits {
             pendingWords.removeValue(forKey: key)
@@ -202,6 +232,27 @@ final class UserLexicon {
     }
 
     // MARK: - Internals
+
+    private func recordUsage(_ key: String) {
+        if store.usage == nil { store.usage = [:] }
+        if var entry = store.usage![key] {
+            entry.c += 1
+            entry.t = Self.now()
+            store.usage![key] = entry
+        } else {
+            if store.usage!.count >= Self.maxUsage {
+                let now = Self.now()
+                if let victim = store.usage!.min(by: {
+                    Self.retentionScore($0.value, now: now)
+                        < Self.retentionScore($1.value, now: now)
+                }) {
+                    store.usage!.removeValue(forKey: victim.key)
+                }
+            }
+            store.usage![key] = Entry(c: 1, t: Self.now())
+        }
+        markMutated()
+    }
 
     private func bump(_ key: String) {
         guard var entry = store.words[key] else { return }

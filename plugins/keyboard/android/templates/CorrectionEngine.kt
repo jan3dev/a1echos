@@ -46,21 +46,25 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
         const val SUB_TOUCH_BASE = 0.25f
         const val SUB_TOUCH_PER_UNIT = 0.55f
         const val SUB_TOUCH_DEAD_ZONE = 0.4f
-        const val INSERT_DUPLICATE = 0.5f
+        const val INSERT_DUPLICATE = 0.35f
         const val INSERT_OTHER = 1.0f
-        const val DELETION_DUPLICATE = 0.5f
+        const val DELETION_DUPLICATE = 0.35f
         const val DELETION = 0.9f
-        const val TRANSPOSITION = 0.5f
+        const val TRANSPOSITION = 0.4f
         const val FIRST_LETTER_SURCHARGE = 0.5f
         const val APOSTROPHE_RESTORE = 0.15f
-        const val WORD_SPLIT = 0.45f
+        const val WORD_SPLIT = 0.5f
+        const val WORD_SPLIT_CONTRACTION = 0.45f
         const val COMPLETION_PER_CHAR = 0.2f
         const val COMPLETION_CAP = 0.9f
         const val AUTOCORRECT_MAX_COMPLETION_EXTRA = 2
         const val AUTOCORRECT_COMPLETION_MIN_TYPED = 5
+        const val AUTOCORRECT_SHORT_COMPLETION_MIN_TYPED = 4
+        const val AUTOCORRECT_SHORT_COMPLETION_MIN_FREQ = 128
         const val AUTOCORRECT_MAX_SCORE_GAP = 0.25f
+        const val AUTOCORRECT_MIN_TARGET_FREQ = 24
         const val SHORT_TYPED_MAX_EDIT_COST = 0.9f
-        const val FREQ_WEIGHT = 0.35f
+        const val FREQ_WEIGHT = 1.0f
         const val BIGRAM_WEIGHT = 0.4f
         const val MAX_CANDIDATES = 3
         const val MAX_COMPLETIONS = 8
@@ -132,7 +136,7 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
     private class Candidate(
         val word: ByteArray,
         val editCost: Float,
-        val freq: Int,
+        var freq: Int,
         val flags: Int,
         val completionExtra: Int = 0,
         /** null = not a split; false = split without corpus evidence
@@ -407,6 +411,22 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
         return word.replaceFirstChar { it.uppercase() }
     }
 
+    /** Candidates the strip may offer but autocorrect must never apply. */
+    private fun isTapOnly(c: Candidate, typedLength: Int): Boolean {
+        if (c.completionExtra > Tuning.AUTOCORRECT_MAX_COMPLETION_EXTRA) return true
+        if (c.completionExtra > 0) {
+            if (c.freq < Tuning.COMMON_FREQ_FLOOR) return true
+            if (typedLength < Tuning.AUTOCORRECT_COMPLETION_MIN_TYPED) {
+                if (typedLength < Tuning.AUTOCORRECT_SHORT_COMPLETION_MIN_TYPED) return true
+                if (c.freq < Tuning.AUTOCORRECT_SHORT_COMPLETION_MIN_FREQ) return true
+            }
+        }
+        if (c.splitHasBigram == false) return true
+        // Curated proper nouns stay correctable however rare in the corpus.
+        return c.freq < Tuning.AUTOCORRECT_MIN_TARGET_FREQ &&
+            (c.flags and Format.FLAG_PROPER_NOUN) == 0
+    }
+
     /** Proper nouns render title-case; split candidates (contain a space)
      *  keep their per-half casing. */
     private fun renderCandidate(word: String, flags: Int): String {
@@ -535,6 +555,18 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
             terminalWordId(c.word)?.let { wordId ->
                 c.bigramFreq = bigramFreqs[wordId] ?: 0
             }
+            // The user's own habits (native-only, lexicon is empty in the
+            // parity fixtures): a word they type often ranks like a common
+            // one; a pair they have typed ranks like a strong corpus bigram —
+            // 160 on first sighting, +16 per repeat.
+            userLexicon.usageFreqQ(c.wordString)?.let { boost ->
+                if (boost > c.freq) c.freq = boost
+            }
+            if (previousWord != null) {
+                userLexicon.bigramCount(previousWord, c.wordString)?.let { count ->
+                    c.bigramFreq = max(c.bigramFreq, min(255, 144 + 16 * count))
+                }
+            }
             c.score = -c.editCost +
                 Tuning.FREQ_WEIGHT * c.freq / 255f +
                 Tuning.BIGRAM_WEIGHT * c.bigramFreq / 255f
@@ -556,20 +588,13 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
         // Autocorrect considers the best candidate that is safe to apply
         // blindly — see decoder.js `evaluate` for the rule-by-rule rationale.
         val topScore = scored.firstOrNull()?.score ?: 0f
-        val acTop = scored.firstOrNull { c ->
-            if (topScore - c.score > Tuning.AUTOCORRECT_MAX_SCORE_GAP) return@firstOrNull false
-            if (c.completionExtra > Tuning.AUTOCORRECT_MAX_COMPLETION_EXTRA) return@firstOrNull false
-            if (c.completionExtra > 0 &&
-                (c.freq < Tuning.COMMON_FREQ_FLOOR ||
-                    typed.size < Tuning.AUTOCORRECT_COMPLETION_MIN_TYPED)
-            ) {
-                return@firstOrNull false
-            }
-            if (c.splitHasBigram == false) return@firstOrNull false
-            if (typed.size <= 4 && c.editCost > Tuning.SHORT_TYPED_MAX_EDIT_COST) {
-                return@firstOrNull false
-            }
-            true
+        var acTop: Candidate? = null
+        for (c in scored) {
+            if (topScore - c.score > Tuning.AUTOCORRECT_MAX_SCORE_GAP) break
+            if (isTapOnly(c, typed.size)) continue
+            if (typed.size <= 4 && c.editCost > Tuning.SHORT_TYPED_MAX_EDIT_COST) break
+            acTop = c
+            break
         }
 
         val isAllCapsAcronym = typedRaw.length <= 5 &&
@@ -871,12 +896,17 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
                 val packed = nodePacked(index)
                 if (nodeIsTerminal(packed) && pathChars.isNotEmpty()) {
                     val word = pathChars.toByteArray()
-                    val editCost = applyFirstLetterSurcharge(
-                        typed, word, rows[rows.size - 1][n],
-                    )
-                    if (editCost <= budget + Tuning.EPSILON) {
+                    // Budget bounds keystroke edits only; the first-letter
+                    // surcharge ranks, it never prunes (see decoder.js).
+                    val rawCost = rows[rows.size - 1][n]
+                    if (rawCost <= budget + Tuning.EPSILON) {
                         results.add(
-                            Candidate(word, editCost, nodeFreq(index), nodeFlags(packed)),
+                            Candidate(
+                                word,
+                                applyFirstLetterSurcharge(typed, word, rawCost),
+                                nodeFreq(index),
+                                nodeFlags(packed),
+                            ),
                         )
                     }
                 }
@@ -1041,11 +1071,12 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
                 continue
             }
             val contractionHalf = leftContraction != null || rightContraction != null
-            var hasBigram = false
+            var bigramFreq: Int? = null
             if (!contractionHalf && rightNode >= 0) {
                 val rightId = nodePacked(rightNode) and Format.NON_TERMINAL_WORD_ID
-                hasBigram = bigramRun(leftBytes).any { it.first == rightId }
+                bigramFreq = bigramRun(leftBytes).firstOrNull { it.first == rightId }?.second
             }
+            val hasBigram = bigramFreq != null
             if (typedIsValid && !hasBigram) continue
             fun renderHalf(word: String, contraction: String?): String =
                 contraction ?: if (word == "i") "I" else word
@@ -1054,8 +1085,11 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
             results.add(
                 Candidate(
                     rendered.toByteArray(Charsets.UTF_8),
-                    Tuning.WORD_SPLIT,
-                    min(leftFreq ?: 255, rightFreq ?: 255),
+                    if (contractionHalf) Tuning.WORD_SPLIT_CONTRACTION else Tuning.WORD_SPLIT,
+                    // Evidenced splits rank by the restored pair's frequency, a
+                    // contraction split by its rarer half, an unseen split last.
+                    bigramFreq
+                        ?: (if (contractionHalf) min(leftFreq ?: 255, rightFreq ?: 255) else 0),
                     (if (leftNode >= 0) nodeFlags(nodePacked(leftNode)) else 0) or
                         (if (rightNode >= 0) nodeFlags(nodePacked(rightNode)) else 0),
                     // Contraction splits are self-evident; plain splits need
@@ -1094,10 +1128,9 @@ class CorrectionEngine(val userLexicon: UserLexicon) {
             if (abs(target.size - n) > 2) continue
             val cost = weightedDistance(typed, target, budget)
             if (cost <= budget + Tuning.EPSILON) {
-                val surcharged = applyFirstLetterSurcharge(typed, target, cost)
-                if (surcharged <= budget + Tuning.EPSILON) {
-                    results.add(Candidate(target, surcharged, freq, 0))
-                }
+                results.add(
+                    Candidate(target, applyFirstLetterSurcharge(typed, target, cost), freq, 0),
+                )
             }
         }
         return results

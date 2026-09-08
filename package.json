@@ -12,10 +12,11 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
     "build:dictionary": "node scripts/keyboard-dictionary/build.js",
+    "bench:dictionary": "node scripts/keyboard-dictionary/benchmark.js",
     "bench:keyboard-lm": "python3 scripts/keyboard-lm/bench.py",
     "distill:keyboard-lm": "python3 scripts/keyboard-lm/distill-generate.py",
     "test:parity:ios": "scripts/keyboard-dictionary/parity/run-swift-parity.sh",
-    "test:parity:android": "cd android && ./gradlew :app:testDebugUnitTest --tests \"com.a1lab.echos.ime.CorrectionEngineParityTest\""
+    "test:parity:android": "cd android && ./gradlew :app:testDebugUnitTest --tests \"com.a1lab.echos.ime.*\""
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

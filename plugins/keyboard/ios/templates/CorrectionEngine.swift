@@ -32,21 +32,25 @@ final class CorrectionEngine {
         static let subTouchBase: Float = 0.25
         static let subTouchPerUnit: Float = 0.55
         static let subTouchDeadZone: Float = 0.4
-        static let insertDuplicate: Float = 0.5
+        static let insertDuplicate: Float = 0.35
         static let insertOther: Float = 1.0
-        static let deletionDuplicate: Float = 0.5
+        static let deletionDuplicate: Float = 0.35
         static let deletion: Float = 0.9
-        static let transposition: Float = 0.5
+        static let transposition: Float = 0.4
         static let firstLetterSurcharge: Float = 0.5
         static let apostropheRestore: Float = 0.15
-        static let wordSplit: Float = 0.45
+        static let wordSplit: Float = 0.5
+        static let wordSplitContraction: Float = 0.45
         static let completionPerChar: Float = 0.2
         static let completionCap: Float = 0.9
         static let autocorrectMaxCompletionExtra = 2
         static let autocorrectCompletionMinTyped = 5
+        static let autocorrectShortCompletionMinTyped = 4
+        static let autocorrectShortCompletionMinFreq: UInt8 = 128
         static let autocorrectMaxScoreGap: Float = 0.25
+        static let autocorrectMinTargetFreq: UInt8 = 24
         static let shortTypedMaxEditCost: Float = 0.9
-        static let freqWeight: Float = 0.35
+        static let freqWeight: Float = 1.0
         static let bigramWeight: Float = 0.4
         static let maxCandidates = 3
         static let maxCompletions = 8
@@ -529,6 +533,20 @@ final class CorrectionEngine {
                    let freq = bigramFreqs[wordId] {
                     kept[i].bigramFreq = freq
                 }
+                // The user's own habits (native-only, lexicon is empty in the
+                // parity fixtures): a word they type often ranks like a common
+                // one; a pair they have typed ranks like a strong corpus
+                // bigram — 160 on first sighting, +16 per repeat.
+                let word = String(decoding: kept[i].word, as: UTF8.self)
+                if let boost = userLexicon.usageFreqQ(word), boost > kept[i].freq {
+                    kept[i].freq = boost
+                }
+                if let previousWord,
+                   let count = userLexicon.bigramCount(previous: previousWord, word: word) {
+                    kept[i].bigramFreq = max(
+                        kept[i].bigramFreq, UInt8(min(255, 144 + 16 * count))
+                    )
+                }
                 kept[i].score = -kept[i].editCost
                     + Tuning.freqWeight * Float(kept[i].freq) / 255
                     + Tuning.bigramWeight * Float(kept[i].bigramFreq) / 255
@@ -554,19 +572,13 @@ final class CorrectionEngine {
         // Autocorrect considers the best candidate that is safe to apply
         // blindly — see decoder.js `evaluate` for the rule-by-rule rationale.
         let topScore = scored.first?.score ?? 0
-        let acTop = scored.first { c in
-            if topScore - c.score > Tuning.autocorrectMaxScoreGap { return false }
-            if c.completionExtra > Tuning.autocorrectMaxCompletionExtra { return false }
-            if c.completionExtra > 0,
-               c.freq < Tuning.commonFreqFloor
-                || typed.count < Tuning.autocorrectCompletionMinTyped {
-                return false
-            }
-            if c.splitHasBigram == false { return false }
-            if typed.count <= 4, c.editCost > Tuning.shortTypedMaxEditCost {
-                return false
-            }
-            return true
+        var acTop: Candidate?
+        for c in scored {
+            if topScore - c.score > Tuning.autocorrectMaxScoreGap { break }
+            if Self.isTapOnly(c, typedLength: typed.count) { continue }
+            if typed.count <= 4, c.editCost > Tuning.shortTypedMaxEditCost { break }
+            acTop = c
+            break
         }
 
         let isAllCapsAcronym = typedRaw.count <= 5
@@ -658,6 +670,22 @@ final class CorrectionEngine {
         }
         guard isProper else { return nil }
         return word.prefix(1).uppercased() + word.dropFirst()
+    }
+
+    /// Candidates the strip may offer but autocorrect must never apply.
+    private static func isTapOnly(_ c: Candidate, typedLength: Int) -> Bool {
+        if c.completionExtra > Tuning.autocorrectMaxCompletionExtra { return true }
+        if c.completionExtra > 0 {
+            if c.freq < Tuning.commonFreqFloor { return true }
+            if typedLength < Tuning.autocorrectCompletionMinTyped {
+                if typedLength < Tuning.autocorrectShortCompletionMinTyped { return true }
+                if c.freq < Tuning.autocorrectShortCompletionMinFreq { return true }
+            }
+        }
+        if c.splitHasBigram == false { return true }
+        // Curated proper nouns stay correctable however rare in the corpus.
+        return c.freq < Tuning.autocorrectMinTargetFreq
+            && (c.flags & Format.flagProperNoun) == 0
     }
 
     /// Proper nouns (France, Monday, Google) render title-case; split
@@ -910,13 +938,15 @@ final class CorrectionEngine {
             if !pruned {
                 let packed = nodePacked(raw, index)
                 if nodeIsTerminal(packed), !pathChars.isEmpty {
-                    let editCost = applyFirstLetterSurcharge(
-                        typed: typed, word: pathChars, editCost: rows[rows.count - 1][n]
-                    )
-                    if editCost <= budget + Tuning.epsilon {
+                    // Budget bounds keystroke edits only; the first-letter
+                    // surcharge ranks, it never prunes (see decoder.js).
+                    let rawCost = rows[rows.count - 1][n]
+                    if rawCost <= budget + Tuning.epsilon {
                         results.append(Candidate(
                             word: pathChars,
-                            editCost: editCost,
+                            editCost: applyFirstLetterSurcharge(
+                                typed: typed, word: pathChars, editCost: rawCost
+                            ),
                             freq: nodeFreq(raw, index),
                             flags: nodeFlags(packed)
                         ))
@@ -1084,12 +1114,13 @@ final class CorrectionEngine {
             if rightContraction == nil,
                rightFreq == nil || rightFreq! < Tuning.commonFreqFloor { continue }
             let contractionHalf = leftContraction != nil || rightContraction != nil
-            var hasBigram = false
+            var bigramFreq: UInt8?
             if !contractionHalf, let rightNode {
                 let rightId = nodePacked(raw, rightNode) & Format.nonTerminalWordId
-                hasBigram = bigramRun(raw, prevWord: leftBytes)
-                    .contains { $0.nextId == rightId }
+                bigramFreq = bigramRun(raw, prevWord: leftBytes)
+                    .first { $0.nextId == rightId }?.freq
             }
+            let hasBigram = bigramFreq != nil
             if typedIsValid, !hasBigram { continue }
             func renderHalf(_ bytes: [UInt8], _ contraction: String?) -> String {
                 if let contraction { return contraction }
@@ -1100,8 +1131,11 @@ final class CorrectionEngine {
                 + renderHalf(rightBytes, rightContraction)
             results.append(Candidate(
                 word: Array(rendered.utf8),
-                editCost: Tuning.wordSplit,
-                freq: min(leftFreq ?? 255, rightFreq ?? 255),
+                editCost: contractionHalf ? Tuning.wordSplitContraction : Tuning.wordSplit,
+                // Evidenced splits rank by the restored pair's frequency, a
+                // contraction split by its rarer half, an unseen split last.
+                freq: bigramFreq
+                    ?? (contractionHalf ? min(leftFreq ?? 255, rightFreq ?? 255) : 0),
                 flags: (leftNode.map { nodeFlags(nodePacked(raw, $0)) } ?? 0)
                     | (rightNode.map { nodeFlags(nodePacked(raw, $0)) } ?? 0),
                 splitHasBigram: contractionHalf || hasBigram
@@ -1138,14 +1172,14 @@ final class CorrectionEngine {
             if abs(target.count - n) > 2 { continue }
             let cost = weightedDistance(typed: typed, target: target, budget: budget)
             if cost <= budget + Tuning.epsilon {
-                let surcharged = applyFirstLetterSurcharge(
-                    typed: typed, word: target, editCost: cost
-                )
-                if surcharged <= budget + Tuning.epsilon {
-                    results.append(Candidate(
-                        word: target, editCost: surcharged, freq: freq, flags: 0
-                    ))
-                }
+                results.append(Candidate(
+                    word: target,
+                    editCost: applyFirstLetterSurcharge(
+                        typed: typed, word: target, editCost: cost
+                    ),
+                    freq: freq,
+                    flags: 0
+                ))
             }
         }
         return results

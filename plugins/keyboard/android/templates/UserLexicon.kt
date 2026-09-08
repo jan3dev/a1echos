@@ -15,7 +15,9 @@ import org.json.JSONObject
  * Learning rules (mirrored by `UserLexicon.swift`):
  *  - an unknown word committed with a separator twice is learned,
  *  - tapping the verbatim strip slot learns immediately,
- *  - reverting an autocorrect blacklists that exact typed→corrected pair.
+ *  - reverting an autocorrect blacklists that exact typed→corrected pair,
+ *  - every committed dictionary word tallies a usage count that boosts its
+ *    frequency in ranking (someone's everyday word may be rare in print).
  */
 class UserLexicon(baseDir: File) {
 
@@ -25,6 +27,7 @@ class UserLexicon(baseDir: File) {
         const val MAX_WORDS = 5000
         const val MAX_BLACKLIST = 500
         const val MAX_BIGRAMS = 2000
+        const val MAX_USAGE = 3000
         private const val LEARN_AFTER_COMMITS = 2
         private const val FLUSH_AFTER_MUTATIONS = 20
         private const val FILENAME = "keyboard-user-lexicon.json"
@@ -48,8 +51,12 @@ class UserLexicon(baseDir: File) {
     private val blacklist = HashMap<String, Long>()
 
     /** Word pairs the user actually types, keyed "prev next" — feeds
-     *  next-word prediction ahead of the static bigram table. */
+     *  next-word prediction and correction ranking ahead of the static
+     *  bigram table. */
     private val bigrams = HashMap<String, Entry>()
+
+    /** Dictionary words the user has committed, with counts. */
+    private val usage = HashMap<String, Entry>()
 
     /** Unknown words seen once; promoted into [words] on the second commit.
      *  In-memory only — a word must prove itself within one session. */
@@ -80,11 +87,17 @@ class UserLexicon(baseDir: File) {
                     val entry = bigramsJson.optJSONObject(key) ?: continue
                     bigrams[key] = Entry(entry.optInt("c", 1), entry.optLong("t", 0L))
                 }
+                val usageJson = json.optJSONObject("usage") ?: JSONObject()
+                for (key in usageJson.keys()) {
+                    val entry = usageJson.optJSONObject(key) ?: continue
+                    usage[key] = Entry(entry.optInt("c", 1), entry.optLong("t", 0L))
+                }
             }
         } catch (_: Exception) {
             words.clear()
             blacklist.clear()
             bigrams.clear()
+            usage.clear()
         }
         loaded = true
     }
@@ -113,11 +126,19 @@ class UserLexicon(baseDir: File) {
                     JSONObject().put("c", entry.count).put("t", entry.lastUsed),
                 )
             }
+            val usageJson = JSONObject()
+            for ((key, entry) in usage) {
+                usageJson.put(
+                    key,
+                    JSONObject().put("c", entry.count).put("t", entry.lastUsed),
+                )
+            }
             val root = JSONObject()
                 .put("version", 1)
                 .put("words", wordsJson)
                 .put("blacklist", blacklistJson)
                 .put("bigrams", bigramsJson)
+                .put("usage", usageJson)
             val tmp = File(file.parentFile, "$FILENAME.tmp")
             tmp.writeText(root.toString(), Charsets.UTF_8)
             tmp.renameTo(file)
@@ -141,8 +162,24 @@ class UserLexicon(baseDir: File) {
     fun freqQ(word: String): Int? {
         if (!loaded) return null
         val entry = words[word.lowercase()] ?: return null
-        return min(255, 96 + 16 * entry.count)
+        return boost(entry.count)
     }
+
+    /** Personal frequency for any word the user types — the learned-word
+     *  weight, or the usage tally of a dictionary word. Ranking takes the max
+     *  of this and the dictionary byte. */
+    fun usageFreqQ(word: String): Int? {
+        if (!loaded) return null
+        val key = word.lowercase()
+        val entry = words[key] ?: usage[key] ?: return null
+        return boost(entry.count)
+    }
+
+    /** How many times the user has committed [word] right after [previous]. */
+    fun bigramCount(previous: String, word: String): Int? =
+        if (loaded) bigrams["${previous.lowercase()} ${word.lowercase()}"]?.count else null
+
+    private fun boost(commits: Int): Int = min(255, 96 + 16 * commits)
 
     fun isBlacklisted(typed: String, corrected: String): Boolean =
         loaded && blacklist.containsKey(pairKey(typed, corrected))
@@ -203,7 +240,10 @@ class UserLexicon(baseDir: File) {
             bump(key)
             return
         }
-        if (isInDictionary) return
+        if (isInDictionary) {
+            recordUsage(key)
+            return
+        }
         val seen = (pendingWords[key] ?: 0) + 1
         if (seen >= LEARN_AFTER_COMMITS) {
             pendingWords.remove(key)
@@ -240,6 +280,22 @@ class UserLexicon(baseDir: File) {
     }
 
     // -- Internals --
+
+    private fun recordUsage(key: String) {
+        val existing = usage[key]
+        if (existing != null) {
+            existing.count += 1
+            existing.lastUsed = now()
+        } else {
+            if (usage.size >= MAX_USAGE) {
+                val nowSeconds = now()
+                usage.minByOrNull { retentionScore(it.value, nowSeconds) }
+                    ?.let { usage.remove(it.key) }
+            }
+            usage[key] = Entry(1, now())
+        }
+        markMutated()
+    }
 
     private fun bump(key: String) {
         val entry = words[key] ?: return
