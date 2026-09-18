@@ -6,14 +6,18 @@ import { Routes } from "@/constants";
 
 import Welcome from "./welcome";
 
-const mockReplace = jest.fn();
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  Redirect: ({ href }: { href: string }) => {
+    const { Text } = require("react-native");
+    return <Text testID="redirect">{href}</Text>;
+  },
+  useRouter: () => ({ push: mockPush }),
 }));
 
-const mockMarkWelcomeSeen = jest.fn();
+const mockHasSeenWelcome = jest.fn(() => false);
 jest.mock("@/stores", () => ({
-  useMarkWelcomeSeen: () => mockMarkWelcomeSeen,
+  useHasSeenWelcome: () => mockHasSeenWelcome(),
 }));
 
 jest.mock("@/components", () => {
@@ -28,8 +32,8 @@ jest.mock("@/components", () => {
 });
 
 beforeEach(() => {
-  mockReplace.mockClear();
-  mockMarkWelcomeSeen.mockClear();
+  mockPush.mockClear();
+  mockHasSeenWelcome.mockReturnValue(false);
 });
 
 describe("Welcome route", () => {
@@ -38,10 +42,16 @@ describe("Welcome route", () => {
     expect(getByTestId("get-started")).toBeTruthy();
   });
 
-  it("marks welcome seen and replaces to home on Get Started", () => {
+  it("advances to the allow-microphone step on Get Started", () => {
     const { getByTestId } = render(<Welcome />);
     fireEvent.press(getByTestId("get-started"));
-    expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingAllowMicrophone);
+  });
+
+  it("redirects home when onboarding is already complete", () => {
+    mockHasSeenWelcome.mockReturnValue(true);
+    const { getByTestId, queryByTestId } = render(<Welcome />);
+    expect(queryByTestId("get-started")).toBeNull();
+    expect(getByTestId("redirect").props.children).toBe(Routes.home);
   });
 });

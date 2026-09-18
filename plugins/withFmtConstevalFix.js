@@ -17,8 +17,14 @@ const { withDangerousMod } = require("expo/config-plugins");
  * preprocessor definitions in the Podfile `post_install` (after
  * `react_native_post_install` so it isn't overwritten).
  *
+ * The same loop also floors every pod's IPHONEOS_DEPLOYMENT_TARGET at the
+ * app's target, since Xcode 27 refuses to build the handful of resource-bundle
+ * pods that still declare pre-iOS-15 targets. That floor is independent of
+ * fmt: keep this plugin (or split the floor out) until RN/CocoaPods stop
+ * emitting sub-iOS-15 targets, even after fmt ≥ 11.1.
+ *
  * CNG: `ios/Podfile` is generated, so this runs on every prebuild. The marker
- * guard keeps it idempotent. Remove this plugin once RN bumps fmt to ≥ 11.1.
+ * guard keeps it idempotent.
  */
 const MARKER = "withFmtConstevalFix";
 
@@ -30,6 +36,13 @@ const SNIPPET = `
         defs = [defs] unless defs.is_a?(Array)
         defs << 'FMT_USE_CONSTEVAL=0' unless defs.include?('FMT_USE_CONSTEVAL=0')
         fmt_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = defs
+        # Xcode 27 rejects deployment targets below iOS 15; a few resource-bundle
+        # pods still declare 9.0-13.4. Floor every pod at the app's own target.
+        floor = podfile_properties['ios.deploymentTarget'] || '15.1'
+        current = fmt_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || Gem::Version.new(current) < Gem::Version.new(floor)
+          fmt_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = floor
+        end
       end
     end`;
 

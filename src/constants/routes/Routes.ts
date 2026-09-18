@@ -10,6 +10,7 @@ import type { Href } from "expo-router";
 export const Routes = {
   home: "/" as Href,
   welcome: "/welcome" as Href,
+  onboardingAllowMicrophone: "/onboarding/allow-microphone" as Href,
   session: (id: string): Href =>
     ({ pathname: "/session/[id]", params: { id } }) as unknown as Href,
   settings: "/settings" as Href,

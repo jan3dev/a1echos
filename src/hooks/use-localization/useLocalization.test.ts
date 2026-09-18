@@ -60,6 +60,12 @@ describe("useLocalization", () => {
       "welcomeTitle",
       "welcomeSubtitle",
       "welcomeGetStarted",
+      "back",
+      "onboardingSkip",
+      "onboardingSkipConfirmTitle",
+      "onboardingSkipConfirmMessage",
+      "onboardingAllowMicrophoneTitle",
+      "onboardingAllow",
     ];
 
     for (const key of expectedStringKeys) {

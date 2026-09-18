@@ -1,18 +1,20 @@
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 
 import { WelcomeScreen } from "@/components";
 import { Routes } from "@/constants";
-import { useMarkWelcomeSeen } from "@/stores";
+import { useHasSeenWelcome } from "@/stores";
 
 export default function Welcome() {
   const router = useRouter();
-  const markWelcomeSeen = useMarkWelcomeSeen();
+  const hasSeenWelcome = useHasSeenWelcome();
 
-  const handleGetStarted = () => {
-    // Persist completion (fire-and-forget) and leave onboarding for good.
-    void markWelcomeSeen();
-    router.replace(Routes.home);
-  };
+  if (hasSeenWelcome) {
+    return <Redirect href={Routes.home} />;
+  }
 
-  return <WelcomeScreen onGetStarted={handleGetStarted} />;
+  return (
+    <WelcomeScreen
+      onGetStarted={() => router.push(Routes.onboardingAllowMicrophone)}
+    />
+  );
 }

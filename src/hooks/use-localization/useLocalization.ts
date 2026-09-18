@@ -128,6 +128,12 @@ export const useLocalization = () => {
       welcomeTitle: t("welcomeTitle"),
       welcomeSubtitle: t("welcomeSubtitle"),
       welcomeGetStarted: t("welcomeGetStarted"),
+      back: t("back"),
+      onboardingSkip: t("onboardingSkip"),
+      onboardingSkipConfirmTitle: t("onboardingSkipConfirmTitle"),
+      onboardingSkipConfirmMessage: t("onboardingSkipConfirmMessage"),
+      onboardingAllowMicrophoneTitle: t("onboardingAllowMicrophoneTitle"),
+      onboardingAllow: t("onboardingAllow"),
     },
   };
 };

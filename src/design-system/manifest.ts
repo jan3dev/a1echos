@@ -28,6 +28,8 @@ import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button
 import colorsGallery from "@/design-system/colors/Colors.gallery";
 import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
+import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-microphone-screen/AllowMicrophoneScreen.gallery";
+import onboardingStepIndicatorGallery from "@/components/domain/onboarding/step-indicator/OnboardingStepIndicator.gallery";
 import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
@@ -84,6 +86,8 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   keyboardLayoutsGallery,
   homeGallery,
   welcomeScreenGallery,
+  allowMicrophoneScreenGallery,
+  onboardingStepIndicatorGallery,
   sessionGallery,
   settingsGallery,
   transcriptionGallery,

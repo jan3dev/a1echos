@@ -115,5 +115,11 @@
   "advancedSettingsAddKeyboardDescription": "Use the Echos keyboard in any app to transcribe while typing.",
   "welcomeTitle": "Welcome to Echos",
   "welcomeSubtitle": "Speak freely. Transcribe privately. Remember everything.",
-  "welcomeGetStarted": "Get Started"
+  "welcomeGetStarted": "Get Started",
+  "back": "Back",
+  "onboardingSkip": "Skip",
+  "onboardingSkipConfirmTitle": "Skip Onboarding?",
+  "onboardingSkipConfirmMessage": "You can set up microphone access and other features later in Settings.",
+  "onboardingAllowMicrophoneTitle": "Allow Echos to Use Your Microphone",
+  "onboardingAllow": "Allow"
 }
