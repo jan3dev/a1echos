@@ -1,5 +1,5 @@
-import { useEffect, useId } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useId, useState } from "react";
+import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -29,33 +29,53 @@ const DEFAULT_LEFT = AquaPrimitiveColors.neonBlue400;
 const DEFAULT_RIGHT = AquaPrimitiveColors.neonBlue500;
 
 /**
- * One full-bleed radial gradient with a three-stop falloff (solid center →
- * faint mid → transparent edge), centered below the bottom edge by its caller.
+ * Elliptical radial fill in pixel space. A screen-sized SVG clips an opaque
+ * circle into a hard rectangle once drift/scale slides it; the caller paints
+ * this on an overscanned canvas so those edges stay off-screen.
  */
 const RadialGlow = ({
   gradientId,
+  svgWidth,
+  svgHeight,
   cx,
   cy,
-  r,
+  rx,
+  ry,
   color,
   intensity,
 }: {
   gradientId: string;
-  cx: string;
-  cy: string;
-  r: string;
+  svgWidth: number;
+  svgHeight: number;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
   color: string;
   intensity: number;
 }) => (
-  <Svg width="100%" height="100%">
+  <Svg width={svgWidth} height={svgHeight}>
     <Defs>
-      <RadialGradient id={gradientId} cx={cx} cy={cy} r={r}>
+      <RadialGradient
+        id={gradientId}
+        gradientUnits="userSpaceOnUse"
+        cx={0}
+        cy={0}
+        r={1}
+        gradientTransform={`translate(${cx}, ${cy}) scale(${rx}, ${ry})`}
+      >
         <Stop offset="0" stopColor={color} stopOpacity={intensity} />
         <Stop offset="0.55" stopColor={color} stopOpacity={intensity * 0.35} />
         <Stop offset="1" stopColor={color} stopOpacity={0} />
       </RadialGradient>
     </Defs>
-    <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradientId})`} />
+    <Rect
+      x={0}
+      y={0}
+      width={svgWidth}
+      height={svgHeight}
+      fill={`url(#${gradientId})`}
+    />
   </Svg>
 );
 
@@ -84,6 +104,14 @@ export const AmbientGlow = ({
 
   const reducedMotion = useReducedMotion();
   const isAnimated = animated && !reducedMotion;
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  const onLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setSize((prev) =>
+      prev.width === width && prev.height === height ? prev : { width, height },
+    );
+  };
 
   const drift = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -124,34 +152,79 @@ export const AmbientGlow = ({
     ],
   }));
 
+  const { width, height } = size;
+  const ready = width > 0 && height > 0;
+  // Ellipse: 62% of each axis like the original objectBoundingBox glow, but
+  // never thinner than 35% of the longer side so landscape doesn't collapse.
+  const rx = Math.max(width * 0.62, height * 0.35);
+  const ry = Math.max(height * 0.62, width * 0.35);
+  // Drift is ±90 and scale goes to 1.24; pad past the ellipse so the SVG
+  // rect never shows as a hard edge inside the screen.
+  const padX = rx + 90;
+  const padY = ry + 40;
+  const svgWidth = width + padX * 2;
+  const svgHeight = height + padY * 2;
+  const canvasStyle = {
+    position: "absolute" as const,
+    left: -padX,
+    top: -padY,
+    width: svgWidth,
+    height: svgHeight,
+  };
+
   return (
     <View
-      style={StyleSheet.absoluteFill}
+      style={[StyleSheet.absoluteFill, styles.clip]}
       pointerEvents="none"
       testID={testID}
       accessible={false}
+      onLayout={onLayout}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, leftStyle]}>
-        <RadialGlow
-          gradientId={leftId}
-          cx="28%"
-          cy="106%"
-          r="62%"
-          color={leftColor}
-          intensity={intensity}
-        />
-      </Animated.View>
+      {ready ? (
+        <>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, styles.clip, leftStyle]}
+          >
+            <View style={canvasStyle}>
+              <RadialGlow
+                gradientId={leftId}
+                svgWidth={svgWidth}
+                svgHeight={svgHeight}
+                cx={padX + width * 0.28}
+                cy={padY + height * 1.06}
+                rx={rx}
+                ry={ry}
+                color={leftColor}
+                intensity={intensity}
+              />
+            </View>
+          </Animated.View>
 
-      <Animated.View style={[StyleSheet.absoluteFill, rightStyle]}>
-        <RadialGlow
-          gradientId={rightId}
-          cx="74%"
-          cy="110%"
-          r="64%"
-          color={rightColor}
-          intensity={intensity}
-        />
-      </Animated.View>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, styles.clip, rightStyle]}
+          >
+            <View style={canvasStyle}>
+              <RadialGlow
+                gradientId={rightId}
+                svgWidth={svgWidth}
+                svgHeight={svgHeight}
+                cx={padX + width * 0.74}
+                cy={padY + height * 1.1}
+                rx={rx * 1.03}
+                ry={ry * 1.03}
+                color={rightColor}
+                intensity={intensity}
+              />
+            </View>
+          </Animated.View>
+        </>
+      ) : null}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  clip: {
+    overflow: "visible",
+  },
+});

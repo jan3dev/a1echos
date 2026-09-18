@@ -10,7 +10,7 @@ const BAR_TOPS = [
   71, 65, 47, 13, 38, 57,
 ];
 const CANVAS_WIDTH = 366;
-const CANVAS_HEIGHT = 257;
+export const GRADIENT_BARS_HEIGHT = 257;
 const BAR_BOTTOM = 254;
 const BAR_PITCH = 15;
 const BAR_WIDTH = 6;
@@ -19,19 +19,20 @@ const BAR_COLOR = "#4D4D4E";
 
 interface GradientBarsProps {
   testID?: string;
+  height?: number;
 }
 
-export const GradientBars = ({ testID }: GradientBarsProps) => (
+export const GradientBars = ({ testID, height }: GradientBarsProps) => (
   <View
     testID={testID}
-    style={styles.root}
+    style={[styles.root, height != null ? { height } : null]}
     pointerEvents="none"
     accessible={false}
   >
     <Svg
       width="100%"
       height="100%"
-      viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+      viewBox={`0 0 ${CANVAS_WIDTH} ${GRADIENT_BARS_HEIGHT}`}
       preserveAspectRatio="xMidYMax meet"
     >
       <Defs>
@@ -62,6 +63,8 @@ export const GradientBars = ({ testID }: GradientBarsProps) => (
 const styles = StyleSheet.create({
   root: {
     width: "100%",
-    height: CANVAS_HEIGHT,
+    flex: 1,
+    minHeight: 0,
+    overflow: "hidden",
   },
 });

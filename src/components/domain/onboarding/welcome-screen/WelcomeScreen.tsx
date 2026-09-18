@@ -82,6 +82,8 @@ export const WelcomeScreen = ({ onGetStarted, testID }: WelcomeScreenProps) => {
           {
             paddingTop: insets.top + spacing.lg,
             paddingBottom: insets.bottom + spacing.md,
+            paddingLeft: insets.left + spacing.md,
+            paddingRight: insets.right + spacing.md,
           },
         ]}
       >
@@ -125,7 +127,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.md,
   },
   intro: {
     flex: 1,
@@ -140,6 +141,7 @@ const styles = StyleSheet.create({
   cta: {
     minHeight: 56,
     justifyContent: "center",
+    alignItems: "center",
   },
   ctaButton: {
     minHeight: 56,

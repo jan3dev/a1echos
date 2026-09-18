@@ -9,11 +9,27 @@ export const Default = () => (
   </View>
 );
 
+export const Landscape = () => (
+  <View
+    style={{
+      width: 720,
+      height: 360,
+      borderRadius: 16,
+      overflow: "hidden",
+    }}
+  >
+    <WelcomeScreen onGetStarted={() => console.log("Get Started pressed")} />
+  </View>
+);
+
 const gallery: GalleryEntry = {
   slug: "welcome-screen",
   title: "Welcome Screen",
   group: "Domain",
-  demos: [{ name: "Default", render: Default }],
+  demos: [
+    { name: "Default", render: Default },
+    { name: "Landscape", render: Landscape },
+  ],
 };
 
 export default gallery;

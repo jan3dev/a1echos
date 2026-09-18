@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
+import { View } from "react-native";
 
 import { TestID } from "@/constants";
 
@@ -58,5 +59,22 @@ describe("AllowMicrophoneScreen", () => {
   it("renders without a testID", () => {
     const { getByText } = renderScreen({ testID: undefined });
     expect(getByText("onboardingAllow")).toBeTruthy();
+  });
+
+  it("keeps title, bars and allow visible in a short landscape window", () => {
+    const { getByText, getByTestId } = render(
+      <View style={{ width: 720, height: 360 }}>
+        <AllowMicrophoneScreen
+          onBack={jest.fn()}
+          onSkip={jest.fn()}
+          onAllow={jest.fn()}
+          testID="allow-mic"
+        />
+      </View>,
+    );
+    expect(getByText("onboardingAllowMicrophoneTitle")).toBeTruthy();
+    expect(getByTestId("allow-mic-bars")).toBeTruthy();
+    expect(getByTestId("allow-mic-allow")).toBeTruthy();
+    expect(getByTestId(TestID.RecordingButtonStart)).toBeTruthy();
   });
 });
