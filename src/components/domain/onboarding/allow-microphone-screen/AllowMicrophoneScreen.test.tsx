@@ -1,5 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import { View } from "react-native";
+import { useSafeAreaFrame } from "react-native-safe-area-context";
 
 import { TestID } from "@/constants";
 
@@ -7,6 +8,12 @@ import {
   AllowMicrophoneScreen,
   type AllowMicrophoneScreenProps,
 } from "./AllowMicrophoneScreen";
+
+jest.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  useSafeAreaFrame: jest.fn(() => ({ x: 0, y: 0, width: 390, height: 844 })),
+}));
+const mockFrame = jest.mocked(useSafeAreaFrame);
 
 const renderScreen = (overrides: Partial<AllowMicrophoneScreenProps> = {}) => {
   const props = {
@@ -62,6 +69,7 @@ describe("AllowMicrophoneScreen", () => {
   });
 
   it("keeps title, bars and allow visible in a short landscape window", () => {
+    mockFrame.mockReturnValueOnce({ x: 0, y: 0, width: 720, height: 360 });
     const { getByText, getByTestId } = render(
       <View style={{ width: 720, height: 360 }}>
         <AllowMicrophoneScreen

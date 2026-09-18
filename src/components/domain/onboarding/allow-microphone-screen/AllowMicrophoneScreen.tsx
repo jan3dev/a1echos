@@ -6,17 +6,13 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-import { AppConstants } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { darkColors, spacing } from "@/theme";
-import { iosPressed } from "@/utils";
 
 import { RecordingButton } from "../../../shared/recording-controls/RecordingButton";
 import { Button } from "../../../ui/button/Button";
-import { Icon } from "../../../ui/icon/Icon";
-import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
-import { OnboardingStepIndicator } from "../step-indicator/OnboardingStepIndicator";
+import { OnboardingHeader } from "../header/OnboardingHeader";
 
 import { GRADIENT_BARS_HEIGHT, GradientBars } from "./GradientBars";
 
@@ -70,61 +66,12 @@ export const AllowMicrophoneScreen = ({
     <View testID={testID} style={styles.root}>
       <SystemBars style="light" />
 
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + (landscape ? spacing.xs : spacing.md),
-            paddingLeft: insets.left + spacing.md,
-            paddingRight: insets.right + spacing.md,
-            paddingBottom: landscape ? spacing.xs : spacing.md,
-          },
-        ]}
-      >
-        <View style={styles.headerSide}>
-          <RipplePressable
-            testID={childTestID("back")}
-            onPress={onBack}
-            hitSlop={10}
-            rippleColor={darkColors.ripple}
-            borderless
-            accessibilityRole="button"
-            accessibilityLabel={loc.back}
-            style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
-          >
-            <Icon
-              name="chevron_left"
-              size={24}
-              color={darkColors.textPrimary}
-            />
-          </RipplePressable>
-        </View>
-        <OnboardingStepIndicator
-          step={ALLOW_MICROPHONE_STEP}
-          totalSteps={AppConstants.ONBOARDING_STEP_COUNT}
-          testID={childTestID("steps")}
-        />
-        <View style={[styles.headerSide, styles.headerTrailing]}>
-          <RipplePressable
-            testID={childTestID("skip")}
-            onPress={onSkip}
-            hitSlop={10}
-            rippleColor={darkColors.ripple}
-            borderless
-            accessibilityRole="button"
-            accessibilityLabel={loc.onboardingSkip}
-            style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
-          >
-            <Text
-              variant="body2"
-              weight="medium"
-              color={darkColors.textSecondary}
-            >
-              {loc.onboardingSkip}
-            </Text>
-          </RipplePressable>
-        </View>
-      </View>
+      <OnboardingHeader
+        step={ALLOW_MICROPHONE_STEP}
+        onBack={onBack}
+        onSkip={onSkip}
+        testID={testID}
+      />
 
       <View
         style={[
@@ -176,22 +123,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: darkColors.surfaceBackground,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexShrink: 0,
-  },
-  // Flex sides keep the indicator centered. TopAppBar's 64pt sides overflow
-  // once the indicator carries all onboarding steps.
-  headerSide: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTrailing: {
-    justifyContent: "flex-end",
   },
   content: {
     flex: 1,

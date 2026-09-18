@@ -121,5 +121,10 @@
   "onboardingSkipConfirmTitle": "Skip Onboarding?",
   "onboardingSkipConfirmMessage": "You can set up microphone access and other features later in Settings.",
   "onboardingAllowMicrophoneTitle": "Allow Echos to Use Your Microphone",
-  "onboardingAllow": "Allow"
+  "onboardingAllow": "Allow",
+  "onboardingEnableKeyboardTitle": "Enable Keyboard Access",
+  "onboardingEnableKeyboardTooltip": "Echos needs keyboard access to type for you. We don’t store your transcriptions.",
+  "onboardingEnableKeyboardRowEchos": "Echos",
+  "onboardingEnableKeyboardRowFullAccess": "Allow Full Access",
+  "onboardingGoToSettings": "Go to Settings"
 }

@@ -66,6 +66,11 @@ describe("useLocalization", () => {
       "onboardingSkipConfirmMessage",
       "onboardingAllowMicrophoneTitle",
       "onboardingAllow",
+      "onboardingEnableKeyboardTitle",
+      "onboardingEnableKeyboardTooltip",
+      "onboardingEnableKeyboardRowEchos",
+      "onboardingEnableKeyboardRowFullAccess",
+      "onboardingGoToSettings",
     ];
 
     for (const key of expectedStringKeys) {

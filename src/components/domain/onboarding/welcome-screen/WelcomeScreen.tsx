@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useLocalization } from "@/hooks";
 import { AquaPrimitiveColors, darkColors, spacing } from "@/theme";
@@ -66,6 +69,8 @@ const GetStartedButton = ({
  */
 export const WelcomeScreen = ({ onGetStarted, testID }: WelcomeScreenProps) => {
   const insets = useSafeAreaInsets();
+  const frame = useSafeAreaFrame();
+  const landscape = frame.width > frame.height;
   const { loc } = useLocalization();
 
   return (
@@ -80,14 +85,14 @@ export const WelcomeScreen = ({ onGetStarted, testID }: WelcomeScreenProps) => {
         style={[
           styles.content,
           {
-            paddingTop: insets.top + spacing.lg,
+            paddingTop: insets.top + (landscape ? spacing.sm : spacing.lg),
             paddingBottom: insets.bottom + spacing.md,
             paddingLeft: insets.left + spacing.md,
             paddingRight: insets.right + spacing.md,
           },
         ]}
       >
-        <View style={styles.intro}>
+        <View style={[styles.intro, landscape && styles.introLandscape]}>
           <Icon name="echos_mark" size={64} color={darkColors.textPrimary} />
           <View style={styles.copy}>
             <Text
@@ -130,9 +135,13 @@ const styles = StyleSheet.create({
   },
   intro: {
     flex: 1,
+    minHeight: 0,
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.lg,
+  },
+  introLandscape: {
+    gap: spacing.md,
   },
   copy: {
     alignItems: "center",
@@ -141,7 +150,7 @@ const styles = StyleSheet.create({
   cta: {
     minHeight: 56,
     justifyContent: "center",
-    alignItems: "center",
+    alignSelf: "stretch",
   },
   ctaButton: {
     minHeight: 56,

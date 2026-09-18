@@ -134,6 +134,13 @@ export const useLocalization = () => {
       onboardingSkipConfirmMessage: t("onboardingSkipConfirmMessage"),
       onboardingAllowMicrophoneTitle: t("onboardingAllowMicrophoneTitle"),
       onboardingAllow: t("onboardingAllow"),
+      onboardingEnableKeyboardTitle: t("onboardingEnableKeyboardTitle"),
+      onboardingEnableKeyboardTooltip: t("onboardingEnableKeyboardTooltip"),
+      onboardingEnableKeyboardRowEchos: t("onboardingEnableKeyboardRowEchos"),
+      onboardingEnableKeyboardRowFullAccess: t(
+        "onboardingEnableKeyboardRowFullAccess",
+      ),
+      onboardingGoToSettings: t("onboardingGoToSettings"),
     },
   };
 };

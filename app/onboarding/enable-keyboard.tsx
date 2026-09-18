@@ -1,28 +1,28 @@
 import { useRouter } from "expo-router";
 
-import { AllowMicrophoneScreen, Toast } from "@/components";
+import { EnableKeyboardScreen, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
 import { Routes } from "@/constants";
-import { useLocalization, useMicPermission } from "@/hooks";
+import { useLocalization } from "@/hooks";
 import { useMarkWelcomeSeen } from "@/stores";
+import { openKeyboardSettings } from "@/utils";
 
-export default function AllowMicrophone() {
+export default function EnableKeyboard() {
   const router = useRouter();
   const { loc } = useLocalization();
   const markWelcomeSeen = useMarkWelcomeSeen();
-  const { show, hide, toastState } = useToast();
-  const ensureMicPermission = useMicPermission(show, hide);
+  const { show, toastState } = useToast();
 
   const finishOnboarding = () => {
     void markWelcomeSeen();
-    // Push from Welcome is still on the stack; replace alone would keep it.
+    // Pushes from Welcome/AllowMicrophone are still on the stack.
     if (router.canDismiss()) router.dismissAll();
     router.replace(Routes.home);
   };
 
-  const handleAllow = async () => {
-    if (await ensureMicPermission())
-      router.push(Routes.onboardingEnableKeyboard);
+  const handleGoToSettings = async () => {
+    // Failure is already logged; Skip remains as the way out.
+    if (await openKeyboardSettings()) finishOnboarding();
   };
 
   const handleSkip = () => {
@@ -39,11 +39,11 @@ export default function AllowMicrophone() {
 
   return (
     <>
-      <AllowMicrophoneScreen
-        testID="allow-microphone"
+      <EnableKeyboardScreen
+        testID="enable-keyboard"
         onBack={router.back}
         onSkip={handleSkip}
-        onAllow={handleAllow}
+        onGoToSettings={handleGoToSettings}
       />
       <Toast {...toastState} />
     </>

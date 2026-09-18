@@ -4,17 +4,15 @@ import React from "react";
 
 import { Routes } from "@/constants";
 
-import AllowMicrophone from "./allow-microphone";
+import EnableKeyboard from "./enable-keyboard";
 
 const mockReplace = jest.fn();
-const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockDismissAll = jest.fn();
 const mockCanDismiss = jest.fn(() => true);
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     replace: mockReplace,
-    push: mockPush,
     back: mockBack,
     dismissAll: mockDismissAll,
     canDismiss: mockCanDismiss,
@@ -26,7 +24,11 @@ jest.mock("@/stores", () => ({
   useMarkWelcomeSeen: () => mockMarkWelcomeSeen,
 }));
 
-const mockEnsureMicPermission = jest.fn();
+const mockOpenKeyboardSettings = jest.fn();
+jest.mock("@/utils", () => ({
+  openKeyboardSettings: () => mockOpenKeyboardSettings(),
+}));
+
 jest.mock("@/hooks", () => ({
   useLocalization: () => ({
     loc: {
@@ -36,25 +38,24 @@ jest.mock("@/hooks", () => ({
       cancel: "Cancel",
     },
   }),
-  useMicPermission: () => mockEnsureMicPermission,
 }));
 
 jest.mock("@/components", () => {
   const { TouchableOpacity, Text, View } = require("react-native");
   return {
-    AllowMicrophoneScreen: ({
+    EnableKeyboardScreen: ({
       onBack,
       onSkip,
-      onAllow,
+      onGoToSettings,
     }: {
       onBack: () => void;
       onSkip: () => void;
-      onAllow: () => void;
+      onGoToSettings: () => void;
     }) => (
       <View>
         <TouchableOpacity testID="back" onPress={onBack} />
         <TouchableOpacity testID="skip" onPress={onSkip} />
-        <TouchableOpacity testID="allow" onPress={onAllow} />
+        <TouchableOpacity testID="settings" onPress={onGoToSettings} />
       </View>
     ),
     Toast: ({
@@ -87,33 +88,34 @@ jest.mock("@/components", () => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockCanDismiss.mockReturnValue(true);
+  mockOpenKeyboardSettings.mockResolvedValue(true);
 });
 
-describe("AllowMicrophone route", () => {
+describe("EnableKeyboard route", () => {
   it("navigates back on the chevron", () => {
-    const { getByTestId } = render(<AllowMicrophone />);
+    const { getByTestId } = render(<EnableKeyboard />);
     fireEvent.press(getByTestId("back"));
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
 
-  it("advances to the keyboard step when permission is granted", async () => {
-    mockEnsureMicPermission.mockResolvedValue(true);
-    const { getByTestId } = render(<AllowMicrophone />);
+  it("opens keyboard settings and finishes onboarding", async () => {
+    const { getByTestId } = render(<EnableKeyboard />);
     await act(async () => {
-      fireEvent.press(getByTestId("allow"));
+      fireEvent.press(getByTestId("settings"));
     });
-    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingEnableKeyboard);
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockOpenKeyboardSettings).toHaveBeenCalledTimes(1);
+    expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
+    expect(mockDismissAll).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
   });
 
-  it("stays on the screen when permission is not granted", async () => {
-    mockEnsureMicPermission.mockResolvedValue(false);
-    const { getByTestId } = render(<AllowMicrophone />);
+  it("stays on the screen when keyboard settings fail to open", async () => {
+    mockOpenKeyboardSettings.mockResolvedValue(false);
+    const { getByTestId } = render(<EnableKeyboard />);
     await act(async () => {
-      fireEvent.press(getByTestId("allow"));
+      fireEvent.press(getByTestId("settings"));
     });
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockOpenKeyboardSettings).toHaveBeenCalledTimes(1);
     expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
     expect(mockDismissAll).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
@@ -121,33 +123,30 @@ describe("AllowMicrophone route", () => {
 
   it("asks for confirmation before skipping and finishes on confirm", () => {
     const { getByTestId, getByText, queryByTestId } = render(
-      <AllowMicrophone />,
+      <EnableKeyboard />,
     );
-    expect(queryByTestId("toast")).toBeNull();
     fireEvent.press(getByTestId("skip"));
     expect(getByText("Skip Onboarding?")).toBeTruthy();
     fireEvent.press(getByTestId("toast-primary"));
     expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
-    expect(mockDismissAll).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith(Routes.home);
     expect(queryByTestId("toast")).toBeNull();
   });
 
   it("cancelling the skip confirmation keeps the user on the screen", () => {
-    const { getByTestId, queryByTestId } = render(<AllowMicrophone />);
+    const { getByTestId, queryByTestId } = render(<EnableKeyboard />);
     fireEvent.press(getByTestId("skip"));
     fireEvent.press(getByTestId("toast-secondary"));
     expect(queryByTestId("toast")).toBeNull();
     expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("replaces home without dismissing when this is the only screen", () => {
+  it("replaces home without dismissing when this is the only screen", async () => {
     mockCanDismiss.mockReturnValue(false);
-    const { getByTestId } = render(<AllowMicrophone />);
-    fireEvent.press(getByTestId("skip"));
-    fireEvent.press(getByTestId("toast-primary"));
+    const { getByTestId } = render(<EnableKeyboard />);
+    await act(async () => {
+      fireEvent.press(getByTestId("settings"));
+    });
     expect(mockDismissAll).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith(Routes.home);
   });
