@@ -86,6 +86,7 @@ jest.mock("@/components", () => {
       </TouchableOpacity>
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
+    Text: ({ children }: any) => <RNText>{String(children)}</RNText>,
     Toggle: ({ value, onValueChange, accessibilityLabel }: any) => (
       <TouchableOpacity
         testID={`toggle-${accessibilityLabel}`}

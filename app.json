@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "appleTeamId": "8KC4F7DWTY",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Echos needs access to your microphone to record audio for transcription.",
