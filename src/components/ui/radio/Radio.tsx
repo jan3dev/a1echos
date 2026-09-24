@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 
-import { AquaPrimitiveColors, useTheme } from "@/theme";
+import { AquaColors, AquaPrimitiveColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
@@ -13,6 +13,8 @@ interface RadioProps<T> {
   onValueChange?: (value: T) => void;
   enabled?: boolean;
   size?: RadioSize;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
 }
 
 export const Radio = <T,>({
@@ -21,9 +23,10 @@ export const Radio = <T,>({
   onValueChange,
   enabled = true,
   size = "large",
+  colors: colorsOverride,
 }: RadioProps<T>) => {
   const { theme } = useTheme();
-  const colors = theme.colors;
+  const colors = colorsOverride ?? theme.colors;
 
   const isSelected = value === groupValue;
   const boxSize = size === "large" ? 24 : 18;

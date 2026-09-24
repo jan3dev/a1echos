@@ -2,6 +2,7 @@ export { useEnsureModelDownloaded } from "./use-ensure-model-downloaded/useEnsur
 export { useKeyboardHeight } from "./use-keyboard-height/useKeyboardHeight";
 export { useLocalization } from "./use-localization/useLocalization";
 export { useMicPermission } from "./use-mic-permission/useMicPermission";
+export { useOnboardingExit } from "./use-onboarding-exit/useOnboardingExit";
 export { usePermissions } from "./use-permissions/usePermissions";
 export { useProgrammaticScrollGuard } from "./use-programmatic-scroll-guard/useProgrammaticScrollGuard";
 export { useScrollSurface } from "./use-scroll-surface/useScrollSurface";

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
-import { useTheme } from "@/theme";
+import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
@@ -27,6 +27,8 @@ export interface ListItemProps {
   titleMaxLines?: number;
   subtitleMaxLines?: number;
   style?: StyleProp<ViewStyle>;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
   testID?: string;
 }
 
@@ -50,19 +52,21 @@ export const ListItem = ({
   titleMaxLines = 2,
   subtitleMaxLines = 3,
   style,
+  colors: colorsOverride,
   testID,
 }: ListItemProps) => {
   const { theme } = useTheme();
+  const colors = colorsOverride ?? theme.colors;
 
   const innerStyle: ViewStyle = {
     backgroundColor: selected
-      ? theme.colors.surfaceSelected
-      : (backgroundColor ?? theme.colors.surfacePrimary),
+      ? colors.surfaceSelected
+      : (backgroundColor ?? colors.surfacePrimary),
     borderColor: !bordered
       ? "transparent"
       : selected
-        ? theme.colors.surfaceBorderSelected
-        : theme.colors.surfaceBorderPrimary,
+        ? colors.surfaceBorderSelected
+        : colors.surfaceBorderPrimary,
     borderWidth: 1,
     borderRadius: 16,
     paddingHorizontal: 12,
@@ -78,7 +82,7 @@ export const ListItem = ({
         onPress={onPress}
         onLongPress={onLongPress}
         disabled={!onPress && !onLongPress}
-        rippleColor={theme.colors.ripple}
+        rippleColor={colors.ripple}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ selected: !!selected, disabled: !onPress }}
@@ -97,7 +101,7 @@ export const ListItem = ({
             <Text
               variant="body1"
               weight="semibold"
-              color={titleColor}
+              color={titleColor ?? colors.textPrimary}
               numberOfLines={titleMaxLines}
             >
               {title}
@@ -109,7 +113,7 @@ export const ListItem = ({
               <Text
                 variant="body2"
                 weight="medium"
-                color={subtitleColor ?? theme.colors.textSecondary}
+                color={subtitleColor ?? colors.textSecondary}
                 numberOfLines={subtitleMaxLines}
                 style={styles.subtitle}
               >
@@ -123,7 +127,7 @@ export const ListItem = ({
               <Text
                 variant="body1"
                 weight="semibold"
-                color={titleTrailingColor}
+                color={titleTrailingColor ?? colors.textPrimary}
                 align="right"
               >
                 {titleTrailing}
@@ -133,7 +137,7 @@ export const ListItem = ({
               <Text
                 variant="body2"
                 weight="medium"
-                color={subtitleTrailingColor ?? theme.colors.textSecondary}
+                color={subtitleTrailingColor ?? colors.textSecondary}
                 align="right"
                 style={styles.subtitle}
               >

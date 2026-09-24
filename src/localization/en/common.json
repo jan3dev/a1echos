@@ -126,5 +126,7 @@
   "onboardingEnableKeyboardTooltip": "Echos needs keyboard access to type for you. We don’t store your transcriptions.",
   "onboardingEnableKeyboardRowEchos": "Echos",
   "onboardingEnableKeyboardRowFullAccess": "Allow Full Access",
-  "onboardingGoToSettings": "Go to Settings"
+  "onboardingGoToSettings": "Go to Settings",
+  "onboardingSpokenLanguageTitle": "What Language Do You Speak?",
+  "onboardingNext": "Next"
 }

@@ -6,41 +6,24 @@ import { Routes } from "@/constants";
 
 import AllowMicrophone from "./allow-microphone";
 
-const mockReplace = jest.fn();
 const mockPush = jest.fn();
 const mockBack = jest.fn();
-const mockDismissAll = jest.fn();
-const mockCanDismiss = jest.fn(() => true);
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    replace: mockReplace,
-    push: mockPush,
-    back: mockBack,
-    dismissAll: mockDismissAll,
-    canDismiss: mockCanDismiss,
-  }),
-}));
-
-const mockMarkWelcomeSeen = jest.fn();
-jest.mock("@/stores", () => ({
-  useMarkWelcomeSeen: () => mockMarkWelcomeSeen,
+  useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
 const mockEnsureMicPermission = jest.fn();
+const mockConfirmSkip = jest.fn();
 jest.mock("@/hooks", () => ({
-  useLocalization: () => ({
-    loc: {
-      onboardingSkipConfirmTitle: "Skip Onboarding?",
-      onboardingSkipConfirmMessage: "msg",
-      onboardingSkip: "Skip",
-      cancel: "Cancel",
-    },
-  }),
   useMicPermission: () => mockEnsureMicPermission,
+  useOnboardingExit: () => ({
+    finishOnboarding: jest.fn(),
+    confirmSkip: mockConfirmSkip,
+  }),
 }));
 
 jest.mock("@/components", () => {
-  const { TouchableOpacity, Text, View } = require("react-native");
+  const { TouchableOpacity, View } = require("react-native");
   return {
     AllowMicrophoneScreen: ({
       onBack,
@@ -57,43 +40,19 @@ jest.mock("@/components", () => {
         <TouchableOpacity testID="allow" onPress={onAllow} />
       </View>
     ),
-    Toast: ({
-      visible,
-      title,
-      onPrimaryButtonTap,
-      onSecondaryButtonTap,
-    }: {
-      visible: boolean;
-      title: string;
-      onPrimaryButtonTap?: () => void;
-      onSecondaryButtonTap?: () => void;
-    }) =>
-      visible ? (
-        <View testID="toast">
-          <Text>{title}</Text>
-          <TouchableOpacity
-            testID="toast-primary"
-            onPress={onPrimaryButtonTap}
-          />
-          <TouchableOpacity
-            testID="toast-secondary"
-            onPress={onSecondaryButtonTap}
-          />
-        </View>
-      ) : null,
+    Toast: () => null,
   };
 });
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockCanDismiss.mockReturnValue(true);
-});
+beforeEach(() => jest.clearAllMocks());
 
 describe("AllowMicrophone route", () => {
-  it("navigates back on the chevron", () => {
+  it("wires back and skip", () => {
     const { getByTestId } = render(<AllowMicrophone />);
     fireEvent.press(getByTestId("back"));
+    fireEvent.press(getByTestId("skip"));
     expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
   });
 
   it("advances to the keyboard step when permission is granted", async () => {
@@ -103,8 +62,6 @@ describe("AllowMicrophone route", () => {
       fireEvent.press(getByTestId("allow"));
     });
     expect(mockPush).toHaveBeenCalledWith(Routes.onboardingEnableKeyboard);
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it("stays on the screen when permission is not granted", async () => {
@@ -114,41 +71,5 @@ describe("AllowMicrophone route", () => {
       fireEvent.press(getByTestId("allow"));
     });
     expect(mockPush).not.toHaveBeenCalled();
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it("asks for confirmation before skipping and finishes on confirm", () => {
-    const { getByTestId, getByText, queryByTestId } = render(
-      <AllowMicrophone />,
-    );
-    expect(queryByTestId("toast")).toBeNull();
-    fireEvent.press(getByTestId("skip"));
-    expect(getByText("Skip Onboarding?")).toBeTruthy();
-    fireEvent.press(getByTestId("toast-primary"));
-    expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
-    expect(mockDismissAll).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
-    expect(queryByTestId("toast")).toBeNull();
-  });
-
-  it("cancelling the skip confirmation keeps the user on the screen", () => {
-    const { getByTestId, queryByTestId } = render(<AllowMicrophone />);
-    fireEvent.press(getByTestId("skip"));
-    fireEvent.press(getByTestId("toast-secondary"));
-    expect(queryByTestId("toast")).toBeNull();
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it("replaces home without dismissing when this is the only screen", () => {
-    mockCanDismiss.mockReturnValue(false);
-    const { getByTestId } = render(<AllowMicrophone />);
-    fireEvent.press(getByTestId("skip"));
-    fireEvent.press(getByTestId("toast-primary"));
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
   });
 });

@@ -3,38 +3,17 @@ import { useRouter } from "expo-router";
 import { AllowMicrophoneScreen, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
 import { Routes } from "@/constants";
-import { useLocalization, useMicPermission } from "@/hooks";
-import { useMarkWelcomeSeen } from "@/stores";
+import { useMicPermission, useOnboardingExit } from "@/hooks";
 
 export default function AllowMicrophone() {
   const router = useRouter();
-  const { loc } = useLocalization();
-  const markWelcomeSeen = useMarkWelcomeSeen();
   const { show, hide, toastState } = useToast();
   const ensureMicPermission = useMicPermission(show, hide);
-
-  const finishOnboarding = () => {
-    void markWelcomeSeen();
-    // Push from Welcome is still on the stack; replace alone would keep it.
-    if (router.canDismiss()) router.dismissAll();
-    router.replace(Routes.home);
-  };
+  const { confirmSkip } = useOnboardingExit(show);
 
   const handleAllow = async () => {
     if (await ensureMicPermission())
       router.push(Routes.onboardingEnableKeyboard);
-  };
-
-  const handleSkip = () => {
-    show({
-      title: loc.onboardingSkipConfirmTitle,
-      message: loc.onboardingSkipConfirmMessage,
-      variant: "warning",
-      messageMaxLines: 3,
-      primaryButtonText: loc.onboardingSkip,
-      onPrimaryButtonTap: finishOnboarding,
-      secondaryButtonText: loc.cancel,
-    });
   };
 
   return (
@@ -42,7 +21,7 @@ export default function AllowMicrophone() {
       <AllowMicrophoneScreen
         testID="allow-microphone"
         onBack={router.back}
-        onSkip={handleSkip}
+        onSkip={confirmSkip}
         onAllow={handleAllow}
       />
       <Toast {...toastState} />

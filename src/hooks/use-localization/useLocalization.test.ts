@@ -71,6 +71,8 @@ describe("useLocalization", () => {
       "onboardingEnableKeyboardRowEchos",
       "onboardingEnableKeyboardRowFullAccess",
       "onboardingGoToSettings",
+      "onboardingSpokenLanguageTitle",
+      "onboardingNext",
     ];
 
     for (const key of expectedStringKeys) {

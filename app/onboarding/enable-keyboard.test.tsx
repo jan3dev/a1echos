@@ -6,22 +6,10 @@ import { Routes } from "@/constants";
 
 import EnableKeyboard from "./enable-keyboard";
 
-const mockReplace = jest.fn();
+const mockPush = jest.fn();
 const mockBack = jest.fn();
-const mockDismissAll = jest.fn();
-const mockCanDismiss = jest.fn(() => true);
 jest.mock("expo-router", () => ({
-  useRouter: () => ({
-    replace: mockReplace,
-    back: mockBack,
-    dismissAll: mockDismissAll,
-    canDismiss: mockCanDismiss,
-  }),
-}));
-
-const mockMarkWelcomeSeen = jest.fn();
-jest.mock("@/stores", () => ({
-  useMarkWelcomeSeen: () => mockMarkWelcomeSeen,
+  useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
 const mockOpenKeyboardSettings = jest.fn();
@@ -29,19 +17,16 @@ jest.mock("@/utils", () => ({
   openKeyboardSettings: () => mockOpenKeyboardSettings(),
 }));
 
+const mockConfirmSkip = jest.fn();
 jest.mock("@/hooks", () => ({
-  useLocalization: () => ({
-    loc: {
-      onboardingSkipConfirmTitle: "Skip Onboarding?",
-      onboardingSkipConfirmMessage: "msg",
-      onboardingSkip: "Skip",
-      cancel: "Cancel",
-    },
+  useOnboardingExit: () => ({
+    finishOnboarding: jest.fn(),
+    confirmSkip: mockConfirmSkip,
   }),
 }));
 
 jest.mock("@/components", () => {
-  const { TouchableOpacity, Text, View } = require("react-native");
+  const { TouchableOpacity, View } = require("react-native");
   return {
     EnableKeyboardScreen: ({
       onBack,
@@ -58,55 +43,31 @@ jest.mock("@/components", () => {
         <TouchableOpacity testID="settings" onPress={onGoToSettings} />
       </View>
     ),
-    Toast: ({
-      visible,
-      title,
-      onPrimaryButtonTap,
-      onSecondaryButtonTap,
-    }: {
-      visible: boolean;
-      title: string;
-      onPrimaryButtonTap?: () => void;
-      onSecondaryButtonTap?: () => void;
-    }) =>
-      visible ? (
-        <View testID="toast">
-          <Text>{title}</Text>
-          <TouchableOpacity
-            testID="toast-primary"
-            onPress={onPrimaryButtonTap}
-          />
-          <TouchableOpacity
-            testID="toast-secondary"
-            onPress={onSecondaryButtonTap}
-          />
-        </View>
-      ) : null,
+    Toast: () => null,
   };
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockCanDismiss.mockReturnValue(true);
   mockOpenKeyboardSettings.mockResolvedValue(true);
 });
 
 describe("EnableKeyboard route", () => {
-  it("navigates back on the chevron", () => {
+  it("wires back and skip", () => {
     const { getByTestId } = render(<EnableKeyboard />);
     fireEvent.press(getByTestId("back"));
+    fireEvent.press(getByTestId("skip"));
     expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("opens keyboard settings and finishes onboarding", async () => {
+  it("opens keyboard settings and continues to the language step", async () => {
     const { getByTestId } = render(<EnableKeyboard />);
     await act(async () => {
       fireEvent.press(getByTestId("settings"));
     });
     expect(mockOpenKeyboardSettings).toHaveBeenCalledTimes(1);
-    expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
-    expect(mockDismissAll).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingSpokenLanguage);
   });
 
   it("stays on the screen when keyboard settings fail to open", async () => {
@@ -115,39 +76,6 @@ describe("EnableKeyboard route", () => {
     await act(async () => {
       fireEvent.press(getByTestId("settings"));
     });
-    expect(mockOpenKeyboardSettings).toHaveBeenCalledTimes(1);
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
-  it("asks for confirmation before skipping and finishes on confirm", () => {
-    const { getByTestId, getByText, queryByTestId } = render(
-      <EnableKeyboard />,
-    );
-    fireEvent.press(getByTestId("skip"));
-    expect(getByText("Skip Onboarding?")).toBeTruthy();
-    fireEvent.press(getByTestId("toast-primary"));
-    expect(mockMarkWelcomeSeen).toHaveBeenCalledTimes(1);
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
-    expect(queryByTestId("toast")).toBeNull();
-  });
-
-  it("cancelling the skip confirmation keeps the user on the screen", () => {
-    const { getByTestId, queryByTestId } = render(<EnableKeyboard />);
-    fireEvent.press(getByTestId("skip"));
-    fireEvent.press(getByTestId("toast-secondary"));
-    expect(queryByTestId("toast")).toBeNull();
-    expect(mockMarkWelcomeSeen).not.toHaveBeenCalled();
-  });
-
-  it("replaces home without dismissing when this is the only screen", async () => {
-    mockCanDismiss.mockReturnValue(false);
-    const { getByTestId } = render(<EnableKeyboard />);
-    await act(async () => {
-      fireEvent.press(getByTestId("settings"));
-    });
-    expect(mockDismissAll).not.toHaveBeenCalled();
-    expect(mockReplace).toHaveBeenCalledWith(Routes.home);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

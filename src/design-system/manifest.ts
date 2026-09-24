@@ -30,6 +30,7 @@ import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLay
 import homeGallery from "@/components/domain/home/Home.gallery";
 import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-microphone-screen/AllowMicrophoneScreen.gallery";
 import enableKeyboardScreenGallery from "@/components/domain/onboarding/enable-keyboard-screen/EnableKeyboardScreen.gallery";
+import spokenLanguageScreenGallery from "@/components/domain/onboarding/spoken-language-screen/SpokenLanguageScreen.gallery";
 import onboardingStepIndicatorGallery from "@/components/domain/onboarding/step-indicator/OnboardingStepIndicator.gallery";
 import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
@@ -90,6 +91,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   allowMicrophoneScreenGallery,
   enableKeyboardScreenGallery,
   onboardingStepIndicatorGallery,
+  spokenLanguageScreenGallery,
   sessionGallery,
   settingsGallery,
   transcriptionGallery,

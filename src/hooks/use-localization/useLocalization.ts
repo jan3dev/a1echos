@@ -141,6 +141,8 @@ export const useLocalization = () => {
         "onboardingEnableKeyboardRowFullAccess",
       ),
       onboardingGoToSettings: t("onboardingGoToSettings"),
+      onboardingSpokenLanguageTitle: t("onboardingSpokenLanguageTitle"),
+      onboardingNext: t("onboardingNext"),
     },
   };
 };
