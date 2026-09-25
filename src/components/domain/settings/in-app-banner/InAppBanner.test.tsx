@@ -65,4 +65,17 @@ describe("InAppBanner", () => {
 
     Platform.OS = originalOS;
   });
+
+  it("animates the background glow", () => {
+    const { withRepeat } = require("react-native-reanimated");
+    render(<InAppBanner />);
+    expect(withRepeat).toHaveBeenCalled();
+  });
+
+  it("keeps the background static under reduce motion", () => {
+    const reanimated = require("react-native-reanimated");
+    reanimated.useReducedMotion.mockReturnValueOnce(true);
+    render(<InAppBanner />);
+    expect(reanimated.withRepeat).not.toHaveBeenCalled();
+  });
 });
