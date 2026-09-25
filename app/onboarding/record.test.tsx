@@ -6,11 +6,11 @@ import React from "react";
 import Record from "./record";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
 }));
 
-const mockFinishOnboarding = jest.fn();
 const mockConfirmSkip = jest.fn();
 const mockEnsureMic = jest.fn(async () => true);
 jest.mock("@/hooks", () => ({
@@ -25,7 +25,6 @@ jest.mock("@/hooks", () => ({
   }),
   useMicPermission: () => mockEnsureMic,
   useOnboardingExit: () => ({
-    finishOnboarding: mockFinishOnboarding,
     confirmSkip: mockConfirmSkip,
   }),
 }));
@@ -60,7 +59,9 @@ const mockMarkSeen = jest.fn(async () => {});
 const mockTooltip = jest.fn();
 const mockShowToast = jest.fn();
 let mockTranscriptions: (typeof transcription)[] = [];
-const mockUseSessionTranscriptions = jest.fn((_id: string) => mockTranscriptions);
+const mockUseSessionTranscriptions = jest.fn(
+  (_id: string) => mockTranscriptions,
+);
 jest.mock("@/stores", () => {
   const transcriptionState = () => ({
     stopRecordingAndSave: mockStop,
@@ -232,6 +233,6 @@ describe("Record onboarding route", () => {
     fireEvent.press(getByTestId("onNext"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
-    expect(mockFinishOnboarding).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith("/onboarding/privacy");
   });
 });

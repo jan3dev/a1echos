@@ -6,6 +6,7 @@ import { Platform } from "react-native";
 
 import { RecordScreen, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
+import { Routes } from "@/constants";
 import { useLocalization, useMicPermission, useOnboardingExit } from "@/hooks";
 import { Transcription } from "@/models";
 import { shareService } from "@/services";
@@ -37,7 +38,7 @@ export default function Record() {
   const router = useRouter();
   const { loc } = useLocalization();
   const { show, hide, toastState } = useToast();
-  const { finishOnboarding, confirmSkip } = useOnboardingExit(show);
+  const { confirmSkip } = useOnboardingExit(show);
   const ensureMicPermission = useMicPermission(show, hide);
   const showGlobalTooltip = useShowGlobalTooltip();
   const showToast = useShowToast();
@@ -171,8 +172,7 @@ export default function Record() {
         onShare={handleShare}
         onBack={router.back}
         onSkip={confirmSkip}
-        // ponytail: next tutorial screen doesn't exist yet; route there once built.
-        onNext={finishOnboarding}
+        onNext={() => router.push(Routes.onboardingPrivacy)}
       />
       <Toast {...toastState} />
     </>

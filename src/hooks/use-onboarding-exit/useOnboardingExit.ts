@@ -7,7 +7,7 @@ import { useMarkWelcomeSeen } from "@/stores";
 import { useLocalization } from "../use-localization/useLocalization";
 
 export const useOnboardingExit = (
-  showToast: (options: ToastOptions) => void,
+  showToast?: (options: ToastOptions) => void,
 ) => {
   const router = useRouter();
   const { loc } = useLocalization();
@@ -21,7 +21,7 @@ export const useOnboardingExit = (
   };
 
   const confirmSkip = () => {
-    showToast({
+    showToast?.({
       title: loc.onboardingSkipConfirmTitle,
       message: loc.onboardingSkipConfirmMessage,
       variant: "warning",

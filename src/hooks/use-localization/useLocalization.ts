@@ -160,6 +160,10 @@ export const useLocalization = () => {
       onboardingRecordSubtitle: t("onboardingRecordSubtitle"),
       onboardingTranscriptReadyTitle: t("onboardingTranscriptReadyTitle"),
       onboardingTranscriptReadySubtitle: t("onboardingTranscriptReadySubtitle"),
+      onboardingPrivacyTitle: t("onboardingPrivacyTitle"),
+      onboardingPrivacySubtitle: t("onboardingPrivacySubtitle"),
+      onboardingAllSetTitle: t("onboardingAllSetTitle"),
+      onboardingAllSetSubtitle: t("onboardingAllSetSubtitle"),
     }),
     [t],
   );

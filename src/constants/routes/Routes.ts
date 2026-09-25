@@ -19,6 +19,8 @@ export const Routes = {
   onboardingDictate: "/onboarding/dictate" as Href,
   onboardingAutocorrect: "/onboarding/autocorrect" as Href,
   onboardingRecord: "/onboarding/record" as Href,
+  onboardingPrivacy: "/onboarding/privacy" as Href,
+  onboardingAllSet: "/onboarding/all-set" as Href,
   session: (id: string): Href =>
     ({ pathname: "/session/[id]", params: { id } }) as unknown as Href,
   settings: "/settings" as Href,

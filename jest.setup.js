@@ -582,11 +582,13 @@ jest.mock("@shopify/react-native-skia", () => ({
   Group: "SkiaGroup",
   Mask: "SkiaMask",
   Rect: "SkiaRect",
+  Skottie: "SkiaSkottie",
   LinearGradient: "SkiaLinearGradient",
   vec: (x, y) => ({ x, y }),
   Skia: {
     Path: { Make: jest.fn() },
     Color: jest.fn(),
+    Skottie: { Make: jest.fn(() => ({ duration: () => 1, fps: () => 30 })) },
   },
   useValue: jest.fn(() => ({ current: 0 })),
   useTiming: jest.fn(),
