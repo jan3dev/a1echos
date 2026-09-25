@@ -12,6 +12,11 @@ describe("Text", () => {
     expect(getByText("Hello World")).toBeTruthy();
   });
 
+  it("ignores system font scaling", () => {
+    const { getByText } = render(<Text>Fixed</Text>);
+    expect(getByText("Fixed").props.allowFontScaling).toBe(false);
+  });
+
   it("applies default variant body1", () => {
     const { getByText } = render(<Text>Default</Text>);
     const textElement = getByText("Default");

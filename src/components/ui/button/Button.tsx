@@ -178,6 +178,7 @@ const ButtonBase = ({
                 </>
               )}
               <Text
+                allowFontScaling={false}
                 style={[
                   textStyle,
                   { color: textColor },

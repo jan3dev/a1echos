@@ -75,6 +75,7 @@ export const DictateScreen = ({
         </View>
 
         <TextInput
+          allowFontScaling={false}
           testID={childTestID("input")}
           value={text}
           onChangeText={setText}

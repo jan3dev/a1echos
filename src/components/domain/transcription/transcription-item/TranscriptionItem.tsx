@@ -199,6 +199,7 @@ export const TranscriptionItem = ({
         <View style={styles.contentContainer}>
           {isEditing ? (
             <TextInput
+              allowFontScaling={false}
               ref={inputRef}
               value={editText}
               onChangeText={setEditText}

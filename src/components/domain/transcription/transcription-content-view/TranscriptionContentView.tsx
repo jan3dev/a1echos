@@ -67,7 +67,12 @@ export const TranscriptionContentView = ({
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={{ color: theme.colors.accentDanger }}>{error}</Text>
+        <Text
+          allowFontScaling={false}
+          style={{ color: theme.colors.accentDanger }}
+        >
+          {error}
+        </Text>
       </View>
     );
   }

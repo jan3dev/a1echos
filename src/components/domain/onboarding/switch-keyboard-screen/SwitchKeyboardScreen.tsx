@@ -78,6 +78,7 @@ export const SwitchKeyboardScreen = ({
       </View>
 
       <TextInput
+        allowFontScaling={false}
         testID={testID ? `${testID}-input` : undefined}
         autoFocus
         caretHidden

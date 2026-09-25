@@ -33,7 +33,9 @@ export interface AutocorrectScreenProps {
 
 const Key = ({ label }: { label: string }) => (
   <View style={[styles.key, styles.letterKey]}>
-    <RNText style={styles.keyLabel}>{label}</RNText>
+    <RNText allowFontScaling={false} style={styles.keyLabel}>
+      {label}
+    </RNText>
   </View>
 );
 
@@ -49,16 +51,27 @@ const KeyboardPreview = () => (
   >
     <View style={styles.inputBar}>
       <View style={styles.field}>
-        <RNText style={styles.fieldText}>Accurage</RNText>
+        <RNText allowFontScaling={false} style={styles.fieldText}>
+          Accurage
+        </RNText>
       </View>
     </View>
     <View style={styles.suggestions}>
       <View style={styles.words}>
-        <RNText style={styles.word}>“Accurage”</RNText>
+        <RNText allowFontScaling={false} style={styles.word}>
+          “Accurage”
+        </RNText>
         <View style={styles.suggested}>
-          <RNText style={[styles.word, styles.suggestedWord]}>Accurate</RNText>
+          <RNText
+            allowFontScaling={false}
+            style={[styles.word, styles.suggestedWord]}
+          >
+            Accurate
+          </RNText>
         </View>
-        <RNText style={styles.word}>Ajutage</RNText>
+        <RNText allowFontScaling={false} style={styles.word}>
+          Ajutage
+        </RNText>
       </View>
       <View style={styles.micPill}>
         <Icon name="mic" size={14} color={darkColors.textPrimary} />
@@ -80,16 +93,22 @@ const KeyboardPreview = () => (
       </View>
       <View style={[styles.row, styles.bottomRow]}>
         <View style={[styles.key, styles.specialKey, styles.smallKey]}>
-          <RNText style={styles.smallKeyLabel}>123</RNText>
+          <RNText allowFontScaling={false} style={styles.smallKeyLabel}>
+            123
+          </RNText>
         </View>
         <View style={[styles.key, styles.specialKey, styles.smallKey]}>
           <KeyEmoji width={29} height={KEY_SIZE} color={KEY_TEXT} />
         </View>
         <View style={[styles.key, styles.letterKey, styles.spaceKey]}>
-          <RNText style={styles.spaceLabel}>ECHOS</RNText>
+          <RNText allowFontScaling={false} style={styles.spaceLabel}>
+            ECHOS
+          </RNText>
         </View>
         <View style={[styles.key, styles.specialKey, styles.returnKey]}>
-          <RNText style={styles.keyLabel}>↵</RNText>
+          <RNText allowFontScaling={false} style={styles.keyLabel}>
+            ↵
+          </RNText>
         </View>
       </View>
     </View>

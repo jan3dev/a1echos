@@ -225,6 +225,7 @@ export const TextField = ({
           >
             {label && (
               <Animated.Text
+                allowFontScaling={false}
                 style={[
                   styles.label,
                   {
@@ -254,6 +255,7 @@ export const TextField = ({
               ]}
             >
               <TextInput
+                allowFontScaling={false}
                 ref={inputRef}
                 accessibilityLabel={accessibilityLabel || label}
                 accessibilityHint={accessibilityHint || assistiveText}
@@ -319,6 +321,7 @@ export const TextField = ({
           ]}
         >
           <Text
+            allowFontScaling={false}
             style={[
               AquaTypography.caption1Medium,
               {

@@ -60,5 +60,7 @@ export const Text = ({
   if (size) textStyles.fontSize = size;
   if (height) textStyles.lineHeight = height;
 
-  return <RNText style={[textStyles, style]} {...props} />;
+  return (
+    <RNText allowFontScaling={false} style={[textStyles, style]} {...props} />
+  );
 };
