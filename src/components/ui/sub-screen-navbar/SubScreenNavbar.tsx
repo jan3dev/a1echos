@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getShadow, useTheme } from "@/theme";
+import { AquaColors, getShadow, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { AnimatedGlassSurface } from "../animated-glass-surface/AnimatedGlassSurface";
@@ -154,17 +154,37 @@ export const SubScreenNavbar = ({
       ]}
     >
       <AnimatedGlassSurface scrolled={scrolled} blurTarget={blurTarget} />
-      <View style={styles.row}>
-        {actions.map((action) => (
-          <NavbarAction
-            key={action.key}
-            action={action}
-            defaultColor={theme.colors.textPrimary}
-            rippleColor={theme.colors.ripple}
-          />
-        ))}
-      </View>
+      <SubScreenNavbarActions actions={actions} />
     </Animated.View>
+  );
+};
+
+interface SubScreenNavbarActionsProps {
+  actions: SubScreenNavbarAction[];
+  testID?: string;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
+}
+
+/** The navbar's action row alone, for placing inline in content. */
+export const SubScreenNavbarActions = ({
+  actions,
+  testID,
+  colors: colorsOverride,
+}: SubScreenNavbarActionsProps) => {
+  const { theme } = useTheme();
+  const colors = colorsOverride ?? theme.colors;
+  return (
+    <View testID={testID} style={styles.row}>
+      {actions.map((action) => (
+        <NavbarAction
+          key={action.key}
+          action={action}
+          defaultColor={colors.textPrimary}
+          rippleColor={colors.ripple}
+        />
+      ))}
+    </View>
   );
 };
 

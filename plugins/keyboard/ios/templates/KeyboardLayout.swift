@@ -178,9 +178,9 @@ enum KeyboardLayout {
     static let lettersRow4: [KeyDefinition] = [
         KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.2, accessibilityLabel: "Numbers"),
         // iOS: no globe key per design — long-press on the emoji key opens
-        // the system keyboard picker instead. `.emoji` keys render a
-        // hand-drawn native-style open-mouth smiley (see KeyButton's
-        // emojiKeyGlyph); the symbolName is only an a11y/legacy fallback.
+        // the system keyboard picker instead. `.emoji` keys render the
+        // Echos smiley from kb_emoji.svg (see KeyButton's emojiKeyGlyph);
+        // the symbolName is only an a11y/legacy fallback.
         KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
                       accessibilityLabel: "Emoji",
                       symbolName: "face.smiling"),

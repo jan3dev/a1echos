@@ -600,6 +600,21 @@ describe("transcriptionStore", () => {
         );
       });
 
+      it("keeps incognito edits in memory only", async () => {
+        useSessionStore.setState({
+          incognitoSession: { ...testSession, id: tx1.sessionId },
+        });
+        useTranscriptionStore.setState({ transcriptions: [tx1] });
+        const updated = { ...tx1, text: "Updated text" };
+
+        await useTranscriptionStore.getState().updateTranscription(updated);
+
+        expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
+        expect(useTranscriptionStore.getState().transcriptions[0].text).toBe(
+          "Updated text",
+        );
+      });
+
       it("throws when transcription not found", async () => {
         useTranscriptionStore.setState({ transcriptions: [] });
         await expect(

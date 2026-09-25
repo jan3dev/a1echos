@@ -29,9 +29,11 @@ import colorsGallery from "@/design-system/colors/Colors.gallery";
 import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
 import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-microphone-screen/AllowMicrophoneScreen.gallery";
+import autocorrectScreenGallery from "@/components/domain/onboarding/autocorrect-screen/AutocorrectScreen.gallery";
 import enableKeyboardScreenGallery from "@/components/domain/onboarding/enable-keyboard-screen/EnableKeyboardScreen.gallery";
 import dictateScreenGallery from "@/components/domain/onboarding/dictate-screen/DictateScreen.gallery";
 import glowCtaButtonGallery from "@/components/domain/onboarding/glow-cta-button/GlowCtaButton.gallery";
+import recordScreenGallery from "@/components/domain/onboarding/record-screen/RecordScreen.gallery";
 import spokenLanguageScreenGallery from "@/components/domain/onboarding/spoken-language-screen/SpokenLanguageScreen.gallery";
 import onboardingStepIndicatorGallery from "@/components/domain/onboarding/step-indicator/OnboardingStepIndicator.gallery";
 import switchKeyboardScreenGallery from "@/components/domain/onboarding/switch-keyboard-screen/SwitchKeyboardScreen.gallery";
@@ -96,6 +98,8 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   allowMicrophoneScreenGallery,
   enableKeyboardScreenGallery,
   dictateScreenGallery,
+  autocorrectScreenGallery,
+  recordScreenGallery,
   glowCtaButtonGallery,
   onboardingStepIndicatorGallery,
   spokenLanguageScreenGallery,

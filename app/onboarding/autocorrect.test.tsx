@@ -2,7 +2,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import Dictate from "./dictate";
+import Autocorrect from "./autocorrect";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -20,7 +20,7 @@ jest.mock("@/hooks", () => ({
 jest.mock("@/components", () => {
   const { TouchableOpacity, View } = require("react-native");
   return {
-    DictateScreen: (props: {
+    AutocorrectScreen: (props: {
       onBack: () => void;
       onSkip: () => void;
       onNext: () => void;
@@ -35,14 +35,14 @@ jest.mock("@/components", () => {
   };
 });
 
-describe("Dictate onboarding route", () => {
+describe("Autocorrect onboarding route", () => {
   it("wires back, skip and next", () => {
-    const { getByTestId } = render(<Dictate />);
+    const { getByTestId } = render(<Autocorrect />);
     fireEvent.press(getByTestId("back"));
     fireEvent.press(getByTestId("skip"));
     fireEvent.press(getByTestId("next"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith("/onboarding/autocorrect");
+    expect(mockPush).toHaveBeenCalledWith("/onboarding/record");
   });
 });

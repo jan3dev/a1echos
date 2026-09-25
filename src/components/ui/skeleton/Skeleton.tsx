@@ -8,13 +8,15 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { useTheme } from "@/theme";
+import { AquaColors, useTheme } from "@/theme";
 
 interface SkeletonProps {
   width?: number | string;
   height?: number | string;
   borderRadius?: number;
   style?: ViewStyle;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
 }
 
 export const Skeleton = ({
@@ -22,8 +24,10 @@ export const Skeleton = ({
   height = 20,
   borderRadius = 4,
   style,
+  colors,
 }: SkeletonProps) => {
   const { theme } = useTheme();
+  const { surfaceBorderSecondary } = colors ?? theme.colors;
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export const Skeleton = ({
           width: width as any,
           height: height as any,
           borderRadius,
-          backgroundColor: theme.colors.surfaceBorderSecondary,
+          backgroundColor: surfaceBorderSecondary,
         },
         animatedStyle,
         style,

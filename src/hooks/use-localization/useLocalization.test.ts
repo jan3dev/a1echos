@@ -83,6 +83,12 @@ describe("useLocalization", () => {
       "onboardingDictateTitle",
       "onboardingDictateSubtitle",
       "onboardingDictatePlaceholder",
+      "onboardingAutocorrectTitle",
+      "onboardingAutocorrectSubtitle",
+      "onboardingRecordTitle",
+      "onboardingRecordSubtitle",
+      "onboardingTranscriptReadyTitle",
+      "onboardingTranscriptReadySubtitle",
     ];
 
     for (const key of expectedStringKeys) {

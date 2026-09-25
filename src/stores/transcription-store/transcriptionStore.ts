@@ -642,6 +642,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
       set({ transcriptions: newTranscriptions });
 
+      if (useSessionStore.getState().incognitoSession?.id === updated.sessionId)
+        return;
+
       try {
         await databaseService.upsertTranscription(updated);
         await useSessionStore

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
 import { Transcription } from "@/models";
-import { useTheme } from "@/theme";
+import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
 import { Checkbox } from "../../../ui/checkbox/Checkbox";
@@ -44,6 +44,8 @@ interface TranscriptionItemProps {
   onEndEdit?: () => void;
   onTranscriptionUpdate?: (updated: Transcription) => void;
   style?: ViewStyle;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
 }
 
 export const TranscriptionItem = ({
@@ -62,8 +64,10 @@ export const TranscriptionItem = ({
   onTranscriptionUpdate,
   isCancelling = false,
   style,
+  colors: colorsOverride,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
+  const colors = colorsOverride ?? theme.colors;
   const [editText, setEditText] = useState(transcription.text);
   const inputRef = useRef<TextInput>(null);
 
@@ -113,20 +117,20 @@ export const TranscriptionItem = ({
   const isSelectedItem = selectionMode && isSelected;
 
   const innerBackgroundColor = isSelectedItem
-    ? theme.colors.surfaceSelected
-    : theme.colors.surfacePrimary;
+    ? colors.surfaceSelected
+    : colors.surfacePrimary;
 
   const borderColor = isEditing
-    ? theme.colors.accentBrand
+    ? colors.accentBrand
     : isSelectedItem
-      ? theme.colors.surfaceBorderSelected
-      : theme.colors.surfaceBorderPrimary;
+      ? colors.surfaceBorderSelected
+      : colors.surfaceBorderPrimary;
 
   return (
     <View
       style={[
         styles.cardContainer,
-        { backgroundColor: theme.colors.surfacePrimary },
+        { backgroundColor: colors.surfacePrimary },
         style,
       ]}
     >
@@ -141,7 +145,7 @@ export const TranscriptionItem = ({
             onLongPress?.();
           }
         }}
-        rippleColor={theme.colors.ripple}
+        rippleColor={colors.ripple}
         disabled={!enableInteractions && !isEditing}
         style={({ pressed }) => [
           styles.container,
@@ -157,10 +161,10 @@ export const TranscriptionItem = ({
           <View style={styles.timestampContainer}>
             {(showSkeleton ||
               !(isLivePreviewItem && transcription.text === "")) && (
-              <Text variant="caption1" color={theme.colors.textSecondary}>
+              <Text variant="caption1" color={colors.textSecondary}>
                 {dateFormat.format(transcription.timestamp)}
                 {"  "}
-                <Text variant="caption1" color={theme.colors.textTertiary}>
+                <Text variant="caption1" color={colors.textTertiary}>
                   {TIME_FORMAT.format(transcription.timestamp)}
                 </Text>
               </Text>
@@ -182,15 +186,11 @@ export const TranscriptionItem = ({
                 onPress={onStartEdit}
                 disabled={disableIcons}
                 hitSlop={10}
-                rippleColor={theme.colors.ripple}
+                rippleColor={colors.ripple}
                 borderless
                 style={[styles.iconButton, { opacity: disableIcons ? 0.5 : 1 }]}
               >
-                <Icon
-                  name="edit"
-                  size={18}
-                  color={theme.colors.textSecondary}
-                />
+                <Icon name="edit" size={18} color={colors.textSecondary} />
               </RipplePressable>
             )}
           </View>
@@ -209,23 +209,29 @@ export const TranscriptionItem = ({
               style={[
                 styles.input,
                 {
-                  color: theme.colors.textPrimary,
+                  color: colors.textPrimary,
                   ...theme.typography.body1,
                 },
               ]}
             />
           ) : showSkeleton ? (
             <View style={styles.skeletonContainer}>
-              <Skeleton borderRadius={8} width="100%" height={16} />
+              <Skeleton
+                borderRadius={8}
+                width="100%"
+                height={16}
+                colors={colors}
+              />
               <Skeleton
                 borderRadius={8}
                 width="60%"
                 height={16}
                 style={{ marginTop: 6 }}
+                colors={colors}
               />
             </View>
           ) : (
-            <Text variant="body1" color={theme.colors.textSecondary}>
+            <Text variant="body1" color={colors.textSecondary}>
               {transcription.text}
             </Text>
           )}

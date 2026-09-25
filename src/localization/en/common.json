@@ -138,5 +138,11 @@
   "onboardingSwitchKeyboardSubtitle": "This activates the Echos keyboard.",
   "onboardingDictateTitle": "Start Talking",
   "onboardingDictateSubtitle": "Tap the Echos mic and Echos will type for you.",
-  "onboardingDictatePlaceholder": "Say something!"
+  "onboardingDictatePlaceholder": "Say something!",
+  "onboardingAutocorrectTitle": "Type with Fewer Mistakes",
+  "onboardingAutocorrectSubtitle": "Echos suggests corrections automatically.",
+  "onboardingRecordTitle": "Transcribe Inside Echos",
+  "onboardingRecordSubtitle": "Tap record and talk. Echos transcribes the whole session.",
+  "onboardingTranscriptReadyTitle": "Your Transcript Is Ready",
+  "onboardingTranscriptReadySubtitle": "Tap a word to make a quick edit, then copy or share."
 }

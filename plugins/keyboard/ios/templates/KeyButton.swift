@@ -232,92 +232,76 @@ class KeyButton: UIControl {
         }
     }
 
-    // Native iOS draws its emoji-key affordance as an open-mouth grin
-    // (teeth included): light theme is an outlined face with a filled
-    // mouth, dark theme a solid disc with the features punched out.
-    // No SF Symbol matches, so render both by hand and pair them in a
-    // UIImageAsset so the image view swaps variants on trait changes.
-    // Template mode so they follow `symbolView.tintColor` like SF glyphs.
-    private static let emojiKeyGlyph: UIImage = {
-        let asset = UIImageAsset()
-        asset.register(
-            makeEmojiKeyGlyph(outlined: true),
-            with: UITraitCollection(userInterfaceStyle: .light)
-        )
-        asset.register(
-            makeEmojiKeyGlyph(outlined: false),
-            with: UITraitCollection(userInterfaceStyle: .dark)
-        )
-        return asset.image(with: UITraitCollection(userInterfaceStyle: .light))
-    }()
+    // Echos emoji-key face, drawn from `assets/icons/kb_emoji.svg` so it
+    // matches the design exactly. Template mode so it follows
+    // `symbolView.tintColor` like the SF-symbol key glyphs.
+    private static let emojiKeyGlyph: UIImage = makeEmojiKeyGlyph()
 
-    private static func makeEmojiKeyGlyph(outlined: Bool) -> UIImage {
-        // Geometry is authored in 22pt space; rendered at 19pt so the face
-        // sits a touch smaller than the neighboring SF-symbol key glyphs.
-        let side: CGFloat = 22
+    // SVG path data (absolute M/C/Z only). The face's bounding box within
+    // the SVG canvas is `emojiFaceOrigin` + `emojiFaceSide`.
+    private static let emojiPathData =
+        "M14.5029 21.9313C10.5957 21.9313 7.42834 18.7639 7.42834 14.8567" +
+        "C7.42834 10.9495 10.5957 7.78207 14.5029 7.78207" +
+        "C18.4101 7.78207 21.5775 10.9495 21.5775 14.8567" +
+        "C21.5775 18.7639 18.4101 21.9313 14.5029 21.9313ZM14.5029 21.2238" +
+        "C18.0194 21.2238 20.8701 18.3731 20.8701 14.8567" +
+        "C20.8701 11.3402 18.0194 8.48953 14.5029 8.48953" +
+        "C10.9865 8.48953 8.1358 11.3402 8.1358 14.8567" +
+        "C8.1358 18.3731 10.9865 21.2238 14.5029 21.2238ZM14.4946 19.8089" +
+        "C11.9732 19.8089 9.58025 17.3906 9.58025 15.643" +
+        "C9.58025 14.64 11.7595 15.8471 14.4946 15.8471" +
+        "C17.2296 15.8471 19.4329 14.6416 19.4256 15.643" +
+        "C19.4133 17.3366 17.0159 19.8089 14.4946 19.8089ZM14.4946 17.5804" +
+        "C16.8389 17.5804 18.4606 16.6741 18.4606 16.0205" +
+        "C18.4606 15.367 16.8389 16.4102 14.4946 16.4102" +
+        "C12.1502 16.4102 10.5554 15.4922 10.5554 16.0205" +
+        "C10.5554 16.5489 12.1502 17.5804 14.4946 17.5804ZM12.3717 13.6009" +
+        "C11.9077 13.6009 11.5316 13.2248 11.5316 12.7608" +
+        "C11.5316 12.2968 11.9077 11.9207 12.3717 11.9207" +
+        "C12.8357 11.9207 13.2118 12.2968 13.2118 12.7608" +
+        "C13.2118 13.2248 12.8357 13.6009 12.3717 13.6009ZM16.6165 13.6009" +
+        "C16.1525 13.6009 15.7764 13.2248 15.7764 12.7608" +
+        "C15.7764 12.2968 16.1525 11.9207 16.6165 11.9207" +
+        "C17.0805 11.9207 17.4566 12.2968 17.4566 12.7608" +
+        "C17.4566 13.2248 17.0805 13.6009 16.6165 13.6009Z"
+    private static let emojiFaceOrigin = CGPoint(x: 7.42834, y: 7.78207)
+    private static let emojiFaceSide: CGFloat = 14.1492
+
+    private static func makeEmojiKeyGlyph() -> UIImage {
+        // Rendered at 19pt so the face sits a touch smaller than the
+        // neighboring SF-symbol key glyphs.
         let renderSide: CGFloat = 19
-        // Outlined variant draws the features in; filled variant carves
-        // them out of the solid disc. Same geometry, inverted blends.
-        let featureMode: CGBlendMode = outlined ? .normal : .clear
-        let teethMode: CGBlendMode = outlined ? .clear : .normal
+        let path = UIBezierPath()
+        let tokens = emojiPathData
+            .replacingOccurrences(of: "M", with: " M ")
+            .replacingOccurrences(of: "C", with: " C ")
+            .replacingOccurrences(of: "Z", with: " Z ")
+            .split(separator: " ")
+        var i = 0
+        func point() -> CGPoint {
+            defer { i += 2 }
+            return CGPoint(x: Double(tokens[i])!, y: Double(tokens[i + 1])!)
+        }
+        while i < tokens.count {
+            let command = tokens[i]
+            i += 1
+            switch command {
+            case "M": path.move(to: point())
+            case "C":
+                let c1 = point(), c2 = point(), end = point()
+                path.addCurve(to: end, controlPoint1: c1, controlPoint2: c2)
+            default: path.close()
+            }
+        }
+        let scale = renderSide / emojiFaceSide
+        path.apply(CGAffineTransform(scaleX: scale, y: scale)
+            .translatedBy(x: -emojiFaceOrigin.x, y: -emojiFaceOrigin.y))
+        path.usesEvenOddFillRule = true
+
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: renderSide, height: renderSide))
-        let image = renderer.image { ctx in
-            ctx.cgContext.scaleBy(x: renderSide / side, y: renderSide / side)
+        let image = renderer.image { _ in
             UIColor.black.setFill()
-            UIColor.black.setStroke()
-
-            if outlined {
-                let lineWidth: CGFloat = 1.5
-                let outline = UIBezierPath(ovalIn: CGRect(
-                    x: lineWidth / 2, y: lineWidth / 2,
-                    width: side - lineWidth, height: side - lineWidth
-                ))
-                outline.lineWidth = lineWidth
-                outline.stroke()
-            } else {
-                UIBezierPath(
-                    ovalIn: CGRect(x: 0, y: 0, width: side, height: side)
-                ).fill()
-            }
-
-            for eyeX: CGFloat in [7.4, 14.6] {
-                UIBezierPath(ovalIn: CGRect(
-                    x: eyeX - 1.3, y: 6.2, width: 2.6, height: 3.0
-                )).fill(with: featureMode, alpha: 1)
-            }
-
-            let cx = side / 2
-            let mouthL = CGPoint(x: 5.4, y: 11.4)
-            let mouthR = CGPoint(x: 16.6, y: 11.4)
-            let lipControl = CGPoint(x: cx, y: 13.8)
-
-            // Full open mouth: a lip line whose corners curve up to the
-            // sides, closed by a wide arc below.
-            let mouth = UIBezierPath()
-            mouth.move(to: mouthL)
-            mouth.addQuadCurve(to: mouthR, controlPoint: lipControl)
-            mouth.addArc(
-                withCenter: CGPoint(x: cx, y: 11.4), radius: 5.6,
-                startAngle: 0, endAngle: .pi, clockwise: true
-            )
-            mouth.close()
-            mouth.fill(with: featureMode, alpha: 1)
-
-            // Teeth: a band inset inside the opening, parallel to the lip
-            // line — the untouched rim of the mouth doubles as the lip, so
-            // no stroking (and no asymmetric line caps) is needed.
-            let teeth = UIBezierPath()
-            teeth.move(to: CGPoint(x: mouthL.x + 1.4, y: mouthL.y + 1.3))
-            teeth.addQuadCurve(
-                to: CGPoint(x: mouthR.x - 1.4, y: mouthR.y + 1.3),
-                controlPoint: CGPoint(x: cx, y: lipControl.y + 1.3)
-            )
-            teeth.addQuadCurve(
-                to: CGPoint(x: mouthL.x + 1.4, y: mouthL.y + 1.3),
-                controlPoint: CGPoint(x: cx, y: lipControl.y + 4.1)
-            )
-            teeth.close()
-            teeth.fill(with: teethMode, alpha: 1)
+            path.fill()
         }
         return image.withRenderingMode(.alwaysTemplate)
     }

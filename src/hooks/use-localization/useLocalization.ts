@@ -1,11 +1,12 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 export const useLocalization = () => {
   const { t } = useTranslation();
 
-  return {
-    t,
-    loc: {
+  // Memoized: ~150 t() calls per render otherwise; t changes on language change.
+  const loc = useMemo(
+    () => ({
       sessionRenameTitle: t("sessionRenameTitle"),
       delete: t("delete"),
       modifiedPrefix: t("modifiedPrefix"),
@@ -153,6 +154,15 @@ export const useLocalization = () => {
       onboardingDictateTitle: t("onboardingDictateTitle"),
       onboardingDictateSubtitle: t("onboardingDictateSubtitle"),
       onboardingDictatePlaceholder: t("onboardingDictatePlaceholder"),
-    },
-  };
+      onboardingAutocorrectTitle: t("onboardingAutocorrectTitle"),
+      onboardingAutocorrectSubtitle: t("onboardingAutocorrectSubtitle"),
+      onboardingRecordTitle: t("onboardingRecordTitle"),
+      onboardingRecordSubtitle: t("onboardingRecordSubtitle"),
+      onboardingTranscriptReadyTitle: t("onboardingTranscriptReadyTitle"),
+      onboardingTranscriptReadySubtitle: t("onboardingTranscriptReadySubtitle"),
+    }),
+    [t],
+  );
+
+  return { t, loc };
 };
