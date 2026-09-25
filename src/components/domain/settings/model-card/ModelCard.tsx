@@ -583,7 +583,7 @@ function ModeMetaChip({ icon, label }: { icon: IconName; label: string }) {
   const colors = useCardColors();
   return (
     <View style={styles.actionCluster}>
-      <Icon name={icon} size={18} color={colors.textTertiary} />
+      <Icon name={icon} size={18} color={colors.accentBrand} />
       <Text variant="caption1" weight="medium" color={colors.textTertiary}>
         {label}
       </Text>
@@ -686,7 +686,7 @@ function LanguagesChip({
   const content = (
     <View style={styles.actionCluster}>
       <Icon name="globe" size={18} color={colors.accentBrand} />
-      <Text variant="caption1" weight="medium" color={colors.accentBrand}>
+      <Text variant="caption1" weight="medium" color={colors.textTertiary}>
         {languagesText}
       </Text>
     </View>
