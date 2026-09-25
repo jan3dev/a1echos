@@ -33,6 +33,9 @@ class IPCClient {
     /// record and then time out 10 seconds later.
     static let pingNotificationName = "com.a1lab.echos.transcriptionPing"
     static let pongNotificationName = "com.a1lab.echos.transcriptionPong"
+    /// Posted each time the keyboard appears, so onboarding can tell the user
+    /// switched to Echos.
+    static let keyboardShownNotificationName = "com.a1lab.echos.keyboardShown"
 
     var onTranscriptionResult: ((String) -> Void)?
     var onTranscriptionError: ((String) -> Void)?
@@ -295,6 +298,10 @@ class IPCClient {
         try? FileManager.default.removeItem(at: pongURL)
         let armed = (json["armed"] as? Bool) ?? false
         finishPing(alive: true, armed: armed)
+    }
+
+    func notifyKeyboardShown() {
+        postDarwinNotification(IPCClient.keyboardShownNotificationName)
     }
 
     private func postDarwinNotification(_ name: String) {

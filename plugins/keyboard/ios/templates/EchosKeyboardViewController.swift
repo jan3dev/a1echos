@@ -190,6 +190,7 @@ class EchosKeyboardViewController: UIInputViewController {
         // effect on next appearance — no file watcher needed. Also re-resolve
         // the checker language so a host-locale change is picked up.
         settings = KeyboardSettings.load()
+        ipcClient.notifyKeyboardShown()
         suggestionEngine.resolveLanguage()
         applyKeyboardAppearance()
         HapticManager.prepare()

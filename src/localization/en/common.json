@@ -133,5 +133,10 @@
   "onboardingTryLargerModelSubtitle": "Better accuracy for accents and noisy environments. Requires more space.",
   "onboardingNotNow": "Not Now",
   "onboardingTutorialIntroTitle": "Now for the Fun Part!",
-  "onboardingTutorialIntroSubtitle": "See what Echos can do."
+  "onboardingTutorialIntroSubtitle": "See what Echos can do.",
+  "onboardingSwitchKeyboardTitle": "Tap and Hold the Globe, Then Select Echos",
+  "onboardingSwitchKeyboardSubtitle": "This activates the Echos keyboard.",
+  "onboardingDictateTitle": "Start Talking",
+  "onboardingDictateSubtitle": "Tap the Echos mic and Echos will type for you.",
+  "onboardingDictatePlaceholder": "Say something!"
 }

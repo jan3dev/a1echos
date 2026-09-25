@@ -91,5 +91,6 @@ export { writeJsonAtomic } from "./file/writeJsonAtomic";
 export {
   readKeyboardLaunchMarker,
   clearKeyboardLaunchMarker,
+  readKeyboardShownAt,
   type KeyboardLaunchMarker,
 } from "./keyboard-launch/keyboardLaunchMarker";

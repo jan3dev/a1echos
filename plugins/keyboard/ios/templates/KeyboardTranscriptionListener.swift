@@ -45,6 +45,8 @@ import UIKit
     /// indicator when the user dismisses it from the lock screen / Dynamic
     /// Island.
     private let endSessionNotificationName = "com.a1lab.echos.endSession"
+    /// Posted by the keyboard on every appearance (`IPCClient.notifyKeyboardShown`).
+    private let keyboardShownNotificationName = "com.a1lab.echos.keyboardShown"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -219,6 +221,19 @@ import UIKit
             .deliverImmediately
         )
 
+        CFNotificationCenterAddObserver(
+            center,
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let listener = Unmanaged<KeyboardTranscriptionListener>.fromOpaque(observer).takeUnretainedValue()
+                listener.writeDocumentsMarker("keyboard-shown.json", key: "shownAt")
+            },
+            keyboardShownNotificationName as CFString,
+            nil,
+            .deliverImmediately
+        )
+
         // Mirror keyboard settings (written by JS to the app sandbox, which the
         // extension can't read) into the App Group suite the extension reads.
         // Re-mirror when the app backgrounds so a toggle made mid-session
@@ -369,22 +384,24 @@ import UIKit
     /// resolves — not the App Group container the extension bridge uses.
     /// Filename kept in sync with `keyboardLaunchMarker.ts`.
     @objc func markOpenedFromKeyboard() {
+        writeDocumentsMarker("keyboard-launch.json", key: "openedAt")
+    }
+
+    /// Writes `{ <key>: <epoch ms> }` to Documents for JS to read.
+    fileprivate func writeDocumentsMarker(_ filename: String, key: String) {
         guard let docsDir = NSSearchPathForDirectoriesInDomains(
             .documentDirectory, .userDomainMask, true
         ).first else { return }
-        let path = (docsDir as NSString)
-            .appendingPathComponent("keyboard-launch.json")
-        let payload: [String: Any] = [
-            "openedAt": Date().timeIntervalSince1970 * 1000
-        ]
+        let path = (docsDir as NSString).appendingPathComponent(filename)
+        let payload: [String: Any] = [key: Date().timeIntervalSince1970 * 1000]
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
-            NSLog("[KeyboardTranscriptionListener] Failed to serialize keyboard-launch marker")
+            NSLog("[KeyboardTranscriptionListener] Failed to serialize %@", filename)
             return
         }
         do {
             try data.write(to: URL(fileURLWithPath: path), options: .atomic)
         } catch {
-            NSLog("[KeyboardTranscriptionListener] Failed to write keyboard-launch marker: \(error)")
+            NSLog("[KeyboardTranscriptionListener] Failed to write %@: \(error)", filename)
         }
     }
 

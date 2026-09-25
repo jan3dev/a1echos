@@ -1,22 +1,22 @@
 import { useRouter } from "expo-router";
 
-import { Toast, TutorialIntroScreen } from "@/components";
+import { DictateScreen, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
-import { Routes } from "@/constants";
 import { useOnboardingExit } from "@/hooks";
 
-export default function TutorialIntro() {
+export default function Dictate() {
   const router = useRouter();
   const { show, toastState } = useToast();
-  const { confirmSkip } = useOnboardingExit(show);
+  const { finishOnboarding, confirmSkip } = useOnboardingExit(show);
 
   return (
     <>
-      <TutorialIntroScreen
-        testID="tutorial-intro"
+      <DictateScreen
+        testID="dictate"
         onBack={router.back}
         onSkip={confirmSkip}
-        onNext={() => router.push(Routes.onboardingSwitchKeyboard)}
+        // ponytail: next tutorial screen doesn't exist yet; route there once built.
+        onNext={finishOnboarding}
       />
       <Toast {...toastState} />
     </>

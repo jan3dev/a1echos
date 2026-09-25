@@ -78,6 +78,11 @@ describe("useLocalization", () => {
       "onboardingNotNow",
       "onboardingTutorialIntroTitle",
       "onboardingTutorialIntroSubtitle",
+      "onboardingSwitchKeyboardTitle",
+      "onboardingSwitchKeyboardSubtitle",
+      "onboardingDictateTitle",
+      "onboardingDictateSubtitle",
+      "onboardingDictatePlaceholder",
     ];
 
     for (const key of expectedStringKeys) {

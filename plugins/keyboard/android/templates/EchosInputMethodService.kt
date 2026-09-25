@@ -284,6 +284,13 @@ class EchosInputMethodService : InputMethodService(),
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // Lets onboarding detect the switch to Echos; read by keyboardLaunchMarker.ts.
+        if (info.packageName == packageName) {
+            runCatching {
+                java.io.File(filesDir, "keyboard-shown.json")
+                    .writeText("{\"shownAt\":${System.currentTimeMillis()}}")
+            }
+        }
         currentEditorAction = info.imeOptions and EditorInfo.IME_MASK_ACTION
         currentEditorInfo = info
         currentWordTouches.clear()

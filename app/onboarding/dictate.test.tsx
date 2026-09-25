@@ -2,17 +2,18 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import TutorialIntro from "./tutorial-intro";
+import Dictate from "./dictate";
 
 const mockBack = jest.fn();
-const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack, push: mockPush }),
+  useRouter: () => ({ back: mockBack }),
 }));
 
+const mockFinishOnboarding = jest.fn();
 const mockConfirmSkip = jest.fn();
 jest.mock("@/hooks", () => ({
   useOnboardingExit: () => ({
+    finishOnboarding: mockFinishOnboarding,
     confirmSkip: mockConfirmSkip,
   }),
 }));
@@ -20,7 +21,7 @@ jest.mock("@/hooks", () => ({
 jest.mock("@/components", () => {
   const { TouchableOpacity, View } = require("react-native");
   return {
-    TutorialIntroScreen: (props: {
+    DictateScreen: (props: {
       onBack: () => void;
       onSkip: () => void;
       onNext: () => void;
@@ -35,14 +36,14 @@ jest.mock("@/components", () => {
   };
 });
 
-describe("TutorialIntro onboarding route", () => {
+describe("Dictate onboarding route", () => {
   it("wires back, skip and next", () => {
-    const { getByTestId } = render(<TutorialIntro />);
+    const { getByTestId } = render(<Dictate />);
     fireEvent.press(getByTestId("back"));
     fireEvent.press(getByTestId("skip"));
     fireEvent.press(getByTestId("next"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith("/onboarding/switch-keyboard");
+    expect(mockFinishOnboarding).toHaveBeenCalledTimes(1);
   });
 });

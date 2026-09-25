@@ -5,6 +5,7 @@ import * as logModule from "../log/log";
 import {
   clearKeyboardLaunchMarker,
   readKeyboardLaunchMarker,
+  readKeyboardShownAt,
 } from "./keyboardLaunchMarker";
 
 const mockFile = File as unknown as jest.Mock;
@@ -63,6 +64,23 @@ describe("keyboardLaunchMarker", () => {
       setupFile({ textThrows: true });
       expect(await readKeyboardLaunchMarker()).toBeNull();
       expect(mockLogWarn).toHaveBeenCalled();
+    });
+  });
+
+  describe("readKeyboardShownAt", () => {
+    it("returns the timestamp", async () => {
+      setupFile({ text: '{"shownAt":123}' });
+      expect(await readKeyboardShownAt()).toBe(123);
+    });
+
+    it("returns null silently when missing, malformed or unreadable", async () => {
+      setupFile({ exists: false });
+      expect(await readKeyboardShownAt()).toBeNull();
+      setupFile({ text: '{"shownAt":"x"}' });
+      expect(await readKeyboardShownAt()).toBeNull();
+      setupFile({ textThrows: true });
+      expect(await readKeyboardShownAt()).toBeNull();
+      expect(mockLogWarn).not.toHaveBeenCalled();
     });
   });
 
