@@ -3,6 +3,7 @@ import { ReactNode, useState } from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
 import {
+  AquaColors,
   AquaPrimitiveColors,
   AquaTypography,
   getShadow,
@@ -31,6 +32,8 @@ export interface ButtonProps {
   icon?: ReactNode;
   isLoading?: boolean;
   enabled?: boolean;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
   testID?: string;
 }
 
@@ -52,6 +55,7 @@ const ButtonBase = ({
   icon,
   isLoading,
   enabled = true,
+  colors: colorsOverride,
   testID,
   size = "large",
   type,
@@ -60,7 +64,7 @@ const ButtonBase = ({
   type: ButtonType;
 }) => {
   const { theme } = useTheme();
-  const colors = theme.colors;
+  const colors = colorsOverride ?? theme.colors;
 
   const [pressed, setPressed] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -227,7 +231,7 @@ const deriveState = ({
 const getBackgroundColor = (
   type: ButtonType,
   state: ButtonState,
-  colors: ReturnType<typeof useTheme>["theme"]["colors"],
+  colors: AquaColors,
 ): string => {
   if (type === "primary") {
     if (state === "active" || state === "hover")

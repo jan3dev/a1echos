@@ -16,9 +16,11 @@ import { Text } from "../../../ui/text/Text";
 import { OnboardingStepIndicator } from "../step-indicator/OnboardingStepIndicator";
 
 export interface OnboardingHeaderProps {
-  step: number;
+  /** Omit to hide the step indicator. */
+  step?: number;
   onBack: () => void;
-  onSkip: () => void;
+  /** Omit to hide Skip. */
+  onSkip?: () => void;
   testID?: string;
 }
 
@@ -87,25 +89,29 @@ export const OnboardingHeader = ({
           <Icon name="chevron_left" size={24} color={darkColors.textPrimary} />
         </HeaderAction>
       </View>
-      <OnboardingStepIndicator
-        step={step}
-        totalSteps={AppConstants.ONBOARDING_STEP_COUNT}
-        testID={childTestID("steps")}
-      />
+      {step !== undefined && (
+        <OnboardingStepIndicator
+          step={step}
+          totalSteps={AppConstants.ONBOARDING_STEP_COUNT}
+          testID={childTestID("steps")}
+        />
+      )}
       <View style={[styles.headerSide, styles.headerTrailing]}>
-        <HeaderAction
-          testID={childTestID("skip")}
-          onPress={onSkip}
-          accessibilityLabel={loc.onboardingSkip}
-        >
-          <Text
-            variant="body2"
-            weight="medium"
-            color={darkColors.textSecondary}
+        {onSkip && (
+          <HeaderAction
+            testID={childTestID("skip")}
+            onPress={onSkip}
+            accessibilityLabel={loc.onboardingSkip}
           >
-            {loc.onboardingSkip}
-          </Text>
-        </HeaderAction>
+            <Text
+              variant="body2"
+              weight="medium"
+              color={darkColors.textSecondary}
+            >
+              {loc.onboardingSkip}
+            </Text>
+          </HeaderAction>
+        )}
       </View>
     </View>
   );

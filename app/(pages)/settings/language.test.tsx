@@ -52,6 +52,9 @@ jest.mock("@/models", () => ({
   getCountryCode: jest.fn((lang: any) => `flag_${lang.code}`),
   getModelInfo: jest.fn(() => ({ supportedLanguageCodes: undefined })),
   ModelId: { WHISPER_TINY: "whisper_tiny" },
+  shouldSuggestLargerModel: jest.requireActual(
+    "@/models/model-registry/ModelRegistry",
+  ).shouldSuggestLargerModel,
   SupportedLanguages: {
     get all() {
       return mockLanguages;

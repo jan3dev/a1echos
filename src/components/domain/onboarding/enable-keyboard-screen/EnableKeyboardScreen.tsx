@@ -16,7 +16,7 @@ import { Text } from "../../../ui/text/Text";
 import { Toggle } from "../../../ui/toggle/Toggle";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
-const ENABLE_KEYBOARD_STEP = 3;
+const ENABLE_KEYBOARD_STEP = 2;
 // Mimics the system Settings list, so these are iOS system colors, not theme tokens.
 const SYSTEM_GROUPED_BACKGROUND = "#1C1C1E";
 const SYSTEM_SEPARATOR = "rgba(84, 84, 88, 0.65)";

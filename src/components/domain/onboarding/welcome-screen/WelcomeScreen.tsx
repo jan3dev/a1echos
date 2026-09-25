@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
@@ -7,60 +6,17 @@ import {
 } from "react-native-safe-area-context";
 
 import { useLocalization } from "@/hooks";
-import { AquaPrimitiveColors, darkColors, spacing } from "@/theme";
-import { iosPressed } from "@/utils";
+import { darkColors, spacing } from "@/theme";
 
 import { AmbientGlow } from "../../../shared/ambient-glow/AmbientGlow";
 import { Icon } from "../../../ui/icon/Icon";
-import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
+import { GlowCtaButton } from "../glow-cta-button/GlowCtaButton";
 
 export interface WelcomeScreenProps {
   onGetStarted: () => void;
   testID?: string;
 }
-
-/**
- * Welcome CTA. Dark-fixed to match the surrounding screen: the pill fill is the
- * surface/background color so the button reads as floating, glowing white text
- * on the dark backdrop (per the design), with no elevation shadow. Uses
- * RipplePressable directly rather than the themed `Button` — `Button`'s colors
- * follow the active theme and would mismatch this dark-fixed screen.
- */
-const GetStartedButton = ({
-  text,
-  onPress,
-  testID,
-}: {
-  text: string;
-  onPress: () => void;
-  testID?: string;
-}) => {
-  const [pressed, setPressed] = useState(false);
-
-  return (
-    <RipplePressable
-      testID={testID}
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={text}
-      rippleColor={darkColors.rippleOnPrimary}
-      style={[styles.ctaButton, { opacity: iosPressed(pressed, 0.9) }]}
-    >
-      <Text
-        variant="body1"
-        weight="semibold"
-        align="center"
-        color={AquaPrimitiveColors.white}
-        style={styles.ctaLabel}
-      >
-        {text}
-      </Text>
-    </RipplePressable>
-  );
-};
 
 /**
  * First-launch welcome screen. Dark-fixed (uses `darkColors` regardless of the
@@ -115,7 +71,7 @@ export const WelcomeScreen = ({ onGetStarted, testID }: WelcomeScreenProps) => {
         </View>
 
         <View style={styles.cta}>
-          <GetStartedButton
+          <GlowCtaButton
             text={loc.welcomeGetStarted}
             onPress={onGetStarted}
             testID={testID ? `${testID}-cta` : undefined}
@@ -151,21 +107,5 @@ const styles = StyleSheet.create({
     minHeight: 56,
     justifyContent: "center",
     alignSelf: "stretch",
-  },
-  ctaButton: {
-    minHeight: 56,
-    borderRadius: 80,
-    backgroundColor: darkColors.surfaceBackground,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    overflow: "hidden",
-  },
-  ctaLabel: {
-    textShadowColor: "rgba(255, 255, 255, 0.8)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 80,
   },
 });

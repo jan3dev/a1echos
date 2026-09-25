@@ -20,6 +20,8 @@ export { ModelId, ModelType, TranscriptionMode } from "./model-type/ModelType";
 export {
   getAllModels,
   getModelInfo,
+  getRecommendedModelId,
+  shouldSuggestLargerModel,
   MODEL_REGISTRY,
 } from "./model-registry/ModelRegistry";
 export type { ModelFileInfo, ModelInfo } from "./model-registry/ModelRegistry";

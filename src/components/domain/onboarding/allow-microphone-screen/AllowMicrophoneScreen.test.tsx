@@ -33,7 +33,7 @@ describe("AllowMicrophoneScreen", () => {
   it("renders title, step indicator and gradient bars", () => {
     const { getByText, getByTestId } = renderScreen();
     expect(getByText("onboardingAllowMicrophoneTitle")).toBeTruthy();
-    expect(getByTestId("allow-mic-steps-dot-2")).toHaveStyle({ width: 24 });
+    expect(getByTestId("allow-mic-steps-dot-1")).toHaveStyle({ width: 24 });
     expect(getByTestId("allow-mic-bars")).toBeTruthy();
   });
 

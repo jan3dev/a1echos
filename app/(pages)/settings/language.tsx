@@ -16,7 +16,7 @@ import { useLocalization, useScrollSurface } from "@/hooks";
 import {
   getCountryCode,
   getModelInfo,
-  ModelId,
+  shouldSuggestLargerModel,
   SpokenLanguage,
   SupportedLanguages,
 } from "@/models";
@@ -64,12 +64,10 @@ export default function LanguageSettingsScreen() {
     try {
       await setLanguage(language);
       await feedback;
-      // The bundled model is much weaker outside English, so nudge the user
-      // toward a bigger one — once, and only while they're still on it. The
-      // sheet is rendered globally because this screen unmounts on `back()`.
+      // Nudge once. The sheet is rendered globally because this screen
+      // unmounts on `back()`.
       if (
-        language.code !== SupportedLanguages.defaultLanguage.code &&
-        selectedModelId === ModelId.WHISPER_TINY &&
+        shouldSuggestLargerModel(language.code, selectedModelId) &&
         !hasSeenLargerModelSuggestion
       ) {
         showLargerModelSuggestion();

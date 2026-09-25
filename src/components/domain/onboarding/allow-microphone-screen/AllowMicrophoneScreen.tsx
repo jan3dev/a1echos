@@ -16,7 +16,7 @@ import { OnboardingHeader } from "../header/OnboardingHeader";
 
 import { GRADIENT_BARS_HEIGHT, GradientBars } from "./GradientBars";
 
-const ALLOW_MICROPHONE_STEP = 2;
+const ALLOW_MICROPHONE_STEP = 1;
 const RECORD_BUTTON_SIZE = 80;
 // Overlaps the bars' lower third to match the design.
 const RECORD_BUTTON_BOTTOM_OFFSET = -8;

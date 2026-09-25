@@ -1,4 +1,5 @@
 import { ModelId, TranscriptionMode } from "../model-type/ModelType";
+import { SupportedLanguages } from "../spoken-language/SpokenLanguage";
 
 export interface ModelFileInfo {
   name: string;
@@ -293,3 +294,21 @@ export const getModelInfo = (modelId: ModelId): ModelInfo =>
 const ALL_MODELS: ModelInfo[] = Object.values(MODEL_REGISTRY);
 
 export const getAllModels = (): ModelInfo[] => ALL_MODELS;
+
+/** The larger model to suggest for a spoken language: Parakeet where it
+ *  covers the language, otherwise Whisper Small (every Whisper language). */
+export const getRecommendedModelId = (languageCode: string): ModelId =>
+  MODEL_REGISTRY[ModelId.NEMO_PARAKEET_V3].supportedLanguageCodes?.includes(
+    languageCode,
+  )
+    ? ModelId.NEMO_PARAKEET_V3
+    : ModelId.WHISPER_SMALL;
+
+/** The bundled model is much weaker outside English, so a non-English speaker
+ *  still on it is worth nudging toward a larger one. */
+export const shouldSuggestLargerModel = (
+  languageCode: string,
+  modelId: ModelId,
+): boolean =>
+  languageCode !== SupportedLanguages.defaultLanguage.code &&
+  modelId === ModelId.WHISPER_TINY;

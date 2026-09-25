@@ -2,23 +2,34 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
+import { Routes } from "@/constants";
+
 import SpokenLanguageOnboarding from "./spoken-language";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, push: mockPush }),
 }));
 
 const mockSetLanguage = jest.fn();
+const mockMarkSuggestionSeen = jest.fn();
+let mockModelId = "whisper_tiny";
 jest.mock("@/stores", () => ({
   useSelectedLanguage: () => ({ code: "en", name: "English" }),
-  useSelectedModelId: () => "whisper-tiny",
+  useSelectedModelId: () => mockModelId,
   useSetLanguage: () => mockSetLanguage,
+  useMarkLargerModelSuggestionSeen: () => mockMarkSuggestionSeen,
 }));
 
 jest.mock("@/models", () => ({
   getModelInfo: () => ({ supportedLanguageCodes: ["en", "pt"] }),
+  ModelId: { WHISPER_TINY: "whisper_tiny" },
+  shouldSuggestLargerModel: jest.requireActual(
+    "@/models/model-registry/ModelRegistry",
+  ).shouldSuggestLargerModel,
   SupportedLanguages: {
+    defaultLanguage: { code: "en", name: "English" },
     forCodes: () => [
       { code: "en", name: "English" },
       { code: "pt", name: "Portuguese" },
@@ -26,13 +37,9 @@ jest.mock("@/models", () => ({
   },
 }));
 
-const mockFinishOnboarding = jest.fn();
 const mockConfirmSkip = jest.fn();
 jest.mock("@/hooks", () => ({
-  useOnboardingExit: () => ({
-    finishOnboarding: mockFinishOnboarding,
-    confirmSkip: mockConfirmSkip,
-  }),
+  useOnboardingExit: () => ({ confirmSkip: mockConfirmSkip }),
 }));
 
 jest.mock("@/components", () => {
@@ -73,6 +80,7 @@ jest.mock("@/components", () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockModelId = "whisper_tiny";
   mockSetLanguage.mockResolvedValue(undefined);
 });
 
@@ -85,16 +93,17 @@ describe("SpokenLanguage onboarding route", () => {
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("finishes without saving when the language is unchanged", async () => {
+  it("goes to the tutorial without saving when English is unchanged", async () => {
     const { getByTestId } = render(<SpokenLanguageOnboarding />);
     await act(async () => {
       fireEvent.press(getByTestId("next"));
     });
     expect(mockSetLanguage).not.toHaveBeenCalled();
-    expect(mockFinishOnboarding).toHaveBeenCalledTimes(1);
+    expect(mockMarkSuggestionSeen).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingTutorialIntro);
   });
 
-  it("saves the picked language on next", async () => {
+  it("saves a non-English pick and offers a larger model", async () => {
     const { getByTestId } = render(<SpokenLanguageOnboarding />);
     fireEvent.press(getByTestId("lang-pt"));
     expect(getByTestId("selected").props.children).toBe("pt");
@@ -105,16 +114,27 @@ describe("SpokenLanguage onboarding route", () => {
       code: "pt",
       name: "Portuguese",
     });
-    expect(mockFinishOnboarding).toHaveBeenCalledTimes(1);
+    expect(mockMarkSuggestionSeen).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingTryLargerModel);
   });
 
-  it("still finishes when saving fails", async () => {
+  it("skips the larger-model offer when already off the bundled model", async () => {
+    mockModelId = "nemo_parakeet_v3";
+    const { getByTestId } = render(<SpokenLanguageOnboarding />);
+    fireEvent.press(getByTestId("lang-pt"));
+    await act(async () => {
+      fireEvent.press(getByTestId("next"));
+    });
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingTutorialIntro);
+  });
+
+  it("goes to the tutorial when saving fails", async () => {
     mockSetLanguage.mockRejectedValue(new Error("boom"));
     const { getByTestId } = render(<SpokenLanguageOnboarding />);
     fireEvent.press(getByTestId("lang-pt"));
     await act(async () => {
       fireEvent.press(getByTestId("next"));
     });
-    expect(mockFinishOnboarding).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingTutorialIntro);
   });
 });

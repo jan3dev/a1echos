@@ -1,4 +1,11 @@
-import { getAllModels, getModelInfo, MODEL_REGISTRY, ModelId } from "../";
+import {
+  getAllModels,
+  getModelInfo,
+  getRecommendedModelId,
+  MODEL_REGISTRY,
+  ModelId,
+  shouldSuggestLargerModel,
+} from "../";
 
 describe("ModelRegistry", () => {
   it("getModelInfo returns the bundled Whisper Tiny entry", () => {
@@ -23,5 +30,19 @@ describe("ModelRegistry", () => {
         /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/main$/,
       );
     }
+  });
+
+  it("recommends Parakeet where it covers the language, else Whisper Small", () => {
+    expect(getRecommendedModelId("de")).toBe(ModelId.NEMO_PARAKEET_V3);
+    expect(getRecommendedModelId("ja")).toBe(ModelId.WHISPER_SMALL);
+    expect(getRecommendedModelId("en")).toBe(ModelId.NEMO_PARAKEET_V3);
+  });
+
+  it("suggests a larger model only to non-English speakers on Whisper Tiny", () => {
+    expect(shouldSuggestLargerModel("de", ModelId.WHISPER_TINY)).toBe(true);
+    expect(shouldSuggestLargerModel("en", ModelId.WHISPER_TINY)).toBe(false);
+    expect(shouldSuggestLargerModel("de", ModelId.NEMO_PARAKEET_V3)).toBe(
+      false,
+    );
   });
 });

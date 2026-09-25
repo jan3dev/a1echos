@@ -1,7 +1,13 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import {
+  cancelAnimation,
+  useReducedMotion,
+  withRepeat,
+} from "react-native-reanimated";
 
 import { ModelId, TranscriptionMode } from "@/models";
+import { type AquaColors, useTheme } from "@/theme";
 
 import { ModelCard } from "./ModelCard";
 
@@ -341,5 +347,50 @@ describe("ModelCard", () => {
       />,
     );
     expect(getByText("High Accuracy Only")).toBeTruthy();
+  });
+
+  describe("highlightDownload", () => {
+    const renderHighlighted = () =>
+      render(
+        <ModelCard
+          {...baseProps}
+          isBundled={false}
+          isSelected={false}
+          isDownloaded={false}
+          onDownload={onDownload}
+          highlightDownload
+        />,
+      );
+    const onDownload = jest.fn();
+    beforeEach(() => jest.clearAllMocks());
+
+    it("animates the Download action and keeps it pressable", () => {
+      const { getByText, unmount } = renderHighlighted();
+      expect(withRepeat).toHaveBeenCalledTimes(2);
+      fireEvent.press(getByText("Download"));
+      expect(onDownload).toHaveBeenCalledTimes(1);
+      unmount();
+      expect(cancelAnimation).toHaveBeenCalledTimes(2);
+    });
+
+    it("stays still under reduced motion", () => {
+      jest.mocked(useReducedMotion).mockReturnValueOnce(true);
+      renderHighlighted();
+      expect(withRepeat).not.toHaveBeenCalled();
+    });
+  });
+
+  it("uses the colors override instead of the theme", () => {
+    const override = { textPrimary: "#override" } as unknown as AquaColors;
+    const { getByText } = render(
+      <ModelCard
+        {...baseProps}
+        isBundled
+        isSelected
+        isDownloaded
+        colors={{ ...useTheme().theme.colors, ...override }}
+      />,
+    );
+    expect(getByText("Whisper Tiny")).toHaveStyle({ color: "#override" });
   });
 });

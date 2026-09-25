@@ -73,6 +73,11 @@ describe("useLocalization", () => {
       "onboardingGoToSettings",
       "onboardingSpokenLanguageTitle",
       "onboardingNext",
+      "onboardingTryLargerModelTitle",
+      "onboardingTryLargerModelSubtitle",
+      "onboardingNotNow",
+      "onboardingTutorialIntroTitle",
+      "onboardingTutorialIntroSubtitle",
     ];
 
     for (const key of expectedStringKeys) {

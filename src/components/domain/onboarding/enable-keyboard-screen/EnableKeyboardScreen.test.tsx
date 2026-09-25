@@ -36,7 +36,7 @@ describe("EnableKeyboardScreen", () => {
     const { getByText, getByTestId } = renderScreen();
     expect(getByText("onboardingEnableKeyboardTitle")).toBeTruthy();
     expect(getByText("onboardingEnableKeyboardTooltip")).toBeTruthy();
-    expect(getByTestId("kb-steps-dot-3")).toHaveStyle({ width: 24 });
+    expect(getByTestId("kb-steps-dot-2")).toHaveStyle({ width: 24 });
     expect(getByTestId("kb-list")).toBeTruthy();
     expect(getByTestId("kb-echos")).toBeTruthy();
   });

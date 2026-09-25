@@ -128,5 +128,10 @@
   "onboardingEnableKeyboardRowFullAccess": "Allow Full Access",
   "onboardingGoToSettings": "Go to Settings",
   "onboardingSpokenLanguageTitle": "What Language Do You Speak?",
-  "onboardingNext": "Next"
+  "onboardingNext": "Next",
+  "onboardingTryLargerModelTitle": "Try a Larger Model",
+  "onboardingTryLargerModelSubtitle": "Better accuracy for accents and noisy environments. Requires more space.",
+  "onboardingNotNow": "Not Now",
+  "onboardingTutorialIntroTitle": "Now for the Fun Part!",
+  "onboardingTutorialIntroSubtitle": "See what Echos can do."
 }

@@ -30,4 +30,13 @@ describe("OnboardingHeader", () => {
     );
     expect(getByText("onboardingSkip")).toBeTruthy();
   });
+
+  it("hides the step indicator and skip when omitted", () => {
+    const { queryByTestId } = render(
+      <OnboardingHeader onBack={jest.fn()} testID="h" />,
+    );
+    expect(queryByTestId("h-steps")).toBeNull();
+    expect(queryByTestId("h-skip")).toBeNull();
+    expect(queryByTestId("h-back")).toBeTruthy();
+  });
 });

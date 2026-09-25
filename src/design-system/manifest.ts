@@ -30,8 +30,11 @@ import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLay
 import homeGallery from "@/components/domain/home/Home.gallery";
 import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-microphone-screen/AllowMicrophoneScreen.gallery";
 import enableKeyboardScreenGallery from "@/components/domain/onboarding/enable-keyboard-screen/EnableKeyboardScreen.gallery";
+import glowCtaButtonGallery from "@/components/domain/onboarding/glow-cta-button/GlowCtaButton.gallery";
 import spokenLanguageScreenGallery from "@/components/domain/onboarding/spoken-language-screen/SpokenLanguageScreen.gallery";
 import onboardingStepIndicatorGallery from "@/components/domain/onboarding/step-indicator/OnboardingStepIndicator.gallery";
+import tryLargerModelScreenGallery from "@/components/domain/onboarding/try-larger-model-screen/TryLargerModelScreen.gallery";
+import tutorialIntroScreenGallery from "@/components/domain/onboarding/tutorial-intro-screen/TutorialIntroScreen.gallery";
 import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
@@ -90,8 +93,11 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   welcomeScreenGallery,
   allowMicrophoneScreenGallery,
   enableKeyboardScreenGallery,
+  glowCtaButtonGallery,
   onboardingStepIndicatorGallery,
   spokenLanguageScreenGallery,
+  tryLargerModelScreenGallery,
+  tutorialIntroScreenGallery,
   sessionGallery,
   settingsGallery,
   transcriptionGallery,

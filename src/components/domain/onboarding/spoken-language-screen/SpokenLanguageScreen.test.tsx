@@ -37,10 +37,10 @@ describe("SpokenLanguageScreen", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it("renders title, step 4 and every language with the selection marked", () => {
+  it("renders title, step 3 and every language with the selection marked", () => {
     const { getByText, getByTestId, getAllByRole } = renderScreen();
     expect(getByText("onboardingSpokenLanguageTitle")).toBeTruthy();
-    expect(getByTestId("sl-steps-dot-4")).toHaveStyle({ width: 24 });
+    expect(getByTestId("sl-steps-dot-3")).toHaveStyle({ width: 24 });
     expect(getByText("English")).toBeTruthy();
     expect(getByText("Portuguese")).toBeTruthy();
     const radios = getAllByRole("radio");

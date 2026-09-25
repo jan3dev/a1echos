@@ -17,7 +17,7 @@ import { Text } from "../../../ui/text/Text";
 import { ListItem } from "../../../shared/list-item/ListItem";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
-const SPOKEN_LANGUAGE_STEP = 4;
+const SPOKEN_LANGUAGE_STEP = 3;
 
 export interface SpokenLanguageScreenProps {
   languages: SpokenLanguage[];

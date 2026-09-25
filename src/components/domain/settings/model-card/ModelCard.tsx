@@ -1,5 +1,14 @@
-import { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { createContext, ReactNode, useContext, useEffect } from "react";
+import { StyleSheet, TextStyle, View } from "react-native";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   Chip,
@@ -15,6 +24,13 @@ import { TranscriptionMode } from "@/models";
 import type { DownloadProgress } from "@/services";
 import { AquaColors, useTheme } from "@/theme";
 import { formatBytes, iosPressed } from "@/utils";
+
+const ATTENTION_FLOAT = 3;
+
+// Always provided by ModelCard, which resolves the override against the theme.
+const CardColorsContext = createContext<AquaColors | null>(null);
+
+const useCardColors = () => useContext(CardColorsContext)!;
 
 interface ModelCardProps {
   name: string;
@@ -35,6 +51,10 @@ interface ModelCardProps {
   onRetry?: () => void;
   onLanguagesPress?: () => void;
   disabled?: boolean;
+  /** Floats and pulses the Download action to invite a tap. */
+  highlightDownload?: boolean;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
   testID?: string;
 }
 
@@ -57,11 +77,13 @@ export const ModelCard = ({
   onRetry,
   onLanguagesPress,
   disabled,
+  highlightDownload,
+  colors: colorsOverride,
   testID,
 }: ModelCardProps) => {
   const { theme } = useTheme();
+  const colors = colorsOverride ?? theme.colors;
   const { loc } = useLocalization();
-  const { colors } = theme;
 
   const isDownloading = downloadProgress?.status === "downloading";
   const hasError = downloadProgress?.status === "error";
@@ -75,93 +97,97 @@ export const ModelCard = ({
   const languagesText = loc.languageCount(languageCount);
 
   return (
-    <RipplePressable
-      testID={testID}
-      onPress={canSelect ? onSelect : undefined}
-      disabled={!canSelect}
-      rippleColor={colors.ripple}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: colors.surfacePrimary,
-          borderColor,
-          opacity: canSelect ? iosPressed(pressed) : 1,
-        },
-      ]}
-    >
-      <View style={styles.headerRow}>
-        <View style={styles.headerText}>
-          <View style={styles.titleLine}>
+    <CardColorsContext.Provider value={colors}>
+      <RipplePressable
+        testID={testID}
+        onPress={canSelect ? onSelect : undefined}
+        disabled={!canSelect}
+        rippleColor={colors.ripple}
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: colors.surfacePrimary,
+            borderColor,
+            opacity: canSelect ? iosPressed(pressed) : 1,
+          },
+        ]}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <View style={styles.titleLine}>
+              <Text
+                variant="subtitle"
+                weight="medium"
+                color={colors.textPrimary}
+                numberOfLines={1}
+              >
+                {name}
+              </Text>
+              {isBundled && <Chip size="small" label={loc.included} />}
+            </View>
             <Text
-              variant="subtitle"
+              variant="body2"
               weight="medium"
-              color={colors.textPrimary}
-              numberOfLines={1}
+              color={colors.textSecondary}
+              numberOfLines={2}
             >
-              {name}
+              {description}
             </Text>
-            {isBundled && <Chip size="small" label={loc.included} />}
           </View>
-          <Text
-            variant="body2"
-            weight="medium"
-            color={colors.textSecondary}
-            numberOfLines={2}
-          >
-            {description}
-          </Text>
+
+          {isDownloaded && !isDownloading && (
+            <View style={styles.radioWrapper}>
+              <Radio<boolean>
+                value={true}
+                groupValue={isSelected}
+                onValueChange={canSelect ? onSelect : undefined}
+                enabled={canSelect}
+                size="small"
+                colors={colors}
+              />
+            </View>
+          )}
         </View>
 
-        {isDownloaded && !isDownloading && (
-          <View style={styles.radioWrapper}>
-            <Radio<boolean>
-              value={true}
-              groupValue={isSelected}
-              onValueChange={canSelect ? onSelect : undefined}
-              enabled={canSelect}
-              size="small"
-            />
-          </View>
+        {isDownloaded ? (
+          <DownloadedBody
+            languagesText={languagesText}
+            sizeLabel={sizeLabel}
+            isBundled={isBundled}
+            isSelected={isSelected}
+            supportedModes={supportedModes}
+            selectedMode={selectedMode}
+            onSelectMode={onSelectMode}
+            onDelete={onDelete}
+            onLanguagesPress={onLanguagesPress}
+          />
+        ) : isDownloading && downloadProgress ? (
+          <DownloadProgressSection
+            progress={downloadProgress}
+            onCancel={onCancelDownload}
+            languagesText={languagesText}
+            supportedModes={supportedModes}
+            onLanguagesPress={onLanguagesPress}
+          />
+        ) : hasError ? (
+          <ErrorSection
+            languagesText={languagesText}
+            supportedModes={supportedModes}
+            onRetry={onRetry}
+            onLanguagesPress={onLanguagesPress}
+          />
+        ) : (
+          <AvailableBody
+            languagesText={languagesText}
+            sizeLabel={sizeLabel}
+            supportedModes={supportedModes}
+            onDownload={onDownload}
+            highlightDownload={highlightDownload}
+            onLanguagesPress={onLanguagesPress}
+          />
         )}
-      </View>
-
-      {isDownloaded ? (
-        <DownloadedBody
-          languagesText={languagesText}
-          sizeLabel={sizeLabel}
-          isBundled={isBundled}
-          isSelected={isSelected}
-          supportedModes={supportedModes}
-          selectedMode={selectedMode}
-          onSelectMode={onSelectMode}
-          onDelete={onDelete}
-          onLanguagesPress={onLanguagesPress}
-        />
-      ) : isDownloading && downloadProgress ? (
-        <DownloadProgressSection
-          progress={downloadProgress}
-          onCancel={onCancelDownload}
-          languagesText={languagesText}
-          supportedModes={supportedModes}
-          onLanguagesPress={onLanguagesPress}
-        />
-      ) : hasError ? (
-        <ErrorSection
-          languagesText={languagesText}
-          supportedModes={supportedModes}
-          onRetry={onRetry}
-          onLanguagesPress={onLanguagesPress}
-        />
-      ) : (
-        <AvailableBody
-          languagesText={languagesText}
-          sizeLabel={sizeLabel}
-          supportedModes={supportedModes}
-          onDownload={onDownload}
-          onLanguagesPress={onLanguagesPress}
-        />
-      )}
-    </RipplePressable>
+      </RipplePressable>
+    </CardColorsContext.Provider>
   );
 };
 
@@ -190,9 +216,8 @@ function DownloadedBody({
   onDelete,
   onLanguagesPress,
 }: DownloadedBodyProps) {
-  const { theme } = useTheme();
+  const colors = useCardColors();
   const { loc } = useLocalization();
-  const { colors } = theme;
 
   const showDelete = !isBundled;
 
@@ -243,6 +268,7 @@ interface AvailableBodyProps {
   sizeLabel: string;
   supportedModes: TranscriptionMode[];
   onDownload?: () => void;
+  highlightDownload?: boolean;
   onLanguagesPress?: () => void;
 }
 
@@ -251,11 +277,11 @@ function AvailableBody({
   sizeLabel,
   supportedModes,
   onDownload,
+  highlightDownload,
   onLanguagesPress,
 }: AvailableBodyProps) {
-  const { theme } = useTheme();
+  const colors = useCardColors();
   const { loc } = useLocalization();
-  const { colors } = theme;
 
   return (
     <>
@@ -282,6 +308,7 @@ function AvailableBody({
             label={loc.download}
             color={colors.accentBrand}
             onPress={onDownload}
+            attention={highlightDownload}
           />
         )}
       </View>
@@ -306,9 +333,8 @@ function DownloadProgressSection({
   supportedModes,
   onLanguagesPress,
 }: DownloadProgressSectionProps) {
-  const { theme } = useTheme();
+  const colors = useCardColors();
   const { loc } = useLocalization();
-  const { colors } = theme;
 
   const percent = Math.round(progress.progressRatio * 100);
 
@@ -320,7 +346,7 @@ function DownloadProgressSection({
         onLanguagesPress={onLanguagesPress}
       />
 
-      <DownloadProgressBar ratio={progress.progressRatio} />
+      <DownloadProgressBar ratio={progress.progressRatio} colors={colors} />
 
       <View style={styles.progressRow}>
         <View style={styles.progressMeta}>
@@ -361,9 +387,8 @@ function ErrorSection({
   onRetry,
   onLanguagesPress,
 }: ErrorSectionProps) {
-  const { theme } = useTheme();
+  const colors = useCardColors();
   const { loc } = useLocalization();
-  const { colors } = theme;
 
   return (
     <View style={styles.errorSection}>
@@ -474,8 +499,7 @@ function ModeSelectorChip({
   fullWidth?: boolean;
   onPress?: () => void;
 }) {
-  const { theme } = useTheme();
-  const { colors } = theme;
+  const colors = useCardColors();
 
   const backgroundColor = active
     ? colors.accentBrandTransparent
@@ -556,8 +580,7 @@ function ModeMetaRow({
 }
 
 function ModeMetaChip({ icon, label }: { icon: IconName; label: string }) {
-  const { theme } = useTheme();
-  const { colors } = theme;
+  const colors = useCardColors();
   return (
     <View style={styles.actionCluster}>
       <Icon name={icon} size={18} color={colors.textTertiary} />
@@ -575,24 +598,79 @@ function ActionButton({
   label,
   color,
   onPress,
+  attention,
 }: {
   icon: IconName;
   label: string;
   color: string;
   onPress: () => void;
+  attention?: boolean;
 }) {
-  const { theme } = useTheme();
+  const colors = useCardColors();
+  const reducedMotion = useReducedMotion();
+  const animate = !!attention && !reducedMotion;
+  const float = useSharedValue(0);
+  const glow = useSharedValue(0);
+
+  useEffect(() => {
+    if (!animate) return;
+    float.value = withRepeat(
+      withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    glow.value = withRepeat(
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    return () => {
+      cancelAnimation(float);
+      cancelAnimation(glow);
+      float.value = 0;
+      glow.value = 0;
+    };
+  }, [animate, float, glow]);
+
+  const floatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -ATTENTION_FLOAT * float.value }],
+  }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+
+  const renderLabel = (style?: TextStyle) => (
+    <Text variant="body2" weight="semibold" color={color} style={style}>
+      {label}
+    </Text>
+  );
+
   return (
-    <PressableCluster
-      onPress={onPress}
-      style={styles.actionCluster}
-      rippleColor={theme.colors.ripple}
-    >
-      <Icon name={icon} size={18} color={color} />
-      <Text variant="body2" weight="semibold" color={color}>
-        {label}
-      </Text>
-    </PressableCluster>
+    <Animated.View style={attention ? floatStyle : undefined}>
+      <PressableCluster
+        onPress={onPress}
+        style={styles.actionCluster}
+        rippleColor={colors.ripple}
+      >
+        <Icon name={icon} size={18} color={color} />
+        {attention ? (
+          <View>
+            {renderLabel(styles.attentionGlow)}
+            <Animated.View
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              style={[StyleSheet.absoluteFill, glowStyle]}
+            >
+              {renderLabel({
+                ...styles.attentionGlowPeak,
+                textShadowColor: color,
+              })}
+            </Animated.View>
+          </View>
+        ) : (
+          renderLabel()
+        )}
+      </PressableCluster>
+    </Animated.View>
   );
 }
 
@@ -603,8 +681,7 @@ function LanguagesChip({
   languagesText: string;
   onPress?: () => void;
 }) {
-  const { theme } = useTheme();
-  const { colors } = theme;
+  const colors = useCardColors();
 
   const content = (
     <View style={styles.actionCluster}>
@@ -649,12 +726,12 @@ function PressableCluster({
 }
 
 function MetaDivider() {
-  const { theme } = useTheme();
+  const colors = useCardColors();
   return (
     <View
       style={[
         styles.metaDivider,
-        { backgroundColor: theme.colors.surfaceBorderPrimary },
+        { backgroundColor: colors.surfaceBorderPrimary },
       ]}
     />
   );
@@ -755,5 +832,16 @@ const styles = StyleSheet.create({
   },
   errorBar: {
     height: 1,
+  },
+  attentionGlow: {
+    textShadowColor: "rgba(255, 255, 255, 0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
+  },
+  // A wide radius blurs into a haze over the whole cluster; keep it tight so
+  // the glow hugs the glyphs.
+  attentionGlowPeak: {
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
 });

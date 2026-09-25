@@ -143,6 +143,11 @@ export const useLocalization = () => {
       onboardingGoToSettings: t("onboardingGoToSettings"),
       onboardingSpokenLanguageTitle: t("onboardingSpokenLanguageTitle"),
       onboardingNext: t("onboardingNext"),
+      onboardingTryLargerModelTitle: t("onboardingTryLargerModelTitle"),
+      onboardingTryLargerModelSubtitle: t("onboardingTryLargerModelSubtitle"),
+      onboardingNotNow: t("onboardingNotNow"),
+      onboardingTutorialIntroTitle: t("onboardingTutorialIntroTitle"),
+      onboardingTutorialIntroSubtitle: t("onboardingTutorialIntroSubtitle"),
     },
   };
 };

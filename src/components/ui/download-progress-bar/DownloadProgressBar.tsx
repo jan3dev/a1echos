@@ -1,10 +1,12 @@
 import { StyleSheet, View } from "react-native";
 
-import { useTheme } from "@/theme";
+import { AquaColors, useTheme } from "@/theme";
 
 export interface DownloadProgressBarProps {
   /** Completion in 0…1. Values outside the range are clamped. */
   ratio: number;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
   testID?: string;
 }
 
@@ -16,9 +18,11 @@ export interface DownloadProgressBarProps {
  */
 export const DownloadProgressBar = ({
   ratio,
+  colors: colorsOverride,
   testID,
 }: DownloadProgressBarProps) => {
   const { theme } = useTheme();
+  const colors = colorsOverride ?? theme.colors;
   // A NaN width silently collapses the fill to zero, so a bad ratio would
   // look like "stuck at 0%" rather than a bug worth reporting.
   const safeRatio = Number.isFinite(ratio)
@@ -34,16 +38,13 @@ export const DownloadProgressBar = ({
         max: 100,
         now: Math.round(safeRatio * 100),
       }}
-      style={[
-        styles.track,
-        { backgroundColor: theme.colors.accentBrandTransparent },
-      ]}
+      style={[styles.track, { backgroundColor: colors.accentBrandTransparent }]}
     >
       <View
         style={[
           styles.fill,
           {
-            backgroundColor: theme.colors.accentBrand,
+            backgroundColor: colors.accentBrand,
             width: `${safeRatio * 100}%`,
           },
         ]}
