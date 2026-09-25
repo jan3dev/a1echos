@@ -365,6 +365,17 @@ export default function RootLayout() {
     Inter: require("@/assets/fonts/Inter-Regular.ttf"),
     "Inter-Medium": require("@/assets/fonts/Inter-Medium.ttf"),
     "Inter-SemiBold": require("@/assets/fonts/Inter-SemiBold.ttf"),
+    "Inter-Bold": require("@/assets/fonts/Inter-Bold.ttf"),
+    "NunitoSans-Regular": require("@/assets/fonts/NunitoSans-Regular.ttf"),
+    "NunitoSans-Bold": require("@/assets/fonts/NunitoSans-Bold.ttf"),
+    "Literata-Regular": require("@/assets/fonts/Literata-Regular.ttf"),
+    "Literata-Bold": require("@/assets/fonts/Literata-Bold.ttf"),
+    "EBGaramond-Regular": require("@/assets/fonts/EBGaramond-Regular.ttf"),
+    "EBGaramond-Bold": require("@/assets/fonts/EBGaramond-Bold.ttf"),
+    "IBMPlexMono-Regular": require("@/assets/fonts/IBMPlexMono-Regular.ttf"),
+    "IBMPlexMono-Bold": require("@/assets/fonts/IBMPlexMono-Bold.ttf"),
+    "Bitter-Regular": require("@/assets/fonts/Bitter-Regular.ttf"),
+    "Bitter-Bold": require("@/assets/fonts/Bitter-Bold.ttf"),
   });
 
   const initTheme = useThemeStore((state) => state.initTheme);

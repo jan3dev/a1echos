@@ -30,6 +30,7 @@ import Rectangle from "@/assets/icons/rectangle.svg";
 import RotateLeft from "@/assets/icons/rotate_left.svg";
 import SelectAll from "@/assets/icons/select_all.svg";
 import Settings from "@/assets/icons/settings.svg";
+import Text from "@/assets/icons/text.svg";
 import Theme from "@/assets/icons/theme.svg";
 import Timer from "@/assets/icons/timer.svg";
 import Trash from "@/assets/icons/trash.svg";
@@ -66,6 +67,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   rotate_left: RotateLeft,
   select_all: SelectAll,
   settings: Settings,
+  text: Text,
   theme: Theme,
   timer: Timer,
   trash: Trash,

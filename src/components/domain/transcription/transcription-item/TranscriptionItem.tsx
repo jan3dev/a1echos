@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
 
-import { Transcription } from "@/models";
+import { Transcription, transcriptTextStyle } from "@/models";
+import { useTextAppearance } from "@/stores";
 import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
@@ -68,6 +69,7 @@ export const TranscriptionItem = ({
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
   const colors = colorsOverride ?? theme.colors;
+  const textStyle = transcriptTextStyle(useTextAppearance());
   const [editText, setEditText] = useState(transcription.text);
   const inputRef = useRef<TextInput>(null);
 
@@ -211,7 +213,7 @@ export const TranscriptionItem = ({
                 styles.input,
                 {
                   color: colors.textPrimary,
-                  ...theme.typography.body1,
+                  ...textStyle,
                 },
               ]}
             />
@@ -232,7 +234,7 @@ export const TranscriptionItem = ({
               />
             </View>
           ) : (
-            <Text variant="body1" color={colors.textSecondary}>
+            <Text color={colors.textSecondary} style={textStyle}>
               {transcription.text}
             </Text>
           )}

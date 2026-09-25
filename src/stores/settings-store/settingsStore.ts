@@ -3,12 +3,15 @@ import { create } from "zustand";
 
 import {
   AppTheme,
+  DEFAULT_TEXT_APPEARANCE,
   getModelInfo,
   getThemeByName,
   ModelId,
   ModelType,
+  parseTextAppearance,
   SpokenLanguage,
   SupportedLanguages,
+  TextAppearance,
   TranscriptionMode,
 } from "@/models";
 import { sherpaTranscriptionService } from "@/services";
@@ -32,6 +35,7 @@ const STORAGE_KEYS = {
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
   HAS_SEEN_WELCOME: "has_seen_welcome",
   LARGER_MODEL_SUGGESTION_SEEN: "larger_model_suggestion_seen",
+  TEXT_APPEARANCE: "text_appearance",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -82,6 +86,8 @@ interface SettingsStore {
    *  the first time a non-English language is picked while still on the small
    *  bundled model, which transcribes other languages noticeably worse. */
   hasSeenLargerModelSuggestion: boolean;
+  /** Font, size and weight of transcript text only. */
+  textAppearance: TextAppearance;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -100,6 +106,7 @@ interface SettingsStore {
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
   markLargerModelSuggestionSeen: () => Promise<void>;
+  setTextAppearance: (patch: Partial<TextAppearance>) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -221,6 +228,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
   hasSeenWelcome: false,
   hasSeenLargerModelSuggestion: false,
+  textAppearance: DEFAULT_TEXT_APPEARANCE,
 
   initialize: async () => {
     try {
@@ -240,6 +248,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardMicTimeoutValue,
         hasSeenWelcomeValue,
         largerModelSuggestionValue,
+        textAppearanceValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -256,6 +265,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.KEYBOARD_MIC_TIMEOUT),
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
         AsyncStorage.getItem(STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN),
+        AsyncStorage.getItem(STORAGE_KEYS.TEXT_APPEARANCE),
       ]);
 
       const selectedTheme = themeValue
@@ -327,7 +337,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardMicTimeoutValue,
       );
       const hasSeenWelcome = hasSeenWelcomeValue === "true";
-      const hasSeenLargerModelSuggestion = largerModelSuggestionValue === "true";
+      const hasSeenLargerModelSuggestion =
+        largerModelSuggestionValue === "true";
 
       set({
         selectedTheme,
@@ -345,6 +356,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardMicTimeoutSeconds,
         hasSeenWelcome,
         hasSeenLargerModelSuggestion,
+        textAppearance: parseTextAppearance(textAppearanceValue),
       });
 
       // Mirror the preferences to the keyboard config file so the native
@@ -372,6 +384,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
         hasSeenWelcome: false,
         hasSeenLargerModelSuggestion: false,
+        textAppearance: DEFAULT_TEXT_APPEARANCE,
       });
     }
   },
@@ -645,6 +658,27 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
+
+  setTextAppearance: async (patch: Partial<TextAppearance>) => {
+    const previous = get().textAppearance;
+    const keys = Object.keys(patch) as (keyof TextAppearance)[];
+    if (keys.every((k) => patch[k] === previous[k])) return;
+    const next = { ...previous, ...patch };
+    set({ textAppearance: next });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.TEXT_APPEARANCE,
+        JSON.stringify(next),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save text appearance",
+      });
+      // Slider ticks overlap; don't let a stale failure undo a newer pick.
+      if (get().textAppearance === next) set({ textAppearance: previous });
+    }
+  },
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
@@ -699,6 +733,10 @@ export const useHasSeenLargerModelSuggestion = () =>
   useSettingsStore((s) => s.hasSeenLargerModelSuggestion);
 export const useMarkLargerModelSuggestionSeen = () =>
   useSettingsStore((s) => s.markLargerModelSuggestionSeen);
+export const useTextAppearance = () =>
+  useSettingsStore((s) => s.textAppearance);
+export const useSetTextAppearance = () =>
+  useSettingsStore((s) => s.setTextAppearance);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

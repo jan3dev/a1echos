@@ -44,6 +44,7 @@ import tutorialIntroScreenGallery from "@/components/domain/onboarding/tutorial-
 import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
+import textAppearanceGallery from "@/components/domain/settings/text-appearance/TextAppearance.gallery";
 import transcriptionGallery from "@/components/domain/transcription/Transcription.gallery";
 
 export type GalleryGroup = "UI" | "Shared" | "Domain";
@@ -112,6 +113,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   tutorialIntroScreenGallery,
   sessionGallery,
   settingsGallery,
+  textAppearanceGallery,
   transcriptionGallery,
 ];
 

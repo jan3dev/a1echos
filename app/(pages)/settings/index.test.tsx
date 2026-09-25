@@ -117,6 +117,9 @@ describe("SettingsScreen", () => {
     fireEvent.press(getByTestId("list-item-themeTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/theme");
 
+    fireEvent.press(getByTestId("list-item-textAppearanceTitle"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/text-appearance");
+
     fireEvent.press(getByTestId("list-item-spokenLanguageTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/language");
 

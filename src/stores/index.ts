@@ -42,6 +42,8 @@ export {
   useHasSeenWelcome,
   useMarkWelcomeSeen,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
+  useTextAppearance,
+  useSetTextAppearance,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,

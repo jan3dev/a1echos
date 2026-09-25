@@ -42,6 +42,7 @@ import {
   useSettingsStore,
   useSetTranscriptionMode,
   useSmartSplitEnabled,
+  useTextAppearance,
 } from "./settingsStore";
 
 jest.mock("@/utils", () => ({
@@ -78,6 +79,7 @@ const initialState = {
   keyboardHaptic: false,
   keyboardSound: false,
   keyboardMicTimeoutSeconds: 300,
+  textAppearance: { font: "inter" as const, size: 16, bold: false },
   hasSeenWelcome: false,
 };
 
@@ -1216,6 +1218,61 @@ describe("settingsStore", () => {
       expect(typeof result.current).toBe("function");
     });
   });
+  describe("setTextAppearance()", () => {
+    it("merges the patch and persists it as JSON", async () => {
+      await useSettingsStore.getState().setTextAppearance({ size: 20 });
+      expect(useSettingsStore.getState().textAppearance).toEqual({
+        font: "inter",
+        size: 20,
+        bold: false,
+      });
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "text_appearance",
+        JSON.stringify({ font: "inter", size: 20, bold: false }),
+      );
+    });
+
+    it("skips the write when nothing changes", async () => {
+      await useSettingsStore.getState().setTextAppearance({ bold: false });
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+        "text_appearance",
+        expect.anything(),
+      );
+    });
+
+    it("rolls back when the write fails", async () => {
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error("x"));
+      await useSettingsStore.getState().setTextAppearance({ bold: true });
+      expect(useSettingsStore.getState().textAppearance.bold).toBe(false);
+    });
+
+    it("a stale failure does not undo a newer pick", async () => {
+      let rejectFirst!: (e: Error) => void;
+      (AsyncStorage.setItem as jest.Mock).mockImplementationOnce(
+        () => new Promise((_, reject) => (rejectFirst = reject)),
+      );
+      const first = useSettingsStore.getState().setTextAppearance({ size: 18 });
+      await useSettingsStore.getState().setTextAppearance({ size: 20 });
+      rejectFirst(new Error("x"));
+      await first;
+      expect(useSettingsStore.getState().textAppearance.size).toBe(20);
+    });
+
+    it("initialize() restores the persisted appearance", async () => {
+      const getItem = AsyncStorage.getItem as jest.Mock;
+      const original = getItem.getMockImplementation();
+      getItem.mockImplementation(async (key) =>
+        key === "text_appearance"
+          ? JSON.stringify({ font: "bitter", size: 24, bold: true })
+          : null,
+      );
+      await initializeSettingsStore();
+      getItem.mockImplementation(original);
+      const { result } = renderHook(() => useTextAppearance());
+      expect(result.current).toEqual({ font: "bitter", size: 24, bold: true });
+    });
+  });
+
   describe("option constants", () => {
     // Pinned here because the picker screens forward these constants rather
     // than defining their own — nothing else asserts the actual values, and

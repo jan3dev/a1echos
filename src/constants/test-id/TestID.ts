@@ -60,6 +60,7 @@ export enum TestID {
   // --- Settings ---
   SettingsModel = "settings-model",
   SettingsTheme = "settings-theme",
+  SettingsTextAppearance = "settings-text-appearance",
   SettingsLanguage = "settings-language",
   SettingsAdvanced = "settings-advanced",
   SettingsContactSupport = "settings-contact-support",
@@ -80,6 +81,11 @@ export enum TestID {
   ThemeAuto = "theme-auto",
   ThemeLight = "theme-light",
   ThemeDark = "theme-dark",
+
+  // --- Text Appearance Settings ---
+  TextAppearancePreview = "text-appearance-preview",
+  TextAppearanceSizeSlider = "text-appearance-size-slider",
+  TextAppearanceBoldToggle = "text-appearance-bold-toggle",
 
   // --- Microphone Timeout Settings ---
   MicTimeoutOption = "mic-timeout-option",
@@ -149,4 +155,5 @@ export const dynamicTestID = {
   flagIcon: (name: string) => `flag-icon-${name}`,
   sessionItem: (id: string) => `session-item-${id}`,
   menuItem: (title: string) => `menu-item-${title}`,
+  fontOption: (font: string) => `font-option-${font}`,
 };

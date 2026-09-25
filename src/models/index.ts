@@ -35,3 +35,16 @@ export {
   SupportedLanguages,
 } from "./spoken-language/SpokenLanguage";
 export type { SpokenLanguage } from "./spoken-language/SpokenLanguage";
+
+export {
+  DEFAULT_TEXT_APPEARANCE,
+  parseTextAppearance,
+  TRANSCRIPT_FONT_KEYS,
+  TRANSCRIPT_FONT_SIZES,
+  TRANSCRIPT_FONTS,
+  transcriptTextStyle,
+} from "./text-appearance/TextAppearance";
+export type {
+  TextAppearance,
+  TranscriptFont,
+} from "./text-appearance/TextAppearance";

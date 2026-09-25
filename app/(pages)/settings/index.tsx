@@ -117,6 +117,26 @@ export default function SettingsScreen() {
             />
 
             <ListItem
+              testID={TestID.SettingsTextAppearance}
+              title={loc.textAppearanceTitle}
+              iconLeading={
+                <Icon
+                  name="text"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              iconTrailing={
+                <Icon
+                  name="chevron_right"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
+              }
+              onPress={() => router.push(Routes.settingsTextAppearance)}
+            />
+
+            <ListItem
               testID={TestID.SettingsLanguage}
               title={loc.spokenLanguageTitle}
               titleTrailing={languageDisplay}
