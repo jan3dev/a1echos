@@ -406,11 +406,15 @@ jest.mock("react-native-reanimated", () => ({
   runOnUI: jest.fn((fn) => fn),
   runOnJS: jest.fn((fn) => fn),
   createAnimatedComponent: jest.fn((component) => component),
-  FadeIn: { duration: jest.fn().mockReturnThis() },
+  FadeIn: {
+    duration: jest.fn().mockReturnThis(),
+    delay: jest.fn().mockReturnThis(),
+  },
   FadeOut: { duration: jest.fn().mockReturnThis() },
   SlideInDown: { duration: jest.fn().mockReturnThis() },
   SlideOutDown: { duration: jest.fn().mockReturnThis() },
   Layout: { duration: jest.fn().mockReturnThis() },
+  LayoutAnimationConfig: ({ children }) => children,
 }));
 
 jest.mock("react-native-svg", () => ({
@@ -585,6 +589,8 @@ jest.mock("@shopify/react-native-skia", () => ({
   Skottie: "SkiaSkottie",
   LinearGradient: "SkiaLinearGradient",
   vec: (x, y) => ({ x, y }),
+  rect: (x, y, width, height) => ({ x, y, width, height }),
+  rrect: (r, rx, ry) => ({ rect: r, rx, ry }),
   Skia: {
     Path: { Make: jest.fn() },
     Color: jest.fn(),

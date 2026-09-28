@@ -56,18 +56,16 @@ describe("RecordingButton", () => {
     expect(style.borderColor).toBe("rgba(255,255,255,0.90)");
   });
 
-  it("does not render the idle ring while RECORDING", () => {
-    const { UNSAFE_getAllByType } = render(
+  it("pauses the gradient rotation while RECORDING", () => {
+    const { useFrameCallback } = require("react-native-reanimated");
+    render(
       <RecordingButton
         state={TranscriptionState.RECORDING}
         colors={mockColors}
       />,
     );
-    const ring = UNSAFE_getAllByType(View).find((node) => {
-      const flat = StyleSheet.flatten(node.props.style) ?? {};
-      return flat.borderWidth === 10;
-    });
-    expect(ring).toBeUndefined();
+    const callback = useFrameCallback.mock.results.at(-1).value;
+    expect(callback.setActive).toHaveBeenLastCalledWith(false);
   });
 
   it('renders with "Stop Recording" accessibility label in RECORDING state', () => {
@@ -258,6 +256,23 @@ describe("RecordingButton", () => {
     expect(queryByTestId("icon-mic")).toBeNull();
   });
 
+  it("renders the processing icon only while busy", () => {
+    const { getByTestId, queryByTestId, rerender } = render(
+      <RecordingButton
+        state={TranscriptionState.TRANSCRIBING}
+        colors={mockColors}
+      />,
+    );
+    expect(getByTestId("processing-icon")).toBeTruthy();
+    rerender(
+      <RecordingButton
+        state={TranscriptionState.RECORDING}
+        colors={mockColors}
+      />,
+    );
+    expect(queryByTestId("processing-icon")).toBeNull();
+  });
+
   it("renders rectangle icon in RECORDING state with danger color", () => {
     const { getByTestId } = render(
       <RecordingButton
@@ -383,24 +398,14 @@ describe("RecordingButton", () => {
     jest.useRealTimers();
   });
 
-  it("renders rotating LinearGradient in READY state", () => {
+  it("renders the blurred gradient blobs in READY state", () => {
     const { UNSAFE_root } = render(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
-    const { LinearGradient } = require("expo-linear-gradient");
-    const gradients = UNSAFE_root.findAllByType(LinearGradient);
-    expect(gradients.length).toBeGreaterThan(0);
-  });
-
-  it("does not render LinearGradient in RECORDING state", () => {
-    const { UNSAFE_root } = render(
-      <RecordingButton
-        state={TranscriptionState.RECORDING}
-        colors={mockColors}
-      />,
+    const { recordingButtonGradient } = require("@/theme");
+    expect(UNSAFE_root.findAllByType("SkiaCircle" as any).length).toBe(
+      recordingButtonGradient.blobs.length,
     );
-    const { LinearGradient } = require("expo-linear-gradient");
-    expect(UNSAFE_root.findAllByType(LinearGradient).length).toBe(0);
   });
 
   it("stop recording while already debouncing is ignored", async () => {

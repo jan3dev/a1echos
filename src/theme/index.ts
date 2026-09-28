@@ -2,9 +2,10 @@ export { AquaPrimitiveColors } from "./colors/colors";
 export type { AquaPrimitiveColor } from "./colors/colors";
 
 export {
-  recordingGradient,
+  recordingButtonGradient,
   recordingWaveGradients,
 } from "./gradients/gradients";
+export type { RecordingButtonBlob } from "./gradients/gradients";
 
 export { darkColors, lightColors } from "./theme-colors/themeColors";
 export type { AquaColors } from "./theme-colors/themeColors";
