@@ -19,10 +19,11 @@ struct KeyboardTheme {
     /// stock iOS, whose dark keys pick up the content behind the keyboard. This
     /// is what keeps the keys from reading "too dark" when the system is dark
     /// but the host app is light-themed (a light backdrop lightens the keys);
-    /// over a genuinely dark app it composites to ~#3C3C3C as before.
+    /// gray #606060 at 52% was solved from simulator screenshots of the iOS 27
+    /// stock keyboard (plain white at 20% read ~8/255 too light).
     let keyBackground: UIColor = UIColor { traits in
         if traits.userInterfaceStyle == .dark {
-            return UIColor.white.withAlphaComponent(0.20)
+            return UIColor(white: 96 / 255.0, alpha: 0.52)
         }
         return .white
     }
@@ -107,6 +108,15 @@ struct KeyboardTheme {
         return UIColor.black.withAlphaComponent(0.08)
     }
 
+    /// Emoji section titles ("SMILEYS & PEOPLE"), sampled from the stock
+    /// keyboard.
+    let emojiSectionHeaderText: UIColor = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor.white.withAlphaComponent(0.44)
+        }
+        return UIColor.black.withAlphaComponent(0.28)
+    }
+
     /// Search-pill fill in the emoji picker. Exact design tokens.
     let emojiSearchBarFill: UIColor = UIColor { traits in
         if traits.userInterfaceStyle == .dark {
@@ -159,5 +169,12 @@ extension UIColor {
             blue: CGFloat(hex & 0xFF) / 255.0,
             alpha: alpha
         )
+    }
+}
+
+extension UIFont {
+    /// Echos Sans ships only a Regular face, so every keyboard label uses it.
+    static func echosSans(ofSize size: CGFloat) -> UIFont {
+        UIFont(name: "EchosSans-Regular", size: size) ?? .systemFont(ofSize: size)
     }
 }

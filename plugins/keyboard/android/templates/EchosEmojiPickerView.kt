@@ -189,6 +189,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
         val placeholder = TextView(context).apply {
             text = "Search emoji"
             textSize = 14f
+            typeface = echosSans(context)
             setTextColor(theme.keyTextSecondary)
             setPadding(dp(8f).toInt(), 0, 0, 0)
             // Tagged so the collapse animator can fade just the text
@@ -412,6 +413,7 @@ class EchosEmojiPickerView @JvmOverloads constructor(
         val header = TextView(context).apply {
             text = title
             textSize = 12f
+            typeface = echosSans(context)
             setTextColor(theme.keyTextSecondary)
             setPadding(dp(4f).toInt(), 0, 0, dp(4f).toInt())
             gravity = Gravity.START or Gravity.CENTER_VERTICAL

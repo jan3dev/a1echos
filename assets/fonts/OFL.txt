@@ -3,6 +3,8 @@ Version 1.1, reproduced below.
 
 Bitter:        Copyright 2011 The Bitter Project Authors (https://github.com/solmatas/BitterPro)
 EB Garamond:   Copyright 2017 The EB Garamond Project Authors (https://github.com/octaviopardo/EBGaramond12)
+Echos Sans:    Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter),
+               modifications copyright 2026 Echos. A Modified Version of Inter.
 IBM Plex Mono: Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
 Inter:         Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
 Literata:      Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)

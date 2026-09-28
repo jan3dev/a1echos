@@ -98,13 +98,13 @@ final class EmojiSearchOverlayView: UIView {
         glass.contentMode = .scaleAspectFit
 
         queryLabel.translatesAutoresizingMaskIntoConstraints = false
-        queryLabel.font = .systemFont(ofSize: 16)
+        queryLabel.font = .echosSans(ofSize: 16)
         queryLabel.textColor = theme.keyText
         queryLabel.lineBreakMode = .byTruncatingHead
         queryLabel.isHidden = true
 
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
-        placeholderLabel.font = .systemFont(ofSize: 16)
+        placeholderLabel.font = .echosSans(ofSize: 16)
         placeholderLabel.text = "Search Emoji"
         placeholderLabel.textColor = theme.emojiCategoryInactiveTint
 
@@ -227,7 +227,7 @@ final class EmojiSearchOverlayView: UIView {
         if emojis.isEmpty {
             let empty = UILabel()
             empty.text = hasQuery ? "No Results" : ""
-            empty.font = .systemFont(ofSize: 15)
+            empty.font = .echosSans(ofSize: 15)
             empty.textAlignment = .center
             empty.textColor = theme.emojiCategoryInactiveTint
             resultsStack.addArrangedSubview(empty)

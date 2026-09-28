@@ -239,6 +239,17 @@ function withImeSources(config) {
         path.join(assetsDir, "confusables.json"),
       );
 
+      // Keyboard typeface; loaded by echosSans() in KeyTheme.kt.
+      fs.copyFileSync(
+        path.join(
+          projectRoot,
+          "assets",
+          "fonts",
+          "EchosSans-Regular.ttf",
+        ),
+        path.join(assetsDir, "EchosSans-Regular.ttf"),
+      );
+
       // Write XML resources
       const resDir = path.join(androidRoot, "res");
 

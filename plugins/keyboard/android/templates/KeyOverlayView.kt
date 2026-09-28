@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -30,7 +29,7 @@ class KeyOverlayView @JvmOverloads constructor(
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = echosSans(context)
     }
 
     private data class VariantsState(

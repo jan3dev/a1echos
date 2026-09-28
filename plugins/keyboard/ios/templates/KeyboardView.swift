@@ -83,9 +83,9 @@ class KeyboardView: UIInputView {
         default:
             // Budget = 8 pt top band (rowStackTopFromTopBar, gives the top-row
             // key-preview balloon headroom) + the fixed rowStack height + the
-            // bottom margin. Portrait uses a slim 2 pt margin; landscape uses
-            // 4 pt so the keys sit a touch higher off the screen edge.
-            rowsHeight = isLandscape ? 146 : 218
+            // bottom margin (3 pt portrait, 4 pt landscape), which lands the
+            // bottom row where stock puts it.
+            rowsHeight = isLandscape ? 145 : 216
         }
         return rowsHeight + KeyboardTopBar.preferredHeight
     }
@@ -118,15 +118,21 @@ class KeyboardView: UIInputView {
     // Pins the rowStack to the QWERTY-equivalent height regardless of mode
     // so swapping into/out of search doesn't resize the keys.
     private var rowStackHeightConstraint: NSLayoutConstraint!
+    private var rowStackLeading: NSLayoutConstraint!
+    private var rowStackTrailing: NSLayoutConstraint!
 
     /// Height the rowStack should occupy in any QWERTY-style mode.
-    /// Portrait: 208 pt = 4 rows × ~43.75 pt + 3 × 11 pt spacing.
-    /// Landscape: 134 pt = 4 rows × ~26.75 pt + 3 × 9 pt spacing.
-    /// Portrait keys run 2 pt taller than the earlier 41.75 to match stock
-    /// iOS; landscape keys are shorter still (26.75) — they read too tall
-    /// otherwise. The 9 pt inter-row gap is unchanged.
+    /// Portrait: 205 pt = 4 rows × 43 pt + 3 × 11 pt spacing (measured against
+    /// the iOS 27 stock keyboard on an iPhone 17 Pro simulator).
+    /// Landscape: 133 pt = 4 rows × 27.25 pt + 3 × 8 pt spacing.
     private var qwertyRowStackHeight: CGFloat {
-        isPhoneLandscape ? 134 : 208
+        isPhoneLandscape ? 133 : 205
+    }
+
+    /// Stock insets the rows 7 pt from the view edge in portrait, 4 pt in
+    /// landscape.
+    private var rowStackSideInset: CGFloat {
+        isPhoneLandscape ? 4 : 7
     }
 
     private var rowStackInterRowSpacing: CGFloat {
@@ -136,7 +142,7 @@ class KeyboardView: UIInputView {
             // uniform mesh; the keys grow taller to absorb the tighter spacing.
             return 6
         default:
-            return isPhoneLandscape ? 9 : 11
+            return isPhoneLandscape ? 8 : 11
         }
     }
 
@@ -294,8 +300,14 @@ class KeyboardView: UIInputView {
         // so if iOS forces a slightly different total keyboard height
         // the slack lands as a bottom margin instead of resizing keys.
         rowStackHeightConstraint.priority = .required
+        rowStackLeading = rowStackView.leadingAnchor.constraint(
+            equalTo: leadingAnchor, constant: rowStackSideInset
+        )
+        rowStackTrailing = rowStackView.trailingAnchor.constraint(
+            equalTo: trailingAnchor, constant: -rowStackSideInset
+        )
         let rowStackBottom = rowStackView.bottomAnchor.constraint(
-            equalTo: bottomAnchor, constant: -2
+            equalTo: bottomAnchor, constant: -3
         )
         rowStackBottom.priority = .defaultHigh - 1
         NSLayoutConstraint.activate([
@@ -304,8 +316,8 @@ class KeyboardView: UIInputView {
             topBar.topAnchor.constraint(equalTo: topAnchor),
             topBar.heightAnchor.constraint(equalToConstant: KeyboardTopBar.preferredHeight),
 
-            rowStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 7),
-            rowStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
+            rowStackLeading,
+            rowStackTrailing,
             rowStackTopFromTopBar,
             rowStackBottom,
             rowStackHeightConstraint,
@@ -433,25 +445,11 @@ class KeyboardView: UIInputView {
         keyFramesValid = false
     }
 
-    // Landscape shrinks shift/delete (1.4 → 1.2) and grows the row-3
-    // spacer (0.01 → 0.21) in lockstep so shift+spacer = 1.41K still
-    // holds and z stays under s.
     private func effectiveWidthWeight(
         for keyDef: KeyboardLayout.KeyDefinition
     ) -> CGFloat {
         guard isPhoneLandscape else { return keyDef.widthWeight }
-        switch keyDef.type {
-        case .shift, .delete:
-            // Only override the 1.4 default — other widths (e.g. the
-            // 1.5 used elsewhere historically) stay as defined.
-            return keyDef.widthWeight == 1.4 ? 1.2 : keyDef.widthWeight
-        case .spacer:
-            // Only override the near-zero row-3 spacers, leaving the
-            // larger row-2 indent spacers (0.41) alone.
-            return keyDef.widthWeight == 0.01 ? 0.21 : keyDef.widthWeight
-        default:
-            return keyDef.widthWeight
-        }
+        return keyDef.landscapeWidthWeight ?? keyDef.widthWeight
     }
 
     /// Pins every weighted view (key buttons + spacers) in a row to the
@@ -1200,6 +1198,8 @@ class KeyboardView: UIInputView {
         super.layoutSubviews()
         keyFramesValid = false
         rowStackHeightConstraint.constant = qwertyRowStackHeight
+        rowStackLeading.constant = rowStackSideInset
+        rowStackTrailing.constant = -rowStackSideInset
         rowStackView.spacing = rowStackInterRowSpacing
     }
 
@@ -1208,6 +1208,8 @@ class KeyboardView: UIInputView {
         if traitCollection.verticalSizeClass
             != previousTraitCollection?.verticalSizeClass {
             rowStackHeightConstraint.constant = qwertyRowStackHeight
+            rowStackLeading.constant = rowStackSideInset
+            rowStackTrailing.constant = -rowStackSideInset
             rowStackView.spacing = rowStackInterRowSpacing
             // Rebuild rows so shift/delete/spacer widths pick up the
             // orientation-specific `effectiveWidthWeight` values.
@@ -1810,7 +1812,7 @@ final class KeyboardToastView: UIView {
         addSubview(pill)
 
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+        label.font = .echosSans(ofSize: 13)
         label.textColor = UIColor(hex: 0xF5F5F8)
         label.textAlignment = .center
         label.adjustsFontSizeToFitWidth = true

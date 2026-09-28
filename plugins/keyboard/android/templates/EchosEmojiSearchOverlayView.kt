@@ -3,7 +3,6 @@ package com.a1lab.echos.ime
 import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
@@ -108,7 +107,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
         val title = TextView(context).apply {
             text = "Search emoji"
             textSize = 18f
-            setTypeface(typeface, Typeface.BOLD)
+            typeface = echosSans(context)
             setTextColor(theme.keyText)
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -182,6 +181,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
         }
         queryLabel = TextView(context).apply {
             textSize = 15f
+            typeface = echosSans(context)
             setTextColor(theme.keyText)
             visibility = View.GONE
             maxLines = 1
@@ -201,6 +201,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
         placeholder = TextView(context).apply {
             text = "Search"
             textSize = 15f
+            typeface = echosSans(context)
             setTextColor(theme.keyTextSecondary)
             layoutParams = LayoutParams(
                 LayoutParams.WRAP_CONTENT,
@@ -305,6 +306,7 @@ class EchosEmojiSearchOverlayView(context: Context) : LinearLayout(context) {
             val emptyView = TextView(context).apply {
                 text = message
                 textSize = 13f
+                typeface = echosSans(context)
                 setTextColor(theme.keyTextSecondary)
                 val pl = dpPx(8f).toInt()
                 setPadding(pl, 0, pl, 0)

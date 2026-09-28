@@ -103,9 +103,7 @@ final class SuggestionStripView: UIView {
         let title = slot.isVerbatim ? "\u{201C}\(slot.text)\u{201D}" : slot.text
         button.setTitle(title, for: .normal)
         button.setTitleColor(.label, for: .normal)
-        button.titleLabel?.font = .systemFont(
-            ofSize: 17, weight: slot.isEmphasized ? .semibold : .regular
-        )
+        button.titleLabel?.font = .echosSans(ofSize: 17)
         if slot.isEmphasized {
             // Highlight the word autocorrect is about to apply with the same
             // fill as the key-preview balloon, rounded into a full pill (the

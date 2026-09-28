@@ -2,6 +2,7 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Build
 import android.util.TypedValue
 import androidx.core.content.ContextCompat
@@ -124,3 +125,11 @@ class KeyTheme(context: Context) {
         return if (id != 0) ContextCompat.getColor(context, id) else Color.TRANSPARENT
     }
 }
+
+private var echosSansTypeface: Typeface? = null
+
+/** Echos Sans ships only a Regular face, so every keyboard label uses it. */
+fun echosSans(context: Context): Typeface =
+    echosSansTypeface
+        ?: Typeface.createFromAsset(context.assets, "EchosSans-Regular.ttf")
+            .also { echosSansTypeface = it }

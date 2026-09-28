@@ -168,7 +168,7 @@ final class KeyVariantsView: UIView {
             let label = UILabel()
             label.text = variant
             label.textAlignment = .center
-            label.font = UIFont.systemFont(ofSize: 22, weight: .regular)
+            label.font = .echosSans(ofSize: 22)
             // Shrink the glyph if a large accent set forced narrow cells rather
             // than letting it crowd or clip against its neighbours.
             label.adjustsFontSizeToFitWidth = true

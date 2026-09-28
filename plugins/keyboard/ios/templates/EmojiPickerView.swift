@@ -30,10 +30,9 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
     private let collectionView: UICollectionView
 
     private let bottomStripContainer = UIView()
-    // Outer strip: [ABC] — gap — [category icons] — gap — [delete]. ABC/delete
-    // are fixed-width so the gaps read as real margin; the category icons live
-    // in `categoryStack` and fill the middle equally.
-    private let bottomStrip = UIStackView()
+    // Outer strip: [ABC] [category icons] [delete], each pinned to the
+    // positions measured on the stock keyboard (see `StripMetrics`).
+    private let bottomStrip = UIView()
     private let categoryStack = UIStackView()
     private let abcButton = StripTextButton(text: "ABC")
     private let deleteButton = StripDeleteButton()
@@ -75,20 +74,30 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
     // scrub is under way — a plain tap must not flash it.
     private var scrubStartX: CGFloat = 0
     private static let scrubActivationSlop: CGFloat = 6
-    // Caps the category-icon cluster width so the icons don't spread across
-    // the full (wide) landscape strip; only binds in landscape. Constant is
-    // refreshed per rebuild since it scales with the category count.
-    private var categoryWidthCap: NSLayoutConstraint?
-    // Per-icon cell width the landscape cluster is capped at. Wide enough that
-    // the icons sit evenly with generous spacing (more than portrait), while
-    // the wide landscape strip still leaves a large margin to ABC/back.
-    private static let maxCategoryCellWidth: CGFloat = 60
-    // Minimum margin between ABC/back and the icon cluster. Landscape keeps a
-    // wide margin (the cluster is centered); portrait drops it to ~0 so the
-    // icons spread across the full width like the original layout.
-    private var categorySpacerMin: NSLayoutConstraint?
-    private static let categorySpacerMinLandscape: CGFloat = 14
-    private static let categorySpacerMinPortrait: CGFloat = 6
+    // Strip positions measured on the iOS 27 stock emoji keyboard (iPhone 17
+    // Pro simulator), relative to `bottomStrip`.
+    private struct StripMetrics {
+        let abcCenterX: CGFloat
+        let firstIconCenterX: CGFloat
+        let iconPitch: CGFloat
+        let deleteCenterFromTrailing: CGFloat
+    }
+    private static let stripPortrait = StripMetrics(
+        abcCenterX: 23.3, firstIconCenterX: 63.8, iconPitch: 33.24, deleteCenterFromTrailing: 20.7
+    )
+    private static let stripLandscape = StripMetrics(
+        abcCenterX: 80.3, firstIconCenterX: 146, iconPitch: 44.4, deleteCenterFromTrailing: 78.3
+    )
+    private var stripMetrics: StripMetrics {
+        traitCollection.verticalSizeClass == .compact
+            ? EmojiPickerView.stripLandscape
+            : EmojiPickerView.stripPortrait
+    }
+    private var abcCenterX: NSLayoutConstraint!
+    private var categoryLeading: NSLayoutConstraint!
+    private var categoryWidth: NSLayoutConstraint!
+    private var deleteCenterX: NSLayoutConstraint!
+
     // Gap between the search bar and the grid. Landscape tightens it so the
     // rows sit higher (freeing room for the taller landscape cells).
     private var gridTopGap: NSLayoutConstraint?
@@ -135,7 +144,7 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             string: "Search Emoji",
             attributes: [.foregroundColor: theme.emojiCategoryInactiveTint]
         )
-        searchField.font = .systemFont(ofSize: 16)
+        searchField.font = .echosSans(ofSize: 16)
         // Slightly darker than the category-pill fill — native iOS uses
         // a more recessed look for the search field so it reads as the
         // primary input affordance.
@@ -172,6 +181,11 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.register(EmojiCell.self, forCellWithReuseIdentifier: EmojiCell.reuseId)
+        collectionView.register(
+            EmojiSectionHeader.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: EmojiSectionHeader.reuseId
+        )
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.showsHorizontalScrollIndicator = false
@@ -198,24 +212,13 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         categoryScrubBackground.alpha = 0
         bottomStripContainer.addSubview(categoryScrubBackground)
 
-        // Layout: [ABC][spacer][category icons][spacer][delete]. The equal
-        // spacers center the icon cluster and provide the ≥14pt margin to
-        // ABC/delete; `categoryWidthCap` keeps the cluster from stretching
-        // across a wide (landscape) strip so the icons stay close together.
-        bottomStrip.axis = .horizontal
-        bottomStrip.alignment = .fill
-        bottomStrip.distribution = .fill
-        bottomStrip.spacing = 0
         bottomStrip.translatesAutoresizingMaskIntoConstraints = false
         bottomStripContainer.addSubview(bottomStrip)
 
         categoryStack.axis = .horizontal
         categoryStack.alignment = .fill
         categoryStack.distribution = .fillEqually
-        // Explicit, even gap between the category icons — the same value in
-        // both orientations so they never read as touching.
-        categoryStack.spacing = 8
-        categoryStack.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        categoryStack.translatesAutoresizingMaskIntoConstraints = false
 
         abcButton.theme = theme
         abcButton.addTarget(self, action: #selector(handleABCTap), for: .touchUpInside)
@@ -230,33 +233,22 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             self.delegate?.emojiPickerDidHoldDeleteWord(self)
         }
 
-        // Fixed structure — only `categoryStack`'s contents change on rebuild.
-        // ABC/delete are a fixed width; the spacers (high hugging, so they
-        // stay at their 14pt minimum until the cap forces the cluster narrow)
-        // provide the margin and centering.
-        let leftSpacer = UIView()
-        let rightSpacer = UIView()
-        for spacer in [leftSpacer, rightSpacer] {
-            spacer.isUserInteractionEnabled = false
-            spacer.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        for view in [abcButton, categoryStack, deleteButton] as [UIView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            bottomStrip.addSubview(view)
         }
-        bottomStrip.addArrangedSubview(abcButton)
-        bottomStrip.addArrangedSubview(leftSpacer)
-        bottomStrip.addArrangedSubview(categoryStack)
-        bottomStrip.addArrangedSubview(rightSpacer)
-        bottomStrip.addArrangedSubview(deleteButton)
-        let cap = categoryStack.widthAnchor.constraint(lessThanOrEqualToConstant: 9999)
-        categoryWidthCap = cap
-        let spacerMin = leftSpacer.widthAnchor.constraint(
-            greaterThanOrEqualToConstant: EmojiPickerView.categorySpacerMinLandscape
-        )
-        categorySpacerMin = spacerMin
+        abcCenterX = abcButton.centerXAnchor.constraint(equalTo: bottomStrip.leadingAnchor)
+        categoryLeading = categoryStack.leadingAnchor.constraint(equalTo: bottomStrip.leadingAnchor)
+        categoryWidth = categoryStack.widthAnchor.constraint(equalToConstant: 0)
+        deleteCenterX = deleteButton.centerXAnchor.constraint(equalTo: bottomStrip.trailingAnchor)
         NSLayoutConstraint.activate([
-            abcButton.widthAnchor.constraint(equalToConstant: 34),
-            deleteButton.widthAnchor.constraint(equalToConstant: 34),
-            leftSpacer.widthAnchor.constraint(equalTo: rightSpacer.widthAnchor),
-            spacerMin,
-        ])
+            abcCenterX, categoryLeading, categoryWidth, deleteCenterX,
+            abcButton.widthAnchor.constraint(equalToConstant: 44),
+            deleteButton.widthAnchor.constraint(equalToConstant: 44),
+        ] + [abcButton, categoryStack, deleteButton].flatMap { view in [
+            view.topAnchor.constraint(equalTo: bottomStrip.topAnchor),
+            view.bottomAnchor.constraint(equalTo: bottomStrip.bottomAnchor),
+        ] })
 
         // The scrub gesture only needs the category area; attaching it to
         // `categoryStack` keeps ABC/delete taps flowing to their own buttons.
@@ -276,9 +268,9 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             // 8pt padding around the search field — matches native iOS.
             searchContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: EmojiPickerView.searchBarPadding),
             searchContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -EmojiPickerView.searchBarPadding),
-            // +2 over the standard pad drops the search bar (and the grid
-            // below it) a touch lower, tightening the gap down to the strip.
-            searchContainer.topAnchor.constraint(equalTo: topAnchor, constant: EmojiPickerView.searchBarPadding + 2),
+            // +4 over the standard pad lands the search bar (and the grid
+            // below it) where the stock keyboard puts them.
+            searchContainer.topAnchor.constraint(equalTo: topAnchor, constant: EmojiPickerView.searchBarPadding + 4),
             searchContainer.heightAnchor.constraint(equalToConstant: EmojiPickerView.searchBarHeight),
 
             searchField.leadingAnchor.constraint(equalTo: searchContainer.leadingAnchor),
@@ -311,70 +303,41 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         let layout = UICollectionViewCompositionalLayout { [weak self] _, env in
             guard let self = self else { return nil }
 
+            // Cell / header sizes measured on the iOS 27 stock emoji keyboard
+            // (iPhone 17 Pro simulator): 5 rows of 46 × 38.7 pt in portrait,
+            // 3 rows of 40 × 45.8 pt in landscape, under a section title.
             let isCompact = self.traitCollection.verticalSizeClass == .compact
-            let rowCount = isCompact ? 3 : 4
-            // Landscape opens the inter-emoji gaps up (wide screen has room):
-            // columns +6 pt, rows a further +2 pt on top of that.
-            let colSpacing = EmojiPickerView.cellSpacing + (isCompact ? 7 : 0)
-            let rowSpacing: CGFloat = isCompact ? 10 : (colSpacing - 1)
-            // Vertical top/bottom padding of the grid. Landscape keeps it and
-            // centers the rows; portrait drops it to 0 and (below) piles the
-            // slack above the grid, so the rows sit low — more gap under the
-            // search bar, less above the category strip.
-            let outerPad: CGFloat = isCompact ? EmojiPickerView.cellSpacing : 0
-            let interGaps = CGFloat(rowCount - 1)
-            // Cap prevents cellH from absorbing all leftover vertical space —
-            // without it, reducing cellSpacing just inflates cell padding and
-            // the visible gap doesn't change.
-            let maxCellSize: CGFloat = 52
-            let containerH = env.container.effectiveContentSize.height
-            let usableH = max(80, containerH - interGaps * rowSpacing - 2 * outerPad)
-            let cellH = min(floor(usableH / CGFloat(rowCount)), maxCellSize)
-            let cellSide = cellH
+            let rowCount = isCompact ? 3 : 5
+            let cellW: CGFloat = isCompact ? 40 : 46
+            let cellH: CGFloat = isCompact ? 45.8 : 38.7
 
-            let itemSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellSide),
-                heightDimension: .absolute(cellH)
-            )
-            let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-            let groupHeight = cellH * CGFloat(rowCount) + rowSpacing * interGaps
-            let groupSize = NSCollectionLayoutSize(
-                widthDimension: .absolute(cellSide),
-                heightDimension: .absolute(groupHeight)
-            )
+            let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
+                widthDimension: .absolute(cellW), heightDimension: .absolute(cellH)
+            ))
             let group = NSCollectionLayoutGroup.vertical(
-                layoutSize: groupSize, subitem: item, count: rowCount
+                layoutSize: NSCollectionLayoutSize(
+                    widthDimension: .absolute(cellW),
+                    heightDimension: .absolute(cellH * CGFloat(rowCount))
+                ),
+                subitem: item, count: rowCount
             )
-            group.interItemSpacing = .fixed(rowSpacing)
-
-            let baseTopBottom = outerPad
-            let usedH = groupHeight + 2 * baseTopBottom
-            let leftover = max(0, containerH - usedH)
-            let extraTop: CGFloat
-            let extraBottom: CGFloat
-            if isCompact {
-                extraTop = floor(leftover / 2)
-                extraBottom = leftover - extraTop
-            } else {
-                // Portrait: pile the slack above the grid so the rows sit low
-                // (touching the strip) — grows the gap under the search bar and
-                // shrinks the gap above the category strip.
-                extraTop = leftover
-                extraBottom = 0
-            }
-
-            // Landscape sits the block 2pt higher (shifts top inset → bottom)
-            // so the last row clears the category strip by as much as the top
-            // row clears the search bar — the inter-row gaps are already equal.
-            let upShift: CGFloat = isCompact ? 2 : 0
+            let header = NSCollectionLayoutBoundarySupplementaryItem(
+                layoutSize: NSCollectionLayoutSize(
+                    widthDimension: .estimated(120),
+                    heightDimension: .absolute(EmojiSectionHeader.height(compact: isCompact))
+                ),
+                elementKind: UICollectionView.elementKindSectionHeader,
+                alignment: .topLeading
+            )
+            // In a horizontally scrolling layout a boundary header would add
+            // width before the section; keep it inside the top inset instead.
+            header.extendsBoundary = false
+            header.pinToVisibleBounds = true
             let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = colSpacing
+            section.boundarySupplementaryItems = [header]
+            section.supplementaryContentInsetsReference = .none
             section.contentInsets = NSDirectionalEdgeInsets(
-                top: max(0, baseTopBottom + extraTop - upShift),
-                leading: colSpacing / 2,
-                bottom: baseTopBottom + extraBottom + upShift,
-                trailing: colSpacing / 2
+                top: EmojiSectionHeader.height(compact: isCompact), leading: 3, bottom: 0, trailing: 3
             )
             return section
         }
@@ -399,16 +362,13 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         }
     }
 
-    /// Landscape clusters the category icons (width-capped, wide ABC/back
-    /// margin); portrait lets them spread across the full strip with almost no
-    /// margin, matching the original portrait layout. Only the landscape
-    /// tuning changed last time — this keeps it out of portrait.
     private func applyStripOrientation() {
         let isLandscape = traitCollection.verticalSizeClass == .compact
-        categoryWidthCap?.isActive = isLandscape
-        categorySpacerMin?.constant = isLandscape
-            ? EmojiPickerView.categorySpacerMinLandscape
-            : EmojiPickerView.categorySpacerMinPortrait
+        let m = stripMetrics
+        abcCenterX.constant = m.abcCenterX
+        categoryLeading.constant = m.firstIconCenterX - m.iconPitch / 2
+        categoryWidth.constant = m.iconPitch * CGFloat(categoryButtons.count)
+        deleteCenterX.constant = -m.deleteCenterFromTrailing
         gridTopGap?.constant = isLandscape
             ? EmojiPickerView.gridTopGapLandscape
             : EmojiPickerView.searchBarPadding
@@ -468,14 +428,7 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
             categoryButtons.append(btn)
         }
 
-        // Cap the cluster at ~one native cell per icon so a wide landscape
-        // strip doesn't fan the icons apart; portrait stays under the cap and
-        // fills normally.
-        categoryWidthCap?.constant =
-            CGFloat(categoryButtons.count) * EmojiPickerView.maxCategoryCellWidth
-
-        // Trailing: delete.
-        bottomStrip.addArrangedSubview(deleteButton)
+        applyStripOrientation()
     }
 
     private func updateCategorySelection() {
@@ -593,6 +546,18 @@ final class EmojiPickerView: UIView, UICollectionViewDataSource,
         return cell
     }
 
+    func collectionView(
+        _ collectionView: UICollectionView,
+        viewForSupplementaryElementOfKind kind: String,
+        at indexPath: IndexPath
+    ) -> UICollectionReusableView {
+        let header = collectionView.dequeueReusableSupplementaryView(
+            ofKind: kind, withReuseIdentifier: EmojiSectionHeader.reuseId, for: indexPath
+        ) as! EmojiSectionHeader
+        header.configure(title: visibleCategories[indexPath.section].displayName, theme: theme)
+        return header
+    }
+
     /// The untinted base emoji at `indexPath`, or nil if the path is stale.
     /// Centralizes the section/item bounds check every tap / highlight /
     /// long-press path needs, so the `sectionData` shape is asserted once.
@@ -706,7 +671,7 @@ private final class StripTextButton: UIButton {
     init(text: String) {
         super.init(frame: .zero)
         setTitle(text, for: .normal)
-        titleLabel?.font = .systemFont(ofSize: 15, weight: .medium)
+        titleLabel?.font = .echosSans(ofSize: 15)
         applyColors()
     }
 
@@ -741,15 +706,15 @@ private final class StripIconButton: UIButton {
         adjustsImageWhenHighlighted = false
         pill.translatesAutoresizingMaskIntoConstraints = false
         pill.isUserInteractionEnabled = false
-        pill.layer.cornerRadius = 12
+        pill.layer.cornerRadius = 15
         pill.layer.cornerCurve = .continuous
         pill.backgroundColor = .clear
         insertSubview(pill, at: 0)
         NSLayoutConstraint.activate([
             pill.centerXAnchor.constraint(equalTo: centerXAnchor),
             pill.centerYAnchor.constraint(equalTo: centerYAnchor),
-            pill.widthAnchor.constraint(equalToConstant: 24),
-            pill.heightAnchor.constraint(equalToConstant: 24),
+            pill.widthAnchor.constraint(equalToConstant: 30),
+            pill.heightAnchor.constraint(equalToConstant: 30),
         ])
         applyColors()
     }
@@ -839,6 +804,45 @@ private final class StripDeleteButton: UIButton {
     }
 }
 
+// MARK: - Section header
+
+/// Uppercase category title above each section, as on the stock keyboard.
+private final class EmojiSectionHeader: UICollectionReusableView {
+    static let reuseId = "EmojiSectionHeader"
+
+    /// Header band height; the grid's first row starts right below it.
+    static func height(compact: Bool) -> CGFloat { compact ? 17 : 20 }
+
+    private let label = UILabel()
+    private var leading: NSLayoutConstraint!
+    private var top: NSLayoutConstraint!
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        label.font = .echosSans(ofSize: 13)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        leading = label.leadingAnchor.constraint(equalTo: leadingAnchor)
+        top = label.topAnchor.constraint(equalTo: topAnchor)
+        NSLayoutConstraint.activate([
+            leading, top,
+            label.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func configure(title: String, theme: KeyboardTheme) {
+        label.text = title.uppercased()
+        label.textColor = theme.emojiSectionHeaderText
+        // Title starts over the first glyph column (29 pt glyphs centered in
+        // 46 / 40 pt cells).
+        let compact = traitCollection.verticalSizeClass == .compact
+        leading.constant = compact ? 6 : 9
+        top.constant = compact ? 3 : 2.5
+    }
+}
+
 // MARK: - Cell
 
 private final class EmojiCell: UICollectionViewCell {
@@ -847,7 +851,6 @@ private final class EmojiCell: UICollectionViewCell {
     private let label = UILabel()
     private let highlightView = UIView()
     private var theme = KeyboardTheme()
-    private var lastGlyphHeight: CGFloat = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -861,6 +864,8 @@ private final class EmojiCell: UICollectionViewCell {
 
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textAlignment = .center
+        // 32 pt renders the ~29 pt glyph stock uses in both orientations.
+        label.font = .systemFont(ofSize: 32)
         contentView.addSubview(label)
 
         NSLayoutConstraint.activate([
@@ -876,20 +881,6 @@ private final class EmojiCell: UICollectionViewCell {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        // Glyph scales with the cell. Portrait's 0.75 ratio keeps native-sized
-        // ~39pt emojis in 52pt cells with tight gaps; landscape cells are much
-        // shorter, so a larger ratio is used there to render the emojis ~4pt
-        // bigger (they read as undersized otherwise). Only rebuild the font
-        // when the cell height changes — layoutSubviews fires repeatedly and
-        // reassigning the font re-lays out the label each time.
-        guard bounds.height != lastGlyphHeight else { return }
-        lastGlyphHeight = bounds.height
-        let ratio: CGFloat = traitCollection.verticalSizeClass == .compact ? 0.88 : 0.75
-        label.font = .systemFont(ofSize: floor(bounds.height * ratio))
     }
 
     func configure(with emoji: String, theme: KeyboardTheme) {

@@ -84,6 +84,8 @@ enum KeyboardLayout {
         let label: String
         let type: KeyType
         let widthWeight: CGFloat
+        /// Weight used in phone landscape; nil = `widthWeight`.
+        let landscapeWidthWeight: CGFloat?
         let accessibilityLabel: String
         let symbolName: String?
         /// SF Symbol swapped in while the key is held — used by the flat
@@ -111,6 +113,7 @@ enum KeyboardLayout {
             label: String,
             type: KeyType = .character,
             widthWeight: CGFloat = 1.0,
+            landscapeWidthWeight: CGFloat? = nil,
             accessibilityLabel: String? = nil,
             symbolName: String? = nil,
             pressedSymbolName: String? = nil,
@@ -122,6 +125,7 @@ enum KeyboardLayout {
             self.label = label
             self.type = type
             self.widthWeight = widthWeight
+            self.landscapeWidthWeight = landscapeWidthWeight
             self.accessibilityLabel = accessibilityLabel ?? label
             self.symbolName = symbolName
             self.pressedSymbolName = pressedSymbolName
@@ -142,26 +146,23 @@ enum KeyboardLayout {
         // 0.41-weight spacers on each end center each row-2 key under
         // the gap between two adjacent row-1 keys. The math:
         // spacer_W = (K - S) / 2 ⇒ weight = 0.5 - S/(2K).
-        // S = 6 pt, K ≈ 33 pt on typical iPhone portrait ⇒ ≈ 0.41.
-        KeyDefinition(label: "", type: .spacer, widthWeight: 0.41),
+        // S = 6 pt, K ≈ 33 pt on typical iPhone portrait ⇒ ≈ 0.41. Landscape
+        // (K ≈ 66 pt) measures 0.453 on the stock keyboard.
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.41, landscapeWidthWeight: 0.453),
     ] + [
         "a", "s", "d", "f", "g", "h", "j", "k", "l",
     ].map { KeyDefinition(label: $0) } + [
-        KeyDefinition(label: "", type: .spacer, widthWeight: 0.41),
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.41, landscapeWidthWeight: 0.453),
     ]
 
+    // Widths below are measured from the iOS 27 stock keyboard on an iPhone
+    // 17 Pro simulator (portrait K ≈ 33.4 pt, landscape K ≈ 66.2 pt, 6 pt
+    // gaps). The row-3 spacers widen the shift→z gap to stock's 13.7 pt
+    // (20.3 pt landscape) and keep z under s.
     static let lettersRow3: [KeyDefinition] = [
-        // Shift / delete kept at 1.4 (native-iOS-like width). Spacer
-        // widthWeight reduced to 0.01 (≈ 0 pt physical) so the math
-        // closes for z-under-s alignment: shift + spacer = 1.41K, the
-        // required offset for z's center to land under s's center.
-        // The spacer is still present in the row stack — its
-        // contribution comes from the two 6 pt stack spacings around
-        // it (before and after), giving a ~12 pt visible gap between
-        // shift and z without disturbing the alignment math.
-        KeyDefinition(label: "", type: .shift, widthWeight: 1.4,
+        KeyDefinition(label: "", type: .shift, widthWeight: 1.36, landscapeWidthWeight: 1.33,
                       accessibilityLabel: "Shift", symbolName: "shift"),
-        KeyDefinition(label: "", type: .spacer, widthWeight: 0.01),
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.05, landscapeWidthWeight: 0.125),
         KeyDefinition(label: "z"),
         KeyDefinition(label: "x"),
         KeyDefinition(label: "c"),
@@ -169,14 +170,18 @@ enum KeyboardLayout {
         KeyDefinition(label: "b"),
         KeyDefinition(label: "n"),
         KeyDefinition(label: "m"),
-        KeyDefinition(label: "", type: .spacer, widthWeight: 0.01),
-        KeyDefinition(label: "", type: .delete, widthWeight: 1.4,
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.05, landscapeWidthWeight: 0.125),
+        KeyDefinition(label: "", type: .delete, widthWeight: 1.36, landscapeWidthWeight: 1.33,
                       accessibilityLabel: "Delete", symbolName: "delete.left",
                       pressedSymbolName: "delete.left.fill"),
     ]
 
+    // Stock bottom rows sit on a grid of equal units: 8 per row in portrait
+    // (unit ≈ 43.25 pt), 10 in landscape (unit = the landscape letter width).
+    // `123` and emoji are one unit; a key spanning n units weighs
+    // n + 6·(n−1)/unit so it absorbs the gaps it covers.
     static let lettersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.2, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "123", type: .modeSwitch, accessibilityLabel: "Numbers"),
         // iOS: no globe key per design — long-press on the emoji key opens
         // the system keyboard picker instead. `.emoji` keys render the
         // Echos smiley from kb_emoji.svg (see KeyButton's emojiKeyGlyph);
@@ -184,16 +189,9 @@ enum KeyboardLayout {
         KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
                       accessibilityLabel: "Emoji",
                       symbolName: "face.smiling"),
-        // Space must sit exactly below x-c-v-b-n in row 3 (5 keys + 4
-        // inter-letter gaps = 5K + 4S). The K used by row 4 (let's call
-        // it K_row4) differs from row 1's K because row 4's weight sum
-        // differs. Solving `2.2·K_row4 + 2S = 2.4K_row1 + 3S` and
-        // `space_W = 5K_row1 + 4S` for K_row1 ≈ 33, S = 6 yields
-        // K_row4 ≈ 38.7 and these weights: space ≈ 4.9, return ≈ 2.4.
-        // Previously space was 5.7 / return 1.8 — space overflowed past
-        // `n` into `m`; the excess width now lives in return instead.
-        KeyDefinition(label: " ", type: .space, widthWeight: 4.9, accessibilityLabel: "Space"),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.4,
+        KeyDefinition(label: " ", type: .space, widthWeight: 4.416, landscapeWidthWeight: 6.453,
+                      accessibilityLabel: "Space"),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.139, landscapeWidthWeight: 2.091,
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 
@@ -208,26 +206,27 @@ enum KeyboardLayout {
     ].map { KeyDefinition(label: $0) }
 
     static let numbersRow3: [KeyDefinition] = [
-        KeyDefinition(label: "#+=", type: .symbolSwitch, widthWeight: 1.5, accessibilityLabel: "Symbols"),
+        KeyDefinition(label: "#+=", type: .symbolSwitch, widthWeight: 0.919, landscapeWidthWeight: 0.926,
+                      accessibilityLabel: "Symbols"),
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.034, landscapeWidthWeight: 0.087),
         KeyDefinition(label: "."),
         KeyDefinition(label: ","),
         KeyDefinition(label: "?"),
         KeyDefinition(label: "!"),
         KeyDefinition(label: "'"),
-        KeyDefinition(label: "", type: .delete, widthWeight: 1.5,
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.034, landscapeWidthWeight: 0.087),
+        KeyDefinition(label: "", type: .delete, widthWeight: 0.919, landscapeWidthWeight: 0.926,
                       accessibilityLabel: "Delete", symbolName: "delete.left",
                       pressedSymbolName: "delete.left.fill"),
     ]
 
+    // Stock drops the emoji key on the number / symbol layers; `ABC` takes
+    // its two units.
     static let numbersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "ABC", type: .modeSwitch, widthWeight: 1.2, accessibilityLabel: "Letters"),
-        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
-                      accessibilityLabel: "Emoji",
-                      symbolName: "face.smiling"),
-        // Match lettersRow4's space / return weights so the row-4 chrome
-        // doesn't visibly resize when toggling between letters / numbers.
-        KeyDefinition(label: " ", type: .space, widthWeight: 4.9, accessibilityLabel: "Space"),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.4,
+        KeyDefinition(label: "ABC", type: .modeSwitch, accessibilityLabel: "Letters"),
+        KeyDefinition(label: " ", type: .space, widthWeight: 2.064, landscapeWidthWeight: 3.09,
+                      accessibilityLabel: "Space"),
+        KeyDefinition(label: "", type: .returnKey,
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 
@@ -242,13 +241,16 @@ enum KeyboardLayout {
     ].map { KeyDefinition(label: $0) }
 
     static let symbolsRow3: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .symbolSwitch, widthWeight: 1.5, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "123", type: .symbolSwitch, widthWeight: 0.919, landscapeWidthWeight: 0.926,
+                      accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.034, landscapeWidthWeight: 0.087),
         KeyDefinition(label: "."),
         KeyDefinition(label: ","),
         KeyDefinition(label: "?"),
         KeyDefinition(label: "!"),
         KeyDefinition(label: "'"),
-        KeyDefinition(label: "", type: .delete, widthWeight: 1.5,
+        KeyDefinition(label: "", type: .spacer, widthWeight: 0.034, landscapeWidthWeight: 0.087),
+        KeyDefinition(label: "", type: .delete, widthWeight: 0.919, landscapeWidthWeight: 0.926,
                       accessibilityLabel: "Delete", symbolName: "delete.left",
                       pressedSymbolName: "delete.left.fill"),
     ]
@@ -257,74 +259,58 @@ enum KeyboardLayout {
 
     // MARK: - Field-type letter variants (§9.1)
 
-    // URL / email reuse lettersRow1–3; only the bottom row changes. The total
-    // width weight is held at ≈ 9.5 (the lettersRow4 sum) so the row-4 chrome
-    // doesn't visibly resize when the variant is shown.
+    // URL / email / twitter / web search reuse lettersRow1–3; only the bottom
+    // row changes. Same unit grid as lettersRow4.
 
-    // email: `@` and `.` follow a shrunk space. `applyWidthConstraints` anchors
-    // the row to the first weight-1.0 key, so `emoji` / `@` / `.` stay at 1.0
-    // (the unit); only `123` / `space` / `return` carry tuned weights. Aligns
-    // with row 3 despite the two extra inter-key gaps: `emoji` ends under `z`,
-    // the spacebar runs from `x`'s left edge to the middle of `v` (its trailing
-    // gap with `@` lands on v's centre), then `@` / `.` / return. `@` uses the
-    // compact label font so it reads a touch smaller than a letter.
+    // email: space (2 units, 4 in landscape), then `@` and `.`.
     static let emailLettersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
-        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+        KeyDefinition(label: "123", type: .modeSwitch, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji,
                       accessibilityLabel: "Emoji", symbolName: "face.smiling"),
-        KeyDefinition(label: " ", type: .space, widthWeight: 2.252, accessibilityLabel: "Space"),
-        KeyDefinition(label: "@", widthWeight: 1.0, usesCompactLabelFont: true),
+        KeyDefinition(label: " ", type: .space, widthWeight: 2.139, landscapeWidthWeight: 4.272,
+                      accessibilityLabel: "Space"),
+        KeyDefinition(label: "@"),
         KeyDefinition(label: "."),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.139, landscapeWidthWeight: 2.091,
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 
-    // URL: native iOS shows no spacebar; `.` `/` `.com` take its place and
-    // tile exactly under row 3's x-c-v-b-n. Replacing the single spacebar with
-    // three keys adds two extra 6pt inter-key gaps, which shrinks this row's
-    // per-unit key width — so `123`/`emoji`/`return` carry heavier weights than
-    // lettersRow4 to keep their pixel widths despite the gaps (otherwise `emoji`
-    // ends left of `z` and `.` starts left of `x`). `.` and `/` are one
-    // letter-key wide (land under `x` and `c`); `.com` spans the remaining
-    // three (`v`-`b`-`n`). Tuned to the row-1 reference (K ≈ 33pt, gap 6pt),
-    // matching the lettersRow4 alignment math.
+    // URL: native iOS shows no spacebar; `.` `/` `.com` split its space
+    // equally (2 units each in landscape).
     static let urlLettersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.40, accessibilityLabel: "Numbers"),
-        KeyDefinition(label: "", type: .emoji, widthWeight: 1.19,
+        KeyDefinition(label: "123", type: .modeSwitch, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji,
                       accessibilityLabel: "Emoji", symbolName: "face.smiling"),
-        KeyDefinition(label: ".", widthWeight: 1.0),
-        KeyDefinition(label: "/", widthWeight: 1.0, usesCompactLabelFont: true),
-        KeyDefinition(label: ".com", widthWeight: 3.36, accessibilityLabel: "dot com",
+        KeyDefinition(label: ".", widthWeight: 1.379, landscapeWidthWeight: 2.091),
+        KeyDefinition(label: "/", widthWeight: 1.379, landscapeWidthWeight: 2.091,
                       usesCompactLabelFont: true),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.77,
+        KeyDefinition(label: ".com", widthWeight: 1.379, landscapeWidthWeight: 2.091,
+                      accessibilityLabel: "dot com", usesCompactLabelFont: true),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.139, landscapeWidthWeight: 2.091,
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 
-    // twitter: same shape as email — a shrunk spacebar flanked by two
-    // punctuation keys — but the keys are `@` and `#` instead of `@` / `.`.
-    // Weights match `emailLettersRow4` so the row-4 chrome doesn't resize.
+    // twitter: stock has no return key; `@` and `#` take its two units.
     static let twitterLettersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
-        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+        KeyDefinition(label: "123", type: .modeSwitch, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji,
                       accessibilityLabel: "Emoji", symbolName: "face.smiling"),
-        KeyDefinition(label: " ", type: .space, widthWeight: 2.252, accessibilityLabel: "Space"),
-        KeyDefinition(label: "@", widthWeight: 1.0, usesCompactLabelFont: true),
-        KeyDefinition(label: "#", widthWeight: 1.0),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
-                      accessibilityLabel: "Return", symbolName: "return"),
+        KeyDefinition(label: " ", type: .space, widthWeight: 4.416, landscapeWidthWeight: 6.453,
+                      accessibilityLabel: "Space"),
+        KeyDefinition(label: "@"),
+        KeyDefinition(label: "#"),
     ]
 
-    // webSearch: a single `.` beside the spacebar. Drops email's `@` and folds
-    // its width into the spacebar (2.252 + 1.0), keeping `123` / emoji / `.` /
-    // return aligned with the email variant. The Search return is mapped from
-    // the host's `returnKeyType`, not here.
+    // webSearch: off the unit grid on stock — a letter-wide `.` and a
+    // narrower Go key. Weights are the measured widths over one unit.
     static let webSearchLettersRow4: [KeyDefinition] = [
-        KeyDefinition(label: "123", type: .modeSwitch, widthWeight: 1.176, accessibilityLabel: "Numbers"),
-        KeyDefinition(label: "", type: .emoji, widthWeight: 1.0,
+        KeyDefinition(label: "123", type: .modeSwitch, accessibilityLabel: "Numbers"),
+        KeyDefinition(label: "", type: .emoji,
                       accessibilityLabel: "Emoji", symbolName: "face.smiling"),
-        KeyDefinition(label: " ", type: .space, widthWeight: 3.252, accessibilityLabel: "Space"),
-        KeyDefinition(label: "."),
-        KeyDefinition(label: "", type: .returnKey, widthWeight: 2.579,
+        KeyDefinition(label: " ", type: .space, widthWeight: 4.2, landscapeWidthWeight: 6.234,
+                      accessibilityLabel: "Space"),
+        KeyDefinition(label: ".", widthWeight: 0.77, landscapeWidthWeight: 0.785),
+        KeyDefinition(label: "", type: .returnKey, widthWeight: 1.464, landscapeWidthWeight: 1.435,
                       accessibilityLabel: "Return", symbolName: "return"),
     ]
 

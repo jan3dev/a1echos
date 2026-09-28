@@ -2,7 +2,6 @@ package com.a1lab.echos.ime
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.util.TypedValue
@@ -73,7 +72,7 @@ class SuggestionStripView(context: Context) : LinearLayout(context) {
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTypeface(null, if (slot.isEmphasized) Typeface.BOLD else Typeface.NORMAL)
+            typeface = echosSans(context)
             isClickable = true
             isFocusable = true
             contentDescription = if (slot.isVerbatim) "Keep ${slot.text}" else slot.text

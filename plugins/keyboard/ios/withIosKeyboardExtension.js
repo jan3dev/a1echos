@@ -75,6 +75,18 @@ const CONFUSABLES_SOURCE = path.join(
   CONFUSABLES_FILE,
 );
 
+// Keyboard typeface; registered via UIAppFonts in the extension Info.plist.
+const FONT_FILE = "EchosSans-Regular.ttf";
+const FONT_SOURCE = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "assets",
+  "fonts",
+  FONT_FILE,
+);
+
 // LM reranker (context-aware autocorrect): the llama.cpp runtime and
 // LmReranker.swift are wired into the build only when the locally-built
 // vendor artifact exists (scripts/keyboard-lm/build-llama-xcframework.sh);
@@ -154,6 +166,7 @@ function withKeyboardXcodeTarget(config) {
       ...EXTENSION_SWIFT_FILES,
       DICTIONARY_FILE,
       CONFUSABLES_FILE,
+      FONT_FILE,
     ];
     if (lmEnabled()) {
       groupFiles.push(LM_RERANKER_SWIFT_FILE, LLAMA_XCFRAMEWORK, LM_MODEL_FILE);
@@ -166,6 +179,7 @@ function withKeyboardXcodeTarget(config) {
     const fileRefSection = proj.hash.project.objects["PBXFileReference"];
     const fileTypeOverrides = {
       [DICTIONARY_FILE]: "file",
+      [FONT_FILE]: "file",
       [LM_MODEL_FILE]: "file",
       [LLAMA_XCFRAMEWORK]: "wrapper.xcframework",
     };
@@ -471,6 +485,8 @@ function withKeyboardExtensionFiles(config) {
         path.join(extensionDir, CONFUSABLES_FILE),
       );
 
+      fs.copyFileSync(FONT_SOURCE, path.join(extensionDir, FONT_FILE));
+
       // Stage the llama.cpp runtime, harness, and bundled model when the
       // vendor artifact has been built locally.
       if (lmEnabled()) {
@@ -511,6 +527,7 @@ function withKeyboardExtensionFiles(config) {
           NSExtensionPrincipalClass:
             "$(PRODUCT_MODULE_NAME).EchosKeyboardViewController",
         },
+        UIAppFonts: [FONT_FILE],
         NSMicrophoneUsageDescription:
           "Echos Keyboard needs microphone access to transcribe your speech into text.",
       };

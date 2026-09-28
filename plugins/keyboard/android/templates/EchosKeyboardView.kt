@@ -7,7 +7,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.media.AudioManager
 import android.os.Build
@@ -171,21 +170,21 @@ class EchosKeyboardView @JvmOverloads constructor(
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val keyTextPaintRegular = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = echosSans(context)
     }
     private val keyTextPaintSpecial = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = echosSans(context)
     }
     private val keyTextPaintNumber = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = echosSans(context)
     }
     // Larger digit text for the auto numeric pad (the 4×4 keys are wide, so
     // the numbers read bigger than on the QWERTY/number layouts).
     private val keyTextPaintNumericPad = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = echosSans(context)
     }
     private var regularBaselineOffset = 0f
     private var specialBaselineOffset = 0f

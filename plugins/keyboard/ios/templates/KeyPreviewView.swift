@@ -74,7 +74,7 @@ final class KeyPreviewView: UIView {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.textAlignment = .center
         label.textColor = theme.keyText
-        label.font = UIFont.systemFont(ofSize: 32, weight: .regular)
+        label.font = .echosSans(ofSize: 32)
         addSubview(label)
     }
 
@@ -107,7 +107,7 @@ final class KeyPreviewView: UIView {
             maxLabelFontSize,
             max(Self.minLabelFontSize, headHeight * glyphHeightRatio)
         )
-        label.font = UIFont.systemFont(ofSize: fontSize, weight: .regular)
+        label.font = .echosSans(ofSize: fontSize)
 
         // Label sits inside the rounded head area only.
         label.frame = CGRect(x: 0, y: 0, width: bounds.width, height: headHeight)

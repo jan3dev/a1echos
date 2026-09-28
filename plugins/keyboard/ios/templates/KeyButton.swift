@@ -33,14 +33,6 @@ class KeyButton: UIControl {
     /// visible glyph box — not the font line box — is centered in the key.
     private var labelCenterYConstraint: NSLayoutConstraint?
 
-    /// Upper bounds on the modifier glyph's height, toggled by orientation.
-    /// Landscape keys are much shorter, so the portrait 0.55 cap shrinks the
-    /// shift/delete/return glyphs too far; landscape uses a looser cap so they
-    /// read closer to the native size. Portrait keeps 0.55 (there the point
-    /// size, not the cap, is the binding size).
-    private var symbolHeightCapPortrait: NSLayoutConstraint?
-    private var symbolHeightCapLandscape: NSLayoutConstraint?
-
     // Cached theme state for the pressed/highlighted recomputation.
     private var theme = KeyboardTheme()
     private var micState: MicState = .idle
@@ -114,7 +106,7 @@ class KeyButton: UIControl {
         // Telephone letters under the numeric-pad digits (2 → ABC, etc.).
         // Small, tracked, and muted to match the native pad's secondary glyphs.
         subLabel.textAlignment = .center
-        subLabel.font = .systemFont(ofSize: 9, weight: .regular)
+        subLabel.font = .echosSans(ofSize: 9)
         subLabel.textColor = theme.keyTextSecondary
         subLabel.translatesAutoresizingMaskIntoConstraints = false
         subLabel.isUserInteractionEnabled = false
@@ -143,14 +135,11 @@ class KeyButton: UIControl {
             symbolView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: 0.6),
         ])
 
-        // Only one of these is active at a time (see `updateAppearance`).
-        symbolHeightCapPortrait = symbolView.heightAnchor.constraint(
-            lessThanOrEqualTo: heightAnchor, multiplier: 0.55
-        )
-        symbolHeightCapLandscape = symbolView.heightAnchor.constraint(
-            lessThanOrEqualTo: heightAnchor, multiplier: 0.75
-        )
-        symbolHeightCapPortrait?.isActive = true
+        // Loose enough that the 19 pt symbols (image ≈ 23 pt tall with
+        // padding) aren't clamped on the 27 pt landscape keys.
+        symbolView.heightAnchor.constraint(
+            lessThanOrEqualTo: heightAnchor, multiplier: 0.9
+        ).isActive = true
 
         if keyDefinition.type == .space {
             // Native keyboards print the active input languages here ("DE EN").
@@ -191,6 +180,12 @@ class KeyButton: UIControl {
 
         if keyDefinition.type == .emoji {
             symbolView.image = KeyButton.emojiKeyGlyph
+            // The trait-based asset image doesn't report an intrinsic size,
+            // so pin the face to its 19 pt render size.
+            NSLayoutConstraint.activate([
+                symbolView.widthAnchor.constraint(equalToConstant: 19),
+                symbolView.heightAnchor.constraint(equalToConstant: 19),
+            ])
             symbolView.isHidden = false
             label.isHidden = true
         } else if let name = keyDefinition.symbolName {
@@ -263,11 +258,15 @@ class KeyButton: UIControl {
     private static let emojiFaceOrigin = CGPoint(x: 7.42834, y: 7.78207)
     private static let emojiFaceSide: CGFloat = 14.1492
 
+    // Light mode uses the outline face and dark mode the filled one, as stock
+    // iOS does; the image asset swaps them on trait changes.
     private static func makeEmojiKeyGlyph() -> UIImage {
         // Rendered at 19pt so the face sits a touch smaller than the
         // neighboring SF-symbol key glyphs.
         let renderSide: CGFloat = 19
-        let path = UIBezierPath()
+        let face = UIBezierPath()
+        let features = UIBezierPath()
+        var current = face
         let tokens = emojiPathData
             .replacingOccurrences(of: "M", with: " M ")
             .replacingOccurrences(of: "C", with: " C ")
@@ -282,24 +281,48 @@ class KeyButton: UIControl {
             let command = tokens[i]
             i += 1
             switch command {
-            case "M": path.move(to: point())
+            case "M":
+                // The first subpath is the face disc; the rest (mouth, teeth,
+                // eyes) are the features.
+                if !face.isEmpty { current = features }
+                current.move(to: point())
             case "C":
                 let c1 = point(), c2 = point(), end = point()
-                path.addCurve(to: end, controlPoint1: c1, controlPoint2: c2)
-            default: path.close()
+                current.addCurve(to: end, controlPoint1: c1, controlPoint2: c2)
+            default: current.close()
             }
         }
         let scale = renderSide / emojiFaceSide
-        path.apply(CGAffineTransform(scaleX: scale, y: scale)
-            .translatedBy(x: -emojiFaceOrigin.x, y: -emojiFaceOrigin.y))
-        path.usesEvenOddFillRule = true
+        let transform = CGAffineTransform(scaleX: scale, y: scale)
+            .translatedBy(x: -emojiFaceOrigin.x, y: -emojiFaceOrigin.y)
+        face.apply(transform)
+        features.apply(transform)
+        features.usesEvenOddFillRule = true
+        let filled = face.copy() as! UIBezierPath
+        filled.append(features)
+        filled.usesEvenOddFillRule = true
+
+        // Ring width measured from the stock light-mode emoji key.
+        let ringWidth: CGFloat = 5.0 / 3.0
+        let ring = UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: renderSide, height: renderSide)
+            .insetBy(dx: ringWidth / 2, dy: ringWidth / 2))
+        ring.lineWidth = ringWidth
 
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: renderSide, height: renderSide))
-        let image = renderer.image { _ in
+        let outlineImage = renderer.image { _ in
+            UIColor.black.set()
+            ring.stroke()
+            features.fill()
+        }.withRenderingMode(.alwaysTemplate)
+        let filledImage = renderer.image { _ in
             UIColor.black.setFill()
-            path.fill()
-        }
-        return image.withRenderingMode(.alwaysTemplate)
+            filled.fill()
+        }.withRenderingMode(.alwaysTemplate)
+
+        let asset = UIImageAsset()
+        asset.register(outlineImage, with: UITraitCollection(userInterfaceStyle: .light))
+        asset.register(filledImage, with: UITraitCollection(userInterfaceStyle: .dark))
+        return asset.image(with: UITraitCollection(userInterfaceStyle: .light))
     }
 
     override func layoutSubviews() {
@@ -388,35 +411,25 @@ class KeyButton: UIControl {
         self.micState = micState
         self.shiftState = shiftState
 
-        // Landscape uses smaller character glyphs (matches native iOS)
-        // and bigger SF Symbol icons (shift / delete / return / emoji —
-        // they read as undersized when the keys shrink to the landscape
-        // height). The looser landscape glyph height cap (below) is what
-        // actually lets those symbols grow, since the short keys otherwise
-        // clamp them.
+        // Sizes matched against the iOS 27 stock keyboard (iPhone 17 Pro
+        // simulator): landscape shrinks the letters but keeps the symbols
+        // (shift / delete / return) at their portrait size.
         let isLandscape = traitCollection.verticalSizeClass == .compact
-        let characterFontSize: CGFloat = isLandscape ? 20 : 25
-        let symbolPointSize: CGFloat = isLandscape ? 24 : 20
+        let characterFontSize: CGFloat = isLandscape ? 22 : 25
+        let modifierFontSize: CGFloat = isLandscape ? 17 : 19
         symbolView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
-            pointSize: symbolPointSize, weight: .regular
+            pointSize: 19, weight: .regular
         )
-        symbolHeightCapPortrait?.isActive = !isLandscape
-        symbolHeightCapLandscape?.isActive = isLandscape
 
         let textColor: UIColor
         let tintColor: UIColor
         let fontSize: CGFloat
 
-        // Sizes sampled against iPhone 17 Pro stock keyboard — character
-        // keys ~25pt portrait / 22 landscape, modifier text (123/ABC)
-        // ~17pt, return ~17pt semibold.
-        let weight: UIFont.Weight
         switch keyDefinition.type {
         case .mic:
             textColor = theme.micButtonIcon
             tintColor = theme.micButtonIcon
             fontSize = 18
-            weight = .regular
 
         case .returnKey:
             // The blue accent-fill variant (used in `.emojiSearch`) needs
@@ -427,7 +440,6 @@ class KeyButton: UIControl {
             textColor = isPrimaryAction ? theme.micButtonIcon : theme.keyText
             tintColor = isPrimaryAction ? theme.micButtonIcon : theme.keyText
             fontSize = 17
-            weight = .semibold
 
         case .shift:
             // iOS 26 swaps the outlined arrow for `shift.fill` (or
@@ -435,7 +447,6 @@ class KeyButton: UIControl {
             // background — no brand-color highlight.
             textColor = theme.keyText
             tintColor = theme.keyText
-            weight = shiftState.isShifted ? .semibold : .regular
             fontSize = 17
             switch shiftState {
             case .off, .manualFromAuto: setDisplaySymbol("shift")
@@ -443,17 +454,21 @@ class KeyButton: UIControl {
             case .capsLock: setDisplaySymbol("capslock.fill")
             }
 
-        case .delete, .modeSwitch, .symbolSwitch, .globe, .emoji:
+        case .modeSwitch, .symbolSwitch:
+            textColor = theme.keyText
+            tintColor = theme.keyText
+            // Stock sets `#+=` noticeably smaller than `123` / `ABC`.
+            fontSize = keyDefinition.label == "#+=" ? 14 : modifierFontSize
+
+        case .delete, .globe, .emoji:
             textColor = theme.keyText
             tintColor = theme.keyText
             fontSize = 17
-            weight = .regular
 
         case .space:
             textColor = theme.keyText
             tintColor = theme.keyText
             fontSize = 17
-            weight = .regular
 
         default:
             textColor = theme.keyText
@@ -469,13 +484,12 @@ class KeyButton: UIControl {
                 && (keyDefinition.label.first?.isLetter ?? false)
             let uppercaseTrim: CGFloat = (isLetterKey && shiftState.isShifted) ? 2 : 0
             fontSize = keyDefinition.usesCompactLabelFont
-                ? 17
+                ? 19
                 : characterFontSize - uppercaseTrim
-            weight = .regular
         }
 
         label.textColor = textColor
-        label.font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+        label.font = .echosSans(ofSize: fontSize)
         // `subLabel`'s color is otherwise fixed at init, so a theme swap would
         // leave the spacebar / numeric-pad hints on the previous palette.
         subLabel.textColor = theme.keyTextSecondary
@@ -504,7 +518,17 @@ class KeyButton: UIControl {
         let hasLowercase = text != text.uppercased()
         let glyphHeight = hasLowercase ? font.xHeight : font.capHeight
         let dropBelowCenter = (font.ascender + font.descender - glyphHeight) / 2
-        constraint.constant = -dropBelowCenter
+        // Offsets from glyph centering measured on the stock keyboard: its
+        // labels sit slightly above center, except lowercase letters
+        // (centered in portrait) and all letters in landscape.
+        let isLetter = text.count == 1 && (text.first?.isLetter ?? false)
+        let stockLift: CGFloat
+        if traitCollection.verticalSizeClass == .compact {
+            stockLift = isLetter ? -0.15 : 0.5
+        } else {
+            stockLift = isLetter && hasLowercase ? -0.55 : 1
+        }
+        constraint.constant = -dropBelowCenter - stockLift
     }
 
     private func applyBackgroundColor(pressed: Bool) {
