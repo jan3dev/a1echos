@@ -80,6 +80,9 @@ export const useLocalization = () => {
       insufficientSpace: (required: string, available: string) =>
         t("insufficientSpace", { required, available }),
       languageCount: (count: number) => t("languageCount", { count }),
+      transcriptionModeTitle: t("transcriptionModeTitle"),
+      transcriptionSettings: t("transcriptionSettings"),
+      close: t("close"),
       realtime: t("realtime"),
       highAccuracy: t("highAccuracy"),
       realtimeOnly: t("realtimeOnly"),

@@ -428,6 +428,15 @@ interface ModeSelectorProps {
   onSelectMode?: (mode: TranscriptionMode) => void;
 }
 
+export const TranscriptionModeSelector = (props: ModeSelectorProps) => {
+  const { theme } = useTheme();
+  return (
+    <CardColorsContext.Provider value={theme.colors}>
+      <ModeSelector {...props} />
+    </CardColorsContext.Provider>
+  );
+};
+
 function ModeSelector({
   supportedModes,
   selectedMode,

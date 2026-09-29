@@ -2,11 +2,8 @@ import { RefObject } from "react";
 import { View } from "react-native";
 
 import { useLocalization } from "@/hooks";
-import { getCountryCode } from "@/models";
-import { useSelectedLanguage } from "@/stores";
 import { useTheme } from "@/theme";
 
-import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Icon } from "../../../ui/icon/Icon";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { TopAppBar } from "../../../ui/top-app-bar/TopAppBar";
@@ -19,7 +16,6 @@ interface SessionAppBarProps {
   isIncognitoSession: boolean;
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
-  onLanguageFlagPressed?: () => void;
   onMorePressed?: () => void;
   onExitSelectionPressed?: () => void;
   onCancelEditPressed?: () => void;
@@ -36,7 +32,6 @@ export const SessionAppBar = ({
   isIncognitoSession,
   onBackPressed,
   onTitlePressed,
-  onLanguageFlagPressed,
   onMorePressed,
   onExitSelectionPressed,
   onCancelEditPressed,
@@ -46,7 +41,6 @@ export const SessionAppBar = ({
 }: SessionAppBarProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
-  const selectedLanguage = useSelectedLanguage();
 
   if (editMode) {
     return (
@@ -95,15 +89,6 @@ export const SessionAppBar = ({
         !isIncognitoSession && !selectionMode ? onTitlePressed : undefined
       }
       actions={[
-        <RipplePressable
-          key="language"
-          onPress={onLanguageFlagPressed}
-          hitSlop={10}
-          rippleColor={theme.colors.ripple}
-          borderless
-        >
-          <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
-        </RipplePressable>,
         <RipplePressable
           key={trailingAction}
           onPress={onTrailingActionPressed}

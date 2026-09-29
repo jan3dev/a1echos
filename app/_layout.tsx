@@ -5,10 +5,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Modal, Platform, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -20,11 +24,13 @@ import {
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
   Tooltip,
+  TranscriptionSettingsSheet,
   VoiceSessionHintModal,
 } from "@/components";
-import { useVoiceSessionHint } from "@/hooks";
-import { AppConstants, Routes } from "@/constants";
+import { useLocalization, useVoiceSessionHint } from "@/hooks";
+import { AppConstants, Routes, TestID } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
+import { TranscriptionState } from "@/models";
 import migrationsBundle from "@/db/migrations/migrations.js";
 import {
   cleanupLegacyArtifactsIfPresent,
@@ -61,6 +67,7 @@ import {
 } from "@/stores";
 import { useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
+import GrabberArc from "@/assets/icons/grabber_arc.svg";
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
@@ -100,6 +107,9 @@ export const unstable_settings = {
 };
 
 const TOOLTIP_GAP_ABOVE_FOOTER = 16;
+const SETTINGS_SWIPE_ACTIVATION = 8;
+const SETTINGS_SWIPE_MAX_DRIFT_X = 30;
+const SETTINGS_HANDLE_HIT_ABOVE = 16;
 const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
 
 function GlobalTooltipRenderer() {
@@ -300,6 +310,7 @@ function GlobalVoiceSessionHintRenderer() {
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
+  const { loc } = useLocalization();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
   const isEngineInitializing = useIsEngineInitializing();
@@ -308,7 +319,12 @@ function GlobalRecordingControls() {
   const enabled = useRecordingControlsEnabled();
   const visible = useRecordingControlsVisible();
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
   const handleRecordingStart = useCallback(() => {
+    setSettingsOpen(false);
     onRecordingStart?.();
   }, [onRecordingStart]);
 
@@ -319,39 +335,88 @@ function GlobalRecordingControls() {
   const isOnRecordingScreen =
     pathname === "/" || pathname.startsWith("/session/");
   const isVisible = visible && isOnRecordingScreen;
+  const canOpenSettings =
+    isVisible &&
+    enabled &&
+    !isEngineInitializing &&
+    transcriptionState === TranscriptionState.READY;
+
+  useEffect(() => {
+    if (!canOpenSettings) setSettingsOpen(false);
+  }, [canOpenSettings]);
+
+  const swipeUp = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(canOpenSettings)
+        .activeOffsetY(-SETTINGS_SWIPE_ACTIVATION)
+        .failOffsetX([-SETTINGS_SWIPE_MAX_DRIFT_X, SETTINGS_SWIPE_MAX_DRIFT_X])
+        .runOnJS(true)
+        .onStart(openSettings),
+    [canOpenSettings, openSettings],
+  );
+
+  const controls = (
+    <RecordingControlsView
+      state={transcriptionState}
+      isInitializing={isEngineInitializing}
+      onRecordingStart={handleRecordingStart}
+      onRecordingStop={handleRecordingStop}
+      enabled={enabled}
+      colors={theme.colors}
+    />
+  );
+
+  // Same RGB at both stops so only alpha varies; "transparent" is
+  // rgba(0,0,0,0) and smears dark gray on the way to a light endpoint.
+  const fadeColors = isDark
+    ? (["rgba(9, 10, 11, 0)", "rgba(9, 10, 11, 1)"] as const)
+    : (["rgba(244, 245, 246, 0)", "rgba(244, 245, 246, 1)"] as const);
 
   return (
     <View
       style={[
         styles.recordingControls,
-        { paddingBottom: insets.bottom, opacity: isVisible ? 1 : 0 },
+        { opacity: isVisible ? 1 : 0 },
       ]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
       <LinearGradient
-        // Use the surfaceBackground RGB at both stops so the gradient only
-        // varies in alpha. "transparent" defaults to rgba(0,0,0,0), which
-        // smears through dark gray on the way to a light endpoint.
-        colors={
-          isDark
-            ? (["rgba(9, 10, 11, 0)", "rgba(9, 10, 11, 1)"] as const)
-            : (["rgba(244, 245, 246, 0)", "rgba(244, 245, 246, 1)"] as const)
-        }
+        colors={fadeColors}
         locations={[0, 0.7]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       {isVisible && (
-        <RecordingControlsView
-          state={transcriptionState}
-          isInitializing={isEngineInitializing}
-          onRecordingStart={handleRecordingStart}
-          onRecordingStop={handleRecordingStop}
-          enabled={enabled}
-          colors={theme.colors}
-        />
+        <GestureDetector gesture={swipeUp}>
+          <View
+            collapsable={false}
+            pointerEvents="box-none"
+            style={{ paddingBottom: insets.bottom }}
+          >
+            {canOpenSettings ? (
+              <Pressable
+                testID={TestID.TranscriptionSettingsHandle}
+                style={styles.settingsHandle}
+                onPress={openSettings}
+                accessibilityRole="button"
+                accessibilityLabel={loc.transcriptionSettings}
+              >
+                <GrabberArc color={theme.colors.systemBackgroundColor} />
+              </Pressable>
+            ) : (
+              <View style={styles.settingsHandle} pointerEvents="none" />
+            )}
+            {controls}
+          </View>
+        </GestureDetector>
       )}
+      <TranscriptionSettingsSheet
+        visible={settingsOpen}
+        onDismiss={closeSettings}
+        footer={controls}
+      />
     </View>
   );
 }
@@ -509,5 +574,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 100,
+  },
+  // In-flow (not hitSlop) so the grabber is inside the swipe and touch area.
+  settingsHandle: {
+    height: 28 + SETTINGS_HANDLE_HIT_ABOVE,
+    width: 48 + 2 * SETTINGS_HANDLE_HIT_ABOVE,
+    alignSelf: "center",
+    alignItems: "center",
+    paddingTop: 9 + SETTINGS_HANDLE_HIT_ABOVE,
   },
 });

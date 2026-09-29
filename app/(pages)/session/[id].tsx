@@ -407,10 +407,6 @@ export default function SessionScreen() {
     [id, renameSessionAction],
   );
 
-  const handleLanguageFlagPressed = useCallback(() => {
-    router.push(Routes.settingsLanguage);
-  }, [router]);
-
   const handleDeleteSelectedPressed = useCallback(() => {
     if (!hasSelectedItems) return;
 
@@ -650,7 +646,6 @@ export default function SessionScreen() {
         isIncognitoSession={isIncognito}
         onBackPressed={handleBackPressed}
         onTitlePressed={handleTitlePressed}
-        onLanguageFlagPressed={handleLanguageFlagPressed}
         onMorePressed={enterSelectionMode}
         onExitSelectionPressed={exitSelectionMode}
         onCancelEditPressed={handleCancelEdit}

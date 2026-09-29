@@ -4,8 +4,8 @@ describe("AquaPrimitiveColors", () => {
   const keys = Object.keys(AquaPrimitiveColors);
   const values = Object.values(AquaPrimitiveColors);
 
-  it("exports an object with 46 keys", () => {
-    expect(keys).toHaveLength(46);
+  it("exports an object with 47 keys", () => {
+    expect(keys).toHaveLength(47);
   });
 
   it("contains all expected key groups", () => {
@@ -59,7 +59,7 @@ describe("AquaPrimitiveColors", () => {
     ];
     const rippleKeys = ["rippleLight", "rippleDark", "rippleOnPrimary"];
     const waveKeys = ["waveOrange", "waveCyan"];
-    const systemKeys = ["systemBackgroundColor"];
+    const systemKeys = ["systemBackgroundLight", "systemBackgroundDark"];
 
     const allExpectedKeys = [
       ...grayscaleKeys,

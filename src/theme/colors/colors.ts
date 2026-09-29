@@ -54,7 +54,8 @@ export const AquaPrimitiveColors = {
   waveOrange: "#F7931A",
   waveCyan: "#16BAC5",
 
-  systemBackgroundColor: "#D0D5DC",
+  systemBackgroundLight: "#D0D5DC",
+  systemBackgroundDark: "#333435",
 } as const;
 
 export type AquaPrimitiveColor =

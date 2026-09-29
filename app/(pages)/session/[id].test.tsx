@@ -148,7 +148,6 @@ let mockOnBackPressed: (() => void) | null = null;
 let mockOnMorePressed: (() => void) | null = null;
 let mockOnCancelEditPressed: (() => void) | null = null;
 let mockOnSaveEditPressed: (() => void) | null = null;
-let mockOnLanguageFlagPressed: (() => void) | null = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
 let mockOnRenameCancel: (() => void) | null = null;
 let mockOnTranscriptionTap: ((id: string) => void) | null = null;
@@ -173,7 +172,6 @@ jest.mock("@/components", () => {
       mockOnMorePressed = props.onMorePressed;
       mockOnCancelEditPressed = props.onCancelEditPressed;
       mockOnSaveEditPressed = props.onSaveEditPressed;
-      mockOnLanguageFlagPressed = props.onLanguageFlagPressed;
       return (
         <View testID={TID.SessionAppBar}>
           <Text testID={TID.SessionName}>{props.sessionName}</Text>
@@ -246,7 +244,6 @@ beforeEach(() => {
   mockOnMorePressed = null;
   mockOnCancelEditPressed = null;
   mockOnSaveEditPressed = null;
-  mockOnLanguageFlagPressed = null;
   mockOnRenameSubmit = null;
   mockOnRenameCancel = null;
   mockOnTranscriptionTap = null;
@@ -1348,31 +1345,6 @@ describe("SessionScreen", () => {
 
       // toggle should still be called even if haptics fail
       expect(mockToggle).toHaveBeenCalledWith("t1");
-    });
-  });
-
-  describe("handleLanguageFlagPressed", () => {
-    it("navigates to language settings", async () => {
-      const mockPush = jest.fn();
-      const routerMock = jest.requireMock("expo-router");
-      const originalUseRouter = routerMock.useRouter;
-      routerMock.useRouter = () => ({
-        back: mockBack,
-        replace: mockReplace,
-        canGoBack: mockCanGoBack,
-        push: mockPush,
-      });
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      await act(async () => {
-        mockOnLanguageFlagPressed!();
-      });
-
-      expect(mockPush).toHaveBeenCalledWith("/settings/language");
-
-      routerMock.useRouter = originalUseRouter;
     });
   });
 

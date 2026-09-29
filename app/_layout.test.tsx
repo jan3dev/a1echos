@@ -97,6 +97,7 @@ jest.mock("@/db/runtime-migration", () => ({
 
 jest.mock("@/hooks", () => ({
   useVoiceSessionHint: jest.fn(),
+  useLocalization: () => ({ loc: { transcriptionSettings: "settings" } }),
 }));
 
 jest.mock("@/utils", () => ({
@@ -129,6 +130,16 @@ jest.mock("@/components", () => {
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
     TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
+    TranscriptionSettingsSheet: ({ visible, onDismiss, footer }: any) => {
+      const { TouchableOpacity } = require("react-native");
+      if (!visible) return null;
+      return (
+        <View testID={TID.TranscriptionSettingsSheet}>
+          <TouchableOpacity testID="tss-dismiss" onPress={onDismiss} />
+          {footer}
+        </View>
+      );
+    },
     LargerModelSuggestionModal: ({
       visible,
       languageName,
@@ -566,6 +577,78 @@ describe("RootLayout", () => {
         const { View } = require("react-native");
         return <View testID={TestID.RecordingControlsView} />;
       };
+    });
+  });
+
+  describe("GlobalRecordingControls - transcription settings sheet", () => {
+    const { Gesture } = jest.requireMock("react-native-gesture-handler");
+    const swipeUp = async () => {
+      const pan = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+      const onStart = pan.onStart.mock.calls.at(-1)[0];
+      await act(async () => onStart());
+    };
+
+    beforeEach(() => {
+      const { useTranscriptionState } = require("@/stores");
+      (useTranscriptionState as jest.Mock).mockReturnValue("ready");
+    });
+
+    afterEach(() => {
+      const { useTranscriptionState } = require("@/stores");
+      (useTranscriptionState as jest.Mock).mockReturnValue("IDLE");
+    });
+
+    it("swipe up opens the sheet and dismiss closes it", async () => {
+      const { getByTestId, queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.TranscriptionSettingsSheet)).toBeNull();
+
+      await swipeUp();
+      expect(getByTestId(TestID.TranscriptionSettingsSheet)).toBeTruthy();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("tss-dismiss"));
+      });
+      expect(queryByTestId(TestID.TranscriptionSettingsSheet)).toBeNull();
+    });
+
+    it("tapping the grabber opens the sheet", async () => {
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.TranscriptionSettingsHandle));
+      });
+      expect(getByTestId(TestID.TranscriptionSettingsSheet)).toBeTruthy();
+    });
+
+    it("swipe gesture is disabled while recording", async () => {
+      const { useTranscriptionState } = require("@/stores");
+      (useTranscriptionState as jest.Mock).mockReturnValue("recording");
+      const { queryByTestId } = await renderAndWaitForInit();
+      const pan = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
+      expect(pan.enabled).toHaveBeenLastCalledWith(false);
+      expect(queryByTestId(TestID.TranscriptionSettingsHandle)).toBeNull();
+    });
+
+    it("starting a recording from the sheet closes it", async () => {
+      const mockOnStart = jest.fn();
+      const { useOnRecordingStart } = require("@/stores");
+      (useOnRecordingStart as jest.Mock).mockReturnValue(mockOnStart);
+      const comps = jest.requireMock("@/components");
+      const original = comps.RecordingControlsView;
+      comps.RecordingControlsView = ({ onRecordingStart }: any) => {
+        const { Pressable } = require("react-native");
+        return <Pressable testID={TestID.BtnStart} onPress={onRecordingStart} />;
+      };
+
+      const { getAllByTestId, queryByTestId } = await renderAndWaitForInit();
+      await swipeUp();
+      const buttons = getAllByTestId(TestID.BtnStart);
+      await act(async () => {
+        fireEvent.press(buttons[buttons.length - 1]);
+      });
+
+      expect(mockOnStart).toHaveBeenCalled();
+      expect(queryByTestId(TestID.TranscriptionSettingsSheet)).toBeNull();
+      comps.RecordingControlsView = original;
     });
   });
 

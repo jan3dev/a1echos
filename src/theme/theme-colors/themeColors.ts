@@ -89,7 +89,7 @@ export const lightColors: AquaColors = {
   buttonUtilityBackground: AquaPrimitiveColors.metal950,
   buttonFocusRing: AquaPrimitiveColors.neonBlue400,
 
-  systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
+  systemBackgroundColor: AquaPrimitiveColors.systemBackgroundLight,
 };
 
 // In dark mode, buttonUtilityBackground uses metal850 instead of metal950 so
@@ -137,5 +137,5 @@ export const darkColors: AquaColors = {
   buttonUtilityBackground: AquaPrimitiveColors.metal850,
   buttonFocusRing: AquaPrimitiveColors.neonBlue400,
 
-  systemBackgroundColor: AquaPrimitiveColors.systemBackgroundColor,
+  systemBackgroundColor: AquaPrimitiveColors.systemBackgroundDark,
 };

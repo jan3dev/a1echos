@@ -46,6 +46,7 @@ import sessionGallery from "@/components/domain/session/Session.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
 import textAppearanceGallery from "@/components/domain/settings/text-appearance/TextAppearance.gallery";
 import transcriptionGallery from "@/components/domain/transcription/Transcription.gallery";
+import transcriptionSettingsSheetGallery from "@/components/domain/transcription/transcription-settings-sheet/TranscriptionSettingsSheet.gallery";
 
 export type GalleryGroup = "UI" | "Shared" | "Domain";
 
@@ -115,6 +116,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   settingsGallery,
   textAppearanceGallery,
   transcriptionGallery,
+  transcriptionSettingsSheetGallery,
 ];
 
 export const findGalleryBySlug = (slug: string): GalleryEntry | undefined =>

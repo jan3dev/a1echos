@@ -9,14 +9,15 @@ export interface DimmerProps {
   onDismiss: () => void;
 }
 
-export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
+export const useScrimColor = () => {
   const { theme, isDark } = useTheme();
-
   // Pinned to the original glassBackground-dark opacity (0.7) so the scrim stays
   // dimmer-appropriate while glassBackground is bumped to ~0.88 for headers/panels.
-  const scrimColor = isDark
-    ? "rgba(9, 10, 11, 0.7)"
-    : theme.colors.glassInverse;
+  return isDark ? "rgba(9, 10, 11, 0.7)" : theme.colors.glassInverse;
+};
+
+export const Dimmer = ({ visible, children, onDismiss }: DimmerProps) => {
+  const scrimColor = useScrimColor();
 
   return (
     <Modal

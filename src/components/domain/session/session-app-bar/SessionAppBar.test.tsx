@@ -6,14 +6,6 @@ import { TestID, dynamicTestID } from "@/constants";
 
 import { SessionAppBar } from "./SessionAppBar";
 
-jest.mock("@/stores", () => ({
-  useSelectedLanguage: jest.fn(() => "en"),
-}));
-
-jest.mock("@/models", () => ({
-  getCountryCode: jest.fn((lang: string) => lang),
-}));
-
 jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({
     loc: {
@@ -22,14 +14,6 @@ jest.mock("@/hooks", () => ({
         count === 0 ? "Select items" : `${count} selected`,
     },
   })),
-}));
-
-jest.mock("../../../ui/icon/FlagIcon", () => ({
-  FlagIcon: (props: any) => {
-    const { View } = require("react-native");
-    const { dynamicTestID: dTID } = require("@/constants");
-    return <View testID={dTID.flag(props.name)} />;
-  },
 }));
 
 jest.mock("../../../ui/icon/Icon", () => ({
@@ -89,7 +73,6 @@ const defaultProps = {
   isIncognitoSession: false,
   onBackPressed: jest.fn(),
   onTitlePressed: jest.fn(),
-  onLanguageFlagPressed: jest.fn(),
   onMorePressed: jest.fn(),
   onExitSelectionPressed: jest.fn(),
   onCancelEditPressed: jest.fn(),
@@ -105,11 +88,6 @@ describe("SessionAppBar", () => {
   it("normal mode: renders session name as title", () => {
     const { getByTestId } = render(<SessionAppBar {...defaultProps} />);
     expect(getByTestId(TestID.TitleText).props.children).toBe("My Session");
-  });
-
-  it("normal mode: renders language flag icon", () => {
-    const { getByTestId } = render(<SessionAppBar {...defaultProps} />);
-    expect(getByTestId(dynamicTestID.flag("en"))).toBeTruthy();
   });
 
   it("normal mode: renders more icon (not copy)", () => {
