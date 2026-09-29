@@ -44,6 +44,69 @@ enum MicState {
     case transcribing
 }
 
+/// Vertical metrics matched to the stock keyboard per iOS release and screen
+/// class (measured on iOS 26.5 / 27 simulators across 375–440 pt widths).
+/// The total height must equal stock's with its predictive bar when the user
+/// switches over from it: the system keeps the outgoing keyboard's height
+/// while switching, so any mismatch reads as the background jumping.
+/// Whatever is left above the rows goes to the top bar — except that portrait
+/// bars never go below 44 pt (the 72 × 32 record button plus 8 pt clearance
+/// above the rows, so it's hard to miss). That makes a portrait globe switch
+/// up to 13 pt taller than stock; landscape still matches exactly.
+///
+/// Portrait adds ~17 pt of the host's own backdrop above the extension —
+/// always on iOS 26, and on iOS 27 only when arriving via the globe key (a
+/// keyboard that opens already on Echos gets none, so it's 17 pt shorter
+/// than stock there; nothing is on screen to jump against).
+struct KeyboardMetrics {
+    let keyHeight: CGFloat
+    let rowSpacing: CGFloat
+    /// Gap between the bottom row and the extension's bottom edge. On iOS 27
+    /// stock's bottom row on < 420 pt-wide phones sits 4 pt below the area
+    /// iOS gives extensions, so 0 is as low as the rows can go.
+    let bottomMargin: CGFloat
+    /// Everything above the rows; also the top-row key-preview headroom.
+    let topBarHeight: CGFloat
+
+    static let minPortraitTopBar: CGFloat = 44
+
+    var rowStackHeight: CGFloat { 4 * keyHeight + 3 * rowSpacing }
+    var qwertyHeight: CGFloat { topBarHeight + rowStackHeight + bottomMargin }
+
+    static func current(landscape: Bool) -> KeyboardMetrics {
+        let screen = UIScreen.main.bounds.size
+        let isLarge = min(screen.width, screen.height) >= 420
+        let hasHomeButton = max(screen.width, screen.height) < 700
+        if #available(iOS 27, *) {
+            if landscape {
+                return KeyboardMetrics(
+                    keyHeight: 32, rowSpacing: 8,
+                    bottomMargin: hasHomeButton ? 4 : 2, topBarHeight: 50
+                )
+            }
+            // Stock-matching bars would be 35 (SE, ≥ 420 pt) and 31 pt.
+            if hasHomeButton {
+                return KeyboardMetrics(
+                    keyHeight: 42, rowSpacing: 12, bottomMargin: 4,
+                    topBarHeight: minPortraitTopBar
+                )
+            }
+            return isLarge
+                ? KeyboardMetrics(keyHeight: 45, rowSpacing: 11, bottomMargin: 7, topBarHeight: minPortraitTopBar)
+                : KeyboardMetrics(keyHeight: 43, rowSpacing: 11, bottomMargin: 0, topBarHeight: minPortraitTopBar)
+        }
+        if landscape {
+            return KeyboardMetrics(
+                keyHeight: 27.25, rowSpacing: 8, bottomMargin: 4, topBarHeight: 149.0 / 3
+            )
+        }
+        // Stock-matching bar would be 35 pt.
+        return isLarge
+            ? KeyboardMetrics(keyHeight: 45, rowSpacing: 11, bottomMargin: 5, topBarHeight: minPortraitTopBar)
+            : KeyboardMetrics(keyHeight: 43, rowSpacing: 11, bottomMargin: 3, topBarHeight: minPortraitTopBar)
+    }
+}
+
 /// Main keyboard view. Inherits from `UIInputView` with `.keyboard` style so
 /// iOS renders the native translucent blur backdrop that the stock keyboard
 /// uses (requires the extension's `RequestsOpenAccess` to be true, which is
@@ -66,28 +129,26 @@ class KeyboardView: UIInputView {
         traitCollection.verticalSizeClass == .compact
     }
 
+    private var metrics: KeyboardMetrics {
+        KeyboardMetrics.current(landscape: isPhoneLandscape)
+    }
+
     var preferredHeight: CGFloat {
         let isLandscape = isPhoneLandscape
-        let rowsHeight: CGFloat
+        let m = metrics
         switch currentLayout {
         case .emoji, .emojiSearch:
-            // The picker occupies `rowsHeight − 4 (top band) − 2 (bottom
-            // margin)`. Portrait keeps its 4×52pt grid; landscape is taller
-            // (242) so its 3-row grid gets ~44pt cells — big enough for the
-            // larger emoji glyph without tightening the gaps between them.
-            rowsHeight = isLandscape ? 252 : 319
+            // Extra room over QWERTY for the picker's grid (cells size to the
+            // picker's height) and the search overlay's fixed-height field +
+            // results strip, which sits above the unchanged key rows.
+            return m.qwertyHeight + (isLandscape ? 111 : 107)
         case .numberPad, .decimalPad:
-            // Top bar is hidden on numeric pads — return the rows-only budget
-            // (4 pt top band + rowStack height + 2 pt bottom margin).
-            return isLandscape ? 140 : 214
+            // Top bar is hidden on numeric pads — rows-only budget
+            // (4 pt top band + rowStack height + bottom slack).
+            return m.rowStackHeight + (isLandscape ? 7 : 9)
         default:
-            // Budget = 8 pt top band (rowStackTopFromTopBar, gives the top-row
-            // key-preview balloon headroom) + the fixed rowStack height + the
-            // bottom margin (3 pt portrait, 4 pt landscape), which lands the
-            // bottom row where stock puts it.
-            rowsHeight = isLandscape ? 145 : 216
+            return m.qwertyHeight
         }
-        return rowsHeight + KeyboardTopBar.preferredHeight
     }
 
     private let theme = KeyboardTheme()
@@ -118,16 +179,10 @@ class KeyboardView: UIInputView {
     // Pins the rowStack to the QWERTY-equivalent height regardless of mode
     // so swapping into/out of search doesn't resize the keys.
     private var rowStackHeightConstraint: NSLayoutConstraint!
+    private var rowStackBottom: NSLayoutConstraint!
+    private var topBarHeightConstraint: NSLayoutConstraint!
     private var rowStackLeading: NSLayoutConstraint!
     private var rowStackTrailing: NSLayoutConstraint!
-
-    /// Height the rowStack should occupy in any QWERTY-style mode.
-    /// Portrait: 205 pt = 4 rows × 43 pt + 3 × 11 pt spacing (measured against
-    /// the iOS 27 stock keyboard on an iPhone 17 Pro simulator).
-    /// Landscape: 133 pt = 4 rows × 27.25 pt + 3 × 8 pt spacing.
-    private var qwertyRowStackHeight: CGFloat {
-        isPhoneLandscape ? 133 : 205
-    }
 
     /// Stock insets the rows 7 pt from the view edge in portrait, 4 pt in
     /// landscape.
@@ -142,7 +197,7 @@ class KeyboardView: UIInputView {
             // uniform mesh; the keys grow taller to absorb the tighter spacing.
             return 6
         default:
-            return isPhoneLandscape ? 8 : 11
+            return metrics.rowSpacing
         }
     }
 
@@ -287,34 +342,37 @@ class KeyboardView: UIInputView {
         addSubview(keyPreview)
         addSubview(keyVariants)
         rowStackTopFromTopBar = rowStackView.topAnchor.constraint(
-            equalTo: topBar.bottomAnchor, constant: 8
+            equalTo: topBar.bottomAnchor
         )
         rowStackTopFromContainer = rowStackView.topAnchor.constraint(
             equalTo: topAnchor, constant: 4
         )
         rowStackHeightConstraint = rowStackView.heightAnchor.constraint(
-            equalToConstant: qwertyRowStackHeight
+            equalToConstant: metrics.rowStackHeight
         )
         // Required: the rows' size is the user-visible invariant. The
         // bottom anchor below has its priority lowered to .defaultHigh-1
         // so if iOS forces a slightly different total keyboard height
         // the slack lands as a bottom margin instead of resizing keys.
         rowStackHeightConstraint.priority = .required
+        topBarHeightConstraint = topBar.heightAnchor.constraint(
+            equalToConstant: metrics.topBarHeight
+        )
         rowStackLeading = rowStackView.leadingAnchor.constraint(
             equalTo: leadingAnchor, constant: rowStackSideInset
         )
         rowStackTrailing = rowStackView.trailingAnchor.constraint(
             equalTo: trailingAnchor, constant: -rowStackSideInset
         )
-        let rowStackBottom = rowStackView.bottomAnchor.constraint(
-            equalTo: bottomAnchor, constant: -3
+        rowStackBottom = rowStackView.bottomAnchor.constraint(
+            equalTo: bottomAnchor, constant: -metrics.bottomMargin
         )
         rowStackBottom.priority = .defaultHigh - 1
         NSLayoutConstraint.activate([
             topBar.leadingAnchor.constraint(equalTo: leadingAnchor),
             topBar.trailingAnchor.constraint(equalTo: trailingAnchor),
             topBar.topAnchor.constraint(equalTo: topAnchor),
-            topBar.heightAnchor.constraint(equalToConstant: KeyboardTopBar.preferredHeight),
+            topBarHeightConstraint,
 
             rowStackLeading,
             rowStackTrailing,
@@ -1197,7 +1255,14 @@ class KeyboardView: UIInputView {
     override func layoutSubviews() {
         super.layoutSubviews()
         keyFramesValid = false
-        rowStackHeightConstraint.constant = qwertyRowStackHeight
+        applyMetrics()
+    }
+
+    private func applyMetrics() {
+        let m = metrics
+        rowStackHeightConstraint.constant = m.rowStackHeight
+        rowStackBottom.constant = -m.bottomMargin
+        topBarHeightConstraint.constant = m.topBarHeight
         rowStackLeading.constant = rowStackSideInset
         rowStackTrailing.constant = -rowStackSideInset
         rowStackView.spacing = rowStackInterRowSpacing
@@ -1207,10 +1272,7 @@ class KeyboardView: UIInputView {
         super.traitCollectionDidChange(previousTraitCollection)
         if traitCollection.verticalSizeClass
             != previousTraitCollection?.verticalSizeClass {
-            rowStackHeightConstraint.constant = qwertyRowStackHeight
-            rowStackLeading.constant = rowStackSideInset
-            rowStackTrailing.constant = -rowStackSideInset
-            rowStackView.spacing = rowStackInterRowSpacing
+            applyMetrics()
             // Rebuild rows so shift/delete/spacer widths pick up the
             // orientation-specific `effectiveWidthWeight` values.
             if currentLayout != .emoji {
@@ -1609,7 +1671,7 @@ extension KeyboardView: EmojiPickerViewDelegate {
             // horizontal space.
             picker.leadingAnchor.constraint(equalTo: leadingAnchor),
             picker.trailingAnchor.constraint(equalTo: trailingAnchor),
-            picker.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 4),
+            picker.topAnchor.constraint(equalTo: topBar.bottomAnchor),
             picker.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
         ])
         // Keep the popups (preview / variants) above the picker.
@@ -1679,7 +1741,7 @@ extension KeyboardView: EmojiSearchOverlayViewDelegate {
         NSLayoutConstraint.activate([
             overlay.leadingAnchor.constraint(equalTo: leadingAnchor),
             overlay.trailingAnchor.constraint(equalTo: trailingAnchor),
-            overlay.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 4),
+            overlay.topAnchor.constraint(equalTo: topBar.bottomAnchor),
         ])
         rowStackTopFromSearchOverlay = topConstraint
         // Keep popups above the overlay.

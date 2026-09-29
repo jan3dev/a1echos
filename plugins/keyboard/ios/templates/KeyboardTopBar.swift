@@ -12,11 +12,6 @@ protocol KeyboardTopBarDelegate: AnyObject {
 
 final class KeyboardTopBar: UIView {
 
-    /// ~0pt padding above + 32pt button + 8pt padding below. Kept compact so
-    /// the keyboard adds as little chrome as possible over the key rows; the
-    /// button is bottom-pinned so the slim top edge sits flush at the top.
-    static let preferredHeight: CGFloat = 40
-
     weak var delegate: KeyboardTopBarDelegate?
 
     private let recordButton = UIButton(type: .system)
@@ -127,6 +122,18 @@ final class KeyboardTopBar: UIView {
         ])
 
         applyMicState()
+    }
+
+    /// Near-misses around the record button belong to it: `KeyboardView`
+    /// claims every unowned point for the rows and routes it to the nearest
+    /// key, so a tap just beside the capsule would otherwise type a letter.
+    /// The zone spans the bar's full height and the 8 pt gutter on each side.
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if bounds.contains(point),
+           recordButton.frame.insetBy(dx: -8, dy: -bounds.height).contains(point) {
+            return recordButton
+        }
+        return super.hitTest(point, with: event)
     }
 
     override func layoutSubviews() {
