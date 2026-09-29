@@ -17,6 +17,7 @@ export const useLocalization = () => {
       share: t("share"),
       rename: t("rename"),
       copy: t("copy"),
+      merge: t("merge"),
       selectedCount: (count: number) => t("selectedCount", { count }),
       sessionNameLabel: t("sessionNameLabel"),
       sessionNameMaxLengthHelper: t("sessionNameMaxLengthHelper"),
@@ -51,6 +52,9 @@ export const useLocalization = () => {
         t("sessionDeleteTranscriptionsMessage", { count }),
       sessionTranscriptionsDeleted: (count: number) =>
         t("sessionTranscriptionsDeleted", { count }),
+      sessionTranscriptionsMerged: (count: number) =>
+        t("sessionTranscriptionsMerged", { count }),
+      mergeFailedTitle: t("mergeFailedTitle"),
       allTranscriptionsCopied: t("allTranscriptionsCopied"),
       noTranscriptionsToCopy: t("noTranscriptionsToCopy"),
       copyFailed: (error: string) => t("copyFailed", { error }),
@@ -65,6 +69,7 @@ export const useLocalization = () => {
       fontWeight: t("fontWeight"),
       boldText: t("boldText"),
       spokenLanguageTitle: t("spokenLanguageTitle"),
+      spokenLanguageDescription: t("spokenLanguageDescription"),
       auto: t("auto"),
       light: t("light"),
       dark: t("dark"),

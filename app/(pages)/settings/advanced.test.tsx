@@ -58,6 +58,7 @@ jest.mock("@/stores", () => ({
   useSetKeyboardSound: jest.fn(() => mockSetKeyboardSound),
   useKeyboardMicTimeout: jest.fn(() => 300),
   useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
+  useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
 }));
 
 jest.mock("@/components", () => {
@@ -184,6 +185,16 @@ describe("AdvancedSettingsScreen", () => {
     expect(getByText("advancedSettingsAddKeyboardDescription")).toBeTruthy();
   });
 
+  it("shows the EN layout label on the Add Echos Keyboard row", () => {
+    const { useSelectedLanguage } = require("@/stores");
+    (useSelectedLanguage as jest.Mock).mockReturnValueOnce({
+      code: "de",
+      name: "German",
+    });
+    const { getByText } = render(<AdvancedSettingsScreen />);
+    expect(getByText("EN")).toBeTruthy();
+  });
+
   it("pressing Add Echos Keyboard row opens the prompt", () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
     fireEvent.press(getByTestId(TestID.SettingsAddKeyboardRow));
@@ -286,6 +297,13 @@ describe("AdvancedSettingsScreen", () => {
     (useKeyboardMicTimeout as jest.Mock).mockReturnValueOnce(seconds);
     const { getByText } = render(<AdvancedSettingsScreen />);
     expect(getByText(label)).toBeTruthy();
+  });
+
+  it("renders the spoken language row and navigates to the picker", () => {
+    const { getByTestId, getAllByText } = render(<AdvancedSettingsScreen />);
+    expect(getAllByText("EN")).toHaveLength(2);
+    fireEvent.press(getByTestId(TestID.SettingsLanguage));
+    expect(mockPush).toHaveBeenCalledWith(Routes.settingsLanguage);
   });
 
   it("pressing the microphone-timeout row navigates to the picker", () => {

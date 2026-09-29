@@ -292,6 +292,23 @@ describe("DatabaseService", () => {
     });
   });
 
+  describe("mergeTranscriptions", () => {
+    it("upserts the merged row and deletes sources in one transaction", async () => {
+      queryResults.rows = [{ audioPath: "/audio/b.wav" }, { audioPath: "" }];
+
+      const result = await databaseService.mergeTranscriptions(
+        sampleTranscription,
+        ["t2", "t3"],
+      );
+
+      expect(chain.values).toHaveBeenCalledWith(
+        transcriptionRowFor(sampleTranscription),
+      );
+      expect(mockDelete).toHaveBeenCalled();
+      expect(result.audioPaths).toEqual(["/audio/b.wav"]);
+    });
+  });
+
   describe("clearAllTranscriptions", () => {
     it("returns audio paths and clears the table", async () => {
       queryResults.rows = [

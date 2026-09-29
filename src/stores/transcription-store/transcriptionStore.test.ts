@@ -23,6 +23,7 @@ import {
   useAudioLevel,
   useDeleteTranscriptions,
   useIsRecording,
+  useMergeTranscriptions,
   useLivePreview,
   useSessionTranscriptions,
   useStartRecording,
@@ -43,6 +44,7 @@ jest.mock("@/services", () => ({
     upsertTranscription: jest.fn(async () => undefined),
     deleteTranscription: jest.fn(async () => ({ audioPath: null })),
     deleteTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
+    mergeTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
     clearAllTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
   },
   audioProtectionService: {
@@ -661,6 +663,115 @@ describe("transcriptionStore", () => {
           .mock.calls[0][0];
         expect(new Set(calledWith)).toEqual(new Set(["tx1", "tx2"]));
         expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
+      });
+    });
+
+    describe("mergeTranscriptions", () => {
+      const a = makeTx({
+        id: "a",
+        text: "First",
+        timestamp: new Date("2024-01-01"),
+      });
+      const b = makeTx({
+        id: "b",
+        text: "Second ",
+        timestamp: new Date("2024-01-02"),
+      });
+      const c = makeTx({
+        id: "c",
+        text: "Third",
+        timestamp: new Date("2024-01-03"),
+      });
+
+      it("joins text into the oldest selected item and deletes the rest", async () => {
+        useSessionStore.setState({ sessions: [testSession] });
+        useTranscriptionStore.setState({ transcriptions: [a, b, c] });
+        (
+          databaseService.mergeTranscriptions as jest.Mock
+        ).mockResolvedValueOnce({ audioPaths: ["/audio/c.wav"] });
+
+        await useTranscriptionStore
+          .getState()
+          .mergeTranscriptions(new Set(["c", "a"]));
+
+        const merged = { ...a, text: "First\n\nThird" };
+        expect(useTranscriptionStore.getState().transcriptions).toEqual([
+          merged,
+          b,
+        ]);
+        expect(databaseService.mergeTranscriptions).toHaveBeenCalledWith(
+          merged,
+          ["c"],
+        );
+        expect(audioProtectionService.deleteAudio).toHaveBeenCalledWith(
+          "/audio/c.wav",
+        );
+      });
+
+      it("throws with fewer than two items", async () => {
+        useTranscriptionStore.setState({ transcriptions: [a, b] });
+        await expect(
+          useTranscriptionStore.getState().mergeTranscriptions(new Set(["a"])),
+        ).rejects.toThrow("at least two");
+        expect(useTranscriptionStore.getState().transcriptions).toEqual([a, b]);
+      });
+
+      it("rolls back when persisting the merge fails", async () => {
+        useSessionStore.setState({ sessions: [testSession] });
+        useTranscriptionStore.setState({ transcriptions: [a, b] });
+        (
+          databaseService.mergeTranscriptions as jest.Mock
+        ).mockRejectedValueOnce(new Error("db"));
+
+        await expect(
+          useTranscriptionStore
+            .getState()
+            .mergeTranscriptions(new Set(["a", "b"])),
+        ).rejects.toThrow("Failed to merge transcriptions");
+        expect(useTranscriptionStore.getState().transcriptions).toEqual([a, b]);
+        expect(audioProtectionService.deleteAudio).not.toHaveBeenCalled();
+      });
+
+      it("refuses to merge while recording", async () => {
+        useTranscriptionStore.setState({
+          transcriptions: [a, b],
+          state: TranscriptionState.RECORDING,
+        });
+        await expect(
+          useTranscriptionStore
+            .getState()
+            .mergeTranscriptions(new Set(["a", "b"])),
+        ).rejects.toThrow("while recording");
+        expect(useTranscriptionStore.getState().transcriptions).toEqual([a, b]);
+      });
+
+      it("resolves when the session timestamp update fails after commit", async () => {
+        useSessionStore.setState({ sessions: [testSession] });
+        useTranscriptionStore.setState({ transcriptions: [a, b] });
+        (databaseService.upsertSession as jest.Mock).mockRejectedValueOnce(
+          new Error("db"),
+        );
+
+        await expect(
+          useTranscriptionStore
+            .getState()
+            .mergeTranscriptions(new Set(["a", "b"])),
+        ).resolves.toBeUndefined();
+        expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
+      });
+
+      it("skips persistence for incognito sessions", async () => {
+        useSessionStore.setState({
+          incognitoSession: { ...testSession, isIncognito: true },
+        });
+        useTranscriptionStore.setState({ transcriptions: [a, b] });
+
+        await useTranscriptionStore
+          .getState()
+          .mergeTranscriptions(new Set(["a", "b"]));
+
+        expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
+        expect(databaseService.mergeTranscriptions).not.toHaveBeenCalled();
       });
     });
 
@@ -2008,6 +2119,11 @@ describe("transcriptionStore", () => {
 
     it("useDeleteTranscriptions returns a function", () => {
       const { result } = renderHook(() => useDeleteTranscriptions());
+      expect(typeof result.current).toBe("function");
+    });
+
+    it("useMergeTranscriptions returns a function", () => {
+      const { result } = renderHook(() => useMergeTranscriptions());
       expect(typeof result.current).toBe("function");
     });
 

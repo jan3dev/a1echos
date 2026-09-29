@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   bannerContainer: {
-    paddingTop: 24,
+    paddingTop: 48,
+    paddingBottom: 24,
   },
   spacer: {
     flexGrow: 1,

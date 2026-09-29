@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppBarBlurTarget,
   Icon,
+  type IconName,
   ListItem,
   Screen,
   Text,
@@ -19,6 +20,7 @@ import {
   useKeyboardHaptic,
   useKeyboardMicTimeout,
   useKeyboardSound,
+  useSelectedLanguage,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
   useSetKeyboardSound,
@@ -47,6 +49,12 @@ export default function AdvancedSettingsScreen() {
   const setKeyboardSound = useSetKeyboardSound();
   const keyboardMicTimeout = useKeyboardMicTimeout();
   const showKeyboardPrompt = useShowKeyboardPrompt();
+  const selectedLanguage = useSelectedLanguage();
+
+  const secondary = theme.colors.textSecondary;
+  const leading = (name: IconName) => (
+    <Icon name={name} size={24} color={secondary} />
+  );
 
   const micTimeoutDisplay = loc[micTimeoutLabelKey(keyboardMicTimeout)];
 
@@ -84,9 +92,21 @@ export default function AdvancedSettingsScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
+          <ListItem
+            testID={TestID.SettingsLanguage}
+            title={loc.spokenLanguageTitle}
+            titleTrailing={selectedLanguage.code.toUpperCase()}
+            titleTrailingColor={secondary}
+            iconLeading={leading("language")}
+            iconTrailing={
+              <Icon name="chevron_right" size={24} color={secondary} />
+            }
+            onPress={() => router.push(Routes.settingsLanguage)}
+          />
           <Captioned caption={loc.smartSplitDescription}>
             <ListItem
               testID={TestID.SettingsSmartSplitToggle}
+              iconLeading={leading("scissor")}
               title={loc.smartSplitTitle}
               iconTrailing={
                 <Toggle
@@ -101,6 +121,7 @@ export default function AdvancedSettingsScreen() {
           <Captioned caption={loc.keyboardAutocorrectDescription}>
             <ListItem
               testID={TestID.SettingsKeyboardAutocorrectToggle}
+              iconLeading={leading("edit")}
               title={loc.keyboardAutocorrectTitle}
               iconTrailing={
                 <Toggle
@@ -115,6 +136,7 @@ export default function AdvancedSettingsScreen() {
           <Captioned caption={loc.keyboardHapticDescription}>
             <ListItem
               testID={TestID.SettingsKeyboardHapticToggle}
+              iconLeading={leading("flash")}
               title={loc.keyboardHapticTitle}
               iconTrailing={
                 <Toggle
@@ -129,6 +151,7 @@ export default function AdvancedSettingsScreen() {
           <Captioned caption={loc.keyboardSoundDescription}>
             <ListItem
               testID={TestID.SettingsKeyboardSoundToggle}
+              iconLeading={leading("sound")}
               title={loc.keyboardSoundTitle}
               iconTrailing={
                 <Toggle
@@ -146,6 +169,7 @@ export default function AdvancedSettingsScreen() {
             <Captioned caption={loc.micTimeoutDescription}>
               <ListItem
                 testID={TestID.SettingsMicTimeoutRow}
+                iconLeading={leading("timer")}
                 title={loc.micTimeoutTitle}
                 titleTrailing={micTimeoutDisplay}
                 titleTrailingColor={theme.colors.textSecondary}
@@ -163,7 +187,10 @@ export default function AdvancedSettingsScreen() {
           <Captioned caption={loc.advancedSettingsAddKeyboardDescription}>
             <ListItem
               testID={TestID.SettingsAddKeyboardRow}
+              iconLeading={leading("globe")}
               title={loc.advancedSettingsAddKeyboardTitle}
+              titleTrailing="EN"
+              titleTrailingColor={secondary}
               iconTrailing={
                 <Icon
                   name="chevron_right"

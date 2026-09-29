@@ -154,6 +154,7 @@ interface TranscriptionStore {
   updateTranscription: (transcription: Transcription) => Promise<void>;
   deleteTranscription: (id: string) => Promise<void>;
   deleteTranscriptions: (ids: Set<string>) => Promise<void>;
+  mergeTranscriptions: (ids: Set<string>) => Promise<void>;
   clearTranscriptions: () => Promise<void>;
   deleteParagraphFromTranscription: (
     id: string,
@@ -730,6 +731,74 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         });
         throw new Error(`Failed to delete transcriptions: ${error}`);
       }
+    },
+
+    mergeTranscriptions: async (ids: Set<string>) => {
+      // File-mode items aren't persisted until stop, which would resurrect merged sources.
+      if (
+        get().isStreaming() ||
+        get().isTranscribing() ||
+        get().state === TranscriptionState.RECORDING_STARTING
+      ) {
+        throw new Error("Cannot merge while recording");
+      }
+      const previous = get().transcriptions;
+      const selected = previous.filter((t) => ids.has(t.id));
+      if (selected.length < 2) {
+        throw new Error("Select at least two transcriptions to merge");
+      }
+
+      const [target, ...rest] = selected;
+      const restIds = new Set(rest.map((t) => t.id));
+      const merged: Transcription = {
+        ...target,
+        text: selected
+          .map((t) => t.text.trim())
+          .filter(Boolean)
+          .join("\n\n"),
+      };
+
+      // One synchronous commit so the caller's LayoutAnimation covers it.
+      set({
+        transcriptions: previous
+          .filter((t) => !restIds.has(t.id))
+          .map((t) => (t.id === target.id ? merged : t)),
+      });
+
+      if (useSessionStore.getState().incognitoSession?.id === target.sessionId)
+        return;
+
+      let audioPaths: string[];
+      try {
+        ({ audioPaths } = await databaseService.mergeTranscriptions(merged, [
+          ...restIds,
+        ]));
+      } catch (error) {
+        set({
+          transcriptions: [
+            ...get().transcriptions.filter((t) => t.id !== target.id),
+            ...selected,
+          ].sort((x, y) => x.timestamp.getTime() - y.timestamp.getTime()),
+        });
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: "Failed to merge transcriptions",
+        });
+        throw new Error(`Failed to merge transcriptions: ${error}`);
+      }
+      // The merge is committed; cleanup failures must not surface as a failed merge.
+      await Promise.allSettled([
+        ...audioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+        useSessionStore
+          .getState()
+          .updateSessionModifiedTimestamp(target.sessionId)
+          .catch((error) =>
+            logError(error, {
+              flag: FeatureFlag.store,
+              message: "Failed to update session after merge",
+            }),
+          ),
+      ]);
     },
 
     clearTranscriptions: async () => {
@@ -1315,6 +1384,8 @@ export const useStopRecordingAndSave = () =>
   useTranscriptionStore((s) => s.stopRecordingAndSave);
 export const useDeleteTranscriptions = () =>
   useTranscriptionStore((s) => s.deleteTranscriptions);
+export const useMergeTranscriptions = () =>
+  useTranscriptionStore((s) => s.mergeTranscriptions);
 export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
 
 export const initializeTranscriptionStore = async () => {

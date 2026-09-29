@@ -15,6 +15,7 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   StyleSheet,
   View,
@@ -49,6 +50,7 @@ import {
   useIsRecording,
   useIsTranscriptionSelectionMode,
   useLivePreview,
+  useMergeTranscriptions,
   useRenameSession,
   useSelectAllTranscriptions,
   useSelectedTranscriptionIdsSet,
@@ -127,6 +129,7 @@ export default function SessionScreen() {
   const exitSelectionMode = useExitTranscriptionSelection();
   const selectAllTranscriptions = useSelectAllTranscriptions();
   const deleteTranscriptions = useDeleteTranscriptions();
+  const mergeTranscriptions = useMergeTranscriptions();
 
   const handleLongPress = useCallback(
     async (transcriptionId: string) => {
@@ -438,6 +441,31 @@ export default function SessionScreen() {
     loc,
   ]);
 
+  const handleMergeSelectedPressed = useCallback(async () => {
+    const count = selectedIds.size;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    try {
+      const merge = mergeTranscriptions(selectedIds);
+      exitSelectionMode();
+      await merge;
+      showGlobalTooltip(loc.sessionTranscriptionsMerged(count));
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      showAlertToast({
+        title: loc.mergeFailedTitle,
+        message: getErrorMessage(error),
+        variant: "error",
+      });
+    }
+  }, [
+    selectedIds,
+    mergeTranscriptions,
+    exitSelectionMode,
+    showGlobalTooltip,
+    showAlertToast,
+    loc,
+  ]);
+
   const handleCopySelectedPressed = useCallback(async () => {
     if (!hasSelectedItems) return;
 
@@ -580,6 +608,16 @@ export default function SessionScreen() {
         disabled: !hasSelectedItems,
         onPress: handleDeleteSelectedPressed,
       },
+      ...(selectedIds.size >= 2 && !isRecording
+        ? [
+            {
+              key: "merge",
+              icon: "blend",
+              label: loc.merge,
+              onPress: handleMergeSelectedPressed,
+            },
+          ]
+        : []),
       {
         key: "copy",
         icon: "copy",
@@ -598,10 +636,14 @@ export default function SessionScreen() {
     [
       handleCopySelectedPressed,
       handleDeleteSelectedPressed,
+      handleMergeSelectedPressed,
       handleSharePressed,
       hasSelectedItems,
+      isRecording,
+      selectedIds.size,
       loc.copy,
       loc.delete,
+      loc.merge,
       loc.share,
       theme.colors.accentDanger,
     ],

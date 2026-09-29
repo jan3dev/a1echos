@@ -86,6 +86,7 @@ jest.mock("@/hooks", () => ({
 
 jest.mock("@/utils", () => ({
   logError: jest.fn(),
+  getErrorMessage: (e: Error) => e.message,
   FeatureFlag: {
     recording: "recording",
     session: "session",
@@ -142,6 +143,7 @@ jest.mock("@/stores", () => ({
   useExitTranscriptionSelection: jest.fn(() => mockExitSelectionMode),
   useSelectAllTranscriptions: jest.fn(() => jest.fn()),
   useDeleteTranscriptions: jest.fn(() => jest.fn()),
+  useMergeTranscriptions: jest.fn(() => jest.fn()),
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
@@ -300,6 +302,7 @@ beforeEach(() => {
   );
   (stores.useSelectAllTranscriptions as jest.Mock).mockReturnValue(jest.fn());
   (stores.useDeleteTranscriptions as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useMergeTranscriptions as jest.Mock).mockReturnValue(jest.fn());
 
   // Restore component mocks
   const components = jest.requireMock("@/components");
@@ -725,6 +728,71 @@ describe("SessionScreen", () => {
       expect(mockHideDeleteToast).toHaveBeenCalled();
       expect(mockDeleteTranscriptions).toHaveBeenCalledWith(selectedIds);
       expect(mockShowGlobalTooltip).toHaveBeenCalled();
+    });
+  });
+
+  // --- F1. handleMergeSelectedPressed ---
+
+  describe("handleMergeSelectedPressed", () => {
+    const { useMergeTranscriptions, useShowGlobalTooltip } =
+      jest.requireMock("@/stores");
+
+    it("hides merge action with fewer than two selected", async () => {
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        new Set(["t1"]),
+      );
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      expect(navbarActions.merge).toBeUndefined();
+    });
+
+    it("merges selected, exits selection and shows tooltip", async () => {
+      const selectedIds = new Set(["t1", "t2"]);
+      const mockMerge = jest.fn().mockResolvedValue(undefined);
+      const mockShowGlobalTooltip = jest.fn();
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        selectedIds,
+      );
+      (useMergeTranscriptions as jest.Mock).mockReturnValue(mockMerge);
+      (useShowGlobalTooltip as jest.Mock).mockReturnValue(
+        mockShowGlobalTooltip,
+      );
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        await navbarActions.merge();
+      });
+
+      expect(mockMerge).toHaveBeenCalledWith(selectedIds);
+      expect(mockExitSelectionMode).toHaveBeenCalled();
+      expect(mockShowGlobalTooltip).toHaveBeenCalled();
+    });
+
+    it("shows error toast when merge fails", async () => {
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        new Set(["t1", "t2"]),
+      );
+      (useMergeTranscriptions as jest.Mock).mockReturnValue(
+        jest.fn().mockRejectedValue(new Error("boom")),
+      );
+
+      render(<SessionScreen />);
+      await act(async () => {});
+
+      await act(async () => {
+        await navbarActions.merge();
+      });
+
+      expect(mockShowDeleteToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "error" }),
+      );
     });
   });
 

@@ -52,6 +52,7 @@ export {
   initializeTranscriptionStore,
   useAudioLevel,
   useDeleteTranscriptions,
+  useMergeTranscriptions,
   useIsEngineInitializing,
   useIsRecording,
   useLivePreview,

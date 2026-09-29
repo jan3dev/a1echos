@@ -111,9 +111,12 @@ const createDatabaseService = () => {
     return rows.map(transcriptionFromRow);
   };
 
-  const upsertTranscription = async (t: Transcription): Promise<void> => {
+  const upsertTranscriptionIn = async (
+    db: Pick<ReturnType<typeof getDb>, "insert">,
+    t: Transcription,
+  ): Promise<void> => {
     const row = transcriptionToRow(t);
-    await getDb()
+    await db
       .insert(transcriptions)
       .values(row)
       .onConflictDoUpdate({
@@ -127,6 +130,9 @@ const createDatabaseService = () => {
       })
       .run();
   };
+
+  const upsertTranscription = (t: Transcription): Promise<void> =>
+    upsertTranscriptionIn(getDb(), t);
 
   const deleteTranscription = async (
     id: string,
@@ -145,23 +151,41 @@ const createDatabaseService = () => {
     return { audioPath };
   };
 
+  const deleteTranscriptionsIn = async (
+    db: Pick<ReturnType<typeof getDb>, "select" | "delete">,
+    ids: string[],
+  ): Promise<string[]> => {
+    const rows = await db
+      .select({ audioPath: transcriptions.audioPath })
+      .from(transcriptions)
+      .where(inArray(transcriptions.id, ids))
+      .all();
+    await db
+      .delete(transcriptions)
+      .where(inArray(transcriptions.id, ids))
+      .run();
+    return extractAudioPaths(rows);
+  };
+
   const deleteTranscriptions = async (
     ids: string[],
   ): Promise<{ audioPaths: string[] }> => {
     if (ids.length === 0) return { audioPaths: [] };
-    const db = getDb();
     let audioPaths: string[] = [];
-    await db.transaction(async (tx) => {
-      const rows = await tx
-        .select({ audioPath: transcriptions.audioPath })
-        .from(transcriptions)
-        .where(inArray(transcriptions.id, ids))
-        .all();
-      audioPaths = extractAudioPaths(rows);
-      await tx
-        .delete(transcriptions)
-        .where(inArray(transcriptions.id, ids))
-        .run();
+    await getDb().transaction(async (tx) => {
+      audioPaths = await deleteTranscriptionsIn(tx, ids);
+    });
+    return { audioPaths };
+  };
+
+  const mergeTranscriptions = async (
+    merged: Transcription,
+    sourceIds: string[],
+  ): Promise<{ audioPaths: string[] }> => {
+    let audioPaths: string[] = [];
+    await getDb().transaction(async (tx) => {
+      await upsertTranscriptionIn(tx, merged);
+      audioPaths = await deleteTranscriptionsIn(tx, sourceIds);
     });
     return { audioPaths };
   };
@@ -197,6 +221,7 @@ const createDatabaseService = () => {
     upsertTranscription,
     deleteTranscription,
     deleteTranscriptions,
+    mergeTranscriptions,
     clearAllTranscriptions,
     vacuum,
   };
