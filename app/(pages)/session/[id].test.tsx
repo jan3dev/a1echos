@@ -140,12 +140,14 @@ jest.mock("@/stores", () => ({
   useToggleTranscriptionSelection: jest.fn(() => jest.fn()),
   useEnterTranscriptionSelection: jest.fn(() => jest.fn()),
   useExitTranscriptionSelection: jest.fn(() => mockExitSelectionMode),
+  useSelectAllTranscriptions: jest.fn(() => jest.fn()),
   useDeleteTranscriptions: jest.fn(() => jest.fn()),
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
 let mockOnBackPressed: (() => void) | null = null;
 let mockOnMorePressed: (() => void) | null = null;
+let mockOnSelectAllPressed: (() => void) | null = null;
 let mockOnCancelEditPressed: (() => void) | null = null;
 let mockOnSaveEditPressed: (() => void) | null = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
@@ -170,6 +172,7 @@ jest.mock("@/components", () => {
       mockOnTitlePressed = props.onTitlePressed;
       mockOnBackPressed = props.onBackPressed;
       mockOnMorePressed = props.onMorePressed;
+      mockOnSelectAllPressed = props.onSelectAllPressed;
       mockOnCancelEditPressed = props.onCancelEditPressed;
       mockOnSaveEditPressed = props.onSaveEditPressed;
       return (
@@ -242,6 +245,7 @@ beforeEach(() => {
   mockOnTitlePressed = null;
   mockOnBackPressed = null;
   mockOnMorePressed = null;
+  mockOnSelectAllPressed = null;
   mockOnCancelEditPressed = null;
   mockOnSaveEditPressed = null;
   mockOnRenameSubmit = null;
@@ -294,6 +298,7 @@ beforeEach(() => {
   (stores.useExitTranscriptionSelection as jest.Mock).mockReturnValue(
     mockExitSelectionMode,
   );
+  (stores.useSelectAllTranscriptions as jest.Mock).mockReturnValue(jest.fn());
   (stores.useDeleteTranscriptions as jest.Mock).mockReturnValue(jest.fn());
 
   // Restore component mocks
@@ -372,6 +377,26 @@ describe("SessionScreen", () => {
     });
 
     expect(mockEnter).toHaveBeenCalled();
+  });
+
+  it("select all press selects every transcription in the session", async () => {
+    const mockSelectAll = jest.fn();
+    const { useSelectAllTranscriptions, useSessionTranscriptions } =
+      jest.requireMock("@/stores");
+    (useSelectAllTranscriptions as jest.Mock).mockReturnValue(mockSelectAll);
+    (useSessionTranscriptions as jest.Mock).mockReturnValue([
+      { id: "t1", text: "a" },
+      { id: "t2", text: "b" },
+    ]);
+
+    render(<SessionScreen />);
+    await act(async () => {});
+
+    await act(async () => {
+      mockOnSelectAllPressed!();
+    });
+
+    expect(mockSelectAll).toHaveBeenCalledWith(["t1", "t2"]);
   });
 
   it("title press opens rename modal for non-incognito", async () => {

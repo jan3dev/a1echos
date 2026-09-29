@@ -50,6 +50,7 @@ import {
   useIsTranscriptionSelectionMode,
   useLivePreview,
   useRenameSession,
+  useSelectAllTranscriptions,
   useSelectedTranscriptionIdsSet,
   useSelectedTranscriptionMode,
   useSessionStore,
@@ -124,6 +125,7 @@ export default function SessionScreen() {
   const toggleTranscriptionSelection = useToggleTranscriptionSelection();
   const enterSelectionMode = useEnterTranscriptionSelection();
   const exitSelectionMode = useExitTranscriptionSelection();
+  const selectAllTranscriptions = useSelectAllTranscriptions();
   const deleteTranscriptions = useDeleteTranscriptions();
 
   const handleLongPress = useCallback(
@@ -648,6 +650,9 @@ export default function SessionScreen() {
         onTitlePressed={handleTitlePressed}
         onMorePressed={enterSelectionMode}
         onExitSelectionPressed={exitSelectionMode}
+        onSelectAllPressed={() =>
+          selectAllTranscriptions(transcriptions.map((t) => t.id))
+        }
         onCancelEditPressed={handleCancelEdit}
         onSaveEditPressed={handleSaveEdit}
         blurTarget={blurTargetRef}

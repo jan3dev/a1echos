@@ -18,6 +18,7 @@ interface SessionAppBarProps {
   onTitlePressed?: () => void;
   onMorePressed?: () => void;
   onExitSelectionPressed?: () => void;
+  onSelectAllPressed?: () => void;
   onCancelEditPressed?: () => void;
   onSaveEditPressed?: () => void;
   blurTarget?: RefObject<View | null>;
@@ -34,6 +35,7 @@ export const SessionAppBar = ({
   onTitlePressed,
   onMorePressed,
   onExitSelectionPressed,
+  onSelectAllPressed,
   onCancelEditPressed,
   onSaveEditPressed,
   blurTarget,
@@ -89,6 +91,23 @@ export const SessionAppBar = ({
         !isIncognitoSession && !selectionMode ? onTitlePressed : undefined
       }
       actions={[
+        ...(selectionMode
+          ? [
+              <RipplePressable
+                key="select_all"
+                onPress={onSelectAllPressed}
+                hitSlop={10}
+                rippleColor={theme.colors.ripple}
+                borderless
+              >
+                <Icon
+                  name="select_all"
+                  size={24}
+                  color={theme.colors.textPrimary}
+                />
+              </RipplePressable>,
+            ]
+          : []),
         <RipplePressable
           key={trailingAction}
           onPress={onTrailingActionPressed}

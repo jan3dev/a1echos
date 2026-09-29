@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports, react/display-name */
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import React from "react";
@@ -374,6 +375,22 @@ describe("RootLayout", () => {
 
       // Tooltip should be rendered with the action
       expect(getByTestId(TestID.Tooltip)).toBeTruthy();
+    });
+
+    it("positions tooltip 16px above the record button grabber", async () => {
+      const { useGlobalTooltip } = require("@/stores");
+      (useGlobalTooltip as jest.Mock).mockReturnValue({
+        message: "Hi",
+        variant: "normal",
+        isInfo: false,
+        isDismissible: true,
+        duration: 3000,
+      });
+
+      const { getByTestId } = await renderAndWaitForInit();
+      const container = getByTestId(TestID.GlobalTooltipContainer);
+      // 96 controls + 19 grabber top within handle + 16 gap
+      expect(StyleSheet.flatten(container.props.style).bottom).toBe(131);
     });
 
     it("renders dismissible tooltip", async () => {

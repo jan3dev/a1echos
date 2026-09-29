@@ -124,6 +124,7 @@ export enum TestID {
   DeleteToast = "delete-toast",
   Tooltip = "tooltip",
   TooltipActionBtn = "tooltip-action-btn",
+  GlobalTooltipContainer = "global-tooltip-container",
 
   // --- Test Helpers ---
   ConfirmBtn = "confirm-btn",

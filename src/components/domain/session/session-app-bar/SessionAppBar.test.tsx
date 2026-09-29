@@ -75,6 +75,7 @@ const defaultProps = {
   onTitlePressed: jest.fn(),
   onMorePressed: jest.fn(),
   onExitSelectionPressed: jest.fn(),
+  onSelectAllPressed: jest.fn(),
   onCancelEditPressed: jest.fn(),
   onSaveEditPressed: jest.fn(),
 };
@@ -96,6 +97,7 @@ describe("SessionAppBar", () => {
     );
     expect(getByTestId(dynamicTestID.icon("more"))).toBeTruthy();
     expect(queryByTestId(dynamicTestID.icon("copy"))).toBeNull();
+    expect(queryByTestId(dynamicTestID.icon("select_all"))).toBeNull();
   });
 
   it("normal mode: more icon press calls onMorePressed", () => {
@@ -147,6 +149,18 @@ describe("SessionAppBar", () => {
     );
     fireEvent.press(getByTestId(dynamicTestID.icon("close")).parent!);
     expect(defaultProps.onExitSelectionPressed).toHaveBeenCalled();
+  });
+
+  it("selection mode: select all icon press calls onSelectAllPressed", () => {
+    const { getByTestId } = render(
+      <SessionAppBar
+        {...defaultProps}
+        selectionMode={true}
+        selectionTitle="1 selected"
+      />,
+    );
+    fireEvent.press(getByTestId(dynamicTestID.icon("select_all")).parent!);
+    expect(defaultProps.onSelectAllPressed).toHaveBeenCalled();
   });
 
   it("selection mode: title press is disabled", () => {

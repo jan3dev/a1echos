@@ -110,6 +110,8 @@ const TOOLTIP_GAP_ABOVE_FOOTER = 16;
 const SETTINGS_SWIPE_ACTIVATION = 8;
 const SETTINGS_SWIPE_MAX_DRIFT_X = 30;
 const SETTINGS_HANDLE_HIT_ABOVE = 16;
+const SETTINGS_HANDLE_HEIGHT = 28;
+const GRABBER_TOP_INSET = 9;
 const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
 
 function GlobalTooltipRenderer() {
@@ -191,7 +193,9 @@ function GlobalTooltipRenderer() {
     (pathname === "/" && isSessionSelectionMode) ||
     (pathname.startsWith("/session/") && isTranscriptionSelectionMode);
   const footerHeight = liftAboveControls
-    ? AppConstants.RECORDING_CONTROLS_HEIGHT
+    ? AppConstants.RECORDING_CONTROLS_HEIGHT +
+      SETTINGS_HANDLE_HEIGHT -
+      GRABBER_TOP_INSET
     : navbarVisible
       ? SUB_SCREEN_NAVBAR_HEIGHT
       : 0;
@@ -217,6 +221,7 @@ function GlobalTooltipRenderer() {
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
       <View
+        testID={TestID.GlobalTooltipContainer}
         style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
         pointerEvents={isDismissible || hasAction ? "box-none" : "none"}
       >
@@ -577,10 +582,10 @@ const styles = StyleSheet.create({
   },
   // In-flow (not hitSlop) so the grabber is inside the swipe and touch area.
   settingsHandle: {
-    height: 28 + SETTINGS_HANDLE_HIT_ABOVE,
+    height: SETTINGS_HANDLE_HEIGHT + SETTINGS_HANDLE_HIT_ABOVE,
     width: 48 + 2 * SETTINGS_HANDLE_HIT_ABOVE,
     alignSelf: "center",
     alignItems: "center",
-    paddingTop: 9 + SETTINGS_HANDLE_HIT_ABOVE,
+    paddingTop: GRABBER_TOP_INSET + SETTINGS_HANDLE_HIT_ABOVE,
   },
 });
