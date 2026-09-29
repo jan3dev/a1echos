@@ -39,19 +39,9 @@ jest.mock("../../../ui/divider/Divider", () => ({
   },
 }));
 
-jest.mock("../../../ui/tooltip/Tooltip", () => ({
-  Tooltip: () => {
-    const { View } = require("react-native");
-    const { TestID: TID } = require("@/constants");
-    return <View testID={TID.Tooltip} />;
-  },
-}));
-
-jest.mock("../../../ui/tooltip/useTooltip", () => ({
-  useTooltip: () => ({
-    show: jest.fn(),
-    tooltipState: { visible: false, message: "" },
-  }),
+const mockShowGlobalTooltip = jest.fn();
+jest.mock("@/stores", () => ({
+  useShowGlobalTooltip: () => mockShowGlobalTooltip,
 }));
 
 describe("SettingsFooter", () => {
@@ -95,14 +85,17 @@ describe("SettingsFooter", () => {
     });
   });
 
-  it("swallows openURL errors without crashing", async () => {
+  it("shows error tooltip when openURL fails", async () => {
     (Linking as any).openURL = jest.fn(async () => {
       throw new Error("no handler");
     });
     const { getByText } = render(<SettingsFooter />);
     fireEvent.press(getByText("Echos"));
     await waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith("https://x.com/a1echos");
+      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
+        "couldNotOpenLink",
+        "error",
+      );
     });
   });
 });

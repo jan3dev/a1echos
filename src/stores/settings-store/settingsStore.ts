@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   LANGUAGE: "spoken_language",
   INCOGNITO_MODE: "incognito_mode",
   SMART_SPLIT_ENABLED: "smart_split_enabled",
+  BIOMETRIC_AUTH_ENABLED: "biometric_auth_enabled",
   KEYBOARD_PROMPT_SEEN: "keyboard_prompt_seen",
   KEYBOARD_AUTOCORRECT: "keyboard_autocorrect",
   KEYBOARD_HAPTIC: "keyboard_haptic",
@@ -68,6 +69,8 @@ interface SettingsStore {
   selectedLanguage: SpokenLanguage;
   isIncognitoMode: boolean;
   smartSplitEnabled: boolean;
+  /** Require Face ID / fingerprint / device passcode to open the app. */
+  biometricAuthEnabled: boolean;
   hasSeenKeyboardPrompt: boolean;
   /** Keyboard: auto-apply the top spelling guess on space (default off =
    *  tap-to-apply suggestions only). */
@@ -99,6 +102,7 @@ interface SettingsStore {
   setLanguage: (language: SpokenLanguage) => Promise<void>;
   setIncognitoMode: (enabled: boolean) => Promise<void>;
   setSmartSplitEnabled: (enabled: boolean) => Promise<void>;
+  setBiometricAuthEnabled: (enabled: boolean) => Promise<void>;
   markKeyboardPromptSeen: () => Promise<void>;
   setKeyboardAutocorrect: (enabled: boolean) => Promise<void>;
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
@@ -221,6 +225,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   smartSplitEnabled: true,
+  biometricAuthEnabled: false,
   hasSeenKeyboardPrompt: false,
   keyboardAutocorrect: true,
   keyboardHaptic: true,
@@ -249,6 +254,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         hasSeenWelcomeValue,
         largerModelSuggestionValue,
         textAppearanceValue,
+        biometricAuthValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -266,6 +272,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME),
         AsyncStorage.getItem(STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.TEXT_APPEARANCE),
+        AsyncStorage.getItem(STORAGE_KEYS.BIOMETRIC_AUTH_ENABLED),
       ]);
 
       const selectedTheme = themeValue
@@ -349,6 +356,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage,
         isIncognitoMode,
         smartSplitEnabled,
+        biometricAuthEnabled: biometricAuthValue === "true",
         hasSeenKeyboardPrompt,
         keyboardAutocorrect,
         keyboardHaptic,
@@ -377,6 +385,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         selectedLanguage: SupportedLanguages.defaultLanguage,
         isIncognitoMode: false,
         smartSplitEnabled: true,
+        biometricAuthEnabled: false,
         hasSeenKeyboardPrompt: false,
         keyboardAutocorrect: true,
         keyboardHaptic: true,
@@ -584,6 +593,23 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
+  setBiometricAuthEnabled: async (enabled: boolean) => {
+    const previousValue = get().biometricAuthEnabled;
+    set({ biometricAuthEnabled: enabled });
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.BIOMETRIC_AUTH_ENABLED,
+        enabled.toString(),
+      );
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save biometric auth preference",
+      });
+      set({ biometricAuthEnabled: previousValue });
+    }
+  },
+
   markKeyboardPromptSeen: async () => {
     set({ hasSeenKeyboardPrompt: true });
     try {
@@ -706,6 +732,10 @@ export const useSmartSplitEnabled = () =>
   useSettingsStore((s) => s.smartSplitEnabled);
 export const useSetSmartSplitEnabled = () =>
   useSettingsStore((s) => s.setSmartSplitEnabled);
+export const useBiometricAuthEnabled = () =>
+  useSettingsStore((s) => s.biometricAuthEnabled);
+export const useSetBiometricAuthEnabled = () =>
+  useSettingsStore((s) => s.setBiometricAuthEnabled);
 export const useHasSeenKeyboardPrompt = () =>
   useSettingsStore((s) => s.hasSeenKeyboardPrompt);
 export const useMarkKeyboardPromptSeen = () =>

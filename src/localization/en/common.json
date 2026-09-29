@@ -156,5 +156,11 @@
   "onboardingPrivacyTitle": "Nothing Leaves Your Device",
   "onboardingPrivacySubtitle": "Every model runs locally. No account, no uploads.",
   "onboardingAllSetTitle": "You're All Set!",
-  "onboardingAllSetSubtitle": "Speak freely. Transcribe privately. Remember everything."
+  "onboardingAllSetSubtitle": "Speak freely. Transcribe privately. Remember everything.",
+  "settingsSectionTranscription": "Transcription",
+  "settingsSectionAppearance": "Appearance",
+  "biometricAuthTitle": "Biometric Authentication",
+  "biometricAuthPrompt": "Unlock Echos",
+  "biometricAuthUnlock": "Unlock",
+  "biometricAuthUnavailable": "Set up Face ID, fingerprint or a device passcode first."
 }

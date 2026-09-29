@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppErrorBoundary,
+  BiometricLock,
   Icon,
   KeyboardPromptModal,
   LargerModelSuggestionModal,
@@ -562,6 +563,7 @@ export default function RootLayout() {
         <GlobalKeyboardPromptRenderer />
         <GlobalVoiceSessionHintRenderer />
         <GlobalLargerModelSuggestionRenderer />
+        <BiometricLock />
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

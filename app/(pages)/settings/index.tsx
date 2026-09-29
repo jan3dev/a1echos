@@ -6,20 +6,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
+  authenticateBiometric,
   Icon,
   InAppBanner,
   ListItem,
   Screen,
   SettingsFooter,
+  Text,
+  Toggle,
   TopAppBar,
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization, useScrollSurface } from "@/hooks";
 import { AppTheme, getModelInfo } from "@/models";
 import {
-  useSelectedLanguage,
+  useBiometricAuthEnabled,
   useSelectedModelId,
   useSelectedTheme,
+  useSetBiometricAuthEnabled,
+  useShowGlobalTooltip,
 } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -33,7 +38,9 @@ export default function SettingsScreen() {
 
   const selectedModelId = useSelectedModelId();
   const selectedTheme = useSelectedTheme();
-  const selectedLanguage = useSelectedLanguage();
+  const biometricAuthEnabled = useBiometricAuthEnabled();
+  const setBiometricAuthEnabled = useSetBiometricAuthEnabled();
+  const showGlobalTooltip = useShowGlobalTooltip();
 
   const modelDisplay = getModelInfo(selectedModelId).name;
 
@@ -50,7 +57,17 @@ export default function SettingsScreen() {
     }
   })();
 
-  const languageDisplay = selectedLanguage.code.toUpperCase();
+  const handleBiometricToggle = async (next: boolean) => {
+    const result = await authenticateBiometric(loc.biometricAuthPrompt);
+    if (result === "success") {
+      void setBiometricAuthEnabled(next);
+    } else if (result === "unavailable") {
+      showGlobalTooltip(loc.biometricAuthUnavailable, "error", 5000);
+    }
+  };
+
+  const secondary = theme.colors.textSecondary;
+  const chevron = <Icon name="chevron_right" size={18} color={secondary} />;
 
   return (
     <Screen>
@@ -71,136 +88,87 @@ export default function SettingsScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
-          <View style={styles.list}>
-            <ListItem
-              testID={TestID.SettingsModel}
-              title={loc.title}
-              titleTrailing={modelDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon
-                  name="voice_circle"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push(Routes.settingsModel)}
-            />
+          <View style={styles.sections}>
+            <View style={styles.section}>
+              <Text variant="body2" weight="medium" color={secondary}>
+                {loc.settingsSectionTranscription}
+              </Text>
+              <ListItem
+                testID={TestID.SettingsModel}
+                title={loc.title}
+                titleTrailing={modelDisplay}
+                titleTrailingColor={secondary}
+                iconLeading={<Icon name="sound" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsModel)}
+              />
+              <ListItem
+                testID={TestID.SettingsAdvanced}
+                title={loc.advancedSettingsTitle}
+                iconLeading={
+                  <Icon name="setting_3" size={24} color={secondary} />
+                }
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsAdvanced)}
+              />
+            </View>
 
-            <ListItem
-              testID={TestID.SettingsTheme}
-              title={loc.themeTitle}
-              titleTrailing={themeDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon
-                  name="theme"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push(Routes.settingsTheme)}
-            />
+            <View style={styles.section}>
+              <Text variant="body2" weight="medium" color={secondary}>
+                {loc.settingsSectionAppearance}
+              </Text>
+              <ListItem
+                testID={TestID.SettingsTheme}
+                title={loc.themeTitle}
+                titleTrailing={themeDisplay}
+                titleTrailingColor={secondary}
+                iconLeading={<Icon name="theme" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsTheme)}
+              />
+              <ListItem
+                testID={TestID.SettingsTextAppearance}
+                title={loc.textAppearanceTitle}
+                iconLeading={<Icon name="text" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsTextAppearance)}
+              />
+            </View>
 
-            <ListItem
-              testID={TestID.SettingsTextAppearance}
-              title={loc.textAppearanceTitle}
-              iconLeading={
-                <Icon
-                  name="text"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push(Routes.settingsTextAppearance)}
-            />
-
-            <ListItem
-              testID={TestID.SettingsLanguage}
-              title={loc.spokenLanguageTitle}
-              titleTrailing={languageDisplay}
-              titleTrailingColor={theme.colors.textSecondary}
-              iconLeading={
-                <Icon
-                  name="language"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push(Routes.settingsLanguage)}
-            />
-
-            <ListItem
-              testID={TestID.SettingsAdvanced}
-              title={loc.advancedSettingsTitle}
-              iconLeading={
-                <Icon
-                  name="settings"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() => router.push(Routes.settingsAdvanced)}
-            />
-
-            <ListItem
-              testID={TestID.SettingsContactSupport}
-              title={loc.contactSupport}
-              iconLeading={
-                <Icon
-                  name="help_support"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                />
-              }
-              onPress={() =>
-                Linking.openURL(
-                  "https://a1lab.zendesk.com/hc/en-us/requests/new",
-                )
-              }
-            />
+            <View style={styles.section}>
+              <ListItem
+                testID={TestID.SettingsBiometricAuthToggle}
+                title={loc.biometricAuthTitle}
+                iconLeading={
+                  <Icon
+                    name="biometric_fingerprint"
+                    size={24}
+                    color={secondary}
+                  />
+                }
+                iconTrailing={
+                  <Toggle
+                    value={biometricAuthEnabled}
+                    onValueChange={handleBiometricToggle}
+                    accessibilityLabel={loc.biometricAuthTitle}
+                  />
+                }
+                onPress={() => handleBiometricToggle(!biometricAuthEnabled)}
+              />
+              <ListItem
+                testID={TestID.SettingsContactSupport}
+                title={loc.contactSupport}
+                iconLeading={
+                  <Icon name="help_support" size={24} color={secondary} />
+                }
+                iconTrailing={chevron}
+                onPress={() =>
+                  Linking.openURL(
+                    "https://a1lab.zendesk.com/hc/en-us/requests/new",
+                  )
+                }
+              />
+            </View>
           </View>
 
           <View style={styles.bannerContainer}>
@@ -224,7 +192,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
   },
-  list: {
+  sections: {
+    gap: 24,
+  },
+  section: {
     gap: 16,
   },
   bannerContainer: {

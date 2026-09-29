@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render } from "@testing-library/react-native";
+import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Linking from "expo-linking";
+import * as LocalAuthentication from "expo-local-authentication";
 import React from "react";
 
 import SettingsScreen from "./index";
@@ -41,10 +42,14 @@ jest.mock("@/hooks", () => ({
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
 }));
 
+const mockSetBiometricAuthEnabled = jest.fn();
+const mockShowGlobalTooltip = jest.fn();
 jest.mock("@/stores", () => ({
   useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSelectedTheme: jest.fn(() => "auto"),
-  useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
+  useBiometricAuthEnabled: jest.fn(() => false),
+  useSetBiometricAuthEnabled: () => mockSetBiometricAuthEnabled,
+  useShowGlobalTooltip: () => mockShowGlobalTooltip,
 }));
 
 jest.mock("@/models", () => ({
@@ -57,6 +62,9 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
+    authenticateBiometric: jest.requireActual(
+      "@/components/shared/biometric-lock/biometricAuth",
+    ).authenticateBiometric,
     Card: ({ children, ...rest }: any) => (
       <View testID={TID.Card} {...rest}>
         {children}
@@ -75,6 +83,8 @@ jest.mock("@/components", () => {
       </TouchableOpacity>
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
+    Text: ({ children }: any) => <Text>{String(children)}</Text>,
+    Toggle: () => <View />,
     SettingsFooter: () => <View testID={TID.SettingsFooter} />,
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>
@@ -85,12 +95,68 @@ jest.mock("@/components", () => {
 });
 
 describe("SettingsScreen", () => {
-  it("renders settings items (model, theme, language, advanced titles)", () => {
-    const { getByTestId } = render(<SettingsScreen />);
+  beforeEach(() => jest.clearAllMocks());
+
+  it("renders sections and items", () => {
+    const { getByTestId, getByText, queryByTestId } = render(
+      <SettingsScreen />,
+    );
+    expect(getByText("settingsSectionTranscription")).toBeTruthy();
+    expect(getByText("settingsSectionAppearance")).toBeTruthy();
     expect(getByTestId("list-item-title")).toBeTruthy();
     expect(getByTestId("list-item-themeTitle")).toBeTruthy();
-    expect(getByTestId("list-item-spokenLanguageTitle")).toBeTruthy();
     expect(getByTestId("list-item-advancedSettingsTitle")).toBeTruthy();
+    expect(getByTestId("list-item-biometricAuthTitle")).toBeTruthy();
+    expect(queryByTestId("list-item-spokenLanguageTitle")).toBeNull();
+  });
+
+  it("biometric toggle enables after successful authentication", async () => {
+    const { getByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
+    await waitFor(() =>
+      expect(mockSetBiometricAuthEnabled).toHaveBeenCalledWith(true),
+    );
+  });
+
+  it("biometric toggle does nothing when user cancels", async () => {
+    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce(
+      { success: false, error: "user_cancel" },
+    );
+    const { getByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
+    await waitFor(() =>
+      expect(LocalAuthentication.authenticateAsync).toHaveBeenCalled(),
+    );
+    expect(mockSetBiometricAuthEnabled).not.toHaveBeenCalled();
+    expect(mockShowGlobalTooltip).not.toHaveBeenCalled();
+  });
+
+  it("biometric toggle shows tooltip when device has no auth set up", async () => {
+    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce(
+      { success: false, error: "not_enrolled" },
+    );
+    const { getByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
+    await waitFor(() =>
+      expect(mockShowGlobalTooltip).toHaveBeenCalledWith(
+        expect.anything(),
+        "error",
+        5000,
+      ),
+    );
+    expect(mockSetBiometricAuthEnabled).not.toHaveBeenCalled();
+  });
+
+  it("biometric toggle ignores a rejected authentication", async () => {
+    (LocalAuthentication.authenticateAsync as jest.Mock).mockRejectedValueOnce(
+      new Error("boom"),
+    );
+    const { getByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
+    await waitFor(() =>
+      expect(LocalAuthentication.authenticateAsync).toHaveBeenCalled(),
+    );
+    expect(mockSetBiometricAuthEnabled).not.toHaveBeenCalled();
   });
 
   it("model item shows current model name", () => {
@@ -104,11 +170,6 @@ describe("SettingsScreen", () => {
     expect(getByTestId("trailing-themeTitle")).toHaveTextContent("auto");
   });
 
-  it("language item shows uppercase language code", () => {
-    const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-spokenLanguageTitle")).toHaveTextContent("EN");
-  });
-
   it("settings item press navigates to correct route", () => {
     const { getByTestId } = render(<SettingsScreen />);
     fireEvent.press(getByTestId("list-item-title"));
@@ -119,9 +180,6 @@ describe("SettingsScreen", () => {
 
     fireEvent.press(getByTestId("list-item-textAppearanceTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/text-appearance");
-
-    fireEvent.press(getByTestId("list-item-spokenLanguageTitle"));
-    expect(mockPush).toHaveBeenCalledWith("/settings/language");
 
     fireEvent.press(getByTestId("list-item-advancedSettingsTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/advanced");

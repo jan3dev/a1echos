@@ -127,6 +127,10 @@ jest.mock("expo-secure-store", () => ({
   }),
 }));
 
+jest.mock("expo-local-authentication", () => ({
+  authenticateAsync: jest.fn(async () => ({ success: true })),
+}));
+
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),

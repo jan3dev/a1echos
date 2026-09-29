@@ -21,6 +21,7 @@ import toggleGallery from "@/components/ui/toggle/Toggle.gallery";
 import tooltipGallery from "@/components/ui/tooltip/Tooltip.gallery";
 import topAppBarGallery from "@/components/ui/top-app-bar/TopAppBar.gallery";
 import ambientGlowGallery from "@/components/shared/ambient-glow/AmbientGlow.gallery";
+import biometricLockGallery from "@/components/shared/biometric-lock/BiometricLock.gallery";
 import errorViewGallery from "@/components/shared/error-view/ErrorView.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
@@ -92,6 +93,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   tooltipGallery,
   topAppBarGallery,
   ambientGlowGallery,
+  biometricLockGallery,
   errorViewGallery,
   listItemGallery,
   recordingButtonGallery,

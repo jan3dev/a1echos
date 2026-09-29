@@ -172,6 +172,12 @@ export const useLocalization = () => {
       onboardingPrivacySubtitle: t("onboardingPrivacySubtitle"),
       onboardingAllSetTitle: t("onboardingAllSetTitle"),
       onboardingAllSetSubtitle: t("onboardingAllSetSubtitle"),
+      settingsSectionTranscription: t("settingsSectionTranscription"),
+      settingsSectionAppearance: t("settingsSectionAppearance"),
+      biometricAuthTitle: t("biometricAuthTitle"),
+      biometricAuthPrompt: t("biometricAuthPrompt"),
+      biometricAuthUnlock: t("biometricAuthUnlock"),
+      biometricAuthUnavailable: t("biometricAuthUnavailable"),
     }),
     [t],
   );

@@ -52,6 +52,12 @@
           }
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Echos to use Face ID to unlock the app."
+        }
+      ],
       "./plugins/withRnForegroundService",
       "./plugins/withFixJcenter",
       "./plugins/withReactNativeFsFix",

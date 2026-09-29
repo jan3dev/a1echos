@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { SvgProps } from "react-native-svg";
 
+import BiometricFingerprint from "@/assets/icons/biometric_fingerprint.svg";
 import Check from "@/assets/icons/check.svg";
 import ChevronLeft from "@/assets/icons/chevron_left.svg";
 import ChevronRight from "@/assets/icons/chevron_right.svg";
@@ -29,7 +30,9 @@ import Paste from "@/assets/icons/paste.svg";
 import Rectangle from "@/assets/icons/rectangle.svg";
 import RotateLeft from "@/assets/icons/rotate_left.svg";
 import SelectAll from "@/assets/icons/select_all.svg";
+import Setting3 from "@/assets/icons/setting_3.svg";
 import Settings from "@/assets/icons/settings.svg";
+import Sound from "@/assets/icons/sound.svg";
 import Text from "@/assets/icons/text.svg";
 import Theme from "@/assets/icons/theme.svg";
 import Timer from "@/assets/icons/timer.svg";
@@ -38,6 +41,7 @@ import VoiceCircle from "@/assets/icons/voice_circle.svg";
 import Warning from "@/assets/icons/warning.svg";
 
 export const iconMap: Record<string, FC<SvgProps>> = {
+  biometric_fingerprint: BiometricFingerprint,
   check: Check,
   chevron_left: ChevronLeft,
   chevron_right: ChevronRight,
@@ -66,7 +70,9 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   rectangle: Rectangle,
   rotate_left: RotateLeft,
   select_all: SelectAll,
+  setting_3: Setting3,
   settings: Settings,
+  sound: Sound,
   text: Text,
   theme: Theme,
   timer: Timer,

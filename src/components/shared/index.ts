@@ -1,4 +1,5 @@
 export * from "./ambient-glow";
+export * from "./biometric-lock";
 export * from "./error-view";
 export * from "./list-item";
 export * from "./option-picker-screen";

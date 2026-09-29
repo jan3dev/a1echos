@@ -113,6 +113,7 @@ jest.mock("@/components", () => {
   const { View } = require("react-native");
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
+    BiometricLock: () => null,
     AppErrorBoundary: ({ children }: any) => (
       <View testID={TID.AppErrorBoundary}>{children}</View>
     ),

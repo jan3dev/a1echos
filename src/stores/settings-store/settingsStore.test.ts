@@ -12,12 +12,14 @@ import {
 import {
   initializeSettingsStore,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
+  useBiometricAuthEnabled,
   useHasSeenKeyboardPrompt,
   useHasSeenLargerModelSuggestion,
   useMarkLargerModelSuggestionSeen,
   useHasSeenWelcome,
   useMarkWelcomeSeen,
   useIsIncognitoMode,
+  useSetBiometricAuthEnabled,
   useKeyboardAutocorrect,
   useKeyboardHaptic,
   useKeyboardMicTimeout,
@@ -397,6 +399,51 @@ describe("settingsStore", () => {
 
       await useSettingsStore.getState().initialize();
       expect(useSettingsStore.getState().smartSplitEnabled).toBe(false);
+    });
+  });
+
+  describe("setBiometricAuthEnabled()", () => {
+    it("defaults to false and persists enable", async () => {
+      expect(useSettingsStore.getState().biometricAuthEnabled).toBe(false);
+
+      await useSettingsStore.getState().setBiometricAuthEnabled(true);
+
+      expect(useSettingsStore.getState().biometricAuthEnabled).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "biometric_auth_enabled",
+        "true",
+      );
+    });
+
+    it("rolls back on persist failure", async () => {
+      useSettingsStore.setState({ biometricAuthEnabled: false });
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await useSettingsStore.getState().setBiometricAuthEnabled(true);
+
+      expect(useSettingsStore.getState().biometricAuthEnabled).toBe(false);
+    });
+
+    it("initialize() reads the persisted flag", async () => {
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key) =>
+        key === "biometric_auth_enabled" ? "true" : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().biometricAuthEnabled).toBe(true);
+    });
+
+    it("selectors expose the flag and its setter", () => {
+      useSettingsStore.setState({ biometricAuthEnabled: true });
+      expect(renderHook(() => useBiometricAuthEnabled()).result.current).toBe(
+        true,
+      );
+      expect(
+        renderHook(() => useSetBiometricAuthEnabled()).result.current,
+      ).toBe(useSettingsStore.getState().setBiometricAuthEnabled);
     });
   });
 

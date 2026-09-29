@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useLocalization } from "@/hooks";
+import { useShowGlobalTooltip } from "@/stores";
 import { useTheme } from "@/theme";
 
 import { Divider } from "../../../ui/divider/Divider";
 import { Icon } from "../../../ui/icon/Icon";
 import { Text } from "../../../ui/text/Text";
-import { Tooltip } from "../../../ui/tooltip/Tooltip";
-import { useTooltip } from "../../../ui/tooltip/useTooltip";
 
 interface SocialTag {
   tag: string;
@@ -26,7 +25,7 @@ const SOCIAL_TAGS: SocialTag[] = [
 export const SettingsFooter = () => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
-  const { show: showTooltip, tooltipState } = useTooltip();
+  const showGlobalTooltip = useShowGlobalTooltip();
   const [version, setVersion] = useState("");
 
   useEffect(() => {
@@ -49,10 +48,7 @@ export const SettingsFooter = () => {
     try {
       await Linking.openURL(url);
     } catch {
-      showTooltip({
-        message: loc.couldNotOpenLink,
-        variant: "error",
-      });
+      showGlobalTooltip(loc.couldNotOpenLink, "error");
     }
   };
 
@@ -121,9 +117,6 @@ export const SettingsFooter = () => {
       >
         {version}
       </Text>
-
-      {/* Tooltip for errors */}
-      <Tooltip {...tooltipState} />
     </View>
   );
 };

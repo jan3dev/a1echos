@@ -23,6 +23,8 @@ export {
   useSetModelMode,
   useSetModelType,
   useSetSmartSplitEnabled,
+  useBiometricAuthEnabled,
+  useSetBiometricAuthEnabled,
   useSetTheme,
   useSetTranscriptionMode,
   useSettingsStore,
