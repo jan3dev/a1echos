@@ -120,7 +120,7 @@ export const TranscriptionItem = ({
   const showSkeleton = isLoadingWhisperResult || isWhisperRecording;
 
   const enableInteractions = !isLivePreviewItem && !showSkeleton;
-  const showEditIcon = !isLivePreviewItem && !selectionMode;
+  const showEditIcon = !!onStartEdit && !isLivePreviewItem && !selectionMode;
   const showCheckbox = selectionMode && !isLivePreviewItem;
   const disableIcons =
     showSkeleton || editDisabled || (isAnyEditing && !isEditing);

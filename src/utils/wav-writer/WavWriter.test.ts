@@ -1,6 +1,6 @@
 import { File } from "expo-file-system";
 
-import { createPcmStreamWriter } from "./WavWriter";
+import { createPcmStreamWriter, sliceWavFile } from "./WavWriter";
 
 jest.mock("../log/log", () => ({
   FeatureFlag: { recording: "RECORDING" },
@@ -15,7 +15,7 @@ const makeFileInstance = (uri: string) => ({
   uri,
   exists: true,
   write: jest.fn(),
-  bytesSync: jest.fn(() => new Uint8Array([1, 2, 3, 4])),
+  bytesSync: jest.fn((): Uint8Array => new Uint8Array([1, 2, 3, 4])),
   delete: jest.fn(),
 });
 
@@ -267,5 +267,62 @@ describe("createPcmStreamWriter", () => {
       expect(outFile().delete).not.toHaveBeenCalled();
       expect(tempFile().delete).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("sliceWavFile", () => {
+  const sourceUri = "file:///mock/rec.wav";
+
+  const makeWav = (samples: number[]): Uint8Array<ArrayBuffer> => {
+    const bytes = new Uint8Array(44 + samples.length * 2);
+    const view = new DataView(bytes.buffer);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, 16000, true);
+    view.setUint16(34, 16, true);
+    samples.forEach((v, i) => view.setInt16(44 + i * 2, v, true));
+    return bytes;
+  };
+
+  beforeEach(() => {
+    fileInstances.clear();
+    MockFile.mockReset().mockImplementation((uri: string) =>
+      getFileInstance(uri),
+    );
+    getFileInstance(sourceUri).bytesSync.mockReturnValue(
+      makeWav([10, 20, 30, 40, 50]),
+    );
+  });
+
+  it("writes one WAV per range with the matching PCM frames", () => {
+    const result = sliceWavFile(sourceUri, [
+      { startSample: 0, endSample: 2 },
+      { startSample: 2, endSample: 99 },
+    ]);
+
+    expect(result).toEqual([
+      "file:///mock/rec_0.wav",
+      "file:///mock/rec_1.wav",
+    ]);
+
+    const second = getFileInstance("file:///mock/rec_1.wav");
+    const header = second.write.mock.calls[0][0] as Uint8Array;
+    const pcm = second.write.mock.calls[1][0] as Uint8Array;
+    const headerView = new DataView(header.buffer);
+    expect(headerView.getUint32(24, true)).toBe(16000);
+    expect(headerView.getUint32(40, true)).toBe(6);
+    const pcmView = new DataView(pcm.buffer, pcm.byteOffset, pcm.byteLength);
+    expect([0, 1, 2].map((i) => pcmView.getInt16(i * 2, true))).toEqual([
+      30, 40, 50,
+    ]);
+    expect(second.write.mock.calls[1][1]).toEqual({ append: true });
+  });
+
+  it("returns null for empty or out-of-range slices", () => {
+    expect(
+      sliceWavFile(sourceUri, [
+        { startSample: 3, endSample: 3 },
+        { startSample: 10, endSample: 20 },
+      ]),
+    ).toEqual([null, null]);
   });
 });

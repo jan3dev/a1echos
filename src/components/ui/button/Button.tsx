@@ -40,7 +40,7 @@ interface UtilityButtonProps extends ButtonProps {
   size?: UtilityButtonSize;
 }
 
-const PRIMARY_BUTTON_HEIGHT = 56;
+export const PRIMARY_BUTTON_HEIGHT = 56;
 const UTILITY_HEIGHT_LARGE = 34;
 const UTILITY_HEIGHT_SMALL = 28;
 const PILL_BORDER_RADIUS = 80;

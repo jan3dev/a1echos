@@ -21,6 +21,7 @@ import RootLayout from "./_layout";
 const mockInitTheme = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("@/theme", () => ({
+  spacing: { md: 16 },
   useTheme: jest.fn(() => ({
     theme: {
       colors: {
@@ -132,6 +133,7 @@ jest.mock("@/components", () => {
     },
     RecordingControlsView: () => <View testID={TID.RecordingControlsView} />,
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
+    PRIMARY_BUTTON_HEIGHT: 56,
     TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
     TranscriptionSettingsSheet: ({ visible, onDismiss, footer }: any) => {
@@ -172,13 +174,22 @@ jest.mock("@/components", () => {
   };
 });
 
+jest.mock("@react-navigation/native", () => ({
+  useIsFocused: jest.fn(() => true),
+}));
+
 jest.mock("expo-router", () => {
   const { TestID: TID } = require("@/constants");
   return {
     Stack: Object.assign(
-      ({ children }: any) => {
+      ({ children, screenLayout }: any) => {
         const { View } = require("react-native");
-        return <View testID={TID.Stack}>{children}</View>;
+        return (
+          <View testID={TID.Stack}>
+            {children}
+            {screenLayout?.({ children: null })}
+          </View>
+        );
       },
       {
         Screen: (props: any) => {
@@ -406,6 +417,28 @@ describe("RootLayout", () => {
       expect(StyleSheet.flatten(container.props.style).bottom).toBe(131);
     });
 
+    it("positions tooltip 16px above the onboarding Next button", async () => {
+      const { usePathname } = require("expo-router");
+      (usePathname as jest.Mock).mockReturnValue("/onboarding/record");
+      const { useGlobalTooltip } = require("@/stores");
+      (useGlobalTooltip as jest.Mock).mockReturnValue({
+        message: "Copied",
+        variant: "normal",
+        isInfo: false,
+        isDismissible: true,
+        duration: 3000,
+      });
+
+      const { getByTestId } = await renderAndWaitForInit();
+      // 16 footer padding + 56 button + 16 gap
+      expect(
+        StyleSheet.flatten(
+          getByTestId(TestID.GlobalTooltipContainer).props.style,
+        ).bottom,
+      ).toBe(88);
+      (usePathname as jest.Mock).mockReturnValue("/");
+    });
+
     it("positions tooltip 16px above the edit screen toolbar and keyboard", async () => {
       const { usePathname } = require("expo-router");
       (usePathname as jest.Mock).mockReturnValue("/transcription/t1");
@@ -472,6 +505,23 @@ describe("RootLayout", () => {
       expect(mockHideTooltip).toHaveBeenCalled();
 
       jest.useRealTimers();
+    });
+
+    it("does not render the tooltip in an unfocused screen", async () => {
+      const { useIsFocused } = require("@react-navigation/native");
+      (useIsFocused as jest.Mock).mockReturnValue(false);
+      const { useGlobalTooltip } = require("@/stores");
+      (useGlobalTooltip as jest.Mock).mockReturnValue({
+        message: "Hidden",
+        variant: "normal",
+        isInfo: false,
+        isDismissible: false,
+        duration: 2000,
+      });
+
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.GlobalTooltipContainer)).toBeNull();
+      (useIsFocused as jest.Mock).mockReturnValue(true);
     });
 
     it("renders null tooltip without error", async () => {

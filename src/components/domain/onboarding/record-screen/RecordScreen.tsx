@@ -203,7 +203,6 @@ export const RecordScreen = ({
               isEditing={editingId === t.id}
               isAnyEditing={editingId !== null}
               onTap={() => setEditingId(t.id)}
-              onStartEdit={() => setEditingId(t.id)}
               onEndEdit={() => setEditingId(null)}
               onTranscriptionUpdate={onTranscriptionUpdate}
             />

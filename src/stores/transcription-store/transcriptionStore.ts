@@ -21,6 +21,8 @@ import {
   formatTranscriptionText,
   logError,
   logWarn,
+  type SampleRange,
+  sliceWavFile,
 } from "@/utils";
 
 import { useSessionStore } from "../session-store/sessionStore";
@@ -62,6 +64,11 @@ interface SmartSplitState {
   currentItemStartMs: number;
   /** Items finalized during the active recording, in order. */
   createdTranscriptions: Transcription[];
+  /** Recording sample range per created item, parallel to `createdTranscriptions`. */
+  createdSegments: SampleRange[];
+  currentItemStartSample: number;
+  /** `endSample` of the last chunk event; where the next item's audio begins. */
+  lastEventSample: number;
   /**
    * When true (file mode), the chunk handler skips storage writes. The caller
    * inspects `createdTranscriptions` after the scan and persists in one pass.
@@ -74,6 +81,9 @@ const createEmptySmartSplit = (): SmartSplitState => ({
   currentItemText: "",
   currentItemStartMs: 0,
   createdTranscriptions: [],
+  createdSegments: [],
+  currentItemStartSample: 0,
+  lastEventSample: 0,
   deferPersist: false,
 });
 
@@ -286,27 +296,69 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     });
   };
 
+  const deleteCacheFile = (uri: string): void => {
+    try {
+      const file = new File(uri);
+      if (file.exists) file.delete();
+    } catch (error) {
+      logWarn(`Failed to delete cached recording: ${error}`, {
+        flag: FeatureFlag.storage,
+      });
+    }
+  };
+
+  // Single items get the whole recording; smart-split runs get one slice each.
+  // Failures fall back to text-only so a bad WAV never loses the transcript.
+  const attachRecordedAudio = async (
+    items: Transcription[],
+    segments: SampleRange[],
+    recordedFileUri: string,
+  ): Promise<Transcription[]> => {
+    const audioPaths = new Map<string, string>();
+    try {
+      const sources =
+        items.length === 1
+          ? [recordedFileUri]
+          : sliceWavFile(recordedFileUri, segments);
+      const stamp = Date.now();
+      for (let i = 0; i < items.length; i++) {
+        const source = sources[i];
+        if (!source) continue;
+        audioPaths.set(
+          items[i].id,
+          await audioProtectionService.saveAudio(
+            source,
+            `audio_${stamp}_${i}.wav`,
+          ),
+        );
+      }
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.storage,
+        message: "Failed to attach recorded audio",
+      });
+    }
+    if (items.length !== 1) deleteCacheFile(recordedFileUri);
+
+    const withAudio = <T extends Transcription>(t: T): T => {
+      const audioPath = audioPaths.get(t.id);
+      return audioPath ? { ...t, audioPath } : t;
+    };
+    set({ transcriptions: get().transcriptions.map(withAudio) });
+    return items.map(withAudio);
+  };
+
   const persistFileModeItems = async (
     items: Transcription[],
+    segments: SampleRange[],
     recordedFileUri: string | null,
     sessionId: string,
   ): Promise<void> => {
-    if (items.length === 1 && recordedFileUri) {
-      const audioPath = await audioProtectionService.saveAudio(
-        recordedFileUri,
-        `audio_${Date.now()}.wav`,
-      );
-      const updated: Transcription = { ...items[0], audioPath };
-      set({
-        transcriptions: get().transcriptions.map((t) =>
-          t.id === updated.id ? updated : t,
-        ),
-      });
-      await databaseService.upsertTranscription(updated);
-    } else {
-      for (const t of items) {
-        await databaseService.upsertTranscription(t);
-      }
+    const toSave = recordedFileUri
+      ? await attachRecordedAudio(items, segments, recordedFileUri)
+      : items;
+    for (const t of toSave) {
+      await databaseService.upsertTranscription(t);
     }
     await useSessionStore.getState().updateSessionModifiedTimestamp(sessionId);
   };
@@ -393,7 +445,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     };
   };
 
-  const finalizeSmartSplitItem = (): void => {
+  const finalizeSmartSplitItem = (endSample: number | undefined): void => {
     const state = get();
     const split = state.smartSplit;
 
@@ -434,6 +486,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         currentItemText: "",
         currentItemStartMs: 0,
         createdTranscriptions: [...split.createdTranscriptions, transcription],
+        createdSegments: [
+          ...split.createdSegments,
+          {
+            startSample: split.currentItemStartSample,
+            endSample: endSample ?? split.currentItemStartSample,
+          },
+        ],
       },
       livePreview: null,
     });
@@ -1219,14 +1278,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           });
         set({ realtimeAudioLevelUnsubscribe: unsubscribeAudioLevel });
 
-        const wavOutputUri = isRealtime
-          ? undefined
-          : new File(Paths.cache, `rec_${Date.now()}.wav`).uri;
+        const wavOutputUri = new File(Paths.cache, `rec_${Date.now()}.wav`).uri;
 
         const captureStarted =
-          await sherpaTranscriptionService.startRealtimeTranscription(
-            wavOutputUri ? { wavOutputUri } : {},
-          );
+          await sherpaTranscriptionService.startRealtimeTranscription({
+            wavOutputUri,
+          });
 
         if (!captureStarted) {
           tearDownRealtimeSubscriptions();
@@ -1314,12 +1371,28 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         if (isRealtime) {
           await drainPendingWrites();
-          producedTranscription =
-            get().smartSplit.createdTranscriptions.length > 0;
+          const { createdTranscriptions, createdSegments } = get().smartSplit;
+          producedTranscription = createdTranscriptions.length > 0;
+          if (recordedFileUri) {
+            if (producedTranscription && !isIncognito && sessionId) {
+              const withAudio = await attachRecordedAudio(
+                createdTranscriptions,
+                createdSegments,
+                recordedFileUri,
+              );
+              for (const t of withAudio) {
+                if (t.audioPath) await databaseService.upsertTranscription(t);
+              }
+            } else {
+              deleteCacheFile(recordedFileUri);
+            }
+          }
         } else {
-          const createdItems = get().smartSplit.createdTranscriptions;
+          const { createdTranscriptions: createdItems, createdSegments } =
+            get().smartSplit;
 
           if (createdItems.length === 0) {
+            if (recordedFileUri) deleteCacheFile(recordedFileUri);
             get().setError("Recording was too short or failed");
             get().clearLivePreview();
             get().clearLoadingPreview();
@@ -1332,9 +1405,12 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           if (canPersist) {
             await persistFileModeItems(
               createdItems,
+              createdSegments,
               recordedFileUri,
               sessionId,
             );
+          } else if (recordedFileUri) {
+            deleteCacheFile(recordedFileUri);
           }
           producedTranscription = true;
         }
@@ -1380,19 +1456,21 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     onChunkEvent: (event: ChunkEvent) => {
-      const { text, boundary } = event;
+      const { text, boundary, endSample } = event;
       const state = get();
       const split = state.smartSplit;
 
       let currentItemId = split.currentItemId;
       let currentItemText = split.currentItemText;
       let currentItemStartMs = split.currentItemStartMs;
+      let currentItemStartSample = split.currentItemStartSample;
 
       if (text) {
         if (!currentItemId) {
           currentItemId = Crypto.randomUUID();
           currentItemText = "";
           currentItemStartMs = Date.now();
+          currentItemStartSample = split.lastEventSample;
         }
 
         const separator = currentItemText ? " " : "";
@@ -1425,6 +1503,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             currentItemId,
             currentItemText,
             currentItemStartMs,
+            currentItemStartSample,
           },
           livePreview: nextLivePreview,
           loadingPreview: canShowPreview ? null : state.loadingPreview,
@@ -1443,12 +1522,18 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           break;
         case "long":
           if (smartSplitEnabled && exceededMaxDuration) {
-            finalizeSmartSplitItem();
+            finalizeSmartSplitItem(endSample);
           }
           break;
         case "final":
-          finalizeSmartSplitItem();
+          finalizeSmartSplitItem(endSample);
           break;
+      }
+
+      if (endSample !== undefined) {
+        set({
+          smartSplit: { ...get().smartSplit, lastEventSample: endSample },
+        });
       }
     },
 

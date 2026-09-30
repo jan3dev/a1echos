@@ -66,6 +66,7 @@ const mockTranscription: Transcription = {
 
 const defaultProps = {
   transcription: mockTranscription,
+  onStartEdit: jest.fn(),
 };
 
 describe("TranscriptionItem", () => {
@@ -108,6 +109,13 @@ describe("TranscriptionItem", () => {
       />,
     );
     expect(getByTestId(TestID.Checkbox)).toBeTruthy();
+    expect(queryByTestId("icon-edit")).toBeNull();
+  });
+
+  it("hides edit icon without onStartEdit", () => {
+    const { queryByTestId } = render(
+      <TranscriptionItem transcription={mockTranscription} />,
+    );
     expect(queryByTestId("icon-edit")).toBeNull();
   });
 

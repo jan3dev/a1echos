@@ -33,11 +33,16 @@ const mockLogError = jest.fn();
 jest.mock("@/utils", () => ({
   ...jest.requireActual("@/utils"),
   logError: (...args: unknown[]) => mockLogError(...args),
+  delay: async () => {},
 }));
 
 const mockShare = jest.fn(async (_t: unknown) => {});
+const mockSaveMarkdown = jest.fn(async (_s: unknown) => true);
 jest.mock("@/services", () => ({
-  shareService: { shareTranscriptions: (t: unknown) => mockShare(t) },
+  shareService: {
+    shareTranscriptions: (t: unknown) => mockShare(t),
+    saveSessionsMarkdown: (s: unknown) => mockSaveMarkdown(s),
+  },
 }));
 
 const transcription = {
@@ -59,6 +64,7 @@ const mockMarkSeen = jest.fn(async () => {});
 const mockTooltip = jest.fn();
 const mockShowToast = jest.fn();
 let mockTranscriptions: (typeof transcription)[] = [];
+const mockIncognito = { id: "inc" };
 const mockUseSessionTranscriptions = jest.fn(
   (_id: string) => mockTranscriptions,
 );
@@ -74,6 +80,7 @@ jest.mock("@/stores", () => {
   return {
     useCreateSession: () => mockCreateSession,
     useDeleteTranscriptions: () => mockDeleteTranscriptions,
+    useIncognitoSession: () => mockIncognito,
     useIsEngineInitializing: () => false,
     useLivePreview: () => null,
     useMarkKeyboardPromptSeen: () => mockMarkSeen,
@@ -116,6 +123,18 @@ jest.mock("@/components", () => {
         />
       </View>
     ),
+    SessionActionsSheet: (props: Record<string, any>) =>
+      props.visible ? (
+        <View>
+          {["onCopy", "onDownload", "onShare", "onDismiss"].map((k) => (
+            <TouchableOpacity
+              key={k}
+              testID={`sheet-${k}`}
+              onPress={props[k]}
+            />
+          ))}
+        </View>
+      ) : null,
     Toast: () => null,
   };
 });
@@ -167,15 +186,35 @@ describe("Record onboarding route", () => {
 
   it("deletes, copies, shares and updates the transcript", async () => {
     mockTranscriptions = [transcription];
-    const { getByTestId } = await renderRecord();
+    const { getByTestId, queryByTestId } = await renderRecord();
     await act(async () => fireEvent.press(getByTestId("onDelete")));
     expect(mockDeleteTranscriptions).toHaveBeenCalledWith(new Set(["t1"]));
 
     await act(async () => fireEvent.press(getByTestId("onCopy")));
     expect(Clipboard.setStringAsync).toHaveBeenCalledWith("Hello");
+    expect(mockTooltip).toHaveBeenCalledWith("transcriptionCopied");
+
+    expect(queryByTestId("sheet-onShare")).toBeNull();
+    await act(async () => fireEvent.press(getByTestId("onShare")));
+    await act(async () => fireEvent.press(getByTestId("sheet-onShare")));
+    expect(mockShare).toHaveBeenCalledWith([transcription]);
+    expect(queryByTestId("sheet-onShare")).toBeNull();
 
     await act(async () => fireEvent.press(getByTestId("onShare")));
-    expect(mockShare).toHaveBeenCalledWith([transcription]);
+    await act(async () => fireEvent.press(getByTestId("sheet-onDownload")));
+    expect(mockSaveMarkdown).toHaveBeenCalledWith([
+      { session: mockIncognito, transcriptions: [transcription] },
+    ]);
+    expect(mockTooltip).toHaveBeenCalledWith("markdownSaved");
+
+    (Clipboard.setStringAsync as jest.Mock).mockClear();
+    await act(async () => fireEvent.press(getByTestId("onShare")));
+    await act(async () => fireEvent.press(getByTestId("sheet-onCopy")));
+    expect(Clipboard.setStringAsync).toHaveBeenCalledWith("Hello");
+
+    await act(async () => fireEvent.press(getByTestId("onShare")));
+    await act(async () => fireEvent.press(getByTestId("sheet-onDismiss")));
+    expect(queryByTestId("sheet-onShare")).toBeNull();
 
     await act(async () =>
       fireEvent.press(getByTestId("onTranscriptionUpdate")),
@@ -189,21 +228,27 @@ describe("Record onboarding route", () => {
       new Error("nope"),
     );
     mockShare.mockRejectedValueOnce(new Error("sheet"));
+    mockSaveMarkdown.mockRejectedValueOnce(new Error("disk"));
     mockUpdate.mockRejectedValueOnce(new Error("db"));
     mockDeleteTranscriptions.mockRejectedValueOnce(new Error("db"));
     const { getByTestId } = await renderRecord();
     await act(async () => fireEvent.press(getByTestId("onCopy")));
     await act(async () => fireEvent.press(getByTestId("onShare")));
+    await act(async () => fireEvent.press(getByTestId("sheet-onShare")));
+    await act(async () => fireEvent.press(getByTestId("onShare")));
+    await act(async () => fireEvent.press(getByTestId("sheet-onDownload")));
     await act(async () =>
       fireEvent.press(getByTestId("onTranscriptionUpdate")),
     );
     await act(async () => fireEvent.press(getByTestId("onDelete")));
     expect(mockShowToast).toHaveBeenCalledWith("share:sheet", "error");
+    expect(mockTooltip).toHaveBeenCalledWith("markdownSaveFailed");
     const messages = mockLogError.mock.calls.map(([, ctx]) => ctx.message);
     expect(messages).toEqual(
       expect.arrayContaining([
         "Failed to copy onboarding transcription",
         "Failed to share onboarding transcription",
+        "Failed to save onboarding transcription as markdown",
         "Failed to update onboarding transcription",
         "Failed to delete onboarding transcription",
       ]),

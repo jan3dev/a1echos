@@ -59,6 +59,7 @@
   "mergeFailedTitle": "Merge Failed",
   "sessionNotFound": "Session Not Found",
   "allTranscriptionsCopied": "All Transcriptions Copied to Clipboard",
+  "transcriptionCopied": "Transcription Copied to Clipboard",
   "settingsTitle": "Settings",
   "title": "Audio Models",
   "themeTitle": "Theme",

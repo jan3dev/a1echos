@@ -55,12 +55,21 @@ describe("EnableKeyboardScreen", () => {
     Platform.OS = "ios";
     const { getByTestId } = renderScreen();
     expect(getByTestId("kb-full-access")).toBeTruthy();
+    expect(
+      getByTestId("kb-full-access-toggle", { includeHiddenElements: true }),
+    ).toHaveStyle({
+      width: 64,
+      height: 28,
+    });
   });
 
   it("hides the Full Access row on Android", () => {
     Platform.OS = "android";
     const { queryByTestId } = renderScreen();
     expect(queryByTestId("kb-full-access")).toBeNull();
+    expect(
+      queryByTestId("kb-echos-toggle", { includeHiddenElements: true }),
+    ).toBeNull();
   });
 
   it("renders without a testID", () => {

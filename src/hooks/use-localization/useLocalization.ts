@@ -85,6 +85,7 @@ export const useLocalization = () => {
         t("sessionTranscriptionsMerged", { count }),
       mergeFailedTitle: t("mergeFailedTitle"),
       allTranscriptionsCopied: t("allTranscriptionsCopied"),
+      transcriptionCopied: t("transcriptionCopied"),
       copyFailed: (error: string) => t("copyFailed", { error }),
       shareFailed: (error: string) => t("shareFailed", { error }),
       sessionNotFound: t("sessionNotFound"),

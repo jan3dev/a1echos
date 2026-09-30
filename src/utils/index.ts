@@ -79,8 +79,12 @@ export {
   logWarn,
 } from "./log/log";
 export { formatTranscriptionText } from "./transcription-formatter/TranscriptionFormatter";
-export { createPcmStreamWriter, WAV_HEADER_SIZE } from "./wav-writer/WavWriter";
-export type { PcmStreamWriter } from "./wav-writer/WavWriter";
+export {
+  createPcmStreamWriter,
+  sliceWavFile,
+  WAV_HEADER_SIZE,
+} from "./wav-writer/WavWriter";
+export type { PcmStreamWriter, SampleRange } from "./wav-writer/WavWriter";
 export { iosPressed } from "./ripple/ripple";
 export { openKeyboardSettings } from "./keyboard-settings/openKeyboardSettings";
 export {

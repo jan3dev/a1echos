@@ -1,12 +1,13 @@
 import "@/localization";
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
+import { useIsFocused } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
   Gesture,
@@ -21,6 +22,7 @@ import {
   Icon,
   KeyboardPromptModal,
   LargerModelSuggestionModal,
+  PRIMARY_BUTTON_HEIGHT,
   RecordingControlsView,
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
@@ -70,7 +72,7 @@ import {
   useSettingsStore,
   useTranscriptionState,
 } from "@/stores";
-import { useTheme, useThemeStore } from "@/theme";
+import { spacing, useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
 import GrabberArc from "@/assets/icons/grabber_arc.svg";
 
@@ -214,7 +216,9 @@ function GlobalTooltipRenderer() {
     ? AppConstants.RECORDING_FOOTER_HEIGHT
     : navbarVisible
       ? SUB_SCREEN_NAVBAR_HEIGHT
-      : 0;
+      : pathname === Routes.onboardingRecord
+        ? PRIMARY_BUTTON_HEIGHT + spacing.md
+        : 0;
   // An open keyboard covers the safe area and carries any footer above it.
   const bottomEdge = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
   const bottomOffset =
@@ -222,50 +226,43 @@ function GlobalTooltipRenderer() {
       ? bottomEdge + footerHeight + TOOLTIP_GAP_ABOVE_FOOTER
       : bottomEdge + TOOLTIP_GAP_ABOVE_SAFE_AREA;
 
-  // Rendered in a Modal so it paints above everything — including opaque screen
-  // content like the home empty-state string. On Android the react-native-screens
-  // <Stack> composites its active screen above sibling overlays regardless of
-  // zIndex/elevation, so a plain root-level View can't reliably sit on top; a
-  // Modal escapes into its own window. Transparent with no backdrop so it reads
-  // as a floating tooltip, not a blocking dialog.
+  // Rendered inside the focused screen (via the Stack's screenLayout) rather
+  // than a Modal: a Modal's window swallows every touch, freezing the app while
+  // a tooltip shows, and on Android a sibling of <Stack> draws beneath screens.
+  if (!displayedTooltip) return null;
+
   return (
-    <Modal
-      visible={!!displayedTooltip}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={hideTooltip}
-      supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
+    <View
+      testID={TestID.GlobalTooltipContainer}
+      style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
+      pointerEvents={isDismissible || hasAction ? "box-none" : "none"}
     >
-      <View
-        testID={TestID.GlobalTooltipContainer}
-        style={[styles.globalTooltipContainer, { bottom: bottomOffset }]}
-        pointerEvents={isDismissible || hasAction ? "box-none" : "none"}
-      >
-        <Tooltip
-          visible={!!tooltip}
-          message={displayedTooltip?.message ?? ""}
-          variant={displayedTooltip?.variant ?? "normal"}
-          pointerPosition="none"
-          isInfo={displayedTooltip?.isInfo ?? false}
-          isDismissible={isDismissible}
-          onDismiss={hideTooltip}
-          margin={0}
-          leadingIcon={
-            hasAction ? (
-              <Icon
-                name={displayedTooltip?.action?.iconName ?? "settings"}
-                size={18}
-                color={theme.colors.textInverse}
-              />
-            ) : undefined
-          }
-          onLeadingIconTap={hasAction ? handleActionPress : undefined}
-        />
-      </View>
-    </Modal>
+      <Tooltip
+        visible={!!tooltip}
+        message={displayedTooltip?.message ?? ""}
+        variant={displayedTooltip?.variant ?? "normal"}
+        pointerPosition="none"
+        isInfo={displayedTooltip?.isInfo ?? false}
+        isDismissible={isDismissible}
+        onDismiss={hideTooltip}
+        margin={0}
+        leadingIcon={
+          hasAction ? (
+            <Icon
+              name={displayedTooltip?.action?.iconName ?? "settings"}
+              size={18}
+              color={theme.colors.textInverse}
+            />
+          ) : undefined
+        }
+        onLeadingIconTap={hasAction ? handleActionPress : undefined}
+      />
+    </View>
   );
+}
+
+function FocusedScreenTooltip() {
+  return useIsFocused() ? <GlobalTooltipRenderer /> : null;
 }
 
 function GlobalKeyboardPromptRenderer() {
@@ -562,17 +559,22 @@ export default function RootLayout() {
               backgroundColor: theme.colors.surfaceBackground,
             },
           }}
+          screenLayout={({ children }) => (
+            <>
+              {children}
+              <FocusedScreenTooltip />
+            </>
+          )}
         />
         {/* Overlays live here (siblings of <Stack>, not inside screens) on
             purpose: the recording controls must persist across home↔session
-            navigation without remounting or interrupting an active recording,
-            and the tooltip is fired from non-screen contexts (e.g. a background
-            model download finishing). Because react-native-screens composites
-            the active screen above sibling overlays on Android, each overlay
-            that can sit over opaque content uses a Modal to escape onto its own
-            window — do not "simplify" these into plain root-level Views. */}
+            navigation without remounting or interrupting an active recording.
+            Because react-native-screens composites the active screen above
+            sibling overlays on Android, each overlay that can sit over opaque
+            content uses a Modal to escape onto its own window — do not
+            "simplify" these into plain root-level Views. The tooltip is the
+            exception (it must not block touches): see screenLayout above. */}
         <GlobalRecordingControls />
-        <GlobalTooltipRenderer />
         <GlobalKeyboardPromptRenderer />
         <GlobalVoiceSessionHintRenderer />
         <GlobalLargerModelSuggestionRenderer />

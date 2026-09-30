@@ -4,15 +4,16 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
-import { RecordScreen, Toast } from "@/components";
+import { RecordScreen, SessionActionsSheet, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
-import { Routes } from "@/constants";
+import { AppConstants, Routes } from "@/constants";
 import { useLocalization, useMicPermission, useOnboardingExit } from "@/hooks";
 import { Transcription } from "@/models";
 import { shareService } from "@/services";
 import {
   useCreateSession,
   useDeleteTranscriptions,
+  useIncognitoSession,
   useIsEngineInitializing,
   useLivePreview,
   useMarkKeyboardPromptSeen,
@@ -25,7 +26,7 @@ import {
   useTranscriptionState,
   useTranscriptionStore,
 } from "@/stores";
-import { FeatureFlag, getErrorMessage, logError } from "@/utils";
+import { delay, FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 const logSessionError = (error: unknown) =>
   logError(error, {
@@ -55,6 +56,8 @@ export default function Record() {
   const isInitializing = useIsEngineInitializing();
   const livePreview = useLivePreview();
 
+  const incognitoSession = useIncognitoSession();
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
   const [sessionId, setSessionId] = useState("");
   // "" rather than undefined: undefined falls back to the active session.
   const transcriptions = useSessionTranscriptions(sessionId);
@@ -127,7 +130,11 @@ export default function Record() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Android 12+ shows its own clipboard confirmation.
       if (Platform.OS === "ios" || Number(Platform.Version) < 31) {
-        showGlobalTooltip(loc.allTranscriptionsCopied);
+        showGlobalTooltip(
+          transcriptions.length === 1
+            ? loc.transcriptionCopied
+            : loc.allTranscriptionsCopied,
+        );
       }
     } catch (error) {
       logError(error, {
@@ -154,6 +161,30 @@ export default function Record() {
     }
   }, [transcriptions, showToast, loc]);
 
+  const handleDownload = useCallback(async () => {
+    if (incognitoSession?.id !== sessionId) return;
+    try {
+      const saved = await shareService.saveSessionsMarkdown([
+        { session: incognitoSession, transcriptions },
+      ]);
+      if (saved) showGlobalTooltip(loc.markdownSaved);
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: "Failed to save onboarding transcription as markdown",
+      });
+      showGlobalTooltip(loc.markdownSaveFailed);
+    }
+  }, [incognitoSession, sessionId, transcriptions, showGlobalTooltip, loc]);
+
+  const fromShareSheet =
+    (action: () => Promise<void>, waitForDismiss = true) =>
+    async () => {
+      setShareSheetVisible(false);
+      if (waitForDismiss) await delay(AppConstants.SHEET_DISMISS_MS);
+      await action();
+    };
+
   return (
     <>
       <RecordScreen
@@ -169,10 +200,18 @@ export default function Record() {
         onTranscriptionUpdate={handleUpdate}
         onDelete={handleDelete}
         onCopy={handleCopy}
-        onShare={handleShare}
+        onShare={() => setShareSheetVisible(true)}
         onBack={router.back}
         onSkip={confirmSkip}
         onNext={() => router.push(Routes.onboardingPrivacy)}
+      />
+      <SessionActionsSheet
+        testID="record-share-sheet"
+        visible={shareSheetVisible}
+        onCopy={fromShareSheet(handleCopy, false)}
+        onDownload={fromShareSheet(handleDownload)}
+        onShare={fromShareSheet(handleShare)}
+        onDismiss={() => setShareSheetVisible(false)}
       />
       <Toast {...toastState} />
     </>

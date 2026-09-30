@@ -182,9 +182,26 @@ export const AudioPlayer = ({
         ))}
       </Pressable>
 
-      <Text variant="caption2" weight="medium" color={colors.textTertiary}>
-        {formatPlaybackTime(shownTime)}
-      </Text>
+      {/* Width is pinned to the duration so the waveform never resizes and re-samples. */}
+      <View>
+        <Text
+          variant="caption2"
+          weight="medium"
+          style={styles.hidden}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {formatPlaybackTime(status.duration)}
+        </Text>
+        <Text
+          variant="caption2"
+          weight="medium"
+          color={colors.textTertiary}
+          style={styles.time}
+        >
+          {formatPlaybackTime(shownTime)}
+        </Text>
+      </View>
 
       {onDelete && (
         <RipplePressable
@@ -224,5 +241,14 @@ const styles = StyleSheet.create({
   bar: {
     width: BAR_WIDTH,
     borderRadius: 4,
+  },
+  hidden: {
+    opacity: 0,
+    fontVariant: ["tabular-nums"],
+  },
+  time: {
+    position: "absolute",
+    right: 0,
+    fontVariant: ["tabular-nums"],
   },
 });

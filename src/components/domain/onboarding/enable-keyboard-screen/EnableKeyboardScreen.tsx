@@ -21,9 +21,11 @@ const ENABLE_KEYBOARD_STEP = 2;
 const SYSTEM_GROUPED_BACKGROUND = "#1C1C1E";
 const SYSTEM_SEPARATOR = "rgba(84, 84, 88, 0.65)";
 const SYSTEM_GREEN = "#34C759";
+const SYSTEM_GREEN_DARK = "#30D158";
 const POINTER_WIDTH = 14;
 const POINTER_HEIGHT = 8;
 const LIST_MAX_WIDTH = 343;
+const ROW_ICON_SIZE = 36;
 
 export interface EnableKeyboardScreenProps {
   onBack: () => void;
@@ -41,7 +43,9 @@ interface MockRowProps {
 function MockRow({ label, showIcon, testID }: MockRowProps) {
   return (
     <View style={styles.row} testID={testID}>
-      {showIcon ? <KeyboardTile width={36} height={36} /> : null}
+      {showIcon ? (
+        <KeyboardTile width={ROW_ICON_SIZE} height={ROW_ICON_SIZE} />
+      ) : null}
       <Text
         variant="body1"
         weight="regular"
@@ -56,7 +60,13 @@ function MockRow({ label, showIcon, testID }: MockRowProps) {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Toggle value activeColor={SYSTEM_GREEN} />
+        {Platform.OS === "ios" ? (
+          <View style={styles.glassTrack} testID={testID && `${testID}-toggle`}>
+            <View style={styles.glassKnob} />
+          </View>
+        ) : (
+          <Toggle value activeColor={SYSTEM_GREEN} />
+        )}
       </View>
     </View>
   );
@@ -143,7 +153,7 @@ export const EnableKeyboardScreen = ({
           <View style={styles.list} testID={childTestID("list")}>
             <MockRow
               label={loc.onboardingEnableKeyboardRowEchos}
-              showIcon
+              showIcon={!isIos}
               testID={childTestID("echos")}
             />
             {isIos && (
@@ -151,6 +161,7 @@ export const EnableKeyboardScreen = ({
                 <View style={styles.separator} />
                 <MockRow
                   label={loc.onboardingEnableKeyboardRowFullAccess}
+                  showIcon
                   testID={childTestID("full-access")}
                 />
               </>
@@ -224,9 +235,25 @@ const styles = StyleSheet.create({
   rowLabel: {
     flex: 1,
   },
+  // iOS 27 Liquid Glass switch, on state (Figma "Toggle - Switch").
+  glassTrack: {
+    width: 64,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: 2,
+    backgroundColor: SYSTEM_GREEN_DARK,
+  },
+  glassKnob: {
+    width: 38,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: AquaPrimitiveColors.white,
+  },
   separator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.md,
+    marginLeft: spacing.md * 2 + ROW_ICON_SIZE,
     backgroundColor: SYSTEM_SEPARATOR,
   },
   cta: {

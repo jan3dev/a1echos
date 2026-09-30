@@ -88,13 +88,15 @@ export interface ChunkEvent {
   text: string;
   /** Structural hint about the silence that followed this chunk, if any. */
   boundary: ChunkBoundary;
+  /** Samples consumed from the recording when this event fired; aligns items to the WAV. */
+  endSample?: number;
 }
 
 export interface StartRealtimeOptions {
   /**
    * If provided, PCM samples are mirrored into a WAV file at this URI
-   * (including the `file://` scheme) while recording. Used by file-mode so the
-   * recording is available for playback attachment on single-item runs. The
+   * (including the `file://` scheme) while recording, so the
+   * recording can be attached to the resulting transcriptions. The
    * same URI is returned by {@link stopRealtimeTranscription} once finalized.
    */
   wavOutputUri?: string;
@@ -117,6 +119,7 @@ interface ServiceState {
   pcmUnsubError: (() => void) | null;
   audioBuffer: Float32Array[];
   audioBufferSampleCount: number;
+  consumedSampleCount: number;
   chunkTimer: ReturnType<typeof setTimeout> | null;
   lastSpeechTime: number;
   isSpeaking: boolean;
@@ -309,6 +312,7 @@ const createSherpaTranscriptionService = () => {
     pcmUnsubError: null,
     audioBuffer: [],
     audioBufferSampleCount: 0,
+    consumedSampleCount: 0,
     chunkTimer: null,
     lastSpeechTime: 0,
     isSpeaking: false,
@@ -373,10 +377,11 @@ const createSherpaTranscriptionService = () => {
 
   // --- Chunk emission ---
 
-  const emitChunk = (event: ChunkEvent): void => {
+  const emitChunk = (event: Omit<ChunkEvent, "endSample">): void => {
+    const withPosition = { ...event, endSample: state.consumedSampleCount };
     state.chunkCallbacks.forEach((callback) => {
       try {
-        callback(event);
+        callback(withPosition);
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.transcription,
@@ -396,6 +401,7 @@ const createSherpaTranscriptionService = () => {
       offset += chunk.length;
     }
     state.audioBuffer = [];
+    state.consumedSampleCount += state.audioBufferSampleCount;
     state.audioBufferSampleCount = 0;
 
     // Convert to plain number[] for sherpa-onnx bridge
@@ -800,6 +806,7 @@ const createSherpaTranscriptionService = () => {
       // Reset realtime state
       state.audioBuffer = [];
       state.audioBufferSampleCount = 0;
+      state.consumedSampleCount = 0;
       state.isSpeaking = false;
       state.lastSpeechTime = 0;
       smoothedLevel = 0.0;

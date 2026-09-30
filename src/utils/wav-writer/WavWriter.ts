@@ -155,3 +155,50 @@ export const createPcmStreamWriter = (
 
   return { write, finalize, abort, getByteCount };
 };
+
+export interface SampleRange {
+  startSample: number;
+  endSample: number;
+}
+
+/**
+ * Cut a PCM WAV written by {@link createPcmStreamWriter} into one WAV per
+ * range, clamped to the recording. Empty ranges yield `null`. Outputs land
+ * next to the source as `<name>_<i>.wav`.
+ */
+export const sliceWavFile = (
+  sourceUri: string,
+  ranges: SampleRange[],
+): (string | null)[] => {
+  const bytes = new File(sourceUri).bytesSync();
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const numChannels = view.getUint16(22, true);
+  const sampleRate = view.getUint32(24, true);
+  const bitsPerSample = view.getUint16(34, true);
+  const frameBytes = (numChannels * bitsPerSample) / 8;
+  const totalFrames = Math.floor(
+    (bytes.byteLength - WAV_HEADER_SIZE) / frameBytes,
+  );
+  const baseUri = sourceUri.replace(/\.wav$/, "");
+
+  return ranges.map(({ startSample, endSample }, i) => {
+    const start = Math.max(0, Math.min(startSample, totalFrames));
+    const end = Math.max(start, Math.min(endSample, totalFrames));
+    if (end === start) return null;
+    const pcm = bytes.subarray(
+      WAV_HEADER_SIZE + start * frameBytes,
+      WAV_HEADER_SIZE + end * frameBytes,
+    );
+    const out = new File(`${baseUri}_${i}.wav`);
+    out.write(
+      createWavHeaderBytes(
+        pcm.byteLength,
+        sampleRate,
+        numChannels,
+        bitsPerSample,
+      ),
+    );
+    out.write(pcm, { append: true });
+    return out.uri;
+  });
+};

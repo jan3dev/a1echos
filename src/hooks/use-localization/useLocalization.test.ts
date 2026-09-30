@@ -42,6 +42,7 @@ describe("useLocalization", () => {
       "copyFailedTitle",
       "sessionDeleteTranscriptionsTitle",
       "allTranscriptionsCopied",
+      "transcriptionCopied",
       "sessionNotFound",
       "settingsTitle",
       "title",

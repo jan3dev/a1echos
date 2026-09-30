@@ -17,6 +17,7 @@ import {
   databaseService,
   sherpaTranscriptionService,
 } from "@/services";
+import { sliceWavFile } from "@/utils";
 
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
@@ -88,10 +89,17 @@ jest.mock("@/utils", () => ({
     recording: "RECORDING",
     model: "MODEL",
     service: "SERVICE",
+    storage: "STORAGE",
   },
   logError: jest.fn(),
   logWarn: jest.fn(),
   formatTranscriptionText: jest.fn((text: string) => text),
+  sliceWavFile: jest.fn(
+    (uri: string, ranges: { startSample: number; endSample: number }[]) =>
+      ranges.map((r, i) =>
+        r.endSample > r.startSample ? `${uri}_${i}.wav` : null,
+      ),
+  ),
 }));
 
 const testSession = {
@@ -136,6 +144,9 @@ const getInitialState = () => ({
     currentItemText: "",
     currentItemStartMs: 0,
     createdTranscriptions: [],
+    createdSegments: [],
+    currentItemStartSample: 0,
+    lastEventSample: 0,
     deferPersist: false,
   },
 });
@@ -146,6 +157,7 @@ type ChunkBoundary = "none" | "long" | "final";
 interface ChunkEvent {
   text: string;
   boundary: ChunkBoundary;
+  endSample?: number;
 }
 
 let capturedChunkCallback: ((event: ChunkEvent) => void) | null = null;
@@ -1093,7 +1105,9 @@ describe("transcriptionStore", () => {
       ).toHaveBeenCalled();
       expect(
         sherpaTranscriptionService.startRealtimeTranscription,
-      ).toHaveBeenCalled();
+      ).toHaveBeenCalledWith({
+        wavOutputUri: expect.stringMatching(/rec_\d+\.wav$/),
+      });
     });
 
     it("cleans up on realtime start failure", async () => {
@@ -1169,18 +1183,65 @@ describe("transcriptionStore", () => {
       ).toHaveBeenCalled();
     });
 
-    it("skips audio attachment and persists all items on a multi-split run", async () => {
+    it("slices the WAV per item on a multi-split run", async () => {
       const dateSpy = jest.spyOn(Date, "now");
       (
         sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
       ).mockImplementationOnce(async () => {
         dateSpy.mockReturnValue(1_000_000);
+        capturedChunkCallback?.({ text: "", boundary: "none", endSample: 50 });
         (Crypto.randomUUID as jest.Mock).mockReturnValueOnce("id-1");
-        capturedChunkCallback?.({ text: "First.", boundary: "none" });
+        capturedChunkCallback?.({
+          text: "First.",
+          boundary: "none",
+          endSample: 100,
+        });
         // Advance past the 60s cap so the long pause actually finalizes.
         dateSpy.mockReturnValue(1_000_000 + 61_000);
-        capturedChunkCallback?.({ text: "", boundary: "long" });
+        capturedChunkCallback?.({ text: "", boundary: "long", endSample: 120 });
         (Crypto.randomUUID as jest.Mock).mockReturnValueOnce("id-2");
+        capturedChunkCallback?.({
+          text: "Second.",
+          boundary: "final",
+          endSample: 200,
+        });
+        return "/tmp/recording.wav";
+      });
+      await primeFileModeSubscription();
+
+      await useTranscriptionStore.getState().stopRecordingAndSave();
+      dateSpy.mockRestore();
+
+      expect(sliceWavFile).toHaveBeenCalledWith("/tmp/recording.wav", [
+        { startSample: 50, endSample: 120 },
+        { startSample: 120, endSample: 200 },
+      ]);
+      expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
+        "/tmp/recording.wav_0.wav",
+        expect.stringMatching(/^audio_\d+_0\.wav$/),
+      );
+      expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
+        "/tmp/recording.wav_1.wav",
+        expect.stringMatching(/^audio_\d+_1\.wav$/),
+      );
+      const state = useTranscriptionStore.getState();
+      expect(state.transcriptions).toHaveLength(2);
+      expect(databaseService.upsertTranscription).toHaveBeenCalledTimes(2);
+      expect(state.transcriptions.every((t) => t.audioPath !== "")).toBe(true);
+    });
+
+    it("keeps text without audio when slicing fails", async () => {
+      (sliceWavFile as jest.Mock).mockImplementationOnce(() => {
+        throw new Error("read failed");
+      });
+      const dateSpy = jest.spyOn(Date, "now");
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        dateSpy.mockReturnValue(1_000_000);
+        capturedChunkCallback?.({ text: "First.", boundary: "none" });
+        dateSpy.mockReturnValue(1_000_000 + 61_000);
+        capturedChunkCallback?.({ text: "", boundary: "long" });
         capturedChunkCallback?.({ text: "Second.", boundary: "final" });
         return "/tmp/recording.wav";
       });
@@ -1191,7 +1252,6 @@ describe("transcriptionStore", () => {
 
       const state = useTranscriptionStore.getState();
       expect(state.transcriptions).toHaveLength(2);
-      expect(audioProtectionService.saveAudio).not.toHaveBeenCalled();
       expect(databaseService.upsertTranscription).toHaveBeenCalledTimes(2);
       expect(state.transcriptions.every((t) => t.audioPath === "")).toBe(true);
     });
@@ -1793,7 +1853,7 @@ describe("transcriptionStore", () => {
 
       expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
         "/tmp/rec_123.wav",
-        expect.stringMatching(/^audio_\d+\.wav$/),
+        expect.stringMatching(/^audio_\d+_0\.wav$/),
       );
     });
 
@@ -1818,6 +1878,84 @@ describe("transcriptionStore", () => {
       expect(txs).toHaveLength(1);
       expect(txs[0].audioPath).toBe("");
       expect(databaseService.upsertTranscription).toHaveBeenCalled();
+    });
+
+    it("realtime mode attaches the recorded WAV to a single-item run", async () => {
+      useTranscriptionStore.setState({
+        state: TranscriptionState.RECORDING,
+        isOperationLocked: false,
+        lastOperationTime: null,
+        recordingSessionId: "session-1",
+        chunkUnsubscribe: jest.fn(),
+        realtimeAudioLevelUnsubscribe: jest.fn(),
+      });
+      useSettingsStore.setState({
+        selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
+      });
+      primeChunkCallback();
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({ text: "Live text.", boundary: "final" });
+        return "/tmp/rec_456.wav";
+      });
+
+      await useTranscriptionStore.getState().stopRecordingAndSave();
+
+      expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
+        "/tmp/rec_456.wav",
+        expect.stringMatching(/^audio_\d+_0\.wav$/),
+      );
+      const txs = useTranscriptionStore.getState().transcriptions;
+      expect(txs).toHaveLength(1);
+      expect(txs[0].audioPath).toMatch(/^\/audio\/audio_\d+_0\.wav$/);
+    });
+
+    it("realtime mode attaches a slice to each smart-split item", async () => {
+      useTranscriptionStore.setState({
+        state: TranscriptionState.RECORDING,
+        isOperationLocked: false,
+        lastOperationTime: null,
+        recordingSessionId: "session-1",
+        chunkUnsubscribe: jest.fn(),
+        realtimeAudioLevelUnsubscribe: jest.fn(),
+      });
+      useSettingsStore.setState({
+        selectedModelType: ModelType.WHISPER_REALTIME,
+        selectedTranscriptionMode: TranscriptionMode.REALTIME,
+      });
+      primeChunkCallback();
+      (
+        sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(async () => {
+        capturedChunkCallback?.({
+          text: "One.",
+          boundary: "final",
+          endSample: 80,
+        });
+        capturedChunkCallback?.({
+          text: "Two.",
+          boundary: "final",
+          endSample: 160,
+        });
+        return "/tmp/rec_789.wav";
+      });
+
+      await useTranscriptionStore.getState().stopRecordingAndSave();
+
+      expect(sliceWavFile).toHaveBeenCalledWith("/tmp/rec_789.wav", [
+        { startSample: 0, endSample: 80 },
+        { startSample: 80, endSample: 160 },
+      ]);
+      const txs = useTranscriptionStore.getState().transcriptions;
+      expect(txs).toHaveLength(2);
+      expect(txs.every((t) => t.audioPath.startsWith("/audio/"))).toBe(true);
+      expect(databaseService.upsertTranscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          audioPath: expect.stringMatching(/_1\.wav$/),
+        }),
+      );
     });
 
     it("skips persist for incognito session in realtime mode", async () => {
