@@ -50,6 +50,7 @@ export const FolderGroupItem = (props: FolderGroupItemProps) => {
   return (
     <RipplePressable
       onPress={props.onPress}
+      onLongPress={onMorePress}
       rippleColor={theme.colors.ripple}
       accessibilityRole="button"
       accessibilityLabel={

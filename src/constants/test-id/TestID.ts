@@ -45,6 +45,7 @@ export enum TestID {
   SessionName = "session-name",
   SessionMoreMenu = "session-more-menu",
   SessionActionsSheet = "session-actions-sheet",
+  FolderActionsSheet = "folder-actions-sheet",
   SessionRename = "session-rename",
   SessionDelete = "session-delete",
   SessionShare = "session-share",

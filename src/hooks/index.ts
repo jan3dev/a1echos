@@ -1,4 +1,5 @@
 export { useEnsureModelDownloaded } from "./use-ensure-model-downloaded/useEnsureModelDownloaded";
+export { useFolderActions } from "./use-folder-actions/useFolderActions";
 export { useKeyboardHeight } from "./use-keyboard-height/useKeyboardHeight";
 export { useLocalization } from "./use-localization/useLocalization";
 export { useMicPermission } from "./use-mic-permission/useMicPermission";

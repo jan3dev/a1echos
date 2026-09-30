@@ -50,6 +50,8 @@ describe("FolderGrid", () => {
     expect(onFolderPress).toHaveBeenCalledWith(folders[1]);
     fireEvent.press(getAllByLabelText("folderMoreOptions")[2]);
     expect(onFolderMorePress).toHaveBeenCalledWith(folders[2]);
+    fireEvent(getByText("JAN3"), "longPress");
+    expect(onFolderMorePress).toHaveBeenLastCalledWith(folders[1]);
   });
 
   it("exposes more options as an accessibility action", () => {

@@ -28,6 +28,8 @@ interface SessionStore {
     folderId?: string,
   ) => Promise<string>;
   createFolder: (name: string) => Promise<string>;
+  renameFolder: (id: string, newName: string) => Promise<void>;
+  deleteFolder: (id: string) => Promise<void>;
   renameSession: (id: string, newName: string) => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
@@ -206,6 +208,26 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       return folder.id;
     },
 
+    renameFolder: async (id: string, newName: string) => {
+      const name = normalizeName(newName);
+      if (name === "") return;
+      await databaseService.renameFolder(id, name);
+      set({
+        folders: get().folders.map((f) => (f.id === id ? { ...f, name } : f)),
+      });
+    },
+
+    // Sessions left in the folder fall back to the root (FK `set null`).
+    deleteFolder: async (id: string) => {
+      await databaseService.deleteFolder(id);
+      set({
+        folders: get().folders.filter((f) => f.id !== id),
+        sessions: get().sessions.map((s) =>
+          s.folderId === id ? { ...s, folderId: undefined } : s,
+        ),
+      });
+    },
+
     notifySessionCreated: () => {
       set({});
     },
@@ -258,7 +280,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
     },
 
     deleteSession: async (id: string) => {
-      const { incognitoSession, sessions, activeSessionId } = get();
+      const { incognitoSession, sessions } = get();
 
       if (incognitoSession && incognitoSession.id === id) {
         let newActiveId = "";
@@ -293,7 +315,10 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         throw new Error(`Failed to delete session: ${error}`);
       }
 
-      const updatedSessions = sessions.filter((s) => s.id !== id);
+      // Re-read after the await: parallel deletes would otherwise each write
+      // back their own stale snapshot and resurrect each other's sessions.
+      const { activeSessionId } = get();
+      const updatedSessions = get().sessions.filter((s) => s.id !== id);
       let newActiveId = activeSessionId;
 
       if (updatedSessions.length === 0) {
@@ -421,6 +446,8 @@ export const useFolderSummaries = (): FolderSummary[] => {
 export const useFindFolderById = (id: string) =>
   useSessionStore((s) => s.folders.find((f) => f.id === id) ?? null);
 export const useCreateFolder = () => useSessionStore((s) => s.createFolder);
+export const useRenameFolder = () => useSessionStore((s) => s.renameFolder);
+export const useDeleteFolder = () => useSessionStore((s) => s.deleteFolder);
 export const useCreateSession = () => useSessionStore((s) => s.createSession);
 export const useRenameSession = () => useSessionStore((s) => s.renameSession);
 export const useFindSessionById = () =>

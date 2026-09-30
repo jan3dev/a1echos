@@ -26,7 +26,9 @@ export const FolderGrid = ({
               key={folder.id}
               folder={folder}
               onPress={() => onFolderPress?.(folder)}
-              onMorePress={() => onFolderMorePress?.(folder)}
+              onMorePress={
+                onFolderMorePress && (() => onFolderMorePress(folder))
+              }
             />
           ))}
           {row.length === 1 && <View style={styles.spacer} />}

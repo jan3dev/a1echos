@@ -157,6 +157,21 @@ describe("DatabaseService", () => {
       });
       expect(chain.run).toHaveBeenCalled();
     });
+
+    it("renames a folder row", async () => {
+      await databaseService.renameFolder("f1", "Home");
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(chain.set).toHaveBeenCalledWith({ name: "Home" });
+      expect(chain.where).toHaveBeenCalled();
+      expect(chain.run).toHaveBeenCalled();
+    });
+
+    it("deletes a folder row", async () => {
+      await databaseService.deleteFolder("f1");
+      expect(mockDelete).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalled();
+      expect(chain.run).toHaveBeenCalled();
+    });
   });
 
   describe("upsertSession", () => {

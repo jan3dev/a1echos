@@ -890,7 +890,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
 
       set({
-        transcriptions: state.transcriptions.filter(
+        transcriptions: get().transcriptions.filter(
           (t) => t.sessionId !== sessionId,
         ),
       });

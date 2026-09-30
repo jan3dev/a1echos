@@ -34,6 +34,10 @@ export const useLocalization = () => {
       folderMoreOptions: t("folderMoreOptions"),
       folderCreateTitle: t("folderCreateTitle"),
       folderNameLabel: t("folderNameLabel"),
+      folderRenameTitle: t("folderRenameTitle"),
+      folderDeleted: t("folderDeleted"),
+      folderDeleteWithSessionsTitle: (count: number) =>
+        t("folderDeleteWithSessionsTitle", { count }),
       followUsOnX: t("followUs"),
       couldNotOpenLink: t("couldNotOpenLink"),
       incognitoModeTitle: t("incognitoModeTitle"),

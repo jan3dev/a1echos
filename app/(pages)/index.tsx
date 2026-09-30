@@ -17,6 +17,7 @@ import {
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import {
+  useFolderActions,
   useLocalization,
   useRecordingEntry,
   useScrollSurface,
@@ -92,6 +93,10 @@ function HomeScreenContent() {
     hideToast: hideDeleteToast,
   });
   const { selectionMode } = actions;
+  const folderActions = useFolderActions({
+    showToast: showDeleteToast,
+    hideToast: hideDeleteToast,
+  });
 
   // Hold the empty-state label back while a global tooltip is showing so it
   // doesn't paint over (and visually beneath) the tooltip — the label appears
@@ -169,6 +174,7 @@ function HomeScreenContent() {
           onLayout={onLayout}
           folders={folderSummaries}
           onFolderPress={handleFolderPress}
+          onFolderMorePress={folderActions.onFolderMorePress}
           onCreateFolderPress={openCreateFolder}
         />
       </AppBarBlurTarget>
@@ -216,6 +222,30 @@ function HomeScreenContent() {
           onSubmit={actions.rename.onSubmit}
           onCancel={actions.rename.onCancel}
         />
+      )}
+
+      {folderActions.target && (
+        <>
+          <SessionActionsSheet
+            testID={TestID.FolderActionsSheet}
+            visible={folderActions.actionsSheet.visible}
+            title={folderActions.target.folder.name}
+            createdAt={folderActions.target.folder.createdAt}
+            modifiedAt={folderActions.target.modifiedAt}
+            onRename={folderActions.actionsSheet.onRename}
+            onDelete={folderActions.actionsSheet.onDelete}
+            onDismiss={folderActions.actionsSheet.onDismiss}
+          />
+          <SessionInputModal
+            visible={folderActions.rename.visible}
+            title={loc.folderRenameTitle}
+            label={loc.folderNameLabel}
+            buttonText={loc.save}
+            initialValue={folderActions.target.folder.name}
+            onSubmit={folderActions.rename.onSubmit}
+            onCancel={folderActions.rename.onCancel}
+          />
+        </>
       )}
 
       <SessionInputModal

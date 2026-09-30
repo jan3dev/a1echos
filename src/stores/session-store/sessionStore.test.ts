@@ -24,6 +24,8 @@ jest.mock("@/services", () => ({
     listSessions: jest.fn(async () => []),
     listFolders: jest.fn(async () => []),
     insertFolder: jest.fn(async () => undefined),
+    renameFolder: jest.fn(async () => undefined),
+    deleteFolder: jest.fn(async () => undefined),
     upsertSession: jest.fn(async () => undefined),
     deleteSession: jest.fn(async () => ({ deletedAudioPaths: [] })),
     getActiveSessionId: jest.fn(async () => null),
@@ -254,6 +256,51 @@ describe("sessionStore", () => {
     });
   });
 
+  describe("renameFolder()", () => {
+    it("persists a trimmed, truncated name", async () => {
+      useSessionStore.setState({
+        folders: [{ id: "f1", name: "Old", createdAt: new Date(0) }],
+      });
+      await useSessionStore
+        .getState()
+        .renameFolder("f1", `  ${"C".repeat(40)}  `);
+      expect(useSessionStore.getState().folders[0].name).toBe("C".repeat(30));
+      expect(databaseService.renameFolder).toHaveBeenCalledWith(
+        "f1",
+        "C".repeat(30),
+      );
+    });
+
+    it("ignores an empty name", async () => {
+      useSessionStore.setState({
+        folders: [{ id: "f1", name: "Old", createdAt: new Date(0) }],
+      });
+      await useSessionStore.getState().renameFolder("f1", "  ");
+      expect(useSessionStore.getState().folders[0].name).toBe("Old");
+      expect(databaseService.renameFolder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteFolder()", () => {
+    it("removes the folder and unfiles its sessions", async () => {
+      useSessionStore.setState({
+        folders: [
+          { id: "f1", name: "A", createdAt: new Date(0) },
+          { id: "f2", name: "B", createdAt: new Date(0) },
+        ],
+        sessions: [
+          makeSession({ id: "s1", name: "S1", folderId: "f1" }),
+          makeSession({ id: "s2", name: "S2", folderId: "f2" }),
+        ],
+      });
+      await useSessionStore.getState().deleteFolder("f1");
+      const state = useSessionStore.getState();
+      expect(state.folders.map((f) => f.id)).toEqual(["f2"]);
+      expect(state.sessions.map((s) => s.folderId)).toEqual([undefined, "f2"]);
+      expect(databaseService.deleteFolder).toHaveBeenCalledWith("f1");
+    });
+  });
+
   describe("createSession()", () => {
     it("creates with auto-generated name", async () => {
       const id = await useSessionStore.getState().createSession();
@@ -444,6 +491,20 @@ describe("sessionStore", () => {
 
       expect(state.sessions).toHaveLength(1);
       expect(state.activeSessionId).toBe("s1");
+    });
+
+    it("keeps both removals when deletes run in parallel", async () => {
+      useSessionStore.setState({
+        sessions: [s1, s2],
+        activeSessionId: "",
+      });
+
+      await Promise.all([
+        useSessionStore.getState().deleteSession("s1"),
+        useSessionStore.getState().deleteSession("s2"),
+      ]);
+
+      expect(useSessionStore.getState().sessions).toHaveLength(0);
     });
 
     it("deletes last session and clears active ID", async () => {

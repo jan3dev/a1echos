@@ -56,6 +56,7 @@ jest.mock("@/hooks", () => ({
     requestPermission: jest.fn(),
     openSettings: jest.fn(),
   })),
+  useFolderActions: jest.fn(() => mockFolderActions),
   useSessionListActions: (...args: any[]) =>
     jest
       .requireActual("@/hooks/use-session-list-actions/useSessionListActions")
@@ -90,6 +91,24 @@ let mockSessions: any[] = [];
 let mockFolders: any[] = [];
 const mockCreateFolder = jest.fn(async () => "f-new");
 let mockGlobalTooltip: any = null;
+const mockFolderActions = {
+  target: {
+    folder: { id: "f1", name: "AQUA", createdAt: new Date(0) },
+    modifiedAt: new Date(0),
+  },
+  onFolderMorePress: jest.fn(),
+  actionsSheet: {
+    visible: true,
+    onRename: jest.fn(),
+    onDelete: jest.fn(),
+    onDismiss: jest.fn(),
+  },
+  rename: {
+    visible: false,
+    onSubmit: jest.fn(),
+    onCancel: jest.fn(),
+  },
+};
 
 jest.mock("@/stores", () => ({
   useHasSeenWelcome: jest.fn(() => true),
@@ -119,6 +138,7 @@ jest.mock("@/stores", () => ({
 let mockOnSessionTap: ((id: string) => void) | null = null;
 let mockHomeContentProps: any = null;
 let mockCreateFolderModal: any = null;
+let mockFolderRenameModal: any = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
 let mockOnRenameCancel: (() => void) | null = null;
 const navbarActions: Record<string, () => void> = {};
@@ -148,10 +168,12 @@ jest.mock("@/components", () => {
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
     SessionActionsSheet: (props: any) =>
-      props.visible ? (
-        <View testID={TID.SessionActionsSheet} {...props} />
-      ) : null,
+      props.visible ? <View {...props} /> : null,
     SessionInputModal: (props: any) => {
+      if (String(props.title) === "folderRenameTitle") {
+        mockFolderRenameModal = props;
+        return null;
+      }
       if (props.label) {
         mockCreateFolderModal = props;
         return null;
@@ -261,6 +283,18 @@ describe("HomeScreen folders", () => {
     });
     expect(logError).toHaveBeenCalled();
     expect(mockCreateFolderModal.visible).toBe(true);
+  });
+
+  it("wires folder actions into the list, sheet and rename modal", () => {
+    const { getByTestId } = render(<HomeScreen />);
+    expect(mockHomeContentProps.onFolderMorePress).toBe(
+      mockFolderActions.onFolderMorePress,
+    );
+    expect(getByTestId(TestID.FolderActionsSheet).props.title).toBe("AQUA");
+    expect(mockFolderRenameModal.initialValue).toBe("AQUA");
+    expect(mockFolderRenameModal.onSubmit).toBe(
+      mockFolderActions.rename.onSubmit,
+    );
   });
 
   it("closes the sheet on cancel", () => {

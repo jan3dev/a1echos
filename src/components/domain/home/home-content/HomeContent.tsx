@@ -37,6 +37,7 @@ interface HomeContentProps {
   folderId?: string;
   folders?: FolderSummary[];
   onFolderPress?: (folder: FolderSummary) => void;
+  onFolderMorePress?: (folder: FolderSummary) => void;
   onCreateFolderPress?: () => void;
 }
 
@@ -55,6 +56,7 @@ export const HomeContent = ({
   folderId,
   folders = NO_FOLDERS,
   onFolderPress,
+  onFolderMorePress,
   onCreateFolderPress,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
@@ -162,6 +164,7 @@ export const HomeContent = ({
             folders={folders}
             selectionMode={selectionMode}
             onFolderPress={onFolderPress}
+            onFolderMorePress={onFolderMorePress}
             onCreateFolderPress={onCreateFolderPress}
           />
         }
@@ -200,11 +203,13 @@ const ListHeader = memo(function ListHeader({
   folders,
   selectionMode,
   onFolderPress,
+  onFolderMorePress,
   onCreateFolderPress,
 }: {
   folders: FolderSummary[];
   selectionMode: boolean;
   onFolderPress?: (folder: FolderSummary) => void;
+  onFolderMorePress?: (folder: FolderSummary) => void;
   onCreateFolderPress?: () => void;
 }) {
   const { loc } = useLocalization();
@@ -249,6 +254,7 @@ const ListHeader = memo(function ListHeader({
           <FolderGrid
             folders={folders}
             onFolderPress={selectionMode ? undefined : onFolderPress}
+            onFolderMorePress={selectionMode ? undefined : onFolderMorePress}
           />
           <Divider />
         </>
