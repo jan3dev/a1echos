@@ -1,10 +1,17 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useId } from "react";
 import { StyleSheet, View } from "react-native";
-import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
+import Svg, {
+  Circle,
+  ClipPath,
+  Defs,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from "react-native-svg";
 
 import FolderAddBottom from "@/assets/images/folder_add_bottom.svg";
-import FolderAddTop from "@/assets/images/folder_add_top.svg";
 import FolderBottom from "@/assets/images/folder_bottom.svg";
 import { useLocalization } from "@/hooks";
 import type { FolderSummary } from "@/models";
@@ -26,6 +33,9 @@ const GLOW_STOPS = [
   [1, 0],
 ] as const;
 
+const PLUS_PATH =
+  "M8 16C7.4 16 7 15.6 7 15V9H1C0.4 9 0 8.6 0 8C0 7.4 0.4 7 1 7H7V1C7 0.4 7.4 0 8 0C8.6 0 9 0.4 9 1V7H15C15.6 7 16 7.4 16 8C16 8.6 15.6 9 15 9H9V15C9 15.6 8.6 16 8 16Z";
+
 export type { FolderSummary };
 
 type FolderGroupItemProps =
@@ -34,6 +44,8 @@ type FolderGroupItemProps =
       folder: FolderSummary;
       onPress?: () => void;
       onMorePress?: () => void;
+      /** Defined in pick mode: swaps the more button for a radio. */
+      selected?: boolean;
     }
   | {
       variant: "addNew";
@@ -44,15 +56,21 @@ export const FolderGroupItem = (props: FolderGroupItemProps) => {
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const isAddNew = props.variant === "addNew";
-  const glowId = `folderGlow-${useId().replace(/:/g, "")}`;
+  const uid = useId().replace(/:/g, "");
+  const glowId = `folderGlow-${uid}`;
+  const clipId = `folderAddClip-${uid}`;
   const onMorePress = isAddNew ? undefined : props.onMorePress;
+  const selected = isAddNew ? undefined : props.selected;
 
   return (
     <RipplePressable
       onPress={props.onPress}
       onLongPress={onMorePress}
       rippleColor={theme.colors.ripple}
-      accessibilityRole="button"
+      accessibilityRole={selected === undefined ? "button" : "radio"}
+      accessibilityState={
+        selected === undefined ? undefined : { checked: selected }
+      }
       accessibilityLabel={
         isAddNew
           ? loc.homeNewFolder
@@ -85,14 +103,29 @@ export const FolderGroupItem = (props: FolderGroupItemProps) => {
               />
             </View>
             <View style={styles.top}>
-              <FolderAddTop
-                width="100%"
-                height="100%"
-                preserveAspectRatio="none"
-                fill={theme.colors.surfaceBorderPrimary}
-                stroke={theme.colors.surfaceBorderSecondary}
-                color={theme.colors.textPrimary}
-              />
+              {/* Figma's export bakes the dashes into a notched outline that
+                  distorts when stretched; a 2pt stroke clipped to the shape
+                  is its 1pt inside dashed border at any width. */}
+              <Svg width="100%" height="100%">
+                <Defs>
+                  <ClipPath id={clipId}>
+                    <Rect width="100%" height="100%" rx={16} />
+                  </ClipPath>
+                </Defs>
+                <Rect
+                  width="100%"
+                  height="100%"
+                  rx={16}
+                  fill={theme.colors.surfaceBorderPrimary}
+                  stroke={theme.colors.surfaceBorderSecondary}
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  clipPath={`url(#${clipId})`}
+                />
+              </Svg>
+              <Svg width={16} height={16} style={styles.plus}>
+                <Path d={PLUS_PATH} fill={theme.colors.textPrimary} />
+              </Svg>
             </View>
           </>
         ) : (
@@ -133,16 +166,33 @@ export const FolderGroupItem = (props: FolderGroupItemProps) => {
                 </Defs>
                 <Circle cx={106} cy={106} r={106} fill={`url(#${glowId})`} />
               </Svg>
-              <RipplePressable
-                onPress={onMorePress}
-                hitSlop={10}
-                rippleColor={theme.colors.rippleOnPrimary}
-                borderless
-                accessibilityRole="button"
-                accessibilityLabel={loc.folderMoreOptions}
-              >
-                <Icon name="more" size={18} color={AquaPrimitiveColors.white} />
-              </RipplePressable>
+              {selected !== undefined ? (
+                <View
+                  style={[
+                    styles.radio,
+                    selected
+                      ? { backgroundColor: theme.colors.accentBrand }
+                      : styles.radioOff,
+                  ]}
+                >
+                  {selected && <View style={styles.radioDot} />}
+                </View>
+              ) : (
+                <RipplePressable
+                  onPress={onMorePress}
+                  hitSlop={10}
+                  rippleColor={theme.colors.rippleOnPrimary}
+                  borderless
+                  accessibilityRole="button"
+                  accessibilityLabel={loc.folderMoreOptions}
+                >
+                  <Icon
+                    name="more"
+                    size={18}
+                    color={AquaPrimitiveColors.white}
+                  />
+                </RipplePressable>
+              )}
               <Text
                 variant="body2"
                 weight="medium"
@@ -202,6 +252,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  plus: {
+    position: "absolute",
+    alignSelf: "center",
+    top: "50%",
+    marginTop: -8,
+  },
   tint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: AquaPrimitiveColors.glassSurfaceSecondaryDark,
@@ -218,6 +274,24 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: -74,
     top: -74,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOff: {
+    backgroundColor: AquaPrimitiveColors.glassSurfaceSecondaryDark,
+    borderWidth: 1,
+    borderColor: AquaPrimitiveColors.glassSurfaceBorderDark,
+  },
+  radioDot: {
+    width: 7.5,
+    height: 7.5,
+    borderRadius: 4,
+    backgroundColor: AquaPrimitiveColors.white,
   },
   counter: {
     alignSelf: "stretch",

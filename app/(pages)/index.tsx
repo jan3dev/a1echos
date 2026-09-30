@@ -208,14 +208,25 @@ function HomeScreenContent() {
         <SessionActionsSheet
           testID={TestID.SessionActionsSheet}
           visible={actions.actionsSheet.visible}
-          title={actions.actionsSheet.session.name}
-          createdAt={actions.actionsSheet.session.timestamp}
-          modifiedAt={actions.actionsSheet.session.lastModified}
+          header={{
+            title: actions.actionsSheet.session.name,
+            createdAt: actions.actionsSheet.session.timestamp,
+            modifiedAt: actions.actionsSheet.session.lastModified,
+          }}
           onRename={actions.actionsSheet.onRename}
+          onAddToFolder={actions.actionsSheet.onAddToFolder}
+          onCopy={actions.actionsSheet.onCopy}
+          onDownload={actions.actionsSheet.onDownload}
+          onShare={actions.actionsSheet.onShare}
           onDelete={actions.actionsSheet.onDelete}
           onDismiss={actions.actionsSheet.onDismiss}
         />
       )}
+
+      <SessionActionsSheet
+        testID={TestID.SessionShareSheet}
+        {...actions.shareSheet}
+      />
 
       {actions.rename.target && (
         <SessionInputModal
@@ -233,9 +244,11 @@ function HomeScreenContent() {
           <SessionActionsSheet
             testID={TestID.FolderActionsSheet}
             visible={folderActions.actionsSheet.visible}
-            title={folderActions.target.folder.name}
-            createdAt={folderActions.target.folder.createdAt}
-            modifiedAt={folderActions.target.modifiedAt}
+            header={{
+              title: folderActions.target.folder.name,
+              createdAt: folderActions.target.folder.createdAt,
+              modifiedAt: folderActions.target.modifiedAt,
+            }}
             onRename={folderActions.actionsSheet.onRename}
             onDelete={folderActions.actionsSheet.onDelete}
             onDismiss={folderActions.actionsSheet.onDismiss}

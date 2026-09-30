@@ -82,8 +82,8 @@ describe("HomeContent", () => {
     expect(queryByText("AQUA")).toBeNull();
   });
 
-  it("hides quick actions in selection mode but keeps the folder grid", () => {
-    const { getByText, queryByText } = render(
+  it("hides quick actions and folders in selection mode", () => {
+    const { queryByText } = render(
       <HomeContent
         {...defaultProps}
         selectionMode
@@ -94,7 +94,7 @@ describe("HomeContent", () => {
     );
     expect(queryByText("homeFolder")).toBeNull();
     expect(queryByText("homeUpload")).toBeNull();
-    expect(getByText("AQUA")).toBeTruthy();
+    expect(queryByText("AQUA")).toBeNull();
   });
 
   it("fires onUploadPress from the upload quick action", () => {

@@ -1,4 +1,7 @@
 export const AppConstants = {
+  // iOS drops a native presentation (share sheet, picker) started while a
+  // sheet's Modal is still fading out.
+  SHEET_DISMISS_MS: 350,
   SESSION_NAME_MAX_LENGTH: 30,
   AUDIO_SAMPLE_RATE: 16000,
   AUDIO_NUM_CHANNELS: 1,

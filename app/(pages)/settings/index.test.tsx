@@ -119,9 +119,10 @@ describe("SettingsScreen", () => {
   });
 
   it("biometric toggle does nothing when user cancels", async () => {
-    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce(
-      { success: false, error: "user_cancel" },
-    );
+    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: "user_cancel",
+    });
     const { getByTestId } = render(<SettingsScreen />);
     fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
     await waitFor(() =>
@@ -132,9 +133,10 @@ describe("SettingsScreen", () => {
   });
 
   it("biometric toggle shows tooltip when device has no auth set up", async () => {
-    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce(
-      { success: false, error: "not_enrolled" },
-    );
+    (LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: "not_enrolled",
+    });
     const { getByTestId } = render(<SettingsScreen />);
     fireEvent.press(getByTestId("list-item-biometricAuthTitle"));
     await waitFor(() =>

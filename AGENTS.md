@@ -9,6 +9,7 @@ Expo React Native voice notes app with on-device transcription (sherpa-onnx: Whi
 - Run `npm run test:coverage` after changes; thresholds in `jest.config.js` are enforced.
 - New components: co-located `*.gallery.tsx` exporting a `GalleryEntry`, registered in `DESIGN_SYSTEM_MANIFEST` (`app/(design-system)/manifest.ts`).
 - Don't add dependencies unless necessary; check CVEs before installing.
+- UI copy follows Apple HIG casing: Title Case for labels, titles, buttons, menu/settings rows and toast/tooltip titles (lowercase a/and/as/of/on/to/via mid-phrase); sentence case for full sentences, descriptions, helper text, error details and status/metadata. Use `…`, not `...`. Figma wins on conflict.
 - Codex will review your code.
 
 ## Keyboard dictionary

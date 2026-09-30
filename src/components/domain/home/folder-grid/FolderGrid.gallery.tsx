@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { GalleryEntry } from "@/design-system/manifest";
@@ -36,6 +37,20 @@ export const Grid = () => (
   </View>
 );
 
+export const PickMode = () => {
+  const [selectedId, setSelectedId] = useState<string | null>("2");
+  return (
+    <View style={styles.stage}>
+      <FolderGrid
+        folders={folders.slice(0, 3)}
+        selectedId={selectedId}
+        onFolderPress={(f) => setSelectedId(f.id)}
+        onCreatePress={log("New folder")}
+      />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   row: {
     alignSelf: "stretch",
@@ -56,6 +71,7 @@ const gallery: GalleryEntry = {
   demos: [
     { name: "Items", render: Items },
     { name: "Grid", render: Grid },
+    { name: "Pick mode", render: PickMode },
   ],
 };
 

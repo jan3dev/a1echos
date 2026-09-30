@@ -14,27 +14,32 @@ import { getShadow, useTheme } from "@/theme";
 import { formatDate, formatSessionSubtitle } from "@/utils";
 
 import { ListItem } from "../../../shared/list-item/ListItem";
-import { Icon } from "../../../ui/icon/Icon";
+import { Icon, type IconName } from "../../../ui/icon/Icon";
 import { Dimmer } from "../../../ui/modal/Dimmer";
 import { Text } from "../../../ui/text/Text";
 
 export interface SessionActionsSheetProps {
   visible: boolean;
-  title: string;
-  createdAt: Date;
-  modifiedAt: Date;
-  onRename: () => void;
-  onDelete: () => void;
+  /** Omit for a header-less sheet (e.g. the share sheet). */
+  header?: { title: string; createdAt: Date; modifiedAt: Date };
+  onRename?: () => void;
+  onAddToFolder?: () => void;
+  onCopy?: () => void;
+  onDownload?: () => void;
+  onShare?: () => void;
+  onDelete?: () => void;
   onDismiss: () => void;
   testID?: string;
 }
 
 export const SessionActionsSheet = ({
   visible,
-  title,
-  createdAt,
-  modifiedAt,
+  header,
   onRename,
+  onAddToFolder,
+  onCopy,
+  onDownload,
+  onShare,
   onDelete,
   onDismiss,
   testID,
@@ -77,8 +82,12 @@ export const SessionActionsSheet = ({
     outputRange: [0, 1],
   });
 
+  const createdAt = header?.createdAt;
+  const modifiedAt = header?.modifiedAt;
   const modifiedLabel = useMemo(
     () =>
+      createdAt &&
+      modifiedAt &&
       formatSessionSubtitle({
         now: new Date(),
         created: createdAt,
@@ -87,6 +96,59 @@ export const SessionActionsSheet = ({
       }),
     [createdAt, modifiedAt, loc.modifiedPrefix],
   );
+
+  const rows: {
+    testID: TestID;
+    onPress?: () => void;
+    title: string;
+    leading: IconName;
+    trailing: IconName;
+    color?: string;
+  }[] = [
+    {
+      testID: TestID.SessionRename,
+      onPress: onRename,
+      title: loc.sessionRenameTitle,
+      leading: "edit",
+      trailing: "chevron_right",
+    },
+    {
+      testID: TestID.SessionAddToFolder,
+      onPress: onAddToFolder,
+      title: loc.addToFolder,
+      leading: "folder_move_to",
+      trailing: "chevron_right",
+    },
+    {
+      testID: TestID.SessionCopyText,
+      onPress: onCopy,
+      title: loc.copyAsText,
+      leading: "text",
+      trailing: "copy",
+    },
+    {
+      testID: TestID.SessionDownloadMarkdown,
+      onPress: onDownload,
+      title: loc.downloadMarkdown,
+      leading: "document_text",
+      trailing: "download",
+    },
+    {
+      testID: TestID.SessionShareVia,
+      onPress: onShare,
+      title: loc.shareVia,
+      leading: "export",
+      trailing: "chevron_right",
+    },
+    {
+      testID: TestID.SessionDelete,
+      onPress: onDelete,
+      title: loc.delete,
+      leading: "trash",
+      trailing: "chevron_right",
+      color: theme.colors.accentDanger,
+    },
+  ];
 
   return (
     <Dimmer visible={visible} onDismiss={onDismiss}>
@@ -115,77 +177,59 @@ export const SessionActionsSheet = ({
               />
             </View>
 
-            <View style={styles.header}>
-              <Text
-                variant="subtitle"
-                weight="semibold"
-                align="center"
-                color={theme.colors.textPrimary}
-                numberOfLines={1}
-              >
-                {title}
-              </Text>
-              <Text
-                variant="body2"
-                weight="medium"
-                align="center"
-                color={theme.colors.textSecondary}
-                style={styles.createdLine}
-              >
-                {`${loc.createdPrefix}: ${formatDate(createdAt)}`}
-              </Text>
-              <Text
-                variant="caption1"
-                weight="medium"
-                align="center"
-                color={theme.colors.textTertiary}
-                style={styles.modifiedLine}
-              >
-                {modifiedLabel}
-              </Text>
-            </View>
+            {header && (
+              <View style={styles.header}>
+                <Text
+                  variant="subtitle"
+                  weight="semibold"
+                  align="center"
+                  color={theme.colors.textPrimary}
+                  numberOfLines={1}
+                >
+                  {header.title}
+                </Text>
+                <Text
+                  variant="body2"
+                  weight="medium"
+                  align="center"
+                  color={theme.colors.textSecondary}
+                  style={styles.createdLine}
+                >
+                  {`${loc.createdPrefix}: ${formatDate(header.createdAt)}`}
+                </Text>
+                <Text
+                  variant="caption1"
+                  weight="medium"
+                  align="center"
+                  color={theme.colors.textTertiary}
+                  style={styles.modifiedLine}
+                >
+                  {modifiedLabel}
+                </Text>
+              </View>
+            )}
 
-            <View style={styles.rows}>
-              <ListItem
-                testID={TestID.SessionRename}
-                title={loc.sessionRenameTitle}
-                iconLeading={
-                  <Icon
-                    name="edit"
-                    size={24}
-                    color={theme.colors.textSecondary}
-                  />
-                }
-                iconTrailing={
-                  <Icon
-                    name="chevron_right"
-                    size={18}
-                    color={theme.colors.textSecondary}
-                  />
-                }
-                onPress={onRename}
-              />
-
-              <ListItem
-                testID={TestID.SessionDelete}
-                title={loc.delete}
-                titleColor={theme.colors.accentDanger}
-                iconLeading={
-                  <Icon
-                    name="trash"
-                    size={24}
-                    color={theme.colors.accentDanger}
-                  />
-                }
-                iconTrailing={
-                  <Icon
-                    name="chevron_right"
-                    size={18}
-                    color={theme.colors.accentDanger}
-                  />
-                }
-                onPress={onDelete}
-              />
+            <View style={[styles.rows, !header && styles.rowsNoHeader]}>
+              {rows
+                .filter((r) => r.onPress)
+                .map((r) => {
+                  const color = r.color ?? theme.colors.textSecondary;
+                  return (
+                    <ListItem
+                      key={r.testID}
+                      testID={r.testID}
+                      title={r.title}
+                      titleColor={r.color}
+                      iconLeading={
+                        <Icon name={r.leading} size={24} color={color} />
+                      }
+                      iconTrailing={
+                        <Icon name={r.trailing} size={18} color={color} />
+                      }
+                      onPress={r.onPress}
+                    />
+                  );
+                })}
             </View>
           </Pressable>
         </Animated.View>
@@ -228,5 +272,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 32,
     gap: 16,
+  },
+  rowsNoHeader: {
+    paddingTop: 0,
   },
 });

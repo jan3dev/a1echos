@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,9 +30,11 @@ import {
   useFindFolderById,
   useFolderSessions,
   useGlobalTooltip,
+  useRenameFolder,
   useSetRecordingControlsVisible,
 } from "@/stores";
 import { useTheme } from "@/theme";
+import { FeatureFlag, logError } from "@/utils";
 
 export default function FolderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -45,6 +47,20 @@ export default function FolderScreen() {
     useScrollSurface();
 
   const folder = useFindFolderById(id);
+  const renameFolder = useRenameFolder();
+  const [renameFolderVisible, setRenameFolderVisible] = useState(false);
+
+  const handleRenameFolderSubmit = async (name: string) => {
+    try {
+      await renameFolder(id, name);
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.session,
+        message: "Failed to rename folder",
+      });
+    }
+    setRenameFolderVisible(false);
+  };
   const sessions = useFolderSessions(id);
   const globalTooltip = useGlobalTooltip();
   const setRecordingControlsVisible = useSetRecordingControlsVisible();
@@ -101,6 +117,7 @@ export default function FolderScreen() {
       ) : (
         <TopAppBar
           title={folder?.name ?? ""}
+          onTitlePressed={() => setRenameFolderVisible(true)}
           blurTarget={blurTargetRef}
           scrolled={scrolled}
           actions={[
@@ -137,14 +154,25 @@ export default function FolderScreen() {
         <SessionActionsSheet
           testID={TestID.SessionActionsSheet}
           visible={actions.actionsSheet.visible}
-          title={actions.actionsSheet.session.name}
-          createdAt={actions.actionsSheet.session.timestamp}
-          modifiedAt={actions.actionsSheet.session.lastModified}
+          header={{
+            title: actions.actionsSheet.session.name,
+            createdAt: actions.actionsSheet.session.timestamp,
+            modifiedAt: actions.actionsSheet.session.lastModified,
+          }}
           onRename={actions.actionsSheet.onRename}
+          onAddToFolder={actions.actionsSheet.onAddToFolder}
+          onCopy={actions.actionsSheet.onCopy}
+          onDownload={actions.actionsSheet.onDownload}
+          onShare={actions.actionsSheet.onShare}
           onDelete={actions.actionsSheet.onDelete}
           onDismiss={actions.actionsSheet.onDismiss}
         />
       )}
+
+      <SessionActionsSheet
+        testID={TestID.SessionShareSheet}
+        {...actions.shareSheet}
+      />
 
       {actions.rename.target && (
         <SessionInputModal
@@ -154,6 +182,18 @@ export default function FolderScreen() {
           initialValue={actions.rename.target.name}
           onSubmit={actions.rename.onSubmit}
           onCancel={actions.rename.onCancel}
+        />
+      )}
+
+      {folder && (
+        <SessionInputModal
+          visible={renameFolderVisible}
+          title={loc.folderRenameTitle}
+          label={loc.folderNameLabel}
+          buttonText={loc.save}
+          initialValue={folder.name}
+          onSubmit={handleRenameFolderSubmit}
+          onCancel={() => setRenameFolderVisible(false)}
         />
       )}
 

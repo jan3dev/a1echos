@@ -24,6 +24,7 @@ import {
 import {
   AppBarBlurTarget,
   Screen,
+  SessionActionsSheet,
   SessionAppBar,
   SessionInputModal,
   SubScreenNavbar,
@@ -32,7 +33,7 @@ import {
   TranscriptionContentView,
   useToast,
 } from "@/components";
-import { Routes } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import {
   useLocalization,
   useMicPermission,
@@ -68,7 +69,7 @@ import {
   useToggleTranscriptionSelection,
 } from "@/stores";
 import { useTheme } from "@/theme";
-import { FeatureFlag, getErrorMessage, logError } from "@/utils";
+import { delay, FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -167,15 +168,13 @@ export default function SessionScreen() {
     }
   }, [selectedIds, deleteTranscriptions, exitSelectionMode]);
 
-  const copySelectedTranscriptions = useCallback(async () => {
-    if (selectedIds.size === 0) {
-      return false;
-    }
+  const selectedTranscriptions = useMemo(
+    () => transcriptions.filter((t) => selectedIds.has(t.id)),
+    [transcriptions, selectedIds],
+  );
 
-    const text = transcriptions
-      .filter((t) => selectedIds.has(t.id))
-      .map((t) => t.text)
-      .join("\n\n");
+  const copySelectedTranscriptions = useCallback(async () => {
+    const text = selectedTranscriptions.map((t) => t.text).join("\n\n");
 
     if (!text) return false;
 
@@ -189,17 +188,9 @@ export default function SessionScreen() {
       });
       return false;
     }
-  }, [selectedIds, transcriptions]);
+  }, [selectedTranscriptions]);
 
   const shareSelectedTranscriptions = useCallback(async () => {
-    if (selectedIds.size === 0) {
-      return false;
-    }
-
-    const selectedTranscriptions = transcriptions.filter((t) =>
-      selectedIds.has(t.id),
-    );
-
     if (selectedTranscriptions.length === 0) {
       return false;
     }
@@ -215,7 +206,7 @@ export default function SessionScreen() {
       });
       return false;
     }
-  }, [selectedIds, transcriptions, exitSelectionMode]);
+  }, [selectedTranscriptions, exitSelectionMode]);
 
   const {
     show: showDeleteToast,
@@ -529,6 +520,42 @@ export default function SessionScreen() {
     }
   }, [shareSelectedTranscriptions, showToast, loc]);
 
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+
+  const handleDownloadPressed = useCallback(async () => {
+    if (!session || selectedTranscriptions.length === 0) return;
+    try {
+      const saved = await shareService.saveSessionsMarkdown([
+        { session, transcriptions: selectedTranscriptions },
+      ]);
+      if (!saved) return;
+      showGlobalTooltip(loc.markdownSaved);
+      exitSelectionMode();
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: "Failed to save transcriptions as markdown",
+      });
+      showGlobalTooltip(loc.markdownSaveFailed);
+    }
+  }, [
+    selectedTranscriptions,
+    session,
+    showGlobalTooltip,
+    exitSelectionMode,
+    loc,
+  ]);
+
+  const fromShareSheet = useCallback(
+    (action: () => Promise<void>, waitForDismiss = true) =>
+      async () => {
+        setShareSheetVisible(false);
+        if (waitForDismiss) await delay(AppConstants.SHEET_DISMISS_MS);
+        await action();
+      },
+    [],
+  );
+
   const handleTranscriptionTap = useCallback(
     (transcriptionId: string) => {
       if (selectionMode) {
@@ -630,14 +657,13 @@ export default function SessionScreen() {
         icon: "export",
         label: loc.share,
         disabled: !hasSelectedItems,
-        onPress: handleSharePressed,
+        onPress: () => setShareSheetVisible(true),
       },
     ],
     [
       handleCopySelectedPressed,
       handleDeleteSelectedPressed,
       handleMergeSelectedPressed,
-      handleSharePressed,
       hasSelectedItems,
       isRecording,
       selectedIds.size,
@@ -706,6 +732,15 @@ export default function SessionScreen() {
         actions={navbarActions}
         blurTarget={blurTargetRef}
         scrolled={contentBelow}
+      />
+
+      <SessionActionsSheet
+        testID={TestID.SessionShareSheet}
+        visible={shareSheetVisible}
+        onCopy={fromShareSheet(handleCopySelectedPressed, false)}
+        onDownload={fromShareSheet(handleDownloadPressed)}
+        onShare={fromShareSheet(handleSharePressed)}
+        onDismiss={() => setShareSheetVisible(false)}
       />
 
       <SessionInputModal

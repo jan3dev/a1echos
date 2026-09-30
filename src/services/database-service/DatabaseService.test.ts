@@ -166,6 +166,13 @@ describe("DatabaseService", () => {
       expect(chain.run).toHaveBeenCalled();
     });
 
+    it("moves sessions into a folder in one update", async () => {
+      await databaseService.moveSessionsToFolder(["s1", "s2"], "f1");
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      expect(chain.set).toHaveBeenCalledWith({ folderId: "f1" });
+      expect(chain.run).toHaveBeenCalled();
+    });
+
     it("deletes a folder row", async () => {
       await databaseService.deleteFolder("f1");
       expect(mockDelete).toHaveBeenCalled();

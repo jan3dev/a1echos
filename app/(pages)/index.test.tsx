@@ -78,6 +78,7 @@ jest.mock("@/hooks/use-session-operations/useSessionOperations", () => ({
 }));
 
 jest.mock("@/utils", () => ({
+  delay: async () => undefined,
   logError: jest.fn(),
   FeatureFlag: { recording: "recording", session: "session" },
 }));
@@ -293,7 +294,9 @@ describe("HomeScreen folders", () => {
     expect(mockHomeContentProps.onFolderMorePress).toBe(
       mockFolderActions.onFolderMorePress,
     );
-    expect(getByTestId(TestID.FolderActionsSheet).props.title).toBe("AQUA");
+    expect(getByTestId(TestID.FolderActionsSheet).props.header.title).toBe(
+      "AQUA",
+    );
     expect(mockFolderRenameModal.initialValue).toBe("AQUA");
     expect(mockFolderRenameModal.onSubmit).toBe(
       mockFolderActions.rename.onSubmit,
@@ -360,6 +363,25 @@ describe("HomeScreen", () => {
     expect(getByTestId(TestID.HomeContentSelection)).toHaveTextContent(
       "selection",
     );
+  });
+
+  it("navbar add-to-folder opens the folder picker with the selection", () => {
+    (useIsSessionSelectionMode as jest.Mock).mockReturnValue(true);
+    const { useSelectedSessionIds } = require("@/stores");
+    (useSelectedSessionIds as jest.Mock).mockReturnValue(["s1", "s2"]);
+
+    render(<HomeScreen />);
+    expect(Object.keys(navbarActions)).toEqual([
+      "delete",
+      "rename",
+      "addToFolder",
+      "share",
+    ]);
+    navbarActions.addToFolder!();
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/add-to-folder",
+      params: { sessionIds: "s1,s2" },
+    });
   });
 
   it("delete selected triggers confirmation toast", () => {

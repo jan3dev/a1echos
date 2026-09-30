@@ -44,6 +44,16 @@ export const useLocalization = () => {
       folderNameLabel: t("folderNameLabel"),
       folderRenameTitle: t("folderRenameTitle"),
       folderDeleted: t("folderDeleted"),
+      addToFolder: t("addToFolder"),
+      selectFolder: t("selectFolder"),
+      folderCreateAndAdd: t("folderCreateAndAdd"),
+      sessionsAddedToFolder: (name: string) =>
+        t("sessionsAddedToFolder", { name }),
+      copyAsText: t("copyAsText"),
+      downloadMarkdown: t("downloadMarkdown"),
+      shareVia: t("shareVia"),
+      markdownSaved: t("markdownSaved"),
+      markdownSaveFailed: t("markdownSaveFailed"),
       folderDeleteWithSessionsTitle: (count: number) =>
         t("folderDeleteWithSessionsTitle", { count }),
       followUsOnX: t("followUs"),

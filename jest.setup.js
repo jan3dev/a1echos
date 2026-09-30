@@ -116,6 +116,7 @@ jest.mock("expo-file-system", () => {
     // expo-file-system Directory.list() is synchronous; returns (File|Directory)[].
     list: jest.fn(() => []),
   }));
+  mockDirectory.pickDirectoryAsync = jest.fn();
   return {
     File: mockFile,
     Directory: mockDirectory,

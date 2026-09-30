@@ -120,7 +120,10 @@ export const RecordScreen = ({
   }, [busy]);
 
   const [title, subtitle] = hasResult
-    ? [loc.onboardingTranscriptReadyTitle, loc.onboardingTranscriptReadySubtitle]
+    ? [
+        loc.onboardingTranscriptReadyTitle,
+        loc.onboardingTranscriptReadySubtitle,
+      ]
     : [loc.onboardingRecordTitle, loc.onboardingRecordSubtitle];
 
   const actions: SubScreenNavbarAction[] = [

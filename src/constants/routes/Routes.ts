@@ -25,6 +25,11 @@ export const Routes = {
     ({ pathname: "/session/[id]", params: { id } }) as unknown as Href,
   folder: (id: string): Href =>
     ({ pathname: "/folder/[id]", params: { id } }) as unknown as Href,
+  addToFolder: (sessionIds: string[]): Href =>
+    ({
+      pathname: "/add-to-folder",
+      params: { sessionIds: sessionIds.join(",") },
+    }) as unknown as Href,
   settings: "/settings" as Href,
   settingsModel: "/settings/model" as Href,
   settingsTheme: "/settings/theme" as Href,

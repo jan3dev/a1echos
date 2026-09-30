@@ -162,14 +162,15 @@ export const HomeContent = ({
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
-          <ListHeader
-            folders={folders}
-            selectionMode={selectionMode}
-            onFolderPress={onFolderPress}
-            onFolderMorePress={onFolderMorePress}
-            onCreateFolderPress={onCreateFolderPress}
-            onUploadPress={onUploadPress}
-          />
+          selectionMode ? null : (
+            <ListHeader
+              folders={folders}
+              onFolderPress={onFolderPress}
+              onFolderMorePress={onFolderMorePress}
+              onCreateFolderPress={onCreateFolderPress}
+              onUploadPress={onUploadPress}
+            />
+          )
         }
         contentContainerStyle={{
           paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
@@ -204,14 +205,12 @@ const Separator = () => <View style={styles.separator} />;
 
 const ListHeader = memo(function ListHeader({
   folders,
-  selectionMode,
   onFolderPress,
   onFolderMorePress,
   onCreateFolderPress,
   onUploadPress,
 }: {
   folders: FolderSummary[];
-  selectionMode: boolean;
   onFolderPress?: (folder: FolderSummary) => void;
   onFolderMorePress?: (folder: FolderSummary) => void;
   onCreateFolderPress?: () => void;
@@ -221,46 +220,42 @@ const ListHeader = memo(function ListHeader({
   const { theme } = useTheme();
   const hasFolders = folders.length > 0;
 
-  if (selectionMode && !hasFolders) return null;
-
   return (
     <View style={hasFolders ? styles.header : styles.headerNoFolders}>
-      {!selectionMode && (
-        <View
-          style={[styles.quickActions, hasFolders && styles.quickActionsSpaced]}
-        >
-          {onCreateFolderPress && (
-            <Button.utility
-              text={loc.homeFolder}
-              onPress={onCreateFolderPress}
-              icon={
-                <Icon
-                  name="folder_add"
-                  size={18}
-                  color={theme.colors.textPrimary}
-                />
-              }
-            />
-          )}
+      <View
+        style={[styles.quickActions, hasFolders && styles.quickActionsSpaced]}
+      >
+        {onCreateFolderPress && (
           <Button.utility
-            text={loc.homeUpload}
-            onPress={onUploadPress}
+            text={loc.homeFolder}
+            onPress={onCreateFolderPress}
             icon={
               <Icon
-                name="document_upload"
+                name="folder_add"
                 size={18}
                 color={theme.colors.textPrimary}
               />
             }
           />
-        </View>
-      )}
+        )}
+        <Button.utility
+          text={loc.homeUpload}
+          onPress={onUploadPress}
+          icon={
+            <Icon
+              name="document_upload"
+              size={18}
+              color={theme.colors.textPrimary}
+            />
+          }
+        />
+      </View>
       {hasFolders && (
         <>
           <FolderGrid
             folders={folders}
-            onFolderPress={selectionMode ? undefined : onFolderPress}
-            onFolderMorePress={selectionMode ? undefined : onFolderMorePress}
+            onFolderPress={onFolderPress}
+            onFolderMorePress={onFolderMorePress}
           />
           <Divider />
         </>

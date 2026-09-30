@@ -63,6 +63,7 @@ jest.mock("@/hooks/use-session-operations/useSessionOperations", () => ({
 }));
 
 jest.mock("@/utils", () => ({
+  delay: async () => undefined,
   logError: jest.fn(),
   getErrorMessage: (e: Error) => e.message,
   FeatureFlag: { recording: "recording" },
@@ -83,8 +84,29 @@ const mockToggle = jest.fn();
 const mockExitSelection = jest.fn();
 const mockRename = jest.fn(async () => undefined);
 
+const mockCopySessions = jest.fn(async (..._args: any[]) => true);
+const mockShareSessions = jest.fn(async (..._args: any[]) => undefined);
+const mockSaveMarkdown = jest.fn(async (..._args: any[]) => true);
+jest.mock("@/services", () => ({
+  shareService: {
+    copySessions: (...args: any[]) => mockCopySessions(...args),
+    shareSessions: (...args: any[]) => mockShareSessions(...args),
+    saveSessionsMarkdown: (...args: any[]) => mockSaveMarkdown(...args),
+  },
+}));
+
 jest.mock("@/stores", () => ({
+  useTranscriptionStore: {
+    getState: () => ({
+      sessionTranscriptions: (sessionId: string) =>
+        [
+          { id: "t1", sessionId: "s1", text: "Hello" },
+          { id: "t2", sessionId: "s2", text: "Other" },
+        ].filter((t) => t.sessionId === sessionId),
+    }),
+  },
   useFindFolderById: jest.fn(() => ({ id: "f1", name: "AQUA" })),
+  useRenameFolder: () => mockRenameFolder,
   useFolderSessions: jest.fn(() => mockSessions),
   useCreateSession: jest.fn(() => mockCreateSession),
   useIsIncognitoMode: jest.fn(() => false),
@@ -108,7 +130,10 @@ jest.mock("@/stores", () => ({
 
 const mockShowToast = jest.fn();
 let mockSheet: any = null;
+let mockShareSheet: any = null;
 let mockRenameModal: any = null;
+let mockFolderRenameModal: any = null;
+const mockRenameFolder = jest.fn(async (..._args: any[]) => undefined);
 let mockNavbar: any = null;
 let mockHomeContent: any = null;
 jest.mock("@/components", () => {
@@ -140,10 +165,15 @@ jest.mock("@/components", () => {
       <Text testID="selection-bar">{selectionTitle}</Text>
     ),
     SessionActionsSheet: (props: any) => {
-      mockSheet = props;
+      if (props.header) mockSheet = props;
+      else mockShareSheet = props;
       return null;
     },
     SessionInputModal: (props: any) => {
+      if (String(props.title) === "folderRenameTitle") {
+        mockFolderRenameModal = props;
+        return null;
+      }
       mockRenameModal = props;
       return null;
     },
@@ -152,9 +182,9 @@ jest.mock("@/components", () => {
       return null;
     },
     Toast: () => null,
-    TopAppBar: ({ title, actions }: any) => (
+    TopAppBar: ({ title, actions, onTitlePressed }: any) => (
       <View>
-        <Text>{title}</Text>
+        <Text onPress={onTitlePressed}>{title}</Text>
         {actions}
       </View>
     ),
@@ -179,12 +209,36 @@ beforeEach(() => {
   mockSelectionMode = false;
   mockSelectedIds = [];
   mockSheet = null;
+  mockShareSheet = null;
   mockRenameModal = null;
   mockNavbar = null;
   mockHomeContent = null;
 });
 
 describe("FolderScreen", () => {
+  it("tapping the title opens the folder rename modal", async () => {
+    const { getByText } = render(<FolderScreen />);
+    expect(mockFolderRenameModal.visible).toBe(false);
+    expect(mockFolderRenameModal.initialValue).toBe("AQUA");
+    fireEvent.press(getByText("AQUA"));
+    expect(mockFolderRenameModal.visible).toBe(true);
+    await act(async () => {
+      await mockFolderRenameModal.onSubmit("Work");
+    });
+    expect(mockRenameFolder).toHaveBeenCalledWith("f1", "Work");
+    expect(mockFolderRenameModal.visible).toBe(false);
+
+    fireEvent.press(getByText("AQUA"));
+    act(() => mockFolderRenameModal.onCancel());
+    expect(mockFolderRenameModal.visible).toBe(false);
+
+    mockRenameFolder.mockRejectedValueOnce(new Error("db"));
+    await act(async () => {
+      await mockFolderRenameModal.onSubmit("Work");
+    });
+    expect(jest.requireMock("@/utils").logError).toHaveBeenCalled();
+  });
+
   it("shows the folder name and the empty state without sessions", () => {
     const { getByText } = render(<FolderScreen />);
     expect(getByText("AQUA")).toBeTruthy();
@@ -270,7 +324,7 @@ describe("FolderScreen", () => {
     const { getByTestId } = render(<FolderScreen />);
     act(() => fireEvent.press(getByTestId("more-s1")));
     expect(mockSheet.visible).toBe(true);
-    expect(mockSheet.title).toBe("Session 1");
+    expect(mockSheet.header.title).toBe("Session 1");
 
     act(() => mockSheet.onRename());
     expect(mockSheet.visible).toBe(false);
@@ -286,6 +340,81 @@ describe("FolderScreen", () => {
     act(() => fireEvent.press(getByTestId("more-s1")));
     act(() => mockSheet.onDismiss());
     expect(mockSheet.visible).toBe(false);
+  });
+
+  it("navbar offers add-to-folder and share inside a folder", () => {
+    mockSelectionMode = true;
+    mockSelectedIds = ["s1"];
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+    render(<FolderScreen />);
+    const keys = mockNavbar.actions.map((a: any) => a.key);
+    expect(keys).toEqual(["delete", "rename", "addToFolder", "share"]);
+  });
+
+  it("navbar share opens the share sheet and copies the selection", async () => {
+    mockSelectionMode = true;
+    mockSelectedIds = ["s1"];
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+    render(<FolderScreen />);
+    expect(mockShareSheet.visible).toBe(false);
+    act(() => mockNavbar.actions.find((a: any) => a.key === "share").onPress());
+    expect(mockShareSheet.visible).toBe(true);
+    await act(async () => {
+      await mockShareSheet.onCopy();
+    });
+    expect(mockCopySessions).toHaveBeenCalledWith([
+      {
+        session: { id: "s1", name: "Session 1" },
+        transcriptions: [{ id: "t1", sessionId: "s1", text: "Hello" }],
+      },
+    ]);
+    expect(String(mockShowTooltip.mock.calls[0][0])).toBe("copiedToClipboard");
+    expect(mockShareSheet.visible).toBe(false);
+    expect(mockExitSelection).toHaveBeenCalled();
+
+    await act(async () => {
+      await mockShareSheet.onDownload();
+      await mockShareSheet.onShare();
+    });
+    expect(mockSaveMarkdown).toHaveBeenCalledTimes(1);
+    expect(mockShareSessions).toHaveBeenCalledTimes(1);
+    act(() => mockNavbar.actions.find((a: any) => a.key === "share").onPress());
+    act(() => mockShareSheet.onDismiss());
+    expect(mockShareSheet.visible).toBe(false);
+  });
+
+  it("⋯ menu routes add-to-folder, download and share", async () => {
+    mockSessions = [{ id: "s1", name: "Session 1" }];
+    const { getByTestId } = render(<FolderScreen />);
+    act(() => fireEvent.press(getByTestId("more-s1")));
+    act(() => mockSheet.onAddToFolder());
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/add-to-folder",
+      params: { sessionIds: "s1" },
+    });
+
+    mockSaveMarkdown.mockResolvedValueOnce(false);
+    await act(async () => {
+      await mockSheet.onDownload();
+    });
+    expect(mockShowTooltip).not.toHaveBeenCalled();
+    await act(async () => {
+      await mockSheet.onDownload();
+    });
+    expect(String(mockShowTooltip.mock.calls[0][0])).toBe("markdownSaved");
+
+    mockSaveMarkdown.mockRejectedValueOnce(new Error("disk full"));
+    await act(async () => {
+      await mockSheet.onDownload();
+    });
+    expect(String(mockShowTooltip.mock.calls[1][0])).toBe("markdownSaveFailed");
+
+    await act(async () => {
+      await mockSheet.onShare();
+      await mockSheet.onCopy();
+    });
+    expect(mockShareSessions).toHaveBeenCalledTimes(1);
+    expect(mockCopySessions).toHaveBeenCalledTimes(1);
   });
 
   it("confirming delete removes the session and reports it", async () => {

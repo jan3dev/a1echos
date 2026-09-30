@@ -13,6 +13,7 @@ import {
   useFolders,
   useFolderSummaries,
   useIncognitoSession,
+  useMoveSessionsToFolder,
   useRenameSession,
   useSessions,
   useSessionStore,
@@ -26,6 +27,7 @@ jest.mock("@/services", () => ({
     insertFolder: jest.fn(async () => undefined),
     renameFolder: jest.fn(async () => undefined),
     deleteFolder: jest.fn(async () => undefined),
+    moveSessionsToFolder: jest.fn(async () => undefined),
     upsertSession: jest.fn(async () => undefined),
     deleteSession: jest.fn(async () => ({ deletedAudioPaths: [] })),
     getActiveSessionId: jest.fn(async () => null),
@@ -298,6 +300,26 @@ describe("sessionStore", () => {
       expect(state.folders.map((f) => f.id)).toEqual(["f2"]);
       expect(state.sessions.map((s) => s.folderId)).toEqual([undefined, "f2"]);
       expect(databaseService.deleteFolder).toHaveBeenCalledWith("f1");
+    });
+  });
+
+  describe("moveSessionsToFolder()", () => {
+    it("files the given sessions with one DB update", async () => {
+      useSessionStore.setState({
+        sessions: [
+          makeSession({ id: "s1", name: "S1" }),
+          makeSession({ id: "s2", name: "S2", folderId: "f1" }),
+          makeSession({ id: "s3", name: "S3" }),
+        ],
+      });
+      await useSessionStore.getState().moveSessionsToFolder(["s1", "s2"], "f1");
+      expect(
+        useSessionStore.getState().sessions.map((s) => s.folderId),
+      ).toEqual(["f1", "f1", undefined]);
+      expect(databaseService.moveSessionsToFolder).toHaveBeenCalledWith(
+        ["s1", "s2"],
+        "f1",
+      );
     });
   });
 
@@ -678,6 +700,12 @@ describe("sessionStore", () => {
         sessions: [{ ...s1, folderId: "f1" }, s2],
         needsSort: false,
       });
+    });
+
+    it("useMoveSessionsToFolder exposes the store action", () => {
+      expect(renderHook(() => useMoveSessionsToFolder()).result.current).toBe(
+        useSessionStore.getState().moveSessionsToFolder,
+      );
     });
 
     it("useFolderSessions filters by folder, null for unfiled", () => {

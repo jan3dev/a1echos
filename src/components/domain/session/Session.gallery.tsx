@@ -159,11 +159,36 @@ export const ActionsSheetDefault = () => {
       />
       <SessionActionsSheet
         visible={visible}
-        title="Morning Meeting"
-        createdAt={new Date(2024, 3, 18, 10, 0, 0)}
-        modifiedAt={new Date(2024, 3, 19, 7, 18, 0)}
+        header={{
+          title: "Morning Meeting",
+          createdAt: new Date(2024, 3, 18, 10, 0, 0),
+          modifiedAt: new Date(2024, 3, 19, 7, 18, 0),
+        }}
         onRename={() => setVisible(false)}
+        onAddToFolder={() => setVisible(false)}
+        onCopy={() => setVisible(false)}
+        onDownload={() => setVisible(false)}
+        onShare={() => setVisible(false)}
         onDelete={() => setVisible(false)}
+        onDismiss={() => setVisible(false)}
+      />
+    </View>
+  );
+};
+
+export const ActionsSheetShare = () => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={{ padding: 16, gap: 12 }}>
+      <Button.primary
+        text="Open share sheet"
+        onPress={() => setVisible(true)}
+      />
+      <SessionActionsSheet
+        visible={visible}
+        onCopy={() => setVisible(false)}
+        onDownload={() => setVisible(false)}
+        onShare={() => setVisible(false)}
         onDismiss={() => setVisible(false)}
       />
     </View>
@@ -181,9 +206,11 @@ export const ActionsSheetNeverModified = () => {
       />
       <SessionActionsSheet
         visible={visible}
-        title="Fresh session"
-        createdAt={created}
-        modifiedAt={created}
+        header={{
+          title: "Fresh session",
+          createdAt: created,
+          modifiedAt: created,
+        }}
         onRename={() => setVisible(false)}
         onDelete={() => setVisible(false)}
         onDismiss={() => setVisible(false)}
@@ -202,9 +229,12 @@ export const ActionsSheetLongTitle = () => {
       />
       <SessionActionsSheet
         visible={visible}
-        title="A particularly long session title that should ellipsize gracefully"
-        createdAt={new Date(2024, 3, 18, 10, 0, 0)}
-        modifiedAt={new Date(2024, 3, 19, 7, 18, 0)}
+        header={{
+          title:
+            "A particularly long session title that should ellipsize gracefully",
+          createdAt: new Date(2024, 3, 18, 10, 0, 0),
+          modifiedAt: new Date(2024, 3, 19, 7, 18, 0),
+        }}
         onRename={() => setVisible(false)}
         onDelete={() => setVisible(false)}
         onDismiss={() => setVisible(false)}

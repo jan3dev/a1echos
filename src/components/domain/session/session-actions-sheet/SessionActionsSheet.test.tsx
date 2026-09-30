@@ -12,6 +12,10 @@ jest.mock("@/hooks", () => ({
     loc: {
       sessionRenameTitle: "Rename",
       delete: "Delete",
+      addToFolder: "Add to Folder",
+      copyAsText: "Copy as Text",
+      downloadMarkdown: "Download .md",
+      shareVia: "Share via…",
       modifiedPrefix: "Modified",
       createdPrefix: "Created",
     },
@@ -67,9 +71,11 @@ const setup = (
   const utils = render(
     <SessionActionsSheet
       visible
-      title="Morning Meeting"
-      createdAt={new Date(2024, 3, 18, 10, 0, 0)}
-      modifiedAt={new Date(2024, 3, 19, 7, 18, 0)}
+      header={{
+        title: "Morning Meeting",
+        createdAt: new Date(2024, 3, 18, 10, 0, 0),
+        modifiedAt: new Date(2024, 3, 19, 7, 18, 0),
+      }}
       onRename={onRename}
       onDelete={onDelete}
       onDismiss={onDismiss}
@@ -108,6 +114,41 @@ describe("SessionActionsSheet", () => {
     const { getByTestId, onDelete } = setup();
     fireEvent.press(getByTestId(TestID.SessionDelete));
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders only rows with handlers", () => {
+    const { queryByTestId } = setup();
+    expect(queryByTestId(TestID.SessionAddToFolder)).toBeNull();
+    expect(queryByTestId(TestID.SessionCopyText)).toBeNull();
+  });
+
+  it("fires the folder and share row handlers", () => {
+    const handlers = {
+      onAddToFolder: jest.fn(),
+      onCopy: jest.fn(),
+      onDownload: jest.fn(),
+      onShare: jest.fn(),
+    };
+    const { getByTestId } = setup(handlers);
+    fireEvent.press(getByTestId(TestID.SessionAddToFolder));
+    fireEvent.press(getByTestId(TestID.SessionCopyText));
+    fireEvent.press(getByTestId(TestID.SessionDownloadMarkdown));
+    fireEvent.press(getByTestId(TestID.SessionShareVia));
+    Object.values(handlers).forEach((fn) =>
+      expect(fn).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it("omits the header when none is given", () => {
+    const { queryByText, getByText } = setup({
+      header: undefined,
+      onRename: undefined,
+      onDelete: undefined,
+      onCopy: jest.fn(),
+    });
+    expect(queryByText("Morning Meeting")).toBeNull();
+    expect(queryByText("Rename")).toBeNull();
+    expect(getByText("Copy as Text")).toBeTruthy();
   });
 
   it("does not render content when not visible", () => {

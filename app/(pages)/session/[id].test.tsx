@@ -85,6 +85,7 @@ jest.mock("@/hooks", () => ({
 }));
 
 jest.mock("@/utils", () => ({
+  delay: async () => undefined,
   logError: jest.fn(),
   getErrorMessage: (e: Error) => e.message,
   FeatureFlag: {
@@ -95,7 +96,10 @@ jest.mock("@/utils", () => ({
 }));
 
 jest.mock("@/services", () => ({
-  shareService: { shareTranscriptions: jest.fn() },
+  shareService: {
+    shareTranscriptions: jest.fn(),
+    saveSessionsMarkdown: jest.fn(),
+  },
 }));
 
 const mockEmptySet = new Set();
@@ -227,6 +231,27 @@ jest.mock("@/components", () => {
         </View>
       );
     },
+    SessionActionsSheet: (props: any) =>
+      props.visible ? (
+        <View testID={TID.SessionShareSheet}>
+          <TouchableOpacity
+            testID={TID.SessionCopyText}
+            onPress={props.onCopy}
+          />
+          <TouchableOpacity
+            testID={TID.SessionDownloadMarkdown}
+            onPress={props.onDownload}
+          />
+          <TouchableOpacity
+            testID={TID.SessionShareVia}
+            onPress={props.onShare}
+          />
+          <TouchableOpacity
+            testID="share-sheet-dismiss"
+            onPress={props.onDismiss}
+          />
+        </View>
+      ) : null,
     Screen: ({ children }: any) => <View>{children}</View>,
     Toast: (props: any) => <View testID={TID.Toast} />,
     useToast: jest.fn(() => ({
@@ -659,12 +684,87 @@ describe("SessionScreen", () => {
       await act(async () => {
         fireEvent.press(getByTestId(TestID.ShareButton));
       });
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionShareVia));
+      });
 
       await waitFor(() => {
         expect(shareService.shareTranscriptions).toHaveBeenCalledWith([
           { id: "t1", text: "Hello" },
         ]);
       });
+    });
+  });
+
+  describe("share sheet", () => {
+    const renderWithSelection = async () => {
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      (useSelectedTranscriptionIdsSet as jest.Mock).mockReturnValue(
+        new Set(["t1"]),
+      );
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
+      ]);
+      const utils = render(<SessionScreen />);
+      await act(async () => {});
+      await act(async () => {
+        fireEvent.press(utils.getByTestId(TestID.ShareButton));
+      });
+      return utils;
+    };
+
+    it("opens from the navbar and dismisses", async () => {
+      const { getByTestId, queryByTestId } = await renderWithSelection();
+      expect(getByTestId(TestID.SessionShareSheet)).toBeTruthy();
+      expect(shareService.shareTranscriptions).not.toHaveBeenCalled();
+      fireEvent.press(getByTestId("share-sheet-dismiss"));
+      expect(queryByTestId(TestID.SessionShareSheet)).toBeNull();
+    });
+
+    it("copies the selection as text", async () => {
+      const { getByTestId, queryByTestId } = await renderWithSelection();
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionCopyText));
+      });
+      expect(queryByTestId(TestID.SessionShareSheet)).toBeNull();
+      expect(Clipboard.setStringAsync).toHaveBeenCalledWith("Hello");
+    });
+
+    it("downloads the selection as markdown", async () => {
+      (shareService.saveSessionsMarkdown as jest.Mock).mockResolvedValue(true);
+      const { getByTestId } = await renderWithSelection();
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionDownloadMarkdown));
+      });
+      expect(shareService.saveSessionsMarkdown).toHaveBeenCalledWith([
+        {
+          session: expect.objectContaining({ id: "session-1" }),
+          transcriptions: [{ id: "t1", text: "Hello" }],
+        },
+      ]);
+      expect(mockExitSelectionMode).toHaveBeenCalled();
+    });
+
+    it("does nothing when the folder picker is dismissed", async () => {
+      (shareService.saveSessionsMarkdown as jest.Mock).mockResolvedValue(false);
+      const { getByTestId } = await renderWithSelection();
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionDownloadMarkdown));
+      });
+      expect(mockExitSelectionMode).not.toHaveBeenCalled();
+    });
+
+    it("logs when saving markdown fails", async () => {
+      (shareService.saveSessionsMarkdown as jest.Mock).mockRejectedValue(
+        new Error("disk"),
+      );
+      const { getByTestId } = await renderWithSelection();
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionDownloadMarkdown));
+      });
+      expect(jest.requireMock("@/utils").logError).toHaveBeenCalled();
+      expect(mockExitSelectionMode).not.toHaveBeenCalled();
     });
   });
 
@@ -1264,6 +1364,9 @@ describe("SessionScreen", () => {
       await act(async () => {
         fireEvent.press(getByTestId(TestID.ShareButton));
       });
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionShareVia));
+      });
 
       // shareService should NOT be called because selectedTranscriptions is empty
       expect(shareService.shareTranscriptions).not.toHaveBeenCalled();
@@ -1287,6 +1390,9 @@ describe("SessionScreen", () => {
 
       await act(async () => {
         fireEvent.press(getByTestId(TestID.ShareButton));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionShareVia));
       });
 
       await waitFor(() => {
@@ -1317,6 +1423,9 @@ describe("SessionScreen", () => {
 
       await act(async () => {
         fireEvent.press(getByTestId(TestID.ShareButton));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionShareVia));
       });
 
       await waitFor(() => {

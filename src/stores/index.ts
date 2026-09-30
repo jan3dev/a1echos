@@ -9,6 +9,7 @@ export {
   useFolders,
   useFolderSummaries,
   useIncognitoSession,
+  useMoveSessionsToFolder,
   useRenameFolder,
   useRenameSession,
   useSessions,

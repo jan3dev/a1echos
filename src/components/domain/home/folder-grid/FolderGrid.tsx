@@ -6,31 +6,52 @@ interface FolderGridProps {
   folders: FolderSummary[];
   onFolderPress?: (folder: FolderSummary) => void;
   onFolderMorePress?: (folder: FolderSummary) => void;
+  /** Pick mode: every folder shows a radio, checked for this id. */
+  selectedId?: string | null;
+  /** Appends a "New Folder" tile. */
+  onCreatePress?: () => void;
 }
 
 export const FolderGrid = ({
   folders,
   onFolderPress,
   onFolderMorePress,
+  selectedId,
+  onCreatePress,
 }: FolderGridProps) => {
-  const rows: FolderSummary[][] = [];
-  for (let i = 0; i < folders.length; i += 2)
-    rows.push(folders.slice(i, i + 2));
+  const items: (FolderSummary | null)[] = onCreatePress
+    ? [...folders, null]
+    : folders;
+  const rows: (FolderSummary | null)[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
 
   return (
     <View style={styles.grid}>
       {rows.map((row, rowIndex) => (
         <View key={rowIndex} style={styles.row}>
-          {row.map((folder) => (
-            <FolderGroupItem
-              key={folder.id}
-              folder={folder}
-              onPress={() => onFolderPress?.(folder)}
-              onMorePress={
-                onFolderMorePress && (() => onFolderMorePress(folder))
-              }
-            />
-          ))}
+          {row.map((folder) =>
+            folder ? (
+              <FolderGroupItem
+                key={folder.id}
+                folder={folder}
+                selected={
+                  selectedId === undefined
+                    ? undefined
+                    : selectedId === folder.id
+                }
+                onPress={() => onFolderPress?.(folder)}
+                onMorePress={
+                  onFolderMorePress && (() => onFolderMorePress(folder))
+                }
+              />
+            ) : (
+              <FolderGroupItem
+                key="add-new"
+                variant="addNew"
+                onPress={onCreatePress}
+              />
+            ),
+          )}
           {row.length === 1 && <View style={styles.spacer} />}
         </View>
       ))}

@@ -62,6 +62,17 @@ const createDatabaseService = () => {
     await getDb().update(folders).set({ name }).where(eq(folders.id, id)).run();
   };
 
+  const moveSessionsToFolder = async (
+    ids: string[],
+    folderId: string,
+  ): Promise<void> => {
+    await getDb()
+      .update(sessions)
+      .set({ folderId })
+      .where(inArray(sessions.id, ids))
+      .run();
+  };
+
   const deleteFolder = async (id: string): Promise<void> => {
     await getDb().delete(folders).where(eq(folders.id, id)).run();
   };
@@ -242,6 +253,7 @@ const createDatabaseService = () => {
     insertFolder,
     renameFolder,
     deleteFolder,
+    moveSessionsToFolder,
     getActiveSessionId,
     setActiveSessionId,
     listTranscriptions,

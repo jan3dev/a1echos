@@ -66,4 +66,25 @@ describe("FolderGrid", () => {
     );
     expect(onFolderMorePress).toHaveBeenCalledWith(folders[0]);
   });
+
+  it("pick mode shows radios and appends a New Folder tile", () => {
+    const onCreatePress = jest.fn();
+    const onFolderPress = jest.fn();
+    const { getAllByRole, getByText, queryAllByLabelText } = render(
+      <FolderGrid
+        folders={folders}
+        selectedId="b"
+        onFolderPress={onFolderPress}
+        onCreatePress={onCreatePress}
+      />,
+    );
+    expect(queryAllByLabelText("folderMoreOptions")).toHaveLength(0);
+    expect(
+      getAllByRole("radio").map((r) => r.props.accessibilityState.checked),
+    ).toEqual([false, true, false]);
+    fireEvent.press(getByText("PR"));
+    expect(onFolderPress).toHaveBeenCalledWith(folders[2]);
+    fireEvent.press(getByText("homeNewFolder"));
+    expect(onCreatePress).toHaveBeenCalled();
+  });
 });

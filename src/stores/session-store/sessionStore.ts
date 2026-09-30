@@ -30,6 +30,7 @@ interface SessionStore {
   createFolder: (name: string) => Promise<string>;
   renameFolder: (id: string, newName: string) => Promise<void>;
   deleteFolder: (id: string) => Promise<void>;
+  moveSessionsToFolder: (ids: string[], folderId: string) => Promise<void>;
   renameSession: (id: string, newName: string) => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
@@ -224,6 +225,16 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         folders: get().folders.filter((f) => f.id !== id),
         sessions: get().sessions.map((s) =>
           s.folderId === id ? { ...s, folderId: undefined } : s,
+        ),
+      });
+    },
+
+    moveSessionsToFolder: async (ids: string[], folderId: string) => {
+      const idSet = new Set(ids);
+      await databaseService.moveSessionsToFolder(ids, folderId);
+      set({
+        sessions: get().sessions.map((s) =>
+          idSet.has(s.id) ? { ...s, folderId } : s,
         ),
       });
     },
@@ -448,6 +459,8 @@ export const useFindFolderById = (id: string) =>
 export const useCreateFolder = () => useSessionStore((s) => s.createFolder);
 export const useRenameFolder = () => useSessionStore((s) => s.renameFolder);
 export const useDeleteFolder = () => useSessionStore((s) => s.deleteFolder);
+export const useMoveSessionsToFolder = () =>
+  useSessionStore((s) => s.moveSessionsToFolder);
 export const useCreateSession = () => useSessionStore((s) => s.createSession);
 export const useRenameSession = () => useSessionStore((s) => s.renameSession);
 export const useFindSessionById = () =>
