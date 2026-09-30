@@ -37,6 +37,8 @@ const {
   mockMakeLoc,
 } = require("../../src/test-utils/mock-localization/mockLocalization");
 
+const mockUpload = jest.fn();
+const mockUseFileImport = jest.fn((..._args: any[]) => mockUpload);
 jest.mock("@/hooks", () => ({
   useScrollSurface: jest.fn(() => ({
     scrolled: false,
@@ -47,6 +49,7 @@ jest.mock("@/hooks", () => ({
     reset: jest.fn(),
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useFileImport: (...args: any[]) => mockUseFileImport(...args),
   useRecordingEntry: (...args: any[]) =>
     jest
       .requireActual("@/hooks/use-recording-entry/useRecordingEntry")

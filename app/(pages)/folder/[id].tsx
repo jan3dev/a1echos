@@ -20,6 +20,7 @@ import {
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { AppConstants, TestID } from "@/constants";
 import {
+  useFileImport,
   useLocalization,
   useRecordingEntry,
   useScrollSurface,
@@ -64,6 +65,8 @@ export default function FolderScreen() {
   });
   const { selectionMode } = actions;
 
+  const handleUpload = useFileImport({ showAlertToast, folderId: id });
+
   useRecordingEntry({ showAlertToast, hideAlertToast, folderId: id });
 
   useEffect(() => {
@@ -83,6 +86,7 @@ export default function FolderScreen() {
           onScroll={onScroll}
           onContentSizeChange={onContentSizeChange}
           onLayout={onLayout}
+          onUploadPress={handleUpload}
         />
       </AppBarBlurTarget>
 

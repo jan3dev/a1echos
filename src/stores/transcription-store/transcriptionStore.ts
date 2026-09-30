@@ -1,11 +1,12 @@
 import * as Crypto from "expo-crypto";
-import { File, Paths } from "expo-file-system";
+import { Directory, File, Paths } from "expo-file-system";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useMemo } from "react";
 import { AppState } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
+import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
 import { AppConstants } from "@/constants";
 import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
 import type { ChunkEvent } from "@/services";
@@ -91,6 +92,36 @@ const insertSortedTranscription = (
   return next;
 };
 
+interface ImportFile {
+  uri: string;
+  name: string;
+  size?: number;
+}
+
+export type ImportFailureReason =
+  | "unsupported"
+  | "tooLong"
+  | "tooLarge"
+  | "empty"
+  | "noSpeech"
+  | "failed";
+
+interface ImportFailure {
+  name: string;
+  reason: ImportFailureReason;
+}
+
+interface ImportResult {
+  imported: number;
+  failed: ImportFailure[];
+}
+
+class ImportError extends Error {
+  constructor(readonly reason: ImportFailureReason) {
+    super(`Import failed: ${reason}`);
+  }
+}
+
 interface TranscriptionStore {
   state: TranscriptionState;
   errorMessage: string | null;
@@ -162,6 +193,10 @@ interface TranscriptionStore {
   ) => Promise<void>;
   deleteAllTranscriptionsForSession: (sessionId: string) => Promise<void>;
   cleanupDeletedSessions: (validSessionIds: Set<string>) => Promise<void>;
+  importFiles: (
+    sessionId: string,
+    files: ImportFile[],
+  ) => Promise<ImportResult>;
 
   startRecording: () => Promise<boolean>;
   stopRecordingAndSave: () => Promise<void>;
@@ -184,6 +219,8 @@ const validateStateTransition = (
     ],
     [TranscriptionState.READY]: [
       TranscriptionState.RECORDING_STARTING,
+      // File import reuses TRANSCRIBING so the record button shows its spinner.
+      TranscriptionState.TRANSCRIBING,
       TranscriptionState.LOADING,
       TranscriptionState.ERROR,
     ],
@@ -267,6 +304,88 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
     }
     await useSessionStore.getState().updateSessionModifiedTimestamp(sessionId);
+  };
+
+  const ensureEngine = async (): Promise<boolean> => {
+    const { selectedModelId, selectedLanguage } = useSettingsStore.getState();
+    const initialized = await sherpaTranscriptionService.initialize(
+      selectedModelId,
+      selectedLanguage?.code ?? "en",
+    );
+    if (initialized) set({ isEngineReady: true });
+    return initialized;
+  };
+
+  const transcribeAudioFile = async (
+    uri: string,
+  ): Promise<Pick<Transcription, "text" | "audioPath">> => {
+    if (!EchosAudioDecoder) throw new Error("Audio decoder unavailable");
+    const wav = new File(Paths.cache, `import_${Crypto.randomUUID()}.wav`);
+    try {
+      const { durationMs } = await EchosAudioDecoder.decodeToWav16k(
+        uri,
+        wav.uri,
+        AppConstants.IMPORT_MAX_AUDIO_DURATION_MS,
+      );
+      if (durationMs > AppConstants.IMPORT_MAX_AUDIO_DURATION_MS) {
+        throw new ImportError("tooLong");
+      }
+
+      if (!(await ensureEngine())) {
+        throw new Error("Failed to initialize transcription engine");
+      }
+
+      const text = formatTranscriptionText(
+        await sherpaTranscriptionService.transcribeWavFile(wav.uri),
+      );
+      if (!text) throw new ImportError("noSpeech");
+
+      try {
+        const audioPath = await audioProtectionService.saveAudio(
+          wav.uri,
+          `audio_${Date.now()}.wav`,
+        );
+        return { text, audioPath };
+      } catch (error) {
+        // Don't throw away a long transcription because the audio (e.g. disk full) couldn't be kept.
+        logError(error, {
+          flag: FeatureFlag.store,
+          message: "Failed to save imported audio",
+        });
+        return { text, audioPath: "" };
+      }
+    } finally {
+      if (wav.exists) wav.delete();
+    }
+  };
+
+  const importFile = async (
+    file: ImportFile,
+    sessionId: string,
+  ): Promise<Transcription> => {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    let content: Pick<Transcription, "text" | "audioPath">;
+    if (extension === "mp3" || extension === "wav") {
+      content = await transcribeAudioFile(file.uri);
+    } else if (extension === "md") {
+      const source = new File(file.uri);
+      if (
+        (file.size ?? source.size ?? 0) > AppConstants.IMPORT_MAX_TEXT_BYTES
+      ) {
+        throw new ImportError("tooLarge");
+      }
+      const text = (await source.text()).trim();
+      if (!text) throw new ImportError("empty");
+      content = { text, audioPath: "" };
+    } else {
+      throw new ImportError("unsupported");
+    }
+    return {
+      id: Crypto.randomUUID(),
+      sessionId,
+      timestamp: new Date(),
+      ...content,
+    };
   };
 
   const finalizeSmartSplitItem = (): void => {
@@ -912,6 +1031,60 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
     },
 
+    importFiles: async (sessionId: string, files: ImportFile[]) => {
+      get().clearErrorState();
+      if (
+        get().state !== TranscriptionState.READY ||
+        !get().transitionTo(TranscriptionState.TRANSCRIBING)
+      ) {
+        throw new Error("Cannot import while recording");
+      }
+      get().createLoadingPreview(sessionId);
+
+      const isIncognito =
+        useSessionStore.getState().incognitoSession?.id === sessionId;
+      const failed: ImportFailure[] = [];
+
+      try {
+        for (const file of files) {
+          let audioPath = "";
+          try {
+            const transcription = await importFile(file, sessionId);
+            audioPath = transcription.audioPath;
+            if (!isIncognito) {
+              await databaseService.upsertTranscription(transcription);
+            }
+            get().addTranscription(transcription);
+          } catch (error) {
+            if (audioPath) await audioProtectionService.deleteAudio(audioPath);
+            if (!(error instanceof ImportError)) {
+              logError(error, {
+                flag: FeatureFlag.store,
+                message: "Failed to import file",
+              });
+            }
+            failed.push({
+              name: file.name,
+              reason: error instanceof ImportError ? error.reason : "failed",
+            });
+          } finally {
+            const picked = new File(file.uri);
+            if (picked.exists) picked.delete();
+          }
+        }
+        if (failed.length < files.length && !isIncognito) {
+          await useSessionStore
+            .getState()
+            .updateSessionModifiedTimestamp(sessionId);
+        }
+      } finally {
+        get().clearLoadingPreview();
+        get().transitionTo(TranscriptionState.READY);
+      }
+
+      return { imported: files.length - failed.length, failed };
+    },
+
     startRecording: async () => {
       const operationName = "startRecording";
 
@@ -941,8 +1114,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         // Get settings for model and language
         const settingsState = useSettingsStore.getState();
         const transcriptionMode = settingsState.selectedTranscriptionMode;
-        const modelId = settingsState.selectedModelId;
-        const languageCode = settingsState.selectedLanguage?.code ?? "en";
         const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
 
         // Surface the spinner before the (potentially multi-second) engine
@@ -953,17 +1124,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           return false;
         }
 
-        // Ensure transcription engine is initialized with the right model and language
-        const initialized = await sherpaTranscriptionService.initialize(
-          modelId,
-          languageCode,
-        );
-        if (!initialized) {
+        if (!(await ensureEngine())) {
           get().setError("Failed to initialize transcription engine");
           releaseOperationLock(operationName);
           return false;
         }
-        set({ isEngineReady: true });
 
         if (!get().transitionTo(TranscriptionState.RECORDING)) {
           get().transitionTo(TranscriptionState.READY);
@@ -1386,9 +1551,28 @@ export const useDeleteTranscriptions = () =>
   useTranscriptionStore((s) => s.deleteTranscriptions);
 export const useMergeTranscriptions = () =>
   useTranscriptionStore((s) => s.mergeTranscriptions);
+export const useImportFiles = () => useTranscriptionStore((s) => s.importFiles);
 export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
 
+// Plaintext import leftovers survive a crash or kill mid-import.
+const sweepImportLeftovers = () => {
+  try {
+    const picked = new Directory(Paths.cache, "DocumentPicker");
+    if (picked.exists) picked.delete();
+    for (const entry of new Directory(Paths.cache).list()) {
+      if (entry instanceof File && entry.name.startsWith("import_")) {
+        entry.delete();
+      }
+    }
+  } catch (error) {
+    logWarn(`Failed to sweep import leftovers: ${error}`, {
+      flag: FeatureFlag.store,
+    });
+  }
+};
+
 export const initializeTranscriptionStore = async () => {
+  sweepImportLeftovers();
   return useTranscriptionStore.getState().initialize();
 };
 

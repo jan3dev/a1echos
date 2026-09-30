@@ -60,6 +60,7 @@ export {
   useAudioLevel,
   useDeleteTranscriptions,
   useMergeTranscriptions,
+  useImportFiles,
   useIsEngineInitializing,
   useIsRecording,
   useLivePreview,
@@ -69,6 +70,7 @@ export {
   useTranscriptionState,
   useTranscriptionStore,
 } from "./transcription-store/transcriptionStore";
+export type { ImportFailureReason } from "./transcription-store/transcriptionStore";
 export { preWarmModel } from "./transcription-store/preWarmModel";
 export {
   initializeModelDownloadStore,

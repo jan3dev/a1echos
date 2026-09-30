@@ -40,6 +40,16 @@ jest.mock(
   { virtual: true },
 );
 
+jest.mock("@modules/echos-audio-decoder/src", () => ({
+  EchosAudioDecoder: {
+    decodeToWav16k: jest.fn(async () => ({ durationMs: 1000 })),
+  },
+}));
+
+jest.mock("expo-document-picker", () => ({
+  getDocumentAsync: jest.fn(async () => ({ canceled: true, assets: null })),
+}));
+
 const { useThemeStore } = require("./src/theme");
 
 // ---------------------------------------------------------------------------

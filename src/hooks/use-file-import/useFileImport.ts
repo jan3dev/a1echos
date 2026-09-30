@@ -1,0 +1,132 @@
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
+import { useNavigationContainerRef, useRouter } from "expo-router";
+import { useCallback } from "react";
+import { Platform } from "react-native";
+
+import type { ToastOptions } from "@/components/ui/toast/useToast";
+import { Routes } from "@/constants";
+import {
+  AUDIO_BUSY_STATES,
+  type ImportFailureReason,
+  useCreateSession,
+  useImportFiles,
+  useShowGlobalTooltip,
+  useTranscriptionStore,
+} from "@/stores";
+import { FeatureFlag, getErrorMessage, logError } from "@/utils";
+
+import { useLocalization } from "../use-localization/useLocalization";
+import { useSessionOperations } from "../use-session-operations/useSessionOperations";
+
+const PICKER_TYPES = [
+  "audio/mpeg",
+  "audio/wav",
+  "audio/x-wav",
+  "text/markdown",
+  "text/x-markdown",
+  // Android providers often report .md as text/plain; non-.md picks fail per file.
+  ...(Platform.OS === "android" ? ["text/plain"] : []),
+];
+
+interface UseFileImportParams {
+  showAlertToast: (options: ToastOptions) => void;
+  folderId?: string;
+}
+
+export const useFileImport = ({
+  showAlertToast,
+  folderId,
+}: UseFileImportParams) => {
+  const router = useRouter();
+  const navigation = useNavigationContainerRef();
+  const { loc } = useLocalization();
+  const createSession = useCreateSession();
+  const importFiles = useImportFiles();
+  const { deleteSession } = useSessionOperations();
+  const showGlobalTooltip = useShowGlobalTooltip();
+
+  return useCallback(async () => {
+    const reasonText: Record<ImportFailureReason, string> = {
+      unsupported: loc.uploadErrorUnsupported,
+      tooLong: loc.uploadErrorTooLong,
+      tooLarge: loc.uploadErrorTooLarge,
+      empty: loc.uploadErrorEmpty,
+      noSpeech: loc.uploadErrorNoSpeech,
+      failed: loc.uploadErrorFailed,
+    };
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: PICKER_TYPES,
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+
+      if (AUDIO_BUSY_STATES.has(useTranscriptionStore.getState().state)) {
+        showGlobalTooltip(loc.uploadBusy, "normal", undefined, true);
+        for (const asset of result.assets) new File(asset.uri).delete();
+        return;
+      }
+
+      const sessionName =
+        result.assets.length === 1
+          ? result.assets[0].name.replace(/\.[^.]+$/, "")
+          : undefined;
+      const sessionId = await createSession(
+        sessionName,
+        false,
+        loc.recordingPrefix,
+        loc.incognitoModeTitle,
+        folderId,
+      );
+      router.push(Routes.session(sessionId));
+
+      let imported = 0;
+      let failed: { name: string; reason: ImportFailureReason }[] = [];
+      try {
+        ({ imported, failed } = await importFiles(sessionId, result.assets));
+      } finally {
+        if (imported === 0) {
+          const route = navigation.getCurrentRoute() as
+            | { params?: { id?: string } }
+            | undefined;
+          if (route?.params?.id === sessionId) router.back();
+          await deleteSession(sessionId);
+        }
+      }
+
+      if (failed.length > 0) {
+        showAlertToast({
+          title: loc.uploadFailed(failed.length),
+          message: failed
+            .map((f) => `${f.name}: ${reasonText[f.reason]}`)
+            .join("\n"),
+          messageMaxLines: Math.min(failed.length, 5),
+          variant: "error",
+        });
+      }
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.session,
+        message: "Failed to import files",
+      });
+      showAlertToast({
+        title: loc.uploadFailed(1),
+        message: getErrorMessage(error),
+        variant: "error",
+      });
+    }
+  }, [
+    createSession,
+    deleteSession,
+    folderId,
+    importFiles,
+    loc,
+    navigation,
+    router,
+    showAlertToast,
+    showGlobalTooltip,
+  ]);
+};

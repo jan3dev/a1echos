@@ -30,6 +30,8 @@ const {
 } = require("../../../src/test-utils/mock-localization/mockLocalization");
 
 let mockMicGranted = true;
+const mockUpload = jest.fn();
+const mockUseFileImport = jest.fn((..._args: any[]) => mockUpload);
 jest.mock("@/hooks", () => ({
   useScrollSurface: jest.fn(() => ({
     scrolled: false,
@@ -38,6 +40,7 @@ jest.mock("@/hooks", () => ({
     onLayout: jest.fn(),
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useFileImport: (...args: any[]) => mockUseFileImport(...args),
   useRecordingEntry: (...args: any[]) =>
     jest
       .requireActual("@/hooks/use-recording-entry/useRecordingEntry")
@@ -306,6 +309,14 @@ describe("FolderScreen", () => {
     const { unmount } = render(<FolderScreen />);
     unmount();
     expect(mockExitSelection).toHaveBeenCalled();
+  });
+
+  it("wires upload to import into this folder", () => {
+    render(<FolderScreen />);
+    expect(mockUseFileImport).toHaveBeenCalledWith(
+      expect.objectContaining({ folderId: "f1" }),
+    );
+    expect(mockHomeContent.onUploadPress).toBe(mockUpload);
   });
 
   it("closes back to the previous screen", () => {

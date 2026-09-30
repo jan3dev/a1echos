@@ -2,7 +2,7 @@ import { File } from "expo-file-system";
 
 import { FeatureFlag, logError } from "../log/log";
 
-const WAV_HEADER_SIZE = 44;
+export const WAV_HEADER_SIZE = 44;
 
 /**
  * Build a 44-byte WAV header for a PCM payload of the given length. The header

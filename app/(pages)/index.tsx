@@ -17,6 +17,7 @@ import {
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import {
+  useFileImport,
   useFolderActions,
   useLocalization,
   useRecordingEntry,
@@ -123,6 +124,8 @@ function HomeScreenContent() {
     }
   }, []);
 
+  const handleUpload = useFileImport({ showAlertToast });
+
   useRecordingEntry({
     showAlertToast,
     hideAlertToast,
@@ -172,6 +175,7 @@ function HomeScreenContent() {
           onScroll={onScroll}
           onContentSizeChange={onContentSizeChange}
           onLayout={onLayout}
+          onUploadPress={handleUpload}
           folders={folderSummaries}
           onFolderPress={handleFolderPress}
           onFolderMorePress={folderActions.onFolderMorePress}

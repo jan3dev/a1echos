@@ -1,7 +1,10 @@
 import { renderHook } from "@testing-library/react-native";
 import * as Crypto from "expo-crypto";
+import { File } from "expo-file-system";
 import { Platform } from "react-native";
 
+import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
+import { AppConstants } from "@/constants";
 import {
   ModelType,
   Transcription,
@@ -22,6 +25,7 @@ import {
   initializeTranscriptionStore,
   useAudioLevel,
   useDeleteTranscriptions,
+  useImportFiles,
   useIsRecording,
   useMergeTranscriptions,
   useLivePreview,
@@ -56,7 +60,7 @@ jest.mock("@/services", () => ({
   },
   sherpaTranscriptionService: {
     initialize: jest.fn(async () => true),
-    transcribeFile: jest.fn(async () => "Transcribed text."),
+    transcribeWavFile: jest.fn(async () => "Imported speech."),
     startRealtimeTranscription: jest.fn(async () => true),
     stopRealtimeTranscription: jest.fn(async () => null),
     subscribeToChunk: jest.fn(() => jest.fn()),
@@ -2065,6 +2069,43 @@ describe("transcriptionStore", () => {
 
       expect(useTranscriptionStore.getState().isInitialized).toBe(true);
     });
+
+    it("sweeps import leftovers from the cache", async () => {
+      const { Directory } = jest.requireMock("expo-file-system");
+      const pickerDelete = jest.fn();
+      const leftover = Object.assign(Object.create(File.prototype), {
+        name: "import_x.wav",
+        delete: jest.fn(),
+      });
+      const keep = Object.assign(Object.create(File.prototype), {
+        name: "rec_1.wav",
+        delete: jest.fn(),
+      });
+      (Directory as jest.Mock)
+        .mockImplementationOnce(() => ({ exists: true, delete: pickerDelete }))
+        .mockImplementationOnce(() => ({ list: () => [leftover, keep] }));
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
+
+      await initializeTranscriptionStore();
+
+      expect(pickerDelete).toHaveBeenCalled();
+      expect(leftover.delete).toHaveBeenCalled();
+      expect(keep.delete).not.toHaveBeenCalled();
+    });
+
+    it("keeps initializing when the sweep throws", async () => {
+      const { Directory } = jest.requireMock("expo-file-system");
+      (Directory as jest.Mock).mockImplementationOnce(() => {
+        throw new Error("fs");
+      });
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
+      await initializeTranscriptionStore();
+      expect(useTranscriptionStore.getState().isInitialized).toBe(true);
+    });
   });
 
   describe("selector hooks", () => {
@@ -2815,5 +2856,334 @@ describe("transcriptionStore", () => {
       expect(useTranscriptionStore.getState().transcriptions).toHaveLength(1);
       expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("transcriptionStore.importFiles", () => {
+  const fileMocks = new Map<string, { size?: number; text?: string }>();
+  const deleted: string[] = [];
+  // Earlier suites stub transitionTo via setState and never restore it.
+  const realTransitionTo = useTranscriptionStore.getState().transitionTo;
+
+  beforeEach(() => {
+    useTranscriptionStore.setState({
+      ...getInitialState(),
+      state: TranscriptionState.READY,
+      transitionTo: realTransitionTo,
+    });
+    useSessionStore.setState({
+      sessions: [testSession],
+      activeSessionId: "session-1",
+      incognitoSession: null,
+      updateSessionModifiedTimestamp: jest.fn(async () => undefined),
+    });
+    useSettingsStore.setState({
+      selectedLanguage: { code: "en", name: "English" },
+    });
+    (Crypto.randomUUID as jest.Mock).mockReturnValue("import-uuid");
+    // Earlier suites leave persistent mockImplementations behind.
+    (databaseService.upsertTranscription as jest.Mock).mockImplementation(
+      async () => undefined,
+    );
+    (sherpaTranscriptionService.initialize as jest.Mock).mockImplementation(
+      async () => true,
+    );
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockImplementation(async () => "Imported speech.");
+    (audioProtectionService.saveAudio as jest.Mock).mockImplementation(
+      async (_src: string, name: string) => `/audio/${name}`,
+    );
+    fileMocks.clear();
+    deleted.length = 0;
+    (File as unknown as jest.Mock).mockImplementation((...args: string[]) => {
+      const uri = args.join("/");
+      const mock = fileMocks.get(uri);
+      return {
+        uri,
+        exists: true,
+        size: mock?.size ?? 10,
+        text: jest.fn(async () => mock?.text ?? ""),
+        delete: jest.fn(() => deleted.push(uri)),
+      };
+    });
+  });
+
+  const importFiles = (
+    files: { uri: string; name: string; size?: number }[],
+    sessionId = "session-1",
+  ) => useTranscriptionStore.getState().importFiles(sessionId, files);
+
+  it("imports a markdown file as a transcription and returns to READY", async () => {
+    fileMocks.set("/cache/notes.md", { text: "  # Notes\nHello  " });
+
+    const result = await importFiles([
+      { uri: "/cache/notes.md", name: "notes.md" },
+    ]);
+
+    expect(result).toEqual({ imported: 1, failed: [] });
+    const [t] = useTranscriptionStore.getState().transcriptions;
+    expect(t).toMatchObject({
+      id: "import-uuid",
+      sessionId: "session-1",
+      text: "# Notes\nHello",
+      audioPath: "",
+    });
+    expect(databaseService.upsertTranscription).toHaveBeenCalledWith(t);
+    expect(
+      useSessionStore.getState().updateSessionModifiedTimestamp,
+    ).toHaveBeenCalledWith("session-1");
+    expect(deleted).toContain("/cache/notes.md");
+    expect(useTranscriptionStore.getState().state).toBe(
+      TranscriptionState.READY,
+    );
+    expect(useTranscriptionStore.getState().loadingPreview).toBeNull();
+  });
+
+  it("shows the loading preview and TRANSCRIBING state while importing", async () => {
+    let seen: TranscriptionState | null = null;
+    let preview: string | undefined;
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockImplementationOnce(async () => {
+      seen = useTranscriptionStore.getState().state;
+      preview = useTranscriptionStore.getState().loadingPreview?.sessionId;
+      return "Speech.";
+    });
+
+    await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+
+    expect(seen).toBe(TranscriptionState.TRANSCRIBING);
+    expect(preview).toBe("session-1");
+  });
+
+  it("decodes, transcribes and saves audio files", async () => {
+    const result = await importFiles([
+      { uri: "/cache/talk.WAV", name: "talk.WAV" },
+    ]);
+
+    expect(result).toEqual({ imported: 1, failed: [] });
+    const wavUri = "/mock/cache/import_import-uuid.wav";
+    expect(EchosAudioDecoder!.decodeToWav16k).toHaveBeenCalledWith(
+      "/cache/talk.WAV",
+      wavUri,
+      AppConstants.IMPORT_MAX_AUDIO_DURATION_MS,
+    );
+    expect(sherpaTranscriptionService.initialize).toHaveBeenCalledWith(
+      useSettingsStore.getState().selectedModelId,
+      "en",
+    );
+    expect(sherpaTranscriptionService.transcribeWavFile).toHaveBeenCalledWith(
+      wavUri,
+    );
+    expect(audioProtectionService.saveAudio).toHaveBeenCalledWith(
+      wavUri,
+      expect.stringMatching(/^audio_\d+\.wav$/),
+    );
+    expect(useTranscriptionStore.getState().transcriptions[0]).toMatchObject({
+      text: "Imported speech.",
+      audioPath: expect.stringMatching(/^\/audio\/audio_/),
+    });
+    expect(useTranscriptionStore.getState().isEngineReady).toBe(true);
+    expect(deleted).toEqual([wavUri, "/cache/talk.WAV"]);
+  });
+
+  it("falls back to English when no language is selected", async () => {
+    useSettingsStore.setState({ selectedLanguage: undefined as never });
+    await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+    expect(sherpaTranscriptionService.initialize).toHaveBeenCalledWith(
+      useSettingsStore.getState().selectedModelId,
+      "en",
+    );
+  });
+
+  it("keeps importing after a file fails and reports failures", async () => {
+    fileMocks.set("/cache/b.md", { text: "B" });
+    (EchosAudioDecoder!.decodeToWav16k as jest.Mock).mockResolvedValueOnce({
+      durationMs: AppConstants.IMPORT_MAX_AUDIO_DURATION_MS + 1,
+    });
+
+    const result = await importFiles([
+      { uri: "/cache/long.mp3", name: "long.mp3" },
+      { uri: "/cache/b.md", name: "b.md" },
+    ]);
+
+    expect(result).toEqual({
+      imported: 1,
+      failed: [{ name: "long.mp3", reason: "tooLong" }],
+    });
+    expect(sherpaTranscriptionService.transcribeWavFile).not.toHaveBeenCalled();
+    expect(deleted).toContain("/cache/long.mp3");
+  });
+
+  it.each([
+    ["unsupported", { uri: "/cache/a.txt", name: "a.txt" }],
+    ["unsupported", { uri: "/cache/README", name: "README" }],
+    ["empty", { uri: "/cache/e.md", name: "e.md" }],
+    [
+      "tooLarge",
+      {
+        uri: "/cache/big.md",
+        name: "big.md",
+        size: AppConstants.IMPORT_MAX_TEXT_BYTES + 1,
+      },
+    ],
+  ])("fails with %s for %o", async (reason, file) => {
+    fileMocks.set("/cache/big.md", { text: "big" });
+    const result = await importFiles([file]);
+    expect(result).toEqual({
+      imported: 0,
+      failed: [{ name: file.name, reason }],
+    });
+    expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
+    expect(
+      useSessionStore.getState().updateSessionModifiedTimestamp,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("uses the file's own size when the picker omits it", async () => {
+    fileMocks.set("/cache/big.md", {
+      text: "big",
+      size: AppConstants.IMPORT_MAX_TEXT_BYTES + 1,
+    });
+    const result = await importFiles([
+      { uri: "/cache/big.md", name: "big.md" },
+    ]);
+    expect(result.failed).toEqual([{ name: "big.md", reason: "tooLarge" }]);
+  });
+
+  it("treats an unknown size as small", async () => {
+    (File as unknown as jest.Mock).mockImplementation((uri: string) => ({
+      uri,
+      exists: false,
+      size: null,
+      text: jest.fn(async () => "Body"),
+      delete: jest.fn(),
+    }));
+    const result = await importFiles([{ uri: "/cache/n.md", name: "n.md" }]);
+    expect(result).toEqual({ imported: 1, failed: [] });
+  });
+
+  it("fails audio when the engine can't initialize", async () => {
+    (sherpaTranscriptionService.initialize as jest.Mock).mockResolvedValueOnce(
+      false,
+    );
+    const result = await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+    expect(result.failed).toEqual([{ name: "a.mp3", reason: "failed" }]);
+    expect(deleted).toContain("/mock/cache/import_import-uuid.wav");
+  });
+
+  it("fails audio with no detected speech without saving it", async () => {
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockResolvedValueOnce("");
+    const result = await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+    expect(result.failed).toEqual([{ name: "a.mp3", reason: "noSpeech" }]);
+    expect(audioProtectionService.saveAudio).not.toHaveBeenCalled();
+  });
+
+  it("keeps the transcript without audio when saving audio fails", async () => {
+    (audioProtectionService.saveAudio as jest.Mock).mockRejectedValueOnce(
+      new Error("disk full"),
+    );
+    const result = await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+    expect(result).toEqual({ imported: 1, failed: [] });
+    expect(useTranscriptionStore.getState().transcriptions[0]).toMatchObject({
+      text: "Imported speech.",
+      audioPath: "",
+    });
+  });
+
+  it("deletes saved audio when the database write fails", async () => {
+    (databaseService.upsertTranscription as jest.Mock).mockRejectedValueOnce(
+      new Error("db"),
+    );
+    const result = await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
+    expect(result.failed).toEqual([{ name: "a.mp3", reason: "failed" }]);
+    expect(audioProtectionService.deleteAudio).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/audio\/audio_/),
+    );
+    expect(useTranscriptionStore.getState().transcriptions).toEqual([]);
+  });
+
+  it("doesn't delete audio for a failed markdown write", async () => {
+    fileMocks.set("/cache/n.md", { text: "Body" });
+    (databaseService.upsertTranscription as jest.Mock).mockRejectedValueOnce(
+      new Error("db"),
+    );
+    const result = await importFiles([{ uri: "/cache/n.md", name: "n.md" }]);
+    expect(result.failed).toEqual([{ name: "n.md", reason: "failed" }]);
+    expect(audioProtectionService.deleteAudio).not.toHaveBeenCalled();
+  });
+
+  it("skips persistence for the incognito session", async () => {
+    useSessionStore.setState({
+      incognitoSession: { ...testSession, id: "incog", isIncognito: true },
+    });
+    fileMocks.set("/cache/n.md", { text: "Body" });
+    const result = await importFiles(
+      [{ uri: "/cache/n.md", name: "n.md" }],
+      "incog",
+    );
+    expect(result.imported).toBe(1);
+    expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
+    expect(
+      useSessionStore.getState().updateSessionModifiedTimestamp,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("fails audio when the native decoder is unavailable", async () => {
+    const decoder = jest.requireMock("@modules/echos-audio-decoder/src");
+    const original = decoder.EchosAudioDecoder;
+    decoder.EchosAudioDecoder = null;
+    try {
+      const result = await importFiles([
+        { uri: "/cache/a.mp3", name: "a.mp3" },
+      ]);
+      expect(result).toEqual({
+        imported: 0,
+        failed: [{ name: "a.mp3", reason: "failed" }],
+      });
+    } finally {
+      decoder.EchosAudioDecoder = original;
+    }
+  });
+
+  it("recovers from ERROR before importing", async () => {
+    useTranscriptionStore.setState({ state: TranscriptionState.ERROR });
+    fileMocks.set("/cache/n.md", { text: "Body" });
+    const result = await importFiles([{ uri: "/cache/n.md", name: "n.md" }]);
+    expect(result.imported).toBe(1);
+  });
+
+  it("refuses to import while recording", async () => {
+    useTranscriptionStore.setState({ state: TranscriptionState.RECORDING });
+    await expect(
+      importFiles([{ uri: "/cache/n.md", name: "n.md" }]),
+    ).rejects.toThrow("Cannot import while recording");
+    expect(useTranscriptionStore.getState().state).toBe(
+      TranscriptionState.RECORDING,
+    );
+  });
+
+  it("returns to READY even if the session update throws", async () => {
+    fileMocks.set("/cache/n.md", { text: "Body" });
+    useSessionStore.setState({
+      updateSessionModifiedTimestamp: jest.fn(async () => {
+        throw new Error("boom");
+      }),
+    });
+    await expect(
+      importFiles([{ uri: "/cache/n.md", name: "n.md" }]),
+    ).rejects.toThrow("boom");
+    expect(useTranscriptionStore.getState().state).toBe(
+      TranscriptionState.READY,
+    );
+    expect(useTranscriptionStore.getState().loadingPreview).toBeNull();
+  });
+
+  it("exposes importFiles via useImportFiles", () => {
+    const { result } = renderHook(() => useImportFiles());
+    expect(result.current).toBe(useTranscriptionStore.getState().importFiles);
   });
 });

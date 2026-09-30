@@ -13,6 +13,8 @@ export const AppConstants = {
   SMART_SPLIT_LONG_PAUSE_MS: 3000,
   SMART_SPLIT_MAX_ITEM_MS: 60000,
   SMART_SPLIT_SILENCE_ENERGY_THRESHOLD: 0.02,
+  IMPORT_MAX_AUDIO_DURATION_MS: 3 * 60 * 60 * 1000,
+  IMPORT_MAX_TEXT_BYTES: 1024 * 1024,
   LIST_PAGE_SIZE: 30,
   SCROLL_TO_EDGE_THRESHOLD_RATIO: 0.5,
   // Scroll offset (px) past which an app bar switches from a solid surface that

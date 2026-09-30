@@ -97,6 +97,15 @@ describe("HomeContent", () => {
     expect(getByText("AQUA")).toBeTruthy();
   });
 
+  it("fires onUploadPress from the upload quick action", () => {
+    const onUploadPress = jest.fn();
+    const { getByText } = render(
+      <HomeContent {...defaultProps} onUploadPress={onUploadPress} />,
+    );
+    fireEvent.press(getByText("homeUpload"));
+    expect(onUploadPress).toHaveBeenCalledTimes(1);
+  });
+
   it("fires onCreateFolderPress from the folder quick action", () => {
     const onCreateFolderPress = jest.fn();
     const { getByText } = render(

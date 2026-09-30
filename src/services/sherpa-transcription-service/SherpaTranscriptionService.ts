@@ -14,6 +14,7 @@ import {
   logError,
   logWarn,
   PcmStreamWriter,
+  WAV_HEADER_SIZE,
   writeJsonAtomic,
 } from "@/utils";
 
@@ -70,6 +71,13 @@ const NUM_CHANNELS = AppConstants.AUDIO_NUM_CHANNELS;
 const BITS_PER_SAMPLE = 16;
 const MAX_CHUNK_DURATION_MS = 5000;
 const MIN_CHUNK_SECONDS = 0.3;
+// Whisper's context is 30s; stay under it with room to back off to a pause.
+const FILE_WINDOW_SECONDS = 20;
+const FILE_CUT_SEARCH_SECONDS = 3;
+const FILE_CUT_FRAME_SAMPLES = 480;
+// ~-50 dBFS: below quiet speech (~-47), above typical room tone (~-60).
+// Lower than the mic threshold because imported files aren't gain-normalized.
+const FILE_SPEECH_RMS_THRESHOLD = 0.003;
 const LONG_PAUSE_MS = AppConstants.SMART_SPLIT_LONG_PAUSE_MS;
 const ENERGY_THRESHOLD = AppConstants.SMART_SPLIT_SILENCE_ENERGY_THRESHOLD;
 
@@ -655,29 +663,111 @@ const createSherpaTranscriptionService = () => {
     return state.initializePromise;
   };
 
-  const transcribeFile = async (audioPath: string): Promise<string | null> => {
-    if (!state.isInitialized || !state.sttEngine) {
+  /** Index of the quietest frame in the window's tail, so cuts land in pauses. */
+  const findQuietestCut = (samples: Float32Array): number => {
+    let best = samples.length;
+    let bestEnergy = Infinity;
+    const start = Math.max(
+      0,
+      samples.length - SAMPLE_RATE * FILE_CUT_SEARCH_SECONDS,
+    );
+    for (
+      let f = start;
+      f + FILE_CUT_FRAME_SAMPLES <= samples.length;
+      f += FILE_CUT_FRAME_SAMPLES
+    ) {
+      const energy = computeRawRmsFromFloat32(
+        samples.subarray(f, f + FILE_CUT_FRAME_SAMPLES),
+      );
+      if (energy < bestEnergy) {
+        bestEnergy = energy;
+        best = f + FILE_CUT_FRAME_SAMPLES / 2;
+      }
+    }
+    return best;
+  };
+
+  // Whisper hallucinates text ("(eerie music)") on silence, so windows with no
+  // frame loud enough to be speech never reach the engine.
+  const hasSpeechEnergy = (samples: Float32Array): boolean => {
+    for (
+      let f = 0;
+      f + FILE_CUT_FRAME_SAMPLES <= samples.length;
+      f += FILE_CUT_FRAME_SAMPLES
+    ) {
+      const frame = samples.subarray(f, f + FILE_CUT_FRAME_SAMPLES);
+      if (computeRawRmsFromFloat32(frame) >= FILE_SPEECH_RMS_THRESHOLD) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /**
+   * Transcribes a 16 kHz mono 16-bit WAV of any length by streaming it from
+   * disk in windows, so memory stays flat for multi-hour files.
+   */
+  const transcribeWavFile = async (uri: string): Promise<string> => {
+    const engine = state.sttEngine;
+    if (!state.isInitialized || !engine) {
       throw new Error("Transcription service not initialized");
     }
-
-    if (state.isTranscribing) {
+    if (state.isTranscribing || state.isRealtimeRecording) {
       throw new Error("Transcription already in progress");
     }
 
+    state.isTranscribing = true;
+    const handle = new File(uri).open();
     try {
-      state.isTranscribing = true;
+      const totalBytes = handle.size ?? 0;
+      handle.offset = WAV_HEADER_SIZE;
+      const windowSamples = SAMPLE_RATE * FILE_WINDOW_SECONDS;
+      const texts: string[] = [];
+      let carry = new Float32Array(0);
 
-      const filePath = toNativePath(audioPath);
-      const result = await state.sttEngine.transcribeFile(filePath);
-      const text = result.text?.trim() || null;
-      return text ? postProcessText(text) : null;
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.transcription,
-        message: "File transcription failed",
-      });
-      throw error;
+      for (;;) {
+        const remainingBytes = Math.max(0, totalBytes - (handle.offset ?? 0));
+        const readBytes = Math.min(
+          (windowSamples - carry.length) * 2,
+          remainingBytes,
+        );
+        const bytes =
+          readBytes > 0 ? handle.readBytes(readBytes) : new Uint8Array(0);
+        const isLast = bytes.length >= remainingBytes;
+
+        const aligned = bytes.byteOffset % 2 === 0 ? bytes : bytes.slice();
+        const pcm = new Int16Array(
+          aligned.buffer,
+          aligned.byteOffset,
+          aligned.byteLength >> 1,
+        );
+        const window = new Float32Array(carry.length + pcm.length);
+        window.set(carry);
+        for (let i = 0; i < pcm.length; i++) {
+          window[carry.length + i] = pcm[i] / 32768;
+        }
+
+        const cut = isLast ? window.length : findQuietestCut(window);
+        const chunk = window.subarray(0, cut);
+        carry = window.slice(cut);
+
+        if (
+          chunk.length >= SAMPLE_RATE * MIN_CHUNK_SECONDS &&
+          hasSpeechEnergy(chunk)
+        ) {
+          const result = await engine.transcribeSamples(
+            Array.from(chunk),
+            SAMPLE_RATE,
+          );
+          const text = result.text?.trim();
+          if (text) texts.push(postProcessText(text));
+        }
+        if (isLast) break;
+      }
+
+      return texts.join(" ");
     } finally {
+      handle.close();
       state.isTranscribing = false;
     }
   };
@@ -912,7 +1002,7 @@ const createSherpaTranscriptionService = () => {
   return {
     initialize,
     refreshKeyboardConfig,
-    transcribeFile,
+    transcribeWavFile,
     startRealtimeTranscription,
     stopRealtimeTranscription,
     subscribeToChunk,

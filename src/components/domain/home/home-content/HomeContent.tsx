@@ -39,6 +39,7 @@ interface HomeContentProps {
   onFolderPress?: (folder: FolderSummary) => void;
   onFolderMorePress?: (folder: FolderSummary) => void;
   onCreateFolderPress?: () => void;
+  onUploadPress?: () => void;
 }
 
 const NO_FOLDERS: FolderSummary[] = [];
@@ -58,6 +59,7 @@ export const HomeContent = ({
   onFolderPress,
   onFolderMorePress,
   onCreateFolderPress,
+  onUploadPress,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -166,6 +168,7 @@ export const HomeContent = ({
             onFolderPress={onFolderPress}
             onFolderMorePress={onFolderMorePress}
             onCreateFolderPress={onCreateFolderPress}
+            onUploadPress={onUploadPress}
           />
         }
         contentContainerStyle={{
@@ -205,12 +208,14 @@ const ListHeader = memo(function ListHeader({
   onFolderPress,
   onFolderMorePress,
   onCreateFolderPress,
+  onUploadPress,
 }: {
   folders: FolderSummary[];
   selectionMode: boolean;
   onFolderPress?: (folder: FolderSummary) => void;
   onFolderMorePress?: (folder: FolderSummary) => void;
   onCreateFolderPress?: () => void;
+  onUploadPress?: () => void;
 }) {
   const { loc } = useLocalization();
   const { theme } = useTheme();
@@ -239,6 +244,7 @@ const ListHeader = memo(function ListHeader({
           )}
           <Button.utility
             text={loc.homeUpload}
+            onPress={onUploadPress}
             icon={
               <Icon
                 name="document_upload"

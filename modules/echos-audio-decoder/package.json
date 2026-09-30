@@ -1,0 +1,8 @@
+{
+  "name": "echos-audio-decoder",
+  "version": "0.0.1",
+  "description": "Decodes imported audio files to 16 kHz mono 16-bit WAV for Echos.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true
+}

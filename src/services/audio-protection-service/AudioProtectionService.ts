@@ -53,9 +53,8 @@ const createAudioProtectionService = () => {
       return targetFile.uri;
     }
 
-    // iOS path: plain file copy, then ensure the protection class is set.
-    const src = new File(sourceUri);
-    src.copy(targetFile);
+    // iOS path: move the cache file in, then ensure the protection class is set.
+    new File(sourceUri).move(targetFile);
 
     if (Platform.OS === "ios" && EchosFileProtection) {
       try {
