@@ -75,7 +75,7 @@ describe("AudioProtectionService", () => {
       await audioProtectionService.deleteAudio("/audio/x.wav");
 
       expect(EchosAndroidEncryptedFile!.deleteFile).toHaveBeenCalledWith(
-        "/audio/x.wav",
+        "/mock/document/audio/x.wav",
       );
     });
 
@@ -134,26 +134,66 @@ describe("AudioProtectionService", () => {
     });
   });
 
-  describe("decryptAudioToCache", () => {
-    it("on Android: routes to native decryptToCacheFile", async () => {
+  describe("stored path resolution", () => {
+    it("re-anchors paths from an old app container to the current audio dir", async () => {
+      setPlatform("ios");
+      const mockFile = { exists: true, delete: jest.fn() };
+      (File as unknown as jest.Mock).mockImplementationOnce(() => mockFile);
+
+      await audioProtectionService.deleteAudio(
+        "file:///old-container/Documents/audio/a.wav",
+      );
+
+      expect(File).toHaveBeenLastCalledWith("/mock/document/audio/a.wav");
+    });
+
+    it("leaves paths outside an audio dir alone", async () => {
+      setPlatform("ios");
+      const { path } =
+        await audioProtectionService.openPlaintextAudio("/cache/a.wav");
+      expect(path).toBe("/cache/a.wav");
+    });
+
+    it("audioExists checks the re-anchored file", () => {
+      (File as unknown as jest.Mock).mockImplementationOnce(() => ({
+        exists: false,
+      }));
+      expect(audioProtectionService.audioExists("/old/audio/a.wav")).toBe(
+        false,
+      );
+      expect(audioProtectionService.audioExists("")).toBe(false);
+    });
+  });
+
+  describe("openPlaintextAudio", () => {
+    it("on Android: returns a decrypted copy that release deletes", async () => {
       setPlatform("android");
       (
         EchosAndroidEncryptedFile!.decryptToCacheFile as jest.Mock
       ).mockResolvedValueOnce("/cache/dec_1.wav");
 
-      const out =
-        await audioProtectionService.decryptAudioToCache("/audio/enc.wav");
+      const { path, release } =
+        await audioProtectionService.openPlaintextAudio("/audio/enc.wav");
+      await release();
 
-      expect(out).toBe("/cache/dec_1.wav");
+      expect(path).toBe("/cache/dec_1.wav");
+      expect(EchosAndroidEncryptedFile!.deleteFile).toHaveBeenCalledWith(
+        "/cache/dec_1.wav",
+      );
     });
 
-    it("on iOS: returns the input path unchanged", async () => {
+    it("on iOS: returns the stored file and never deletes it", async () => {
       setPlatform("ios");
+      const mockFile = { exists: true, delete: jest.fn() };
+      (File as unknown as jest.Mock).mockImplementation(() => mockFile);
 
-      const out =
-        await audioProtectionService.decryptAudioToCache("/audio/plain.wav");
+      const { path, release } = await audioProtectionService.openPlaintextAudio(
+        "file:///old-container/Documents/audio/plain.wav",
+      );
+      await release();
 
-      expect(out).toBe("/audio/plain.wav");
+      expect(path).toBe("/mock/document/audio/plain.wav");
+      expect(mockFile.delete).not.toHaveBeenCalled();
     });
   });
 

@@ -59,17 +59,21 @@ export {
   AUDIO_BUSY_STATES,
   initializeTranscriptionStore,
   useAudioLevel,
+  useDeleteTranscription,
+  useDeleteTranscriptionAudio,
   useDeleteTranscriptions,
   useMergeTranscriptions,
   useImportFiles,
   useIsEngineInitializing,
   useIsRecording,
   useLivePreview,
+  useReprocessTranscription,
   useSessionTranscriptions,
   useStartRecording,
   useStopRecordingAndSave,
   useTranscriptionState,
   useTranscriptionStore,
+  useUpdateTranscription,
 } from "./transcription-store/transcriptionStore";
 export type { ImportFailureReason } from "./transcription-store/transcriptionStore";
 export { preWarmModel } from "./transcription-store/preWarmModel";

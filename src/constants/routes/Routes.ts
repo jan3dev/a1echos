@@ -30,6 +30,16 @@ export const Routes = {
       pathname: "/add-to-folder",
       params: { sessionIds: sessionIds.join(",") },
     }) as unknown as Href,
+  transcriptionEdit: (id: string, language?: string): Href =>
+    ({
+      pathname: "/transcription/[id]",
+      params: language ? { id, language } : { id },
+    }) as unknown as Href,
+  transcriptionLanguage: (id: string, language: string): Href =>
+    ({
+      pathname: "/transcription/[id]/language",
+      params: { id, language },
+    }) as unknown as Href,
   settings: "/settings" as Href,
   settingsModel: "/settings/model" as Href,
   settingsTheme: "/settings/theme" as Href,

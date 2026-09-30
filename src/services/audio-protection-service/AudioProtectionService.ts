@@ -19,6 +19,13 @@ const ensureAudioDirExists = (): Directory => {
   return dir;
 };
 
+// Stored paths are absolute, but iOS moves the app container on reinstall and
+// updates, so re-anchor anything under an audio dir to the current one.
+const resolveAudioPath = (path: string): string =>
+  path.includes(`/${AUDIO_DIR_NAME}/`)
+    ? `${getAudioDirectory().uri.replace(/\/$/, "")}/${path.split("/").pop()}`
+    : path;
+
 const createAudioProtectionService = () => {
   /**
    * Persists a captured WAV from cache into the protected audio directory.
@@ -75,8 +82,9 @@ const createAudioProtectionService = () => {
     return targetFile.uri;
   };
 
-  const deleteAudio = async (path: string): Promise<void> => {
-    if (!path || path.trim() === "") return;
+  const deleteAudio = async (storedPath: string): Promise<void> => {
+    if (!storedPath || storedPath.trim() === "") return;
+    const path = resolveAudioPath(storedPath);
     if (Platform.OS === "android" && EchosAndroidEncryptedFile) {
       try {
         await EchosAndroidEncryptedFile.deleteFile(path);
@@ -102,15 +110,19 @@ const createAudioProtectionService = () => {
   };
 
   /**
-   * On Android, decrypts an encrypted audio file to a temporary plaintext path
-   * in the cache directory; the caller is responsible for cleanup.
-   * On iOS, the file is already readable — returns the input path unchanged.
+   * Readable plaintext path for a stored audio file. On Android that's a
+   * decrypted cache copy which `release` deletes; on iOS it's the stored file
+   * itself and `release` is a no-op, so callers can't delete the original.
    */
-  const decryptAudioToCache = async (path: string): Promise<string> => {
+  const openPlaintextAudio = async (
+    storedPath: string,
+  ): Promise<{ path: string; release: () => Promise<void> }> => {
+    const path = resolveAudioPath(storedPath);
     if (Platform.OS === "android" && EchosAndroidEncryptedFile) {
-      return EchosAndroidEncryptedFile.decryptToCacheFile(path);
+      const copy = await EchosAndroidEncryptedFile.decryptToCacheFile(path);
+      return { path: copy, release: () => deleteAudio(copy) };
     }
-    return path;
+    return { path, release: async () => {} };
   };
 
   /**
@@ -245,10 +257,14 @@ const createAudioProtectionService = () => {
     return { migrated };
   };
 
+  const audioExists = (storedPath: string): boolean =>
+    storedPath !== "" && new File(resolveAudioPath(storedPath)).exists;
+
   return {
+    audioExists,
     saveAudio,
     deleteAudio,
-    decryptAudioToCache,
+    openPlaintextAudio,
     applyToAudioDirectory,
     encryptExistingAudioFilesInPlace,
   };

@@ -132,21 +132,6 @@ export const AppBarIncognito = () => {
   );
 };
 
-export const AppBarEditMode = () => {
-  useSeedStore();
-  return (
-    <View style={{ width: "100%", height: 100 }}>
-      <SessionAppBar
-        sessionName="Morning Meeting"
-        editMode={true}
-        isIncognitoSession={false}
-        onCancelEditPressed={() => console.log("Cancel Edit")}
-        onSaveEditPressed={() => console.log("Save Edit")}
-      />
-    </View>
-  );
-};
-
 // --- SessionActionsSheet ---
 
 export const ActionsSheetDefault = () => {
@@ -259,7 +244,6 @@ const gallery: GalleryEntry = {
     { name: "ListItemUnselected", render: ListItemUnselected },
     { name: "AppBarDefault", render: AppBarDefault },
     { name: "AppBarIncognito", render: AppBarIncognito },
-    { name: "AppBarEditMode", render: AppBarEditMode },
     { name: "ActionsSheetDefault", render: ActionsSheetDefault },
     { name: "ActionsSheetNeverModified", render: ActionsSheetNeverModified },
     { name: "ActionsSheetLongTitle", render: ActionsSheetLongTitle },

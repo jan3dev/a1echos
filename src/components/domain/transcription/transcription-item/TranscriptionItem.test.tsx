@@ -201,44 +201,6 @@ describe("TranscriptionItem", () => {
     expect(onEndEdit).toHaveBeenCalled();
   });
 
-  it("cancelling edit resets text and calls onEndEdit", () => {
-    const onEndEdit = jest.fn();
-    const { UNSAFE_getByType, rerender } = render(
-      <TranscriptionItem
-        {...defaultProps}
-        isEditing={true}
-        onEndEdit={onEndEdit}
-        isCancelling={false}
-      />,
-    );
-    const { TextInput } = require("react-native");
-    const input = UNSAFE_getByType(TextInput);
-    fireEvent.changeText(input, "Modified text");
-
-    rerender(
-      <TranscriptionItem
-        {...defaultProps}
-        isEditing={true}
-        onEndEdit={onEndEdit}
-        isCancelling={true}
-      />,
-    );
-    expect(onEndEdit).toHaveBeenCalled();
-  });
-
-  it("cancelling when not editing does not call onEndEdit", () => {
-    const onEndEdit = jest.fn();
-    render(
-      <TranscriptionItem
-        {...defaultProps}
-        isEditing={false}
-        onEndEdit={onEndEdit}
-        isCancelling={true}
-      />,
-    );
-    expect(onEndEdit).not.toHaveBeenCalled();
-  });
-
   it("onTap callback is called when pressed in normal mode", () => {
     const onTap = jest.fn();
     const { getByText } = render(

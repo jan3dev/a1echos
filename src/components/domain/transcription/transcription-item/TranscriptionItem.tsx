@@ -29,6 +29,28 @@ const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   hour12: true,
 });
 
+export const TranscriptionTimestamp = ({
+  timestamp,
+  colors,
+}: {
+  timestamp: Date;
+  colors: AquaColors;
+}) => {
+  const dateFormat =
+    timestamp.getFullYear() < new Date().getFullYear()
+      ? DATE_FORMAT_WITH_YEAR
+      : DATE_FORMAT;
+  return (
+    <Text variant="caption1" color={colors.textSecondary}>
+      {dateFormat.format(timestamp)}
+      {"  "}
+      <Text variant="caption1" color={colors.textTertiary}>
+        {TIME_FORMAT.format(timestamp)}
+      </Text>
+    </Text>
+  );
+};
+
 interface TranscriptionItemProps {
   transcription: Transcription;
   selectionMode?: boolean;
@@ -40,7 +62,7 @@ interface TranscriptionItemProps {
   onLongPress?: () => void;
   isEditing?: boolean;
   isAnyEditing?: boolean;
-  isCancelling?: boolean;
+  editDisabled?: boolean;
   onStartEdit?: () => void;
   onEndEdit?: () => void;
   onTranscriptionUpdate?: (updated: Transcription) => void;
@@ -60,10 +82,10 @@ export const TranscriptionItem = ({
   onLongPress,
   isEditing = false,
   isAnyEditing = false,
+  editDisabled = false,
   onStartEdit,
   onEndEdit,
   onTranscriptionUpdate,
-  isCancelling = false,
   style,
   colors: colorsOverride,
 }: TranscriptionItemProps) => {
@@ -80,13 +102,6 @@ export const TranscriptionItem = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
-  useEffect(() => {
-    if (isCancelling && isEditing) {
-      setEditText(transcription.text);
-      onEndEdit?.();
-    }
-  }, [isCancelling, isEditing, transcription.text, onEndEdit]);
-
   const handleSaveEdit = () => {
     const newText = editText.trim();
     if (newText) {
@@ -102,19 +117,13 @@ export const TranscriptionItem = ({
     onEndEdit?.();
   };
 
-  const isOlderThanCurrentYear =
-    transcription.timestamp.getFullYear() < new Date().getFullYear();
-
-  const dateFormat = isOlderThanCurrentYear
-    ? DATE_FORMAT_WITH_YEAR
-    : DATE_FORMAT;
-
   const showSkeleton = isLoadingWhisperResult || isWhisperRecording;
 
   const enableInteractions = !isLivePreviewItem && !showSkeleton;
   const showEditIcon = !isLivePreviewItem && !selectionMode;
   const showCheckbox = selectionMode && !isLivePreviewItem;
-  const disableIcons = showSkeleton || (isAnyEditing && !isEditing);
+  const disableIcons =
+    showSkeleton || editDisabled || (isAnyEditing && !isEditing);
 
   const isSelectedItem = selectionMode && isSelected;
 
@@ -163,13 +172,10 @@ export const TranscriptionItem = ({
           <View style={styles.timestampContainer}>
             {(showSkeleton ||
               !(isLivePreviewItem && transcription.text === "")) && (
-              <Text variant="caption1" color={colors.textSecondary}>
-                {dateFormat.format(transcription.timestamp)}
-                {"  "}
-                <Text variant="caption1" color={colors.textTertiary}>
-                  {TIME_FORMAT.format(transcription.timestamp)}
-                </Text>
-              </Text>
+              <TranscriptionTimestamp
+                timestamp={transcription.timestamp}
+                colors={colors}
+              />
             )}
           </View>
 

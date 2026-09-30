@@ -24,16 +24,20 @@ import { useSettingsStore } from "../settings-store/settingsStore";
 import {
   initializeTranscriptionStore,
   useAudioLevel,
+  useDeleteTranscription,
+  useDeleteTranscriptionAudio,
   useDeleteTranscriptions,
   useImportFiles,
   useIsRecording,
   useMergeTranscriptions,
   useLivePreview,
+  useReprocessTranscription,
   useSessionTranscriptions,
   useStartRecording,
   useStopRecordingAndSave,
   useTranscriptionState,
   useTranscriptionStore,
+  useUpdateTranscription,
 } from "./transcriptionStore";
 
 jest.mock("@/services", () => ({
@@ -54,7 +58,10 @@ jest.mock("@/services", () => ({
   audioProtectionService: {
     saveAudio: jest.fn(async (_src: string, name: string) => `/audio/${name}`),
     deleteAudio: jest.fn(async () => undefined),
-    decryptAudioToCache: jest.fn(async (p: string) => p),
+    openPlaintextAudio: jest.fn(async (p: string) => ({
+      path: p,
+      release: jest.fn(async () => undefined),
+    })),
     applyToAudioDirectory: jest.fn(async () => undefined),
     encryptExistingAudioFilesInPlace: jest.fn(async () => ({ migrated: 0 })),
   },
@@ -67,6 +74,7 @@ jest.mock("@/services", () => ({
     subscribeToAudioLevel: jest.fn(() => jest.fn()),
     initializationStatus: "ready",
     dispose: jest.fn(async () => undefined),
+    refreshKeyboardConfig: jest.fn(),
   },
   backgroundRecordingService: {
     startBackgroundService: jest.fn(async () => true),
@@ -2163,6 +2171,16 @@ describe("transcriptionStore", () => {
       expect(typeof result.current).toBe("function");
     });
 
+    it.each([
+      ["updateTranscription", useUpdateTranscription],
+      ["deleteTranscription", useDeleteTranscription],
+      ["deleteTranscriptionAudio", useDeleteTranscriptionAudio],
+      ["reprocessTranscription", useReprocessTranscription],
+    ] as const)("exposes %s via its hook", (action, hook) => {
+      const { result } = renderHook(() => hook());
+      expect(result.current).toBe(useTranscriptionStore.getState()[action]);
+    });
+
     it("useMergeTranscriptions returns a function", () => {
       const { result } = renderHook(() => useMergeTranscriptions());
       expect(typeof result.current).toBe("function");
@@ -3185,5 +3203,133 @@ describe("transcriptionStore.importFiles", () => {
   it("exposes importFiles via useImportFiles", () => {
     const { result } = renderHook(() => useImportFiles());
     expect(result.current).toBe(useTranscriptionStore.getState().importFiles);
+  });
+});
+
+describe("transcriptionStore.reprocessTranscription", () => {
+  const realTransitionTo = useTranscriptionStore.getState().transitionTo;
+  const mockRelease = jest.fn(async () => undefined);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useTranscriptionStore.setState({
+      ...getInitialState(),
+      state: TranscriptionState.READY,
+      transitionTo: realTransitionTo,
+    });
+    useSettingsStore.setState({
+      selectedModelId: "whisper-tiny" as never,
+      selectedLanguage: { code: "en" } as never,
+    });
+    (sherpaTranscriptionService.initialize as jest.Mock).mockImplementation(
+      async () => true,
+    );
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockImplementation(async () => "hola mundo");
+    (audioProtectionService.openPlaintextAudio as jest.Mock).mockImplementation(
+      async () => ({ path: "/cache/dec_a.wav", release: mockRelease }),
+    );
+  });
+
+  const reprocess = () =>
+    useTranscriptionStore
+      .getState()
+      .reprocessTranscription("/audio/a.wav", "es");
+
+  it("transcribes the decrypted audio in the given language and cleans up", async () => {
+    await expect(reprocess()).resolves.toBe("hola mundo");
+
+    expect(sherpaTranscriptionService.initialize).toHaveBeenCalledWith(
+      "whisper-tiny",
+      "es",
+    );
+    expect(sherpaTranscriptionService.transcribeWavFile).toHaveBeenCalledWith(
+      "/cache/dec_a.wav",
+    );
+    expect(mockRelease).toHaveBeenCalled();
+    expect(
+      sherpaTranscriptionService.refreshKeyboardConfig,
+    ).toHaveBeenCalledWith("whisper-tiny", "en");
+    expect(useTranscriptionStore.getState().state).toBe(
+      TranscriptionState.READY,
+    );
+  });
+
+  it("rejects while not READY", async () => {
+    useTranscriptionStore.setState({ state: TranscriptionState.RECORDING });
+
+    await expect(reprocess()).rejects.toThrow("engine is busy");
+    expect(sherpaTranscriptionService.transcribeWavFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects and returns to READY when the engine fails to initialize", async () => {
+    (sherpaTranscriptionService.initialize as jest.Mock).mockImplementation(
+      async () => false,
+    );
+
+    await expect(reprocess()).rejects.toThrow("initialize");
+    expect(useTranscriptionStore.getState().state).toBe(
+      TranscriptionState.READY,
+    );
+  });
+});
+
+describe("transcriptionStore.deleteTranscriptionAudio", () => {
+  const item: Transcription = {
+    id: "t1",
+    sessionId: "session-1",
+    text: "Hello",
+    timestamp: new Date("2025-01-01"),
+    audioPath: "/audio/t1.wav",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useTranscriptionStore.setState({ transcriptions: [item] });
+    useSessionStore.setState({
+      incognitoSession: null,
+      updateSessionModifiedTimestamp: jest.fn(async () => undefined),
+    });
+    (databaseService.upsertTranscription as jest.Mock).mockImplementation(
+      async () => undefined,
+    );
+  });
+
+  it("clears the audio path, persists it, then deletes the file", async () => {
+    await useTranscriptionStore.getState().deleteTranscriptionAudio("t1");
+
+    expect(useTranscriptionStore.getState().transcriptions[0].audioPath).toBe(
+      "",
+    );
+    expect(databaseService.upsertTranscription).toHaveBeenCalledWith({
+      ...item,
+      audioPath: "",
+    });
+    expect(audioProtectionService.deleteAudio).toHaveBeenCalledWith(
+      "/audio/t1.wav",
+    );
+  });
+
+  it("is a no-op without audio", async () => {
+    useTranscriptionStore.setState({
+      transcriptions: [{ ...item, audioPath: "" }],
+    });
+
+    await useTranscriptionStore.getState().deleteTranscriptionAudio("t1");
+
+    expect(databaseService.upsertTranscription).not.toHaveBeenCalled();
+    expect(audioProtectionService.deleteAudio).not.toHaveBeenCalled();
+  });
+
+  it("keeps the file when persisting fails", async () => {
+    (databaseService.upsertTranscription as jest.Mock).mockRejectedValueOnce(
+      new Error("disk"),
+    );
+
+    await expect(
+      useTranscriptionStore.getState().deleteTranscriptionAudio("t1"),
+    ).rejects.toThrow();
+    expect(audioProtectionService.deleteAudio).not.toHaveBeenCalled();
   });
 });

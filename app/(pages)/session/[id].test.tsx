@@ -3,9 +3,8 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { Keyboard } from "react-native";
 
-import { TestID } from "@/constants";
+import { Routes, TestID } from "@/constants";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
@@ -25,12 +24,13 @@ import SessionScreen from "./[id]";
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
+const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     back: mockBack,
     replace: mockReplace,
     canGoBack: mockCanGoBack,
-    push: jest.fn(),
+    push: mockPush,
   }),
   useLocalSearchParams: () => ({ id: "session-1" }),
 }));
@@ -62,6 +62,8 @@ const {
   mockMakeLoc,
 } = require("../../../src/test-utils/mock-localization/mockLocalization");
 
+const mockUpload = jest.fn();
+let mockFileImportParams: any = null;
 jest.mock("@/hooks", () => ({
   useScrollSurface: jest.fn(() => ({
     scrolled: false,
@@ -73,6 +75,10 @@ jest.mock("@/hooks", () => ({
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
   useMicPermission: jest.fn(() => jest.fn(async () => true)),
+  useFileImport: (params: any) => {
+    mockFileImportParams = params;
+    return mockUpload;
+  },
   usePermissions: jest.fn(() => ({
     hasPermission: true,
     requestPermission: jest.fn(),
@@ -154,14 +160,11 @@ let mockOnTitlePressed: (() => void) | null = null;
 let mockOnBackPressed: (() => void) | null = null;
 let mockOnMorePressed: (() => void) | null = null;
 let mockOnSelectAllPressed: (() => void) | null = null;
-let mockOnCancelEditPressed: (() => void) | null = null;
-let mockOnSaveEditPressed: (() => void) | null = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
 let mockOnRenameCancel: (() => void) | null = null;
 let mockOnTranscriptionTap: ((id: string) => void) | null = null;
 let mockOnTranscriptionLongPress: ((id: string) => void) | null = null;
-let mockOnEditStart: (() => void) | null = null;
-let mockOnEditEnd: (() => void) | null = null;
+let mockOnTranscriptionEdit: ((id: string) => void) | null = null;
 const navbarActions: Record<string, () => void> = {};
 const navbarActionDisabled: Record<string, boolean> = {};
 const mockOnDeleteSelectedPressed = () => navbarActions.delete?.();
@@ -179,14 +182,9 @@ jest.mock("@/components", () => {
       mockOnBackPressed = props.onBackPressed;
       mockOnMorePressed = props.onMorePressed;
       mockOnSelectAllPressed = props.onSelectAllPressed;
-      mockOnCancelEditPressed = props.onCancelEditPressed;
-      mockOnSaveEditPressed = props.onSaveEditPressed;
       return (
         <View testID={TID.SessionAppBar}>
           <Text testID={TID.SessionName}>{props.sessionName}</Text>
-          <Text testID={TID.EditMode}>
-            {props.editMode ? "editing" : "not-editing"}
-          </Text>
         </View>
       );
     },
@@ -202,10 +200,19 @@ jest.mock("@/components", () => {
     TranscriptionContentView: (props: any) => {
       mockOnTranscriptionTap = props.onTranscriptionTap;
       mockOnTranscriptionLongPress = props.onTranscriptionLongPress;
-      mockOnEditStart = props.onEditStart;
-      mockOnEditEnd = props.onEditEnd;
-      return <View testID={TID.TranscriptionContent} />;
+      mockOnTranscriptionEdit = props.onTranscriptionEdit;
+      return <View testID={TID.TranscriptionContent}>{props.header}</View>;
     },
+    Button: {
+      utility: (props: any) => (
+        <TouchableOpacity
+          testID={props.testID}
+          disabled={props.enabled === false}
+          onPress={props.onPress}
+        />
+      ),
+    },
+    Icon: () => null,
     SubScreenNavbar: (props: any) => {
       Object.keys(navbarActions).forEach((k) => delete navbarActions[k]);
       Object.keys(navbarActionDisabled).forEach(
@@ -273,14 +280,11 @@ beforeEach(() => {
   mockOnBackPressed = null;
   mockOnMorePressed = null;
   mockOnSelectAllPressed = null;
-  mockOnCancelEditPressed = null;
-  mockOnSaveEditPressed = null;
   mockOnRenameSubmit = null;
   mockOnRenameCancel = null;
   mockOnTranscriptionTap = null;
   mockOnTranscriptionLongPress = null;
-  mockOnEditStart = null;
-  mockOnEditEnd = null;
+  mockOnTranscriptionEdit = null;
   mockSwitchSession.mockResolvedValue(undefined);
 
   // Restore default mock return values after clearAllMocks
@@ -522,26 +526,6 @@ describe("SessionScreen", () => {
         expect(mockStopAndSave).toHaveBeenCalled();
         expect(mockBack).toHaveBeenCalled();
       });
-    });
-
-    it("when editing: calls handleCancelEdit (dismiss keyboard)", async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Enter editing mode via onEditStart
-      await act(async () => {
-        mockOnEditStart!();
-      });
-
-      // Now back press should cancel edit
-      await act(async () => {
-        mockOnBackPressed!();
-      });
-
-      expect(keyboardDismissSpy).toHaveBeenCalled();
-      keyboardDismissSpy.mockRestore();
     });
 
     it("when selectionMode: calls exitSelectionMode", async () => {
@@ -1277,24 +1261,6 @@ describe("SessionScreen", () => {
       expect(mockSetVisible).toHaveBeenCalledWith(false);
     });
 
-    it("hides recording controls when editing", async () => {
-      const mockSetVisible = jest.fn();
-      const { useSetRecordingControlsVisible } = jest.requireMock("@/stores");
-      (useSetRecordingControlsVisible as jest.Mock).mockReturnValue(
-        mockSetVisible,
-      );
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Enter editing mode
-      await act(async () => {
-        mockOnEditStart!();
-      });
-
-      expect(mockSetVisible).toHaveBeenCalledWith(false);
-    });
-
     it("shows recording controls when not in selection or edit mode", async () => {
       const mockSetVisible = jest.fn();
       const { useSetRecordingControlsVisible } = jest.requireMock("@/stores");
@@ -1325,29 +1291,8 @@ describe("SessionScreen", () => {
     });
   });
 
-  describe("save edit callback", () => {
-    it("onSaveEditPressed dismisses keyboard and exits edit mode", async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
 
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Enter edit mode
-      await act(async () => {
-        mockOnEditStart!();
-      });
-
-      // Save edit
-      await act(async () => {
-        mockOnSaveEditPressed!();
-      });
-
-      expect(keyboardDismissSpy).toHaveBeenCalled();
-      keyboardDismissSpy.mockRestore();
-    });
-  });
-
-  describe("shareSelectedTranscriptions", () => {
+  describe("shareTargetTranscriptions", () => {
     it("returns false when selectedIds are present but no matching transcriptions", async () => {
       const selectedIds = new Set(["nonexistent"]);
       (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
@@ -1396,7 +1341,7 @@ describe("SessionScreen", () => {
       });
 
       await waitFor(() => {
-        // shareSelectedTranscriptions catches the error internally and returns false
+        // shareTargetTranscriptions catches the error internally and returns false
         // So no haptics should fire (success was false)
         expect(Haptics.notificationAsync).not.toHaveBeenCalled();
       });
@@ -1550,27 +1495,6 @@ describe("SessionScreen", () => {
     });
   });
 
-  describe("handleCancelEdit", () => {
-    it("sets isCancellingEdit to true and dismisses keyboard", async () => {
-      const keyboardDismissSpy = jest.spyOn(Keyboard, "dismiss");
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Enter edit mode
-      await act(async () => {
-        mockOnEditStart!();
-      });
-
-      // Cancel edit
-      await act(async () => {
-        mockOnCancelEditPressed!();
-      });
-
-      expect(keyboardDismissSpy).toHaveBeenCalled();
-      keyboardDismissSpy.mockRestore();
-    });
-  });
 
   describe("navigation beforeRemove edge cases", () => {
     it("beforeRemove when recording and canGoBack is false: replaces route", async () => {
@@ -1737,24 +1661,60 @@ describe("SessionScreen", () => {
     });
   });
 
-  describe("handleEditEnd callback", () => {
-    it("onEditEnd sets editing and cancelling state to false", async () => {
+  it("opens the transcription edit screen for the tapped edit icon", async () => {
+    render(<SessionScreen />);
+    await act(async () => {});
+
+    act(() => mockOnTranscriptionEdit!("t1"));
+
+    expect(mockPush).toHaveBeenCalledWith(Routes.transcriptionEdit("t1"));
+  });
+
+  describe("header actions", () => {
+    it("uploads into this session", async () => {
       const { getByTestId } = render(<SessionScreen />);
       await act(async () => {});
 
-      // Enter edit mode
+      fireEvent.press(getByTestId(TestID.SessionUpload));
+
+      expect(mockFileImportParams.sessionId).toBe("session-1");
+      expect(mockUpload).toHaveBeenCalled();
+    });
+
+    it("shares the whole session via the share sheet", async () => {
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
+      ]);
+      const { getByTestId } = render(<SessionScreen />);
+      await act(async () => {});
+
       await act(async () => {
-        mockOnEditStart!();
+        fireEvent.press(getByTestId(TestID.SessionShare));
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId(TestID.SessionShareVia));
       });
 
-      expect(getByTestId(TestID.EditMode)).toHaveTextContent("editing");
+      expect(shareService.shareTranscriptions).toHaveBeenCalledWith([
+        { id: "t1", text: "Hello" },
+        { id: "t2", text: "World" },
+      ]);
+    });
 
-      // End edit
-      await act(async () => {
-        mockOnEditEnd!();
-      });
+    it("disables Share for an empty session and hides actions in selection mode", async () => {
+      (useSessionTranscriptions as jest.Mock).mockReturnValue([]);
+      const { getByTestId, queryByTestId, rerender } = render(
+        <SessionScreen />,
+      );
+      await act(async () => {});
+      expect(getByTestId(TestID.SessionShare).props.accessibilityState).toEqual(
+        expect.objectContaining({ disabled: true }),
+      );
 
-      expect(getByTestId(TestID.EditMode)).toHaveTextContent("not-editing");
+      (useIsTranscriptionSelectionMode as jest.Mock).mockReturnValue(true);
+      rerender(<SessionScreen />);
+      expect(queryByTestId(TestID.SessionUpload)).toBeNull();
     });
   });
 });

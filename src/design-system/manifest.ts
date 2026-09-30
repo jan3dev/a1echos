@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import audioPlayerGallery from "@/components/ui/audio-player/AudioPlayer.gallery";
 import buttonGallery from "@/components/ui/button/Button.gallery";
 import checkboxGallery from "@/components/ui/checkbox/Checkbox.gallery";
 import chipGallery from "@/components/ui/chip/Chip.gallery";
@@ -73,6 +74,7 @@ export interface GalleryEntry {
 
 export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   colorsGallery,
+  audioPlayerGallery,
   buttonGallery,
   checkboxGallery,
   chipGallery,

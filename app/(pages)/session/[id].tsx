@@ -13,7 +13,6 @@ import {
 import {
   BackHandler,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
@@ -23,6 +22,8 @@ import {
 
 import {
   AppBarBlurTarget,
+  Button,
+  Icon,
   Screen,
   SessionActionsSheet,
   SessionAppBar,
@@ -36,6 +37,7 @@ import {
 import { AppConstants, Routes, TestID } from "@/constants";
 import {
   useLocalization,
+  useFileImport,
   useMicPermission,
   useScrollSurface,
   useSessionOperations,
@@ -92,8 +94,6 @@ export default function SessionScreen() {
     reset,
   } = useScrollSurface();
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isCancellingEdit, setIsCancellingEdit] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [showRenameModal, setShowRenameModal] = useState(false);
 
@@ -168,13 +168,16 @@ export default function SessionScreen() {
     }
   }, [selectedIds, deleteTranscriptions, exitSelectionMode]);
 
-  const selectedTranscriptions = useMemo(
-    () => transcriptions.filter((t) => selectedIds.has(t.id)),
-    [transcriptions, selectedIds],
+  const targetTranscriptions = useMemo(
+    () =>
+      selectionMode
+        ? transcriptions.filter((t) => selectedIds.has(t.id))
+        : transcriptions,
+    [selectionMode, transcriptions, selectedIds],
   );
 
-  const copySelectedTranscriptions = useCallback(async () => {
-    const text = selectedTranscriptions.map((t) => t.text).join("\n\n");
+  const copyTargetTranscriptions = useCallback(async () => {
+    const text = targetTranscriptions.map((t) => t.text).join("\n\n");
 
     if (!text) return false;
 
@@ -188,15 +191,15 @@ export default function SessionScreen() {
       });
       return false;
     }
-  }, [selectedTranscriptions]);
+  }, [targetTranscriptions]);
 
-  const shareSelectedTranscriptions = useCallback(async () => {
-    if (selectedTranscriptions.length === 0) {
+  const shareTargetTranscriptions = useCallback(async () => {
+    if (targetTranscriptions.length === 0) {
       return false;
     }
 
     try {
-      await shareService.shareTranscriptions(selectedTranscriptions);
+      await shareService.shareTranscriptions(targetTranscriptions);
       exitSelectionMode();
       return true;
     } catch (error) {
@@ -206,7 +209,7 @@ export default function SessionScreen() {
       });
       return false;
     }
-  }, [selectedTranscriptions, exitSelectionMode]);
+  }, [targetTranscriptions, exitSelectionMode]);
 
   const {
     show: showDeleteToast,
@@ -221,6 +224,7 @@ export default function SessionScreen() {
   } = useToast();
 
   const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
+  const handleUpload = useFileImport({ showAlertToast, sessionId: id });
 
   // Clear stale app-bar glass when the list isn't shown (loading/error/empty
   // all coincide with no transcriptions): no scroll event fires to reset it.
@@ -319,12 +323,6 @@ export default function SessionScreen() {
     endIncognitoSession,
   ]);
 
-  const handleCancelEdit = useCallback(() => {
-    setIsCancellingEdit(true);
-    Keyboard.dismiss();
-    setIsEditing(false);
-  }, []);
-
   // Handle back button press
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -333,10 +331,6 @@ export default function SessionScreen() {
         if (isRecording) {
           stopRecordingAndSave();
           router.back();
-          return true;
-        }
-        if (isEditing) {
-          handleCancelEdit();
           return true;
         }
         if (selectionMode) {
@@ -350,21 +344,15 @@ export default function SessionScreen() {
     return () => backHandler.remove();
   }, [
     isRecording,
-    isEditing,
     selectionMode,
     exitSelectionMode,
     stopRecordingAndSave,
-    handleCancelEdit,
     router,
   ]);
 
   const handleBackPressed = useCallback(() => {
     if (isRecording) {
       stopRecordingAndSave().then(() => router.back());
-      return;
-    }
-    if (isEditing) {
-      handleCancelEdit();
       return;
     }
     if (selectionMode) {
@@ -374,18 +362,11 @@ export default function SessionScreen() {
     router.back();
   }, [
     isRecording,
-    isEditing,
     selectionMode,
     exitSelectionMode,
     router,
     stopRecordingAndSave,
-    handleCancelEdit,
   ]);
-
-  const handleSaveEdit = useCallback(() => {
-    Keyboard.dismiss();
-    setIsEditing(false);
-  }, []);
 
   const handleTitlePressed = useCallback(() => {
     if (!session?.isIncognito) {
@@ -458,10 +439,10 @@ export default function SessionScreen() {
   ]);
 
   const handleCopySelectedPressed = useCallback(async () => {
-    if (!hasSelectedItems) return;
+    if (selectionMode && !hasSelectedItems) return;
 
     try {
-      const success = await copySelectedTranscriptions();
+      const success = await copyTargetTranscriptions();
       if (success) {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
@@ -492,8 +473,9 @@ export default function SessionScreen() {
       });
     }
   }, [
+    selectionMode,
     hasSelectedItems,
-    copySelectedTranscriptions,
+    copyTargetTranscriptions,
     showGlobalTooltip,
     showAlertToast,
     exitSelectionMode,
@@ -502,7 +484,7 @@ export default function SessionScreen() {
 
   const handleSharePressed = useCallback(async () => {
     try {
-      const success = await shareSelectedTranscriptions();
+      const success = await shareTargetTranscriptions();
       if (success) {
         await Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Success,
@@ -518,15 +500,15 @@ export default function SessionScreen() {
         "error",
       );
     }
-  }, [shareSelectedTranscriptions, showToast, loc]);
+  }, [shareTargetTranscriptions, showToast, loc]);
 
   const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   const handleDownloadPressed = useCallback(async () => {
-    if (!session || selectedTranscriptions.length === 0) return;
+    if (!session || targetTranscriptions.length === 0) return;
     try {
       const saved = await shareService.saveSessionsMarkdown([
-        { session, transcriptions: selectedTranscriptions },
+        { session, transcriptions: targetTranscriptions },
       ]);
       if (!saved) return;
       showGlobalTooltip(loc.markdownSaved);
@@ -539,7 +521,7 @@ export default function SessionScreen() {
       showGlobalTooltip(loc.markdownSaveFailed);
     }
   }, [
-    selectedTranscriptions,
+    targetTranscriptions,
     session,
     showGlobalTooltip,
     exitSelectionMode,
@@ -572,14 +554,11 @@ export default function SessionScreen() {
     [handleLongPress],
   );
 
-  const handleEditStart = useCallback(() => {
-    setIsEditing(true);
-  }, []);
-
-  const handleEditEnd = useCallback(() => {
-    setIsEditing(false);
-    setIsCancellingEdit(false);
-  }, []);
+  const handleTranscriptionEdit = useCallback(
+    (transcriptionId: string) =>
+      router.push(Routes.transcriptionEdit(transcriptionId)),
+    [router],
+  );
 
   const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
   const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
@@ -622,8 +601,8 @@ export default function SessionScreen() {
   }, [setRecordingControlsEnabled, controlsEnabled]);
 
   useEffect(() => {
-    setRecordingControlsVisible(!selectionMode && !isEditing);
-  }, [setRecordingControlsVisible, selectionMode, isEditing]);
+    setRecordingControlsVisible(!selectionMode);
+  }, [setRecordingControlsVisible, selectionMode]);
 
   const navbarActions = useMemo<SubScreenNavbarAction[]>(
     () => [
@@ -697,9 +676,38 @@ export default function SessionScreen() {
               selectedTranscriptionIds={selectedIds}
               onTranscriptionTap={handleTranscriptionTap}
               onTranscriptionLongPress={handleTranscriptionLongPress}
-              onEditStart={handleEditStart}
-              onEditEnd={handleEditEnd}
-              isCancellingEdit={isCancellingEdit}
+              onTranscriptionEdit={handleTranscriptionEdit}
+              header={
+                selectionMode ? undefined : (
+                  <View style={styles.quickActions}>
+                    <Button.utility
+                      testID={TestID.SessionUpload}
+                      text={loc.homeUpload}
+                      onPress={handleUpload}
+                      icon={
+                        <Icon
+                          name="document_upload"
+                          size={18}
+                          color={theme.colors.textPrimary}
+                        />
+                      }
+                    />
+                    <Button.utility
+                      testID={TestID.SessionShare}
+                      text={loc.share}
+                      enabled={transcriptions.length > 0}
+                      onPress={() => setShareSheetVisible(true)}
+                      icon={
+                        <Icon
+                          name="export"
+                          size={18}
+                          color={theme.colors.textPrimary}
+                        />
+                      }
+                    />
+                  </View>
+                )
+              }
               onScroll={onScroll}
               onContentSizeChange={onContentSizeChange}
               onLayout={onLayout}
@@ -712,7 +720,6 @@ export default function SessionScreen() {
         sessionName={sessionName}
         selectionMode={selectionMode}
         selectionTitle={loc.selectedCount(selectedIds.size)}
-        editMode={isEditing}
         isIncognitoSession={isIncognito}
         onBackPressed={handleBackPressed}
         onTitlePressed={handleTitlePressed}
@@ -721,8 +728,6 @@ export default function SessionScreen() {
         onSelectAllPressed={() =>
           selectAllTranscriptions(transcriptions.map((t) => t.id))
         }
-        onCancelEditPressed={handleCancelEdit}
-        onSaveEditPressed={handleSaveEdit}
         blurTarget={blurTargetRef}
         scrolled={scrolled}
       />
@@ -761,5 +766,10 @@ export default function SessionScreen() {
 const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
+  },
+  quickActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
   },
 });

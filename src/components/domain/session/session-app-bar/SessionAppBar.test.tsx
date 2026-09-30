@@ -76,8 +76,6 @@ const defaultProps = {
   onMorePressed: jest.fn(),
   onExitSelectionPressed: jest.fn(),
   onSelectAllPressed: jest.fn(),
-  onCancelEditPressed: jest.fn(),
-  onSaveEditPressed: jest.fn(),
 };
 
 describe("SessionAppBar", () => {
@@ -115,15 +113,6 @@ describe("SessionAppBar", () => {
   it("normal mode: title press disabled for incognito session", () => {
     render(<SessionAppBar {...defaultProps} isIncognitoSession={true} />);
     expect(capturedAppBarProps.onTitlePressed).toBeUndefined();
-  });
-
-  it('edit mode: renders "Edit" title, close and check icons', () => {
-    const { getByTestId } = render(
-      <SessionAppBar {...defaultProps} editMode={true} />,
-    );
-    expect(getByTestId(TestID.TitleText).props.children).toBe("edit");
-    expect(getByTestId(dynamicTestID.icon("close"))).toBeTruthy();
-    expect(getByTestId(dynamicTestID.icon("check"))).toBeTruthy();
   });
 
   it("selection mode: shows selectionTitle and close icon (not more)", () => {

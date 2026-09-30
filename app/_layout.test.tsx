@@ -96,7 +96,9 @@ jest.mock("@/db/runtime-migration", () => ({
   cleanupLegacyArtifactsIfPresent: jest.fn().mockResolvedValue(undefined),
 }));
 
+const mockKeyboardHeight = jest.fn(() => 0);
 jest.mock("@/hooks", () => ({
+  useKeyboardHeight: () => mockKeyboardHeight(),
   useVoiceSessionHint: jest.fn(),
   useLocalization: () => ({ loc: { transcriptionSettings: "settings" } }),
 }));
@@ -402,6 +404,33 @@ describe("RootLayout", () => {
       const container = getByTestId(TestID.GlobalTooltipContainer);
       // 96 controls + 19 grabber top within handle + 16 gap
       expect(StyleSheet.flatten(container.props.style).bottom).toBe(131);
+    });
+
+    it("positions tooltip 16px above the edit screen toolbar and keyboard", async () => {
+      const { usePathname } = require("expo-router");
+      (usePathname as jest.Mock).mockReturnValue("/transcription/t1");
+      const { useGlobalTooltip } = require("@/stores");
+      (useGlobalTooltip as jest.Mock).mockReturnValue({
+        message: "Copied",
+        variant: "normal",
+        isInfo: false,
+        isDismissible: true,
+        duration: 3000,
+      });
+
+      const { getByTestId, rerender } = await renderAndWaitForInit();
+      const bottom = () =>
+        StyleSheet.flatten(
+          getByTestId(TestID.GlobalTooltipContainer).props.style,
+        ).bottom;
+      // 72 toolbar + 16 gap
+      expect(bottom()).toBe(88);
+
+      mockKeyboardHeight.mockReturnValue(300);
+      rerender(<RootLayout />);
+      expect(bottom()).toBe(388);
+      mockKeyboardHeight.mockReturnValue(0);
+      (usePathname as jest.Mock).mockReturnValue("/");
     });
 
     it("renders dismissible tooltip", async () => {

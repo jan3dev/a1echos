@@ -1,3 +1,4 @@
+export * from "./audio-player";
 export * from "./button";
 export * from "./card";
 export * from "./checkbox";

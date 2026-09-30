@@ -193,6 +193,11 @@ interface TranscriptionStore {
   ) => Promise<void>;
   deleteAllTranscriptionsForSession: (sessionId: string) => Promise<void>;
   cleanupDeletedSessions: (validSessionIds: Set<string>) => Promise<void>;
+  reprocessTranscription: (
+    audioPath: string,
+    languageCode: string,
+  ) => Promise<string>;
+  deleteTranscriptionAudio: (id: string) => Promise<void>;
   importFiles: (
     sessionId: string,
     files: ImportFile[],
@@ -306,11 +311,11 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     await useSessionStore.getState().updateSessionModifiedTimestamp(sessionId);
   };
 
-  const ensureEngine = async (): Promise<boolean> => {
+  const ensureEngine = async (languageCode?: string): Promise<boolean> => {
     const { selectedModelId, selectedLanguage } = useSettingsStore.getState();
     const initialized = await sherpaTranscriptionService.initialize(
       selectedModelId,
-      selectedLanguage?.code ?? "en",
+      languageCode ?? selectedLanguage?.code ?? "en",
     );
     if (initialized) set({ isEngineReady: true });
     return initialized;
@@ -1031,6 +1036,46 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       }
     },
 
+    reprocessTranscription: async (audioPath: string, languageCode: string) => {
+      get().clearErrorState();
+      if (
+        get().state !== TranscriptionState.READY ||
+        !get().transitionTo(TranscriptionState.TRANSCRIBING)
+      ) {
+        throw new Error("Cannot reprocess while the engine is busy");
+      }
+      let release: (() => Promise<void>) | undefined;
+      try {
+        const plaintext =
+          await audioProtectionService.openPlaintextAudio(audioPath);
+        release = plaintext.release;
+        if (!(await ensureEngine(languageCode))) {
+          throw new Error("Failed to initialize transcription engine");
+        }
+        return formatTranscriptionText(
+          await sherpaTranscriptionService.transcribeWavFile(plaintext.path),
+        );
+      } finally {
+        await release?.();
+        // Whisper init rewrites the keyboard's model config; point it back
+        // at the user's language, not this one-off reprocess language.
+        const { selectedModelId, selectedLanguage } =
+          useSettingsStore.getState();
+        sherpaTranscriptionService.refreshKeyboardConfig(
+          selectedModelId,
+          selectedLanguage?.code ?? "en",
+        );
+        get().transitionTo(TranscriptionState.READY);
+      }
+    },
+
+    deleteTranscriptionAudio: async (id: string) => {
+      const transcription = get().transcriptions.find((t) => t.id === id);
+      if (!transcription?.audioPath) return;
+      await get().updateTranscription({ ...transcription, audioPath: "" });
+      await audioProtectionService.deleteAudio(transcription.audioPath);
+    },
+
     importFiles: async (sessionId: string, files: ImportFile[]) => {
       get().clearErrorState();
       if (
@@ -1552,15 +1597,23 @@ export const useDeleteTranscriptions = () =>
 export const useMergeTranscriptions = () =>
   useTranscriptionStore((s) => s.mergeTranscriptions);
 export const useImportFiles = () => useTranscriptionStore((s) => s.importFiles);
+export const useReprocessTranscription = () =>
+  useTranscriptionStore((s) => s.reprocessTranscription);
+export const useDeleteTranscriptionAudio = () =>
+  useTranscriptionStore((s) => s.deleteTranscriptionAudio);
+export const useUpdateTranscription = () =>
+  useTranscriptionStore((s) => s.updateTranscription);
+export const useDeleteTranscription = () =>
+  useTranscriptionStore((s) => s.deleteTranscription);
 export const useLivePreview = () => useTranscriptionStore((s) => s.livePreview);
 
-// Plaintext import leftovers survive a crash or kill mid-import.
+// Plaintext import/decrypt leftovers survive a crash or kill mid-use.
 const sweepImportLeftovers = () => {
   try {
     const picked = new Directory(Paths.cache, "DocumentPicker");
     if (picked.exists) picked.delete();
     for (const entry of new Directory(Paths.cache).list()) {
-      if (entry instanceof File && entry.name.startsWith("import_")) {
+      if (entry instanceof File && /^(import|dec)_/.test(entry.name)) {
         entry.delete();
       }
     }

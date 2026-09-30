@@ -364,9 +364,9 @@ describe("TranscriptionList", () => {
     expect(queryByTestId("transcription-item-transcribing_preview")).toBeNull();
   });
 
-  it("handleStartEdit calls onEditModeStarted callback", () => {
+  it("edit icon calls onTranscriptionEdit with the item id", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    const onEditModeStarted = jest.fn();
+    const onTranscriptionEdit = jest.fn();
     jest.requireMock(
       "../transcription-item/TranscriptionItem",
     ).TranscriptionItem = (props: any) => {
@@ -378,10 +378,6 @@ describe("TranscriptionList", () => {
             testID={`start-edit-${props.transcription.id}`}
             onPress={props.onStartEdit}
           />
-          <Pressable
-            testID={`end-edit-${props.transcription.id}`}
-            onPress={props.onEndEdit}
-          />
         </View>
       );
     };
@@ -389,75 +385,12 @@ describe("TranscriptionList", () => {
     const { getByTestId } = render(
       <TranscriptionList
         {...defaultProps}
-        onEditModeStarted={onEditModeStarted}
+        onTranscriptionEdit={onTranscriptionEdit}
       />,
     );
 
     fireEvent.press(getByTestId("start-edit-t1"));
-    expect(onEditModeStarted).toHaveBeenCalledTimes(1);
-  });
-
-  it("handleEndEdit calls onEditModeEnded callback", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    const onEditModeEnded = jest.fn();
-
-    jest.requireMock(
-      "../transcription-item/TranscriptionItem",
-    ).TranscriptionItem = (props: any) => {
-      const { View, Text, Pressable } = require("react-native");
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-          <Pressable
-            testID={`end-edit-${props.transcription.id}`}
-            onPress={props.onEndEdit}
-          />
-        </View>
-      );
-    };
-
-    const { getByTestId } = render(
-      <TranscriptionList {...defaultProps} onEditModeEnded={onEditModeEnded} />,
-    );
-
-    fireEvent.press(getByTestId("end-edit-t1"));
-    expect(onEditModeEnded).toHaveBeenCalledTimes(1);
-  });
-
-  it("handleScrollToIndexFailed is wired to FlatList", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-
-    const { UNSAFE_getByType } = render(
-      <TranscriptionList {...defaultProps} />,
-    );
-
-    const { FlatList } = require("react-native");
-    const flatList = UNSAFE_getByType(FlatList);
-    expect(flatList.props.onScrollToIndexFailed).toBeDefined();
-    expect(() =>
-      flatList.props.onScrollToIndexFailed({
-        index: 2,
-        highestMeasuredFrameIndex: 1,
-        averageItemLength: 100,
-      }),
-    ).not.toThrow();
-  });
-
-  it("keyboard listener is registered and cleaned up", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    const mockRemove = jest.fn();
-    const mockAddListener = jest.fn(() => ({ remove: mockRemove }));
-    const { Keyboard } = require("react-native");
-    const originalAddListener = Keyboard.addListener;
-    Keyboard.addListener = mockAddListener;
-
-    const { unmount } = render(<TranscriptionList {...defaultProps} />);
-    expect(mockAddListener).toHaveBeenCalled();
-
-    unmount();
-    expect(mockRemove).toHaveBeenCalled();
-
-    Keyboard.addListener = originalAddListener;
+    expect(onTranscriptionEdit).toHaveBeenCalledWith("t1");
   });
 
   it("does not show realtime preview when recording in realtime mode but livePreview is null", () => {
@@ -494,59 +427,6 @@ describe("TranscriptionList", () => {
     expect(
       getByTestId("transcription-item-live-for-transcribing"),
     ).toBeTruthy();
-  });
-
-  it("handleScrollToIndexFailed does not throw when no listRef", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-
-    const { UNSAFE_getByType } = render(
-      <TranscriptionList {...defaultProps} />,
-    );
-
-    const { FlatList } = require("react-native");
-    const flatList = UNSAFE_getByType(FlatList);
-    expect(() =>
-      flatList.props.onScrollToIndexFailed({
-        index: 3,
-        highestMeasuredFrameIndex: 1,
-        averageItemLength: 100,
-      }),
-    ).not.toThrow();
-  });
-
-  it("handleUpdateTranscription calls store updateTranscription", () => {
-    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    const mockUpdateTranscription = jest.fn();
-    (useTranscriptionStore as unknown as jest.Mock).mockReturnValue({
-      ...mockStoreDefaults,
-      updateTranscription: mockUpdateTranscription,
-    });
-
-    jest.requireMock(
-      "../transcription-item/TranscriptionItem",
-    ).TranscriptionItem = (props: any) => {
-      const { View, Text, Pressable } = require("react-native");
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-          <Pressable
-            testID={`update-${props.transcription.id}`}
-            onPress={() =>
-              props.onTranscriptionUpdate?.({
-                ...props.transcription,
-                text: "Updated",
-              })
-            }
-          />
-        </View>
-      );
-    };
-
-    const { getByTestId } = render(<TranscriptionList {...defaultProps} />);
-    fireEvent.press(getByTestId("update-t1"));
-    expect(mockUpdateTranscription).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "t1", text: "Updated" }),
-    );
   });
 
   it("onTap does not fire for preview items", () => {
@@ -772,29 +652,28 @@ describe("TranscriptionList", () => {
     expect(items).toHaveLength(1);
   });
 
-  it("passes isCancellingEdit through to items", () => {
+  it("disables editing while recording", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    (useTranscriptionStore as unknown as jest.Mock).mockReturnValue({
+      ...mockStoreDefaults,
+      isRecording: () => true,
+    });
 
-    let capturedCancelling: boolean | undefined;
+    let capturedDisabled: boolean | undefined;
     jest.requireMock(
       "../transcription-item/TranscriptionItem",
     ).TranscriptionItem = (props: any) => {
-      const { View, Text } = require("react-native");
+      const { View } = require("react-native");
       if (props.transcription.id === "t1") {
-        capturedCancelling = props.isCancelling;
+        capturedDisabled = props.editDisabled;
       }
-      return (
-        <View testID={`transcription-item-${props.transcription.id}`}>
-          <Text>{props.transcription.text}</Text>
-        </View>
-      );
+      return <View testID={`transcription-item-${props.transcription.id}`} />;
     };
 
-    render(<TranscriptionList {...defaultProps} isCancellingEdit={true} />);
+    render(<TranscriptionList {...defaultProps} />);
 
-    expect(capturedCancelling).toBe(true);
+    expect(capturedDisabled).toBe(true);
   });
-
   it("forwards scroll, content-size and layout events to the surface tracker", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
     const onScroll = jest.fn();

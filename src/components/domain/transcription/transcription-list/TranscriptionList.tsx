@@ -1,4 +1,5 @@
 import {
+  ReactElement,
   RefObject,
   useCallback,
   useEffect,
@@ -8,11 +9,9 @@ import {
 } from "react";
 import {
   FlatList,
-  Keyboard,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Platform,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -36,9 +35,9 @@ interface TranscriptionListProps {
   onTranscriptionLongPress: (id: string) => void;
   selectionMode?: boolean;
   selectedTranscriptionIds?: Set<string>;
-  onEditModeStarted?: () => void;
-  onEditModeEnded?: () => void;
-  isCancellingEdit?: boolean;
+  onTranscriptionEdit?: (id: string) => void;
+  /** Rendered above the oldest item, and alone when the session is empty. */
+  header?: ReactElement;
   topPadding?: number;
   bottomPadding?: number;
   listRef?: RefObject<FlatList<Transcription>>;
@@ -66,9 +65,8 @@ export const TranscriptionList = ({
   onTranscriptionLongPress,
   selectionMode = false,
   selectedTranscriptionIds = new Set(),
-  onEditModeStarted,
-  onEditModeEnded,
-  isCancellingEdit = false,
+  onTranscriptionEdit,
+  header,
   topPadding = 0,
   bottomPadding = 16,
   listRef,
@@ -76,7 +74,6 @@ export const TranscriptionList = ({
   onContentSizeChange,
   onLayout,
 }: TranscriptionListProps) => {
-  const [editingId, setEditingId] = useState<string | null>(null);
   const { loc } = useLocalization();
   const { theme } = useTheme();
   const { height: viewportHeight } = useWindowDimensions();
@@ -180,70 +177,6 @@ export const TranscriptionList = ({
   }, [data, limit]);
   const hasMore = data.length > limit;
 
-  const editingIdRef = useRef<string | null>(null);
-
-  const scrollToEditingItem = useCallback(() => {
-    const currentEditingId = editingIdRef.current;
-    if (!currentEditingId || !listRef?.current) return;
-
-    const index = visibleData.findIndex((item) => item.id === currentEditingId);
-    if (index === -1) return;
-
-    listRef.current.scrollToIndex({
-      index,
-      viewPosition: 0.2,
-      animated: true,
-    });
-  }, [listRef, visibleData]);
-
-  useEffect(() => {
-    const keyboardEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const subscription = Keyboard.addListener(keyboardEvent, () => {
-      if (editingIdRef.current) {
-        setTimeout(scrollToEditingItem, 50);
-      }
-    });
-    return () => subscription.remove();
-  }, [scrollToEditingItem]);
-
-  const handleStartEdit = useCallback(
-    (id: string) => {
-      setEditingId(id);
-      editingIdRef.current = id;
-      onEditModeStarted?.();
-      setTimeout(scrollToEditingItem, 100);
-    },
-    [onEditModeStarted, scrollToEditingItem],
-  );
-
-  const handleEndEdit = useCallback(() => {
-    setEditingId(null);
-    editingIdRef.current = null;
-    onEditModeEnded?.();
-  }, [onEditModeEnded]);
-
-  const handleScrollToIndexFailed = useCallback(
-    (info: {
-      index: number;
-      highestMeasuredFrameIndex: number;
-      averageItemLength: number;
-    }) => {
-      listRef?.current?.scrollToOffset({
-        offset: info.averageItemLength * info.index,
-        animated: true,
-      });
-    },
-    [listRef],
-  );
-
-  const handleUpdateTranscription = useCallback(
-    (updated: Transcription) => {
-      transcriptionStore.updateTranscription(updated);
-    },
-    [transcriptionStore],
-  );
-
   const handleStartReached = useCallback(() => {
     if (!hasMore) return;
     if (lastBumpedAtLimitRef.current === limit) return;
@@ -343,8 +276,6 @@ export const TranscriptionList = ({
     ({ item }: { item: Transcription }) => {
       const isPreview = previewState.item?.id === item.id;
       const itemState = isPreview ? previewState : EmptyPreviewState;
-      const isEditing = editingId === item.id;
-      const isAnyEditing = editingId !== null;
 
       return (
         <TranscriptionItem
@@ -360,12 +291,8 @@ export const TranscriptionList = ({
           isLivePreviewItem={itemState.isStreamingLive}
           isLoadingWhisperResult={itemState.isLoadingResult}
           isWhisperRecording={itemState.isRecording}
-          isEditing={isEditing}
-          isAnyEditing={isAnyEditing}
-          isCancelling={isCancellingEdit}
-          onStartEdit={() => handleStartEdit(item.id)}
-          onEndEdit={handleEndEdit}
-          onTranscriptionUpdate={handleUpdateTranscription}
+          editDisabled={isRecording || isTranscribing}
+          onStartEdit={() => onTranscriptionEdit?.(item.id)}
           onTap={() => {
             if (!isPreview) {
               onTranscriptionTap(item.id);
@@ -380,11 +307,9 @@ export const TranscriptionList = ({
       );
     },
     [
-      editingId,
-      handleEndEdit,
-      handleStartEdit,
-      handleUpdateTranscription,
-      isCancellingEdit,
+      isRecording,
+      isTranscribing,
+      onTranscriptionEdit,
       onTranscriptionLongPress,
       onTranscriptionTap,
       previewState,
@@ -393,7 +318,15 @@ export const TranscriptionList = ({
     ],
   );
 
-  if (data.length === 0) return null;
+  const contentPadding = {
+    padding: 16,
+    paddingTop: topPadding + 16,
+    backgroundColor: theme.colors.surfaceBackground,
+  };
+
+  if (data.length === 0) {
+    return header ? <View style={contentPadding}>{header}</View> : null;
+  }
 
   return (
     <View style={[styles.flex, { opacity: isReady ? 1 : 0 }]}>
@@ -403,7 +336,6 @@ export const TranscriptionList = ({
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
-        onScrollToIndexFailed={handleScrollToIndexFailed}
         onScroll={handleScroll}
         onScrollBeginDrag={handleScrollBeginDrag}
         scrollEventThrottle={16}
@@ -414,11 +346,8 @@ export const TranscriptionList = ({
         maintainVisibleContentPosition={
           contentOverflows ? { minIndexForVisible: 0 } : undefined
         }
-        contentContainerStyle={{
-          padding: 16,
-          paddingTop: topPadding + 16,
-          backgroundColor: theme.colors.surfaceBackground,
-        }}
+        contentContainerStyle={contentPadding}
+        ListHeaderComponent={header}
         ListFooterComponent={<View style={{ height: bottomPadding }} />}
         renderItem={renderItem}
       />

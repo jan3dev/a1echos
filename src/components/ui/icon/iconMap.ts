@@ -32,7 +32,10 @@ import Menu from "@/assets/icons/menu.svg";
 import Mic from "@/assets/icons/mic.svg";
 import More from "@/assets/icons/more.svg";
 import Paste from "@/assets/icons/paste.svg";
+import Pause from "@/assets/icons/pause.svg";
+import Play from "@/assets/icons/play.svg";
 import Rectangle from "@/assets/icons/rectangle.svg";
+import Redo from "@/assets/icons/redo.svg";
 import RotateLeft from "@/assets/icons/rotate_left.svg";
 import Scissor from "@/assets/icons/scissor.svg";
 import SelectAll from "@/assets/icons/select_all.svg";
@@ -78,7 +81,10 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   mic: Mic,
   more: More,
   paste: Paste,
+  pause: Pause,
+  play: Play,
   rectangle: Rectangle,
+  redo: Redo,
   rotate_left: RotateLeft,
   scissor: Scissor,
   select_all: SelectAll,

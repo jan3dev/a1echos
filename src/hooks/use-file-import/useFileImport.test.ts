@@ -54,9 +54,9 @@ const mockBack = jest.fn();
 const showAlertToast = jest.fn();
 let currentRoute: { params?: { id?: string } } | undefined;
 
-const run = async (folderId?: string) => {
+const run = async (folderId?: string, sessionId?: string) => {
   const { result } = renderHook(() =>
-    useFileImport({ showAlertToast, folderId }),
+    useFileImport({ showAlertToast, folderId, sessionId }),
   );
   await result.current();
 };
@@ -248,4 +248,22 @@ it("surfaces unexpected errors in the toast", async () => {
     message: "picker broke",
     variant: "error",
   });
+});
+
+it("imports into an existing session without creating, navigating or deleting it", async () => {
+  const files = [asset("a.mp3")];
+  pick.mockResolvedValueOnce({ canceled: false, assets: files });
+  mockImportFiles.mockResolvedValueOnce({
+    imported: 0,
+    failed: [{ name: "a.mp3", reason: "noSpeech" }],
+  });
+
+  await run(undefined, "existing");
+
+  expect(mockCreateSession).not.toHaveBeenCalled();
+  expect(mockPush).not.toHaveBeenCalled();
+  expect(mockImportFiles).toHaveBeenCalledWith("existing", files);
+  expect(mockDeleteSession).not.toHaveBeenCalled();
+  expect(mockBack).not.toHaveBeenCalled();
+  expect(showAlertToast).toHaveBeenCalled();
 });

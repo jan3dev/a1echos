@@ -1,4 +1,4 @@
-import { RefObject } from "react";
+import { ReactElement, RefObject } from "react";
 import {
   FlatList,
   type LayoutChangeEvent,
@@ -24,9 +24,8 @@ interface TranscriptionContentViewProps {
   selectedTranscriptionIds: Set<string>;
   onTranscriptionTap: (id: string) => void;
   onTranscriptionLongPress: (id: string) => void;
-  onEditStart?: () => void;
-  onEditEnd?: () => void;
-  isCancellingEdit?: boolean;
+  onTranscriptionEdit?: (id: string) => void;
+  header?: ReactElement;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
@@ -38,9 +37,8 @@ export const TranscriptionContentView = ({
   selectedTranscriptionIds,
   onTranscriptionTap,
   onTranscriptionLongPress,
-  onEditStart,
-  onEditEnd,
-  isCancellingEdit = false,
+  onTranscriptionEdit,
+  header,
   onScroll,
   onContentSizeChange,
   onLayout,
@@ -84,9 +82,8 @@ export const TranscriptionContentView = ({
       selectedTranscriptionIds={selectedTranscriptionIds}
       onTranscriptionTap={onTranscriptionTap}
       onTranscriptionLongPress={onTranscriptionLongPress}
-      onEditModeStarted={onEditStart}
-      onEditModeEnded={onEditEnd}
-      isCancellingEdit={isCancellingEdit}
+      onTranscriptionEdit={onTranscriptionEdit}
+      header={header}
       topPadding={topPadding}
       bottomPadding={bottomPadding}
       onScroll={onScroll}

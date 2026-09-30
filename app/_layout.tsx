@@ -28,7 +28,11 @@ import {
   TranscriptionSettingsSheet,
   VoiceSessionHintModal,
 } from "@/components";
-import { useLocalization, useVoiceSessionHint } from "@/hooks";
+import {
+  useKeyboardHeight,
+  useLocalization,
+  useVoiceSessionHint,
+} from "@/hooks";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
 import { TranscriptionState } from "@/models";
@@ -121,11 +125,15 @@ const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
 const isSessionListRoute = (pathname: string) =>
   pathname === "/" || pathname.startsWith("/folder/");
 
+const isTranscriptionEditRoute = (pathname: string) =>
+  /^\/transcription\/[^/]+$/.test(pathname);
+
 const isRecordingRoute = (pathname: string) =>
   isSessionListRoute(pathname) || pathname.startsWith("/session/");
 
 function GlobalTooltipRenderer() {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { theme } = useTheme();
   const tooltip = useGlobalTooltip();
   const hideTooltip = useHideGlobalTooltip();
@@ -200,16 +208,19 @@ function GlobalTooltipRenderer() {
   // selection mode is active. Lift the tooltip above whichever is present.
   const navbarVisible =
     (isSessionListRoute(pathname) && isSessionSelectionMode) ||
-    (pathname.startsWith("/session/") && isTranscriptionSelectionMode);
+    (pathname.startsWith("/session/") && isTranscriptionSelectionMode) ||
+    isTranscriptionEditRoute(pathname);
   const footerHeight = liftAboveControls
     ? AppConstants.RECORDING_FOOTER_HEIGHT
     : navbarVisible
       ? SUB_SCREEN_NAVBAR_HEIGHT
       : 0;
+  // An open keyboard covers the safe area and carries any footer above it.
+  const bottomEdge = keyboardHeight > 0 ? keyboardHeight : insets.bottom;
   const bottomOffset =
     footerHeight > 0
-      ? insets.bottom + footerHeight + TOOLTIP_GAP_ABOVE_FOOTER
-      : insets.bottom + TOOLTIP_GAP_ABOVE_SAFE_AREA;
+      ? bottomEdge + footerHeight + TOOLTIP_GAP_ABOVE_FOOTER
+      : bottomEdge + TOOLTIP_GAP_ABOVE_SAFE_AREA;
 
   // Rendered in a Modal so it paints above everything — including opaque screen
   // content like the home empty-state string. On Android the react-native-screens

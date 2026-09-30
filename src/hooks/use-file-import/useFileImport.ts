@@ -32,11 +32,14 @@ const PICKER_TYPES = [
 interface UseFileImportParams {
   showAlertToast: (options: ToastOptions) => void;
   folderId?: string;
+  /** Import into this existing session instead of creating a new one. */
+  sessionId?: string;
 }
 
 export const useFileImport = ({
   showAlertToast,
   folderId,
+  sessionId: targetSessionId,
 }: UseFileImportParams) => {
   const router = useRouter();
   const navigation = useNavigationContainerRef();
@@ -70,25 +73,28 @@ export const useFileImport = ({
         return;
       }
 
-      const sessionName =
-        result.assets.length === 1
-          ? result.assets[0].name.replace(/\.[^.]+$/, "")
-          : undefined;
-      const sessionId = await createSession(
-        sessionName,
-        false,
-        loc.recordingPrefix,
-        loc.incognitoModeTitle,
-        folderId,
-      );
-      router.push(Routes.session(sessionId));
+      let sessionId = targetSessionId;
+      if (!sessionId) {
+        const sessionName =
+          result.assets.length === 1
+            ? result.assets[0].name.replace(/\.[^.]+$/, "")
+            : undefined;
+        sessionId = await createSession(
+          sessionName,
+          false,
+          loc.recordingPrefix,
+          loc.incognitoModeTitle,
+          folderId,
+        );
+        router.push(Routes.session(sessionId));
+      }
 
       let imported = 0;
       let failed: { name: string; reason: ImportFailureReason }[] = [];
       try {
         ({ imported, failed } = await importFiles(sessionId, result.assets));
       } finally {
-        if (imported === 0) {
+        if (imported === 0 && !targetSessionId) {
           const route = navigation.getCurrentRoute() as
             | { params?: { id?: string } }
             | undefined;
@@ -128,5 +134,6 @@ export const useFileImport = ({
     router,
     showAlertToast,
     showGlobalTooltip,
+    targetSessionId,
   ]);
 };
