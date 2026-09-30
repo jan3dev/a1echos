@@ -27,6 +27,7 @@ const KEYBOARD_GAP = 16;
 interface SessionInputModalProps {
   visible: boolean;
   title: string;
+  label?: string;
   buttonText: string;
   initialValue?: string;
   onSubmit: (text: string) => void;
@@ -38,6 +39,7 @@ interface SessionInputModalProps {
 export const SessionInputModal = ({
   visible,
   title,
+  label,
   buttonText,
   initialValue = "",
   onSubmit,
@@ -183,7 +185,7 @@ export const SessionInputModal = ({
               </View>
 
               <TextField
-                label={loc.sessionNameLabel}
+                label={label ?? loc.sessionNameLabel}
                 value={text}
                 onChangeText={setText}
                 variant="brand"

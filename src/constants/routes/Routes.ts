@@ -23,6 +23,8 @@ export const Routes = {
   onboardingAllSet: "/onboarding/all-set" as Href,
   session: (id: string): Href =>
     ({ pathname: "/session/[id]", params: { id } }) as unknown as Href,
+  folder: (id: string): Href =>
+    ({ pathname: "/folder/[id]", params: { id } }) as unknown as Href,
   settings: "/settings" as Href,
   settingsModel: "/settings/model" as Href,
   settingsTheme: "/settings/theme" as Href,

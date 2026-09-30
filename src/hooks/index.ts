@@ -5,6 +5,8 @@ export { useMicPermission } from "./use-mic-permission/useMicPermission";
 export { useOnboardingExit } from "./use-onboarding-exit/useOnboardingExit";
 export { usePermissions } from "./use-permissions/usePermissions";
 export { useProgrammaticScrollGuard } from "./use-programmatic-scroll-guard/useProgrammaticScrollGuard";
+export { useRecordingEntry } from "./use-recording-entry/useRecordingEntry";
 export { useScrollSurface } from "./use-scroll-surface/useScrollSurface";
+export { useSessionListActions } from "./use-session-list-actions/useSessionListActions";
 export { useSessionOperations } from "./use-session-operations/useSessionOperations";
 export { useVoiceSessionHint } from "./use-voice-session-hint/useVoiceSessionHint";

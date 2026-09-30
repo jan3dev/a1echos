@@ -5,8 +5,13 @@ import { Session } from "@/models";
 import { audioProtectionService, databaseService } from "@/services";
 
 import {
+  useCreateFolder,
   useCreateSession,
+  useFindFolderById,
   useFindSessionById,
+  useFolderSessions,
+  useFolders,
+  useFolderSummaries,
   useIncognitoSession,
   useRenameSession,
   useSessions,
@@ -17,6 +22,8 @@ import {
 jest.mock("@/services", () => ({
   databaseService: {
     listSessions: jest.fn(async () => []),
+    listFolders: jest.fn(async () => []),
+    insertFolder: jest.fn(async () => undefined),
     upsertSession: jest.fn(async () => undefined),
     deleteSession: jest.fn(async () => ({ deletedAudioPaths: [] })),
     getActiveSessionId: jest.fn(async () => null),
@@ -60,6 +67,7 @@ const s3 = makeSession({
 
 const initialState = {
   sessions: [],
+  folders: [],
   activeSessionId: "",
   incognitoSession: null,
   isLoaded: false,
@@ -222,6 +230,30 @@ describe("sessionStore", () => {
     });
   });
 
+  describe("createFolder()", () => {
+    it("persists a trimmed, truncated folder and prepends it", async () => {
+      useSessionStore.setState({
+        folders: [{ id: "old", name: "Old", createdAt: new Date(0) }],
+      });
+      const id = await useSessionStore
+        .getState()
+        .createFolder(`  ${"B".repeat(40)}  `);
+
+      expect(id).toBe("new-uuid");
+      const [folder] = useSessionStore.getState().folders;
+      expect(folder.name).toBe("B".repeat(30));
+      expect(useSessionStore.getState().folders).toHaveLength(2);
+      expect(databaseService.insertFolder).toHaveBeenCalledWith(folder);
+    });
+
+    it("rejects an empty name", async () => {
+      await expect(
+        useSessionStore.getState().createFolder("   "),
+      ).rejects.toThrow();
+      expect(databaseService.insertFolder).not.toHaveBeenCalled();
+    });
+  });
+
   describe("createSession()", () => {
     it("creates with auto-generated name", async () => {
       const id = await useSessionStore.getState().createSession();
@@ -246,6 +278,32 @@ describe("sessionStore", () => {
       const longName = "A".repeat(50);
       await useSessionStore.getState().createSession(longName);
       expect(useSessionStore.getState().sessions[0].name).toHaveLength(30);
+    });
+
+    it("assigns the folder to a regular session", async () => {
+      useSessionStore.setState({
+        folders: [{ id: "f1", name: "Work", createdAt: new Date() }],
+      });
+      await useSessionStore
+        .getState()
+        .createSession(undefined, false, "Session", "Incognito", "f1");
+      expect(useSessionStore.getState().sessions[0].folderId).toBe("f1");
+    });
+
+    it("drops a folder id that does not exist", async () => {
+      await useSessionStore
+        .getState()
+        .createSession(undefined, false, "Session", "Incognito", "missing");
+      expect(useSessionStore.getState().sessions[0].folderId).toBeUndefined();
+    });
+
+    it("never files an incognito session into a folder", async () => {
+      await useSessionStore
+        .getState()
+        .createSession(undefined, true, "Session", "Incognito", "f1");
+      expect(
+        useSessionStore.getState().incognitoSession?.folderId,
+      ).toBeUndefined();
     });
 
     it("creates incognito session separately", async () => {
@@ -547,6 +605,63 @@ describe("sessionStore", () => {
     it("useIncognitoSession returns null by default", () => {
       const { result } = renderHook(() => useIncognitoSession());
       expect(result.current).toBeNull();
+    });
+  });
+
+  describe("folder hooks", () => {
+    const folder = { id: "f1", name: "Work", createdAt: new Date(0) };
+
+    beforeEach(() => {
+      useSessionStore.setState({
+        folders: [folder],
+        sessions: [{ ...s1, folderId: "f1" }, s2],
+        needsSort: false,
+      });
+    });
+
+    it("useFolderSessions filters by folder, null for unfiled", () => {
+      expect(
+        renderHook(() => useFolderSessions("f1")).result.current.map(
+          (s) => s.id,
+        ),
+      ).toEqual(["s1"]);
+      expect(
+        renderHook(() => useFolderSessions(null)).result.current.map(
+          (s) => s.id,
+        ),
+      ).toEqual(["s2"]);
+    });
+
+    it("useFolderSummaries counts sessions per folder", () => {
+      const createdAt = new Date(0);
+      useSessionStore.setState({
+        folders: [
+          { id: "f1", name: "Work", createdAt },
+          { id: "f2", name: "Empty", createdAt },
+        ],
+        sessions: [
+          { id: "s1", folderId: "f1" },
+          { id: "s2", folderId: "f1" },
+          { id: "s3" },
+        ] as any,
+      });
+      expect(renderHook(() => useFolderSummaries()).result.current).toEqual([
+        { id: "f1", name: "Work", createdAt, sessionCount: 2 },
+        { id: "f2", name: "Empty", createdAt, sessionCount: 0 },
+      ]);
+    });
+
+    it("useFolders, useFindFolderById and useCreateFolder read the store", () => {
+      expect(renderHook(() => useFolders()).result.current).toEqual([folder]);
+      expect(renderHook(() => useFindFolderById("f1")).result.current).toBe(
+        folder,
+      );
+      expect(
+        renderHook(() => useFindFolderById("missing")).result.current,
+      ).toBeNull();
+      expect(renderHook(() => useCreateFolder()).result.current).toBe(
+        useSessionStore.getState().createFolder,
+      );
     });
   });
 });

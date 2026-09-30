@@ -1,14 +1,16 @@
 import { desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, getRawDatabase } from "@/db";
-import { meta, sessions, transcriptions } from "@/db/schema";
+import { folders, meta, sessions, transcriptions } from "@/db/schema";
 import {
+  folderFromRow,
+  folderToRow,
   sessionFromRow,
   sessionToRow,
   transcriptionFromRow,
   transcriptionToRow,
 } from "@/db/types";
-import type { Session, Transcription } from "@/models";
+import type { Folder, Session, Transcription } from "@/models";
 
 const ACTIVE_SESSION_META_KEY = "active_session_id";
 
@@ -37,9 +39,23 @@ const createDatabaseService = () => {
           timestampMs: row.timestampMs,
           lastModifiedMs: row.lastModifiedMs,
           isIncognito: row.isIncognito,
+          folderId: row.folderId,
         },
       })
       .run();
+  };
+
+  const listFolders = async (): Promise<Folder[]> => {
+    const rows = await getDb()
+      .select()
+      .from(folders)
+      .orderBy(desc(folders.createdAtMs))
+      .all();
+    return rows.map(folderFromRow);
+  };
+
+  const insertFolder = async (folder: Folder): Promise<void> => {
+    await getDb().insert(folders).values(folderToRow(folder)).run();
   };
 
   const deleteSession = async (
@@ -214,6 +230,8 @@ const createDatabaseService = () => {
     listSessions,
     upsertSession,
     deleteSession,
+    listFolders,
+    insertFolder,
     getActiveSessionId,
     setActiveSessionId,
     listTranscriptions,

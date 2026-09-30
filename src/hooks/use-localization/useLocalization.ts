@@ -32,6 +32,8 @@ export const useLocalization = () => {
       homeUpload: t("homeUpload"),
       homeNewFolder: t("homeNewFolder"),
       folderMoreOptions: t("folderMoreOptions"),
+      folderCreateTitle: t("folderCreateTitle"),
+      folderNameLabel: t("folderNameLabel"),
       followUsOnX: t("followUs"),
       couldNotOpenLink: t("couldNotOpenLink"),
       incognitoModeTitle: t("incognitoModeTitle"),

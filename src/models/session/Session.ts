@@ -4,6 +4,7 @@ export interface Session {
   timestamp: Date;
   lastModified: Date;
   isIncognito: boolean;
+  folderId?: string;
 }
 
 export interface SessionJSON {
@@ -42,6 +43,7 @@ export const createSession = (params: {
   timestamp: Date;
   lastModified?: Date;
   isIncognito?: boolean;
+  folderId?: string;
 }): Session => {
   return {
     id: params.id,
@@ -49,5 +51,6 @@ export const createSession = (params: {
     timestamp: params.timestamp,
     lastModified: params.lastModified ?? params.timestamp,
     isIncognito: params.isIncognito ?? false,
+    ...(params.folderId && { folderId: params.folderId }),
   };
 };

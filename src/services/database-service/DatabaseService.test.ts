@@ -96,6 +96,7 @@ const sessionRowFor = (s: Session) => ({
   timestampMs: s.timestamp.getTime(),
   lastModifiedMs: s.lastModified.getTime(),
   isIncognito: s.isIncognito,
+  folderId: s.folderId ?? null,
 });
 
 const transcriptionRowFor = (t: Transcription) => ({
@@ -132,6 +133,29 @@ describe("DatabaseService", () => {
     it("returns empty array when no rows", async () => {
       queryResults.rows = [];
       expect(await databaseService.listSessions()).toEqual([]);
+    });
+  });
+
+  describe("folders", () => {
+    it("lists folders mapped from rows", async () => {
+      queryResults.rows = [{ id: "f1", name: "Work", createdAtMs: 1000 }];
+      expect(await databaseService.listFolders()).toEqual([
+        { id: "f1", name: "Work", createdAt: new Date(1000) },
+      ]);
+    });
+
+    it("inserts a folder row", async () => {
+      await databaseService.insertFolder({
+        id: "f1",
+        name: "Work",
+        createdAt: new Date(1000),
+      });
+      expect(chain.values).toHaveBeenCalledWith({
+        id: "f1",
+        name: "Work",
+        createdAtMs: 1000,
+      });
+      expect(chain.run).toHaveBeenCalled();
     });
   });
 

@@ -5,6 +5,8 @@ export {
 } from "./session/Session";
 export type { Session, SessionJSON } from "./session/Session";
 
+export type { Folder, FolderSummary } from "./folder/Folder";
+
 export {
   createTranscription,
   transcriptionFromJSON,

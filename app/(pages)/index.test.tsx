@@ -47,16 +47,30 @@ jest.mock("@/hooks", () => ({
     reset: jest.fn(),
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
-  useMicPermission: jest.fn(() => jest.fn(async () => true)),
+  useRecordingEntry: (...args: any[]) =>
+    jest
+      .requireActual("@/hooks/use-recording-entry/useRecordingEntry")
+      .useRecordingEntry(...args),
   usePermissions: jest.fn(() => ({
     hasPermission: true,
     requestPermission: jest.fn(),
     openSettings: jest.fn(),
   })),
-  useSessionOperations: jest.fn(() => ({
-    deleteSession: jest.fn(),
-    endIncognitoSession: jest.fn(),
-  })),
+  useSessionListActions: (...args: any[]) =>
+    jest
+      .requireActual("@/hooks/use-session-list-actions/useSessionListActions")
+      .useSessionListActions(...args),
+}));
+
+jest.mock("@/hooks/use-mic-permission/useMicPermission", () => ({
+  useMicPermission: () => async () => true,
+}));
+
+jest.mock("@/hooks/use-localization/useLocalization", () => ({
+  useLocalization: () => ({ loc: mockMakeLoc() }),
+}));
+jest.mock("@/hooks/use-session-operations/useSessionOperations", () => ({
+  useSessionOperations: () => ({ deleteSession: jest.fn() }),
 }));
 
 jest.mock("@/utils", () => ({
@@ -73,11 +87,15 @@ const mockShowDeleteToast = jest.fn();
 const mockHideDeleteToast = jest.fn();
 
 let mockSessions: any[] = [];
+let mockFolders: any[] = [];
+const mockCreateFolder = jest.fn(async () => "f-new");
 let mockGlobalTooltip: any = null;
 
 jest.mock("@/stores", () => ({
   useHasSeenWelcome: jest.fn(() => true),
-  useSessions: jest.fn(() => mockSessions),
+  useFolderSessions: jest.fn(() => mockSessions),
+  useFolderSummaries: jest.fn(() => mockFolders),
+  useCreateFolder: jest.fn(() => mockCreateFolder),
   useIncognitoSession: jest.fn(() => null),
   useCreateSession: jest.fn(() => jest.fn()),
   useIsIncognitoMode: jest.fn(() => false),
@@ -99,6 +117,8 @@ jest.mock("@/stores", () => ({
 }));
 
 let mockOnSessionTap: ((id: string) => void) | null = null;
+let mockHomeContentProps: any = null;
+let mockCreateFolderModal: any = null;
 let mockOnRenameSubmit: ((name: string) => void) | null = null;
 let mockOnRenameCancel: (() => void) | null = null;
 const navbarActions: Record<string, () => void> = {};
@@ -112,6 +132,7 @@ jest.mock("@/components", () => {
     HomeAppBar: () => <View testID={TID.HomeAppBar} />,
     HomeContent: (props: any) => {
       mockOnSessionTap = props.onSessionTap;
+      mockHomeContentProps = props;
       return (
         <View testID={TID.HomeContent}>
           <Text testID={TID.HomeContentSelection}>
@@ -131,6 +152,10 @@ jest.mock("@/components", () => {
         <View testID={TID.SessionActionsSheet} {...props} />
       ) : null,
     SessionInputModal: (props: any) => {
+      if (props.label) {
+        mockCreateFolderModal = props;
+        return null;
+      }
       mockOnRenameSubmit = props.onSubmit;
       mockOnRenameCancel = props.onCancel;
       return props.visible ? (
@@ -173,10 +198,77 @@ jest.mock("@/components", () => {
 
 beforeEach(() => {
   mockSessions = [];
+  mockFolders = [];
+  mockHomeContentProps = null;
+  mockCreateFolderModal = null;
   mockGlobalTooltip = null;
   mockOnSessionTap = null;
   mockOnRenameSubmit = null;
   mockOnRenameCancel = null;
+});
+
+describe("HomeScreen folders", () => {
+  it("passes folder summaries to the list", () => {
+    mockFolders = [
+      { id: "f1", name: "Work", createdAt: new Date(0), sessionCount: 2 },
+    ];
+    render(<HomeScreen />);
+    expect(mockHomeContentProps.folders).toBe(mockFolders);
+  });
+
+  it("hides EmptyStateView when only folders exist", () => {
+    mockFolders = [
+      { id: "f1", name: "Work", createdAt: new Date(0), sessionCount: 1 },
+    ];
+    const { queryByTestId } = render(<HomeScreen />);
+    expect(queryByTestId(TestID.EmptyStateView)).toBeNull();
+  });
+
+  it("opens a folder on folder press", () => {
+    render(<HomeScreen />);
+    act(() => mockHomeContentProps.onFolderPress({ id: "f1" }));
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({ params: { id: "f1" } }),
+    );
+  });
+
+  it("creates a folder from the naming sheet and routes into it", async () => {
+    render(<HomeScreen />);
+    expect(mockCreateFolderModal.visible).toBe(false);
+    act(() => mockHomeContentProps.onCreateFolderPress());
+    expect(mockCreateFolderModal.visible).toBe(true);
+
+    await act(async () => {
+      await mockCreateFolderModal.onSubmit("Work");
+    });
+    expect(mockCreateFolder).toHaveBeenCalledWith("Work");
+    expect(mockCreateFolderModal.visible).toBe(false);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pathname: "/folder/[id]",
+        params: { id: "f-new" },
+      }),
+    );
+  });
+
+  it("keeps the sheet open and logs when folder creation fails", async () => {
+    const { logError } = require("@/utils");
+    mockCreateFolder.mockRejectedValueOnce(new Error("db"));
+    render(<HomeScreen />);
+    act(() => mockHomeContentProps.onCreateFolderPress());
+    await act(async () => {
+      await mockCreateFolderModal.onSubmit("Work");
+    });
+    expect(logError).toHaveBeenCalled();
+    expect(mockCreateFolderModal.visible).toBe(true);
+  });
+
+  it("closes the sheet on cancel", () => {
+    render(<HomeScreen />);
+    act(() => mockHomeContentProps.onCreateFolderPress());
+    act(() => mockCreateFolderModal.onCancel());
+    expect(mockCreateFolderModal.visible).toBe(false);
+  });
 });
 
 describe("HomeScreen", () => {

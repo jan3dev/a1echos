@@ -1,8 +1,6 @@
-import { useFocusEffect } from "@react-navigation/native";
-import * as Haptics from "expo-haptics";
 import { Redirect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, FlatList, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -14,40 +12,28 @@ import {
   SessionActionsSheet,
   SessionInputModal,
   SubScreenNavbar,
-  type SubScreenNavbarAction,
   Toast,
   useToast,
 } from "@/components";
-import { Routes, TestID } from "@/constants";
+import { AppConstants, Routes, TestID } from "@/constants";
 import {
   useLocalization,
-  useMicPermission,
+  useRecordingEntry,
   useScrollSurface,
-  useSessionOperations,
+  useSessionListActions,
 } from "@/hooks";
-import { Session } from "@/models";
+import { FolderSummary, Session } from "@/models";
 import {
-  useCreateSession,
-  useExitSessionSelection,
+  useCreateFolder,
+  useFolderSessions,
+  useFolderSummaries,
   useGlobalTooltip,
   useHasSeenWelcome,
   useIncognitoSession,
   useIsIncognitoMode,
-  useIsSessionSelectionMode,
-  useRenameSession,
-  useSelectedSessionIds,
-  useSelectedSessionIdsSet,
-  useSessions,
-  useSetRecordingCallbacks,
-  useSetRecordingControlsEnabled,
   useSetRecordingControlsVisible,
-  useShowGlobalTooltip,
-  useStartRecording,
-  useStopRecordingAndSave,
-  useToggleSessionSelection,
 } from "@/stores";
-import { useTheme } from "@/theme";
-import { FeatureFlag, getErrorMessage, logError } from "@/utils";
+import { FeatureFlag, logError } from "@/utils";
 
 // First-launch gate. Kept as a thin wrapper so the home screen and its
 // recording-control side effects never mount for fresh installs: `useFocusEffect`
@@ -68,7 +54,6 @@ export default function HomeScreen() {
 function HomeScreenContent() {
   const router = useRouter();
   const { loc } = useLocalization();
-  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<FlatList<Session>>(null);
   const blurTargetRef = useRef<View>(null);
@@ -81,22 +66,11 @@ function HomeScreenContent() {
     reset,
   } = useScrollSurface();
 
-  const sessions = useSessions();
+  const sessions = useFolderSessions(null);
+  const folderSummaries = useFolderSummaries();
+  const createFolder = useCreateFolder();
   const incognitoSession = useIncognitoSession();
-  const createSession = useCreateSession();
-  const { deleteSession } = useSessionOperations();
-  const renameSession = useRenameSession();
   const isIncognitoMode = useIsIncognitoMode();
-  const startTranscriptionRecording = useStartRecording();
-  const stopRecordingAndSave = useStopRecordingAndSave();
-  const isSessionSelectionMode = useIsSessionSelectionMode();
-  const selectedSessionIdsSet = useSelectedSessionIdsSet();
-  const selectedSessionIds = useSelectedSessionIds();
-  const toggleSessionSelection = useToggleSessionSelection();
-  const exitSessionSelection = useExitSessionSelection();
-  const showGlobalTooltip = useShowGlobalTooltip();
-  const setRecordingCallbacks = useSetRecordingCallbacks();
-  const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
   const setRecordingControlsVisible = useSetRecordingControlsVisible();
   const {
     show: showDeleteToast,
@@ -104,10 +78,7 @@ function HomeScreenContent() {
     toastState: deleteToastState,
   } = useToast();
 
-  const [actionsSession, setActionsSession] = useState<Session | null>(null);
-  const [actionsSheetVisible, setActionsSheetVisible] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<Session | null>(null);
-  const [renameVisible, setRenameVisible] = useState(false);
+  const [createFolderVisible, setCreateFolderVisible] = useState(false);
 
   const {
     show: showAlertToast,
@@ -115,7 +86,12 @@ function HomeScreenContent() {
     toastState: alertToastState,
   } = useToast();
 
-  const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
+  const actions = useSessionListActions({
+    sessions,
+    showToast: showDeleteToast,
+    hideToast: hideDeleteToast,
+  });
+  const { selectionMode } = actions;
 
   // Hold the empty-state label back while a global tooltip is showing so it
   // doesn't paint over (and visually beneath) the tooltip — the label appears
@@ -125,33 +101,16 @@ function HomeScreenContent() {
   // Incognito sessions live outside `sessions`; treat them as non-empty so the
   // empty-state label unmounts during the record→session-screen transition. In
   // incognito mode, IncognitoEmptyState owns the empty-state messaging instead.
+  const isListEmpty = sessions.length === 0 && folderSummaries.length === 0;
   const effectivelyEmpty =
-    sessions.length === 0 &&
-    !incognitoSession &&
-    !isIncognitoMode &&
-    !globalTooltip;
+    isListEmpty && !incognitoSession && !isIncognitoMode && !globalTooltip;
 
   // Clear stale app-bar glass when the session list isn't a populated,
-  // scrollable surface (incognito empty state, or no sessions): no scroll
-  // event fires to reset it.
+  // scrollable surface (incognito empty state, or no sessions or folders): no
+  // scroll event fires to reset it.
   useEffect(() => {
-    if (isIncognitoMode || sessions.length === 0) reset();
-  }, [isIncognitoMode, sessions.length, reset]);
-
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        if (isSessionSelectionMode) {
-          exitSessionSelection();
-          return true;
-        }
-        return false;
-      },
-    );
-
-    return () => backHandler.remove();
-  }, [isSessionSelectionMode, exitSessionSelection]);
+    if (isIncognitoMode || isListEmpty) reset();
+  }, [isIncognitoMode, isListEmpty, reset]);
 
   const scrollToTop = useCallback(() => {
     if (scrollRef.current) {
@@ -159,229 +118,37 @@ function HomeScreenContent() {
     }
   }, []);
 
-  const handleSessionLongPress = useCallback(
-    async (session: Session) => {
-      if (!isSessionSelectionMode) {
-        toggleSessionSelection(session.id);
-        try {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        } catch {
-          // Haptics not supported
-        }
-      }
-    },
-    [isSessionSelectionMode, toggleSessionSelection],
-  );
-
-  const handleSessionTap = useCallback(
-    (sessionId: string) => {
-      if (isSessionSelectionMode) {
-        toggleSessionSelection(sessionId);
-      } else {
-        router.push(Routes.session(sessionId));
-      }
-    },
-    [isSessionSelectionMode, toggleSessionSelection, router],
-  );
-
-  const handleRecordingStartRef = useRef<(() => Promise<void>) | null>(null);
-  const handleRecordingStopRef = useRef<(() => Promise<void>) | null>(null);
-
-  useEffect(() => {
-    handleRecordingStartRef.current = async () => {
-      if (!(await ensureMicPermission())) return;
-
-      try {
-        const sessionId = await createSession(
-          undefined,
-          isIncognitoMode,
-          loc.recordingPrefix,
-          loc.incognitoModeTitle,
-        );
-
-        const recordingStarted = await startTranscriptionRecording();
-        if (!recordingStarted) {
-          showGlobalTooltip(
-            loc.homeFailedStartRecording,
-            "normal",
-            undefined,
-            true,
-          );
-          return;
-        }
-
-        // brief pause to ensure recording has started before navigation (50ms)
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
-        router.push(Routes.session(sessionId));
-
-        scrollToTop();
-      } catch (error) {
-        logError(error, {
-          flag: FeatureFlag.recording,
-          message: "Failed to start recording",
-        });
-        showAlertToast({
-          title: loc.errorCreatingSessionTitle,
-          message: getErrorMessage(error),
-          variant: "error",
-        });
-      }
-    };
-  }, [
-    isIncognitoMode,
-    loc,
-    router,
-    ensureMicPermission,
-    showGlobalTooltip,
+  useRecordingEntry({
     showAlertToast,
-    createSession,
-    startTranscriptionRecording,
-    scrollToTop,
-  ]);
+    hideAlertToast,
+    onStarted: scrollToTop,
+  });
 
-  useEffect(() => {
-    handleRecordingStopRef.current = async () => {
-      await stopRecordingAndSave();
-    };
-  }, [stopRecordingAndSave]);
-
-  useFocusEffect(
-    useCallback(() => {
-      const onStart = () => handleRecordingStartRef.current?.();
-      const onStop = () => handleRecordingStopRef.current?.();
-      setRecordingCallbacks(onStart, onStop);
-      setRecordingControlsEnabled(true);
-      // No cleanup - next screen will set its own callbacks
-    }, [setRecordingCallbacks, setRecordingControlsEnabled]),
+  const handleFolderPress = useCallback(
+    (folder: FolderSummary) => router.push(Routes.folder(folder.id)),
+    [router],
   );
+  const openCreateFolder = useCallback(() => setCreateFolderVisible(true), []);
 
-  const performDelete = useCallback(
-    async (sessionIds: string[]) => {
-      const count = sessionIds.length;
-      hideDeleteToast();
-
+  const handleCreateFolderSubmit = useCallback(
+    async (name: string) => {
       try {
-        await Promise.all(
-          sessionIds.map((sessionId) => deleteSession(sessionId)),
-        );
+        const folderId = await createFolder(name);
+        setCreateFolderVisible(false);
+        router.push(Routes.folder(folderId));
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.session,
-          message: "Failed to delete sessions",
+          message: "Failed to create folder",
         });
       }
-
-      exitSessionSelection();
-      showGlobalTooltip(loc.homeSessionsDeleted(count));
     },
-    [
-      deleteSession,
-      exitSessionSelection,
-      hideDeleteToast,
-      showGlobalTooltip,
-      loc,
-    ],
-  );
-
-  const confirmDelete = useCallback(
-    (sessionIds: string[]) => {
-      if (sessionIds.length === 0) return;
-      showDeleteToast({
-        title: loc.homeDeleteSelectedSessionsTitle,
-        message: loc.homeDeleteSelectedSessionsMessage(sessionIds.length),
-        primaryButtonText: loc.delete,
-        onPrimaryButtonTap: () => performDelete(sessionIds),
-        secondaryButtonText: loc.cancel,
-        onSecondaryButtonTap: hideDeleteToast,
-        variant: "info",
-      });
-    },
-    [showDeleteToast, hideDeleteToast, performDelete, loc],
-  );
-
-  const handleDeleteSelected = useCallback(() => {
-    confirmDelete(selectedSessionIds);
-  }, [confirmDelete, selectedSessionIds]);
-
-  const handleRenameSelected = useCallback(() => {
-    if (selectedSessionIds.length !== 1) return;
-    const target = sessions.find((s) => s.id === selectedSessionIds[0]);
-    if (!target) return;
-    setRenameTarget(target);
-    setRenameVisible(true);
-  }, [selectedSessionIds, sessions]);
-
-  const handleSessionMorePress = useCallback((session: Session) => {
-    setActionsSession(session);
-    setActionsSheetVisible(true);
-  }, []);
-
-  const handleActionsRename = useCallback(() => {
-    if (!actionsSession) return;
-    const target = actionsSession;
-    setActionsSheetVisible(false);
-    setRenameTarget(target);
-    setRenameVisible(true);
-  }, [actionsSession]);
-
-  const handleActionsDelete = useCallback(() => {
-    if (!actionsSession) return;
-    const targetId = actionsSession.id;
-    setActionsSheetVisible(false);
-    confirmDelete([targetId]);
-  }, [actionsSession, confirmDelete]);
-
-  const handleRenameSubmit = useCallback(
-    async (newName: string) => {
-      if (!renameTarget) return;
-      try {
-        await renameSession(renameTarget.id, newName);
-      } catch (error) {
-        logError(error, {
-          flag: FeatureFlag.session,
-          message: "Failed to rename session",
-        });
-      }
-      setRenameVisible(false);
-      if (isSessionSelectionMode) {
-        exitSessionSelection();
-      }
-    },
-    [renameTarget, renameSession, isSessionSelectionMode, exitSessionSelection],
-  );
-
-  const navbarActions = useMemo<SubScreenNavbarAction[]>(
-    () => [
-      {
-        key: "delete",
-        icon: "trash",
-        label: loc.delete,
-        color: theme.colors.accentDanger,
-        disabled: selectedSessionIds.length === 0,
-        onPress: handleDeleteSelected,
-      },
-      {
-        key: "rename",
-        icon: "edit",
-        label: loc.rename,
-        disabled: selectedSessionIds.length !== 1,
-        onPress: handleRenameSelected,
-      },
-    ],
-    [
-      handleDeleteSelected,
-      handleRenameSelected,
-      loc.delete,
-      loc.rename,
-      selectedSessionIds.length,
-      theme.colors.accentDanger,
-    ],
+    [createFolder, router],
   );
 
   useEffect(() => {
-    setRecordingControlsVisible(!isSessionSelectionMode);
-  }, [isSessionSelectionMode, setRecordingControlsVisible]);
+    setRecordingControlsVisible(!selectionMode);
+  }, [selectionMode, setRecordingControlsVisible]);
 
   return (
     <Screen>
@@ -391,62 +158,78 @@ function HomeScreenContent() {
           positioning + zIndex, so JSX order doesn't affect what paints above. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <HomeContent
-          selectionMode={isSessionSelectionMode}
-          selectedSessionIds={selectedSessionIdsSet}
-          onSessionLongPress={handleSessionLongPress}
-          onSessionTap={handleSessionTap}
-          onSelectionToggle={toggleSessionSelection}
-          onSessionMorePress={handleSessionMorePress}
+          selectionMode={selectionMode}
+          selectedSessionIds={actions.selectedIdsSet}
+          onSessionLongPress={actions.onSessionLongPress}
+          onSessionTap={actions.onSessionTap}
+          onSessionMorePress={actions.onSessionMorePress}
           scrollRef={scrollRef}
           onScroll={onScroll}
           onContentSizeChange={onContentSizeChange}
           onLayout={onLayout}
+          folders={folderSummaries}
+          onFolderPress={handleFolderPress}
+          onCreateFolderPress={openCreateFolder}
         />
       </AppBarBlurTarget>
 
       <HomeAppBar
-        selectionMode={isSessionSelectionMode}
-        selectionTitle={loc.selectedCount(selectedSessionIds.length)}
-        onExitSelectionPressed={exitSessionSelection}
+        selectionMode={selectionMode}
+        selectionTitle={actions.selectionTitle}
+        onExitSelectionPressed={actions.exitSelection}
         blurTarget={blurTargetRef}
         scrolled={scrolled}
       />
 
       {effectivelyEmpty && (
         <View
-          style={[styles.emptyStateContainer, { bottom: insets.bottom + 120 }]}
+          style={[
+            styles.emptyStateContainer,
+            {
+              bottom: insets.bottom + AppConstants.RECORDING_FOOTER_HEIGHT + 16,
+            },
+          ]}
         >
           <EmptyStateView message={loc.emptySessionsMessage} />
         </View>
       )}
 
-      {actionsSession && (
+      {actions.actionsSheet.session && (
         <SessionActionsSheet
           testID={TestID.SessionActionsSheet}
-          visible={actionsSheetVisible}
-          title={actionsSession.name}
-          createdAt={actionsSession.timestamp}
-          modifiedAt={actionsSession.lastModified}
-          onRename={handleActionsRename}
-          onDelete={handleActionsDelete}
-          onDismiss={() => setActionsSheetVisible(false)}
+          visible={actions.actionsSheet.visible}
+          title={actions.actionsSheet.session.name}
+          createdAt={actions.actionsSheet.session.timestamp}
+          modifiedAt={actions.actionsSheet.session.lastModified}
+          onRename={actions.actionsSheet.onRename}
+          onDelete={actions.actionsSheet.onDelete}
+          onDismiss={actions.actionsSheet.onDismiss}
         />
       )}
 
-      {renameTarget && (
+      {actions.rename.target && (
         <SessionInputModal
-          visible={renameVisible}
+          visible={actions.rename.visible}
           title={loc.sessionRenameTitle}
           buttonText={loc.save}
-          initialValue={renameTarget.name}
-          onSubmit={handleRenameSubmit}
-          onCancel={() => setRenameVisible(false)}
+          initialValue={actions.rename.target.name}
+          onSubmit={actions.rename.onSubmit}
+          onCancel={actions.rename.onCancel}
         />
       )}
 
+      <SessionInputModal
+        visible={createFolderVisible}
+        title={loc.folderCreateTitle}
+        label={loc.folderNameLabel}
+        buttonText={loc.save}
+        onSubmit={handleCreateFolderSubmit}
+        onCancel={() => setCreateFolderVisible(false)}
+      />
+
       <SubScreenNavbar
-        visible={isSessionSelectionMode}
-        actions={navbarActions}
+        visible={selectionMode}
+        actions={actions.navbarActions}
         blurTarget={blurTargetRef}
         scrolled={contentBelow}
       />

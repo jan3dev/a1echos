@@ -1,14 +1,19 @@
 import * as Crypto from "expo-crypto";
+import { useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
 import { AppConstants } from "@/constants";
-import { Session, createSession } from "@/models";
+import { Folder, FolderSummary, Session, createSession } from "@/models";
 import { audioProtectionService, databaseService } from "@/services";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
+const normalizeName = (name: string) =>
+  name.trim().substring(0, AppConstants.SESSION_NAME_MAX_LENGTH);
+
 interface SessionStore {
   sessions: Session[];
+  folders: Folder[];
   activeSessionId: string;
   incognitoSession: Session | null;
   isLoaded: boolean;
@@ -20,8 +25,9 @@ interface SessionStore {
     isIncognito?: boolean,
     recordingPrefix?: string,
     incognitoModeTitle?: string,
-    notifyImmediately?: boolean,
+    folderId?: string,
   ) => Promise<string>;
+  createFolder: (name: string) => Promise<string>;
   renameSession: (id: string, newName: string) => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
@@ -49,14 +55,18 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 
   return {
     sessions: [],
+    folders: [],
     activeSessionId: "",
     incognitoSession: null,
     isLoaded: false,
     needsSort: true,
 
     loadSessions: async () => {
-      const sessions = await databaseService.listSessions();
-      const storedActive = await databaseService.getActiveSessionId();
+      const [sessions, folders, storedActive] = await Promise.all([
+        databaseService.listSessions(),
+        databaseService.listFolders(),
+        databaseService.getActiveSessionId(),
+      ]);
 
       let activeSessionId = "";
 
@@ -69,6 +79,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
 
       set({
         sessions,
+        folders,
         activeSessionId,
         isLoaded: true,
         needsSort: true,
@@ -131,6 +142,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       isIncognito = false,
       recordingPrefix = "Session",
       incognitoModeTitle = "Incognito",
+      folderId?: string,
     ) => {
       const now = new Date();
       const sessionId = Crypto.randomUUID();
@@ -145,13 +157,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
             throw new Error("Session name cannot be empty.");
           }
         } else {
-          sessionNameToUse = name.trim();
-          if (sessionNameToUse.length > AppConstants.SESSION_NAME_MAX_LENGTH) {
-            sessionNameToUse = sessionNameToUse.substring(
-              0,
-              AppConstants.SESSION_NAME_MAX_LENGTH,
-            );
-          }
+          sessionNameToUse = normalizeName(name);
         }
       }
 
@@ -161,6 +167,10 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         timestamp: now,
         lastModified: now,
         isIncognito,
+        folderId:
+          !isIncognito && get().folders.some((f) => f.id === folderId)
+            ? folderId
+            : undefined,
       });
 
       if (isIncognito) {
@@ -183,6 +193,19 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       return sessionId;
     },
 
+    createFolder: async (name: string) => {
+      const trimmed = normalizeName(name);
+      if (trimmed === "") throw new Error("Folder name cannot be empty.");
+      const folder: Folder = {
+        id: Crypto.randomUUID(),
+        name: trimmed,
+        createdAt: new Date(),
+      };
+      await databaseService.insertFolder(folder);
+      set({ folders: [folder, ...get().folders] });
+      return folder.id;
+    },
+
     notifySessionCreated: () => {
       set({});
     },
@@ -203,13 +226,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       const index = sessions.findIndex((s) => s.id === id);
 
       if (index >= 0 && newName.trim() !== "") {
-        let trimmedName = newName.trim();
-        if (trimmedName.length > AppConstants.SESSION_NAME_MAX_LENGTH) {
-          trimmedName = trimmedName.substring(
-            0,
-            AppConstants.SESSION_NAME_MAX_LENGTH,
-          );
-        }
+        const trimmedName = normalizeName(newName);
 
         const updated: Session = {
           ...sessions[index],
@@ -370,6 +387,40 @@ export const initializeSessionStore = async (): Promise<void> => {
 };
 export const useSessions = () =>
   useSessionStore(useShallow((s) => s.getSessions()));
+export const useFolderSessions = (folderId: string | null) =>
+  useSessionStore(
+    useShallow((s) =>
+      s
+        .getSessions()
+        .filter((session) => (session.folderId ?? null) === folderId),
+    ),
+  );
+export const useFolders = () => useSessionStore((s) => s.folders);
+export const useFolderSummaries = (): FolderSummary[] => {
+  const folders = useFolders();
+  const counts = useSessionStore(
+    useShallow((s) => {
+      const byFolder: Record<string, number> = {};
+      for (const session of s.sessions) {
+        if (session.folderId) {
+          byFolder[session.folderId] = (byFolder[session.folderId] ?? 0) + 1;
+        }
+      }
+      return byFolder;
+    }),
+  );
+  return useMemo(
+    () =>
+      folders.map((folder) => ({
+        ...folder,
+        sessionCount: counts[folder.id] ?? 0,
+      })),
+    [folders, counts],
+  );
+};
+export const useFindFolderById = (id: string) =>
+  useSessionStore((s) => s.folders.find((f) => f.id === id) ?? null);
+export const useCreateFolder = () => useSessionStore((s) => s.createFolder);
 export const useCreateSession = () => useSessionStore((s) => s.createSession);
 export const useRenameSession = () => useSessionStore((s) => s.renameSession);
 export const useFindSessionById = () =>

@@ -49,6 +49,7 @@ export enum TestID {
   SessionDelete = "session-delete",
   SessionShare = "session-share",
   SessionList = "session-list",
+  FolderCloseButton = "folder-close-button",
   SessionInputModal = "session-input-modal",
   SessionInputModalCard = "session-input-modal-card",
   SelectionMode = "selection-mode",

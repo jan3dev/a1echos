@@ -1,6 +1,6 @@
-import type { Session, Transcription } from "@/models";
+import type { Folder, Session, Transcription } from "@/models";
 
-import type { SessionRow, TranscriptionRow } from "./schema";
+import type { FolderRow, SessionRow, TranscriptionRow } from "./schema";
 
 export function sessionFromRow(row: SessionRow): Session {
   return {
@@ -9,6 +9,7 @@ export function sessionFromRow(row: SessionRow): Session {
     timestamp: new Date(row.timestampMs),
     lastModified: new Date(row.lastModifiedMs),
     isIncognito: row.isIncognito,
+    ...(row.folderId && { folderId: row.folderId }),
   };
 }
 
@@ -19,6 +20,23 @@ export function sessionToRow(session: Session): SessionRow {
     timestampMs: session.timestamp.getTime(),
     lastModifiedMs: session.lastModified.getTime(),
     isIncognito: session.isIncognito,
+    folderId: session.folderId ?? null,
+  };
+}
+
+export function folderFromRow(row: FolderRow): Folder {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt: new Date(row.createdAtMs),
+  };
+}
+
+export function folderToRow(folder: Folder): FolderRow {
+  return {
+    id: folder.id,
+    name: folder.name,
+    createdAtMs: folder.createdAt.getTime(),
   };
 }
 

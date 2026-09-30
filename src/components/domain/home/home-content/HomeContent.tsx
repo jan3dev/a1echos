@@ -13,8 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollToEdgeButton } from "@/components/shared/scroll-to-edge-button";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
-import { Session } from "@/models";
-import { useIsIncognitoMode, useSessions } from "@/stores";
+import { FolderSummary, Session } from "@/models";
+import { useFolderSessions, useIsIncognitoMode } from "@/stores";
 import { useTheme } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
@@ -22,7 +22,6 @@ import { Divider } from "../../../ui/divider/Divider";
 import { Icon } from "../../../ui/icon/Icon";
 import { SessionListItem } from "../../session/session-list-item/SessionListItem";
 import { FolderGrid } from "../folder-grid/FolderGrid";
-import type { FolderSummary } from "../folder-grid/FolderGroupItem";
 import { IncognitoEmptyState } from "../incognito-empty-state/IncognitoEmptyState";
 
 interface HomeContentProps {
@@ -30,13 +29,15 @@ interface HomeContentProps {
   selectedSessionIds: Set<string>;
   onSessionLongPress: (session: Session) => void;
   onSessionTap: (sessionId: string) => void;
-  onSelectionToggle: (sessionId: string) => void;
   onSessionMorePress: (session: Session) => void;
   scrollRef?: RefObject<FlatList<Session> | null>;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
+  folderId?: string;
   folders?: FolderSummary[];
+  onFolderPress?: (folder: FolderSummary) => void;
+  onCreateFolderPress?: () => void;
 }
 
 const NO_FOLDERS: FolderSummary[] = [];
@@ -46,20 +47,22 @@ export const HomeContent = ({
   selectedSessionIds,
   onSessionLongPress,
   onSessionTap,
-  onSelectionToggle,
   onSessionMorePress,
   scrollRef,
   onScroll,
   onContentSizeChange,
   onLayout,
+  folderId,
   folders = NO_FOLDERS,
+  onFolderPress,
+  onCreateFolderPress,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const { loc } = useLocalization();
   const { theme } = useTheme();
   const isIncognitoMode = useIsIncognitoMode();
-  const sessions = useSessions();
+  const sessions = useFolderSessions(folderId ?? null);
 
   const [limit, setLimit] = useState<number>(AppConstants.LIST_PAGE_SIZE);
   const [showJumpButton, setShowJumpButton] = useState(false);
@@ -108,15 +111,12 @@ export const HomeContent = ({
         session={item}
         selectionMode={selectionMode}
         isSelected={selectedSessionIds.has(item.id)}
-        onTap={() =>
-          selectionMode ? onSelectionToggle(item.id) : onSessionTap(item.id)
-        }
+        onTap={() => onSessionTap(item.id)}
         onLongPress={() => onSessionLongPress(item)}
         onMorePress={onSessionMorePress}
       />
     ),
     [
-      onSelectionToggle,
       onSessionLongPress,
       onSessionMorePress,
       onSessionTap,
@@ -158,7 +158,12 @@ export const HomeContent = ({
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
-          <ListHeader folders={folders} selectionMode={selectionMode} />
+          <ListHeader
+            folders={folders}
+            selectionMode={selectionMode}
+            onFolderPress={onFolderPress}
+            onCreateFolderPress={onCreateFolderPress}
+          />
         }
         contentContainerStyle={{
           paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
@@ -194,9 +199,13 @@ const Separator = () => <View style={styles.separator} />;
 const ListHeader = memo(function ListHeader({
   folders,
   selectionMode,
+  onFolderPress,
+  onCreateFolderPress,
 }: {
   folders: FolderSummary[];
   selectionMode: boolean;
+  onFolderPress?: (folder: FolderSummary) => void;
+  onCreateFolderPress?: () => void;
 }) {
   const { loc } = useLocalization();
   const { theme } = useTheme();
@@ -210,16 +219,19 @@ const ListHeader = memo(function ListHeader({
         <View
           style={[styles.quickActions, hasFolders && styles.quickActionsSpaced]}
         >
-          <Button.utility
-            text={loc.homeFolder}
-            icon={
-              <Icon
-                name="folder_add"
-                size={18}
-                color={theme.colors.textPrimary}
-              />
-            }
-          />
+          {onCreateFolderPress && (
+            <Button.utility
+              text={loc.homeFolder}
+              onPress={onCreateFolderPress}
+              icon={
+                <Icon
+                  name="folder_add"
+                  size={18}
+                  color={theme.colors.textPrimary}
+                />
+              }
+            />
+          )}
           <Button.utility
             text={loc.homeUpload}
             icon={
@@ -234,7 +246,10 @@ const ListHeader = memo(function ListHeader({
       )}
       {hasFolders && (
         <>
-          <FolderGrid folders={folders} />
+          <FolderGrid
+            folders={folders}
+            onFolderPress={selectionMode ? undefined : onFolderPress}
+          />
           <Divider />
         </>
       )}

@@ -56,7 +56,6 @@ export const AppBarDefault = () => {
           selectedSessionIds={new Set()}
           onSessionLongPress={(s) => console.log("Long press", s.id)}
           onSessionTap={(id) => console.log("Tap", id)}
-          onSelectionToggle={(id) => console.log("Toggle", id)}
           onSessionMorePress={(s) => console.log("More", s.id)}
         />
       </View>
@@ -78,7 +77,6 @@ export const AppBarSelectionState = () => {
           selectedSessionIds={new Set(["1"])}
           onSessionLongPress={(s) => console.log("Long press", s.id)}
           onSessionTap={(id) => console.log("Tap", id)}
-          onSelectionToggle={(id) => console.log("Toggle", id)}
           onSessionMorePress={(s) => console.log("More", s.id)}
         />
       </View>

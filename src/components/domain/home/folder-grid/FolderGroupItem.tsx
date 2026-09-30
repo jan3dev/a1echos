@@ -7,6 +7,7 @@ import FolderAddBottom from "@/assets/images/folder_add_bottom.svg";
 import FolderAddTop from "@/assets/images/folder_add_top.svg";
 import FolderBottom from "@/assets/images/folder_bottom.svg";
 import { useLocalization } from "@/hooks";
+import type { FolderSummary } from "@/models";
 import { AquaPrimitiveColors, useTheme } from "@/theme";
 import { formatDate, iosPressed } from "@/utils";
 
@@ -25,12 +26,7 @@ const GLOW_STOPS = [
   [1, 0],
 ] as const;
 
-export interface FolderSummary {
-  id: string;
-  name: string;
-  createdAt: Date;
-  sessionCount: number;
-}
+export type { FolderSummary };
 
 type FolderGroupItemProps =
   | {

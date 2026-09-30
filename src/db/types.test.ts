@@ -2,6 +2,8 @@ import { Session, Transcription } from "@/models";
 
 import { SessionRow, TranscriptionRow } from "./schema";
 import {
+  folderFromRow,
+  folderToRow,
   sessionFromRow,
   sessionToRow,
   transcriptionFromRow,
@@ -27,6 +29,33 @@ describe("db/types", () => {
 
     const back = sessionFromRow(row);
     expect(back).toEqual(session);
+  });
+
+  it("round-trips a session filed in a folder", () => {
+    const session: Session = {
+      id: "s1",
+      name: "Filed",
+      timestamp: new Date(1000),
+      lastModified: new Date(2000),
+      isIncognito: false,
+      folderId: "f1",
+    };
+    const row = sessionToRow(session);
+    expect(row.folderId).toBe("f1");
+    expect(sessionFromRow(row)).toEqual(session);
+    expect(sessionFromRow({ ...row, folderId: null })).not.toHaveProperty(
+      "folderId",
+    );
+  });
+
+  it("folderToRow and folderFromRow round-trip", () => {
+    const folder = { id: "f1", name: "Work", createdAt: new Date(1000) };
+    expect(folderToRow(folder)).toEqual({
+      id: "f1",
+      name: "Work",
+      createdAtMs: 1000,
+    });
+    expect(folderFromRow(folderToRow(folder))).toEqual(folder);
   });
 
   it("transcriptionToRow and transcriptionFromRow round-trip", () => {

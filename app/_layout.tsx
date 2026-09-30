@@ -111,9 +111,18 @@ const TOOLTIP_GAP_ABOVE_FOOTER = 16;
 const SETTINGS_SWIPE_ACTIVATION = 8;
 const SETTINGS_SWIPE_MAX_DRIFT_X = 30;
 const SETTINGS_HANDLE_HIT_ABOVE = 16;
-const SETTINGS_HANDLE_HEIGHT = 28;
 const GRABBER_TOP_INSET = 9;
+const SETTINGS_HANDLE_HEIGHT =
+  AppConstants.RECORDING_FOOTER_HEIGHT -
+  AppConstants.RECORDING_CONTROLS_HEIGHT +
+  GRABBER_TOP_INSET;
 const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
+
+const isSessionListRoute = (pathname: string) =>
+  pathname === "/" || pathname.startsWith("/folder/");
+
+const isRecordingRoute = (pathname: string) =>
+  isSessionListRoute(pathname) || pathname.startsWith("/session/");
 
 function GlobalTooltipRenderer() {
   const insets = useSafeAreaInsets();
@@ -184,19 +193,16 @@ function GlobalTooltipRenderer() {
     }
   }, [displayedTooltip, hideTooltip]);
 
-  const isOnRecordingScreen =
-    pathname === "/" || pathname.startsWith("/session/");
+  const isOnRecordingScreen = isRecordingRoute(pathname);
   const liftAboveControls = recordingControlsVisible && isOnRecordingScreen;
   // The bottom selection action bar (SubScreenNavbar) and the recording
   // controls are mutually exclusive — screens hide the controls whenever
   // selection mode is active. Lift the tooltip above whichever is present.
   const navbarVisible =
-    (pathname === "/" && isSessionSelectionMode) ||
+    (isSessionListRoute(pathname) && isSessionSelectionMode) ||
     (pathname.startsWith("/session/") && isTranscriptionSelectionMode);
   const footerHeight = liftAboveControls
-    ? AppConstants.RECORDING_CONTROLS_HEIGHT +
-      SETTINGS_HANDLE_HEIGHT -
-      GRABBER_TOP_INSET
+    ? AppConstants.RECORDING_FOOTER_HEIGHT
     : navbarVisible
       ? SUB_SCREEN_NAVBAR_HEIGHT
       : 0;
@@ -338,8 +344,7 @@ function GlobalRecordingControls() {
     onRecordingStop?.();
   }, [onRecordingStop]);
 
-  const isOnRecordingScreen =
-    pathname === "/" || pathname.startsWith("/session/");
+  const isOnRecordingScreen = isRecordingRoute(pathname);
   const isVisible = visible && isOnRecordingScreen;
   const canOpenSettings =
     isVisible &&
@@ -381,10 +386,7 @@ function GlobalRecordingControls() {
 
   return (
     <View
-      style={[
-        styles.recordingControls,
-        { opacity: isVisible ? 1 : 0 },
-      ]}
+      style={[styles.recordingControls, { opacity: isVisible ? 1 : 0 }]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
       <LinearGradient

@@ -55,7 +55,6 @@ const defaultProps = {
   selectedSessionIds: new Set<string>(),
   onSessionLongPress: jest.fn(),
   onSessionTap: jest.fn(),
-  onSelectionToggle: jest.fn(),
   onSessionMorePress: jest.fn(),
 };
 
@@ -76,7 +75,7 @@ describe("HomeContent", () => {
 
   it("shows quick actions but no folder grid without folders", () => {
     const { getByText, queryByText } = render(
-      <HomeContent {...defaultProps} />,
+      <HomeContent {...defaultProps} onCreateFolderPress={jest.fn()} />,
     );
     expect(getByText("homeFolder")).toBeTruthy();
     expect(getByText("homeUpload")).toBeTruthy();
@@ -96,6 +95,61 @@ describe("HomeContent", () => {
     expect(queryByText("homeFolder")).toBeNull();
     expect(queryByText("homeUpload")).toBeNull();
     expect(getByText("AQUA")).toBeTruthy();
+  });
+
+  it("fires onCreateFolderPress from the folder quick action", () => {
+    const onCreateFolderPress = jest.fn();
+    const { getByText } = render(
+      <HomeContent
+        {...defaultProps}
+        onCreateFolderPress={onCreateFolderPress}
+      />,
+    );
+    fireEvent.press(getByText("homeFolder"));
+    expect(onCreateFolderPress).toHaveBeenCalled();
+  });
+
+  it("opens a folder from the grid", () => {
+    const onFolderPress = jest.fn();
+    const folder = {
+      id: "f1",
+      name: "AQUA",
+      createdAt: new Date(),
+      sessionCount: 0,
+    };
+    const { getByText } = render(
+      <HomeContent
+        {...defaultProps}
+        folders={[folder]}
+        onFolderPress={onFolderPress}
+      />,
+    );
+    fireEvent.press(getByText("AQUA"));
+    expect(onFolderPress).toHaveBeenCalledWith(folder);
+  });
+
+  it("lists only sessions that are not filed in a folder", () => {
+    useSessionStore.setState({
+      sessions: [{ ...makeSession(1), folderId: "f1" }, makeSession(2)],
+      needsSort: false,
+    } as any);
+    const { queryByTestId } = render(<HomeContent {...defaultProps} />);
+    expect(queryByTestId("session-row-s1")).toBeNull();
+    expect(queryByTestId("session-row-s2")).toBeTruthy();
+  });
+
+  it("lists a folder's sessions and hides the folder action", () => {
+    useSessionStore.setState({
+      sessions: [{ ...makeSession(1), folderId: "f1" }, makeSession(2)],
+      needsSort: false,
+    } as any);
+    const { queryByTestId, queryByText } = render(
+      <HomeContent {...defaultProps} folderId="f1" />,
+    );
+    expect(queryByTestId("session-row-s1")).toBeTruthy();
+    expect(queryByTestId("session-row-s2")).toBeNull();
+    expect(queryByText("homeFolder")).toBeNull();
+    expect(queryByText("homeUpload")).toBeTruthy();
   });
 
   it("shows the folder grid when folders exist", () => {
@@ -192,9 +246,8 @@ describe("HomeContent", () => {
     expect(typeof ref.current?.scrollToOffset).toBe("function");
   });
 
-  it("forwards row taps to onSessionTap / onSelectionToggle and onLongPress", () => {
+  it("forwards row taps to onSessionTap and onLongPress", () => {
     const onSessionTap = jest.fn();
-    const onSelectionToggle = jest.fn();
     const onSessionLongPress = jest.fn();
 
     jest.requireMock(
@@ -217,7 +270,6 @@ describe("HomeContent", () => {
       <HomeContent
         {...defaultProps}
         onSessionTap={onSessionTap}
-        onSelectionToggle={onSelectionToggle}
         onSessionLongPress={onSessionLongPress}
       />,
     );
@@ -234,12 +286,11 @@ describe("HomeContent", () => {
         {...defaultProps}
         selectionMode
         onSessionTap={onSessionTap}
-        onSelectionToggle={onSelectionToggle}
         onSessionLongPress={onSessionLongPress}
       />,
     );
     fireEvent.press(getByTestId("tap-s1"));
-    expect(onSelectionToggle).toHaveBeenCalledWith("s1");
+    expect(onSessionTap).toHaveBeenCalledWith("s1");
   });
 
   it("renders a separator between session rows", () => {

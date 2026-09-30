@@ -1,5 +1,11 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+export const folders = sqliteTable("folders", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAtMs: integer("created_at_ms").notNull(),
+});
+
 export const sessions = sqliteTable("sessions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -8,6 +14,9 @@ export const sessions = sqliteTable("sessions", {
   isIncognito: integer("is_incognito", { mode: "boolean" })
     .notNull()
     .default(false),
+  folderId: text("folder_id").references(() => folders.id, {
+    onDelete: "set null",
+  }),
 });
 
 export const transcriptions = sqliteTable(
@@ -32,6 +41,7 @@ export const meta = sqliteTable("meta", {
   value: text("value").notNull(),
 });
 
+export type FolderRow = typeof folders.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type SessionInsert = typeof sessions.$inferInsert;
 export type TranscriptionRow = typeof transcriptions.$inferSelect;

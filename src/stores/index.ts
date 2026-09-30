@@ -1,7 +1,12 @@
 export {
   initializeSessionStore,
+  useCreateFolder,
   useCreateSession,
+  useFindFolderById,
   useFindSessionById,
+  useFolderSessions,
+  useFolders,
+  useFolderSummaries,
   useIncognitoSession,
   useRenameSession,
   useSessions,

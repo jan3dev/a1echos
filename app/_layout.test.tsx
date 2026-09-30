@@ -352,6 +352,16 @@ describe("RootLayout", () => {
     expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
   });
 
+  it("GlobalRecordingControls visible on folder path", async () => {
+    const { usePathname } = require("expo-router");
+    (usePathname as jest.Mock).mockReturnValue("/folder/f1");
+    const { useRecordingControlsVisible } = require("@/stores");
+    (useRecordingControlsVisible as jest.Mock).mockReturnValue(true);
+
+    const { getByTestId } = await renderAndWaitForInit();
+    expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
+  });
+
   // --- Additional coverage tests ---
 
   describe("GlobalTooltipRenderer", () => {
@@ -654,7 +664,9 @@ describe("RootLayout", () => {
       const original = comps.RecordingControlsView;
       comps.RecordingControlsView = ({ onRecordingStart }: any) => {
         const { Pressable } = require("react-native");
-        return <Pressable testID={TestID.BtnStart} onPress={onRecordingStart} />;
+        return (
+          <Pressable testID={TestID.BtnStart} onPress={onRecordingStart} />
+        );
       };
 
       const { getAllByTestId, queryByTestId } = await renderAndWaitForInit();

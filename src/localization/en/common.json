@@ -21,6 +21,8 @@
   "homeUpload": "Upload",
   "homeNewFolder": "New Folder",
   "folderMoreOptions": "Folder options",
+  "folderCreateTitle": "Create Folder",
+  "folderNameLabel": "Folder Name",
   "homeSessionsDeleted_one": "{{count}} Session Deleted",
   "homeSessionsDeleted_other": "{{count}} Sessions Deleted",
   "errorCreatingSessionTitle": "Couldn't Start Session",
