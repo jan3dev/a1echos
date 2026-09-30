@@ -28,6 +28,7 @@ const mockColors = {
   textTertiary: "#999999",
   surfacePrimary: "#FFFFFF",
   glassSurface: "rgba(255,255,255,0.90)",
+  glassSurfaceBorder: "rgba(255,255,255,0.04)",
 } as any;
 
 describe("RecordingButton", () => {
@@ -42,18 +43,20 @@ describe("RecordingButton", () => {
     expect(getByLabelText("Start Recording")).toBeTruthy();
   });
 
-  it("renders the idle ring (10px thick, 300 radius, glass surface) in READY state", () => {
+  it.each([
+    [TranscriptionState.READY, false],
+    [TranscriptionState.RECORDING, true],
+    [TranscriptionState.TRANSCRIBING, true],
+  ])("renders the surface border in %s: %s", (state, expected) => {
     const { UNSAFE_getAllByType } = render(
-      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
+      <RecordingButton state={state} colors={mockColors} />,
     );
-    const ring = UNSAFE_getAllByType(View).find((node) => {
-      const flat = StyleSheet.flatten(node.props.style) ?? {};
-      return flat.borderWidth === 10;
-    });
-    expect(ring).toBeTruthy();
-    const style = StyleSheet.flatten(ring!.props.style);
-    expect(style.borderRadius).toBe(300);
-    expect(style.borderColor).toBe("rgba(255,255,255,0.90)");
+    const hasBorder = UNSAFE_getAllByType(View).some(
+      (node) =>
+        StyleSheet.flatten(node.props.style)?.borderColor ===
+        "rgba(255,255,255,0.04)",
+    );
+    expect(hasBorder).toBe(expected);
   });
 
   it("pauses the gradient rotation while RECORDING", () => {

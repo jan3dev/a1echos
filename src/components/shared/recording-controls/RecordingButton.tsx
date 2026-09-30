@@ -56,11 +56,6 @@ interface RecordingButtonProps {
 }
 
 const PRESS_DOWN_SCALE = 0.9;
-const IDLE_RING_THICKNESS = 10;
-const IDLE_RING_RADIUS = 300;
-// Tuck the ring's inner edge slightly under the button so the two visually
-// connect instead of leaving a hairline gap at the seam.
-const IDLE_RING_OVERLAP = 2;
 const GESTURE_ISOLATION_DURATION = 2000;
 const EASE_OUT = Easing.out(Easing.ease);
 
@@ -204,17 +199,10 @@ const AnimatedGradientCircle = ({
   }, [active, frameCallback]);
 
   return (
-    // Skia's surface ignores the parent View's rounded clip on iOS, and the
-    // canvas is offset past the container border so the circle isn't cropped.
+    // Skia's surface ignores the parent View's rounded clip on iOS.
     <Canvas
       pointerEvents="none"
-      style={{
-        position: "absolute",
-        top: -1,
-        left: -1,
-        width: size,
-        height: size,
-      }}
+      style={{ position: "absolute", width: size, height: size }}
     >
       <Group clip={rrect(rect(0, 0, size, size), size / 2, size / 2)}>
         <Rect
@@ -376,12 +364,8 @@ export const RecordingButton = ({
   const surfaceDiscStyle = useAnimatedStyle(() => ({
     transform: [{ scale: reveal.value }],
   }));
-  const idleRingStyle = useAnimatedStyle(() => ({
-    opacity: 1 - reveal.value,
-  }));
 
   const circleSize = { width: size, height: size };
-  const ringSize = size + (IDLE_RING_THICKNESS - IDLE_RING_OVERLAP) * 2;
   // Slightly larger than the clip so no gradient fringe survives at the edge.
   const discSize = size + 2;
 
@@ -442,18 +426,6 @@ export const RecordingButton = ({
             isBusy ? { disabled: true, busy: true } : undefined
           }
         >
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.idleRing,
-              {
-                width: ringSize,
-                height: ringSize,
-                borderColor: colors.glassSurface,
-              },
-              idleRingStyle,
-            ]}
-          />
           <View style={[styles.buttonContainer, circleSize]}>
             <AnimatedGradientCircle size={size} active={isReady} />
             <Animated.View
@@ -468,6 +440,15 @@ export const RecordingButton = ({
                 surfaceDiscStyle,
               ]}
             />
+            {!isReady && (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.border,
+                  { borderColor: colors.glassSurfaceBorder },
+                ]}
+              />
+            )}
             <Animated.View
               key={isRecording ? "stop" : isBusy ? "busy" : "mic"}
               entering={FadeIn.duration(CONTENT_FADE_MS).delay(CONTENT_FADE_MS)}
@@ -491,17 +472,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderRadius: 1000,
   },
-  idleRing: {
-    position: "absolute",
-    borderRadius: IDLE_RING_RADIUS,
-    borderWidth: IDLE_RING_THICKNESS,
-  },
   buttonContainer: {
     borderRadius: 1000,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+  border: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 1000,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.04)",
   },
 });
