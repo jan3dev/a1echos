@@ -27,6 +27,11 @@ export const useLocalization = () => {
       homeSessionsDeleted: (count: number) =>
         t("homeSessionsDeleted", { count }),
       transcriptionCount: (count: number) => t("transcriptionCount", { count }),
+      sessionCount: (count: number) => t("sessionCount", { count }),
+      homeFolder: t("homeFolder"),
+      homeUpload: t("homeUpload"),
+      homeNewFolder: t("homeNewFolder"),
+      folderMoreOptions: t("folderMoreOptions"),
       followUsOnX: t("followUs"),
       couldNotOpenLink: t("couldNotOpenLink"),
       incognitoModeTitle: t("incognitoModeTitle"),

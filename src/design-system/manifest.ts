@@ -29,6 +29,7 @@ import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button
 import colorsGallery from "@/design-system/colors/Colors.gallery";
 import keyboardLayoutsGallery from "@/design-system/keyboard-layouts/KeyboardLayouts.gallery";
 import homeGallery from "@/components/domain/home/Home.gallery";
+import folderGridGallery from "@/components/domain/home/folder-grid/FolderGrid.gallery";
 import allSetScreenGallery from "@/components/domain/onboarding/all-set-screen/AllSetScreen.gallery";
 import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-microphone-screen/AllowMicrophoneScreen.gallery";
 import autocorrectScreenGallery from "@/components/domain/onboarding/autocorrect-screen/AutocorrectScreen.gallery";
@@ -100,6 +101,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   scrollToEdgeButtonGallery,
   keyboardLayoutsGallery,
   homeGallery,
+  folderGridGallery,
   welcomeScreenGallery,
   allowMicrophoneScreenGallery,
   enableKeyboardScreenGallery,

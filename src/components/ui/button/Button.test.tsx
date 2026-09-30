@@ -104,7 +104,7 @@ describe("Button", () => {
     expect(getByTestId(TestID.TestIcon)).toBeTruthy();
   });
 
-  it("renders icon with utility button (includes utilityIconSpacing)", () => {
+  it("renders icon with utility button", () => {
     const { View } = require("react-native");
     const { getByText, getByTestId } = render(
       <Button.utility

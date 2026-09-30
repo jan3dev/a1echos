@@ -74,6 +74,42 @@ describe("HomeContent", () => {
     expect(queryByTestId(TestID.IncognitoEmptyState)).toBeNull();
   });
 
+  it("shows quick actions but no folder grid without folders", () => {
+    const { getByText, queryByText } = render(
+      <HomeContent {...defaultProps} />,
+    );
+    expect(getByText("homeFolder")).toBeTruthy();
+    expect(getByText("homeUpload")).toBeTruthy();
+    expect(queryByText("AQUA")).toBeNull();
+  });
+
+  it("hides quick actions in selection mode but keeps the folder grid", () => {
+    const { getByText, queryByText } = render(
+      <HomeContent
+        {...defaultProps}
+        selectionMode
+        folders={[
+          { id: "f1", name: "AQUA", createdAt: new Date(), sessionCount: 2 },
+        ]}
+      />,
+    );
+    expect(queryByText("homeFolder")).toBeNull();
+    expect(queryByText("homeUpload")).toBeNull();
+    expect(getByText("AQUA")).toBeTruthy();
+  });
+
+  it("shows the folder grid when folders exist", () => {
+    const { getByText } = render(
+      <HomeContent
+        {...defaultProps}
+        folders={[
+          { id: "f1", name: "AQUA", createdAt: new Date(), sessionCount: 2 },
+        ]}
+      />,
+    );
+    expect(getByText("AQUA")).toBeTruthy();
+  });
+
   it("renders IncognitoEmptyState instead of the list when incognito mode is on", () => {
     useSettingsStore.setState({ isIncognitoMode: true });
     const { getByTestId, queryByTestId } = render(

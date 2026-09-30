@@ -105,14 +105,6 @@ export const shadows = {
     1,
   ),
 
-  button: createShadow(
-    AquaPrimitiveColors.black,
-    { width: 0, height: 8 },
-    0.26,
-    8,
-    4,
-  ),
-
   recordingButton: createShadow(
     AquaPrimitiveColors.black,
     { width: 0, height: 0 },

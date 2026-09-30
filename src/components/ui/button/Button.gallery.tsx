@@ -119,7 +119,7 @@ export const TertiaryStates = () => <TertiaryStatesContent />;
 
 const UtilityStatesContent = () => {
   const { theme } = useTheme();
-  const iconColor = theme.colors.textInverse;
+  const iconColor = theme.colors.textPrimary;
   return (
     <View style={styles.column}>
       <StateLabel>Default (large)</StateLabel>
@@ -205,7 +205,13 @@ const AllVariantsContent = () => {
           />
           <Button.utility
             text="Utility"
-            icon={<Icon name="settings" size={16} color={iconColor} />}
+            icon={
+              <Icon
+                name="settings"
+                size={16}
+                color={theme.colors.textPrimary}
+              />
+            }
             onPress={() => console.log("Pressed")}
           />
         </View>

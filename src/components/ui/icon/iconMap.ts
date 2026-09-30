@@ -11,12 +11,14 @@ import Close from "@/assets/icons/close.svg";
 import CloseCircle from "@/assets/icons/close_circle.svg";
 import Copy from "@/assets/icons/copy.svg";
 import Danger from "@/assets/icons/danger.svg";
+import DocumentUpload from "@/assets/icons/document_upload.svg";
 import Download from "@/assets/icons/download.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
 import EchosMark from "@/assets/icons/echos_mark.svg";
 import Edit from "@/assets/icons/edit.svg";
 import Export from "@/assets/icons/export.svg";
 import Flash from "@/assets/icons/flash.svg";
+import FolderAdd from "@/assets/icons/folder_add.svg";
 import FooterLogo from "@/assets/icons/footer_logo.svg";
 import Ghost from "@/assets/icons/ghost.svg";
 import GhostOn from "@/assets/icons/ghost_on.svg";
@@ -53,12 +55,14 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   close_circle: CloseCircle,
   copy: Copy,
   danger: Danger,
+  document_upload: DocumentUpload,
   download: Download,
   echos_logo: EchosLogo,
   echos_mark: EchosMark,
   edit: Edit,
   export: Export,
   flash: Flash,
+  folder_add: FolderAdd,
   footer_logo: FooterLogo,
   ghost: Ghost,
   ghost_on: GhostOn,

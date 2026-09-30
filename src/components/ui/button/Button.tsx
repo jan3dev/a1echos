@@ -1,12 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode, useState } from "react";
-import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import {
   AquaColors,
   AquaPrimitiveColors,
   AquaTypography,
-  getShadow,
   useTheme,
 } from "@/theme";
 import { iosPressed } from "@/utils";
@@ -78,18 +77,20 @@ const ButtonBase = ({
       : UTILITY_HEIGHT_LARGE
     : PRIMARY_BUTTON_HEIGHT;
   const textStyle = isUtility
-    ? AquaTypography.body2SemiBold
+    ? AquaTypography.body2Medium
     : AquaTypography.body1SemiBold;
-  const horizontalPadding = isUtility ? 14 : 32;
+  const horizontalPadding = isUtility ? 16 : 32;
 
   const state = deriveState({ enabled, isLoading, pressed, focused, hovered });
   const interactive = enabled && !isLoading;
 
   const backgroundColor = getBackgroundColor(type, state, colors);
   const textColor =
-    type === "secondary" || type === "tertiary"
-      ? colors.textSecondary
-      : AquaPrimitiveColors.white;
+    type === "primary"
+      ? AquaPrimitiveColors.white
+      : isUtility
+        ? colors.textPrimary
+        : colors.textSecondary;
 
   const showsPrimaryGradient =
     type === "primary" && state !== "active" && state !== "hover";
@@ -100,13 +101,10 @@ const ButtonBase = ({
       ? 1
       : iosPressed(pressed, 0.9);
 
-  const shadowStyle: ViewStyle | undefined =
-    type === "utility" ? getShadow("button") : undefined;
-
   const showFocusRing = state === "focus";
 
   return (
-    <View style={[shadowStyle, styles.outerWrap]}>
+    <View style={styles.outerWrap}>
       <RipplePressable
         testID={testID}
         onPress={interactive ? onPress : undefined}
@@ -121,9 +119,7 @@ const ButtonBase = ({
         accessibilityLabel={text}
         accessibilityState={{ disabled: !enabled, busy: isLoading }}
         rippleColor={
-          type === "primary" || type === "utility"
-            ? colors.rippleOnPrimary
-            : colors.ripple
+          type === "primary" ? colors.rippleOnPrimary : colors.ripple
         }
         style={[
           styles.button,
@@ -134,6 +130,10 @@ const ButtonBase = ({
             paddingHorizontal: horizontalPadding,
             borderRadius,
           },
+          isUtility && [
+            styles.utilityBorder,
+            { borderColor: colors.surfaceBorderPrimary },
+          ],
         ]}
       >
         {showsPrimaryGradient && (
@@ -158,7 +158,7 @@ const ButtonBase = ({
             />
           </>
         )}
-        <View style={styles.content}>
+        <View style={[styles.content, !isUtility && styles.contentMinWidth]}>
           {isLoading ? (
             <View
               style={[
@@ -172,18 +172,13 @@ const ButtonBase = ({
             <>
               {icon && (
                 <>
-                  {isUtility && <View style={styles.utilityIconSpacing} />}
                   {icon}
                   <View style={styles.iconSpacing} />
                 </>
               )}
               <Text
                 allowFontScaling={false}
-                style={[
-                  textStyle,
-                  { color: textColor },
-                  isUtility && styles.utilityTextPadding,
-                ]}
+                style={[textStyle, { color: textColor }]}
               >
                 {text}
               </Text>
@@ -245,7 +240,7 @@ const getBackgroundColor = (
     if (state === "active" || state === "hover") return colors.surfaceTertiary;
     return "transparent";
   }
-  return colors.buttonUtilityBackground;
+  return colors.surfacePrimary;
 };
 
 export const Button = {
@@ -271,24 +266,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+  },
+  contentMinWidth: {
     minWidth: 120,
   },
   loadingContainer: {
-    minWidth: 120,
     alignItems: "center",
     justifyContent: "center",
+  },
+  utilityBorder: {
+    borderWidth: 1,
   },
   utilityPadding: {
     paddingHorizontal: 2,
   },
   iconSpacing: {
     width: 8,
-  },
-  utilityIconSpacing: {
-    width: 4,
-  },
-  utilityTextPadding: {
-    paddingHorizontal: 2,
   },
   primaryInsetHighlight: {
     borderTopWidth: 2,

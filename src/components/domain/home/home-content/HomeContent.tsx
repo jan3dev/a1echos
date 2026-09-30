@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useMemo, useRef, useState } from "react";
+import { memo, RefObject, useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   type LayoutChangeEvent,
@@ -17,7 +17,12 @@ import { Session } from "@/models";
 import { useIsIncognitoMode, useSessions } from "@/stores";
 import { useTheme } from "@/theme";
 
+import { Button } from "../../../ui/button/Button";
+import { Divider } from "../../../ui/divider/Divider";
+import { Icon } from "../../../ui/icon/Icon";
 import { SessionListItem } from "../../session/session-list-item/SessionListItem";
+import { FolderGrid } from "../folder-grid/FolderGrid";
+import type { FolderSummary } from "../folder-grid/FolderGroupItem";
 import { IncognitoEmptyState } from "../incognito-empty-state/IncognitoEmptyState";
 
 interface HomeContentProps {
@@ -31,7 +36,10 @@ interface HomeContentProps {
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
+  folders?: FolderSummary[];
 }
+
+const NO_FOLDERS: FolderSummary[] = [];
 
 export const HomeContent = ({
   selectionMode,
@@ -44,6 +52,7 @@ export const HomeContent = ({
   onScroll,
   onContentSizeChange,
   onLayout,
+  folders = NO_FOLDERS,
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -148,6 +157,9 @@ export const HomeContent = ({
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}
+        ListHeaderComponent={
+          <ListHeader folders={folders} selectionMode={selectionMode} />
+        }
         contentContainerStyle={{
           paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
           paddingHorizontal: 16,
@@ -179,6 +191,57 @@ export const HomeContent = ({
 
 const Separator = () => <View style={styles.separator} />;
 
+const ListHeader = memo(function ListHeader({
+  folders,
+  selectionMode,
+}: {
+  folders: FolderSummary[];
+  selectionMode: boolean;
+}) {
+  const { loc } = useLocalization();
+  const { theme } = useTheme();
+  const hasFolders = folders.length > 0;
+
+  if (selectionMode && !hasFolders) return null;
+
+  return (
+    <View style={hasFolders ? styles.header : styles.headerNoFolders}>
+      {!selectionMode && (
+        <View
+          style={[styles.quickActions, hasFolders && styles.quickActionsSpaced]}
+        >
+          <Button.utility
+            text={loc.homeFolder}
+            icon={
+              <Icon
+                name="folder_add"
+                size={18}
+                color={theme.colors.textPrimary}
+              />
+            }
+          />
+          <Button.utility
+            text={loc.homeUpload}
+            icon={
+              <Icon
+                name="document_upload"
+                size={18}
+                color={theme.colors.textPrimary}
+              />
+            }
+          />
+        </View>
+      )}
+      {hasFolders && (
+        <>
+          <FolderGrid folders={folders} />
+          <Divider />
+        </>
+      )}
+    </View>
+  );
+});
+
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -189,6 +252,20 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 16,
+  },
+  header: {
+    gap: 24,
+    marginBottom: 24,
+  },
+  headerNoFolders: {
+    marginBottom: 16,
+  },
+  quickActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  quickActionsSpaced: {
+    gap: 16,
   },
   jumpButtonOverlay: {
     position: "absolute",
