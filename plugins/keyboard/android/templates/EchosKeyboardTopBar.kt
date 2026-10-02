@@ -1,9 +1,7 @@
 package com.a1lab.echos.ime
 
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -41,7 +39,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
 
     private val waveform: EchosWaveformView
     private val recordButton: ImageButton
-    private val recordSpinner: ImageView
+    private val recordSpinner: LogoLoadingView
     /// Bright white border that rings the record button while recording and
     /// depletes counter-clockwise over the 30s recording cap, so the user can
     /// see when the keyboard will auto-stop and transcribe. Mirrors the iOS
@@ -50,10 +48,6 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     /// Suggestion strip (§5.5). Invisible by default; shown left of the record
     /// button while composing a word, never while recording.
     private val suggestionStrip: SuggestionStripView
-    /// Continuous rotation that drives the loading-spinner glyph while
-    /// transcribing. Started/stopped with the view's visibility so the
-    /// keyboard isn't paying for an animator while idle.
-    private var spinnerAnimator: ObjectAnimator? = null
     private val recordBackground: GradientDrawable
     private val theme = KeyTheme(context)
     private var listener: Listener? = null
@@ -170,18 +164,13 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         recordContainer.addView(countdownRing)
 
-        // Loading spinner shown while transcribing — replaces the heavy
-        // waveform animation in that state. Uses the design system's
-        // `ic_spinner_loading` glyph rotated continuously by an
-        // `ObjectAnimator`, so the visual matches the iOS keyboard and
-        // the rest of the Echos app exactly.
+        // Logo loading animation shown while transcribing — replaces the
+        // heavy waveform animation in that state. Matches the app's
+        // `ProcessingIcon` and the iOS keyboard.
         val spinnerSize = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, 20f, resources.displayMetrics,
         ).toInt()
-        recordSpinner = ImageView(context).apply {
-            setImageResource(drawable("ic_spinner_loading"))
-            imageTintList = ColorStateList.valueOf(Color.WHITE)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
+        recordSpinner = LogoLoadingView(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 spinnerSize, spinnerSize, Gravity.CENTER,
             )
@@ -228,7 +217,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.imageAlpha = 0xFF
                 recordButton.visibility = VISIBLE
                 recordSpinner.visibility = INVISIBLE
-                stopSpinnerAnimation()
+                recordSpinner.stop()
                 recordButton.contentDescription = "Start recording"
                 recordButton.isEnabled = true
                 waveform.stopAnimating()
@@ -241,7 +230,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 recordButton.imageAlpha = 0xFF
                 recordButton.visibility = VISIBLE
                 recordSpinner.visibility = INVISIBLE
-                stopSpinnerAnimation()
+                recordSpinner.stop()
                 recordButton.contentDescription = "Stop recording"
                 recordButton.isEnabled = true
                 waveform.setMode(EchosWaveformView.Mode.RECORDING)
@@ -251,14 +240,13 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 countdownRing.start()
             }
             MicState.TRANSCRIBING -> {
-                // Swap the mic glyph for the design-system spinner glyph
-                // (rotating) and stop the waveform entirely. The
-                // waveform's per-frame `BlurMaskFilter` + `LinearGradient`
-                // masking is the heaviest thing the keyboard runs; a
-                // simple rotated vector drawable is far cheaper and a
-                // clearer signal that we're waiting.
+                // Swap the mic glyph for the logo loading animation and
+                // stop the waveform entirely. The waveform's per-frame
+                // `BlurMaskFilter` + `LinearGradient` masking is the
+                // heaviest thing the keyboard runs; three filled paths
+                // are far cheaper and a clearer signal that we're waiting.
                 recordSpinner.visibility = VISIBLE
-                startSpinnerAnimation()
+                recordSpinner.start()
                 recordButton.setImageDrawable(null)
                 recordButton.imageAlpha = 0x80
                 recordButton.contentDescription = "Transcribing"
@@ -278,23 +266,6 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
     }
 
     // --- helpers ---
-
-    private fun startSpinnerAnimation() {
-        if (spinnerAnimator?.isRunning == true) return
-        spinnerAnimator?.cancel()
-        spinnerAnimator = ObjectAnimator.ofFloat(recordSpinner, View.ROTATION, 0f, 360f).apply {
-            duration = 1000L
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = LinearInterpolator()
-            start()
-        }
-    }
-
-    private fun stopSpinnerAnimation() {
-        spinnerAnimator?.cancel()
-        spinnerAnimator = null
-        recordSpinner.rotation = 0f
-    }
 
     private fun dim(name: String, fallbackDp: Int): Int {
         val id = context.resources.getIdentifier(name, "dimen", context.packageName)
@@ -394,5 +365,81 @@ private class CountdownRingView(context: Context) : View(context) {
         /// Mirrors `recordingMaxSeconds` (iOS) / `MAX_RECORDING_SECONDS`
         /// (Android transcriber) — the hard cap the ring counts down against.
         private const val COUNTDOWN_DURATION_MS = 30_000L
+    }
+}
+
+/**
+ * Echos logo loading animation shown inside the record pill while
+ * transcribing. Mirrors the app's `ProcessingIcon` (`RecordingButton.tsx`)
+ * and the iOS `LogoLoadingView`: three flat-edged half ellipses whose
+ * brightness sweeps left → right.
+ */
+private class LogoLoadingView(context: Context) : View(context) {
+
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.WHITE
+    }
+    private val paths = ARCS.map { (cx, rx, ry) ->
+        Path().apply {
+            arcTo(RectF(cx - rx, 48f - ry, cx + rx, 48f + ry), -90f, 180f)
+            close()
+        }
+    }
+    private var progress = 0f
+    private var animator: ValueAnimator? = null
+
+    fun start() {
+        if (animator?.isRunning == true) return
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = PERIOD_MS
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    fun stop() {
+        animator?.cancel()
+        animator = null
+    }
+
+    override fun onDetachedFromWindow() {
+        stop()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val scale = minOf(width / VIEWBOX_WIDTH, height / VIEWBOX_HEIGHT)
+        canvas.save()
+        canvas.translate(
+            (width - VIEWBOX_WIDTH * scale) / 2f,
+            (height - VIEWBOX_HEIGHT * scale) / 2f,
+        )
+        canvas.scale(scale, scale)
+        paths.forEachIndexed { index, path ->
+            val phase = progress - index.toFloat() / paths.size
+            val wave = 0.5f + 0.5f * Math.cos(2 * Math.PI * phase).toFloat()
+            paint.alpha = (255 * (MIN_OPACITY + (1 - MIN_OPACITY) * wave)).toInt()
+            canvas.drawPath(path, paint)
+        }
+        canvas.restore()
+    }
+
+    private companion object {
+        const val VIEWBOX_WIDTH = 68f
+        const val VIEWBOX_HEIGHT = 96f
+        const val PERIOD_MS = 3600L
+        const val MIN_OPACITY = 0.25f
+        /** (centerX, radiusX, radiusY) in the 68×96 viewBox, centered at y 48. */
+        val ARCS = listOf(
+            Triple(0f, 15f, 19f),
+            Triple(20f, 19f, 37f),
+            Triple(45f, 23f, 48f),
+        )
     }
 }

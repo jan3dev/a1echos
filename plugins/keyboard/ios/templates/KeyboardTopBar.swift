@@ -16,12 +16,10 @@ final class KeyboardTopBar: UIView {
 
     private let recordButton = UIButton(type: .system)
     private let recordIcon = RecordButtonIconView()
-    /// Replaces the waveform animation while transcribing. Renders the
-    /// design system's `spinner_loading` glyph and rotates it via a
-    /// `CABasicAnimation` on the layer — far cheaper than the per-frame
-    /// `UIGraphicsImageRenderer` + `CIGaussianBlur` pipeline that the
-    /// wave runs at 30fps, and visually identical to the Android keyboard.
-    private let recordSpinner = LoadingSpinnerIconView()
+    /// Replaces the waveform animation while transcribing. Core Animation
+    /// opacity keyframes — far cheaper than the per-frame `CIGaussianBlur`
+    /// pipeline the wave runs at 30fps.
+    private let recordSpinner = LogoLoadingView()
     private let waveform = RecordingWaveformView()
     /// Bright white border that rings the record button while recording and
     /// depletes counter-clockwise over the 30s recording cap, so the user can
@@ -205,7 +203,7 @@ final class KeyboardTopBar: UIView {
             recordIcon.state = .microphone
             recordIcon.alpha = 1
             recordIcon.isHidden = false
-            recordSpinner.stopSpinning()
+            recordSpinner.stopAnimating()
             recordSpinner.isHidden = true
             recordButton.isEnabled = true
             waveform.stopAnimating()
@@ -216,7 +214,7 @@ final class KeyboardTopBar: UIView {
             recordIcon.state = .stop
             recordIcon.alpha = 1
             recordIcon.isHidden = false
-            recordSpinner.stopSpinning()
+            recordSpinner.stopAnimating()
             recordSpinner.isHidden = true
             recordButton.isEnabled = true
             waveform.setMode(.recording)
@@ -225,16 +223,16 @@ final class KeyboardTopBar: UIView {
             startCountdownRing()
             recordButton.accessibilityLabel = "Stop recording"
         case .transcribing:
-            // Swap the mic glyph for the design-system spinner glyph
-            // (rotating) and stop the waveform entirely. The waveform's
+            // Swap the mic glyph for the logo loading animation and stop
+            // the waveform entirely. The waveform's
             // per-frame `CIGaussianBlur` pipeline is the heaviest thing
             // in the keyboard, and there's no audio to react to once
-            // recording stops, so the rotating glyph is both cheaper
+            // recording stops, so the loading glyph is both cheaper
             // and a clearer signal that we're waiting for the main app.
             recordIcon.isHidden = true
             recordButton.isEnabled = false
             recordSpinner.isHidden = false
-            recordSpinner.startSpinning()
+            recordSpinner.startAnimating()
             waveform.stopAnimating()
             waveform.isHidden = true
             stopCountdownRing()
@@ -480,85 +478,80 @@ final class RecordButtonIconView: UIView {
     }
 }
 
-// MARK: - Loading Spinner Icon
+// MARK: - Logo Loading Icon
 
-/// Animated loading glyph shown inside the record-button pill while the
-/// keyboard waits for a transcription result. Mirrors the design system's
-/// `assets/icons/spinner_loading.svg` — eight rounded pill rays at 45°
-/// intervals around center — and keeps it visually identical to the
-/// Android keyboard's `ic_spinner_loading` vector drawable.
-///
-/// Caller is responsible for calling `startSpinning()` / `stopSpinning()`
-/// alongside show/hide. Rotation is driven by a `CABasicAnimation` on
-/// `transform.rotation.z` so it doesn't run on the main thread once
-/// installed and costs nothing while hidden.
-final class LoadingSpinnerIconView: UIView {
+/// Echos logo loading animation shown inside the record-button pill while the
+/// keyboard waits for a transcription result. Mirrors `ProcessingIcon` in the
+/// app's `RecordingButton.tsx` and `LogoLoadingView` in the Android keyboard:
+/// three flat-edged half ellipses whose brightness sweeps left → right.
+final class LogoLoadingView: UIView {
 
-    /// Glyph fill — same off-white the mic / stop glyphs use, so the
-    /// transition between states doesn't cause a perceptible color shift.
-    private let glyphColor = UIColor(hex: 0xF5F5F8)
+    private static let viewBox = CGSize(width: 68, height: 96)
+    /// (centerX, radiusX, radiusY) in the 68×96 viewBox, all centered at y 48.
+    private static let arcs: [(CGFloat, CGFloat, CGFloat)] = [
+        (0, 15, 19), (20, 19, 37), (45, 23, 48),
+    ]
+    private static let period: CFTimeInterval = 3.6
+    private static let minOpacity = 0.25
+    private static let animationKey = "echos.logoLoading"
 
-    private static let spinAnimationKey = "echos.spin"
+    private let arcLayers: [CAShapeLayer]
 
     override init(frame: CGRect) {
+        arcLayers = Self.arcs.map { _ in
+            let layer = CAShapeLayer()
+            layer.fillColor = UIColor(hex: 0xF5F5F8).cgColor
+            return layer
+        }
         super.init(frame: frame)
-        backgroundColor = .clear
-        isOpaque = false
-        contentMode = .redraw
+        arcLayers.forEach(layer.addSublayer)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
     }
 
-    func startSpinning() {
-        guard layer.animation(forKey: Self.spinAnimationKey) == nil else { return }
-        let anim = CABasicAnimation(keyPath: "transform.rotation.z")
-        anim.fromValue = 0
-        anim.toValue = 2 * Double.pi
-        anim.duration = 1.0
-        anim.repeatCount = .infinity
-        // Linear feel matches the Android `LinearInterpolator` rotation —
-        // any easing here would make the two platforms look subtly off.
-        anim.timingFunction = CAMediaTimingFunction(name: .linear)
-        anim.isRemovedOnCompletion = false
-        layer.add(anim, forKey: Self.spinAnimationKey)
-    }
-
-    func stopSpinning() {
-        layer.removeAnimation(forKey: Self.spinAnimationKey)
-    }
-
-    override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext() else { return }
-        ctx.saveGState()
-
-        // Fit the 24×24 design space into `rect` preserving aspect.
-        let scale = min(rect.width / 24.0, rect.height / 24.0)
-        let tx = (rect.width - 24.0 * scale) / 2
-        let ty = (rect.height - 24.0 * scale) / 2
-        ctx.translateBy(x: tx, y: ty)
-        ctx.scaleBy(x: scale, y: scale)
-
-        glyphColor.setFill()
-
-        // Eight rounded pill rays at 45° intervals around (12, 12). Each
-        // pill is 4×2 with full corner radius, outer edge at radius 10
-        // and inner edge at radius 6 — the same geometry the SVG's
-        // hand-drawn cubic Béziers describe.
-        for i in 0..<8 {
-            ctx.saveGState()
-            ctx.translateBy(x: 12, y: 12)
-            ctx.rotate(by: CGFloat(i) * .pi / 4)
-            let pill = UIBezierPath(
-                roundedRect: CGRect(x: 6, y: -1, width: 4, height: 2),
-                cornerRadius: 1
-            )
-            pill.fill()
-            ctx.restoreGState()
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let scale = min(bounds.width / Self.viewBox.width, bounds.height / Self.viewBox.height)
+        let origin = CGPoint(
+            x: (bounds.width - Self.viewBox.width * scale) / 2,
+            y: (bounds.height - Self.viewBox.height * scale) / 2
+        )
+        for (layer, (cx, rx, ry)) in zip(arcLayers, Self.arcs) {
+            let transform = CGAffineTransform(translationX: origin.x, y: origin.y)
+                .scaledBy(x: scale, y: scale)
+                .translatedBy(x: cx, y: 48)
+                .scaledBy(x: rx, y: ry)
+            let path = CGMutablePath()
+            path.addArc(center: .zero, radius: 1, startAngle: -.pi / 2, endAngle: .pi / 2,
+                        clockwise: false, transform: transform)
+            path.closeSubpath()
+            layer.frame = bounds
+            layer.path = path
         }
+    }
 
-        ctx.restoreGState()
+    func startAnimating() {
+        let steps = 36
+        let values = (0...steps).map { step -> Double in
+            let wave = 0.5 + 0.5 * cos(2 * .pi * Double(step) / Double(steps))
+            return Self.minOpacity + (1 - Self.minOpacity) * wave
+        }
+        for (index, layer) in arcLayers.enumerated() {
+            guard layer.animation(forKey: Self.animationKey) == nil else { continue }
+            let anim = CAKeyframeAnimation(keyPath: "opacity")
+            anim.values = values
+            anim.duration = Self.period
+            anim.repeatCount = .infinity
+            anim.timeOffset = Self.period * (1 - Double(index) / Double(arcLayers.count))
+            anim.isRemovedOnCompletion = false
+            layer.add(anim, forKey: Self.animationKey)
+        }
+    }
+
+    func stopAnimating() {
+        arcLayers.forEach { $0.removeAnimation(forKey: Self.animationKey) }
     }
 }
 
