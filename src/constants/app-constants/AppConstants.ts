@@ -12,7 +12,7 @@ export const AppConstants = {
   APP_BAR_ICON_BUTTON_SIZE: 40,
   RECORDING_CONTROLS_HEIGHT: 96,
   // Safe-area bottom to the top of the settings grabber above the controls.
-  RECORDING_FOOTER_HEIGHT: 115,
+  RECORDING_FOOTER_HEIGHT: 110,
   SMART_SPLIT_LONG_PAUSE_MS: 3000,
   SMART_SPLIT_MAX_ITEM_MS: 60000,
   SMART_SPLIT_SILENCE_ENERGY_THRESHOLD: 0.02,

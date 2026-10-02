@@ -413,8 +413,8 @@ describe("RootLayout", () => {
 
       const { getByTestId } = await renderAndWaitForInit();
       const container = getByTestId(TestID.GlobalTooltipContainer);
-      // 96 controls + 19 grabber top within handle + 16 gap
-      expect(StyleSheet.flatten(container.props.style).bottom).toBe(131);
+      // 96 controls + 14 grabber top within handle + 16 gap
+      expect(StyleSheet.flatten(container.props.style).bottom).toBe(126);
     });
 
     it("positions tooltip 16px above the onboarding Next button", async () => {
