@@ -16,8 +16,10 @@ jest.mock("expo-router", () => ({
 }));
 
 const mockHasSeenWelcome = jest.fn(() => false);
+const mockOnboardingStep = jest.fn<string | null, []>(() => null);
 jest.mock("@/stores", () => ({
   useHasSeenWelcome: () => mockHasSeenWelcome(),
+  useOnboardingStep: () => mockOnboardingStep(),
 }));
 
 jest.mock("@/components", () => {
@@ -34,6 +36,7 @@ jest.mock("@/components", () => {
 beforeEach(() => {
   mockPush.mockClear();
   mockHasSeenWelcome.mockReturnValue(false);
+  mockOnboardingStep.mockReturnValue(null);
 });
 
 describe("Welcome route", () => {
@@ -53,5 +56,22 @@ describe("Welcome route", () => {
     const { getByTestId, queryByTestId } = render(<Welcome />);
     expect(queryByTestId("get-started")).toBeNull();
     expect(getByTestId("redirect").props.children).toBe(Routes.home);
+  });
+
+  it("resumes the onboarding step the user was on", () => {
+    mockOnboardingStep.mockReturnValue("/onboarding/enable-keyboard");
+    render(<Welcome />);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/onboarding/enable-keyboard",
+      params: { resumed: "1" },
+    });
+  });
+
+  it("does not resume once onboarding is complete", () => {
+    mockHasSeenWelcome.mockReturnValue(true);
+    mockOnboardingStep.mockReturnValue("/onboarding/enable-keyboard");
+    render(<Welcome />);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import * as logModule from "../log/log";
 import {
   clearKeyboardLaunchMarker,
   readKeyboardLaunchMarker,
+  readKeyboardEnabled,
   readKeyboardShownAt,
 } from "./keyboardLaunchMarker";
 
@@ -81,6 +82,22 @@ describe("keyboardLaunchMarker", () => {
       setupFile({ textThrows: true });
       expect(await readKeyboardShownAt()).toBeNull();
       expect(mockLogWarn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("readKeyboardEnabled", () => {
+    it("returns the stored flag", async () => {
+      setupFile({ text: '{"enabled":true}' });
+      expect(await readKeyboardEnabled()).toBe(true);
+      setupFile({ text: '{"enabled":false}' });
+      expect(await readKeyboardEnabled()).toBe(false);
+    });
+
+    it("returns null when missing or unknown", async () => {
+      setupFile({ exists: false });
+      expect(await readKeyboardEnabled()).toBeNull();
+      setupFile({ text: "{}" });
+      expect(await readKeyboardEnabled()).toBeNull();
     });
   });
 

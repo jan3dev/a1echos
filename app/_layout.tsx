@@ -63,6 +63,7 @@ import {
   useLargerModelSuggestionVisible,
   useMarkLargerModelSuggestionSeen,
   useSelectedLanguage,
+  useSetOnboardingStep,
   useMarkKeyboardPromptSeen,
   useVoiceSessionHintVisible,
   useOnRecordingStart,
@@ -464,6 +465,12 @@ export default function RootLayout() {
 
   // Show the "swipe back" hint when opened from the keyboard's mic button.
   useVoiceSessionHint();
+
+  const pathname = usePathname();
+  const setOnboardingStep = useSetOnboardingStep();
+  useEffect(() => {
+    if (pathname.startsWith("/onboarding/")) void setOnboardingStep(pathname);
+  }, [pathname, setOnboardingStep]);
 
   // Install global error handler once
   useEffect(() => {

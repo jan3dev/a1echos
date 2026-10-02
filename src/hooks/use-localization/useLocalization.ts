@@ -189,6 +189,10 @@ export const useLocalization = () => {
         "onboardingEnableKeyboardRowFullAccess",
       ),
       onboardingGoToSettings: t("onboardingGoToSettings"),
+      onboardingKeyboardNotAddedTitle: t("onboardingKeyboardNotAddedTitle"),
+      onboardingKeyboardNotAddedMessage: t(
+        "onboardingKeyboardNotAddedMessage",
+      ),
       onboardingSpokenLanguageTitle: t("onboardingSpokenLanguageTitle"),
       onboardingNext: t("onboardingNext"),
       onboardingTryLargerModelTitle: t("onboardingTryLargerModelTitle"),

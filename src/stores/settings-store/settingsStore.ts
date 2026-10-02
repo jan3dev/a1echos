@@ -35,6 +35,7 @@ const STORAGE_KEYS = {
   KEYBOARD_SOUND: "keyboard_sound",
   KEYBOARD_MIC_TIMEOUT: "keyboard_mic_timeout",
   HAS_SEEN_WELCOME: "has_seen_welcome",
+  ONBOARDING_STEP: "onboarding_step",
   LARGER_MODEL_SUGGESTION_SEEN: "larger_model_suggestion_seen",
   TEXT_APPEARANCE: "text_appearance",
 };
@@ -85,6 +86,9 @@ interface SettingsStore {
   keyboardMicTimeoutSeconds: number;
   /** Whether the one-time first-launch welcome screen has been shown. */
   hasSeenWelcome: boolean;
+  /** Last onboarding route shown, so a relaunch mid-onboarding (iOS kills the
+   *  app when Full Access is toggled) resumes there instead of at Welcome. */
+  onboardingStep: string | null;
   /** Whether the one-time "try a larger model" sheet has been shown. Offered
    *  the first time a non-English language is picked while still on the small
    *  bundled model, which transcribes other languages noticeably worse. */
@@ -108,6 +112,7 @@ interface SettingsStore {
   setKeyboardHaptic: (enabled: boolean) => Promise<void>;
   setKeyboardSound: (enabled: boolean) => Promise<void>;
   setKeyboardMicTimeout: (seconds: number) => Promise<void>;
+  setOnboardingStep: (step: string) => Promise<void>;
   markWelcomeSeen: () => Promise<void>;
   markLargerModelSuggestionSeen: () => Promise<void>;
   setTextAppearance: (patch: Partial<TextAppearance>) => Promise<void>;
@@ -232,6 +237,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keyboardSound: true,
   keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
   hasSeenWelcome: false,
+  onboardingStep: null,
   hasSeenLargerModelSuggestion: false,
   textAppearance: DEFAULT_TEXT_APPEARANCE,
 
@@ -255,6 +261,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         largerModelSuggestionValue,
         textAppearanceValue,
         biometricAuthValue,
+        onboardingStep,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -273,6 +280,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.LARGER_MODEL_SUGGESTION_SEEN),
         AsyncStorage.getItem(STORAGE_KEYS.TEXT_APPEARANCE),
         AsyncStorage.getItem(STORAGE_KEYS.BIOMETRIC_AUTH_ENABLED),
+        AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_STEP),
       ]);
 
       const selectedTheme = themeValue
@@ -363,6 +371,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardSound,
         keyboardMicTimeoutSeconds,
         hasSeenWelcome,
+        onboardingStep,
         hasSeenLargerModelSuggestion,
         textAppearance: parseTextAppearance(textAppearanceValue),
       });
@@ -392,6 +401,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         keyboardSound: true,
         keyboardMicTimeoutSeconds: DEFAULT_MIC_TIMEOUT_SECONDS,
         hasSeenWelcome: false,
+        onboardingStep: null,
         hasSeenLargerModelSuggestion: false,
         textAppearance: DEFAULT_TEXT_APPEARANCE,
       });
@@ -658,6 +668,19 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       "keyboard mic timeout",
     ),
 
+  setOnboardingStep: async (step: string) => {
+    if (get().onboardingStep === step) return;
+    set({ onboardingStep: step });
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_STEP, step);
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save onboarding step",
+      });
+    }
+  },
+
   markWelcomeSeen: async () => {
     set({ hasSeenWelcome: true });
     try {
@@ -757,6 +780,10 @@ export const useSetKeyboardMicTimeout = () =>
   useSettingsStore((s) => s.setKeyboardMicTimeout);
 export const useHasSeenWelcome = () =>
   useSettingsStore((s) => s.hasSeenWelcome);
+export const useOnboardingStep = () =>
+  useSettingsStore((s) => s.onboardingStep);
+export const useSetOnboardingStep = () =>
+  useSettingsStore((s) => s.setOnboardingStep);
 export const useMarkWelcomeSeen = () =>
   useSettingsStore((s) => s.markWelcomeSeen);
 export const useHasSeenLargerModelSuggestion = () =>

@@ -175,6 +175,8 @@
   "onboardingEnableKeyboardRowEchos": "Echos",
   "onboardingEnableKeyboardRowFullAccess": "Allow Full Access",
   "onboardingGoToSettings": "Go to Settings",
+  "onboardingKeyboardNotAddedTitle": "Echos Keyboard Not Added",
+  "onboardingKeyboardNotAddedMessage": "In Settings, turn on Echos under Keyboards and allow Full Access, then come back.",
   "onboardingSpokenLanguageTitle": "What Language Do You Speak?",
   "onboardingNext": "Next",
   "onboardingTryLargerModelTitle": "Try a Larger Model",

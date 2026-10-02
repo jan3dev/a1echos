@@ -16,23 +16,30 @@ export interface KeyboardLaunchMarker {
   openedAt: number;
 }
 
+/** Value stored under `key` in a Documents marker file, or `undefined`. Never throws. */
+const readMarkerField = async (
+  filename: string,
+  key: string,
+  onError?: (error: unknown) => void,
+): Promise<unknown> => {
+  try {
+    const file = new File(Paths.document, filename);
+    if (!file.exists) return undefined;
+    return (JSON.parse(await file.text()) as Record<string, unknown>)?.[key];
+  } catch (error) {
+    onError?.(error);
+    return undefined;
+  }
+};
+
 /** Epoch ms stored under `key` in a Documents marker file, or `null`. Never throws. */
 const readMarkerTimestamp = async (
   filename: string,
   key: string,
   onError?: (error: unknown) => void,
 ): Promise<number | null> => {
-  try {
-    const file = new File(Paths.document, filename);
-    if (!file.exists) return null;
-    const value = (JSON.parse(await file.text()) as Record<string, unknown>)?.[
-      key
-    ];
-    return typeof value === "number" ? value : null;
-  } catch (error) {
-    onError?.(error);
-    return null;
-  }
+  const value = await readMarkerField(filename, key, onError);
+  return typeof value === "number" ? value : null;
 };
 
 /**
@@ -59,6 +66,16 @@ export const readKeyboardLaunchMarker =
  */
 export const readKeyboardShownAt = () =>
   readMarkerTimestamp(KEYBOARD_SHOWN_FILENAME, "shownAt");
+
+/**
+ * Whether the Echos keyboard is added in iOS Settings (written by the main-app
+ * listener at launch and before each foreground), or `null` when unknown
+ * (Android, or an iOS version that hides the keyboard list).
+ */
+export const readKeyboardEnabled = async (): Promise<boolean | null> => {
+  const value = await readMarkerField("keyboard-status.json", "enabled");
+  return typeof value === "boolean" ? value : null;
+};
 
 /** Deletes the marker so the hint isn't shown again. Never throws. */
 export const clearKeyboardLaunchMarker = (): void => {

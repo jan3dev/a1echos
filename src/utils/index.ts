@@ -96,5 +96,6 @@ export {
   readKeyboardLaunchMarker,
   clearKeyboardLaunchMarker,
   readKeyboardShownAt,
+  readKeyboardEnabled,
   type KeyboardLaunchMarker,
 } from "./keyboard-launch/keyboardLaunchMarker";

@@ -51,6 +51,8 @@ export {
   useSetKeyboardMicTimeout,
   useHasSeenWelcome,
   useMarkWelcomeSeen,
+  useOnboardingStep,
+  useSetOnboardingStep,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useTextAppearance,
   useSetTextAppearance,

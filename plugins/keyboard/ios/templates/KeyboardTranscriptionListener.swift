@@ -47,6 +47,8 @@ import UIKit
     private let endSessionNotificationName = "com.a1lab.echos.endSession"
     /// Posted by the keyboard on every appearance (`IPCClient.notifyKeyboardShown`).
     private let keyboardShownNotificationName = "com.a1lab.echos.keyboardShown"
+    /// Must match `EXTENSION_BUNDLE_ID` in withIosKeyboardExtension.js.
+    private let keyboardBundleID = "com.a1lab.echos.EchosKeyboard"
     /// JSON file inside the main app's Documents directory that describes the
     /// active sherpa-onnx model. Written from JS by SherpaTranscriptionService
     /// when initialization succeeds, read here when the keyboard requests
@@ -285,6 +287,15 @@ import UIKit
         }
         lifecycleObservers.append(fgToken)
 
+        // Onboarding gates on whether the keyboard is added. Written before the
+        // app turns active (and at launch) so JS's AppState "active" reads it fresh.
+        writeKeyboardStatus()
+        let willFgToken = nc.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.writeKeyboardStatus() }
+        lifecycleObservers.append(willFgToken)
+
         // Audio-session interruptions (calls, other apps grabbing audio) and
         // route changes can stop our capture engine; without re-activating, the
         // hot mic — and the residency it buys — dies mid-session.
@@ -388,12 +399,25 @@ import UIKit
     }
 
     /// Writes `{ <key>: <epoch ms> }` to Documents for JS to read.
+    /// `AppleKeyboards` lists the bundle IDs of every keyboard the user added
+    /// in Settings. Full Access can't be read from the app, only by the
+    /// extension itself while it's on screen. An unreadable key writes `{}`
+    /// ("unknown") so JS doesn't block onboarding on an OS that hides it.
+    private func writeKeyboardStatus() {
+        let keyboards = UserDefaults.standard.array(forKey: "AppleKeyboards") as? [String]
+        let payload: [String: Any] = keyboards.map { ["enabled": $0.contains(keyboardBundleID)] } ?? [:]
+        writeDocumentsJSON("keyboard-status.json", payload)
+    }
+
     fileprivate func writeDocumentsMarker(_ filename: String, key: String) {
+        writeDocumentsJSON(filename, [key: Date().timeIntervalSince1970 * 1000])
+    }
+
+    private func writeDocumentsJSON(_ filename: String, _ payload: [String: Any]) {
         guard let docsDir = NSSearchPathForDirectoriesInDomains(
             .documentDirectory, .userDomainMask, true
         ).first else { return }
         let path = (docsDir as NSString).appendingPathComponent(filename)
-        let payload: [String: Any] = [key: Date().timeIntervalSince1970 * 1000]
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
             NSLog("[KeyboardTranscriptionListener] Failed to serialize %@", filename)
             return

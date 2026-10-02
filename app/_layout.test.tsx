@@ -43,6 +43,7 @@ jest.mock("@/theme", () => ({
 }));
 
 // Define mock fns INSIDE the factory so they exist at evaluation time
+const mockSetOnboardingStep = jest.fn();
 jest.mock("@/stores", () => ({
   initializeModelDownloadStore: jest.fn(),
   initializeSettingsStore: jest.fn().mockResolvedValue(undefined),
@@ -55,6 +56,7 @@ jest.mock("@/stores", () => ({
   useIsSessionSelectionMode: jest.fn(() => false),
   useIsTranscriptionSelectionMode: jest.fn(() => false),
   useOnRecordingStart: jest.fn(() => jest.fn()),
+  useSetOnboardingStep: jest.fn(() => mockSetOnboardingStep),
   useOnRecordingStop: jest.fn(() => jest.fn()),
   useRecordingControlsEnabled: jest.fn(() => true),
   useRecordingControlsVisible: jest.fn(() => true),
@@ -337,6 +339,20 @@ describe("RootLayout", () => {
     const { getByTestId } = await renderAndWaitForInit();
     expect(getByTestId(TestID.Tooltip)).toBeTruthy();
     (useGlobalTooltip as jest.Mock).mockReturnValue(null);
+  });
+
+  it("remembers the current onboarding step only", async () => {
+    const { usePathname } = require("expo-router");
+    (usePathname as jest.Mock).mockReturnValue("/onboarding/enable-keyboard");
+    await renderAndWaitForInit();
+    expect(mockSetOnboardingStep).toHaveBeenCalledWith(
+      "/onboarding/enable-keyboard",
+    );
+
+    mockSetOnboardingStep.mockClear();
+    (usePathname as jest.Mock).mockReturnValue("/settings");
+    await renderAndWaitForInit();
+    expect(mockSetOnboardingStep).not.toHaveBeenCalled();
   });
 
   it("GlobalRecordingControls hidden when not on recording screen", async () => {
