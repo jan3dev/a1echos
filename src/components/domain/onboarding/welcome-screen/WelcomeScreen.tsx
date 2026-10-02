@@ -64,6 +64,7 @@ export const WelcomeScreen = ({ onGetStarted, testID }: WelcomeScreenProps) => {
               weight="medium"
               align="center"
               color={darkColors.textSecondary}
+              style={styles.subtitle}
             >
               {loc.welcomeSubtitle}
             </Text>
@@ -102,6 +103,9 @@ const styles = StyleSheet.create({
   copy: {
     alignItems: "center",
     gap: spacing.md,
+  },
+  subtitle: {
+    maxWidth: 279,
   },
   cta: {
     minHeight: 56,

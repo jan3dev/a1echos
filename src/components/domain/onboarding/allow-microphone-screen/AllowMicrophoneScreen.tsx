@@ -18,8 +18,8 @@ import { GRADIENT_BARS_HEIGHT, GradientBars } from "./GradientBars";
 
 const ALLOW_MICROPHONE_STEP = 1;
 const RECORD_BUTTON_SIZE = 80;
-// Overlaps the bars' lower third to match the design.
-const RECORD_BUTTON_BOTTOM_OFFSET = -8;
+// Hangs below the bars' baseline to match the design.
+const RECORD_BUTTON_OVERHANG = 8;
 
 export interface AllowMicrophoneScreenProps {
   onBack: () => void;
@@ -51,16 +51,11 @@ export const AllowMicrophoneScreen = ({
     setArtHeight((prev) => (prev === next ? prev : next));
   };
 
+  // Reserve the overhang inside the art box so the button is never clipped.
   const barsHeight =
-    artHeight > 0 ? Math.min(GRADIENT_BARS_HEIGHT, artHeight) : undefined;
-  const recordSize =
     artHeight > 0
-      ? Math.min(RECORD_BUTTON_SIZE, Math.max(52, Math.round(artHeight * 0.45)))
-      : RECORD_BUTTON_SIZE;
-  // Hang over the bars only when there's portrait-sized room; otherwise the
-  // record button would sit on the Allow CTA.
-  const recordBottom =
-    artHeight >= GRADIENT_BARS_HEIGHT ? RECORD_BUTTON_BOTTOM_OFFSET : 0;
+      ? Math.min(GRADIENT_BARS_HEIGHT, artHeight - RECORD_BUTTON_OVERHANG)
+      : undefined;
 
   return (
     <View testID={testID} style={styles.root}>
@@ -97,12 +92,8 @@ export const AllowMicrophoneScreen = ({
         <View style={styles.illustration}>
           <View style={styles.art} onLayout={onArtLayout}>
             <GradientBars testID={childTestID("bars")} height={barsHeight} />
-            <View style={[styles.recordButton, { bottom: recordBottom }]}>
-              <RecordingButton
-                colors={darkColors}
-                size={recordSize}
-                onRecordingStart={onAllow}
-              />
+            <View style={styles.recordButton}>
+              <RecordingButton colors={darkColors} onRecordingStart={onAllow} />
             </View>
           </View>
         </View>
@@ -136,7 +127,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
-    minHeight: 0,
+    minHeight: RECORD_BUTTON_SIZE,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
@@ -145,12 +136,13 @@ const styles = StyleSheet.create({
   art: {
     width: "100%",
     height: "100%",
-    maxHeight: GRADIENT_BARS_HEIGHT,
-    minHeight: 0,
+    maxHeight: GRADIENT_BARS_HEIGHT + RECORD_BUTTON_OVERHANG,
+    minHeight: RECORD_BUTTON_SIZE,
     alignItems: "center",
   },
   recordButton: {
     position: "absolute",
+    bottom: 0,
     alignSelf: "center",
   },
   cta: {
