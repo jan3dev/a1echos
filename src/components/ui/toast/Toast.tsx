@@ -11,6 +11,7 @@ import {
 import { getShadow, useTheme } from "@/theme";
 
 import { Icon } from "../icon/Icon";
+import { DimmerBackdrop } from "../modal/Dimmer";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
 
@@ -143,12 +144,13 @@ export const Toast = ({
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={onDismiss}
       statusBarTranslucent
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
       <Pressable style={styles.modalOverlay} onPress={onDismiss}>
+        <DimmerBackdrop />
         <Animated.View
           style={[
             styles.container,
@@ -325,7 +327,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.16)",
     padding: 16,
   },
   container: {

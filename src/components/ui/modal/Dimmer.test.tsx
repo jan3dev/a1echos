@@ -3,8 +3,6 @@ import { render } from "@testing-library/react-native";
 import React from "react";
 import { Modal, Text } from "react-native";
 
-import { lightColors } from "@/theme";
-
 import { Dimmer } from "./Dimmer";
 
 describe("Dimmer", () => {
@@ -18,16 +16,13 @@ describe("Dimmer", () => {
     expect(rnModal.props.visible).toBe(true);
   });
 
-  it("renders glass scrim background", () => {
-    const { useThemeStore } = require("@/theme");
-    useThemeStore.setState({ currentTheme: "light" });
-    const { toJSON } = render(
+  it("renders a blurred backdrop", () => {
+    const { UNSAFE_root } = render(
       <Dimmer visible={true} onDismiss={jest.fn()}>
         <Text>Content</Text>
       </Dimmer>,
     );
-    const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.glassInverse);
+    expect(UNSAFE_root.findByType("BlurView" as any).props.intensity).toBe(100);
   });
 
   it("calls onDismiss when backdrop pressed", () => {
@@ -55,7 +50,7 @@ describe("Dimmer", () => {
     expect(getByText("Child Content")).toBeTruthy();
   });
 
-  it("uses pinned dark scrim color when isDark", () => {
+  it("uses Figma dark glass tint when isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "dark" });
     const { toJSON } = render(
@@ -64,10 +59,10 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("rgba(9, 10, 11, 0.7)");
+    expect(json).toContain("rgba(7, 7, 8, 0.4)");
   });
 
-  it("uses glassInverse scrim color when not isDark", () => {
+  it("uses light glass tint when not isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "light" });
     const { toJSON } = render(
@@ -76,6 +71,6 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.glassInverse);
+    expect(json).toContain("rgba(245, 245, 248, 0.4)");
   });
 });

@@ -35,7 +35,7 @@ import { useTheme } from "@/theme";
 import { ListItem } from "../../../shared/list-item/ListItem";
 import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Icon } from "../../../ui/icon/Icon";
-import { useScrimColor } from "../../../ui/modal/Dimmer";
+import { DimmerBackdrop } from "../../../ui/modal/Dimmer";
 import { Radio } from "../../../ui/radio/Radio";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
@@ -61,7 +61,6 @@ export const TranscriptionSettingsSheet = ({
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const scrimColor = useScrimColor();
 
   const selectedModelId = useSelectedModelId();
   const selectedMode = useSelectedTranscriptionMode();
@@ -241,11 +240,13 @@ export const TranscriptionSettingsSheet = ({
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
       <Pressable
-        style={[StyleSheet.absoluteFill, { backgroundColor: scrimColor }]}
+        style={StyleSheet.absoluteFill}
         onPress={onDismiss}
         accessibilityRole="button"
         accessibilityLabel={loc.close}
-      />
+      >
+        <DimmerBackdrop />
+      </Pressable>
       <Animated.View
         testID={TestID.TranscriptionSettingsSheet}
         style={[
