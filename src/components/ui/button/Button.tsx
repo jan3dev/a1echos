@@ -284,8 +284,7 @@ const styles = StyleSheet.create({
     width: 8,
   },
   primaryInsetHighlight: {
-    borderTopWidth: 2,
-    borderTopColor: AquaPrimitiveColors.neonBlue300,
+    boxShadow: `inset 0px 2px 0px 0px ${AquaPrimitiveColors.neonBlue300}`,
   },
   focusRing: {
     position: "absolute",
