@@ -19,15 +19,32 @@ import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 import { useLocalization } from "../use-localization/useLocalization";
 import { useSessionOperations } from "../use-session-operations/useSessionOperations";
 
-const PICKER_TYPES = [
+const TEXT_TYPES = ["text/plain", "text/markdown", "text/x-markdown"];
+
+// MIME types Android providers report for the formats its decoder handles.
+// audio/mpeg also matches .mp2, which then fails per file.
+const ANDROID_AUDIO_TYPES = [
   "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
   "audio/wav",
   "audio/x-wav",
-  "text/markdown",
-  "text/x-markdown",
-  // Android providers often report .md as text/plain; non-.md picks fail per file.
-  ...(Platform.OS === "android" ? ["text/plain"] : []),
+  "audio/aac",
+  "audio/aac-adts",
+  "audio/flac",
+  "audio/ogg",
+  "audio/opus",
+  "audio/amr",
+  "audio/amr-wb",
+  "audio/3gpp",
+  "video/3gpp",
 ];
+
+const pickerTypes = () =>
+  Platform.OS === "android"
+    ? [...ANDROID_AUDIO_TYPES, ...TEXT_TYPES]
+    : // .aifc/.caf/.m4b/.opus have no iOS MIME mapping; unsupported audio fails per file.
+      ["audio/*", ...TEXT_TYPES];
 
 interface UseFileImportParams {
   showAlertToast: (options: ToastOptions) => void;
@@ -61,7 +78,7 @@ export const useFileImport = ({
 
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: PICKER_TYPES,
+        type: pickerTypes(),
         multiple: true,
         copyToCacheDirectory: true,
       });

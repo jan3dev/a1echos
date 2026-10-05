@@ -2,6 +2,7 @@
 import { renderHook } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useNavigationContainerRef, useRouter } from "expo-router";
+import { Platform } from "react-native";
 
 import { Routes } from "@/constants";
 import { TranscriptionState } from "@/models";
@@ -81,15 +82,25 @@ it("opens the picker for audio and markdown, multi-select", async () => {
   await run();
   expect(pick).toHaveBeenCalledWith(
     expect.objectContaining({
-      type: expect.arrayContaining([
-        "audio/mpeg",
-        "audio/wav",
-        "text/markdown",
-      ]),
+      type: ["audio/*", "text/plain", "text/markdown", "text/x-markdown"],
       multiple: true,
       copyToCacheDirectory: true,
     }),
   );
+});
+
+it("limits the Android picker to decodable audio types", async () => {
+  const os = Platform.OS;
+  Platform.OS = "android";
+  pick.mockResolvedValueOnce({ canceled: true, assets: null });
+  await run();
+  Platform.OS = os;
+  const { type } = pick.mock.calls[0][0];
+  expect(type).toEqual(
+    expect.arrayContaining(["audio/mp4", "audio/ogg", "text/plain"]),
+  );
+  expect(type).not.toContain("audio/*");
+  expect(type).not.toContain("audio/x-aiff");
 });
 
 it("names the session after a single file, navigates, then imports", async () => {
@@ -136,14 +147,14 @@ it("keeps the session on partial failure and lists the reason", async () => {
 it("goes back and deletes the session when every file fails", async () => {
   pick.mockResolvedValueOnce({
     canceled: false,
-    assets: [asset("s.mp3"), asset("e.md"), asset("x.txt")],
+    assets: [asset("s.mp3"), asset("e.md"), asset("x.pdf")],
   });
   mockImportFiles.mockResolvedValueOnce({
     imported: 0,
     failed: [
       { name: "s.mp3", reason: "noSpeech" },
       { name: "e.md", reason: "empty" },
-      { name: "x.txt", reason: "unsupported" },
+      { name: "x.pdf", reason: "unsupported" },
     ],
   });
 
@@ -155,7 +166,7 @@ it("goes back and deletes the session when every file fails", async () => {
     expect.objectContaining({
       title: "uploadFailed_3",
       message:
-        "s.mp3: uploadErrorNoSpeech\ne.md: uploadErrorEmpty\nx.txt: uploadErrorUnsupported",
+        "s.mp3: uploadErrorNoSpeech\ne.md: uploadErrorEmpty\nx.pdf: uploadErrorUnsupported",
       messageMaxLines: 3,
     }),
   );

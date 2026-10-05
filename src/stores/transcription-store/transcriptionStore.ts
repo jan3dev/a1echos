@@ -2,7 +2,7 @@ import * as Crypto from "expo-crypto";
 import { Directory, File, Paths } from "expo-file-system";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useMemo } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
@@ -31,6 +31,13 @@ import { useUIStore } from "../ui-store/uiStore";
 
 const MINIMUM_OPERATION_INTERVAL = 500;
 const OPERATION_TIMEOUT = 30000;
+// What EchosAudioDecoder decodes per OS (verified on iOS 27 sim, Android 16 emulator).
+const IOS_AUDIO_EXTENSIONS = new Set(
+  "mp3 wav m4a m4b mp4 aac aif aiff aifc caf flac opus ac3 ec3 au".split(" "),
+);
+const ANDROID_AUDIO_EXTENSIONS = new Set(
+  "mp3 wav m4a m4b mp4 aac flac ogg oga opus amr awb 3gp".split(" "),
+);
 
 // expo-keep-awake rejects with "current activity is no longer available"
 // when the host Activity is mid-recreation. Swallow it — keep-awake is
@@ -422,9 +429,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
   ): Promise<Transcription> => {
     const extension = file.name.split(".").pop()?.toLowerCase();
     let content: Pick<Transcription, "text" | "audioPath">;
-    if (extension === "mp3" || extension === "wav") {
+    const audioExtensions =
+      Platform.OS === "android"
+        ? ANDROID_AUDIO_EXTENSIONS
+        : IOS_AUDIO_EXTENSIONS;
+    if (extension && audioExtensions.has(extension)) {
       content = await transcribeAudioFile(file.uri);
-    } else if (extension === "md") {
+    } else if (extension === "md" || extension === "txt") {
       const source = new File(file.uri);
       if (
         (file.size ?? source.size ?? 0) > AppConstants.IMPORT_MAX_TEXT_BYTES

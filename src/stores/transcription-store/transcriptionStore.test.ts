@@ -3070,6 +3070,17 @@ describe("transcriptionStore.importFiles", () => {
     sessionId = "session-1",
   ) => useTranscriptionStore.getState().importFiles(sessionId, files);
 
+  it("imports a plain text file", async () => {
+    fileMocks.set("/cache/notes.TXT", { text: " Hello \n" });
+    const result = await importFiles([
+      { uri: "/cache/notes.TXT", name: "notes.TXT" },
+    ]);
+    expect(result).toEqual({ imported: 1, failed: [] });
+    expect(useTranscriptionStore.getState().transcriptions[0].text).toBe(
+      "Hello",
+    );
+  });
+
   it("imports a markdown file as a transcription and returns to READY", async () => {
     fileMocks.set("/cache/notes.md", { text: "  # Notes\nHello  " });
 
@@ -3144,6 +3155,39 @@ describe("transcriptionStore.importFiles", () => {
     expect(deleted).toEqual([wavUri, "/cache/talk.WAV"]);
   });
 
+  it.each([
+    [
+      "ios",
+      ["a.m4a", "b.aifc", "c.CAF", "d.opus"],
+      ["e.ogg", "f.amr", "g.mp2"],
+    ],
+    [
+      "android",
+      ["a.m4a", "b.ogg", "c.AMR", "d.3gp"],
+      ["e.aifc", "f.caf", "g.mp2"],
+    ],
+  ] as const)(
+    "imports formats the %s decoder handles and rejects the rest",
+    async (os, supported, unsupported) => {
+      Platform.OS = os;
+      const result = await importFiles(
+        [...supported, ...unsupported].map((name) => ({
+          uri: `/cache/${name}`,
+          name,
+        })),
+      ).finally(() => {
+        Platform.OS = originalPlatformOS;
+      });
+      expect(result).toEqual({
+        imported: supported.length,
+        failed: unsupported.map((name) => ({ name, reason: "unsupported" })),
+      });
+      expect(EchosAudioDecoder!.decodeToWav16k).toHaveBeenCalledTimes(
+        supported.length,
+      );
+    },
+  );
+
   it("falls back to English when no language is selected", async () => {
     useSettingsStore.setState({ selectedLanguage: undefined as never });
     await importFiles([{ uri: "/cache/a.mp3", name: "a.mp3" }]);
@@ -3173,7 +3217,8 @@ describe("transcriptionStore.importFiles", () => {
   });
 
   it.each([
-    ["unsupported", { uri: "/cache/a.txt", name: "a.txt" }],
+    ["unsupported", { uri: "/cache/a.pdf", name: "a.pdf" }],
+    ["unsupported", { uri: "/cache/a.wma", name: "a.wma" }],
     ["unsupported", { uri: "/cache/README", name: "README" }],
     ["empty", { uri: "/cache/e.md", name: "e.md" }],
     [
