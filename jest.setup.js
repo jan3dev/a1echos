@@ -607,6 +607,7 @@ jest.mock("@shopify/react-native-skia", () => ({
   Rect: "SkiaRect",
   Skottie: "SkiaSkottie",
   LinearGradient: "SkiaLinearGradient",
+  RadialGradient: "SkiaRadialGradient",
   vec: (x, y) => ({ x, y }),
   rect: (x, y, width, height) => ({ x, y, width, height }),
   rrect: (r, rx, ry) => ({ rect: r, rx, ry }),

@@ -401,13 +401,16 @@ describe("RecordingButton", () => {
     jest.useRealTimers();
   });
 
-  it("renders the blurred gradient blobs in READY state", () => {
+  it("renders the gradient blobs and highlights in READY state", () => {
     const { UNSAFE_root } = render(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
     const { recordingButtonGradient } = require("@/theme");
-    expect(UNSAFE_root.findAllByType("SkiaCircle" as any).length).toBe(
+    expect(UNSAFE_root.findAllByType("SkiaRadialGradient" as any).length).toBe(
       recordingButtonGradient.blobs.length,
+    );
+    expect(UNSAFE_root.findAllByType("SkiaCircle" as any).length).toBe(
+      recordingButtonGradient.highlights.length,
     );
   });
 

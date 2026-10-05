@@ -4,6 +4,7 @@ import {
   Canvas,
   Circle,
   Group,
+  RadialGradient,
   Rect,
   rect,
   rrect,
@@ -39,6 +40,7 @@ import {
   lightColors,
   recordingButtonGradient,
   RecordingButtonBlob,
+  RecordingButtonHighlight,
 } from "@/theme";
 
 import { Icon } from "../../ui/icon/Icon";
@@ -59,7 +61,8 @@ const PRESS_DOWN_SCALE = 0.9;
 const GESTURE_ISOLATION_DURATION = 2000;
 const EASE_OUT = Easing.out(Easing.ease);
 
-const GRADIENT_BLOB_BLUR = 0.18;
+const GRADIENT = recordingButtonGradient;
+const GRADIENT_ORIGIN = GRADIENT.viewBox / 2 - GRADIENT.maskRadius;
 
 const GRADIENT_TRANSITION_MS = 450;
 const CONTENT_FADE_MS = 200;
@@ -146,30 +149,60 @@ const ProcessingIcon = ({ size, color }: { size: number; color: string }) => {
 const GradientBlob = ({
   blob,
   size,
-  time,
+  progress,
 }: {
   blob: RecordingButtonBlob;
   size: number;
-  time: SharedValue<number>;
+  progress: SharedValue<number>;
 }) => {
-  const cx = useDerivedValue(
-    () =>
-      size *
-      (blob.x +
-        blob.drift *
-          Math.sin((2 * Math.PI * time.value) / blob.periodX + blob.phase)),
-  );
-  const cy = useDerivedValue(
-    () =>
-      size *
-      (blob.y +
-        blob.drift *
-          Math.cos((2 * Math.PI * time.value) / blob.periodY + blob.phase)),
-  );
+  const unit = size / (2 * GRADIENT.maskRadius);
+  const c = useDerivedValue(() => {
+    const angle = 2 * Math.PI * progress.value;
+    return {
+      x: size / 2 + unit * blob.r * Math.sin(blob.kx * angle + blob.phase),
+      y:
+        size / 2 + unit * blob.r * Math.sin(blob.ky * angle + blob.phase * 1.3),
+    };
+  });
 
   return (
-    <Circle cx={cx} cy={cy} r={size * blob.r} color={blob.color}>
-      <BlurMask blur={size * GRADIENT_BLOB_BLUR} style="normal" />
+    <Rect x={0} y={0} width={size} height={size}>
+      <RadialGradient
+        c={c}
+        r={unit * blob.radius}
+        colors={[`rgba(${blob.rgb},1)`, `rgba(${blob.rgb},0)`]}
+      />
+    </Rect>
+  );
+};
+
+const GradientHighlight = ({
+  highlight,
+  size,
+  progress,
+}: {
+  highlight: RecordingButtonHighlight;
+  size: number;
+  progress: SharedValue<number>;
+}) => {
+  const unit = size / (2 * GRADIENT.maskRadius);
+  const c = useDerivedValue(() => {
+    const angle =
+      2 * Math.PI * highlight.revolutions * progress.value +
+      (highlight.phaseDeg * Math.PI) / 180;
+    return {
+      x:
+        unit *
+        (highlight.x - GRADIENT_ORIGIN + highlight.orbit * Math.cos(angle)),
+      y:
+        unit *
+        (highlight.y - GRADIENT_ORIGIN + highlight.orbit * Math.sin(angle)),
+    };
+  });
+
+  return (
+    <Circle c={c} r={unit * highlight.radius} color="white">
+      <BlurMask blur={unit * highlight.blur} style="normal" />
     </Circle>
   );
 };
@@ -181,12 +214,12 @@ const AnimatedGradientCircle = ({
   size: number;
   active: boolean;
 }) => {
-  const time = useSharedValue(0);
+  const progress = useSharedValue(0);
 
   const frameCallback = useFrameCallback((frameInfo) => {
     "worklet";
     const dt = Math.min(frameInfo.timeSincePreviousFrame ?? 16, 50);
-    time.value += dt;
+    progress.value = (progress.value + dt / GRADIENT.loopMs) % 1;
   });
 
   useEffect(() => {
@@ -205,16 +238,25 @@ const AnimatedGradientCircle = ({
       style={{ position: "absolute", width: size, height: size }}
     >
       <Group clip={rrect(rect(0, 0, size, size), size / 2, size / 2)}>
-        <Rect
-          x={0}
-          y={0}
-          width={size}
-          height={size}
-          color={recordingButtonGradient.base}
-        />
-        {recordingButtonGradient.blobs.map((blob) => (
-          <GradientBlob key={blob.color} blob={blob} size={size} time={time} />
+        <Rect x={0} y={0} width={size} height={size} color={GRADIENT.base} />
+        {GRADIENT.blobs.map((blob) => (
+          <GradientBlob
+            key={blob.rgb}
+            blob={blob}
+            size={size}
+            progress={progress}
+          />
         ))}
+        <Group opacity={GRADIENT.highlightStrength}>
+          {GRADIENT.highlights.map((highlight) => (
+            <GradientHighlight
+              key={`${highlight.x},${highlight.y}`}
+              highlight={highlight}
+              size={size}
+              progress={progress}
+            />
+          ))}
+        </Group>
       </Group>
     </Canvas>
   );

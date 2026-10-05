@@ -1,74 +1,66 @@
+// Coordinates are in the spec's 96-unit space; the visible button is the
+// circle of radius `maskRadius` around its center.
 export interface RecordingButtonBlob {
-  color: string;
-  // Rest position and radius as fractions of the button size.
-  x: number;
-  y: number;
+  rgb: string;
+  radius: number;
+  // Lissajous path: x = c + r·sin(2π·kx·t + phase), y = c + r·sin(2π·ky·t + 1.3·phase)
   r: number;
-  drift: number;
-  periodX: number;
-  periodY: number;
+  kx: number;
+  ky: number;
   phase: number;
 }
 
-// Soft blurred blobs drifting over a periwinkle base, sampled from the
-// record-button reference animation.
+export interface RecordingButtonHighlight {
+  x: number;
+  y: number;
+  orbit: number;
+  revolutions: number;
+  phaseDeg: number;
+  radius: number;
+  blur: number;
+}
+
+// Liquid gradient from the record-button animation spec. Integer kx/ky and
+// revolutions keep the loop seamless.
 export const recordingButtonGradient: {
+  viewBox: number;
+  maskRadius: number;
+  loopMs: number;
   base: string;
   blobs: RecordingButtonBlob[];
+  highlights: RecordingButtonHighlight[];
+  highlightStrength: number;
 } = {
-  base: "#9CA0D8",
+  viewBox: 96,
+  maskRadius: 34,
+  loopMs: 7000,
+  base: "#4588D2",
   blobs: [
+    { rgb: "165,76,255", radius: 60, r: 18, kx: 2, ky: 2, phase: 0 },
+    { rgb: "69,136,210", radius: 64, r: 20, kx: 3, ky: 4, phase: 2.1 },
+    { rgb: "200,180,200", radius: 54, r: 16, kx: 2, ky: 3, phase: 4.2 },
+  ],
+  highlights: [
     {
-      color: "#6F6BE0",
-      x: 0.25,
-      y: 0.8,
-      r: 0.34,
-      drift: 0.14,
-      periodX: 7100,
-      periodY: 5300,
-      phase: 0,
+      x: 30,
+      y: 28,
+      orbit: 5,
+      revolutions: 2,
+      phaseDeg: 0,
+      radius: 17,
+      blur: 9,
     },
     {
-      color: "#6386DA",
-      x: 0.82,
-      y: 0.4,
-      r: 0.32,
-      drift: 0.14,
-      periodX: 6100,
-      periodY: 7900,
-      phase: 2.1,
-    },
-    {
-      color: "#D9BCD6",
-      x: 0.55,
-      y: 0.58,
-      r: 0.2,
-      drift: 0.18,
-      periodX: 5600,
-      periodY: 6700,
-      phase: 4.2,
-    },
-    {
-      color: "#E8E6F5",
-      x: 0.3,
-      y: 0.26,
-      r: 0.3,
-      drift: 0.13,
-      periodX: 8300,
-      periodY: 6300,
-      phase: 1.3,
-    },
-    {
-      color: "#D3DBF3",
-      x: 0.74,
-      y: 0.84,
-      r: 0.22,
-      drift: 0.12,
-      periodX: 6900,
-      periodY: 5900,
-      phase: 3.4,
+      x: 68,
+      y: 70,
+      orbit: 4,
+      revolutions: -3,
+      phaseDeg: 140,
+      radius: 15,
+      blur: 9,
     },
   ],
+  highlightStrength: 0.85,
 };
 
 // Per-line gradients for the three animated wave lines. The palette is split
