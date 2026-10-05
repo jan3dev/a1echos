@@ -1,53 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Modal, StyleSheet, View } from "react-native";
+import {
+  AppState,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
 import { useBiometricAuthEnabled } from "@/stores";
-import { useTheme } from "@/theme";
-
-import { Button } from "../../ui/button/Button";
-import { Icon } from "../../ui/icon/Icon";
-import { Text } from "../../ui/text/Text";
 
 import {
   authenticateBiometric,
   isBiometricAuthInFlight,
 } from "./biometricAuth";
 
+// Mirrors the expo-splash-screen config in app.json, which follows the system
+// scheme rather than the in-app theme.
+const SPLASH = {
+  light: { image: require("@/assets/images/icon.png"), background: "#ffffff" },
+  dark: {
+    image: require("@/assets/images/icon-dark.png"),
+    background: "#000000",
+  },
+};
+
 export const BiometricLockView = ({ onUnlock }: { onUnlock: () => void }) => {
-  const { theme } = useTheme();
   const { loc } = useLocalization();
+  const splash = SPLASH[useColorScheme() === "dark" ? "dark" : "light"];
 
   return (
-    <View
+    <Pressable
       testID={TestID.BiometricLockScreen}
-      style={[
-        styles.container,
-        { backgroundColor: theme.colors.surfaceBackground },
-      ]}
+      accessibilityRole="button"
+      accessibilityLabel={loc.biometricAuthPrompt}
+      onPress={onUnlock}
+      style={[styles.container, { backgroundColor: splash.background }]}
     >
-      <Icon
-        name="biometric_fingerprint"
-        size={64}
-        color={theme.colors.textSecondary}
-      />
-      <Text
-        variant="h3"
-        align="center"
-        style={styles.title}
-        accessibilityRole="header"
-      >
-        {loc.biometricAuthPrompt}
-      </Text>
-      <View style={styles.button}>
-        <Button.primary
-          testID={TestID.BiometricLockUnlockButton}
-          text={loc.biometricAuthUnlock}
-          onPress={onUnlock}
-        />
-      </View>
-    </View>
+      <Image source={splash.image} style={styles.image} resizeMode="contain" />
+    </Pressable>
   );
 };
 
@@ -107,13 +100,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
   },
-  title: {
-    marginTop: 24,
-  },
-  button: {
-    marginTop: 32,
-    alignSelf: "stretch",
+  image: {
+    width: 200,
+    height: 200,
   },
 });

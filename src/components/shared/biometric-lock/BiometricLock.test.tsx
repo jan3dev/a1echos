@@ -48,7 +48,7 @@ describe("BiometricLock", () => {
     expect(authenticate).toHaveBeenCalledTimes(1);
   });
 
-  it("stays locked on cancel and retries via the unlock button", async () => {
+  it("stays locked on cancel and retries on tap", async () => {
     setEnabled(true);
     authenticate.mockResolvedValueOnce({
       success: false,
@@ -58,7 +58,7 @@ describe("BiometricLock", () => {
     await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
     expect(getByTestId(TestID.BiometricLockScreen)).toBeTruthy();
 
-    fireEvent.press(getByTestId(TestID.BiometricLockUnlockButton));
+    fireEvent.press(getByTestId(TestID.BiometricLockScreen));
     await waitFor(() =>
       expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
     );

@@ -219,7 +219,6 @@ export const useLocalization = () => {
       settingsSectionAppearance: t("settingsSectionAppearance"),
       biometricAuthTitle: t("biometricAuthTitle"),
       biometricAuthPrompt: t("biometricAuthPrompt"),
-      biometricAuthUnlock: t("biometricAuthUnlock"),
       biometricAuthUnavailable: t("biometricAuthUnavailable"),
     }),
     [t],
