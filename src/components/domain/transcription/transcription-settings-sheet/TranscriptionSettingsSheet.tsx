@@ -36,6 +36,7 @@ import { ListItem } from "../../../shared/list-item/ListItem";
 import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Icon } from "../../../ui/icon/Icon";
 import { DimmerBackdrop } from "../../../ui/modal/Dimmer";
+import { useSwipeToDismiss } from "../../../ui/modal/useSwipeToDismiss";
 import { Radio } from "../../../ui/radio/Radio";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
@@ -75,6 +76,7 @@ export const TranscriptionSettingsSheet = ({
   const afterDismissRef = useRef<(() => void) | null>(null);
   const savingRef = useRef(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const { dragY, panHandlers } = useSwipeToDismiss(visible, onDismiss);
 
   // Reset before paint so the sheet never flashes its last page/position on open.
   useLayoutEffect(() => {
@@ -138,10 +140,13 @@ export const TranscriptionSettingsSheet = ({
   );
 
   const showFooter = page === "main" && !!footer;
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [windowHeight, 0],
-  });
+  const translateY = Animated.add(
+    slideAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [windowHeight, 0],
+    }),
+    dragY,
+  );
 
   const renderMainPage = () => (
     <View style={styles.content}>
@@ -174,31 +179,48 @@ export const TranscriptionSettingsSheet = ({
     </View>
   );
 
+  const grabber = (
+    <View
+      style={[
+        styles.grabber,
+        { backgroundColor: colors.systemBackgroundColor },
+      ]}
+    />
+  );
+
+  // The language list scrolls, so only the header drags the sheet here.
   const renderLanguagePage = () => (
     <>
-      <View style={styles.header}>
-        <RipplePressable
-          testID={TestID.TranscriptionSettingsBack}
-          onPress={() => setPage("main")}
-          hitSlop={10}
-          rippleColor={colors.ripple}
-          borderless
-          accessibilityRole="button"
-          accessibilityLabel={loc.back}
-          style={styles.headerSide}
-        >
-          <Icon name="chevron_left" size={24} color={colors.textPrimary} />
-        </RipplePressable>
-        <Text
-          variant="subtitle"
-          weight="semibold"
-          color={colors.textPrimary}
-          align="center"
-          style={styles.headerTitle}
-        >
-          {loc.spokenLanguageTitle}
-        </Text>
-        <View style={styles.headerSide} />
+      <View
+        testID={TestID.TranscriptionSettingsDragHeader}
+        style={styles.dragHeader}
+        {...panHandlers}
+      >
+        {grabber}
+        <View style={styles.header}>
+          <RipplePressable
+            testID={TestID.TranscriptionSettingsBack}
+            onPress={() => setPage("main")}
+            hitSlop={10}
+            rippleColor={colors.ripple}
+            borderless
+            accessibilityRole="button"
+            accessibilityLabel={loc.back}
+            style={styles.headerSide}
+          >
+            <Icon name="chevron_left" size={24} color={colors.textPrimary} />
+          </RipplePressable>
+          <Text
+            variant="subtitle"
+            weight="semibold"
+            color={colors.textPrimary}
+            align="center"
+            style={styles.headerTitle}
+          >
+            {loc.spokenLanguageTitle}
+          </Text>
+          <View style={styles.headerSide} />
+        </View>
       </View>
       <ScrollView
         style={{
@@ -249,6 +271,7 @@ export const TranscriptionSettingsSheet = ({
       </Pressable>
       <Animated.View
         testID={TestID.TranscriptionSettingsSheet}
+        {...(page === "main" ? panHandlers : undefined)}
         style={[
           styles.sheet,
           {
@@ -262,18 +285,20 @@ export const TranscriptionSettingsSheet = ({
           },
         ]}
       >
-        <View
-          style={[
-            styles.grabber,
-            { backgroundColor: colors.systemBackgroundColor },
-          ]}
-        />
-        {page === "main" ? renderMainPage() : renderLanguagePage()}
+        {page === "main" ? (
+          <>
+            {grabber}
+            {renderMainPage()}
+          </>
+        ) : (
+          renderLanguagePage()
+        )}
       </Animated.View>
       {showFooter && (
         <View
           style={[styles.footer, { paddingBottom: insets.bottom }]}
           pointerEvents="box-none"
+          {...panHandlers}
         >
           {footer}
         </View>
@@ -301,6 +326,9 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     marginTop: 8,
     alignSelf: "center",
+  },
+  dragHeader: {
+    gap: 32,
   },
   content: {
     paddingHorizontal: 16,

@@ -23,6 +23,7 @@ export enum TestID {
   RecordingButtonStarting = "recording-button-starting",
   RecordingButton = "recording-button",
   TranscriptionSettingsSheet = "transcription-settings-sheet",
+  TranscriptionSettingsDragHeader = "transcription-settings-drag-header",
   TranscriptionSettingsLanguage = "transcription-settings-language",
   TranscriptionSettingsBack = "transcription-settings-back",
   TranscriptionSettingsHandle = "transcription-settings-handle",

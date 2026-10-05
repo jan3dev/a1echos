@@ -56,6 +56,22 @@ describe("TranscriptionSettingsSheet", () => {
     expect(getByText("footer")).toBeTruthy();
   });
 
+  it("drags from the whole panel and footer, but only the header on the language page", () => {
+    const { getByTestId, getByText, queryByTestId } = renderSheet();
+    const draggable = (testID: string) =>
+      !!getByTestId(testID).props.onMoveShouldSetResponder;
+
+    expect(draggable(TestID.TranscriptionSettingsSheet)).toBe(true);
+    expect(
+      getByText("footer").parent?.parent?.props.onMoveShouldSetResponder,
+    ).toBeDefined();
+    expect(queryByTestId(TestID.TranscriptionSettingsDragHeader)).toBeNull();
+
+    fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
+    expect(draggable(TestID.TranscriptionSettingsSheet)).toBe(false);
+    expect(draggable(TestID.TranscriptionSettingsDragHeader)).toBe(true);
+  });
+
   it("selecting a mode saves it", async () => {
     const { getByText } = renderSheet();
     await act(async () => {

@@ -16,6 +16,7 @@ import { formatDate, formatSessionSubtitle } from "@/utils";
 import { ListItem } from "../../../shared/list-item/ListItem";
 import { Icon, type IconName } from "../../../ui/icon/Icon";
 import { Dimmer } from "../../../ui/modal/Dimmer";
+import { useSwipeToDismiss } from "../../../ui/modal/useSwipeToDismiss";
 import { Text } from "../../../ui/text/Text";
 
 export interface SessionActionsSheetProps {
@@ -50,6 +51,7 @@ export const SessionActionsSheet = ({
   const { height: screenHeight } = useWindowDimensions();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const didOpenRef = useRef(false);
+  const { dragY, panHandlers } = useSwipeToDismiss(visible, onDismiss);
 
   useEffect(() => {
     if (!visible && !didOpenRef.current) {
@@ -72,10 +74,13 @@ export const SessionActionsSheet = ({
     return () => anim.stop();
   }, [visible, slideAnim]);
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [screenHeight, 0],
-  });
+  const translateY = Animated.add(
+    slideAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [screenHeight, 0],
+    }),
+    dragY,
+  );
 
   const opacity = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -155,6 +160,7 @@ export const SessionActionsSheet = ({
       <View style={styles.overlay}>
         <Animated.View
           testID={testID}
+          {...panHandlers}
           style={[
             styles.sheet,
             getShadow("modal"),

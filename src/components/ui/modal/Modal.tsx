@@ -16,6 +16,7 @@ import { Button } from "../button/Button";
 import { Text } from "../text/Text";
 
 import { Dimmer } from "./Dimmer";
+import { useSwipeToDismiss } from "./useSwipeToDismiss";
 
 export interface ModalProps {
   visible: boolean;
@@ -53,6 +54,7 @@ export const Modal = ({
   const { theme } = useTheme();
   const colors = theme.colors;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const { dragY, panHandlers } = useSwipeToDismiss(visible, onDismiss);
 
   useEffect(() => {
     if (visible) {
@@ -71,10 +73,13 @@ export const Modal = ({
     }
   }, [visible, slideAnim]);
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [300, 0],
-  });
+  const translateY = Animated.add(
+    slideAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [300, 0],
+    }),
+    dragY,
+  );
 
   const opacity = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -93,6 +98,7 @@ export const Modal = ({
       >
         <Animated.View
           testID={testID ?? dynamicTestID.modal(title)}
+          {...panHandlers}
           style={[
             styles.container,
             {
