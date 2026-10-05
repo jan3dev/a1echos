@@ -591,7 +591,7 @@ export default function SessionScreen() {
     useCallback(() => {
       const onStart = () => handleRecordingStartRef.current?.();
       const onStop = () => handleRecordingStopRef.current?.();
-      setRecordingCallbacks(onStart, onStop);
+      setRecordingCallbacks(onStart, onStop, blurTargetRef);
       // No cleanup - next screen will set its own callbacks
     }, [setRecordingCallbacks]),
   );

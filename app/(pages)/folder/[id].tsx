@@ -83,7 +83,12 @@ export default function FolderScreen() {
 
   const handleUpload = useFileImport({ showAlertToast, folderId: id });
 
-  useRecordingEntry({ showAlertToast, hideAlertToast, folderId: id });
+  useRecordingEntry({
+    showAlertToast,
+    hideAlertToast,
+    folderId: id,
+    blurTarget: blurTargetRef,
+  });
 
   useEffect(() => {
     setRecordingControlsVisible(!selectionMode);

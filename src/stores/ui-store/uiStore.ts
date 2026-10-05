@@ -1,4 +1,6 @@
 import * as Crypto from "expo-crypto";
+import type { RefObject } from "react";
+import type { View } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
@@ -39,6 +41,8 @@ interface UIStore {
   recordingControlsVisible: boolean;
   onRecordingStart: (() => void) | null;
   onRecordingStop: (() => void) | null;
+  /** Android: the focused recording screen's `AppBarBlurTarget`. */
+  recordingControlsBlurTarget?: RefObject<View | null>;
 
   keyboardPromptVisible: boolean;
   showKeyboardPrompt: () => void;
@@ -57,6 +61,7 @@ interface UIStore {
   setRecordingCallbacks: (
     onStart: (() => void) | null,
     onStop: (() => void) | null,
+    blurTarget?: RefObject<View | null>,
   ) => void;
 
   toggleTranscriptionSelection: (id: string) => void;
@@ -157,8 +162,13 @@ export const useUIStore = create<UIStore>((set, get) => ({
   setRecordingCallbacks: (
     onStart: (() => void) | null,
     onStop: (() => void) | null,
+    blurTarget?: RefObject<View | null>,
   ) => {
-    set({ onRecordingStart: onStart, onRecordingStop: onStop });
+    set({
+      onRecordingStart: onStart,
+      onRecordingStop: onStop,
+      recordingControlsBlurTarget: blurTarget,
+    });
   },
 
   toggleTranscriptionSelection: (id: string) => {
@@ -312,6 +322,8 @@ export const useSetRecordingControlsVisible = () =>
   useUIStore((s) => s.setRecordingControlsVisible);
 export const useSetRecordingCallbacks = () =>
   useUIStore((s) => s.setRecordingCallbacks);
+export const useRecordingControlsBlurTarget = () =>
+  useUIStore((s) => s.recordingControlsBlurTarget);
 
 export const useKeyboardPromptVisible = () =>
   useUIStore((s) => s.keyboardPromptVisible);

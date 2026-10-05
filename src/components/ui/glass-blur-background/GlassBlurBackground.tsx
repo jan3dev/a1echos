@@ -20,7 +20,7 @@ export interface GlassBlurBackgroundProps {
 }
 
 /**
- * Absolutely-filling native blur background shared by the surfaces that float
+ * Absolutely-filling native blur + glass tint shared by the surfaces that float
  * over scrolling content (the top app bar and the bottom sub-screen navbar).
  *
  * Render as the first child of an `overflow: "hidden"` container, behind the
@@ -29,15 +29,23 @@ export interface GlassBlurBackgroundProps {
 export const GlassBlurBackground = ({
   blurTarget,
 }: GlassBlurBackgroundProps) => {
-  const { isDark } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
-    <BlurView
-      style={StyleSheet.absoluteFill}
-      intensity={BLUR_INTENSITY}
-      tint={isDark ? "dark" : "light"}
-      blurMethod="dimezisBlurViewSdk31Plus"
-      blurTarget={blurTarget}
-    />
+    <>
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        intensity={BLUR_INTENSITY}
+        tint={isDark ? "dark" : "light"}
+        blurMethod="dimezisBlurViewSdk31Plus"
+        blurTarget={blurTarget}
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: theme.colors.glassBackground },
+        ]}
+      />
+    </>
   );
 };

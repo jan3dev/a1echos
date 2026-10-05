@@ -34,8 +34,9 @@ const mockWav = (bytes: Uint8Array) => {
   } = {
     size: bytes.length,
     offset: 0 as number | null,
-    readBytes: jest.fn((length: number): Uint8Array =>
-      bytes.slice(handle.offset!, handle.offset! + length),
+    readBytes: jest.fn(
+      (length: number): Uint8Array =>
+        bytes.slice(handle.offset!, handle.offset! + length),
     ),
     close: jest.fn(),
   };

@@ -397,7 +397,9 @@ describe("HomeScreen", () => {
 
   it("useFocusEffect sets recording callbacks", () => {
     render(<HomeScreen />);
-    expect(mockSetRecordingCallbacks).toHaveBeenCalled();
+    expect(mockSetRecordingCallbacks.mock.calls[0][2]).toHaveProperty(
+      "current",
+    );
     expect(mockSetRecordingControlsEnabled).toHaveBeenCalledWith(true);
   });
 

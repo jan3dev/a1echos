@@ -1095,6 +1095,7 @@ describe("SessionScreen", () => {
       expect(mockSetRecordingCallbacks).toHaveBeenCalledWith(
         expect.any(Function),
         expect.any(Function),
+        expect.objectContaining({ current: null }),
       );
     });
 
@@ -1290,7 +1291,6 @@ describe("SessionScreen", () => {
       expect(mockShowDeleteToast).not.toHaveBeenCalled();
     });
   });
-
 
   describe("shareTargetTranscriptions", () => {
     it("returns false when selectedIds are present but no matching transcriptions", async () => {
@@ -1494,7 +1494,6 @@ describe("SessionScreen", () => {
       expect(mockToggle).toHaveBeenCalledWith("t1");
     });
   });
-
 
   describe("navigation beforeRemove edge cases", () => {
     it("beforeRemove when recording and canGoBack is false: replaces route", async () => {

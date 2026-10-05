@@ -2,7 +2,6 @@ import "@/localization";
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
 import { useIsFocused } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { LinearGradient } from "expo-linear-gradient";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
@@ -19,10 +18,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppErrorBoundary,
   BiometricLock,
+  FadingGlassBlur,
   Icon,
   KeyboardPromptModal,
   LargerModelSuggestionModal,
   PRIMARY_BUTTON_HEIGHT,
+  RECORDING_BUTTON_SIZE,
   RecordingControlsView,
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
@@ -69,6 +70,7 @@ import {
   useOnRecordingStart,
   useOnRecordingStop,
   useRecordingControlsEnabled,
+  useRecordingControlsBlurTarget,
   useRecordingControlsVisible,
   useSettingsStore,
   useTranscriptionState,
@@ -123,6 +125,8 @@ const SETTINGS_HANDLE_HEIGHT =
   AppConstants.RECORDING_FOOTER_HEIGHT -
   AppConstants.RECORDING_CONTROLS_HEIGHT +
   GRABBER_TOP_INSET;
+const SETTINGS_HANDLE_BOX_HEIGHT =
+  SETTINGS_HANDLE_HEIGHT + SETTINGS_HANDLE_HIT_ABOVE;
 const TOOLTIP_GAP_ABOVE_SAFE_AREA = 32;
 
 const isSessionListRoute = (pathname: string) =>
@@ -330,7 +334,7 @@ function GlobalVoiceSessionHintRenderer() {
 
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { loc } = useLocalization();
   const pathname = usePathname();
   const transcriptionState = useTranscriptionState();
@@ -339,6 +343,7 @@ function GlobalRecordingControls() {
   const onRecordingStop = useOnRecordingStop();
   const enabled = useRecordingControlsEnabled();
   const visible = useRecordingControlsVisible();
+  const blurTarget = useRecordingControlsBlurTarget();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
@@ -387,24 +392,18 @@ function GlobalRecordingControls() {
     />
   );
 
-  // Same RGB at both stops so only alpha varies; "transparent" is
-  // rgba(0,0,0,0) and smears dark gray on the way to a light endpoint.
-  const fadeColors = isDark
-    ? (["rgba(9, 10, 11, 0)", "rgba(9, 10, 11, 1)"] as const)
-    : (["rgba(244, 245, 246, 0)", "rgba(244, 245, 246, 1)"] as const);
-
   return (
     <View
       style={[styles.recordingControls, { opacity: isVisible ? 1 : 0 }]}
       pointerEvents={isVisible ? "box-none" : "none"}
     >
-      <LinearGradient
-        colors={fadeColors}
-        locations={[0, 0.7]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+      {isVisible && blurTarget && (
+        <FadingGlassBlur
+          blurTarget={blurTarget}
+          top={SETTINGS_HANDLE_BOX_HEIGHT}
+          fadeHeight={RECORDING_BUTTON_SIZE}
+        />
+      )}
       {isVisible && (
         <GestureDetector gesture={swipeUp}>
           <View
@@ -606,7 +605,7 @@ const styles = StyleSheet.create({
   },
   // In-flow (not hitSlop) so the grabber is inside the swipe and touch area.
   settingsHandle: {
-    height: SETTINGS_HANDLE_HEIGHT + SETTINGS_HANDLE_HIT_ABOVE,
+    height: SETTINGS_HANDLE_BOX_HEIGHT,
     width: 48 + 2 * SETTINGS_HANDLE_HIT_ABOVE,
     alignSelf: "center",
     alignItems: "center",

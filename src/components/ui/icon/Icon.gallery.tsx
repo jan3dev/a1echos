@@ -6,7 +6,6 @@ import type { GalleryEntry } from "@/design-system/manifest";
 
 import { iconMap, IconName } from "./iconMap";
 
-
 export const AllIcons = () => {
   const { theme } = useTheme();
   return (

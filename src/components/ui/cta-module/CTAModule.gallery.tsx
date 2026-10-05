@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "@/components";
 import { AquaTypography, useTheme } from "@/theme";
 import type { GalleryEntry } from "@/design-system/manifest";
 
 import { CTAModule } from "./CTAModule";
+import { FloatingCTAModule } from "./FloatingCTAModule";
 
 const SectionLabel = ({ children }: { children: string }) => {
   const { theme } = useTheme();
@@ -17,7 +18,7 @@ const SectionLabel = ({ children }: { children: string }) => {
 
 const PrimaryOnlyContent = () => (
   <View style={styles.column}>
-    <SectionLabel>Primary only</SectionLabel>
+    <SectionLabel>Primary Only</SectionLabel>
     <CTAModule primary={{ text: "Save", onPress: () => console.log("save") }} />
   </View>
 );
@@ -58,7 +59,48 @@ const AllThreeContent = () => {
 
 export const AllThree = () => <AllThreeContent />;
 
+const FloatingContent = () => {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.column}>
+      <SectionLabel>Floating Over Scroll Content</SectionLabel>
+      <View style={styles.stage}>
+        <ScrollView contentContainerStyle={styles.stageContent}>
+          {Array.from({ length: 8 }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.stageRow,
+                { backgroundColor: theme.colors.accentBrand },
+              ]}
+            />
+          ))}
+        </ScrollView>
+        <FloatingCTAModule
+          primary={{ text: "Save", onPress: () => console.log("save") }}
+        />
+      </View>
+    </View>
+  );
+};
+
+export const Floating = () => <FloatingContent />;
+
 const styles = StyleSheet.create({
+  stage: {
+    height: 320,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  stageContent: {
+    gap: 16,
+    padding: 16,
+    paddingBottom: 120,
+  },
+  stageRow: {
+    height: 48,
+    borderRadius: 8,
+  },
   column: {
     gap: 16,
   },
@@ -76,6 +118,7 @@ const gallery: GalleryEntry = {
     { name: "PrimaryOnly", render: PrimaryOnly },
     { name: "PrimaryAndSecondary", render: PrimaryAndSecondary },
     { name: "AllThree", render: AllThree },
+    { name: "Floating", render: Floating },
   ],
 };
 

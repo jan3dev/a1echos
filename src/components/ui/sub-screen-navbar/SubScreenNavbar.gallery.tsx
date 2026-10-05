@@ -7,7 +7,6 @@ import type { GalleryEntry } from "@/design-system/manifest";
 
 import { SUB_SCREEN_NAVBAR_HEIGHT, SubScreenNavbar } from "./SubScreenNavbar";
 
-
 const Stage = ({ children }: { children: React.ReactNode }) => {
   const { bottom: bottomInset } = useSafeAreaInsets();
   return (

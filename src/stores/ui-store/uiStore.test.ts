@@ -264,6 +264,12 @@ describe("uiStore", () => {
       expect(state.onRecordingStop).toBe(onStop);
     });
 
+    it("setRecordingCallbacks stores the screen's blur target", () => {
+      const target = { current: null };
+      useUIStore.getState().setRecordingCallbacks(jest.fn(), jest.fn(), target);
+      expect(useUIStore.getState().recordingControlsBlurTarget).toBe(target);
+    });
+
     it("setRecordingCallbacks can clear callbacks with null", () => {
       useUIStore.getState().setRecordingCallbacks(jest.fn(), jest.fn());
       useUIStore.getState().setRecordingCallbacks(null, null);

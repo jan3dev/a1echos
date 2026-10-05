@@ -74,6 +74,7 @@ const mockDeleteSession = jest.fn(async () => undefined);
 let mockRecordingStarted = true;
 let mockOnStart: (() => Promise<void>) | undefined;
 let mockOnStop: (() => Promise<void>) | undefined;
+let mockBlurTarget: unknown;
 const mockStop = jest.fn();
 const mockCreateSession = jest.fn(async () => "s-new");
 const mockShowTooltip = jest.fn();
@@ -112,10 +113,13 @@ jest.mock("@/stores", () => ({
   useIsIncognitoMode: jest.fn(() => false),
   useGlobalTooltip: jest.fn(() => null),
   useShowGlobalTooltip: jest.fn(() => mockShowTooltip),
-  useSetRecordingCallbacks: jest.fn(() => (onStart: any, onStop: any) => {
-    mockOnStart = onStart;
-    mockOnStop = onStop;
-  }),
+  useSetRecordingCallbacks: jest.fn(
+    () => (onStart: any, onStop: any, blurTarget: unknown) => {
+      mockOnStart = onStart;
+      mockOnStop = onStop;
+      mockBlurTarget = blurTarget;
+    },
+  ),
   useSetRecordingControlsEnabled: jest.fn(() => jest.fn()),
   useSetRecordingControlsVisible: jest.fn(() => mockSetVisible),
   useStartRecording: jest.fn(() => async () => mockRecordingStarted),
@@ -255,6 +259,11 @@ describe("FolderScreen", () => {
     expect(mockPush).toHaveBeenCalledWith(
       expect.objectContaining({ params: { id: "s1" } }),
     );
+  });
+
+  it("hands its blur target to the global recording controls", () => {
+    render(<FolderScreen />);
+    expect(mockBlurTarget).toHaveProperty("current");
   });
 
   it("stops recording through the registered stop callback", async () => {

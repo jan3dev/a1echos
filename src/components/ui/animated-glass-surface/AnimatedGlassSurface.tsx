@@ -62,12 +62,6 @@ export const AnimatedGlassSurface = ({
       {Platform.OS === "ios" ? (
         <>
           <GlassBlurBackground blurTarget={blurTarget} />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: theme.colors.glassBackground },
-            ]}
-          />
           {/* Opaque cover faded in front: hides the blur at rest, clears it
               when scrolled. */}
           <Animated.View
@@ -94,12 +88,6 @@ export const AnimatedGlassSurface = ({
             style={[StyleSheet.absoluteFill, { opacity: glassOpacity }]}
           >
             <GlassBlurBackground blurTarget={blurTarget} />
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: theme.colors.glassBackground },
-              ]}
-            />
           </Animated.View>
         </>
       )}

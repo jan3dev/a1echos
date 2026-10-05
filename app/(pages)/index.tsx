@@ -130,6 +130,7 @@ function HomeScreenContent() {
     showAlertToast,
     hideAlertToast,
     onStarted: scrollToTop,
+    blurTarget: blurTargetRef,
   });
 
   const handleFolderPress = useCallback(

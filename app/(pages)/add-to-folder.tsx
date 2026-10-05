@@ -5,9 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
-  Button,
+  FloatingCTAModule,
   FolderGrid,
   Icon,
+  PRIMARY_BUTTON_HEIGHT,
   Screen,
   SessionInputModal,
   TopAppBar,
@@ -23,7 +24,7 @@ import {
   useMoveSessionsToFolder,
   useShowGlobalTooltip,
 } from "@/stores";
-import { useTheme } from "@/theme";
+import { spacing, useTheme } from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
 export default function AddToFolderScreen() {
@@ -82,6 +83,8 @@ export default function AddToFolderScreen() {
             styles.scrollContent,
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
+              paddingBottom:
+                insets.bottom + PRIMARY_BUTTON_HEIGHT + 2 * spacing.md,
               backgroundColor: theme.colors.surfaceBackground,
             },
           ]}
@@ -98,14 +101,15 @@ export default function AddToFolderScreen() {
         </ScrollView>
       </AppBarBlurTarget>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <Button.primary
-          testID={TestID.AddToFolderSave}
-          text={loc.save}
-          enabled={selected !== null && !isSaving}
-          onPress={() => selected && moveTo(selected.id, selected.name)}
-        />
-      </View>
+      <FloatingCTAModule
+        blurTarget={blurTargetRef}
+        primary={{
+          testID: TestID.AddToFolderSave,
+          text: loc.save,
+          enabled: selected !== null && !isSaving,
+          onPress: () => selected && moveTo(selected.id, selected.name),
+        }}
+      />
 
       <TopAppBar
         title={loc.selectFolder}
@@ -145,10 +149,5 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
 });

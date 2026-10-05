@@ -96,6 +96,7 @@ export {
   useIsTranscriptionSelectionMode,
   useOnRecordingStart,
   useOnRecordingStop,
+  useRecordingControlsBlurTarget,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useSelectAllTranscriptions,

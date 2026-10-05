@@ -262,13 +262,15 @@ const AnimatedGradientCircle = ({
   );
 };
 
+export const RECORDING_BUTTON_SIZE = 80;
+
 export const RecordingButton = ({
   state = TranscriptionState.READY,
   isInitializing = false,
   onRecordingStart,
   onRecordingStop,
   enabled = true,
-  size = 80,
+  size = RECORDING_BUTTON_SIZE,
   scaleAnimationDuration = 250,
   debounceDuration = 800,
   colors,

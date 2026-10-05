@@ -60,6 +60,7 @@ jest.mock("@/stores", () => ({
   useOnRecordingStop: jest.fn(() => jest.fn()),
   useRecordingControlsEnabled: jest.fn(() => true),
   useRecordingControlsVisible: jest.fn(() => true),
+  useRecordingControlsBlurTarget: jest.fn(),
   useSettingsStore: {
     getState: jest.fn(() => ({
       selectedModelId: "whisper-tiny",
@@ -119,6 +120,8 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     BiometricLock: () => null,
+    FadingGlassBlur: () => null,
+    RECORDING_BUTTON_SIZE: 80,
     AppErrorBoundary: ({ children }: any) => (
       <View testID={TID.AppErrorBoundary}>{children}</View>
     ),

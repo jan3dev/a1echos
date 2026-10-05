@@ -13,6 +13,7 @@ jest.mock("expo-router", () => ({
 }));
 
 jest.mock("@/theme", () => ({
+  spacing: { md: 16 },
   useTheme: jest.fn(() => ({
     theme: {
       colors: {
@@ -59,6 +60,7 @@ jest.mock("@/components", () => {
   const { Pressable, Text, View } = require("react-native");
   return {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
+    PRIMARY_BUTTON_HEIGHT: 56,
     Screen: ({ children }: any) => <View>{children}</View>,
     Icon: () => null,
     TopAppBar: ({ title, actions }: any) => (
@@ -71,16 +73,14 @@ jest.mock("@/components", () => {
       mockGrid = props;
       return null;
     },
-    Button: {
-      primary: ({ testID, enabled, onPress }: any) => (
-        <Pressable
-          testID={testID}
-          disabled={!enabled}
-          accessibilityState={{ disabled: !enabled }}
-          onPress={onPress}
-        />
-      ),
-    },
+    FloatingCTAModule: ({ primary: { testID, enabled, onPress } }: any) => (
+      <Pressable
+        testID={testID}
+        disabled={!enabled}
+        accessibilityState={{ disabled: !enabled }}
+        onPress={onPress}
+      />
+    ),
     SessionInputModal: (props: any) => {
       mockModal = props;
       return null;

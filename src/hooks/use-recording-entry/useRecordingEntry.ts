@@ -1,6 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef } from "react";
+import { RefObject, useCallback, useEffect, useRef } from "react";
+import type { View } from "react-native";
 
 import type { ToastOptions } from "@/components/ui/toast/useToast";
 import { Routes } from "@/constants";
@@ -23,6 +24,7 @@ interface UseRecordingEntryParams {
   hideAlertToast: () => void;
   folderId?: string;
   onStarted?: () => void;
+  blurTarget?: RefObject<View | null>;
 }
 
 export const useRecordingEntry = ({
@@ -30,6 +32,7 @@ export const useRecordingEntry = ({
   hideAlertToast,
   folderId,
   onStarted,
+  blurTarget,
 }: UseRecordingEntryParams) => {
   const router = useRouter();
   const { loc } = useLocalization();
@@ -110,9 +113,9 @@ export const useRecordingEntry = ({
     useCallback(() => {
       const onStart = () => handleRecordingStartRef.current?.();
       const onStop = () => handleRecordingStopRef.current?.();
-      setRecordingCallbacks(onStart, onStop);
+      setRecordingCallbacks(onStart, onStop, blurTarget);
       setRecordingControlsEnabled(true);
       // No cleanup - next screen will set its own callbacks
-    }, [setRecordingCallbacks, setRecordingControlsEnabled]),
+    }, [setRecordingCallbacks, setRecordingControlsEnabled, blurTarget]),
   );
 };
