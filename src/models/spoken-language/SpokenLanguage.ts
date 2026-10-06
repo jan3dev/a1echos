@@ -127,6 +127,13 @@ const languageData: Record<string, LanguageInfo> = {
   su: { countryCode: "indonesia", name: "Sundanese" },
 };
 
+// Locale-independent lowercasing: a Turkish locale would turn "I" into "ı".
+const searchWords = (text: string) =>
+  ` ${text
+    .toLowerCase()
+    .replace(/[()\s]+/g, " ")
+    .trim()}`;
+
 const allLanguages = Object.keys(languageData).map((code) => ({
   code,
   name: languageData[code].name,
@@ -146,6 +153,20 @@ export const SupportedLanguages = {
     if (!codes) return allLanguages;
     const codeSet = new Set(codes);
     return allLanguages.filter((lang) => codeSet.has(lang.code));
+  },
+
+  /** Case-insensitive match on the start of any word in the language name. */
+  search(languages: SpokenLanguage[], query: string): SpokenLanguage[] {
+    const needle = searchWords(query);
+    if (needle === " ") return languages;
+    return languages.filter((lang) => searchWords(lang.name).includes(needle));
+  },
+
+  /** Returns a copy with the given language moved to the front. */
+  pinFirst(languages: SpokenLanguage[], code: string): SpokenLanguage[] {
+    return [...languages].sort(
+      (a, b) => Number(b.code === code) - Number(a.code === code),
+    );
   },
 
   /** Checks whether a language code is in the given supported set. */

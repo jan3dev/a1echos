@@ -92,6 +92,49 @@ describe("SpokenLanguage", () => {
     });
   });
 
+  describe("search", () => {
+    const languages = SupportedLanguages.forCodes([
+      "en",
+      "mk",
+      "ms",
+      "ro",
+      "ht",
+      "zh",
+    ]);
+
+    it("returns the full list for a blank query", () => {
+      expect(SupportedLanguages.search(languages, "  ")).toBe(languages);
+    });
+
+    it("matches the start of any word, case-insensitively", () => {
+      const codes = (query: string) =>
+        SupportedLanguages.search(languages, query).map((l) => l.code);
+      expect(codes(" MA")).toEqual(["ms", "mk"]);
+      expect(codes("creole")).toEqual(["ht"]);
+      expect(codes("简体")).toEqual(["zh"]);
+      expect(codes("chinese (简体)")).toEqual(["zh"]);
+      expect(codes("haitian   creole")).toEqual(["ht"]);
+    });
+
+    it("returns an empty list when nothing matches", () => {
+      expect(SupportedLanguages.search(languages, "Klingon")).toEqual([]);
+    });
+  });
+
+  describe("pinFirst", () => {
+    it("moves the language to the front without mutating the input", () => {
+      const languages = [
+        { code: "en", name: "English" },
+        { code: "fr", name: "French" },
+        { code: "de", name: "German" },
+      ];
+      expect(
+        SupportedLanguages.pinFirst(languages, "fr").map((l) => l.code),
+      ).toEqual(["fr", "en", "de"]);
+      expect(languages.map((l) => l.code)).toEqual(["en", "fr", "de"]);
+    });
+  });
+
   describe("isSupported", () => {
     it("returns true when supportedCodes is undefined", () => {
       expect(SupportedLanguages.isSupported("en", undefined)).toBe(true);

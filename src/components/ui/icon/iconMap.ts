@@ -38,6 +38,7 @@ import Rectangle from "@/assets/icons/rectangle.svg";
 import Redo from "@/assets/icons/redo.svg";
 import RotateLeft from "@/assets/icons/rotate_left.svg";
 import Scissor from "@/assets/icons/scissor.svg";
+import Search from "@/assets/icons/search.svg";
 import SelectAll from "@/assets/icons/select_all.svg";
 import Setting3 from "@/assets/icons/setting_3.svg";
 import Settings from "@/assets/icons/settings.svg";
@@ -87,6 +88,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   redo: Redo,
   rotate_left: RotateLeft,
   scissor: Scissor,
+  search: Search,
   select_all: SelectAll,
   setting_3: Setting3,
   settings: Settings,

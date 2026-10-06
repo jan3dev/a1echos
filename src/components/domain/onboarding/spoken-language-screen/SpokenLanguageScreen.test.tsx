@@ -61,6 +61,34 @@ describe("SpokenLanguageScreen", () => {
     expect(props.onSelect).toHaveBeenCalledWith(languages[1]);
   });
 
+  it("lists the selected language first and keeps it there on a new pick", () => {
+    const { getAllByText, rerender, props } = renderScreen({
+      selectedCode: "pt",
+    });
+    const names = () =>
+      getAllByText(/English|Portuguese/).map((t) => t.props.children);
+    expect(names()).toEqual(["Portuguese", "English"]);
+    rerender(<SpokenLanguageScreen {...props} selectedCode="en" />);
+    expect(names()).toEqual(["Portuguese", "English"]);
+  });
+
+  it("filters by the search query and restores the list when cleared", () => {
+    const { getByLabelText, getByText, queryByText, getByTestId } =
+      renderScreen();
+    const search = getByLabelText("searchLanguage");
+
+    fireEvent.changeText(search, "port");
+    expect(queryByText("English")).toBeNull();
+    expect(getByText("Portuguese")).toBeTruthy();
+
+    fireEvent.changeText(search, "Klingon");
+    expect(getByTestId("no-languages-found")).toBeTruthy();
+
+    fireEvent.press(getByLabelText("Clear text"));
+    expect(getByText("English")).toBeTruthy();
+    expect(getByText("Portuguese")).toBeTruthy();
+  });
+
   it("wires back, skip and next", () => {
     const { getByTestId, props } = renderScreen();
     fireEvent.press(getByTestId("sl-back"));

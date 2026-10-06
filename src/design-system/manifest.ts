@@ -25,6 +25,7 @@ import ambientGlowGallery from "@/components/shared/ambient-glow/AmbientGlow.gal
 import biometricLockGallery from "@/components/shared/biometric-lock/BiometricLock.gallery";
 import errorViewGallery from "@/components/shared/error-view/ErrorView.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
+import noLanguagesFoundGallery from "@/components/shared/no-languages-found/NoLanguagesFound.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
 import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button/ScrollToEdgeButton.gallery";
 import colorsGallery from "@/design-system/colors/Colors.gallery";
@@ -99,6 +100,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   biometricLockGallery,
   errorViewGallery,
   listItemGallery,
+  noLanguagesFoundGallery,
   recordingButtonGallery,
   scrollToEdgeButtonGallery,
   keyboardLayoutsGallery,

@@ -60,6 +60,10 @@ jest.mock("@/models", () => ({
       return mockLanguages;
     },
     forCodes: jest.fn(() => mockLanguages),
+    search: jest.requireActual("@/models/spoken-language/SpokenLanguage")
+      .SupportedLanguages.search,
+    pinFirst: jest.requireActual("@/models/spoken-language/SpokenLanguage")
+      .SupportedLanguages.pinFirst,
     defaultLanguage: { code: "en", name: "English" },
   },
 }));
@@ -105,8 +109,17 @@ jest.mock("@/components", () => {
         </Text>
       </TouchableOpacity>
     ),
+    NoLanguagesFound: ({ query }: any) => (
+      <Text testID="no-languages-found">{query}</Text>
+    ),
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
+    TextField: ({ value, onChangeText }: any) => {
+      const { TextInput } = require("react-native");
+      return (
+        <TextInput testID="search" value={value} onChangeText={onChangeText} />
+      );
+    },
     TopAppBar: ({ title }: any) => (
       <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>
@@ -155,6 +168,34 @@ describe("LanguageSettingsScreen", () => {
       });
       expect(mockBack).toHaveBeenCalled();
     });
+  });
+
+  it("filters by the search query and restores the list when cleared", () => {
+    const { getByTestId, queryByTestId } = render(<LanguageSettingsScreen />);
+
+    fireEvent.changeText(getByTestId("search"), "fre");
+    expect(queryByTestId("list-item-English")).toBeNull();
+    expect(getByTestId("list-item-French")).toBeTruthy();
+
+    fireEvent.changeText(getByTestId("search"), "Klingon");
+    expect(getByTestId("no-languages-found")).toHaveTextContent("Klingon");
+
+    fireEvent.changeText(getByTestId("search"), "");
+    expect(queryByTestId("no-languages-found")).toBeNull();
+    expect(getByTestId("list-item-Spanish")).toBeTruthy();
+  });
+
+  it("lists the selected language first", () => {
+    const { useSelectedLanguage } = require("@/stores");
+    (useSelectedLanguage as jest.Mock).mockReturnValueOnce({
+      code: "fr",
+      name: "French",
+    });
+    const { getAllByTestId } = render(<LanguageSettingsScreen />);
+    expect(getAllByTestId(/^list-item-/)[0].props.testID).toBe(
+      "list-item-French",
+    );
+    expect(mockLanguages[0].code).toBe("en");
   });
 
   it("renders FlagIcon for each language", () => {

@@ -33,6 +33,10 @@ export const Brand = () => (
   />
 );
 
+export const Outlined = () => (
+  <TextFieldWithState label="Search" variant="outlined" showClearIcon />
+);
+
 export const ErrorState = () => (
   <TextFieldWithState
     label="Label"
@@ -143,6 +147,7 @@ const gallery: GalleryEntry = {
   demos: [
     { name: "Default", render: Default },
     { name: "Brand", render: Brand },
+    { name: "Outlined", render: Outlined },
     { name: "Error", render: ErrorState },
     { name: "Disabled", render: Disabled },
     { name: "AllVariants", render: AllVariants },

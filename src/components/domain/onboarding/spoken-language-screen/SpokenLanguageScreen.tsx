@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Keyboard, ScrollView, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
   useSafeAreaFrame,
@@ -6,15 +7,17 @@ import {
 } from "react-native-safe-area-context";
 
 import { dynamicTestID } from "@/constants";
-import { useLocalization } from "@/hooks";
-import { getCountryCode, SpokenLanguage } from "@/models";
+import { useKeyboardHeight, useLocalization } from "@/hooks";
+import { getCountryCode, SpokenLanguage, SupportedLanguages } from "@/models";
 import { darkColors, spacing } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
 import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Radio } from "../../../ui/radio/Radio";
 import { Text } from "../../../ui/text/Text";
+import { TextField } from "../../../ui/textfield/TextField";
 import { ListItem } from "../../../shared/list-item/ListItem";
+import { NoLanguagesFound } from "../../../shared/no-languages-found/NoLanguagesFound";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
 const SPOKEN_LANGUAGE_STEP = 3;
@@ -42,9 +45,17 @@ export const SpokenLanguageScreen = ({
   testID,
 }: SpokenLanguageScreenProps) => {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const frame = useSafeAreaFrame();
   const landscape = frame.width > frame.height;
   const { loc } = useLocalization();
+  const [query, setQuery] = useState("");
+  // Pinned at mount so the list doesn't reorder on each pick.
+  const [pinnedCode] = useState(selectedCode);
+  const results = SupportedLanguages.pinFirst(
+    SupportedLanguages.search(languages, query),
+    pinnedCode,
+  );
   const childTestID = (suffix: string) =>
     testID ? `${testID}-${suffix}` : undefined;
 
@@ -63,7 +74,7 @@ export const SpokenLanguageScreen = ({
           styles.content,
           {
             paddingTop: landscape ? spacing.sm : spacing.xl,
-            paddingBottom: insets.bottom + spacing.md,
+            paddingBottom: Math.max(keyboardHeight, insets.bottom) + spacing.md,
             paddingLeft: insets.left + spacing.md,
             paddingRight: insets.right + spacing.md,
           },
@@ -79,13 +90,31 @@ export const SpokenLanguageScreen = ({
           {loc.onboardingSpokenLanguageTitle}
         </Text>
 
+        <TextField
+          label={loc.searchLanguage}
+          value={query}
+          onChangeText={setQuery}
+          variant="outlined"
+          showClearIcon
+          debounceTime={0}
+          colors={darkColors}
+        />
+
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          {languages.map((language) => {
-            const select = () => onSelect(language);
+          {results.length === 0 && (
+            <NoLanguagesFound query={query} colors={darkColors} />
+          )}
+          {results.map((language) => {
+            const select = () => {
+              Keyboard.dismiss();
+              onSelect(language);
+            };
             return (
               <ListItem
                 key={language.code}

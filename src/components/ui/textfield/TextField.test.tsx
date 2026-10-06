@@ -3,7 +3,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { StyleSheet } from "react-native";
 
-import { lightColors } from "@/theme";
+import { darkColors, lightColors } from "@/theme";
 
 import { TextField } from "./TextField";
 
@@ -197,6 +197,47 @@ describe("TextField", () => {
     });
     const json = JSON.stringify(toJSON());
     expect(json).toContain(`"borderColor":"${lightColors.accentBrand}"`);
+  });
+
+  it("outlined variant swaps its border to accentBrand on focus", () => {
+    const { getByDisplayValue, toJSON } = render(
+      <TextField label="Search" value="" variant="outlined" />,
+    );
+    expect(JSON.stringify(toJSON())).toContain(
+      `"borderColor":"${lightColors.surfaceBorderPrimary}"`,
+    );
+    fireEvent(getByDisplayValue(""), "focus");
+    expect(JSON.stringify(toJSON())).toContain(
+      `"borderColor":"${lightColors.accentBrand}"`,
+    );
+    fireEvent(getByDisplayValue(""), "blur");
+    expect(JSON.stringify(toJSON())).toContain(
+      `"borderColor":"${lightColors.surfaceBorderPrimary}"`,
+    );
+  });
+
+  it("calls onChangeText synchronously when debounceTime is 0", () => {
+    const onChangeText = jest.fn();
+    const { getByDisplayValue } = render(
+      <TextField value="" onChangeText={onChangeText} debounceTime={0} />,
+    );
+    fireEvent.changeText(getByDisplayValue(""), "fr");
+    expect(onChangeText).toHaveBeenCalledWith("fr");
+  });
+
+  it("colors override wins over the app theme", () => {
+    const { toJSON } = render(
+      <TextField
+        label="Search"
+        value=""
+        variant="outlined"
+        colors={darkColors}
+      />,
+    );
+    expect(JSON.stringify(toJSON())).toContain(
+      `"borderColor":"${darkColors.surfaceBorderPrimary}"`,
+    );
+    expect(JSON.stringify(toJSON())).toContain(`"keyboardAppearance":"dark"`);
   });
 
   it("error border takes priority over brand variant", () => {

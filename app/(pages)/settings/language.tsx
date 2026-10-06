@@ -7,9 +7,11 @@ import {
   AppBarBlurTarget,
   FlagIcon,
   ListItem,
+  NoLanguagesFound,
   Radio,
   Screen,
   Text,
+  TextField,
   TopAppBar,
 } from "@/components";
 import { AppConstants, dynamicTestID } from "@/constants";
@@ -49,6 +51,9 @@ export default function LanguageSettingsScreen() {
     null,
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  // Pinned at mount so the list doesn't reorder while a new pick saves.
+  const [pinnedCode] = useState(selectedLanguage.code);
   const effectiveLanguageCode = pendingLanguageCode ?? selectedLanguage.code;
 
   const handleSelect = async (language: SpokenLanguage) => {
@@ -85,8 +90,12 @@ export default function LanguageSettingsScreen() {
   };
 
   const modelInfo = getModelInfo(selectedModelId);
-  const languages = SupportedLanguages.forCodes(
-    modelInfo.supportedLanguageCodes,
+  const languages = SupportedLanguages.pinFirst(
+    SupportedLanguages.search(
+      SupportedLanguages.forCodes(modelInfo.supportedLanguageCodes),
+      query,
+    ),
+    pinnedCode,
   );
 
   return (
@@ -106,6 +115,9 @@ export default function LanguageSettingsScreen() {
           showsVerticalScrollIndicator={false}
           onScroll={onScroll}
           scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
         >
           <Text
             variant="body1"
@@ -114,30 +126,42 @@ export default function LanguageSettingsScreen() {
           >
             {loc.spokenLanguageDescription}
           </Text>
-          <View style={styles.list}>
-            {languages.map((language) => (
-              <ListItem
-                key={language.code}
-                testID={dynamicTestID.language(language.code)}
-                title={language.name}
-                iconLeading={
-                  <FlagIcon name={getCountryCode(language)} size={24} />
-                }
-                iconTrailing={
-                  <Radio<string>
-                    value={language.code}
-                    size="small"
-                    groupValue={effectiveLanguageCode}
-                    onValueChange={
-                      isSaving ? undefined : () => handleSelect(language)
-                    }
-                    enabled={!isSaving}
-                  />
-                }
-                onPress={isSaving ? undefined : () => handleSelect(language)}
-              />
-            ))}
-          </View>
+          <TextField
+            label={loc.searchLanguage}
+            value={query}
+            onChangeText={setQuery}
+            variant="outlined"
+            showClearIcon
+            debounceTime={0}
+          />
+          {languages.length === 0 ? (
+            <NoLanguagesFound query={query} />
+          ) : (
+            <View style={styles.list}>
+              {languages.map((language) => (
+                <ListItem
+                  key={language.code}
+                  testID={dynamicTestID.language(language.code)}
+                  title={language.name}
+                  iconLeading={
+                    <FlagIcon name={getCountryCode(language)} size={24} />
+                  }
+                  iconTrailing={
+                    <Radio<string>
+                      value={language.code}
+                      size="small"
+                      groupValue={effectiveLanguageCode}
+                      onValueChange={
+                        isSaving ? undefined : () => handleSelect(language)
+                      }
+                      enabled={!isSaving}
+                    />
+                  }
+                  onPress={isSaving ? undefined : () => handleSelect(language)}
+                />
+              ))}
+            </View>
+          )}
         </ScrollView>
       </AppBarBlurTarget>
 

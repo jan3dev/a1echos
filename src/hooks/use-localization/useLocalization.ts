@@ -99,6 +99,10 @@ export const useLocalization = () => {
       boldText: t("boldText"),
       spokenLanguageTitle: t("spokenLanguageTitle"),
       spokenLanguageDescription: t("spokenLanguageDescription"),
+      searchLanguage: t("searchLanguage"),
+      noLanguagesFoundTitle: t("noLanguagesFoundTitle"),
+      noLanguagesFoundDescription: (query: string) =>
+        t("noLanguagesFoundDescription", { query }),
       auto: t("auto"),
       light: t("light"),
       dark: t("dark"),

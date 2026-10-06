@@ -10,12 +10,18 @@ import {
   View,
 } from "react-native";
 
-import { AquaTypography, getShadow, useTheme } from "@/theme";
+import {
+  AquaColors,
+  AquaTypography,
+  darkColors,
+  getShadow,
+  useTheme,
+} from "@/theme";
 import { FeatureFlag, logError } from "@/utils";
 
 import { Icon } from "../icon/Icon";
 
-export type TextFieldVariant = "default" | "brand";
+export type TextFieldVariant = "default" | "brand" | "outlined";
 
 interface TextFieldProps {
   label?: string;
@@ -35,6 +41,8 @@ interface TextFieldProps {
   forceFocus?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /** Pins colors on screens that ignore the app theme. */
+  colors?: AquaColors;
 }
 
 const LABEL_ANIMATION_DURATION = 200;
@@ -73,9 +81,10 @@ export const TextField = ({
   forceFocus = false,
   accessibilityLabel,
   accessibilityHint,
+  colors: colorsOverride,
 }: TextFieldProps) => {
   const { theme } = useTheme();
-  const colors = theme.colors;
+  const colors = colorsOverride ?? theme.colors;
 
   const [internalFocus, setInternalFocus] = useState(false);
   const isFocused = forceFocus || internalFocus;
@@ -124,6 +133,11 @@ export const TextField = ({
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+    }
+
+    if (debounceTime <= 0) {
+      onChangeText?.(newText);
+      return;
     }
 
     debounceTimerRef.current = setTimeout(() => {
@@ -188,13 +202,18 @@ export const TextField = ({
     return TRAILING_ICON_RIGHT + iconsWidth + ICON_SPACING;
   };
 
+  const idleBorderColor = {
+    default: "transparent",
+    brand: colors.accentBrand,
+    outlined: colors.surfaceBorderPrimary,
+  }[variant];
   const borderColor = !enabled
     ? "transparent"
     : error
       ? colors.accentDanger
-      : variant === "brand"
+      : variant === "outlined" && isFocused
         ? colors.accentBrand
-        : "transparent";
+        : idleBorderColor;
 
   const labelColor = enabled ? colors.textSecondary : colors.textTertiary;
 
@@ -275,6 +294,7 @@ export const TextField = ({
                 underlineColorAndroid="transparent"
                 textAlignVertical="top"
                 disableFullscreenUI
+                keyboardAppearance={colors === darkColors ? "dark" : "light"}
               />
             </View>
 
