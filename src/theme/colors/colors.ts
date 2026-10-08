@@ -8,6 +8,7 @@ export const AquaPrimitiveColors = {
   metal300: "#C8C8CE",
   metal400: "#ABABB2",
   metal500: "#8A8A92",
+  metal510: "#84858D",
   metal750: "#2C3136",
   metal850: "#1E2226",
   metal900: "#15181B",

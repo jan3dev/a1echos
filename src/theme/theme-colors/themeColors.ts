@@ -48,7 +48,7 @@ export interface AquaColors {
 export const lightColors: AquaColors = {
   textPrimary: AquaPrimitiveColors.metal950,
   textSecondary: AquaPrimitiveColors.metal750,
-  textTertiary: AquaPrimitiveColors.metal500,
+  textTertiary: AquaPrimitiveColors.metal510,
   textInverse: AquaPrimitiveColors.white,
 
   surfacePrimary: AquaPrimitiveColors.white,

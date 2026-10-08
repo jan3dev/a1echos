@@ -4,8 +4,8 @@ describe("AquaPrimitiveColors", () => {
   const keys = Object.keys(AquaPrimitiveColors);
   const values = Object.values(AquaPrimitiveColors);
 
-  it("exports an object with 47 keys", () => {
-    expect(keys).toHaveLength(47);
+  it("exports an object with 48 keys", () => {
+    expect(keys).toHaveLength(48);
   });
 
   it("contains all expected key groups", () => {
@@ -18,6 +18,7 @@ describe("AquaPrimitiveColors", () => {
       "metal300",
       "metal400",
       "metal500",
+      "metal510",
       "metal750",
       "metal850",
       "metal900",
