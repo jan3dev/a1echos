@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppBarBlurTarget,
   authenticateBiometric,
+  Divider,
   Icon,
   InAppBanner,
   ListItem,
@@ -67,6 +68,10 @@ export default function SettingsScreen() {
   };
 
   const secondary = theme.colors.textSecondary;
+  const groupColors = {
+    backgroundColor: theme.colors.surfacePrimary,
+    borderColor: theme.colors.surfaceBorderPrimary,
+  };
   const chevron = <Icon name="chevron_right" size={18} color={secondary} />;
 
   return (
@@ -79,7 +84,7 @@ export default function SettingsScreen() {
             styles.scrollContent,
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-              paddingBottom: insets.bottom,
+              paddingBottom: insets.bottom + 48,
               flexGrow: 1,
               backgroundColor: theme.colors.surfaceBackground,
             },
@@ -93,50 +98,70 @@ export default function SettingsScreen() {
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionTranscription}
               </Text>
-              <ListItem
-                testID={TestID.SettingsModel}
-                title={loc.title}
-                titleTrailing={modelDisplay}
-                titleTrailingColor={secondary}
-                iconLeading={<Icon name="sound" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsModel)}
-              />
-              <ListItem
-                testID={TestID.SettingsAdvanced}
-                title={loc.advancedSettingsTitle}
-                iconLeading={
-                  <Icon name="setting_3" size={24} color={secondary} />
-                }
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsAdvanced)}
-              />
+              <View style={[styles.group, groupColors]}>
+                <ListItem
+                  bordered={false}
+                  borderRadius={0}
+                  testID={TestID.SettingsModel}
+                  title={loc.title}
+                  titleTrailing={modelDisplay}
+                  titleTrailingColor={secondary}
+                  iconLeading={
+                    <Icon name="sound" size={24} color={secondary} />
+                  }
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsModel)}
+                />
+                <Divider />
+                <ListItem
+                  bordered={false}
+                  borderRadius={0}
+                  testID={TestID.SettingsAdvanced}
+                  title={loc.advancedSettingsTitle}
+                  iconLeading={
+                    <Icon name="setting_3" size={24} color={secondary} />
+                  }
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsAdvanced)}
+                />
+              </View>
             </View>
 
             <View style={styles.section}>
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionAppearance}
               </Text>
-              <ListItem
-                testID={TestID.SettingsTheme}
-                title={loc.themeTitle}
-                titleTrailing={themeDisplay}
-                titleTrailingColor={secondary}
-                iconLeading={<Icon name="theme" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsTheme)}
-              />
-              <ListItem
-                testID={TestID.SettingsTextAppearance}
-                title={loc.textAppearanceTitle}
-                iconLeading={<Icon name="text" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsTextAppearance)}
-              />
+              <View style={[styles.group, groupColors]}>
+                <ListItem
+                  bordered={false}
+                  borderRadius={0}
+                  testID={TestID.SettingsTheme}
+                  title={loc.themeTitle}
+                  titleTrailing={themeDisplay}
+                  titleTrailingColor={secondary}
+                  iconLeading={
+                    <Icon name="theme" size={24} color={secondary} />
+                  }
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsTheme)}
+                />
+                <Divider />
+                <ListItem
+                  bordered={false}
+                  borderRadius={0}
+                  testID={TestID.SettingsTextAppearance}
+                  title={loc.textAppearanceTitle}
+                  iconLeading={<Icon name="text" size={24} color={secondary} />}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsTextAppearance)}
+                />
+              </View>
             </View>
 
-            <View style={styles.section}>
+            <View style={[styles.group, groupColors]}>
               <ListItem
+                bordered={false}
+                borderRadius={0}
                 testID={TestID.SettingsBiometricAuthToggle}
                 title={loc.biometricAuthTitle}
                 iconLeading={
@@ -155,7 +180,10 @@ export default function SettingsScreen() {
                 }
                 onPress={() => handleBiometricToggle(!biometricAuthEnabled)}
               />
+              <Divider />
               <ListItem
+                bordered={false}
+                borderRadius={0}
                 testID={TestID.SettingsContactSupport}
                 title={loc.contactSupport}
                 iconLeading={
@@ -198,9 +226,14 @@ const styles = StyleSheet.create({
   section: {
     gap: 16,
   },
+  group: {
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
   bannerContainer: {
     paddingTop: 48,
-    paddingBottom: 24,
+    paddingBottom: 48,
   },
   spacer: {
     flexGrow: 1,

@@ -22,6 +22,7 @@ export interface ListItemProps {
   iconTrailing?: ReactNode;
   selected?: boolean;
   bordered?: boolean;
+  borderRadius?: number;
   onPress?: () => void;
   onLongPress?: () => void;
   titleMaxLines?: number;
@@ -47,6 +48,7 @@ export const ListItem = ({
   iconTrailing,
   selected,
   bordered = true,
+  borderRadius = 16,
   onPress,
   onLongPress,
   titleMaxLines = 2,
@@ -68,7 +70,7 @@ export const ListItem = ({
         ? colors.surfaceBorderSelected
         : colors.surfaceBorderPrimary,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius,
     paddingHorizontal: 12,
     paddingVertical: 15,
     flexDirection: "row",
@@ -88,7 +90,7 @@ export const ListItem = ({
         accessibilityState={{ selected: !!selected, disabled: !onPress }}
         style={({ pressed }) => ({
           opacity: !selected ? iosPressed(pressed) : 1,
-          borderRadius: 16,
+          borderRadius,
           overflow: "hidden",
         })}
       >

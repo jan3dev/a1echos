@@ -53,9 +53,16 @@ export const SettingsFooter = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Footer Logo */}
-      <View style={styles.logoContainer}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surfacePrimary,
+          borderColor: theme.colors.surfaceBorderPrimary,
+        },
+      ]}
+    >
+      <View style={styles.logoRow}>
         <Icon
           name="footer_logo"
           size={108}
@@ -64,51 +71,38 @@ export const SettingsFooter = () => {
         />
       </View>
 
-      {/* First Divider */}
-      <View style={styles.dividerContainer}>
-        <Divider color={theme.colors.surfaceBorderSecondary} />
-      </View>
+      <Divider color={theme.colors.surfaceBorderSecondary} />
 
-      {/* Follow Us Text */}
-      <Text
-        variant="body2"
-        weight="medium"
-        color={theme.colors.textTertiary}
-        align="center"
-      >
-        {loc.followUsOnX}
-      </Text>
-
-      {/* Social Links */}
-      <View style={styles.socialContainer}>
-        {SOCIAL_TAGS.map((tagData) => (
-          <Pressable
-            key={tagData.handle}
-            onPress={() => handleLaunchX(tagData.handle)}
-            style={({ pressed }) => [
-              styles.socialLink,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
-            accessibilityLabel={`Open ${tagData.tag} on X`}
-            accessibilityRole="link"
-          >
-            <Text
-              variant="body2"
-              weight="medium"
-              color={theme.colors.textPrimary}
+      <View style={styles.followUs}>
+        <Text variant="body2" weight="medium" color={theme.colors.textTertiary}>
+          {loc.followUsOnX}
+        </Text>
+        <View style={styles.socialContainer}>
+          {SOCIAL_TAGS.map((tagData) => (
+            <Pressable
+              key={tagData.handle}
+              onPress={() => handleLaunchX(tagData.handle)}
+              style={({ pressed }) => [
+                styles.socialLink,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+              accessibilityLabel={`Open ${tagData.tag} on X`}
+              accessibilityRole="link"
             >
-              {tagData.tag}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                variant="body2"
+                weight="medium"
+                color={theme.colors.textPrimary}
+              >
+                {tagData.tag}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
-      {/* Second Divider */}
-      <View style={styles.dividerContainer}>
-        <Divider color={theme.colors.surfaceBorderSecondary} />
-      </View>
+      <Divider color={theme.colors.surfaceBorderSecondary} />
 
-      {/* App Version */}
       <Text
         variant="caption1"
         weight="regular"
@@ -123,24 +117,23 @@ export const SettingsFooter = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 24,
+    padding: 16,
+    gap: 8,
     alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 16,
   },
-  logoContainer: {
+  logoRow: {
+    paddingBottom: 8,
+  },
+  followUs: {
+    paddingVertical: 8,
+    gap: 16,
     alignItems: "center",
-    marginBottom: 16,
-  },
-  dividerContainer: {
-    width: "100%",
-    marginBottom: 16,
   },
   socialContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 16,
   },
   socialLink: {
     paddingHorizontal: 12,
