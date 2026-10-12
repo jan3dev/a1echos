@@ -4,8 +4,8 @@ import { StyleSheet } from "react-native";
 import { AquaPrimitiveColors, darkColors, spacing } from "@/theme";
 import { iosPressed } from "@/utils";
 
-import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
-import { Text } from "../../../ui/text/Text";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
+import { Text } from "../text/Text";
 
 export interface GlowCtaButtonProps {
   text: string;
@@ -14,9 +14,9 @@ export interface GlowCtaButtonProps {
 }
 
 /**
- * Dark-fixed onboarding CTA: the pill fill is the background color so it reads
- * as floating, glowing white text on the dark backdrop (per the design), with
- * no elevation shadow.
+ * Dark-fixed CTA for onboarding and the lock screen: the pill fill is the
+ * background color so it reads as floating, glowing white text on the dark
+ * backdrop (per the design), with no elevation shadow.
  */
 export const GlowCtaButton = ({
   text,

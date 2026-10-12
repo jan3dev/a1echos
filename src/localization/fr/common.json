@@ -214,5 +214,6 @@
   "settingsSectionAppearance": "Apparence",
   "biometricAuthTitle": "Authentification biométrique",
   "biometricAuthPrompt": "Déverrouiller Echos",
-  "biometricAuthUnavailable": "Configurez d’abord Face ID, une empreinte digitale ou un code d’accès."
+  "biometricAuthUnavailable": "Configurez d’abord Face ID, une empreinte digitale ou un code d’accès.",
+  "biometricUnlock": "Déverrouiller"
 }

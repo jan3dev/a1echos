@@ -3,7 +3,6 @@ export * from "./allow-microphone-screen";
 export * from "./autocorrect-screen";
 export * from "./dictate-screen";
 export * from "./enable-keyboard-screen";
-export * from "./glow-cta-button";
 export * from "./header";
 export * from "./privacy-screen";
 export * from "./record-screen";

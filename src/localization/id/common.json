@@ -198,5 +198,6 @@
   "settingsSectionAppearance": "Tampilan",
   "biometricAuthTitle": "Autentikasi Biometrik",
   "biometricAuthPrompt": "Buka Kunci Echos",
-  "biometricAuthUnavailable": "Siapkan Face ID, sidik jari, atau kode sandi perangkat terlebih dahulu."
+  "biometricAuthUnavailable": "Siapkan Face ID, sidik jari, atau kode sandi perangkat terlebih dahulu.",
+  "biometricUnlock": "Buka Kunci"
 }

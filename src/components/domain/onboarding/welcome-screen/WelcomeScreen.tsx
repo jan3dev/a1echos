@@ -11,7 +11,7 @@ import { darkColors, spacing } from "@/theme";
 import { AmbientGlow } from "../../../shared/ambient-glow/AmbientGlow";
 import { Icon } from "../../../ui/icon/Icon";
 import { Text } from "../../../ui/text/Text";
-import { GlowCtaButton } from "../glow-cta-button/GlowCtaButton";
+import { GlowCtaButton } from "../../../ui/glow-cta-button/GlowCtaButton";
 
 export interface WelcomeScreenProps {
   onGetStarted: () => void;

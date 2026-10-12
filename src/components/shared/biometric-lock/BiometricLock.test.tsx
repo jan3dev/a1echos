@@ -1,7 +1,7 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import React from "react";
-import { AppState } from "react-native";
+import { Animated, AppState } from "react-native";
 
 import { TestID } from "@/constants";
 import { useSettingsStore } from "@/stores";
@@ -15,6 +15,15 @@ let appStateListener: ((state: string) => void) | undefined;
 beforeEach(() => {
   jest.clearAllMocks();
   appStateListener = undefined;
+  jest.spyOn(Animated, "timing").mockImplementation(
+    (value, config) =>
+      ({
+        start: (cb?: Animated.EndCallback) => {
+          (value as Animated.Value).setValue(config.toValue as number);
+          cb?.({ finished: true });
+        },
+      }) as never,
+  );
   jest.spyOn(AppState, "addEventListener").mockImplementation(((
     _: string,
     cb: (state: string) => void,
@@ -48,7 +57,19 @@ describe("BiometricLock", () => {
     expect(authenticate).toHaveBeenCalledTimes(1);
   });
 
-  it("stays locked on cancel and retries on tap", async () => {
+  it("hides the unlock button until auth fails", async () => {
+    setEnabled(true);
+    let resolveAuth: (value: { success: boolean }) => void = () => {};
+    authenticate.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveAuth = resolve)),
+    );
+    const { getByTestId, queryByTestId } = render(<BiometricLock />);
+    expect(queryByTestId(TestID.BiometricUnlockButton)).toBeNull();
+    await act(async () => resolveAuth({ success: false }));
+    expect(getByTestId(TestID.BiometricUnlockButton)).toBeTruthy();
+  });
+
+  it("stays locked on cancel and retries on tapping unlock", async () => {
     setEnabled(true);
     authenticate.mockResolvedValueOnce({
       success: false,
@@ -58,11 +79,30 @@ describe("BiometricLock", () => {
     await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
     expect(getByTestId(TestID.BiometricLockScreen)).toBeTruthy();
 
-    fireEvent.press(getByTestId(TestID.BiometricLockScreen));
+    fireEvent.press(getByTestId(TestID.BiometricUnlockButton));
     await waitFor(() =>
       expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
     );
     expect(authenticate).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores a second unlock tap during the fade-out", async () => {
+    setEnabled(true);
+    authenticate.mockResolvedValueOnce({
+      success: false,
+      error: "user_cancel",
+    });
+    const { getByTestId, queryByTestId } = render(<BiometricLock />);
+    await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1));
+    jest
+      .spyOn(Animated, "timing")
+      .mockImplementation(() => ({ start: jest.fn() }) as never);
+
+    const button = getByTestId(TestID.BiometricUnlockButton);
+    await act(async () => fireEvent.press(button));
+    await act(async () => fireEvent.press(button));
+    expect(authenticate).toHaveBeenCalledTimes(2);
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeTruthy();
   });
 
   it("re-locks after backgrounding, but not on inactive", async () => {
@@ -84,9 +124,11 @@ describe("BiometricLock", () => {
     });
     act(() => appStateListener?.("background"));
     expect(queryByTestId(TestID.BiometricLockScreen)).toBeTruthy();
+    expect(queryByTestId(TestID.BiometricUnlockButton)).toBeNull();
     await act(async () => appStateListener?.("active"));
     expect(authenticate).toHaveBeenCalledTimes(2);
     expect(queryByTestId(TestID.BiometricLockScreen)).toBeTruthy();
+    expect(queryByTestId(TestID.BiometricUnlockButton)).toBeTruthy();
   });
 
   it("logs and stays locked when authentication throws", async () => {
@@ -120,7 +162,9 @@ describe("BiometricLock", () => {
     await act(async () => resolveAuth({ success: true }));
     act(() => appStateListener?.("active"));
 
-    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
+    await waitFor(() =>
+      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
+    );
     expect(authenticate).toHaveBeenCalledTimes(1);
   });
 
@@ -135,6 +179,8 @@ describe("BiometricLock", () => {
 
     await act(async () => appStateListener?.("active"));
     expect(authenticate).toHaveBeenCalledTimes(1);
-    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
+    await waitFor(() =>
+      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
+    );
   });
 });

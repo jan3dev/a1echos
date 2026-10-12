@@ -12,6 +12,7 @@ import { type AquaColors, useTheme } from "@/theme";
 import { ModelCard } from "./ModelCard";
 
 jest.mock("@/theme", () => ({
+  ...jest.requireActual("@/theme"),
   useTheme: jest.fn(() => ({
     theme: {
       colors: {

@@ -16,7 +16,7 @@ import { darkColors, spacing } from "@/theme";
 
 import { AmbientGlow } from "../../../shared/ambient-glow/AmbientGlow";
 import { Text } from "../../../ui/text/Text";
-import { GlowCtaButton } from "../glow-cta-button/GlowCtaButton";
+import { GlowCtaButton } from "../../../ui/glow-cta-button/GlowCtaButton";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
 const CHECK_ANIMATION = Skia.Skottie.Make(

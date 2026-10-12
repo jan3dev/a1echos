@@ -237,5 +237,6 @@
   "settingsSectionAppearance": "المظهر",
   "biometricAuthTitle": "المصادقة البيومترية",
   "biometricAuthPrompt": "فتح Echos",
-  "biometricAuthUnavailable": "أعدّ Face ID أو بصمة الإصبع أو رمز مرور الجهاز أولًا."
+  "biometricAuthUnavailable": "أعدّ Face ID أو بصمة الإصبع أو رمز مرور الجهاز أولًا.",
+  "biometricUnlock": "فتح القفل"
 }

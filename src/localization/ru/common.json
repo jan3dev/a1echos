@@ -222,5 +222,6 @@
   "settingsSectionAppearance": "Оформление",
   "biometricAuthTitle": "Биометрическая аутентификация",
   "biometricAuthPrompt": "Разблокировать Echos",
-  "biometricAuthUnavailable": "Сначала настройте Face ID, отпечаток пальца или код-пароль устройства."
+  "biometricAuthUnavailable": "Сначала настройте Face ID, отпечаток пальца или код-пароль устройства.",
+  "biometricUnlock": "Разблокировать"
 }

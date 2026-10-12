@@ -224,6 +224,7 @@ export const useLocalization = () => {
       biometricAuthTitle: t("biometricAuthTitle"),
       biometricAuthPrompt: t("biometricAuthPrompt"),
       biometricAuthUnavailable: t("biometricAuthUnavailable"),
+      biometricUnlock: t("biometricUnlock"),
     }),
     [t],
   );

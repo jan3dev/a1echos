@@ -198,5 +198,6 @@
   "settingsSectionAppearance": "外观",
   "biometricAuthTitle": "生物识别验证",
   "biometricAuthPrompt": "解锁 Echos",
-  "biometricAuthUnavailable": "请先设置面容 ID、指纹或设备密码。"
+  "biometricAuthUnavailable": "请先设置面容 ID、指纹或设备密码。",
+  "biometricUnlock": "解锁"
 }

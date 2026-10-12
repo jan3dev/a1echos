@@ -86,6 +86,7 @@ export enum TestID {
   SettingsContactSupport = "settings-contact-support",
   SettingsBiometricAuthToggle = "settings-biometric-auth-toggle",
   BiometricLockScreen = "biometric-lock-screen",
+  BiometricUnlockButton = "biometric-unlock-button",
   SettingsFooter = "settings-footer",
   SettingsSmartSplitToggle = "settings-smart-split-toggle",
   SettingsKeyboardAutocorrectToggle = "settings-keyboard-autocorrect-toggle",

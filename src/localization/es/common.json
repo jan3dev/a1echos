@@ -214,5 +214,6 @@
   "settingsSectionAppearance": "Apariencia",
   "biometricAuthTitle": "Autenticación biométrica",
   "biometricAuthPrompt": "Desbloquear Echos",
-  "biometricAuthUnavailable": "Primero configura Face ID, la huella dactilar o un código del dispositivo."
+  "biometricAuthUnavailable": "Primero configura Face ID, la huella dactilar o un código del dispositivo.",
+  "biometricUnlock": "Desbloquear"
 }

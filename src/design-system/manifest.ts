@@ -10,6 +10,7 @@ import dividerGallery from "@/components/ui/divider/Divider.gallery";
 import downloadProgressBarGallery from "@/components/ui/download-progress-bar/DownloadProgressBar.gallery";
 import flagIconGallery from "@/components/ui/icon/FlagIcon.gallery";
 import glassIconButtonGallery from "@/components/ui/glass-icon-button/GlassIconButton.gallery";
+import glowCtaButtonGallery from "@/components/ui/glow-cta-button/GlowCtaButton.gallery";
 import iconGallery from "@/components/ui/icon/Icon.gallery";
 import modalGallery from "@/components/ui/modal/Modal.gallery";
 import progressGallery from "@/components/ui/progress/ProgressIndicator.gallery";
@@ -37,7 +38,6 @@ import allowMicrophoneScreenGallery from "@/components/domain/onboarding/allow-m
 import autocorrectScreenGallery from "@/components/domain/onboarding/autocorrect-screen/AutocorrectScreen.gallery";
 import enableKeyboardScreenGallery from "@/components/domain/onboarding/enable-keyboard-screen/EnableKeyboardScreen.gallery";
 import dictateScreenGallery from "@/components/domain/onboarding/dictate-screen/DictateScreen.gallery";
-import glowCtaButtonGallery from "@/components/domain/onboarding/glow-cta-button/GlowCtaButton.gallery";
 import privacyScreenGallery from "@/components/domain/onboarding/privacy-screen/PrivacyScreen.gallery";
 import recordScreenGallery from "@/components/domain/onboarding/record-screen/RecordScreen.gallery";
 import spokenLanguageScreenGallery from "@/components/domain/onboarding/spoken-language-screen/SpokenLanguageScreen.gallery";
@@ -84,6 +84,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   dividerGallery,
   flagIconGallery,
   glassIconButtonGallery,
+  glowCtaButtonGallery,
   iconGallery,
   modalGallery,
   downloadProgressBarGallery,
@@ -114,7 +115,6 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   recordScreenGallery,
   privacyScreenGallery,
   allSetScreenGallery,
-  glowCtaButtonGallery,
   onboardingStepIndicatorGallery,
   spokenLanguageScreenGallery,
   switchKeyboardScreenGallery,

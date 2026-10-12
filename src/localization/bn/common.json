@@ -206,5 +206,6 @@
   "settingsSectionAppearance": "চেহারা ও বিন্যাস",
   "biometricAuthTitle": "বায়োমেট্রিক প্রমাণীকরণ",
   "biometricAuthPrompt": "Echos আনলক করুন",
-  "biometricAuthUnavailable": "আগে Face ID, ফিঙ্গারপ্রিন্ট বা ডিভাইসের পাসকোড সেট আপ করুন।"
+  "biometricAuthUnavailable": "আগে Face ID, ফিঙ্গারপ্রিন্ট বা ডিভাইসের পাসকোড সেট আপ করুন।",
+  "biometricUnlock": "আনলক করুন"
 }

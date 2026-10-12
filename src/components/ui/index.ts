@@ -8,6 +8,7 @@ export * from "./divider";
 export * from "./download-progress-bar";
 export * from "./glass-blur-background";
 export * from "./glass-icon-button";
+export * from "./glow-cta-button";
 export * from "./icon";
 export * from "./modal";
 export * from "./progress";

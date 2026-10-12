@@ -600,8 +600,11 @@ jest.mock("@supersami/rn-foreground-service", () => ({
 jest.mock("@shopify/react-native-skia", () => ({
   Canvas: "Canvas",
   Path: "SkiaPath",
+  Blur: "SkiaBlur",
   BlurMask: "SkiaBlurMask",
   Circle: "SkiaCircle",
+  FractalNoise: "SkiaFractalNoise",
+  ColorMatrix: "SkiaColorMatrix",
   Group: "SkiaGroup",
   Mask: "SkiaMask",
   Rect: "SkiaRect",

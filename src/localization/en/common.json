@@ -206,5 +206,6 @@
   "settingsSectionAppearance": "Appearance",
   "biometricAuthTitle": "Biometric Authentication",
   "biometricAuthPrompt": "Unlock Echos",
-  "biometricAuthUnavailable": "Set up Face ID, fingerprint or a device passcode first."
+  "biometricAuthUnavailable": "Set up Face ID, fingerprint or a device passcode first.",
+  "biometricUnlock": "Unlock"
 }

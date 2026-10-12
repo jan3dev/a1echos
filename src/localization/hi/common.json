@@ -206,5 +206,6 @@
   "settingsSectionAppearance": "रूप-रंग",
   "biometricAuthTitle": "बायोमेट्रिक प्रमाणीकरण",
   "biometricAuthPrompt": "Echos अनलॉक करें",
-  "biometricAuthUnavailable": "पहले Face ID, फ़िंगरप्रिंट या डिवाइस पासकोड सेट करें।"
+  "biometricAuthUnavailable": "पहले Face ID, फ़िंगरप्रिंट या डिवाइस पासकोड सेट करें।",
+  "biometricUnlock": "अनलॉक करें"
 }

@@ -18,7 +18,7 @@ const Default = () => (
 const gallery: GalleryEntry = {
   slug: "glow-cta-button",
   title: "Glow CTA Button",
-  group: "Domain",
+  group: "UI",
   demos: [{ name: "Default", render: Default }],
 };
 

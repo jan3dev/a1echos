@@ -206,5 +206,6 @@
   "settingsSectionAppearance": "ظاہری شکل",
   "biometricAuthTitle": "بایومیٹرک تصدیق",
   "biometricAuthPrompt": "Echos ان لاک کریں",
-  "biometricAuthUnavailable": "پہلے Face ID، فنگر پرنٹ یا آلے کا پاس کوڈ سیٹ اپ کریں۔"
+  "biometricAuthUnavailable": "پہلے Face ID، فنگر پرنٹ یا آلے کا پاس کوڈ سیٹ اپ کریں۔",
+  "biometricUnlock": "ان لاک کریں"
 }
