@@ -127,27 +127,18 @@ describe("KeyboardPromptModal", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the iOS keyboard image on iOS", () => {
-    setPlatform("ios");
-    const { getByTestId } = render(
-      <KeyboardPromptModal
-        visible={true}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />,
-    );
-    expect(getByTestId(TestID.KeyboardPromptImageIos)).toBeTruthy();
-  });
-
-  it("renders the Android keyboard image on Android", () => {
-    setPlatform("android");
-    const { getByTestId } = render(
-      <KeyboardPromptModal
-        visible={true}
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />,
-    );
-    expect(getByTestId(TestID.KeyboardPromptImageAndroid)).toBeTruthy();
-  });
+  it.each(["ios", "android"] as const)(
+    "renders the keyboard image on %s",
+    (os) => {
+      setPlatform(os);
+      const { getByTestId } = render(
+        <KeyboardPromptModal
+          visible={true}
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />,
+      );
+      expect(getByTestId(TestID.KeyboardPromptImage)).toBeTruthy();
+    },
+  );
 });

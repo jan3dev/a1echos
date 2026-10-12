@@ -95,8 +95,7 @@ export enum TestID {
   SettingsMicTimeoutRow = "settings-mic-timeout-row",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
   KeyboardPromptModal = "keyboard-prompt-modal",
-  KeyboardPromptImageIos = "keyboard-prompt-image-ios",
-  KeyboardPromptImageAndroid = "keyboard-prompt-image-android",
+  KeyboardPromptImage = "keyboard-prompt-image",
   VoiceSessionHintModal = "voice-session-hint-modal",
   LargerModelSuggestionModal = "larger-model-suggestion-modal",
 

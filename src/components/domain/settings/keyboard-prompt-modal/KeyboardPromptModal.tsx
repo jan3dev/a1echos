@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,8 +24,8 @@ interface KeyboardPromptModalProps {
   onCancel: () => void;
 }
 
-const ANDROID_KEYBOARD_IMAGE = require("@/assets/images/android-keyboard.png");
-const IOS_KEYBOARD_IMAGE = require("@/assets/images/ios-keyboard.png");
+const KEYBOARD_IMAGE = require("@/assets/images/use-echos-everywhere-keyboard.png");
+const KEYBOARD_IMAGE_ASPECT_RATIO = 933 / 759;
 
 export const KeyboardPromptModal = ({
   visible,
@@ -70,13 +69,9 @@ export const KeyboardPromptModal = ({
 
   const maxWidth = width >= 768 ? 343 : undefined;
 
-  const keyboardImage =
-    Platform.OS === "ios" ? IOS_KEYBOARD_IMAGE : ANDROID_KEYBOARD_IMAGE;
-
   const modalWidth = Math.min(width - 32, maxWidth ?? Infinity);
   const imageWidth = modalWidth - 32;
-  const imageAspectRatio = Platform.OS === "ios" ? 750 / 610 : 750 / 588;
-  const imageHeight = imageWidth / imageAspectRatio;
+  const imageHeight = imageWidth / KEYBOARD_IMAGE_ASPECT_RATIO;
 
   return (
     <Dimmer visible={visible} onDismiss={onCancel}>
@@ -116,12 +111,8 @@ export const KeyboardPromptModal = ({
 
               <View style={styles.heroContainer}>
                 <Image
-                  testID={
-                    Platform.OS === "ios"
-                      ? TestID.KeyboardPromptImageIos
-                      : TestID.KeyboardPromptImageAndroid
-                  }
-                  source={keyboardImage}
+                  testID={TestID.KeyboardPromptImage}
+                  source={KEYBOARD_IMAGE}
                   style={{ width: imageWidth, height: imageHeight }}
                   resizeMode="contain"
                   accessibilityIgnoresInvertColors
