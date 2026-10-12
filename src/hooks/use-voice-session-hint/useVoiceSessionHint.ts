@@ -53,8 +53,9 @@ export const useVoiceSessionHint = (): void => {
           () => void checkMarker(),
           WARM_START_RECHECK_MS,
         );
-      } else {
+      } else if (state === "background") {
         // The user swiped back to the host app — drop the now-irrelevant hint.
+        // Not on `inactive`: the Face ID prompt triggers that while we stay up.
         useUIStore.getState().hideVoiceSessionHint();
       }
     });

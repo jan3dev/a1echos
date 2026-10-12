@@ -105,6 +105,15 @@ describe("useVoiceSessionHint", () => {
     expect(mockHide).toHaveBeenCalled();
   });
 
+  it("keeps the hint while inactive (e.g. Face ID prompt)", () => {
+    mockRead.mockResolvedValue(null);
+    renderHook(() => useVoiceSessionHint());
+    act(() => {
+      appStateHandler("inactive");
+    });
+    expect(mockHide).not.toHaveBeenCalled();
+  });
+
   it("removes the AppState subscription on unmount", () => {
     mockRead.mockResolvedValue(null);
     const { unmount } = renderHook(() => useVoiceSessionHint());

@@ -75,6 +75,7 @@ jest.mock("@/stores", () => ({
   ),
   useVoiceSessionHintVisible: jest.fn(() => false),
   useHideVoiceSessionHint: jest.fn(() => jest.fn()),
+  useAppLocked: jest.fn(() => false),
   useLargerModelSuggestionVisible: jest.fn(() => false),
   useHideLargerModelSuggestion: jest.fn(() => jest.fn()),
   useMarkLargerModelSuggestionSeen: jest.fn(() =>
@@ -910,6 +911,16 @@ describe("RootLayout", () => {
 
       const { getByTestId } = await renderAndWaitForInit();
       expect(getByTestId(TestID.VoiceSessionHintModal)).toBeTruthy();
+    });
+
+    it("waits for the biometric lock to clear", async () => {
+      const { useVoiceSessionHintVisible, useAppLocked } = require("@/stores");
+      (useVoiceSessionHintVisible as jest.Mock).mockReturnValue(true);
+      (useAppLocked as jest.Mock).mockReturnValue(true);
+
+      const { queryByTestId } = await renderAndWaitForInit();
+      expect(queryByTestId(TestID.VoiceSessionHintModal)).toBeNull();
+      (useAppLocked as jest.Mock).mockReturnValue(false);
     });
 
     it("dismiss hides the hint", async () => {

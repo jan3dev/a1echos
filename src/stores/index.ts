@@ -117,6 +117,8 @@ export {
   useVoiceSessionHintVisible,
   useShowVoiceSessionHint,
   useHideVoiceSessionHint,
+  useAppLocked,
+  useSetAppLocked,
   useLargerModelSuggestionVisible,
   useShowLargerModelSuggestion,
   useHideLargerModelSuggestion,

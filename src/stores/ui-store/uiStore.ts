@@ -52,6 +52,10 @@ interface UIStore {
   showVoiceSessionHint: () => void;
   hideVoiceSessionHint: () => void;
 
+  /** The biometric lock screen is up; iOS can't present another Modal over it. */
+  appLocked: boolean;
+  setAppLocked: (locked: boolean) => void;
+
   largerModelSuggestionVisible: boolean;
   showLargerModelSuggestion: () => void;
   hideLargerModelSuggestion: () => void;
@@ -139,6 +143,12 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   hideVoiceSessionHint: () => {
     set({ voiceSessionHintVisible: false });
+  },
+
+  appLocked: false,
+
+  setAppLocked: (locked) => {
+    set({ appLocked: locked });
   },
 
   largerModelSuggestionVisible: false,
@@ -338,6 +348,8 @@ export const useShowVoiceSessionHint = () =>
   useUIStore((s) => s.showVoiceSessionHint);
 export const useHideVoiceSessionHint = () =>
   useUIStore((s) => s.hideVoiceSessionHint);
+export const useAppLocked = () => useUIStore((s) => s.appLocked);
+export const useSetAppLocked = () => useUIStore((s) => s.setAppLocked);
 
 export const useLargerModelSuggestionVisible = () =>
   useUIStore((s) => s.largerModelSuggestionVisible);

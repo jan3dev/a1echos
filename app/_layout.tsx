@@ -60,6 +60,7 @@ import {
   useIsSessionSelectionMode,
   useIsTranscriptionSelectionMode,
   useHideVoiceSessionHint,
+  useAppLocked,
   useKeyboardPromptVisible,
   useLargerModelSuggestionVisible,
   useMarkLargerModelSuggestionSeen,
@@ -328,8 +329,12 @@ function GlobalLargerModelSuggestionRenderer() {
 function GlobalVoiceSessionHintRenderer() {
   const visible = useVoiceSessionHintVisible();
   const hide = useHideVoiceSessionHint();
+  // Wait for the lock screen to go: UIKit refuses to present a second Modal.
+  const locked = useAppLocked();
 
-  return <VoiceSessionHintModal visible={visible} onDismiss={hide} />;
+  return (
+    <VoiceSessionHintModal visible={visible && !locked} onDismiss={hide} />
+  );
 }
 
 function GlobalRecordingControls() {

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
-import { useBiometricAuthEnabled } from "@/stores";
+import { useBiometricAuthEnabled, useSetAppLocked } from "@/stores";
 import { darkColors, spacing } from "@/theme";
 
 import { GlowCtaButton } from "../../ui/glow-cta-button/GlowCtaButton";
@@ -90,6 +90,12 @@ export const BiometricLock = () => {
   // A background launch (headless/foreground-service start) prompts on the
   // first "active" instead of at mount.
   const wasBackgrounded = useRef(AppState.currentState !== "active");
+  const setAppLocked = useSetAppLocked();
+  const isShown = enabled && locked;
+
+  useEffect(() => {
+    setAppLocked(isShown);
+  }, [isShown, setAppLocked]);
 
   const unlock = useCallback(async () => {
     if (fadingOut.current) return;
@@ -137,7 +143,7 @@ export const BiometricLock = () => {
 
   return (
     <Modal
-      visible={enabled && locked}
+      visible={isShown}
       transparent
       animationType="none"
       statusBarTranslucent
