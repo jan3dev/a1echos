@@ -46,7 +46,8 @@ describe("RecordingButton", () => {
   it.each([
     [TranscriptionState.READY, false],
     [TranscriptionState.RECORDING, true],
-    [TranscriptionState.TRANSCRIBING, true],
+    [TranscriptionState.RECORDING_STARTING, true],
+    [TranscriptionState.TRANSCRIBING, false],
   ])("renders the surface border in %s: %s", (state, expected) => {
     const { UNSAFE_getAllByType } = render(
       <RecordingButton state={state} colors={mockColors} />,
@@ -113,6 +114,29 @@ describe("RecordingButton", () => {
     jest.useRealTimers();
   });
 
+  it("pressing start shows the surface border before the state changes", () => {
+    jest.useFakeTimers();
+    const { getByLabelText, UNSAFE_getAllByType } = render(
+      <RecordingButton
+        state={TranscriptionState.READY}
+        onRecordingStart={jest.fn()}
+        colors={mockColors}
+      />,
+    );
+    const hasBorder = () =>
+      UNSAFE_getAllByType(View).some(
+        (node) =>
+          StyleSheet.flatten(node.props.style)?.borderColor ===
+          "rgba(255,255,255,0.04)",
+      );
+    expect(hasBorder()).toBe(false);
+    fireEvent.press(getByLabelText("Start Recording"));
+    expect(hasBorder()).toBe(true);
+    advance(2000);
+    expect(hasBorder()).toBe(false);
+    jest.useRealTimers();
+  });
+
   it("pressing stop triggers haptic feedback", () => {
     const Haptics = require("expo-haptics");
     const onRecordingStop = jest.fn();
@@ -125,7 +149,7 @@ describe("RecordingButton", () => {
     );
     fireEvent.press(getByLabelText("Stop Recording"));
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
-      Haptics.ImpactFeedbackStyle.Light,
+      Haptics.ImpactFeedbackStyle.Medium,
     );
   });
 
@@ -175,7 +199,7 @@ describe("RecordingButton", () => {
     expect(getByLabelText("Start Recording")).toBeTruthy();
   });
 
-  it("stop recording fires haptic Light feedback", () => {
+  it("stop recording fires the same haptic as start", () => {
     const Haptics = require("expo-haptics");
     const onRecordingStop = jest.fn();
     const { getByLabelText } = render(
@@ -187,7 +211,7 @@ describe("RecordingButton", () => {
     );
     fireEvent.press(getByLabelText("Stop Recording"));
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
-      Haptics.ImpactFeedbackStyle.Light,
+      Haptics.ImpactFeedbackStyle.Medium,
     );
   });
 
@@ -259,21 +283,43 @@ describe("RecordingButton", () => {
     expect(queryByTestId("icon-mic")).toBeNull();
   });
 
-  it("renders the processing icon only while busy", () => {
+  it("shows the processing logo only after 2s of processing", () => {
+    jest.useFakeTimers();
     const { getByTestId, queryByTestId, rerender } = render(
       <RecordingButton
         state={TranscriptionState.TRANSCRIBING}
         colors={mockColors}
       />,
     );
+    expect(queryByTestId("processing-icon")).toBeNull();
+    advance(1999);
+    expect(queryByTestId("processing-icon")).toBeNull();
+    advance(1);
     expect(getByTestId("processing-icon")).toBeTruthy();
     rerender(
+      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
+    );
+    expect(queryByTestId("processing-icon")).toBeNull();
+    jest.useRealTimers();
+  });
+
+  it("holds the processing state when transcription finishes instantly", () => {
+    jest.useFakeTimers();
+    const { getByLabelText, queryByTestId, rerender } = render(
       <RecordingButton
-        state={TranscriptionState.RECORDING}
+        state={TranscriptionState.TRANSCRIBING}
         colors={mockColors}
       />,
     );
+    rerender(
+      <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
+    );
+    expect(getByLabelText("Transcribing")).toBeTruthy();
+    expect(queryByTestId("icon-mic")).toBeNull();
+    advance(1000);
+    expect(getByLabelText("Start Recording")).toBeTruthy();
     expect(queryByTestId("processing-icon")).toBeNull();
+    jest.useRealTimers();
   });
 
   it("renders rectangle icon in RECORDING state with danger color", () => {

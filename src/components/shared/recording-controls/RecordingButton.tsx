@@ -64,8 +64,11 @@ const EASE_OUT = Easing.out(Easing.ease);
 const GRADIENT = recordingButtonGradient;
 const GRADIENT_ORIGIN = GRADIENT.viewBox / 2 - GRADIENT.maskRadius;
 
-const GRADIENT_TRANSITION_MS = 450;
+const GRADIENT_TRANSITION_MS = 330;
 const CONTENT_FADE_MS = 200;
+const MIN_PROCESSING_MS = 1000;
+const PROCESSING_LOGO_DELAY_MS = 2000;
+const PROCESSING_LOGO_SIZE = 42;
 
 const PROCESSING_PERIOD_MS = 3600;
 const PROCESSING_MIN_OPACITY = 0.25;
@@ -277,12 +280,18 @@ export const RecordingButton = ({
 }: RecordingButtonProps) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
+  const [startPressed, setStartPressed] = useState(false);
+  const [processingHeld, setProcessingHeld] = useState(false);
+  const [showProcessingLogo, setShowProcessingLogo] = useState(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gestureIsolationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const pressActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const processingHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
@@ -295,8 +304,14 @@ export const RecordingButton = ({
         clearTimeout(gestureIsolationTimerRef.current);
       if (pressActionTimerRef.current)
         clearTimeout(pressActionTimerRef.current);
+      if (processingHoldTimerRef.current)
+        clearTimeout(processingHoldTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    setStartPressed(false);
+  }, [state]);
 
   useEffect(() => {
     if (state === TranscriptionState.READY) {
@@ -330,6 +345,7 @@ export const RecordingButton = ({
 
     setIsDebouncing(true);
     setGestureIsolationActive(true);
+    setStartPressed(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
@@ -344,10 +360,12 @@ export const RecordingButton = ({
         clearTimeout(gestureIsolationTimerRef.current);
       gestureIsolationTimerRef.current = setTimeout(() => {
         setGestureIsolationActive(false);
+        setStartPressed(false);
       }, GESTURE_ISOLATION_DURATION);
     } catch {
       setIsDebouncing(false);
       setGestureIsolationActive(false);
+      setStartPressed(false);
     }
   };
 
@@ -357,7 +375,7 @@ export const RecordingButton = ({
     }
 
     setIsDebouncing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     triggerPressTransition(() => {
       onRecordingStop();
@@ -373,21 +391,44 @@ export const RecordingButton = ({
     transform: [{ scale: scale.value }],
   }));
 
-  const isBusy =
-    state === TranscriptionState.RECORDING_STARTING ||
+  const isStarting = state === TranscriptionState.RECORDING_STARTING;
+  const isRecording = state === TranscriptionState.RECORDING;
+  const isInitializingIdle =
+    isInitializing &&
+    (state === TranscriptionState.READY || state === TranscriptionState.ERROR);
+  const isProcessingState =
     state === TranscriptionState.LOADING ||
     state === TranscriptionState.TRANSCRIBING ||
-    (isInitializing &&
-      (state === TranscriptionState.READY ||
-        state === TranscriptionState.ERROR));
-  const isRecording = !isBusy && state === TranscriptionState.RECORDING;
-  const isReady = !isBusy && !isRecording;
+    isInitializingIdle;
+
+  // Fast transcriptions still show the processing state for a beat, and the
+  // logo only appears once processing turns out to be slow.
+  useEffect(() => {
+    if (!isProcessingState) return;
+    setProcessingHeld(true);
+    if (processingHoldTimerRef.current)
+      clearTimeout(processingHoldTimerRef.current);
+    processingHoldTimerRef.current = setTimeout(
+      () => setProcessingHeld(false),
+      MIN_PROCESSING_MS,
+    );
+    const logoTimer = setTimeout(
+      () => setShowProcessingLogo(true),
+      PROCESSING_LOGO_DELAY_MS,
+    );
+    return () => {
+      clearTimeout(logoTimer);
+      setShowProcessingLogo(false);
+    };
+  }, [isProcessingState]);
+
+  const isProcessing =
+    !isStarting && !isRecording && (isProcessingState || processingHeld);
+  const isBusy = isStarting || isProcessing;
+  const showSurface = isStarting || isRecording || startPressed;
 
   const busyLabel =
-    state === TranscriptionState.LOADING ||
-    state === TranscriptionState.TRANSCRIBING
-      ? "Transcribing"
-      : "Preparing recording";
+    isStarting || isInitializingIdle ? "Preparing recording" : "Transcribing";
   const busyTestID =
     busyLabel === "Transcribing"
       ? TestID.RecordingButtonTranscribing
@@ -396,14 +437,14 @@ export const RecordingButton = ({
   // 0 = gradient fills the button, 1 = surface disc has pushed it out past
   // the edge. Driven by shared values so a mid-transition state change reverses
   // smoothly instead of waiting for the previous animation.
-  const reveal = useSharedValue(isReady ? 0 : 1);
+  const reveal = useSharedValue(showSurface ? 1 : 0);
 
   useEffect(() => {
-    reveal.value = withTiming(isReady ? 0 : 1, {
+    reveal.value = withTiming(showSurface ? 1 : 0, {
       duration: GRADIENT_TRANSITION_MS,
       easing: EASE_OUT,
     });
-  }, [isReady, reveal]);
+  }, [showSurface, reveal]);
 
   const surfaceDiscStyle = useAnimatedStyle(() => ({
     transform: [{ scale: reveal.value }],
@@ -413,8 +454,18 @@ export const RecordingButton = ({
   // Slightly larger than the clip so no gradient fringe survives at the edge.
   const discSize = size + 2;
 
+  const contentKey = isRecording
+    ? "stop"
+    : isProcessing
+      ? showProcessingLogo
+        ? "logo"
+        : "empty"
+      : showSurface
+        ? "empty"
+        : "mic";
+
   const renderContent = () => {
-    if (isRecording) {
+    if (contentKey === "stop") {
       return (
         <View
           style={{
@@ -429,10 +480,18 @@ export const RecordingButton = ({
         </View>
       );
     }
-    if (isBusy) {
-      return <ProcessingIcon size={24} color={colors.textTertiary} />;
+    if (contentKey === "logo") {
+      return (
+        <ProcessingIcon
+          size={PROCESSING_LOGO_SIZE}
+          color={lightColors.textInverse}
+        />
+      );
     }
-    return <Icon name="mic" size={24} color={lightColors.textInverse} />;
+    if (contentKey === "mic") {
+      return <Icon name="mic" size={24} color={lightColors.textInverse} />;
+    }
+    return null;
   };
 
   return (
@@ -471,7 +530,7 @@ export const RecordingButton = ({
           }
         >
           <View style={[styles.buttonContainer, circleSize]}>
-            <AnimatedGradientCircle size={size} active={isReady} />
+            <AnimatedGradientCircle size={size} active={!showSurface} />
             <Animated.View
               pointerEvents="none"
               style={[
@@ -484,7 +543,7 @@ export const RecordingButton = ({
                 surfaceDiscStyle,
               ]}
             />
-            {!isReady && (
+            {showSurface && (
               <View
                 pointerEvents="none"
                 style={[
@@ -494,7 +553,7 @@ export const RecordingButton = ({
               />
             )}
             <Animated.View
-              key={isRecording ? "stop" : isBusy ? "busy" : "mic"}
+              key={contentKey}
               entering={FadeIn.duration(CONTENT_FADE_MS).delay(CONTENT_FADE_MS)}
               exiting={FadeOut.duration(CONTENT_FADE_MS)}
             >
