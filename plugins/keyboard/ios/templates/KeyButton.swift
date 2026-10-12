@@ -180,11 +180,9 @@ class KeyButton: UIControl {
 
         if keyDefinition.type == .emoji {
             symbolView.image = KeyButton.emojiKeyGlyph
-            // The trait-based asset image doesn't report an intrinsic size,
-            // so pin the face to its 19 pt render size.
             NSLayoutConstraint.activate([
-                symbolView.widthAnchor.constraint(equalToConstant: 19),
-                symbolView.heightAnchor.constraint(equalToConstant: 19),
+                symbolView.widthAnchor.constraint(equalToConstant: KeyButton.emojiKeyGlyphSide),
+                symbolView.heightAnchor.constraint(equalToConstant: KeyButton.emojiKeyGlyphSide),
             ])
             symbolView.isHidden = false
             label.isHidden = true
@@ -231,42 +229,53 @@ class KeyButton: UIControl {
     // matches the design exactly. Template mode so it follows
     // `symbolView.tintColor` like the SF-symbol key glyphs.
     private static let emojiKeyGlyph: UIImage = makeEmojiKeyGlyph()
+    static let emojiKeyGlyphSide: CGFloat = 20
 
     // SVG path data (absolute M/C/Z only). The face's bounding box within
-    // the SVG canvas is `emojiFaceOrigin` + `emojiFaceSide`.
+    // the SVG canvas is `emojiFaceOrigin` + `emojiKeyGlyphSide`.
     private static let emojiPathData =
-        "M14.5029 21.9313C10.5957 21.9313 7.42834 18.7639 7.42834 14.8567" +
-        "C7.42834 10.9495 10.5957 7.78207 14.5029 7.78207" +
-        "C18.4101 7.78207 21.5775 10.9495 21.5775 14.8567" +
-        "C21.5775 18.7639 18.4101 21.9313 14.5029 21.9313ZM14.4946 19.8089" +
-        "C11.9732 19.8089 9.58025 17.3906 9.58025 15.643" +
-        "C9.58025 14.64 11.7595 15.8471 14.4946 15.8471" +
-        "C17.2296 15.8471 19.4329 14.6416 19.4256 15.643" +
-        "C19.4133 17.3366 17.0159 19.8089 14.4946 19.8089ZM14.4946 17.5804" +
-        "C16.8389 17.5804 18.4606 16.6741 18.4606 16.0205" +
-        "C18.4606 15.367 16.8389 16.4102 14.4946 16.4102" +
-        "C12.1502 16.4102 10.5554 15.4922 10.5554 16.0205" +
-        "C10.5554 16.5489 12.1502 17.5804 14.4946 17.5804ZM12.3717 13.6009" +
-        "C11.9077 13.6009 11.5316 13.2248 11.5316 12.7608" +
-        "C11.5316 12.2968 11.9077 11.9207 12.3717 11.9207" +
-        "C12.8357 11.9207 13.2118 12.2968 13.2118 12.7608" +
-        "C13.2118 13.2248 12.8357 13.6009 12.3717 13.6009ZM16.6165 13.6009" +
-        "C16.1525 13.6009 15.7764 13.2248 15.7764 12.7608" +
-        "C15.7764 12.2968 16.1525 11.9207 16.6165 11.9207" +
-        "C17.0805 11.9207 17.4566 12.2968 17.4566 12.7608" +
-        "C17.4566 13.2248 17.0805 13.6009 16.6165 13.6009Z"
-    private static let emojiFaceOrigin = CGPoint(x: 7.42834, y: 7.78207)
-    private static let emojiFaceSide: CGFloat = 14.1492
+        "M20.5 31" +
+        "C25.9705 31 30.5 26.4608 30.5 21" +
+        "C30.5 15.5294 25.9608 11 20.4902 11" +
+        "C15.0294 11 10.5 15.5294 10.5 21" +
+        "C10.5 26.4608 15.0392 31 20.5 31Z" +
+        "M20.5 29.3333" +
+        "C15.8725 29.3333 12.1765 25.6275 12.1765 21" +
+        "C12.1765 16.3725 15.8627 12.6667 20.4902 12.6667" +
+        "C25.1176 12.6667 28.8137 16.3725 28.8236 21" +
+        "C28.8333 25.6078 25.1275 29.3333 20.5 29.3333Z" +
+        "M17.5882 20.1078" +
+        "C18.2157 20.1078 18.7745 19.4608 18.7745 18.7157" +
+        "C18.7745 17.951 18.2255 17.3235 17.5882 17.3235" +
+        "C16.9412 17.3235 16.4118 17.9608 16.4118 18.7157" +
+        "C16.4118 19.451 16.951 20.1078 17.5882 20.1078Z" +
+        "M23.4216 20.1078" +
+        "C24.049 20.1078 24.5882 19.451 24.5882 18.7157" +
+        "C24.5882 17.9608 24.0588 17.3235 23.4216 17.3235" +
+        "C22.7745 17.3235 22.2255 17.951 22.2255 18.7157" +
+        "C22.2255 19.4608 22.7843 20.1078 23.4216 20.1078Z" +
+        "M20.5 27.7157" +
+        "C23.8726 27.7157 26.5686 25.2353 26.9412 22.3039" +
+        "C27.0196 21.7059 26.6372 21.4412 26.1177 21.598" +
+        "C24.2157 22.1569 22.451 22.4706 20.5 22.4706" +
+        "C18.549 22.4706 16.7843 22.1569 14.8823 21.598" +
+        "C14.3529 21.4412 13.9804 21.7157 14.0588 22.3039" +
+        "C14.4314 25.2353 17.1274 27.7157 20.5 27.7157Z" +
+        "M20.4902 24.6764" +
+        "C18.9314 24.6764 17.2647 24.4608 15.951 24.1275" +
+        "C15.7647 24.0784 15.6569 23.9902 15.5784 23.853" +
+        "C15.4314 23.5883 15.2745 23.2549 15.1569 22.8235" +
+        "C15.1471 22.7549 15.1863 22.7255 15.2451 22.7353" +
+        "C16.8333 23.1666 18.6471 23.4608 20.4902 23.4608" +
+        "C22.3333 23.4608 24.1471 23.1666 25.7353 22.7353" +
+        "C25.7941 22.7255 25.8333 22.7549 25.8235 22.8235" +
+        "C25.7156 23.245 25.5294 23.6078 25.402 23.853" +
+        "C25.3137 23.9902 25.2255 24.0686 25.0392 24.1275" +
+        "C23.7157 24.4608 22.049 24.6764 20.4902 24.6764Z"
+    private static let emojiFaceOrigin = CGPoint(x: 10.5, y: 11)
 
-    // Light mode uses the outline face and dark mode the filled one, as stock
-    // iOS does; the image asset swaps them on trait changes.
     private static func makeEmojiKeyGlyph() -> UIImage {
-        // Rendered at 19pt so the face sits a touch smaller than the
-        // neighboring SF-symbol key glyphs.
-        let renderSide: CGFloat = 19
         let face = UIBezierPath()
-        let features = UIBezierPath()
-        var current = face
         let tokens = emojiPathData
             .replacingOccurrences(of: "M", with: " M ")
             .replacingOccurrences(of: "C", with: " C ")
@@ -281,48 +290,19 @@ class KeyButton: UIControl {
             let command = tokens[i]
             i += 1
             switch command {
-            case "M":
-                // The first subpath is the face disc; the rest (mouth, teeth,
-                // eyes) are the features.
-                if !face.isEmpty { current = features }
-                current.move(to: point())
+            case "M": face.move(to: point())
             case "C":
                 let c1 = point(), c2 = point(), end = point()
-                current.addCurve(to: end, controlPoint1: c1, controlPoint2: c2)
-            default: current.close()
+                face.addCurve(to: end, controlPoint1: c1, controlPoint2: c2)
+            default: face.close()
             }
         }
-        let scale = renderSide / emojiFaceSide
-        let transform = CGAffineTransform(scaleX: scale, y: scale)
-            .translatedBy(x: -emojiFaceOrigin.x, y: -emojiFaceOrigin.y)
-        face.apply(transform)
-        features.apply(transform)
-        features.usesEvenOddFillRule = true
-        let filled = face.copy() as! UIBezierPath
-        filled.append(features)
-        filled.usesEvenOddFillRule = true
-
-        // Ring width measured from the stock light-mode emoji key.
-        let ringWidth: CGFloat = 5.0 / 3.0
-        let ring = UIBezierPath(ovalIn: CGRect(x: 0, y: 0, width: renderSide, height: renderSide)
-            .insetBy(dx: ringWidth / 2, dy: ringWidth / 2))
-        ring.lineWidth = ringWidth
-
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: renderSide, height: renderSide))
-        let outlineImage = renderer.image { _ in
-            UIColor.black.set()
-            ring.stroke()
-            features.fill()
-        }.withRenderingMode(.alwaysTemplate)
-        let filledImage = renderer.image { _ in
+        face.apply(CGAffineTransform(translationX: -emojiFaceOrigin.x, y: -emojiFaceOrigin.y))
+        let side = emojiKeyGlyphSide
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
             UIColor.black.setFill()
-            filled.fill()
+            face.fill()
         }.withRenderingMode(.alwaysTemplate)
-
-        let asset = UIImageAsset()
-        asset.register(outlineImage, with: UITraitCollection(userInterfaceStyle: .light))
-        asset.register(filledImage, with: UITraitCollection(userInterfaceStyle: .dark))
-        return asset.image(with: UITraitCollection(userInterfaceStyle: .light))
     }
 
     override func layoutSubviews() {
