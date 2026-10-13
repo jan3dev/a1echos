@@ -332,10 +332,19 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ...storedModelModes,
       };
 
-      const selectedLanguage = languageValue
-        ? (SupportedLanguages.findByCode(languageValue) ??
-          SupportedLanguages.defaultLanguage)
-        : SupportedLanguages.defaultLanguage;
+      const storedLanguage = languageValue
+        ? SupportedLanguages.findByCode(languageValue)
+        : undefined;
+      // A model's language list can shrink across releases, so a saved pair
+      // may no longer be valid; fall back the same way setModelId does.
+      const selectedLanguage =
+        storedLanguage &&
+        SupportedLanguages.isSupported(
+          storedLanguage.code,
+          getModelInfo(selectedModelId).supportedLanguageCodes,
+        )
+          ? storedLanguage
+          : SupportedLanguages.defaultLanguage;
       const isIncognitoMode = incognitoModeValue === "true";
       // Default true — only the explicit string "false" disables.
       const smartSplitEnabled =

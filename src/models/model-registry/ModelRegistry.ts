@@ -175,7 +175,7 @@ const PARAKEET_LANGUAGES = [
   "sv",
   "da",
   "fi",
-  "no",
+  "mt",
   "hu",
   "cs",
   "sk",
@@ -187,7 +187,7 @@ const PARAKEET_LANGUAGES = [
   "et",
   "el",
   "uk",
-  "sr",
+  "ru",
 ];
 
 export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {

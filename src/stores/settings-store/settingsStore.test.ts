@@ -163,6 +163,22 @@ describe("settingsStore", () => {
       });
     });
 
+    it("resets a stored language the stored model doesn't support", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(ModelId.NEMO_PARAKEET_V3)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce("no")
+        .mockResolvedValue(null);
+
+      await useSettingsStore.getState().initialize();
+      expect(useSettingsStore.getState().selectedLanguage).toEqual(
+        SupportedLanguages.defaultLanguage,
+      );
+    });
+
     it("falls back to defaults when storage returns null", async () => {
       (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
 

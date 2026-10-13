@@ -32,6 +32,40 @@ describe("ModelRegistry", () => {
     }
   });
 
+  // https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+  it("Parakeet V3 lists exactly the model card's 25 languages", () => {
+    const codes = getModelInfo(ModelId.NEMO_PARAKEET_V3).supportedLanguageCodes;
+    expect([...(codes ?? [])].sort()).toEqual(
+      [
+        "bg",
+        "hr",
+        "cs",
+        "da",
+        "nl",
+        "en",
+        "et",
+        "fi",
+        "fr",
+        "de",
+        "el",
+        "hu",
+        "it",
+        "lv",
+        "lt",
+        "mt",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "sl",
+        "es",
+        "sv",
+        "ru",
+        "uk",
+      ].sort(),
+    );
+  });
+
   it("recommends Parakeet where it covers the language, else Whisper Small", () => {
     expect(getRecommendedModelId("de")).toBe(ModelId.NEMO_PARAKEET_V3);
     expect(getRecommendedModelId("ja")).toBe(ModelId.WHISPER_SMALL);
