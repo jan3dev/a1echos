@@ -1,31 +1,36 @@
+import { useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import {
   useSafeAreaFrame,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
-import KeyboardTile from "@/assets/icons/keyboard_tile.svg";
 import { useLocalization } from "@/hooks";
 import { AquaPrimitiveColors, darkColors, spacing } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
 import { Icon } from "../../../ui/icon/Icon";
 import { Text } from "../../../ui/text/Text";
-import { Toggle } from "../../../ui/toggle/Toggle";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
+import { ANDROID_DEMO_DONE, AndroidSettingsDemo } from "./AndroidSettingsDemo";
+import { IOS_DEMO_DONE, IosSettingsDemo } from "./IosSettingsDemo";
+import { mix, segment } from "./walkthrough";
+
 const ENABLE_KEYBOARD_STEP = 2;
-// Mimics the system Settings list, so these are iOS system colors, not theme tokens.
-const SYSTEM_GROUPED_BACKGROUND = "#1C1C1E";
-const SYSTEM_SEPARATOR = "rgba(84, 84, 88, 0.65)";
-const SYSTEM_GREEN = "#34C759";
-const SYSTEM_GREEN_DARK = "#30D158";
 const POINTER_WIDTH = 14;
 const POINTER_HEIGHT = 8;
-const LIST_MAX_WIDTH = 343;
-const ROW_ICON_SIZE = 36;
+const CTA_FADE_MS = 400;
 
 export interface EnableKeyboardScreenProps {
   onBack: () => void;
@@ -34,47 +39,10 @@ export interface EnableKeyboardScreenProps {
   testID?: string;
 }
 
-interface MockRowProps {
-  label: string;
-  showIcon?: boolean;
-  testID?: string;
-}
-
-function MockRow({ label, showIcon, testID }: MockRowProps) {
-  return (
-    <View style={styles.row} testID={testID}>
-      {showIcon ? (
-        <KeyboardTile width={ROW_ICON_SIZE} height={ROW_ICON_SIZE} />
-      ) : null}
-      <Text
-        variant="body1"
-        weight="regular"
-        color={AquaPrimitiveColors.white}
-        style={styles.rowLabel}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-      <View
-        pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {Platform.OS === "ios" ? (
-          <View style={styles.glassTrack} testID={testID && `${testID}-toggle`}>
-            <View style={styles.glassKnob} />
-          </View>
-        ) : (
-          <Toggle value activeColor={SYSTEM_GREEN} />
-        )}
-      </View>
-    </View>
-  );
-}
-
 /**
  * Presentational only — opening Settings and navigation live at the route.
- * Full Access only exists on iOS; Android just needs the keyboard enabled.
+ * Plays a walkthrough of the system Settings steps once per mount (so again
+ * after Back and forward); Go to Settings unlocks when it ends.
  */
 export const EnableKeyboardScreen = ({
   onBack,
@@ -89,6 +57,57 @@ export const EnableKeyboardScreen = ({
   const childTestID = (suffix: string) =>
     testID ? `${testID}-${suffix}` : undefined;
   const isIos = Platform.OS === "ios";
+  const Demo = isIos ? IosSettingsDemo : AndroidSettingsDemo;
+  const doneAt = isIos ? IOS_DEMO_DONE : ANDROID_DEMO_DONE;
+  const end = doneAt + CTA_FADE_MS;
+
+  const reduceMotion = useReducedMotion();
+  const t = useSharedValue(reduceMotion ? end : 0);
+  const [done, setDone] = useState(reduceMotion);
+  const [available, setAvailable] = useState(0);
+  const [natural, setNatural] = useState(0);
+  const scale = available && natural ? Math.min(1, available / natural) : 1;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    t.value = withTiming(end, { duration: end, easing: Easing.linear });
+    const timer = setTimeout(() => setDone(true), doneAt);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimation(t);
+    };
+  }, [t, end, doneAt, reduceMotion]);
+
+  // The Button dims itself to 0.5 while disabled; take over from there.
+  const ctaStyle = useAnimatedStyle(() => ({
+    opacity: done ? mix(segment(t.value, doneAt, CTA_FADE_MS), 0.5, 1) : 1,
+  }));
+
+  const tooltip = (
+    <View style={styles.tooltip}>
+      <View style={styles.bubble}>
+        <Icon name="info_circle" size={18} color={darkColors.textPrimary} />
+        <Text
+          variant="body2"
+          weight="medium"
+          color={darkColors.textPrimary}
+          style={styles.bubbleText}
+        >
+          {loc.onboardingEnableKeyboardTooltip}
+        </Text>
+      </View>
+      <Svg
+        width={POINTER_WIDTH}
+        height={POINTER_HEIGHT}
+        viewBox={`0 0 ${POINTER_WIDTH} ${POINTER_HEIGHT}`}
+      >
+        <Path
+          d={`M0 0 L${POINTER_WIDTH / 2} ${POINTER_HEIGHT} L${POINTER_WIDTH} 0 Z`}
+          fill={AquaPrimitiveColors.glassSurfaceSecondaryDark}
+        />
+      </Svg>
+    </View>
+  );
 
   return (
     <View testID={testID} style={styles.root}>
@@ -121,61 +140,28 @@ export const EnableKeyboardScreen = ({
           {loc.onboardingEnableKeyboardTitle}
         </Text>
 
-        <View style={styles.illustration}>
-          <View style={styles.tooltip}>
-            <View style={styles.bubble}>
-              <Icon
-                name="info_circle"
-                size={18}
-                color={darkColors.textPrimary}
-              />
-              <Text
-                variant="body2"
-                weight="medium"
-                color={darkColors.textPrimary}
-                style={styles.bubbleText}
-              >
-                {loc.onboardingEnableKeyboardTooltip}
-              </Text>
-            </View>
-            <Svg
-              width={POINTER_WIDTH}
-              height={POINTER_HEIGHT}
-              viewBox={`0 0 ${POINTER_WIDTH} ${POINTER_HEIGHT}`}
-            >
-              <Path
-                d={`M0 0 L${POINTER_WIDTH / 2} ${POINTER_HEIGHT} L${POINTER_WIDTH} 0 Z`}
-                fill={AquaPrimitiveColors.glassSurfaceSecondaryDark}
-              />
-            </Svg>
-          </View>
-
-          <View style={styles.list} testID={childTestID("list")}>
-            <MockRow
-              label={loc.onboardingEnableKeyboardRowEchos}
-              showIcon={!isIos}
-              testID={childTestID("echos")}
-            />
-            {isIos && (
-              <>
-                <View style={styles.separator} />
-                <MockRow
-                  label={loc.onboardingEnableKeyboardRowFullAccess}
-                  showIcon
-                  testID={childTestID("full-access")}
-                />
-              </>
-            )}
+        <View
+          style={styles.illustration}
+          testID={childTestID("illustration")}
+          onLayout={(e) => setAvailable(e.nativeEvent.layout.height)}
+        >
+          <View
+            style={[styles.scaler, { transform: [{ scale }] }]}
+            testID={childTestID("illustration-content")}
+            onLayout={(e) => setNatural(e.nativeEvent.layout.height)}
+          >
+            <Demo t={t} tooltip={tooltip} testID={testID} />
           </View>
         </View>
 
-        <View style={styles.cta}>
+        <Animated.View style={[styles.cta, ctaStyle]}>
           <Button.primary
             testID={childTestID("go-to-settings")}
             text={loc.onboardingGoToSettings}
+            enabled={done}
             onPress={onGoToSettings}
           />
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -198,9 +184,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.sm,
     overflow: "hidden",
+  },
+  scaler: {
+    alignItems: "center",
   },
   tooltip: {
     alignItems: "center",
@@ -217,44 +204,6 @@ const styles = StyleSheet.create({
   },
   bubbleText: {
     flexShrink: 1,
-  },
-  list: {
-    width: "100%",
-    maxWidth: LIST_MAX_WIDTH,
-    borderRadius: 26,
-    overflow: "hidden",
-    backgroundColor: SYSTEM_GROUPED_BACKGROUND,
-  },
-  row: {
-    height: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  rowLabel: {
-    flex: 1,
-  },
-  // iOS 27 Liquid Glass switch, on state (Figma "Toggle - Switch").
-  glassTrack: {
-    width: 64,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "flex-end",
-    paddingHorizontal: 2,
-    backgroundColor: SYSTEM_GREEN_DARK,
-  },
-  glassKnob: {
-    width: 38,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: AquaPrimitiveColors.white,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.md * 2 + ROW_ICON_SIZE,
-    backgroundColor: SYSTEM_SEPARATOR,
   },
   cta: {
     flexShrink: 0,

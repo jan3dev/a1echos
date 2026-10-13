@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="iOS Icon / Microphone">
+<rect width="36" height="36" rx="8.1" fill="url(#paint0_linear_0_125)"/>
+<path id="Glyph / mic" d="M10.5 16.5C10.5 20.64 13.86 24 18 24M18 24C22.14 24 25.5 20.64 25.5 16.5M18 24V28.5M14.5 28.5H21.5M14 11.5C14 9.29 15.79 7.5 18 7.5C20.21 7.5 22 9.29 22 11.5V16.5C22 18.71 20.21 20.5 18 20.5C15.79 20.5 14 18.71 14 16.5V11.5Z" stroke="white" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_125" x1="18" y1="0" x2="18" y2="36" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFAC61"/>
+<stop offset="0.5" stop-color="#FF973A"/>
+<stop offset="1" stop-color="#FF8C27"/>
+</linearGradient>
+</defs>
+</svg>

@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="iOS Icon / Search">
+<rect width="36" height="36" rx="8.1" fill="url(#paint0_linear_0_119)"/>
+<path id="Glyph / magnifyingglass" d="M20.8 20.8L26.5 26.5M9.5 16C9.5 12.41 12.41 9.5 16 9.5C19.59 9.5 22.5 12.41 22.5 16C22.5 19.59 19.59 22.5 16 22.5C12.41 22.5 9.5 19.59 9.5 16Z" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_119" x1="18" y1="0" x2="18" y2="36" gradientUnits="userSpaceOnUse">
+<stop stop-color="#B0B0B4"/>
+<stop offset="0.5" stop-color="#98989D"/>
+<stop offset="1" stop-color="#8E8D92"/>
+</linearGradient>
+</defs>
+</svg>

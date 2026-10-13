@@ -1,17 +1,35 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
+import { useRef } from "react";
 import { Platform, View } from "react-native";
+import * as Reanimated from "react-native-reanimated";
 import { useSafeAreaFrame } from "react-native-safe-area-context";
 
+import { ANDROID_DEMO_DONE } from "./AndroidSettingsDemo";
 import {
   EnableKeyboardScreen,
   type EnableKeyboardScreenProps,
 } from "./EnableKeyboardScreen";
+import { IOS_DEMO_DONE } from "./IosSettingsDemo";
 
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   useSafeAreaFrame: jest.fn(() => ({ x: 0, y: 0, width: 390, height: 844 })),
 }));
 const mockFrame = jest.mocked(useSafeAreaFrame);
+const mockReducedMotion = jest.mocked(Reanimated.useReducedMotion);
+const hidden = { includeHiddenElements: true };
+
+// Run the worklets for real so the timeline's styles land on the views.
+beforeAll(() => {
+  jest.mocked(Reanimated.useAnimatedStyle).mockImplementation((fn) => fn());
+  jest
+    .mocked(Reanimated.useSharedValue)
+    .mockImplementation((value) => useRef({ value }).current as never);
+  Object.assign(Reanimated, {
+    interpolateColor: (p: number, _: number[], colors: string[]) =>
+      colors[p < 0.5 ? 0 : 1],
+  });
+});
 
 const renderScreen = (overrides: Partial<EnableKeyboardScreenProps> = {}) => {
   const props = {
@@ -30,6 +48,7 @@ describe("EnableKeyboardScreen", () => {
   afterEach(() => {
     jest.useRealTimers();
     Platform.OS = originalOS;
+    mockReducedMotion.mockReturnValue(false);
   });
 
   it("renders title, step indicator, tooltip and CTA", () => {
@@ -37,39 +56,71 @@ describe("EnableKeyboardScreen", () => {
     expect(getByText("onboardingEnableKeyboardTitle")).toBeTruthy();
     expect(getByText("onboardingEnableKeyboardTooltip")).toBeTruthy();
     expect(getByTestId("kb-steps-dot-2")).toHaveStyle({ width: 24 });
-    expect(getByTestId("kb-list")).toBeTruthy();
-    expect(getByTestId("kb-echos")).toBeTruthy();
+    expect(getByTestId("kb-go-to-settings")).toBeTruthy();
   });
 
-  it("wires back, skip and go-to-settings", () => {
+  it("wires back and skip", () => {
     const { getByTestId, props } = renderScreen();
     fireEvent.press(getByTestId("kb-back"));
     fireEvent.press(getByTestId("kb-skip"));
-    fireEvent.press(getByTestId("kb-go-to-settings"));
     expect(props.onBack).toHaveBeenCalledTimes(1);
     expect(props.onSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it("on iOS walks Settings → Keyboards → Full Access, then unlocks the CTA", () => {
+    Platform.OS = "ios";
+    const { getByTestId, getByText, props } = renderScreen();
+    expect(
+      getByText("onboardingEnableKeyboardRowKeyboards", hidden),
+    ).toBeTruthy();
+    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 312 });
+
+    fireEvent.press(getByTestId("kb-go-to-settings"));
+    expect(props.onGoToSettings).not.toHaveBeenCalled();
+
+    act(() => jest.advanceTimersByTime(IOS_DEMO_DONE));
+    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 104 });
+    expect(getByTestId("kb-full-access-toggle", hidden)).toHaveStyle({
+      width: 64,
+      height: 28,
+      backgroundColor: "#30D158",
+    });
+    fireEvent.press(getByTestId("kb-go-to-settings"));
     expect(props.onGoToSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the Full Access row on iOS", () => {
-    Platform.OS = "ios";
-    const { getByTestId } = renderScreen();
-    expect(getByTestId("kb-full-access")).toBeTruthy();
-    expect(
-      getByTestId("kb-full-access-toggle", { includeHiddenElements: true }),
-    ).toHaveStyle({
-      width: 64,
-      height: 28,
-    });
+  it("on Android toggles Echos through the system dialog, then unlocks the CTA", () => {
+    Platform.OS = "android";
+    const { getByTestId, getByText, queryByTestId, props } = renderScreen();
+    expect(queryByTestId("kb-full-access", hidden)).toBeNull();
+    expect(getByTestId("kb-echos", hidden)).toBeTruthy();
+    expect(getByText("onboardingEnableKeyboardDialogOk", hidden)).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(ANDROID_DEMO_DONE - 1));
+    fireEvent.press(getByTestId("kb-go-to-settings"));
+    expect(props.onGoToSettings).not.toHaveBeenCalled();
+
+    act(() => jest.advanceTimersByTime(1));
+    fireEvent.press(getByTestId("kb-go-to-settings"));
+    expect(props.onGoToSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("hides the Full Access row on Android", () => {
-    Platform.OS = "android";
-    const { queryByTestId } = renderScreen();
-    expect(queryByTestId("kb-full-access")).toBeNull();
-    expect(
-      queryByTestId("kb-echos-toggle", { includeHiddenElements: true }),
-    ).toBeNull();
+  it("replays the walkthrough on every mount", () => {
+    const first = renderScreen();
+    act(() => jest.advanceTimersByTime(IOS_DEMO_DONE));
+    first.unmount();
+
+    const { getByTestId, props } = renderScreen();
+    fireEvent.press(getByTestId("kb-go-to-settings"));
+    expect(props.onGoToSettings).not.toHaveBeenCalled();
+  });
+
+  it("skips straight to the end with Reduce Motion", () => {
+    mockReducedMotion.mockReturnValue(true);
+    const { getByTestId, props } = renderScreen();
+    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 104 });
+    fireEvent.press(getByTestId("kb-go-to-settings"));
+    expect(props.onGoToSettings).toHaveBeenCalledTimes(1);
   });
 
   it("renders without a testID", () => {
@@ -77,9 +128,9 @@ describe("EnableKeyboardScreen", () => {
     expect(getByText("onboardingGoToSettings")).toBeTruthy();
   });
 
-  it("keeps title, list and CTA visible in a short landscape window", () => {
+  it("scales the walkthrough down to fit a short landscape window", () => {
     mockFrame.mockReturnValueOnce({ x: 0, y: 0, width: 720, height: 360 });
-    const { getByText, getByTestId } = render(
+    const { getByTestId } = render(
       <View style={{ width: 720, height: 360 }}>
         <EnableKeyboardScreen
           onBack={jest.fn()}
@@ -89,8 +140,17 @@ describe("EnableKeyboardScreen", () => {
         />
       </View>,
     );
-    expect(getByText("onboardingEnableKeyboardTitle")).toBeTruthy();
-    expect(getByTestId("kb-list")).toBeTruthy();
-    expect(getByTestId("kb-go-to-settings")).toBeTruthy();
+    const layout = (height: number) => ({
+      nativeEvent: { layout: { x: 0, y: 0, width: 343, height } },
+    });
+    fireEvent(getByTestId("kb-illustration"), "layout", layout(156));
+    fireEvent(getByTestId("kb-illustration-content"), "layout", layout(312));
+    expect(getByTestId("kb-illustration-content")).toHaveStyle({
+      transform: [{ scale: 0.5 }],
+    });
+    fireEvent(getByTestId("kb-list", hidden), "layout", layout(312));
+    // The Keyboards list sits just below the measured tooltip.
+    fireEvent(getByTestId("kb-tooltip"), "layout", layout(300));
+    expect(getByTestId("kb-list", hidden)).toHaveStyle({ top: 308 });
   });
 });
