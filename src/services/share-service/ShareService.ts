@@ -9,6 +9,14 @@ export interface SessionContent {
   transcriptions: Transcription[];
 }
 
+const TIMESTAMP_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
 const createShareService = () => {
   const shareTranscriptions = async (
     transcriptions: Transcription[],
@@ -35,8 +43,12 @@ const createShareService = () => {
       .join("\n\n");
 
   const toMarkdown = ({ session, transcriptions }: SessionContent): string =>
-    [`# ${session.name}`, ...transcriptions.map((t) => t.text)].join("\n\n") +
-    "\n";
+    [
+      `# ${session.name}`,
+      ...transcriptions.map(
+        (t) => `## ${TIMESTAMP_FORMAT.format(t.timestamp)}\n\n${t.text}`,
+      ),
+    ].join("\n\n") + "\n";
 
   const copySessions = (contents: SessionContent[]) =>
     Clipboard.setStringAsync(formatSessions(contents));

@@ -16,7 +16,7 @@ describe("ShareService", () => {
     id,
     sessionId: "session-1",
     text,
-    timestamp: new Date("2025-06-15T12:00:00.000Z"),
+    timestamp: new Date(2025, 5, 15, 12, 0),
     audioPath: `/audio/${id}.wav`,
   });
 
@@ -125,7 +125,9 @@ describe("ShareService", () => {
         ["a-b.md", "text/markdown"],
         ["Session.md", "text/markdown"],
       ]);
-      expect(write).toHaveBeenCalledWith("# Standup\n\nFirst\n\nSecond\n");
+      expect(write).toHaveBeenCalledWith(
+        "# Standup\n\n## Jun 15, 2025, 12:00 PM\n\nFirst\n\n## Jun 15, 2025, 12:00 PM\n\nSecond\n",
+      );
     });
   });
 });
