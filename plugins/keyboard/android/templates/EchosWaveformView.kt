@@ -5,14 +5,17 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.View
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -20,8 +23,8 @@ import kotlin.math.sin
 /**
  * Three sine-curve lines that flow across the keyboard top bar. Mirrors the
  * iOS `RecordingWaveformView` and the main app's `ThreeWaveLines.tsx` — same
- * per-wave profiles, smoothing, color identity, and transcribing oscillation
- * — so the brand visualizer reads identically across all three surfaces.
+ * per-wave profiles, smoothing and transcribing oscillation; color, stroke
+ * and blur follow the keyboard DS Figma, matching the iOS keyboard.
  *
  * Driven by `Choreographer` (the Android equivalent of `CADisplayLink`).
  * Numeric design constants come from the JS reference and are scaled by
@@ -72,19 +75,19 @@ class EchosWaveformView @JvmOverloads constructor(
     private val profiles = listOf(
         WaveProfile(
             basePhaseSpeed = 0.04, frequency = 2.2, verticalOffset = -3.2f,
-            amplitudeMultiplier = 0.35, strokeWidthDp = 3.0f,
+            amplitudeMultiplier = 0.35, strokeWidthDp = 2.4375f,
             energyFloor = 0.06, audioAmplitudeReactivity = 0.7,
             transcribingAmplitude = 0.6, transcribingPhaseOffset = 0.0,
         ),
         WaveProfile(
             basePhaseSpeed = 0.07, frequency = 3.1, verticalOffset = 0.0f,
-            amplitudeMultiplier = 0.55, strokeWidthDp = 3.0f,
+            amplitudeMultiplier = 0.55, strokeWidthDp = 2.4375f,
             energyFloor = 0.05, audioAmplitudeReactivity = 1.0,
             transcribingAmplitude = 0.7, transcribingPhaseOffset = Math.PI,
         ),
         WaveProfile(
             basePhaseSpeed = 0.09, frequency = 2.5, verticalOffset = 3.6f,
-            amplitudeMultiplier = 0.75, strokeWidthDp = 3.0f,
+            amplitudeMultiplier = 0.75, strokeWidthDp = 2.4375f,
             energyFloor = 0.04, audioAmplitudeReactivity = 0.55,
             transcribingAmplitude = 0.8,
             transcribingPhaseOffset = 2.0 * Math.PI / 3.0,
@@ -98,12 +101,9 @@ class EchosWaveformView @JvmOverloads constructor(
         )
     }.toMutableList()
 
-    /// Sharp pass — never blurred. Visible only in the segments where the
-    /// per-wave horizontal alpha gradient is opaque. Combined with the
-    /// blurred pass below, this produces the alternating crisp/blurred
-    /// segments the Figma design uses along each wave. Each wave's
-    /// per-line horizontal color gradient is installed via
-    /// `onSizeChanged` once the view dimensions are known.
+    /// Figma blurs each line progressively along its height (see
+    /// `BLUR_RAMPS`). Approximated by crossfading a sharp and a fully blurred
+    /// pass with a vertical alpha mask over the line's band.
     private val sharpPaints = profiles.map { p ->
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -112,10 +112,6 @@ class EchosWaveformView @JvmOverloads constructor(
             strokeJoin = Paint.Join.ROUND
         }
     }
-
-    /// Blurred pass — Gaussian-blurred 3px stroke, the Android equivalent
-    /// of the Figma SVG's `feGaussianBlur stdDeviation=2.5`. Visible only
-    /// in the segments where the inverse gradient is opaque.
     private val blurredPaints = profiles.map { p ->
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -130,6 +126,30 @@ class EchosWaveformView @JvmOverloads constructor(
     }
 
     private val paths = profiles.map { Path() }
+
+    /// Unit-length vertical gradients, one per wave, stretched onto each
+    /// wave's band every frame via `setLocalMatrix` (no per-frame allocation).
+    private val waveShaders = profiles.indices.map { i ->
+        LinearGradient(
+            0f, 0f, 0f, 1f,
+            WAVE_LINE_GRADIENT, WAVE_LINE_GRADIENT_STOPS, Shader.TileMode.CLAMP,
+        ).also {
+            sharpPaints[i].shader = it
+            blurredPaints[i].shader = it
+        }
+    }
+    private val waveBands = profiles.map { RectF() }
+    private val waveGradientMatrix = Matrix()
+
+    /// Unit vertical alpha ramps (0 → 1) for the blur crossfade, mapped onto
+    /// each band in `onDraw`.
+    private val sharpMask = LinearGradient(
+        0f, 0f, 0f, 1f, Color.WHITE, Color.TRANSPARENT, Shader.TileMode.CLAMP,
+    )
+    private val blurredMask = LinearGradient(
+        0f, 0f, 0f, 1f, Color.TRANSPARENT, Color.WHITE, Shader.TileMode.CLAMP,
+    )
+    private val maskMatrix = Matrix()
 
     @Volatile private var audioLevel: Double = 0.0
     private var mode: Mode = Mode.RECORDING
@@ -205,24 +225,6 @@ class EchosWaveformView @JvmOverloads constructor(
         super.onDetachedFromWindow()
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        if (w <= 0 || h <= 0) return
-        // Each wave gets its own horizontal gradient running left-to-right
-        // across the view, mirroring the main app's per-line palette (middle
-        // line orange). Recreated on size changes since `LinearGradient` bakes
-        // its endpoints in.
-        for (i in profiles.indices) {
-            val shader = LinearGradient(
-                0f, 0f, w.toFloat(), 0f,
-                WAVE_LINE_GRADIENTS[i % WAVE_LINE_GRADIENTS.size],
-                WAVE_LINE_GRADIENT_STOPS,
-                Shader.TileMode.CLAMP,
-            )
-            sharpPaints[i].shader = shader
-            blurredPaints[i].shader = shader
-        }
-    }
 
     private fun tick(nowNs: Long) {
         val w = width.toDouble()
@@ -338,6 +340,7 @@ class EchosWaveformView @JvmOverloads constructor(
 
             var prevX = 0.0
             var prevY = adjustedCenterY
+            var prevSlope = 0.0
 
             for (j in 0 until POINT_COUNT) {
                 val normalizedX = j.toDouble() / (POINT_COUNT - 1)
@@ -350,28 +353,38 @@ class EchosWaveformView @JvmOverloads constructor(
                 val amplitude = min(maxAmp,
                     minAmplitude + normalizedAmplitude * amplitudeRange)
 
-                val sine = sin(freqTwoPi * normalizedX + phase)
+                val theta = freqTwoPi * normalizedX + phase
                 val energyFactor = 0.65 + normalizedAmplitude * 0.35
-                val y = adjustedCenterY + amplitude * energyFactor * sine * phaseInversion
+                val a = amplitude * energyFactor * phaseInversion
+                val y = adjustedCenterY + a * sin(theta)
+                val slope = a * cos(theta) * freqTwoPi / w
 
                 if (j == 0) {
                     path.moveTo(x.toFloat(), y.toFloat())
                 } else {
-                    // Smooth cubic between adjacent samples — same 1/3, 2/3
-                    // control points the Skia-rendered version uses.
-                    val dx = x - prevX
-                    val dy = y - prevY
+                    // Hermite cubic using the sine's exact slope at both ends,
+                    // so crests stay round instead of faceting.
+                    val third = (x - prevX) / 3.0
                     path.cubicTo(
-                        (prevX + dx * 0.33).toFloat(),
-                        (prevY + dy * 0.33).toFloat(),
-                        (prevX + dx * 0.66).toFloat(),
-                        (prevY + dy * 0.66).toFloat(),
+                        (prevX + third).toFloat(),
+                        (prevY + prevSlope * third).toFloat(),
+                        (x - third).toFloat(),
+                        (y - slope * third).toFloat(),
                         x.toFloat(), y.toFloat(),
                     )
                 }
                 prevX = x
                 prevY = y
+                prevSlope = slope
             }
+
+            // Figma: the gradient starts at the wave's crest and spans twice
+            // its crest-to-trough height, so crests read purple, troughs blue.
+            val band = waveBands[i]
+            path.computeBounds(band, true)
+            waveGradientMatrix.setScale(1f, max(band.height(), 1f) * 2f)
+            waveGradientMatrix.postTranslate(0f, band.top)
+            waveShaders[i].setLocalMatrix(waveGradientMatrix)
 
             val alpha =
                 (state.smoothedOpacity.coerceIn(0.0, FIGMA_OPACITY_CEILING) * 255.0).toInt()
@@ -382,21 +395,16 @@ class EchosWaveformView @JvmOverloads constructor(
         invalidate()
     }
 
-    /// When non-zero, fades the waveform's alpha from 0 at each horizontal
-    /// edge to fully opaque at `edgeFadeFraction` from the edge. Used when
-    /// the wave spans the full keyboard header so the record button sits
-    /// on a transparent fall-off behind it.
-    private var edgeFadeFraction: Float = 0f
+    /// When true, fades the wave in from the left edge and out before the
+    /// record button (`EDGE_FADE_POSITIONS`). Used when the wave spans the
+    /// full keyboard header.
+    private var edgeFade = false
     private val maskPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
 
-    /** Enable a horizontal alpha gradient that fades the wave to
-     *  transparent at both edges. `fraction` is the portion of the view
-     *  width consumed by the fade on each side (e.g. 0.18 → wave is fully
-     *  opaque between 18% and 82% of the width). Pass 0 to disable. */
-    fun setEdgeFadeFraction(fraction: Float) {
-        edgeFadeFraction = fraction.coerceIn(0f, 0.5f)
+    fun setEdgeFade(enabled: Boolean) {
+        edgeFade = enabled
         invalidate()
     }
 
@@ -405,36 +413,22 @@ class EchosWaveformView @JvmOverloads constructor(
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        // Wrap the entire wave drawing in a single saveLayer when the edge
-        // fade is enabled so the horizontal fade applies uniformly across
-        // both the sharp and blurred passes.
-        val outerLayer = if (edgeFadeFraction > 0f) {
+        // Wrap the wave drawing in a single saveLayer when the edge fade is
+        // enabled so the horizontal fade applies across all three lines.
+        val outerLayer = if (edgeFade) {
             canvas.saveLayer(0f, 0f, w, h, null)
         } else {
             -1
         }
 
         for (i in paths.indices) {
-            // Each wave gets its own off-screen layer so the per-pass
-            // horizontal alpha gradient (sharp vs blurred) only masks
-            // that wave's strokes, not the previously drawn ones.
-            val sharpLayer = canvas.saveLayer(0f, 0f, w, h, null)
-            canvas.drawPath(paths[i], sharpPaints[i])
-            applyHorizontalGradientMask(
-                canvas, w, h,
-                GRADIENT_POSITIONS[i], SHARP_VISIBILITY[i],
-                inverse = false,
-            )
-            canvas.restoreToCount(sharpLayer)
-
-            val blurredLayer = canvas.saveLayer(0f, 0f, w, h, null)
-            canvas.drawPath(paths[i], blurredPaints[i])
-            applyHorizontalGradientMask(
-                canvas, w, h,
-                GRADIENT_POSITIONS[i], SHARP_VISIBILITY[i],
-                inverse = true,
-            )
-            canvas.restoreToCount(blurredLayer)
+            val band = waveBands[i]
+            val bandH = max(band.height(), 1f)
+            val (start, end) = BLUR_RAMPS[i]
+            maskMatrix.setScale(1f, (end - start) * bandH)
+            maskMatrix.postTranslate(0f, band.top + start * bandH)
+            drawMaskedPass(canvas, w, h, paths[i], sharpPaints[i], sharpMask)
+            drawMaskedPass(canvas, w, h, paths[i], blurredPaints[i], blurredMask)
         }
 
         if (outerLayer >= 0) {
@@ -442,7 +436,7 @@ class EchosWaveformView @JvmOverloads constructor(
             maskPaint.shader = LinearGradient(
                 0f, 0f, w, 0f,
                 intArrayOf(Color.TRANSPARENT, Color.WHITE, Color.WHITE, Color.TRANSPARENT),
-                floatArrayOf(0f, edgeFadeFraction, 1f - edgeFadeFraction, 1f),
+                EDGE_FADE_POSITIONS,
                 Shader.TileMode.CLAMP,
             )
             canvas.drawRect(0f, 0f, w, h, maskPaint)
@@ -450,29 +444,15 @@ class EchosWaveformView @JvmOverloads constructor(
         }
     }
 
-    /** Punch the previously drawn wave with a horizontal alpha gradient
-     *  so it's only visible where `visibility` matches the requested
-     *  pass (sharp or its inverse for the blurred pass). The visibility
-     *  pattern carries the wave's two blurred-spot positions per
-     *  `SHARP_VISIBILITY[i]`. */
-    private fun applyHorizontalGradientMask(
-        canvas: Canvas,
-        w: Float,
-        h: Float,
-        positions: FloatArray,
-        visibility: IntArray,
-        inverse: Boolean,
+    private fun drawMaskedPass(
+        canvas: Canvas, w: Float, h: Float, path: Path, paint: Paint, mask: Shader,
     ) {
-        val opaque = Color.WHITE
-        val clear = Color.TRANSPARENT
-        val colors = IntArray(visibility.size) { i ->
-            val v = if (inverse) 1 - visibility[i] else visibility[i]
-            if (v == 1) opaque else clear
-        }
-        maskPaint.shader = LinearGradient(
-            0f, 0f, w, 0f, colors, positions, Shader.TileMode.CLAMP,
-        )
+        val layer = canvas.saveLayer(0f, 0f, w, h, null)
+        canvas.drawPath(path, paint)
+        mask.setLocalMatrix(maskMatrix)
+        maskPaint.shader = mask
         canvas.drawRect(0f, 0f, w, h, maskPaint)
+        canvas.restoreToCount(layer)
     }
 
     companion object {
@@ -481,40 +461,26 @@ class EchosWaveformView @JvmOverloads constructor(
         private const val RECORDING_MAX_AMPLITUDE = 32.0
         private const val MIN_AMPLITUDE = 2.0
         private const val VOICE_THRESHOLD = 0.38
-        /// Matches the Android `END_BLUR` in `ThreeWaveLines.tsx` (1.8 on
-        /// Android, vs 2.5 on iOS) — Android's blur composites the light
-        /// fringe brighter, so the tighter radius keeps the glow colored
-        /// instead of washing the line edges toward white.
-        private const val BLUR_RADIUS_DP = 1.8f
+        /// Figma `stdDeviation=2.03125`. Skia maps a `BlurMaskFilter` radius
+        /// to sigma as 0.57735·r + 0.5, so r = (2.03125 − 0.5) / 0.57735.
+        private const val BLUR_RADIUS_DP = 2.652f
         /// Mirrors `opacity="0.8"` on the Figma group definition.
         private const val FIGMA_OPACITY_CEILING = 0.8
 
-        /// Per-wave horizontal gradient stops + visibility pattern that
-        /// drives which segments of the wave render as a sharp 3pt
-        /// stroke vs. a Gaussian-blurred stroke. Mirrors `WAVE_BLUR_REVEALS`
-        /// in `ThreeWaveLines.tsx`: the outer lines (0, 2) soften at both
-        /// ends and stay crisp through the middle; the middle line (1)
-        /// softens through the center and stays crisp at the ends. A `1`
-        /// marks where the sharp pass shows (blurred pass shows where `0`).
-        private val GRADIENT_POSITIONS = arrayOf(
-            floatArrayOf(0f, 0.32f, 0.68f, 1f),
-            floatArrayOf(0f, 0.34f, 0.66f, 1f),
-            floatArrayOf(0f, 0.32f, 0.68f, 1f),
-        )
-        private val SHARP_VISIBILITY = arrayOf(
-            intArrayOf(0, 1, 1, 0),
-            intArrayOf(1, 0, 0, 1),
-            intArrayOf(0, 1, 1, 0),
-        )
+        /// Figma progressive blur per line, as (sharp, fully blurred) offsets
+        /// in the line's band (0 = crest, 1 = trough), linear in between:
+        /// the small lines sharpen toward the crests, the big one toward the
+        /// troughs.
+        private val BLUR_RAMPS = arrayOf(0f to 1f, 0f to 1f, 1.0133f to 0.5067f)
 
-        /// Per-line horizontal color gradients, one per wave, mirroring
-        /// `recordingWaveGradients` (src/theme/gradients/gradients.ts). Each
-        /// wave spans its full palette left-to-right; the middle line is orange.
-        private val WAVE_LINE_GRADIENTS = arrayOf(
-            intArrayOf(Color.parseColor("#A54CFF"), Color.parseColor("#4588D2")),
-            intArrayOf(Color.parseColor("#FF8A3D"), Color.parseColor("#F7931A")),
-            intArrayOf(Color.parseColor("#4588D2"), Color.parseColor("#A54CFF")),
+        /// Figma "Transcription Waves" stroke gradient, same for all three
+        /// lines: purple → blue → peach top to bottom.
+        private val WAVE_LINE_GRADIENT = intArrayOf(
+            Color.parseColor("#A54CFF"), Color.parseColor("#4588D2"), Color.parseColor("#FBCAB9"),
         )
-        private val WAVE_LINE_GRADIENT_STOPS = floatArrayOf(0f, 1f)
+        private val WAVE_LINE_GRADIENT_STOPS = floatArrayOf(0f, 0.5f, 1f)
+
+        /// Figma "Waves" overlay: clear 12%–72%, fully faded from 81.25%.
+        private val EDGE_FADE_POSITIONS = floatArrayOf(0f, 0.12f, 0.72f, 0.8125f)
     }
 }

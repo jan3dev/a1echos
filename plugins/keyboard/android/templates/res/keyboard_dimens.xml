@@ -6,8 +6,8 @@
     <dimen name="keyboard_top_bar_height">48dp</dimen>
     <dimen name="keyboard_top_bar_horizontal_padding">8dp</dimen>
     <dimen name="keyboard_top_bar_record_width">72dp</dimen>
-    <dimen name="keyboard_top_bar_record_height">40dp</dimen>
-    <dimen name="keyboard_top_bar_record_corner_radius">20dp</dimen>
+    <dimen name="keyboard_top_bar_record_height">32dp</dimen>
+    <dimen name="keyboard_top_bar_record_corner_radius">16dp</dimen>
     <dimen name="keyboard_top_bar_record_icon_size">18dp</dimen>
     <!-- Slightly tighter than 46dp to land on the native Gboard portrait
          key height. Combined with the bigger gaps below, the rows now have

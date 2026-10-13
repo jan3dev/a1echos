@@ -80,12 +80,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
                 LayoutParams.MATCH_PARENT, waveformHeight, Gravity.CENTER,
             )
             visibility = INVISIBLE
-            // Fade to transparent at both edges so the wave reads cleanly
-            // behind the record button. 0.32 mirrors the iOS
-            // `installEdgeFadeMask` default — the fade BEGINS well inside
-            // of the button so the wave is already mostly transparent by
-            // the time it reaches it.
-            setEdgeFadeFraction(0.32f)
+            setEdgeFade(true)
         }
         addView(waveform)
 
@@ -110,14 +105,14 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         foreground.addView(suggestionStrip)
 
-        // 72×40 pill with 20dp corner radius — matches the iOS record button
+        // 72×32 pill with 16dp corner radius — matches the iOS record button
         // shape so the keyboard reads as the same product on both platforms.
         val recordWidth = dim("keyboard_top_bar_record_width", 72)
-        val recordHeight = dim("keyboard_top_bar_record_height", 40)
+        val recordHeight = dim("keyboard_top_bar_record_height", 32)
         val recordIconSize = dim("keyboard_top_bar_record_icon_size", 18)
         recordBackground = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = dim("keyboard_top_bar_record_corner_radius", 20).toFloat()
+            cornerRadius = dim("keyboard_top_bar_record_corner_radius", 16).toFloat()
             setColor(pillColor)
         }
         // Wrap the gray pill in a translucent-white ripple so taps register
@@ -126,7 +121,7 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         val rippleBackground = RippleDrawable(rippleColor, recordBackground, null)
         // Wrap the record button in a `FrameLayout` so the indeterminate
         // `ProgressBar` shown during transcription can stack on top of the
-        // pill at the same 72×40 footprint without disturbing the
+        // pill at the same 72×32 footprint without disturbing the
         // foreground row's `LinearLayout` flow.
         val recordContainer = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(recordWidth, recordHeight)
@@ -153,13 +148,13 @@ class EchosKeyboardTopBar @JvmOverloads constructor(
         }
         recordContainer.addView(recordButton)
 
-        // Countdown ring overlay — same 72×40 footprint, rides the pill edge.
+        // Countdown ring overlay — same 72×32 footprint, rides the pill edge.
         countdownRing = CountdownRingView(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             )
-            cornerRadiusPx = dim("keyboard_top_bar_record_corner_radius", 20).toFloat()
+            cornerRadiusPx = dim("keyboard_top_bar_record_corner_radius", 16).toFloat()
             visibility = INVISIBLE
         }
         recordContainer.addView(countdownRing)
