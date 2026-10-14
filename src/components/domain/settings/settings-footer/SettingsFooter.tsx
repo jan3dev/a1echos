@@ -53,15 +53,7 @@ export const SettingsFooter = () => {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surfacePrimary,
-          borderColor: theme.colors.surfaceBorderPrimary,
-        },
-      ]}
-    >
+    <View style={styles.container}>
       <View style={styles.logoRow}>
         <Icon
           name="footer_logo"
@@ -117,11 +109,9 @@ export const SettingsFooter = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    paddingVertical: 16,
     gap: 8,
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 16,
   },
   logoRow: {
     paddingBottom: 8,
