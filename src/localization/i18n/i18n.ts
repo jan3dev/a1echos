@@ -32,15 +32,12 @@ const resources = {
   zh: { common: zhCommon },
 };
 
-const deviceLocale = Localization.getLocales()[0]?.languageCode ?? "en";
-const supportedLanguages = Object.keys(resources);
-const fallbackLng = supportedLanguages.includes(deviceLocale)
-  ? deviceLocale
-  : "en";
+export const resolveAppLanguage = (languageCode?: string | null) =>
+  languageCode && Object.hasOwn(resources, languageCode) ? languageCode : "en";
 
 i18nUse(initReactI18next).init({
   resources,
-  lng: fallbackLng,
+  lng: resolveAppLanguage(Localization.getLocales()[0]?.languageCode),
   fallbackLng: "en",
   defaultNS: "common",
   ns: ["common", "languages"],

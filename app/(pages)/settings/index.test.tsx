@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import * as IntentLauncher from "expo-intent-launcher";
 import * as Linking from "expo-linking";
 import * as LocalAuthentication from "expo-local-authentication";
 import React from "react";
+import { Platform } from "react-native";
 
 import SettingsScreen from "./index";
 
@@ -193,6 +195,44 @@ describe("SettingsScreen", () => {
     expect(Linking.openURL).toHaveBeenCalledWith(
       "https://a1lab.zendesk.com/hc/en-us/requests/new",
     );
+  });
+
+  describe("app language row", () => {
+    const original = { OS: Platform.OS, Version: Platform.Version };
+    const setPlatform = (OS: string, Version: number | string) => {
+      Object.defineProperty(Platform, "OS", { value: OS, configurable: true });
+      Object.defineProperty(Platform, "Version", {
+        value: Version,
+        configurable: true,
+      });
+    };
+    afterEach(() => setPlatform(original.OS, original.Version));
+
+    it("shows the current UI language and opens iOS Settings", () => {
+      setPlatform("ios", "18.0");
+      const { getByTestId } = render(<SettingsScreen />);
+      expect(getByTestId("trailing-appLanguageTitle")).toHaveTextContent(
+        "appLanguageName",
+      );
+      fireEvent.press(getByTestId("list-item-appLanguageTitle"));
+      expect(Linking.openSettings).toHaveBeenCalled();
+    });
+
+    it("opens the per-app language page on Android 13+", () => {
+      setPlatform("android", 33);
+      const { getByTestId } = render(<SettingsScreen />);
+      fireEvent.press(getByTestId("list-item-appLanguageTitle"));
+      expect(IntentLauncher.startActivityAsync).toHaveBeenCalledWith(
+        "android.settings.APP_LOCALE_SETTINGS",
+        { data: expect.stringMatching(/^package:/) },
+      );
+    });
+
+    it("is hidden on Android 12 and below", () => {
+      setPlatform("android", 32);
+      const { queryByTestId } = render(<SettingsScreen />);
+      expect(queryByTestId("list-item-appLanguageTitle")).toBeNull();
+    });
   });
 
   it("model item shows parakeet name when parakeet selected", () => {

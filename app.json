@@ -58,6 +58,39 @@
           "faceIDPermission": "Allow Echos to use Face ID to unlock the app."
         }
       ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": {
+            "ios": [
+              "en",
+              "ar",
+              "bn",
+              "es",
+              "fr",
+              "hi",
+              "id",
+              "pt",
+              "ru",
+              "ur",
+              "zh-Hans"
+            ],
+            "android": [
+              "en",
+              "ar",
+              "bn",
+              "es",
+              "fr",
+              "hi",
+              "id",
+              "pt",
+              "ru",
+              "ur",
+              "zh"
+            ]
+          }
+        }
+      ],
       "./plugins/withRnForegroundService",
       "./plugins/withFixJcenter",
       "./plugins/withReactNativeFsFix",

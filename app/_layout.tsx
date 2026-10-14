@@ -1,7 +1,7 @@
-import "@/localization";
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
 import { useIsFocused } from "@react-navigation/native";
 import { useFonts } from "expo-font";
+import { useLocales } from "expo-localization";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
@@ -38,6 +38,7 @@ import {
 } from "@/hooks";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
+import { i18n, resolveAppLanguage } from "@/localization";
 import { TranscriptionState } from "@/models";
 import migrationsBundle from "@/db/migrations/migrations.js";
 import {
@@ -475,6 +476,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (pathname.startsWith("/onboarding/")) void setOnboardingStep(pathname);
   }, [pathname, setOnboardingStep]);
+
+  // Android 13+ switches the per-app language without restarting the app.
+  const [{ languageCode }] = useLocales();
+  useEffect(() => {
+    void i18n.changeLanguage(resolveAppLanguage(languageCode));
+  }, [languageCode]);
 
   // Install global error handler once
   useEffect(() => {

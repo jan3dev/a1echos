@@ -81,6 +81,7 @@ export enum TestID {
   SettingsModel = "settings-model",
   SettingsTheme = "settings-theme",
   SettingsTextAppearance = "settings-text-appearance",
+  SettingsAppLanguage = "settings-app-language",
   SettingsLanguage = "settings-language",
   SettingsAdvanced = "settings-advanced",
   SettingsContactSupport = "settings-contact-support",

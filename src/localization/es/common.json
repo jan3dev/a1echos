@@ -72,6 +72,8 @@
   "title": "Modelos de audio",
   "themeTitle": "Tema",
   "textAppearanceTitle": "Apariencia del texto",
+  "appLanguageTitle": "Idioma de la app",
+  "appLanguageName": "Español",
   "textAppearancePreview": "Si no te lo crees o no lo entiendes, no tengo tiempo para intentar convencerte, lo siento.",
   "fontSize": "Tamaño de fuente",
   "fontWeight": "Grosor de fuente",

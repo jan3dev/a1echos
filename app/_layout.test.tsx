@@ -114,7 +114,11 @@ jest.mock("@/utils", () => ({
   openKeyboardSettings: jest.fn().mockResolvedValue(true),
 }));
 
-jest.mock("@/localization", () => ({}));
+const mockChangeLanguage = jest.fn();
+jest.mock("@/localization", () => ({
+  i18n: { changeLanguage: (lng: string) => mockChangeLanguage(lng) },
+  resolveAppLanguage: (code?: string | null) => (code === "fr" ? "fr" : "en"),
+}));
 
 jest.mock("@/components", () => {
   const { View } = require("react-native");
@@ -1007,6 +1011,17 @@ describe("RootLayout", () => {
       expect(mockHide).toHaveBeenCalled();
       expect(mockPush).not.toHaveBeenCalled();
     });
+  });
+
+  it("follows the device language when it changes at runtime", async () => {
+    const { useLocales } = require("expo-localization");
+    const { rerender } = await renderAndWaitForInit();
+    expect(mockChangeLanguage).toHaveBeenLastCalledWith("en");
+
+    (useLocales as jest.Mock).mockReturnValue([{ languageCode: "fr" }]);
+    rerender(<RootLayout />);
+    expect(mockChangeLanguage).toHaveBeenLastCalledWith("fr");
+    (useLocales as jest.Mock).mockReturnValue([{ languageCode: "en" }]);
   });
 
   describe("Platform-specific rendering", () => {

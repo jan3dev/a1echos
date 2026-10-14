@@ -1,4 +1,4 @@
-import i18n from "./i18n";
+import i18n, { resolveAppLanguage } from "./i18n";
 
 const en = require("../en/common.json") as Record<string, string>;
 
@@ -87,9 +87,10 @@ describe.each(Object.entries(LOCALES))("%s translations", (lng, strings) => {
     (count) => {
       const category = new Intl.PluralRules(lng).select(count);
       for (const base of pluralBases) {
-        const key = count === 0 && `${base}_zero` in strings
-          ? `${base}_zero`
-          : `${base}_${category}`;
+        const key =
+          count === 0 && `${base}_zero` in strings
+            ? `${base}_zero`
+            : `${base}_${category}`;
         expect(i18n.t(base, { lng, count })).toBe(
           strings[key].replace(/\{\{count\}\}/g, String(count)),
         );
@@ -118,5 +119,14 @@ describe("i18n resources", () => {
   it("falls back to English for keys only English has", async () => {
     await i18n.changeLanguage("fr");
     expect(i18n.t("english", { ns: "languages" })).toBe("English");
+  });
+});
+
+describe("resolveAppLanguage", () => {
+  it("keeps supported languages and falls back to English", () => {
+    expect(resolveAppLanguage("zh")).toBe("zh");
+    expect(resolveAppLanguage("de")).toBe("en");
+    expect(resolveAppLanguage("toString")).toBe("en");
+    expect(resolveAppLanguage(null)).toBe("en");
   });
 });

@@ -93,6 +93,8 @@ export const useLocalization = () => {
       title: t("title"),
       themeTitle: t("themeTitle"),
       textAppearanceTitle: t("textAppearanceTitle"),
+      appLanguageTitle: t("appLanguageTitle"),
+      appLanguageName: t("appLanguageName"),
       textAppearancePreview: t("textAppearancePreview"),
       fontSize: t("fontSize"),
       fontWeight: t("fontWeight"),

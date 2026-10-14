@@ -62,6 +62,9 @@ importers:
       expo-haptics:
         specifier: 55.0.9
         version: 55.0.9(expo@55.0.9)
+      expo-intent-launcher:
+        specifier: 55.0.16
+        version: 55.0.16(expo@55.0.9)
       expo-keep-awake:
         specifier: 55.0.4
         version: 55.0.4(expo@55.0.9)(react@19.2.0)
@@ -3430,6 +3433,11 @@ packages:
     peerDependenciesMeta:
       react-native-web:
         optional: true
+
+  expo-intent-launcher@55.0.16:
+    resolution: {integrity: sha512-0jVpzSPT3Ey7seNAzwEyf3+OVVYRqKGecSzgQdgMI41TqMFCfawgdP4E/KGNfFUgcSBwAACGXP+WF0jNyZQS9Q==}
+    peerDependencies:
+      expo: '*'
 
   expo-json-utils@55.0.2:
     resolution: {integrity: sha512-QJMOZOPOG7CTnKcrdVaiummn2va1MCO56z++eyWkDv3GBRODldM6MFMDf/jTREWthFc2Nxo6TuyWRrEV9S6n/Q==}
@@ -9644,6 +9652,10 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
+
+  expo-intent-launcher@55.0.16(expo@55.0.9):
+    dependencies:
+      expo: 55.0.9(@babel/core@7.28.5)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.8)(react-dom@19.2.7(react@19.2.0))(react-native@0.83.4(@babel/core@7.28.5)(@types/react@19.2.10)(react@19.2.0))(react@19.2.0)(typescript@5.9.2)
 
   expo-json-utils@55.0.2: {}
 

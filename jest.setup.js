@@ -154,6 +154,13 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
+jest.mock("expo-intent-launcher", () => ({
+  ActivityAction: {
+    APP_LOCALE_SETTINGS: "android.settings.APP_LOCALE_SETTINGS",
+  },
+  startActivityAsync: jest.fn(),
+}));
+
 jest.mock("expo-linking", () => ({
   openSettings: jest.fn(),
   openURL: jest.fn(),
@@ -201,6 +208,7 @@ jest.mock("expo-splash-screen", () => ({
 
 jest.mock("expo-localization", () => ({
   getLocales: jest.fn(() => [{ languageCode: "en", regionCode: "US" }]),
+  useLocales: jest.fn(() => [{ languageCode: "en", regionCode: "US" }]),
   locale: "en-US",
 }));
 

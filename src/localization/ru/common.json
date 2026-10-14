@@ -80,6 +80,8 @@
   "title": "Аудиомодели",
   "themeTitle": "Тема",
   "textAppearanceTitle": "Вид текста",
+  "appLanguageTitle": "Язык приложения",
+  "appLanguageName": "Русский",
   "textAppearancePreview": "Если вы не верите или не понимаете, у меня нет времени вас убеждать, извините.",
   "fontSize": "Размер шрифта",
   "fontWeight": "Насыщенность шрифта",

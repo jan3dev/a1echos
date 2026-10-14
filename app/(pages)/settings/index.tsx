@@ -1,7 +1,9 @@
+import Constants from "expo-constants";
+import * as IntentLauncher from "expo-intent-launcher";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -28,6 +30,19 @@ import {
   useShowGlobalTooltip,
 } from "@/stores";
 import { useTheme } from "@/theme";
+
+// Per-app language settings exist on iOS and on Android 13+ (API 33).
+const hasAppLanguageSettings = () =>
+  Platform.OS === "ios" ||
+  (Platform.OS === "android" && Number(Platform.Version) >= 33);
+
+const openAppLanguageSettings = () =>
+  Platform.OS === "android"
+    ? IntentLauncher.startActivityAsync(
+        IntentLauncher.ActivityAction.APP_LOCALE_SETTINGS,
+        { data: `package:${Constants.expoConfig?.android?.package}` },
+      )
+    : Linking.openSettings();
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -155,6 +170,24 @@ export default function SettingsScreen() {
                   iconTrailing={chevron}
                   onPress={() => router.push(Routes.settingsTextAppearance)}
                 />
+                {hasAppLanguageSettings() && (
+                  <>
+                    <Divider />
+                    <ListItem
+                      bordered={false}
+                      borderRadius={0}
+                      testID={TestID.SettingsAppLanguage}
+                      title={loc.appLanguageTitle}
+                      titleTrailing={loc.appLanguageName}
+                      titleTrailingColor={secondary}
+                      iconLeading={
+                        <Icon name="globe" size={24} color={secondary} />
+                      }
+                      iconTrailing={chevron}
+                      onPress={() => void openAppLanguageSettings()}
+                    />
+                  </>
+                )}
               </View>
             </View>
 

@@ -56,6 +56,8 @@
   "title": "音频模型",
   "themeTitle": "主题",
   "textAppearanceTitle": "文字外观",
+  "appLanguageTitle": "应用语言",
+  "appLanguageName": "简体中文",
   "textAppearancePreview": "如果你不相信或者不理解，我没有时间去说服你，抱歉。",
   "fontSize": "字体大小",
   "fontWeight": "字体粗细",
