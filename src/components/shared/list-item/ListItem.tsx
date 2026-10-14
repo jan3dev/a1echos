@@ -125,9 +125,12 @@ export const ListItem = ({
           <View style={styles.trailingTextContainer}>
             {titleTrailing && (
               <Text
-                variant="body1"
-                weight="semibold"
-                color={titleTrailingColor ?? colors.textPrimary}
+                variant={subtitleTrailing ? "body1" : "body2"}
+                weight={subtitleTrailing ? "semibold" : "medium"}
+                color={
+                  titleTrailingColor ??
+                  (subtitleTrailing ? colors.textPrimary : colors.textSecondary)
+                }
                 align="right"
               >
                 {titleTrailing}

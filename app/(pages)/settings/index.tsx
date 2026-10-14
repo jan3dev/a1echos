@@ -132,7 +132,6 @@ export default function SettingsScreen() {
                 testID={TestID.SettingsTheme}
                 title={loc.themeTitle}
                 titleTrailing={themeDisplay}
-                titleTrailingColor={secondary}
                 iconLeading={<Icon name="theme" size={24} color={secondary} />}
                 iconTrailing={chevron}
                 onPress={() => router.push(Routes.settingsTheme)}
@@ -149,7 +148,6 @@ export default function SettingsScreen() {
                   testID={TestID.SettingsAppLanguage}
                   title={loc.appLanguageTitle}
                   titleTrailing={i18n.language.toUpperCase()}
-                  titleTrailingColor={secondary}
                   iconLeading={
                     <Icon name="globe" size={24} color={secondary} />
                   }

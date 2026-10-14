@@ -115,7 +115,6 @@ export default function AdvancedSettingsScreen() {
             testID={TestID.SettingsLanguage}
             title={loc.spokenLanguageTitle}
             titleTrailing={selectedLanguage.code.toUpperCase()}
-            titleTrailingColor={secondary}
             iconLeading={leading("language")}
             iconTrailing={
               <Icon name="chevron_right" size={24} color={secondary} />
@@ -191,7 +190,6 @@ export default function AdvancedSettingsScreen() {
                 iconLeading={leading("timer")}
                 title={loc.micTimeoutTitle}
                 titleTrailing={micTimeoutDisplay}
-                titleTrailingColor={theme.colors.textSecondary}
                 iconTrailing={
                   <Icon
                     name="chevron_right"
