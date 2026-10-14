@@ -15,6 +15,9 @@ const LOCALES: Record<string, Record<string, string>> = {
   zh: require("../zh/common.json"),
 };
 
+// Translated but not loaded by the app until right-to-left layout is supported.
+const HIDDEN_LOCALES = new Set(["ar", "ur"]);
+
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
 const placeholders = (text: string) =>
@@ -28,6 +31,8 @@ const pluralBases = new Set(
 const plainKeys = Object.keys(en).filter((key) => !PLURAL_SUFFIX.test(key));
 
 describe.each(Object.entries(LOCALES))("%s translations", (lng, strings) => {
+  const itLoaded = HIDDEN_LOCALES.has(lng) ? it.skip : it;
+
   const categories = new Intl.PluralRules(lng).resolvedOptions()
     .pluralCategories;
 
@@ -76,13 +81,13 @@ describe.each(Object.entries(LOCALES))("%s translations", (lng, strings) => {
     }
   });
 
-  it("registers the translations used by the app", () => {
+  itLoaded("registers the translations used by the app", () => {
     for (const [key, value] of Object.entries(strings)) {
       expect(i18n.getResource(lng, "common", key)).toBe(value);
     }
   });
 
-  it.each([0, 1, 2, 3, 5, 11, 21, 100, 101, 1000000])(
+  itLoaded.each([0, 1, 2, 3, 5, 11, 21, 100, 101, 1000000])(
     "renders plural messages for count %i without falling back to English",
     (count) => {
       const category = new Intl.PluralRules(lng).select(count);
@@ -107,12 +112,15 @@ describe("i18n resources", () => {
     expect(i18n.t("sessionCount", { count: 3 })).toBe("3 сессии");
     expect(i18n.t("sessionCount", { count: 5 })).toBe("5 сессий");
 
-    await i18n.changeLanguage("ar");
-    expect(i18n.t("sessionCount", { count: 2 })).toBe("جلستان");
-
     await i18n.changeLanguage("zh");
     expect(i18n.t("selectedCount", { count: 0 })).toBe("选择项目");
     expect(i18n.t("selectedCount", { count: 4 })).toBe("已选择 4 项");
+  });
+
+  it("does not load right-to-left languages", () => {
+    for (const lng of HIDDEN_LOCALES) {
+      expect(i18n.hasResourceBundle(lng, "common")).toBe(false);
+    }
   });
 
   it("falls back to English for keys only English has", async () => {
