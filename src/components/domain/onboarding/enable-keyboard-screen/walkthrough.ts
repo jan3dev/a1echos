@@ -21,13 +21,6 @@ export const easeInOutCubic = (x: number) => {
   return x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
 };
 
-// Slight overshoot, like a stiff spring settling.
-export const easeOutBack = (x: number) => {
-  "worklet";
-  const c1 = 1.2;
-  return 1 + (c1 + 1) * (x - 1) ** 3 + c1 * (x - 1) ** 2;
-};
-
 /** Eased 0→1 progress of the segment [start, start + duration] at time t (ms). */
 export const segment = (
   t: number,

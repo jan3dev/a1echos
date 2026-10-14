@@ -189,23 +189,6 @@ export const useLocalization = () => {
       onboardingEnableKeyboardTitle: t("onboardingEnableKeyboardTitle"),
       onboardingEnableKeyboardTooltip: t("onboardingEnableKeyboardTooltip"),
       onboardingEnableKeyboardRowEchos: t("onboardingEnableKeyboardRowEchos"),
-      onboardingEnableKeyboardRowFullAccess: t(
-        "onboardingEnableKeyboardRowFullAccess",
-      ),
-      onboardingEnableKeyboardRowMicrophone: t(
-        "onboardingEnableKeyboardRowMicrophone",
-      ),
-      onboardingEnableKeyboardRowSiri: t("onboardingEnableKeyboardRowSiri"),
-      onboardingEnableKeyboardRowSearch: t("onboardingEnableKeyboardRowSearch"),
-      onboardingEnableKeyboardRowLiveActivities: t(
-        "onboardingEnableKeyboardRowLiveActivities",
-      ),
-      onboardingEnableKeyboardRowCellularData: t(
-        "onboardingEnableKeyboardRowCellularData",
-      ),
-      onboardingEnableKeyboardRowKeyboards: t(
-        "onboardingEnableKeyboardRowKeyboards",
-      ),
       onboardingEnableKeyboardDialogOk: t("onboardingEnableKeyboardDialogOk"),
       onboardingGoToSettings: t("onboardingGoToSettings"),
       onboardingKeyboardNotAddedTitle: t("onboardingKeyboardNotAddedTitle"),

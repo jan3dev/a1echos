@@ -52,9 +52,9 @@ describe("EnableKeyboardScreen", () => {
   });
 
   it("renders title, step indicator, tooltip and CTA", () => {
-    const { getByText, getByTestId } = renderScreen();
+    const { getByText, getByTestId, getByLabelText } = renderScreen();
     expect(getByText("onboardingEnableKeyboardTitle")).toBeTruthy();
-    expect(getByText("onboardingEnableKeyboardTooltip")).toBeTruthy();
+    expect(getByLabelText("onboardingEnableKeyboardTooltip")).toBeTruthy();
     expect(getByTestId("kb-steps-dot-2")).toHaveStyle({ width: 24 });
     expect(getByTestId("kb-go-to-settings")).toBeTruthy();
   });
@@ -67,24 +67,20 @@ describe("EnableKeyboardScreen", () => {
     expect(props.onSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("on iOS walks Settings → Keyboards → Full Access, then unlocks the CTA", () => {
+  it("on iOS plays the Settings animation once, then unlocks the CTA", () => {
     Platform.OS = "ios";
-    const { getByTestId, getByText, props } = renderScreen();
-    expect(
-      getByText("onboardingEnableKeyboardRowKeyboards", hidden),
-    ).toBeTruthy();
-    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 312 });
+    const { getByTestId, props, UNSAFE_root } = renderScreen();
+    const frame = () =>
+      UNSAFE_root.findByType("SkiaSkottie" as never).props.frame.value;
+    expect(frame()).toBe(0);
 
+    act(() => jest.advanceTimersByTime(IOS_DEMO_DONE - 1));
     fireEvent.press(getByTestId("kb-go-to-settings"));
     expect(props.onGoToSettings).not.toHaveBeenCalled();
 
-    act(() => jest.advanceTimersByTime(IOS_DEMO_DONE));
-    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 104 });
-    expect(getByTestId("kb-full-access-toggle", hidden)).toHaveStyle({
-      width: 64,
-      height: 28,
-      backgroundColor: "#30D158",
-    });
+    act(() => jest.advanceTimersByTime(1));
+    // Holds the last frame before the design's loop-reset segment.
+    expect(frame()).toBe(194);
     fireEvent.press(getByTestId("kb-go-to-settings"));
     expect(props.onGoToSettings).toHaveBeenCalledTimes(1);
   });
@@ -117,8 +113,10 @@ describe("EnableKeyboardScreen", () => {
 
   it("skips straight to the end with Reduce Motion", () => {
     mockReducedMotion.mockReturnValue(true);
-    const { getByTestId, props } = renderScreen();
-    expect(getByTestId("kb-list", hidden)).toHaveStyle({ height: 104 });
+    const { getByTestId, props, UNSAFE_root } = renderScreen();
+    expect(
+      UNSAFE_root.findByType("SkiaSkottie" as never).props.frame.value,
+    ).toBe(194);
     fireEvent.press(getByTestId("kb-go-to-settings"));
     expect(props.onGoToSettings).toHaveBeenCalledTimes(1);
   });
@@ -148,9 +146,5 @@ describe("EnableKeyboardScreen", () => {
     expect(getByTestId("kb-illustration-content")).toHaveStyle({
       transform: [{ scale: 0.5 }],
     });
-    fireEvent(getByTestId("kb-list", hidden), "layout", layout(312));
-    // The Keyboards list sits just below the measured tooltip.
-    fireEvent(getByTestId("kb-tooltip"), "layout", layout(300));
-    expect(getByTestId("kb-list", hidden)).toHaveStyle({ top: 308 });
   });
 });
