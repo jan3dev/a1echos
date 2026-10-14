@@ -187,7 +187,7 @@
   "onboardingGoToSettings": "সেটিংসে যান",
   "onboardingKeyboardNotAddedTitle": "Echos কিবোর্ড যোগ করা হয়নি",
   "onboardingKeyboardNotAddedMessage": "সেটিংসে, কিবোর্ডের অধীনে Echos চালু করুন এবং সম্পূর্ণ অ্যাক্সেসের অনুমতি দিন, তারপর ফিরে আসুন।",
-  "onboardingSpokenLanguageTitle": "আপনি কোন ভাষায় কথা বলেন?",
+  "onboardingSpokenLanguageTitle": "আপনি কোন ভাষায় রেকর্ড করবেন?",
   "onboardingNext": "পরবর্তী",
   "onboardingTryLargerModelTitle": "একটি বড় মডেল ব্যবহার করে দেখুন",
   "onboardingTryLargerModelSubtitle": "উচ্চারণভেদ ও কোলাহলপূর্ণ পরিবেশে আরও নির্ভুল। বেশি জায়গা প্রয়োজন।",

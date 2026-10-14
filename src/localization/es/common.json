@@ -195,7 +195,7 @@
   "onboardingGoToSettings": "Ir a Ajustes",
   "onboardingKeyboardNotAddedTitle": "No se ha añadido el teclado de Echos",
   "onboardingKeyboardNotAddedMessage": "En Ajustes, activa Echos en Teclados y permite el acceso total. Después, vuelve aquí.",
-  "onboardingSpokenLanguageTitle": "¿Qué idioma hablas?",
+  "onboardingSpokenLanguageTitle": "¿En qué idioma vas a grabar?",
   "onboardingNext": "Siguiente",
   "onboardingTryLargerModelTitle": "Prueba un modelo más grande",
   "onboardingTryLargerModelSubtitle": "Más precisión con acentos y en entornos ruidosos. Requiere más espacio.",

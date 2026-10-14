@@ -195,7 +195,7 @@
   "onboardingGoToSettings": "Ir para Ajustes",
   "onboardingKeyboardNotAddedTitle": "Teclado Echos não adicionado",
   "onboardingKeyboardNotAddedMessage": "Nos Ajustes, ative o Echos em Teclados e permita o Acesso Total. Depois, volte aqui.",
-  "onboardingSpokenLanguageTitle": "Qual idioma você fala?",
+  "onboardingSpokenLanguageTitle": "Em qual idioma você vai gravar?",
   "onboardingNext": "Próximo",
   "onboardingTryLargerModelTitle": "Experimente um modelo maior",
   "onboardingTryLargerModelSubtitle": "Mais precisão com sotaques e em ambientes barulhentos. Requer mais espaço.",

@@ -195,7 +195,7 @@
   "onboardingGoToSettings": "Aller dans Réglages",
   "onboardingKeyboardNotAddedTitle": "Clavier Echos non ajouté",
   "onboardingKeyboardNotAddedMessage": "Dans Réglages, activez Echos sous Claviers et autorisez l’accès complet, puis revenez ici.",
-  "onboardingSpokenLanguageTitle": "Quelle langue parlez-vous ?",
+  "onboardingSpokenLanguageTitle": "Dans quelle langue allez-vous enregistrer ?",
   "onboardingNext": "Suivant",
   "onboardingTryLargerModelTitle": "Essayez un modèle plus grand",
   "onboardingTryLargerModelSubtitle": "Plus précis avec les accents et dans les environnements bruyants. Nécessite plus d’espace.",

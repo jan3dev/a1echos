@@ -187,7 +187,7 @@
   "onboardingGoToSettings": "Go to Settings",
   "onboardingKeyboardNotAddedTitle": "Echos Keyboard Not Added",
   "onboardingKeyboardNotAddedMessage": "In Settings, turn on Echos under Keyboards and allow Full Access, then come back.",
-  "onboardingSpokenLanguageTitle": "What Language Do You Speak?",
+  "onboardingSpokenLanguageTitle": "What Language Will You Record In?",
   "onboardingNext": "Next",
   "onboardingTryLargerModelTitle": "Try a Larger Model",
   "onboardingTryLargerModelSubtitle": "Better accuracy for accents and noisy environments. Requires more space.",

@@ -179,7 +179,7 @@
   "onboardingGoToSettings": "前往设置",
   "onboardingKeyboardNotAddedTitle": "尚未添加 Echos 键盘",
   "onboardingKeyboardNotAddedMessage": "在设置的“键盘”中开启 Echos 并允许完全访问，然后返回这里。",
-  "onboardingSpokenLanguageTitle": "你说哪种语言？",
+  "onboardingSpokenLanguageTitle": "你将用哪种语言录音？",
   "onboardingNext": "下一步",
   "onboardingTryLargerModelTitle": "试试更大的模型",
   "onboardingTryLargerModelSubtitle": "对口音和嘈杂环境的识别更准确。需要更多存储空间。",

@@ -218,7 +218,7 @@
   "onboardingGoToSettings": "الانتقال إلى الإعدادات",
   "onboardingKeyboardNotAddedTitle": "لم تتم إضافة لوحة مفاتيح Echos",
   "onboardingKeyboardNotAddedMessage": "في الإعدادات، فعّل Echos ضمن لوحات المفاتيح واسمح بالوصول الكامل، ثم عُد إلى هنا.",
-  "onboardingSpokenLanguageTitle": "ما اللغة التي تتحدث بها؟",
+  "onboardingSpokenLanguageTitle": "بأي لغة ستسجّل؟",
   "onboardingNext": "التالي",
   "onboardingTryLargerModelTitle": "جرّب نموذجًا أكبر",
   "onboardingTryLargerModelSubtitle": "دقة أفضل مع اللهجات والبيئات الصاخبة. يتطلب مساحة أكبر.",

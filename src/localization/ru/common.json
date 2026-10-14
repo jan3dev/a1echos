@@ -203,7 +203,7 @@
   "onboardingGoToSettings": "Перейти в Настройки",
   "onboardingKeyboardNotAddedTitle": "Клавиатура Echos не добавлена",
   "onboardingKeyboardNotAddedMessage": "В Настройках включите Echos в разделе «Клавиатуры» и разрешите полный доступ, затем вернитесь сюда.",
-  "onboardingSpokenLanguageTitle": "На каком языке вы говорите?",
+  "onboardingSpokenLanguageTitle": "На каком языке вы будете записывать?",
   "onboardingNext": "Далее",
   "onboardingTryLargerModelTitle": "Попробуйте модель побольше",
   "onboardingTryLargerModelSubtitle": "Точнее распознаёт акценты и речь в шумной обстановке. Требует больше места.",
