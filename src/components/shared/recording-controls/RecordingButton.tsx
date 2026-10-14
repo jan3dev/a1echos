@@ -71,6 +71,8 @@ const PROCESSING_LOGO_DELAY_MS = 2000;
 const PROCESSING_LOGO_SIZE = 42;
 
 const PROCESSING_PERIOD_MS = 3600;
+const PROCESSING_GRADIENT_SPEED = 3;
+const PROCESSING_SPEED_RAMP_MS = 450;
 const PROCESSING_MIN_OPACITY = 0.25;
 const PROCESSING_VIEWBOX_WIDTH = 68;
 const PROCESSING_VIEWBOX_HEIGHT = 96;
@@ -213,16 +215,27 @@ const GradientHighlight = ({
 const AnimatedGradientCircle = ({
   size,
   active,
+  fast,
 }: {
   size: number;
   active: boolean;
+  fast: boolean;
 }) => {
   const progress = useSharedValue(0);
+  const speed = useSharedValue(1);
+
+  useEffect(() => {
+    speed.value = withTiming(fast ? PROCESSING_GRADIENT_SPEED : 1, {
+      duration: PROCESSING_SPEED_RAMP_MS,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [fast, speed]);
 
   const frameCallback = useFrameCallback((frameInfo) => {
     "worklet";
     const dt = Math.min(frameInfo.timeSincePreviousFrame ?? 16, 50);
-    progress.value = (progress.value + dt / GRADIENT.loopMs) % 1;
+    progress.value =
+      (progress.value + (dt * speed.value) / GRADIENT.loopMs) % 1;
   });
 
   useEffect(() => {
@@ -530,7 +543,11 @@ export const RecordingButton = ({
           }
         >
           <View style={[styles.buttonContainer, circleSize]}>
-            <AnimatedGradientCircle size={size} active={!showSurface} />
+            <AnimatedGradientCircle
+              size={size}
+              active={!showSurface}
+              fast={isProcessing}
+            />
             <Animated.View
               pointerEvents="none"
               style={[
