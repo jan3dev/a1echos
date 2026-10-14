@@ -1,5 +1,4 @@
 import * as Linking from "expo-linking";
-import { useEffect, useId } from "react";
 import {
   Image,
   Platform,
@@ -8,17 +7,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  SharedValue,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
-import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import AquaLogo from "@/assets/images/aqua-logo.svg";
 import { Text } from "@/components/ui/text";
@@ -33,8 +21,6 @@ const AQUA_APP_URLS = {
 // AQUA brand colors, not part of the Echos palette.
 const AQUA_COLORS = {
   base: "#10BBEB",
-  glowLight: "#3BCCF4",
-  glowDark: "#06A7DB",
   buttonBackground: "#022173",
   buttonText: "#00C7F9",
 };
@@ -43,71 +29,10 @@ const AQUA_COLORS = {
 const DESIGN_WIDTH = 343;
 const DESIGN_HEIGHT = 211;
 const MAX_BANNER_WIDTH = 633;
-const PHONE = { left: 202, top: 26, width: 115.757, height: 243.823 };
-const GLOW_SWEEP_MS = 3600;
-
-const Glow = ({
-  color,
-  width,
-  height,
-  fromX,
-  toX,
-  progress,
-}: {
-  color: string;
-  width: number;
-  height: number;
-  fromX: number;
-  toX: number;
-  progress: SharedValue<number>;
-}) => {
-  const gradientId = `aquaGlow-${useId().replace(/:/g, "")}`;
-  const rx = width * 0.45;
-  const ry = height * 0.8;
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: fromX + (toX - fromX) * progress.value - rx }],
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.glow,
-        { top: height * 0.45 - ry, width: rx * 2, height: ry * 2 },
-        style,
-      ]}
-    >
-      <Svg width={rx * 2} height={ry * 2}>
-        <Defs>
-          <RadialGradient id={gradientId} cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={color} stopOpacity={1} />
-            <Stop offset="0.5" stopColor={color} stopOpacity={0.5} />
-            <Stop offset="1" stopColor={color} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect width={rx * 2} height={ry * 2} fill={`url(#${gradientId})`} />
-      </Svg>
-    </Animated.View>
-  );
-};
+const PHONE = { left: 202.07, top: 26.07, width: 115.87, height: 184.93 };
 
 export const InAppBanner = () => {
   const { width: screenWidth } = useWindowDimensions();
-  const reducedMotion = useReducedMotion();
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (reducedMotion) return;
-    progress.value = withRepeat(
-      withTiming(1, {
-        duration: GLOW_SWEEP_MS,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1,
-      true,
-    );
-    return () => cancelAnimation(progress);
-  }, [reducedMotion, progress]);
 
   const handlePress = async () => {
     try {
@@ -147,21 +72,14 @@ export const InAppBanner = () => {
         accessibilityLabel="Download AQUA Wallet"
         accessibilityRole="link"
       >
-        <Glow
-          color={AQUA_COLORS.glowLight}
-          width={bannerWidth}
-          height={bannerHeight}
-          fromX={bannerWidth * 0.8}
-          toX={bannerWidth * 0.2}
-          progress={progress}
-        />
-        <Glow
-          color={AQUA_COLORS.glowDark}
-          width={bannerWidth}
-          height={bannerHeight}
-          fromX={bannerWidth * 0.15}
-          toX={bannerWidth * 0.85}
-          progress={progress}
+        <Image
+          source={require("@/assets/images/aqua-banner-bg.png")}
+          style={{
+            position: "absolute",
+            width: bannerWidth,
+            height: bannerHeight,
+          }}
+          resizeMode="stretch"
         />
         <Image
           source={require("@/assets/images/aqua-banner-phone.png")}
@@ -205,10 +123,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
     backgroundColor: AQUA_COLORS.base,
-  },
-  glow: {
-    position: "absolute",
-    left: 0,
   },
   content: {
     width: 171,

@@ -82,6 +82,23 @@ describe("HomeContent", () => {
     expect(queryByText("AQUA")).toBeNull();
   });
 
+  it("hides quick actions on an empty home", () => {
+    seedSessions(0);
+    const { queryByText } = render(
+      <HomeContent {...defaultProps} onCreateFolderPress={jest.fn()} />,
+    );
+    expect(queryByText("homeFolder")).toBeNull();
+    expect(queryByText("homeUpload")).toBeNull();
+  });
+
+  it("keeps the upload action in an empty folder", () => {
+    seedSessions(0);
+    const { getByText } = render(
+      <HomeContent {...defaultProps} folderId="f1" />,
+    );
+    expect(getByText("homeUpload")).toBeTruthy();
+  });
+
   it("hides quick actions and folders in selection mode", () => {
     const { queryByText } = render(
       <HomeContent
