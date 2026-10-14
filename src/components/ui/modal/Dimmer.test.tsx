@@ -22,7 +22,7 @@ describe("Dimmer", () => {
         <Text>Content</Text>
       </Dimmer>,
     );
-    expect(UNSAFE_root.findByType("BlurView" as any).props.intensity).toBe(100);
+    expect(UNSAFE_root.findByType("BlurView" as any).props.intensity).toBe(30);
   });
 
   it("calls onDismiss when backdrop pressed", () => {
@@ -50,7 +50,7 @@ describe("Dimmer", () => {
     expect(getByText("Child Content")).toBeTruthy();
   });
 
-  it("uses Figma dark glass tint when isDark", () => {
+  it("uses Glass/Dimmer dark tint when isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "dark" });
     const { toJSON } = render(
@@ -59,10 +59,10 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("rgba(7, 7, 8, 0.4)");
+    expect(json).toContain("rgba(255, 255, 255, 0.02)");
   });
 
-  it("uses light glass tint when not isDark", () => {
+  it("uses Glass/Dimmer light tint when not isDark", () => {
     const { useThemeStore } = require("@/theme");
     useThemeStore.setState({ currentTheme: "light" });
     const { toJSON } = render(
@@ -71,6 +71,6 @@ describe("Dimmer", () => {
       </Dimmer>,
     );
     const json = JSON.stringify(toJSON());
-    expect(json).toContain("rgba(245, 245, 248, 0.4)");
+    expect(json).toContain("rgba(0, 0, 0, 0.02)");
   });
 });

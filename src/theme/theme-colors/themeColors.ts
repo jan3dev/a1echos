@@ -21,6 +21,7 @@ export interface AquaColors {
   glassSurfaceBorder: string;
   glassInverse: string;
   glassBackground: string;
+  glassDimmer: string;
 
   accentBrand: string;
   accentBrandTransparent: string;
@@ -66,6 +67,7 @@ export const lightColors: AquaColors = {
   glassSurfaceBorder: AquaPrimitiveColors.glassSurfaceBorderLight,
   glassInverse: AquaPrimitiveColors.glassInverseLight,
   glassBackground: AquaPrimitiveColors.glassBackgroundLight,
+  glassDimmer: AquaPrimitiveColors.glassDimmerLight,
 
   accentBrand: AquaPrimitiveColors.neonBlue500,
   accentBrandTransparent: AquaPrimitiveColors.neonBlue16,
@@ -111,6 +113,7 @@ export const darkColors: AquaColors = {
   glassSurfaceBorder: AquaPrimitiveColors.glassSurfaceBorderDark,
   glassInverse: AquaPrimitiveColors.glassInverseDark,
   glassBackground: AquaPrimitiveColors.glassBackgroundDark,
+  glassDimmer: AquaPrimitiveColors.glassDimmerDark,
 
   accentBrand: AquaPrimitiveColors.neonBlue400,
   accentBrandTransparent: AquaPrimitiveColors.neonBlue16,

@@ -10,18 +10,17 @@ export interface DimmerProps {
   onDismiss: () => void;
 }
 
-// Figma "Dimmer" (Echos Flows 1107:7636): backdrop-blur 75 + Glass/Background
-// at 40%. expo-blur caps well below a 75px radius, so intensity is maxed.
-const DIMMER_BLUR_INTENSITY = 100;
-const DIMMER_TINT_DARK = "rgba(7, 7, 8, 0.4)";
-const DIMMER_TINT_LIGHT = "rgba(245, 245, 248, 0.4)";
+// Figma "Dimmer" (DS 7:4415): backdrop-blur 100 + Glass/Dimmer. iOS blur
+// materials wash a plain page out to white at full intensity, hiding the
+// sheet edge, so intensity is tuned on device instead of matching Figma.
+const DIMMER_BLUR_INTENSITY = 30;
 
 /**
  * Full-screen blurred, tinted backdrop for overlays. Android blur needs a
  * `BlurTargetView`, which a Modal can't reach, so it falls back to the tint.
  */
 export const DimmerBackdrop = () => {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -33,7 +32,7 @@ export const DimmerBackdrop = () => {
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: isDark ? DIMMER_TINT_DARK : DIMMER_TINT_LIGHT },
+          { backgroundColor: theme.colors.glassDimmer },
         ]}
       />
     </View>
