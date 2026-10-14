@@ -27,6 +27,7 @@ import GhostOn from "@/assets/icons/ghost_on.svg";
 import Globe from "@/assets/icons/globe.svg";
 import HelpSupport from "@/assets/icons/help_support.svg";
 import InfoCircle from "@/assets/icons/info_circle.svg";
+import Keyboard from "@/assets/icons/keyboard.svg";
 import Language from "@/assets/icons/language.svg";
 import Menu from "@/assets/icons/menu.svg";
 import Mic from "@/assets/icons/mic.svg";
@@ -77,6 +78,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   globe: Globe,
   help_support: HelpSupport,
   info_circle: InfoCircle,
+  keyboard: Keyboard,
   language: Language,
   menu: Menu,
   mic: Mic,

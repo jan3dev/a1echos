@@ -174,10 +174,12 @@ export const useLocalization = () => {
         t("largerModelSuggestionBody", { language }),
       largerModelSuggestionCta: t("largerModelSuggestionCta"),
       largerModelSuggestionDismiss: t("largerModelSuggestionDismiss"),
-      advancedSettingsAddKeyboardTitle: t("advancedSettingsAddKeyboardTitle"),
-      advancedSettingsAddKeyboardDescription: t(
-        "advancedSettingsAddKeyboardDescription",
+      advancedSettingsKeyboardTitle: t("advancedSettingsKeyboardTitle"),
+      advancedSettingsKeyboardDescription: t(
+        "advancedSettingsKeyboardDescription",
       ),
+      advancedSettingsKeyboardAdded: t("advancedSettingsKeyboardAdded"),
+      advancedSettingsKeyboardNotAdded: t("advancedSettingsKeyboardNotAdded"),
       welcomeTitle: t("welcomeTitle"),
       welcomeSubtitle: t("welcomeSubtitle"),
       welcomeGetStarted: t("welcomeGetStarted"),

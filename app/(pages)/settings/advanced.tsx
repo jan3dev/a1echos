@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
-import { type ReactNode, useRef } from "react";
-import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  AppState,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -29,6 +35,7 @@ import {
   useSmartSplitEnabled,
 } from "@/stores";
 import { useTheme } from "@/theme";
+import { readKeyboardEnabled } from "@/utils";
 import { micTimeoutLabelKey } from "@/utils/keyboard-settings/micTimeoutLabel";
 
 export default function AdvancedSettingsScreen() {
@@ -50,6 +57,18 @@ export default function AdvancedSettingsScreen() {
   const keyboardMicTimeout = useKeyboardMicTimeout();
   const showKeyboardPrompt = useShowKeyboardPrompt();
   const selectedLanguage = useSelectedLanguage();
+  const [keyboardEnabled, setKeyboardEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const refresh = () => void readKeyboardEnabled().then(setKeyboardEnabled);
+    refresh();
+    let previous = AppState.currentState;
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (previous === "background" && next === "active") refresh();
+      previous = next;
+    });
+    return () => subscription.remove();
+  }, []);
 
   const secondary = theme.colors.textSecondary;
   const leading = (name: IconName) => (
@@ -184,13 +203,21 @@ export default function AdvancedSettingsScreen() {
               />
             </Captioned>
           )}
-          <Captioned caption={loc.advancedSettingsAddKeyboardDescription}>
+          <Captioned caption={loc.advancedSettingsKeyboardDescription}>
             <ListItem
               testID={TestID.SettingsAddKeyboardRow}
-              iconLeading={leading("globe")}
-              title={loc.advancedSettingsAddKeyboardTitle}
-              titleTrailing="EN"
-              titleTrailingColor={secondary}
+              iconLeading={leading("keyboard")}
+              title={loc.advancedSettingsKeyboardTitle}
+              titleTrailing={
+                keyboardEnabled === null
+                  ? undefined
+                  : keyboardEnabled
+                    ? loc.advancedSettingsKeyboardAdded
+                    : loc.advancedSettingsKeyboardNotAdded
+              }
+              titleTrailingColor={
+                keyboardEnabled ? theme.colors.accentSuccess : secondary
+              }
               iconTrailing={
                 <Icon
                   name="chevron_right"

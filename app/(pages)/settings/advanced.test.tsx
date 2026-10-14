@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+} from "@testing-library/react-native";
 import React from "react";
 
 import { Routes, TestID } from "@/constants";
@@ -22,6 +27,7 @@ jest.mock("@/theme", () => ({
         surfaceBorderPrimary: "#ccc",
         textPrimary: "#000",
         textSecondary: "#666",
+        accentSuccess: "#18A23B",
       },
     },
   })),
@@ -30,6 +36,19 @@ jest.mock("@/theme", () => ({
 const {
   mockMakeLoc,
 } = require("../../../src/test-utils/mock-localization/mockLocalization");
+
+const mockReadKeyboardEnabled = jest.fn();
+jest.mock("@/utils", () => ({
+  readKeyboardEnabled: () => mockReadKeyboardEnabled(),
+}));
+
+const mockAppStateListeners: ((state: string) => void)[] = [];
+jest
+  .spyOn(require("react-native").AppState, "addEventListener")
+  .mockImplementation((_: any, listener: any) => {
+    mockAppStateListeners.push(listener);
+    return { remove: jest.fn() };
+  });
 
 jest.mock("@/hooks", () => ({
   useScrollSurface: jest.fn(() => ({
@@ -117,6 +136,9 @@ describe("AdvancedSettingsScreen", () => {
     mockSetKeyboardSound.mockReset();
     mockSetKeyboardSound.mockResolvedValue(undefined);
     mockShowKeyboardPrompt.mockReset();
+    mockReadKeyboardEnabled.mockReset();
+    mockReadKeyboardEnabled.mockResolvedValue(null);
+    mockAppStateListeners.length = 0;
     mockPush.mockReset();
     const {
       useSmartSplitEnabled,
@@ -178,21 +200,37 @@ describe("AdvancedSettingsScreen", () => {
     });
   });
 
-  it("renders the Add Echos Keyboard row with description caption", () => {
+  it("renders the Echos Keyboard row with description caption", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsAddKeyboardRow)).toBeTruthy();
-    expect(getByText("advancedSettingsAddKeyboardTitle")).toBeTruthy();
-    expect(getByText("advancedSettingsAddKeyboardDescription")).toBeTruthy();
+    expect(getByText("advancedSettingsKeyboardTitle")).toBeTruthy();
+    expect(getByText("advancedSettingsKeyboardDescription")).toBeTruthy();
   });
 
-  it("shows the EN layout label on the Add Echos Keyboard row", () => {
-    const { useSelectedLanguage } = require("@/stores");
-    (useSelectedLanguage as jest.Mock).mockReturnValueOnce({
-      code: "de",
-      name: "German",
+  it("shows Added when the keyboard is enabled", async () => {
+    mockReadKeyboardEnabled.mockResolvedValue(true);
+    const { findByText } = render(<AdvancedSettingsScreen />);
+    expect(await findByText("advancedSettingsKeyboardAdded")).toBeTruthy();
+  });
+
+  it("shows no status when it is unknown", async () => {
+    const { queryByText } = render(<AdvancedSettingsScreen />);
+    await waitFor(() => expect(mockReadKeyboardEnabled).toHaveBeenCalled());
+    expect(queryByText("advancedSettingsKeyboardAdded")).toBeNull();
+    expect(queryByText("advancedSettingsKeyboardNotAdded")).toBeNull();
+  });
+
+  it("refreshes the status when returning to the foreground", async () => {
+    mockReadKeyboardEnabled.mockResolvedValue(false);
+    const { findByText } = render(<AdvancedSettingsScreen />);
+    expect(await findByText("advancedSettingsKeyboardNotAdded")).toBeTruthy();
+
+    mockReadKeyboardEnabled.mockResolvedValue(true);
+    act(() => {
+      mockAppStateListeners.forEach((l) => l("background"));
+      mockAppStateListeners.forEach((l) => l("active"));
     });
-    const { getByText } = render(<AdvancedSettingsScreen />);
-    expect(getByText("EN")).toBeTruthy();
+    expect(await findByText("advancedSettingsKeyboardAdded")).toBeTruthy();
   });
 
   it("pressing Add Echos Keyboard row opens the prompt", () => {
@@ -301,7 +339,7 @@ describe("AdvancedSettingsScreen", () => {
 
   it("renders the spoken language row and navigates to the picker", () => {
     const { getByTestId, getAllByText } = render(<AdvancedSettingsScreen />);
-    expect(getAllByText("EN")).toHaveLength(2);
+    expect(getAllByText("EN")).toHaveLength(1);
     fireEvent.press(getByTestId(TestID.SettingsLanguage));
     expect(mockPush).toHaveBeenCalledWith(Routes.settingsLanguage);
   });
