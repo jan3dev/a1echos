@@ -75,7 +75,7 @@ export default function AdvancedSettingsScreen() {
     <Icon name={name} size={24} color={secondary} />
   );
 
-  const micTimeoutDisplay = loc[micTimeoutLabelKey(keyboardMicTimeout)];
+  const micTimeoutDisplay = loc[micTimeoutLabelKey(keyboardMicTimeout, true)];
 
   const handleToggle = (next: boolean) => {
     void setSmartSplitEnabled(next);
@@ -140,7 +140,7 @@ export default function AdvancedSettingsScreen() {
           <Captioned caption={loc.keyboardAutocorrectDescription}>
             <ListItem
               testID={TestID.SettingsKeyboardAutocorrectToggle}
-              iconLeading={leading("edit")}
+              iconLeading={leading("edit_square")}
               title={loc.keyboardAutocorrectTitle}
               iconTrailing={
                 <Toggle

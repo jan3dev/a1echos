@@ -17,6 +17,7 @@ import Download from "@/assets/icons/download.svg";
 import EchosLogo from "@/assets/icons/echos_logo.svg";
 import EchosMark from "@/assets/icons/echos_mark.svg";
 import Edit from "@/assets/icons/edit.svg";
+import EditSquare from "@/assets/icons/edit_square.svg";
 import Export from "@/assets/icons/export.svg";
 import Flash from "@/assets/icons/flash.svg";
 import FolderAdd from "@/assets/icons/folder_add.svg";
@@ -68,6 +69,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   echos_logo: EchosLogo,
   echos_mark: EchosMark,
   edit: Edit,
+  edit_square: EditSquare,
   export: Export,
   flash: Flash,
   folder_add: FolderAdd,

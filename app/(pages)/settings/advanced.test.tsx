@@ -321,15 +321,15 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsMicTimeoutRow)).toBeTruthy();
     expect(getByText("micTimeoutTitle")).toBeTruthy();
-    // Default 300s → the "5 minutes" label.
-    expect(getByText("micTimeout5Min")).toBeTruthy();
+    // Default 300s → the short "5 min" label.
+    expect(getByText("micTimeout5MinShort")).toBeTruthy();
   });
 
   it.each([
     [0, "micTimeoutOff"],
-    [60, "micTimeout1Min"],
-    [1200, "micTimeout20Min"],
-    [3600, "micTimeout60Min"],
+    [60, "micTimeout1MinShort"],
+    [1200, "micTimeout20MinShort"],
+    [3600, "micTimeout60MinShort"],
   ])("shows the right label for a %i second timeout", (seconds, label) => {
     const { useKeyboardMicTimeout } = require("@/stores");
     (useKeyboardMicTimeout as jest.Mock).mockReturnValueOnce(seconds);
