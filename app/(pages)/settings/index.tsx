@@ -3,13 +3,13 @@ import * as IntentLauncher from "expo-intent-launcher";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
   authenticateBiometric,
-  Divider,
   Icon,
   InAppBanner,
   ListItem,
@@ -21,10 +21,9 @@ import {
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization, useScrollSurface } from "@/hooks";
-import { AppTheme, getModelInfo } from "@/models";
+import { AppTheme } from "@/models";
 import {
   useBiometricAuthEnabled,
-  useSelectedModelId,
   useSelectedTheme,
   useSetBiometricAuthEnabled,
   useShowGlobalTooltip,
@@ -48,17 +47,15 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { loc } = useLocalization();
+  const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<View>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
-  const selectedModelId = useSelectedModelId();
   const selectedTheme = useSelectedTheme();
   const biometricAuthEnabled = useBiometricAuthEnabled();
   const setBiometricAuthEnabled = useSetBiometricAuthEnabled();
   const showGlobalTooltip = useShowGlobalTooltip();
-
-  const modelDisplay = getModelInfo(selectedModelId).name;
 
   const themeDisplay = (() => {
     switch (selectedTheme) {
@@ -83,10 +80,6 @@ export default function SettingsScreen() {
   };
 
   const secondary = theme.colors.textSecondary;
-  const groupColors = {
-    backgroundColor: theme.colors.surfacePrimary,
-    borderColor: theme.colors.surfaceBorderPrimary,
-  };
   const chevron = <Icon name="chevron_right" size={18} color={secondary} />;
 
   return (
@@ -113,88 +106,64 @@ export default function SettingsScreen() {
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionTranscription}
               </Text>
-              <View style={[styles.group, groupColors]}>
-                <ListItem
-                  bordered={false}
-                  borderRadius={0}
-                  testID={TestID.SettingsModel}
-                  title={loc.title}
-                  titleTrailing={modelDisplay}
-                  titleTrailingColor={secondary}
-                  iconLeading={
-                    <Icon name="sound" size={24} color={secondary} />
-                  }
-                  iconTrailing={chevron}
-                  onPress={() => router.push(Routes.settingsModel)}
-                />
-                <Divider />
-                <ListItem
-                  bordered={false}
-                  borderRadius={0}
-                  testID={TestID.SettingsAdvanced}
-                  title={loc.advancedSettingsTitle}
-                  iconLeading={
-                    <Icon name="setting_3" size={24} color={secondary} />
-                  }
-                  iconTrailing={chevron}
-                  onPress={() => router.push(Routes.settingsAdvanced)}
-                />
-              </View>
+              <ListItem
+                testID={TestID.SettingsModel}
+                title={loc.title}
+                iconLeading={<Icon name="sound" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsModel)}
+              />
+              <ListItem
+                testID={TestID.SettingsAdvanced}
+                title={loc.advancedSettingsTitle}
+                iconLeading={
+                  <Icon name="setting_3" size={24} color={secondary} />
+                }
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsAdvanced)}
+              />
             </View>
 
             <View style={styles.section}>
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionAppearance}
               </Text>
-              <View style={[styles.group, groupColors]}>
+              <ListItem
+                testID={TestID.SettingsTheme}
+                title={loc.themeTitle}
+                titleTrailing={themeDisplay}
+                titleTrailingColor={secondary}
+                iconLeading={<Icon name="theme" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsTheme)}
+              />
+              <ListItem
+                testID={TestID.SettingsTextAppearance}
+                title={loc.textAppearanceTitle}
+                iconLeading={<Icon name="text" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsTextAppearance)}
+              />
+              {hasAppLanguageSettings() && (
                 <ListItem
-                  bordered={false}
-                  borderRadius={0}
-                  testID={TestID.SettingsTheme}
-                  title={loc.themeTitle}
-                  titleTrailing={themeDisplay}
+                  testID={TestID.SettingsAppLanguage}
+                  title={loc.appLanguageTitle}
+                  titleTrailing={i18n.language.toUpperCase()}
                   titleTrailingColor={secondary}
                   iconLeading={
-                    <Icon name="theme" size={24} color={secondary} />
+                    <Icon name="globe" size={24} color={secondary} />
                   }
                   iconTrailing={chevron}
-                  onPress={() => router.push(Routes.settingsTheme)}
+                  onPress={() => void openAppLanguageSettings()}
                 />
-                <Divider />
-                <ListItem
-                  bordered={false}
-                  borderRadius={0}
-                  testID={TestID.SettingsTextAppearance}
-                  title={loc.textAppearanceTitle}
-                  iconLeading={<Icon name="text" size={24} color={secondary} />}
-                  iconTrailing={chevron}
-                  onPress={() => router.push(Routes.settingsTextAppearance)}
-                />
-                {hasAppLanguageSettings() && (
-                  <>
-                    <Divider />
-                    <ListItem
-                      bordered={false}
-                      borderRadius={0}
-                      testID={TestID.SettingsAppLanguage}
-                      title={loc.appLanguageTitle}
-                      titleTrailing={loc.appLanguageName}
-                      titleTrailingColor={secondary}
-                      iconLeading={
-                        <Icon name="globe" size={24} color={secondary} />
-                      }
-                      iconTrailing={chevron}
-                      onPress={() => void openAppLanguageSettings()}
-                    />
-                  </>
-                )}
-              </View>
+              )}
             </View>
 
-            <View style={[styles.group, groupColors]}>
+            <View style={styles.section}>
+              <Text variant="body2" weight="medium" color={secondary}>
+                {loc.settingsSectionGeneral}
+              </Text>
               <ListItem
-                bordered={false}
-                borderRadius={0}
                 testID={TestID.SettingsBiometricAuthToggle}
                 title={loc.biometricAuthTitle}
                 iconLeading={
@@ -213,10 +182,7 @@ export default function SettingsScreen() {
                 }
                 onPress={() => handleBiometricToggle(!biometricAuthEnabled)}
               />
-              <Divider />
               <ListItem
-                bordered={false}
-                borderRadius={0}
                 testID={TestID.SettingsContactSupport}
                 title={loc.contactSupport}
                 iconLeading={
@@ -258,11 +224,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 16,
-  },
-  group: {
-    borderWidth: 1,
-    borderRadius: 16,
-    overflow: "hidden",
   },
   bannerContainer: {
     paddingTop: 48,

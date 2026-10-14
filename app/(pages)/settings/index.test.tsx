@@ -47,7 +47,6 @@ jest.mock("@/hooks", () => ({
 const mockSetBiometricAuthEnabled = jest.fn();
 const mockShowGlobalTooltip = jest.fn();
 jest.mock("@/stores", () => ({
-  useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSelectedTheme: jest.fn(() => "auto"),
   useBiometricAuthEnabled: jest.fn(() => false),
   useSetBiometricAuthEnabled: () => mockSetBiometricAuthEnabled,
@@ -56,7 +55,6 @@ jest.mock("@/stores", () => ({
 
 jest.mock("@/models", () => ({
   AppTheme: { AUTO: "auto", LIGHT: "light", DARK: "dark" },
-  getModelInfo: jest.fn(() => ({ name: "Whisper Tiny" })),
 }));
 
 jest.mock("@/components", () => {
@@ -105,6 +103,7 @@ describe("SettingsScreen", () => {
     );
     expect(getByText("settingsSectionTranscription")).toBeTruthy();
     expect(getByText("settingsSectionAppearance")).toBeTruthy();
+    expect(getByText("settingsSectionGeneral")).toBeTruthy();
     expect(getByTestId("list-item-title")).toBeTruthy();
     expect(getByTestId("list-item-themeTitle")).toBeTruthy();
     expect(getByTestId("list-item-advancedSettingsTitle")).toBeTruthy();
@@ -163,11 +162,6 @@ describe("SettingsScreen", () => {
     expect(mockSetBiometricAuthEnabled).not.toHaveBeenCalled();
   });
 
-  it("model item shows current model name", () => {
-    const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-title")).toHaveTextContent("Whisper Tiny");
-  });
-
   it("theme item shows current theme display text", () => {
     const { getByTestId } = render(<SettingsScreen />);
     // selectedTheme is 'auto' → themeDisplay = loc.auto
@@ -211,9 +205,7 @@ describe("SettingsScreen", () => {
     it("shows the current UI language and opens iOS Settings", () => {
       setPlatform("ios", "18.0");
       const { getByTestId } = render(<SettingsScreen />);
-      expect(getByTestId("trailing-appLanguageTitle")).toHaveTextContent(
-        "appLanguageName",
-      );
+      expect(getByTestId("trailing-appLanguageTitle")).toHaveTextContent("EN");
       fireEvent.press(getByTestId("list-item-appLanguageTitle"));
       expect(Linking.openSettings).toHaveBeenCalled();
     });
@@ -235,14 +227,9 @@ describe("SettingsScreen", () => {
     });
   });
 
-  it("model item shows parakeet name when parakeet selected", () => {
-    const { useSelectedModelId } = require("@/stores");
-    const { getModelInfo } = require("@/models");
-    (useSelectedModelId as jest.Mock).mockReturnValue("nemo_parakeet_v3");
-    (getModelInfo as jest.Mock).mockReturnValue({ name: "Parakeet V3" });
-
-    const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("trailing-title")).toHaveTextContent("Parakeet V3");
+  it("model item shows no trailing model name", () => {
+    const { queryByTestId } = render(<SettingsScreen />);
+    expect(queryByTestId("trailing-title")).toBeNull();
   });
 
   it("theme item shows light display text when light selected", () => {
