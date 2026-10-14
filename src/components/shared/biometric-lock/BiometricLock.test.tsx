@@ -1,5 +1,6 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as SplashScreen from "expo-splash-screen";
 import React from "react";
 import { Animated, AppState } from "react-native";
 
@@ -55,6 +56,17 @@ describe("BiometricLock", () => {
       expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
     );
     expect(authenticate).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the native splash once the lock screen is laid out", async () => {
+    setEnabled(true);
+    const { getByTestId, queryByTestId } = render(<BiometricLock />);
+    expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
+    fireEvent(getByTestId(TestID.BiometricLockScreen).parent!, "layout");
+    expect(SplashScreen.hideAsync).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
+    );
   });
 
   it("hides the unlock button until auth fails", async () => {

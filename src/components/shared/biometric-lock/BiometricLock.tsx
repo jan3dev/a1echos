@@ -1,7 +1,7 @@
+import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, AppState, Modal, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
@@ -18,7 +18,8 @@ import {
 import { UnlockGradient } from "./UnlockGradient";
 
 const LOGO_WIDTH = 193;
-const LOGO_FADE_IN_MS = 150;
+const LOGO_HEIGHT = 62;
+const GRADIENT_FADE_IN_MS = 300;
 const UNLOCK_FADE_OUT_MS = 200;
 
 export const BiometricLockView = ({
@@ -29,43 +30,38 @@ export const BiometricLockView = ({
   onUnlock: () => void;
 }) => {
   const { loc } = useLocalization();
-  const insets = useSafeAreaInsets();
-  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const gradientOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(logoOpacity, {
+    Animated.timing(gradientOpacity, {
       toValue: 1,
-      duration: LOGO_FADE_IN_MS,
+      duration: GRADIENT_FADE_IN_MS,
       useNativeDriver: true,
     }).start();
-  }, [logoOpacity]);
+  }, [gradientOpacity]);
 
   return (
     <View
       testID={TestID.BiometricLockScreen}
       // A transparent Modal keeps the app in the iOS window; hide it from VoiceOver.
       accessibilityViewIsModal
-      style={[
-        styles.container,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
+      style={styles.container}
     >
       <SystemBars style="light" />
-      <UnlockGradient />
-      <Animated.View
-        style={{ opacity: logoOpacity }}
-        accessible
-        accessibilityRole="image"
-        accessibilityLabel="Echos"
-      >
+      {/* The native splash (app.json) is this screen's logo on the same
+          background, so only the gradient fades in when JS takes over. */}
+      <Animated.View style={[styles.fill, { opacity: gradientOpacity }]}>
+        <UnlockGradient />
+      </Animated.View>
+      <View accessible accessibilityRole="image" accessibilityLabel="Echos">
         <Icon
           name="echos_logo"
           size={LOGO_WIDTH}
           style={styles.logo}
           color={darkColors.textPrimary}
         />
-      </Animated.View>
-      {/* The slot is always laid out so the logo doesn't jump when the button appears. */}
+      </View>
+      {/* Out of flow so the logo stays at screen center, where the splash draws it. */}
       <View style={styles.unlockSlot}>
         {showUnlock && (
           <GlowCtaButton
@@ -151,7 +147,10 @@ export const BiometricLock = () => {
       onRequestClose={() => undefined}
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
-      <Animated.View style={[styles.fill, { opacity }]}>
+      <Animated.View
+        style={[styles.fill, { opacity }]}
+        onLayout={() => void SplashScreen.hideAsync()}
+      >
         <BiometricLockView showUnlock={failed} onUnlock={() => void unlock()} />
       </Animated.View>
     </Modal>
@@ -160,21 +159,21 @@ export const BiometricLock = () => {
 
 const styles = StyleSheet.create({
   fill: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.xxxl,
     backgroundColor: darkColors.surfaceBackground,
   },
   logo: {
     width: LOGO_WIDTH,
-    height: 62,
+    height: LOGO_HEIGHT,
   },
   unlockSlot: {
-    minWidth: 199,
-    minHeight: 56,
+    position: "absolute",
+    top: "50%",
+    marginTop: LOGO_HEIGHT / 2 + spacing.xxxl,
   },
 });

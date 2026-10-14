@@ -76,6 +76,7 @@ jest.mock("@/stores", () => ({
   useVoiceSessionHintVisible: jest.fn(() => false),
   useHideVoiceSessionHint: jest.fn(() => jest.fn()),
   useAppLocked: jest.fn(() => false),
+  useBiometricAuthEnabled: jest.fn(() => false),
   useLargerModelSuggestionVisible: jest.fn(() => false),
   useHideLargerModelSuggestion: jest.fn(() => jest.fn()),
   useMarkLargerModelSuggestionSeen: jest.fn(() =>
@@ -298,6 +299,19 @@ describe("RootLayout", () => {
       gestureRoot.props.onLayout?.();
     });
     expect(SplashScreen.hideAsync).toHaveBeenCalled();
+  });
+
+  it("leaves the splash to the biometric lock when it is enabled", async () => {
+    const { useBiometricAuthEnabled } = require("@/stores");
+    (useBiometricAuthEnabled as jest.Mock).mockReturnValue(true);
+    (SplashScreen.hideAsync as jest.Mock).mockClear();
+    const { getByTestId } = await renderAndWaitForInit();
+    const gestureRoot = getByTestId(TestID.AppErrorBoundary).children[0] as any;
+    await act(async () => {
+      gestureRoot.props.onLayout?.();
+    });
+    expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
+    (useBiometricAuthEnabled as jest.Mock).mockReturnValue(false);
   });
 
   it("AppErrorBoundary wraps content", async () => {

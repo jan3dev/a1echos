@@ -62,6 +62,7 @@ import {
   useIsTranscriptionSelectionMode,
   useHideVoiceSessionHint,
   useAppLocked,
+  useBiometricAuthEnabled,
   useKeyboardPromptVisible,
   useLargerModelSuggestionVisible,
   useMarkLargerModelSuggestionSeen,
@@ -543,11 +544,13 @@ export default function RootLayout() {
   }, [initTheme]);
 
   // Hide splash screen when fonts are loaded and app is ready
+  // With the lock on, BiometricLock hides the splash once it covers the app.
+  const biometricAuthEnabled = useBiometricAuthEnabled();
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && appReady) {
+    if (fontsLoaded && appReady && !biometricAuthEnabled) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, appReady]);
+  }, [fontsLoaded, appReady, biometricAuthEnabled]);
 
   useEffect(() => {
     if (fontError) {
