@@ -16,11 +16,12 @@ interface TouchIndicatorProps {
   t: SharedValue<number>;
   /** Press moment in ms on the timeline. */
   at: number;
+  color: string;
   style: ViewStyle;
 }
 
 /** The demo finger: lands, presses, lifts off. */
-export function TouchIndicator({ t, at, style }: TouchIndicatorProps) {
+export function TouchIndicator({ t, at, color, style }: TouchIndicatorProps) {
   const animated = useAnimatedStyle(() => {
     const land = segment(t.value, at - LAND_MS, LAND_MS);
     const press = segment(t.value, at, 120);
@@ -37,7 +38,7 @@ export function TouchIndicator({ t, at, style }: TouchIndicatorProps) {
       pointerEvents="none"
       style={[styles.indicator, style, animated]}
     >
-      <TouchIndicatorSvg width={TOUCH_SIZE} height={TOUCH_SIZE} />
+      <TouchIndicatorSvg width={TOUCH_SIZE} height={TOUCH_SIZE} color={color} />
     </Animated.View>
   );
 }

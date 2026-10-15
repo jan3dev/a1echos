@@ -1,4 +1,10 @@
-import { Canvas, Group, Skia, Skottie } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  Group,
+  Skia,
+  Skottie,
+  type SkSkottieAnimation,
+} from "@shopify/react-native-skia";
 import { StyleSheet } from "react-native";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 
@@ -7,7 +13,17 @@ import { useLocalization } from "@/hooks";
 import { type DemoProps, LIST_MAX_WIDTH } from "./walkthrough";
 
 const ANIMATION_JSON = require("@/assets/animations/enable-keyboard.json");
-const ANIMATION = Skia.Skottie.Make(JSON.stringify(ANIMATION_JSON));
+const animations: { dark?: SkSkottieAnimation; light?: SkSkottieAnimation } =
+  {};
+// Light is derived by scripts/generate-light-enable-keyboard-animation.js.
+const animationFor = (dark: boolean) =>
+  dark
+    ? (animations.dark ??= Skia.Skottie.Make(JSON.stringify(ANIMATION_JSON)))
+    : (animations.light ??= Skia.Skottie.Make(
+        JSON.stringify(
+          require("@/assets/animations/enable-keyboard-light.json"),
+        ),
+      ));
 
 // Frames from the "reset" marker on only rewind the demo for looping.
 const LAST_FRAME: number = ANIMATION_JSON.markers.find(
@@ -21,7 +37,7 @@ const CROP_Y = 288;
 const CROP_HEIGHT = 432;
 
 /** Settings → Keyboards → Echos on, Allow Full Access on. */
-export function IosSettingsDemo({ t, testID }: DemoProps) {
+export function IosSettingsDemo({ t, dark, testID }: DemoProps) {
   const { loc } = useLocalization();
   const canvasSize = useSharedValue({
     width: LIST_MAX_WIDTH,
@@ -46,7 +62,7 @@ export function IosSettingsDemo({ t, testID }: DemoProps) {
       accessibilityLabel={loc.onboardingEnableKeyboardTooltip}
     >
       <Group transform={transform}>
-        <Skottie animation={ANIMATION} frame={frame} />
+        <Skottie animation={animationFor(dark)} frame={frame} />
       </Group>
     </Canvas>
   );

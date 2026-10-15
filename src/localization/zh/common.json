@@ -148,8 +148,6 @@
   "micTimeout5MinShort": "5 分钟",
   "micTimeout20MinShort": "20 分钟",
   "micTimeout60MinShort": "1 小时",
-  "keyboardPromptTitle": "随处使用 Echos",
-  "keyboardPromptBody": "在任何 App 中直接转录，保护隐私。在设置中，点按键盘 → 添加新键盘 → Echos。开启“允许完全访问”以使用语音输入。",
   "keyboardPromptCta": "添加键盘",
   "keyboardPromptDismiss": "以后再说",
   "voiceSessionHintTitle": "返回继续输入",

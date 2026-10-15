@@ -6,7 +6,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { useLocalization } from "@/hooks";
-import { AquaPrimitiveColors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 
 import { Text } from "../../../ui/text/Text";
 
@@ -20,17 +20,42 @@ import {
   segment,
 } from "./walkthrough";
 
-// Mimics the stock (AOSP / Material 3 dark) "Manage keyboards" screen, which
+// Mimics the stock (AOSP / Material 3) "Manage keyboards" screen, which
 // INPUT_METHOD_SETTINGS opens on most devices, so these are system colors.
-const LIST_BACKGROUND = "#1E1F20";
-const DIALOG_BACKGROUND = "#282A2C";
-const PRIMARY = "#A8C7FA";
-const ON_PRIMARY = "#062E6F";
-const OUTLINE = "#8E918F";
-const TRACK_OFF = "#333537";
-const PRIMARY_PRESSED = "rgba(168, 199, 250, 0.12)";
-const SKELETON_STRONG = "rgba(227, 227, 227, 0.3)";
-const SKELETON = "rgba(227, 227, 227, 0.14)";
+const PALETTES = {
+  dark: {
+    list: "#1E1F20",
+    dialog: "#282A2C",
+    label: "#FFFFFF",
+    primary: "#A8C7FA",
+    primaryClear: "rgba(168, 199, 250, 0)",
+    primaryPressed: "rgba(168, 199, 250, 0.12)",
+    onPrimary: "#062E6F",
+    outline: "#8E918F",
+    trackOff: "#333537",
+    skeletonStrong: "rgba(227, 227, 227, 0.3)",
+    skeleton: "rgba(227, 227, 227, 0.14)",
+    shadow: "0px 8px 24px rgba(0, 0, 0, 0.5)",
+    touch: "#FFFFFF",
+  },
+  light: {
+    list: "#FFFFFF",
+    dialog: "#E9EEF6",
+    label: "#1F1F1F",
+    primary: "#0B57D0",
+    primaryClear: "rgba(11, 87, 208, 0)",
+    primaryPressed: "rgba(11, 87, 208, 0.12)",
+    onPrimary: "#FFFFFF",
+    outline: "#747775",
+    trackOff: "#E3E3E3",
+    skeletonStrong: "rgba(31, 31, 31, 0.3)",
+    skeleton: "rgba(31, 31, 31, 0.14)",
+    shadow: "0px 8px 24px rgba(0, 0, 0, 0.16)",
+    // Black reads much heavier than white over the same opacities.
+    touch: "rgba(0, 0, 0, 0.4)",
+  },
+};
+type Palette = (typeof PALETTES)["dark"];
 
 const ROW_HEIGHT = 64;
 const DIALOG_WIDTH = 296;
@@ -58,8 +83,9 @@ const dialogShown = (t: number) => {
  * dialog, switch turns on. The dialog copy is abstracted to skeleton lines
  * since it varies by OEM and Android version.
  */
-export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
+export function AndroidSettingsDemo({ t, tooltip, dark, testID }: DemoProps) {
   const { loc } = useLocalization();
+  const c = dark ? PALETTES.dark : PALETTES.light;
   const childTestID = (suffix: string) =>
     testID ? `${testID}-${suffix}` : undefined;
 
@@ -82,7 +108,7 @@ export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
     backgroundColor: interpolateColor(
       pressAmount(t.value, TAP_OK),
       [0, 1],
-      ["rgba(168, 199, 250, 0)", PRIMARY_PRESSED],
+      [c.primaryClear, c.primaryPressed],
     ),
   }));
 
@@ -91,7 +117,7 @@ export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
       <Animated.View style={[styles.group, dimStyle]}>
         {tooltip}
         <View
-          style={styles.card}
+          style={[styles.card, { backgroundColor: c.list }]}
           testID={childTestID("list")}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
@@ -100,13 +126,13 @@ export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
             <Text
               variant="body1"
               weight="regular"
-              color={AquaPrimitiveColors.white}
+              color={c.label}
               style={styles.rowLabel}
               numberOfLines={1}
             >
               {loc.onboardingEnableKeyboardRowEchos}
             </Text>
-            <MaterialSwitch t={t} />
+            <MaterialSwitch t={t} c={c} />
           </View>
         </View>
       </Animated.View>
@@ -117,24 +143,51 @@ export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Animated.View style={[styles.dialog, dialogStyle]}>
-          <View style={[styles.bar, styles.title]} />
+        <Animated.View
+          style={[
+            styles.dialog,
+            { backgroundColor: c.dialog, boxShadow: c.shadow },
+            dialogStyle,
+          ]}
+        >
+          <View
+            style={[
+              styles.bar,
+              styles.title,
+              { backgroundColor: c.skeletonStrong },
+            ]}
+          />
           <View style={styles.body}>
-            <View style={styles.bar} />
-            <View style={[styles.bar, { width: "94%" }]} />
-            <View style={[styles.bar, { width: "58%" }]} />
+            <View style={[styles.bar, { backgroundColor: c.skeleton }]} />
+            <View
+              style={[
+                styles.bar,
+                { width: "94%", backgroundColor: c.skeleton },
+              ]}
+            />
+            <View
+              style={[
+                styles.bar,
+                { width: "58%", backgroundColor: c.skeleton },
+              ]}
+            />
           </View>
           <View style={styles.actions}>
             <View style={styles.action}>
-              <Text variant="body2" weight="medium" color={PRIMARY}>
+              <Text variant="body2" weight="medium" color={c.primary}>
                 {loc.cancel}
               </Text>
             </View>
             <Animated.View style={[styles.action, okPressedStyle]}>
-              <Text variant="body2" weight="medium" color={PRIMARY}>
+              <Text variant="body2" weight="medium" color={c.primary}>
                 {loc.onboardingEnableKeyboardDialogOk}
               </Text>
-              <TouchIndicator t={t} at={TAP_OK} style={styles.okTouch} />
+              <TouchIndicator
+                t={t}
+                at={TAP_OK}
+                color={c.touch}
+                style={styles.okTouch}
+              />
             </Animated.View>
           </View>
         </Animated.View>
@@ -144,12 +197,12 @@ export function AndroidSettingsDemo({ t, tooltip, testID }: DemoProps) {
 }
 
 // Material 3 switch: the thumb grows from 16 to 24dp when on, 28dp while held.
-function MaterialSwitch({ t }: { t: SharedValue<number> }) {
+function MaterialSwitch({ t, c }: { t: SharedValue<number>; c: Palette }) {
   const trackStyle = useAnimatedStyle(() => {
     const on = segment(t.value, SWITCH_ON_AT, 300, easeInOutCubic);
     return {
-      backgroundColor: interpolateColor(on, [0, 1], [TRACK_OFF, PRIMARY]),
-      borderColor: interpolateColor(on, [0, 1], [OUTLINE, PRIMARY]),
+      backgroundColor: interpolateColor(on, [0, 1], [c.trackOff, c.primary]),
+      borderColor: interpolateColor(on, [0, 1], [c.outline, c.primary]),
     };
   });
   const thumbStyle = useAnimatedStyle(() => {
@@ -157,7 +210,7 @@ function MaterialSwitch({ t }: { t: SharedValue<number> }) {
     const resting = mix(on, 16, 24);
     const diameter = mix(pressAmount(t.value, TAP_TOGGLE), resting, THUMB_BOX);
     return {
-      backgroundColor: interpolateColor(on, [0, 1], [OUTLINE, ON_PRIMARY]),
+      backgroundColor: interpolateColor(on, [0, 1], [c.outline, c.onPrimary]),
       transform: [
         { translateX: mix(on, 16, 36) - THUMB_BOX / 2 },
         { scale: diameter / THUMB_BOX },
@@ -169,7 +222,12 @@ function MaterialSwitch({ t }: { t: SharedValue<number> }) {
     <View style={styles.switch}>
       <Animated.View style={[styles.track, trackStyle]} />
       <Animated.View style={[styles.thumb, thumbStyle]} />
-      <TouchIndicator t={t} at={TAP_TOGGLE} style={styles.switchTouch} />
+      <TouchIndicator
+        t={t}
+        at={TAP_TOGGLE}
+        color={c.touch}
+        style={styles.switchTouch}
+      />
     </View>
   );
 }
@@ -189,7 +247,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     borderRadius: 26,
     overflow: "hidden",
-    backgroundColor: LIST_BACKGROUND,
   },
   row: {
     height: ROW_HEIGHT,
@@ -233,14 +290,11 @@ const styles = StyleSheet.create({
     maxWidth: "100%",
     padding: spacing.lg,
     borderRadius: 28,
-    backgroundColor: DIALOG_BACKGROUND,
-    boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.5)",
   },
   title: {
     width: "45%",
     height: 12,
     borderRadius: 6,
-    backgroundColor: SKELETON_STRONG,
   },
   body: {
     marginTop: spacing.md,
@@ -249,7 +303,6 @@ const styles = StyleSheet.create({
   bar: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: SKELETON,
   },
   actions: {
     marginTop: spacing.lg,

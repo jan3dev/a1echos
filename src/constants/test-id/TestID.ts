@@ -95,8 +95,7 @@ export enum TestID {
   SettingsKeyboardSoundToggle = "settings-keyboard-sound-toggle",
   SettingsMicTimeoutRow = "settings-mic-timeout-row",
   SettingsAddKeyboardRow = "settings-add-keyboard-row",
-  KeyboardPromptModal = "keyboard-prompt-modal",
-  KeyboardPromptImage = "keyboard-prompt-image",
+  EchosKeyboardScreen = "echos-keyboard-screen",
   VoiceSessionHintModal = "voice-session-hint-modal",
   LargerModelSuggestionModal = "larger-model-suggestion-modal",
 

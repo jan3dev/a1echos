@@ -70,9 +70,7 @@ jest.mock("@/stores", () => ({
   useTranscriptionState: jest.fn(() => "IDLE"),
   useKeyboardPromptVisible: jest.fn(() => false),
   useHideKeyboardPrompt: jest.fn(() => jest.fn()),
-  useMarkKeyboardPromptSeen: jest.fn(() =>
-    jest.fn().mockResolvedValue(undefined),
-  ),
+  useMarkKeyboardPromptSeen: jest.fn(() => jest.fn()),
   useVoiceSessionHintVisible: jest.fn(() => false),
   useHideVoiceSessionHint: jest.fn(() => jest.fn()),
   useAppLocked: jest.fn(() => false),
@@ -112,7 +110,7 @@ jest.mock("@/hooks", () => ({
 jest.mock("@/utils", () => ({
   logError: jest.fn(),
   FeatureFlag: { general: "general", ui: "ui" },
-  openKeyboardSettings: jest.fn().mockResolvedValue(true),
+  readKeyboardEnabled: jest.fn().mockResolvedValue(null),
 }));
 
 const mockChangeLanguage = jest.fn();
@@ -132,16 +130,6 @@ jest.mock("@/components", () => {
       <View testID={TID.AppErrorBoundary}>{children}</View>
     ),
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
-    KeyboardPromptModal: ({ visible, onConfirm, onCancel }: any) => {
-      const { TouchableOpacity } = require("react-native");
-      if (!visible) return null;
-      return (
-        <View testID={TID.KeyboardPromptModal}>
-          <TouchableOpacity testID="kbd-confirm" onPress={onConfirm} />
-          <TouchableOpacity testID="kbd-cancel" onPress={onCancel} />
-        </View>
-      );
-    },
     RecordingControlsView: () => <View testID={TID.RecordingControlsView} />,
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
     PRIMARY_BUTTON_HEIGHT: 56,
@@ -846,71 +834,58 @@ describe("RootLayout", () => {
     });
   });
 
-  describe("GlobalKeyboardPromptRenderer", () => {
-    it("does not render when keyboardPromptVisible is false", async () => {
+  describe("GlobalKeyboardPromptNavigator", () => {
+    afterEach(() => {
+      (require("@/stores").useKeyboardPromptVisible as jest.Mock).mockReturnValue(
+        false,
+      );
+    });
+
+    it("stays put while no prompt is requested", async () => {
+      const mockPush = jest.fn();
       const { useKeyboardPromptVisible } = require("@/stores");
+      const { useRouter } = require("expo-router");
       (useKeyboardPromptVisible as jest.Mock).mockReturnValue(false);
+      (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
 
-      const { queryByTestId } = await renderAndWaitForInit();
-      expect(queryByTestId(TestID.KeyboardPromptModal)).toBeNull();
+      await renderAndWaitForInit();
+      expect(mockPush).not.toHaveBeenCalledWith(Routes.settingsEchosKeyboard);
     });
 
-    it("renders when keyboardPromptVisible is true", async () => {
-      const { useKeyboardPromptVisible } = require("@/stores");
-      (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
-
-      const { getByTestId } = await renderAndWaitForInit();
-      expect(getByTestId(TestID.KeyboardPromptModal)).toBeTruthy();
-    });
-
-    it("confirm marks seen, hides, and opens settings", async () => {
+    it("clears the request and opens the Echos Keyboard screen", async () => {
+      const mockPush = jest.fn();
       const mockHide = jest.fn();
-      const mockMark = jest.fn().mockResolvedValue(undefined);
       const {
         useKeyboardPromptVisible,
         useHideKeyboardPrompt,
-        useMarkKeyboardPromptSeen,
       } = require("@/stores");
+      const { useRouter } = require("expo-router");
       (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
       (useHideKeyboardPrompt as jest.Mock).mockReturnValue(mockHide);
-      (useMarkKeyboardPromptSeen as jest.Mock).mockReturnValue(mockMark);
+      (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
 
-      const { openKeyboardSettings } = require("@/utils");
-      (openKeyboardSettings as jest.Mock).mockClear();
-
-      const { getByTestId } = await renderAndWaitForInit();
-      await act(async () => {
-        fireEvent.press(getByTestId("kbd-confirm"));
-      });
-
-      expect(mockMark).toHaveBeenCalled();
+      await renderAndWaitForInit();
+      await waitFor(() =>
+        expect(mockPush).toHaveBeenCalledWith(Routes.settingsEchosKeyboard),
+      );
       expect(mockHide).toHaveBeenCalled();
-      expect(openKeyboardSettings).toHaveBeenCalled();
     });
 
-    it("cancel marks seen and hides without opening settings", async () => {
-      const mockHide = jest.fn();
-      const mockMark = jest.fn().mockResolvedValue(undefined);
-      const {
-        useKeyboardPromptVisible,
-        useHideKeyboardPrompt,
-        useMarkKeyboardPromptSeen,
-      } = require("@/stores");
+    it("marks seen instead when the keyboard is already added", async () => {
+      const mockPush = jest.fn();
+      const mockMark = jest.fn();
+      const { useKeyboardPromptVisible, useMarkKeyboardPromptSeen } =
+        require("@/stores");
+      const { useRouter } = require("expo-router");
+      const { readKeyboardEnabled } = require("@/utils");
       (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);
-      (useHideKeyboardPrompt as jest.Mock).mockReturnValue(mockHide);
       (useMarkKeyboardPromptSeen as jest.Mock).mockReturnValue(mockMark);
+      (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+      (readKeyboardEnabled as jest.Mock).mockResolvedValueOnce(true);
 
-      const { openKeyboardSettings } = require("@/utils");
-      (openKeyboardSettings as jest.Mock).mockClear();
-
-      const { getByTestId } = await renderAndWaitForInit();
-      await act(async () => {
-        fireEvent.press(getByTestId("kbd-cancel"));
-      });
-
-      expect(mockMark).toHaveBeenCalled();
-      expect(mockHide).toHaveBeenCalled();
-      expect(openKeyboardSettings).not.toHaveBeenCalled();
+      await renderAndWaitForInit();
+      await waitFor(() => expect(mockMark).toHaveBeenCalled());
+      expect(mockPush).not.toHaveBeenCalledWith(Routes.settingsEchosKeyboard);
     });
   });
 

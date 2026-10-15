@@ -28,8 +28,13 @@ const mockLoc = {
   onboardingKeyboardNotAddedTitle: "Not Added",
   onboardingKeyboardNotAddedMessage: "Add it",
 };
-jest.mock("@/hooks", () => ({
+jest.mock("@/hooks/use-localization/useLocalization", () => ({
   useLocalization: () => ({ loc: mockLoc }),
+}));
+jest.mock("@/hooks", () => ({
+  useKeyboardSettingsCheck: jest.requireActual(
+    "@/hooks/use-keyboard-settings-check/useKeyboardSettingsCheck",
+  ).useKeyboardSettingsCheck,
   useOnboardingExit: () => ({
     finishOnboarding: jest.fn(),
     confirmSkip: mockConfirmSkip,

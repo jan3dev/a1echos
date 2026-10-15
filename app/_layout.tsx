@@ -20,7 +20,6 @@ import {
   BiometricLock,
   FadingGlassBlur,
   Icon,
-  KeyboardPromptModal,
   LargerModelSuggestionModal,
   PRIMARY_BUTTON_HEIGHT,
   RECORDING_BUTTON_SIZE,
@@ -79,7 +78,7 @@ import {
   useTranscriptionState,
 } from "@/stores";
 import { spacing, useTheme, useThemeStore } from "@/theme";
-import { FeatureFlag, logError, openKeyboardSettings } from "@/utils";
+import { FeatureFlag, logError, readKeyboardEnabled } from "@/utils";
 import GrabberArc from "@/assets/icons/grabber_arc.svg";
 
 // Prevent the splash screen from auto-hiding before initialization completes
@@ -273,29 +272,26 @@ function FocusedScreenTooltip() {
   return useIsFocused() ? <GlobalTooltipRenderer /> : null;
 }
 
-function GlobalKeyboardPromptRenderer() {
-  const visible = useKeyboardPromptVisible();
+// Stores can't navigate, so they raise the flag and this pushes the screen.
+function GlobalKeyboardPromptNavigator() {
+  const router = useRouter();
+  const requested = useKeyboardPromptVisible();
   const hide = useHideKeyboardPrompt();
   const markSeen = useMarkKeyboardPromptSeen();
 
-  const handleConfirm = useCallback(() => {
-    void markSeen();
-    hide();
-    void openKeyboardSettings();
-  }, [hide, markSeen]);
+  useEffect(() => {
+    if (!requested) return;
+    // Next tick: a caller's `await stopRecordingAndSave(); router.back()`
+    // must land first, or its back() pops this screen.
+    const timer = setTimeout(async () => {
+      hide();
+      if ((await readKeyboardEnabled()) === true) void markSeen();
+      else router.push(Routes.settingsEchosKeyboard);
+    });
+    return () => clearTimeout(timer);
+  }, [requested, hide, markSeen, router]);
 
-  const handleCancel = useCallback(() => {
-    void markSeen();
-    hide();
-  }, [hide, markSeen]);
-
-  return (
-    <KeyboardPromptModal
-      visible={visible}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
-    />
-  );
+  return null;
 }
 
 function GlobalLargerModelSuggestionRenderer() {
@@ -596,7 +592,7 @@ export default function RootLayout() {
             "simplify" these into plain root-level Views. The tooltip is the
             exception (it must not block touches): see screenLayout above. */}
         <GlobalRecordingControls />
-        <GlobalKeyboardPromptRenderer />
+        <GlobalKeyboardPromptNavigator />
         <GlobalVoiceSessionHintRenderer />
         <GlobalLargerModelSuggestionRenderer />
         <BiometricLock />

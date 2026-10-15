@@ -47,6 +47,7 @@ import tryLargerModelScreenGallery from "@/components/domain/onboarding/try-larg
 import tutorialIntroScreenGallery from "@/components/domain/onboarding/tutorial-intro-screen/TutorialIntroScreen.gallery";
 import welcomeScreenGallery from "@/components/domain/onboarding/welcome-screen/WelcomeScreen.gallery";
 import sessionGallery from "@/components/domain/session/Session.gallery";
+import echosKeyboardScreenGallery from "@/components/domain/settings/echos-keyboard-screen/EchosKeyboardScreen.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
 import textAppearanceGallery from "@/components/domain/settings/text-appearance/TextAppearance.gallery";
 import transcriptionGallery from "@/components/domain/transcription/Transcription.gallery";
@@ -121,6 +122,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   tryLargerModelScreenGallery,
   tutorialIntroScreenGallery,
   sessionGallery,
+  echosKeyboardScreenGallery,
   settingsGallery,
   textAppearanceGallery,
   transcriptionGallery,

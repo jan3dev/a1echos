@@ -112,7 +112,6 @@ export {
   useToggleTranscriptionSelection,
   useUIStore,
   useKeyboardPromptVisible,
-  useShowKeyboardPrompt,
   useHideKeyboardPrompt,
   useVoiceSessionHintVisible,
   useShowVoiceSessionHint,

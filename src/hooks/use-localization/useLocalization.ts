@@ -166,8 +166,6 @@ export const useLocalization = () => {
       micTimeout5MinShort: t("micTimeout5MinShort"),
       micTimeout20MinShort: t("micTimeout20MinShort"),
       micTimeout60MinShort: t("micTimeout60MinShort"),
-      keyboardPromptTitle: t("keyboardPromptTitle"),
-      keyboardPromptBody: t("keyboardPromptBody"),
       keyboardPromptCta: t("keyboardPromptCta"),
       keyboardPromptDismiss: t("keyboardPromptDismiss"),
       voiceSessionHintTitle: t("voiceSessionHintTitle"),

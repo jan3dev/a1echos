@@ -337,8 +337,6 @@ export const useRecordingControlsBlurTarget = () =>
 
 export const useKeyboardPromptVisible = () =>
   useUIStore((s) => s.keyboardPromptVisible);
-export const useShowKeyboardPrompt = () =>
-  useUIStore((s) => s.showKeyboardPrompt);
 export const useHideKeyboardPrompt = () =>
   useUIStore((s) => s.hideKeyboardPrompt);
 

@@ -172,8 +172,6 @@
   "micTimeout5MinShort": "5 мин",
   "micTimeout20MinShort": "20 мин",
   "micTimeout60MinShort": "1 ч",
-  "keyboardPromptTitle": "Используйте Echos везде",
-  "keyboardPromptBody": "Транскрибируйте прямо в любом приложении, конфиденциально. В Настройках откройте Клавиатура → Новые клавиатуры → Echos. Включите «Разрешить полный доступ» для голосового ввода.",
   "keyboardPromptCta": "Добавить клавиатуру",
   "keyboardPromptDismiss": "Может, позже",
   "voiceSessionHintTitle": "Вернитесь назад, чтобы продолжить ввод",

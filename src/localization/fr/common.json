@@ -164,8 +164,6 @@
   "micTimeout5MinShort": "5 min",
   "micTimeout20MinShort": "20 min",
   "micTimeout60MinShort": "1 h",
-  "keyboardPromptTitle": "Utilisez Echos partout",
-  "keyboardPromptBody": "Transcrivez directement dans n’importe quelle app, en toute confidentialité. Dans Réglages, touchez Clavier → Ajouter un clavier → Echos. Activez Autoriser l’accès complet pour la saisie vocale.",
   "keyboardPromptCta": "Ajouter le clavier",
   "keyboardPromptDismiss": "Plus tard",
   "voiceSessionHintTitle": "Revenez en arrière pour continuer à écrire",

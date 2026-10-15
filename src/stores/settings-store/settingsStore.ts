@@ -630,6 +630,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   markKeyboardPromptSeen: async () => {
+    if (get().hasSeenKeyboardPrompt) return;
     set({ hasSeenKeyboardPrompt: true });
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.KEYBOARD_PROMPT_SEEN, "true");

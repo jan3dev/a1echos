@@ -20,7 +20,6 @@ import {
   useShowGlobalTooltip,
   useHideGlobalTooltip,
   useKeyboardPromptVisible,
-  useShowKeyboardPrompt,
   useHideKeyboardPrompt,
   useVoiceSessionHintVisible,
   useShowVoiceSessionHint,
@@ -406,9 +405,8 @@ describe("uiStore", () => {
     });
 
     it("showKeyboardPrompt flips visibility to true", () => {
-      const { result } = renderHook(() => useShowKeyboardPrompt());
       act(() => {
-        result.current();
+        useUIStore.getState().showKeyboardPrompt();
       });
       expect(useUIStore.getState().keyboardPromptVisible).toBe(true);
     });

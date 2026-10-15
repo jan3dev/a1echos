@@ -65,7 +65,6 @@ const mockSetSmartSplitEnabled = jest.fn();
 const mockSetKeyboardAutocorrect = jest.fn();
 const mockSetKeyboardHaptic = jest.fn();
 const mockSetKeyboardSound = jest.fn();
-const mockShowKeyboardPrompt = jest.fn();
 jest.mock("@/stores", () => ({
   useSmartSplitEnabled: jest.fn(() => true),
   useSetSmartSplitEnabled: jest.fn(() => mockSetSmartSplitEnabled),
@@ -76,7 +75,6 @@ jest.mock("@/stores", () => ({
   useKeyboardSound: jest.fn(() => false),
   useSetKeyboardSound: jest.fn(() => mockSetKeyboardSound),
   useKeyboardMicTimeout: jest.fn(() => 300),
-  useShowKeyboardPrompt: jest.fn(() => mockShowKeyboardPrompt),
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
 }));
 
@@ -135,7 +133,6 @@ describe("AdvancedSettingsScreen", () => {
     mockSetKeyboardHaptic.mockResolvedValue(undefined);
     mockSetKeyboardSound.mockReset();
     mockSetKeyboardSound.mockResolvedValue(undefined);
-    mockShowKeyboardPrompt.mockReset();
     mockReadKeyboardEnabled.mockReset();
     mockReadKeyboardEnabled.mockResolvedValue(null);
     mockAppStateListeners.length = 0;
@@ -233,10 +230,10 @@ describe("AdvancedSettingsScreen", () => {
     expect(await findByText("advancedSettingsKeyboardAdded")).toBeTruthy();
   });
 
-  it("pressing Add Echos Keyboard row opens the prompt", () => {
+  it("pressing Add Echos Keyboard row opens the Echos Keyboard screen", () => {
     const { getByTestId } = render(<AdvancedSettingsScreen />);
     fireEvent.press(getByTestId(TestID.SettingsAddKeyboardRow));
-    expect(mockShowKeyboardPrompt).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(Routes.settingsEchosKeyboard);
   });
 
   it("renders the keyboard autocorrect row (off by default)", () => {

@@ -77,6 +77,7 @@ const initialState = {
   selectedLanguage: SupportedLanguages.defaultLanguage,
   isIncognitoMode: false,
   smartSplitEnabled: true,
+  hasSeenKeyboardPrompt: false,
   keyboardAutocorrect: false,
   keyboardHaptic: false,
   keyboardSound: false,
@@ -474,6 +475,15 @@ describe("settingsStore", () => {
         "keyboard_prompt_seen",
         "true",
       );
+    });
+
+    it("skips the write once already seen", async () => {
+      useSettingsStore.setState({ hasSeenKeyboardPrompt: true });
+      (AsyncStorage.setItem as jest.Mock).mockClear();
+
+      await useSettingsStore.getState().markKeyboardPromptSeen();
+
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
     });
 
     it("does NOT throw on persist failure (fire-and-forget)", async () => {

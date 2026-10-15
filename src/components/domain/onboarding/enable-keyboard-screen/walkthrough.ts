@@ -7,6 +7,7 @@ export const PRESS_MS = 220;
 export interface DemoProps {
   t: SharedValue<number>;
   tooltip: ReactNode;
+  dark: boolean;
   testID?: string;
 }
 

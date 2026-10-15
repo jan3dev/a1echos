@@ -164,8 +164,6 @@
   "micTimeout5MinShort": "5 min",
   "micTimeout20MinShort": "20 min",
   "micTimeout60MinShort": "1 h",
-  "keyboardPromptTitle": "Use o Echos em qualquer lugar",
-  "keyboardPromptBody": "Transcreva diretamente em qualquer app, com privacidade. Nos Ajustes, toque em Teclado → Adicionar Novo Teclado → Echos. Ative Permitir Acesso Total para a digitação por voz.",
   "keyboardPromptCta": "Adicionar teclado",
   "keyboardPromptDismiss": "Talvez depois",
   "voiceSessionHintTitle": "Volte para continuar digitando",

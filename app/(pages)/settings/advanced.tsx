@@ -31,7 +31,6 @@ import {
   useSetKeyboardHaptic,
   useSetKeyboardSound,
   useSetSmartSplitEnabled,
-  useShowKeyboardPrompt,
   useSmartSplitEnabled,
 } from "@/stores";
 import { useTheme } from "@/theme";
@@ -55,7 +54,6 @@ export default function AdvancedSettingsScreen() {
   const keyboardSound = useKeyboardSound();
   const setKeyboardSound = useSetKeyboardSound();
   const keyboardMicTimeout = useKeyboardMicTimeout();
-  const showKeyboardPrompt = useShowKeyboardPrompt();
   const selectedLanguage = useSelectedLanguage();
   const [keyboardEnabled, setKeyboardEnabled] = useState<boolean | null>(null);
 
@@ -223,7 +221,7 @@ export default function AdvancedSettingsScreen() {
                   color={theme.colors.textSecondary}
                 />
               }
-              onPress={showKeyboardPrompt}
+              onPress={() => router.push(Routes.settingsEchosKeyboard)}
             />
           </Captioned>
         </ScrollView>
