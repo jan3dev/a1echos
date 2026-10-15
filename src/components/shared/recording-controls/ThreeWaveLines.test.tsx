@@ -32,10 +32,7 @@ jest.mock("@shopify/react-native-skia", () => ({
     const { View } = require("react-native");
     return <View>{children}</View>;
   },
-  Mask: ({ children }: any) => {
-    const { View } = require("react-native");
-    return <View>{children}</View>;
-  },
+  Paint: () => null,
   Rect: () => null,
   LinearGradient: () => null,
   usePathValue: jest.fn(() => ({ current: null })),

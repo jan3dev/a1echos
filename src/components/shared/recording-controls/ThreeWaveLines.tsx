@@ -3,7 +3,7 @@ import {
   Canvas,
   Group,
   LinearGradient,
-  Mask,
+  Paint,
   Path,
   Rect,
   usePathValue,
@@ -80,7 +80,7 @@ const BASE_AMPLITUDE_RANGE = BASE_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const RECORDING_AMPLITUDE_RANGE = RECORDING_MAX_AMPLITUDE - MIN_AMPLITUDE;
 const POINTS_MINUS_ONE = POINTS - 1;
 const VOICE_THRESHOLD = 0.38;
-const WAVE_OPACITY = 1.0;
+const WAVE_OPACITY = 0.8;
 
 // Each wave crossfades between a crisp copy and a single blurred copy along the
 // horizontal axis. Skia has no variable blur, so the blur lives in fixed
@@ -89,6 +89,9 @@ const WAVE_OPACITY = 1.0;
 // by the complement (1 - alpha). LinearGradient interpolates between stops for a
 // smooth soft↔crisp transition and clamps beyond its endpoints.
 const END_BLUR = Platform.OS === "android" ? 1.8 : 2.5;
+// The canvas overhangs the layout box so the blur tail (~3σ) of a line at its
+// amplitude clamp fades out instead of being cut off at the canvas edge.
+const BLUR_BLEED = Math.ceil(END_BLUR * 3);
 
 interface BlurReveal {
   positions: number[];
@@ -340,38 +343,33 @@ const MaskedWave = ({
     </Path>
   );
 
+  // Each copy draws into its own layer and a dstIn gradient rect scales its
+  // alpha by the reveal. Skia's <Mask> is avoided: it multiplies the content
+  // alpha in twice and leaks the mask color through a BlurMask's soft coverage.
+  const renderMasked = (blur: number, maskColors: string[]) => (
+    <Group layer>
+      {renderCopy(blur)}
+      <Rect
+        x={0}
+        y={-BLUR_BLEED}
+        width={containerWidth}
+        height={height + BLUR_BLEED * 2}
+        blendMode="dstIn"
+      >
+        <LinearGradient
+          start={maskStart}
+          end={maskEnd}
+          colors={maskColors}
+          positions={reveal.positions}
+        />
+      </Rect>
+    </Group>
+  );
+
   return (
-    <Group opacity={WAVE_OPACITY}>
-      <Mask
-        mode="alpha"
-        mask={
-          <Rect x={0} y={0} width={containerWidth} height={height}>
-            <LinearGradient
-              start={maskStart}
-              end={maskEnd}
-              colors={blurColors}
-              positions={reveal.positions}
-            />
-          </Rect>
-        }
-      >
-        {renderCopy(END_BLUR)}
-      </Mask>
-      <Mask
-        mode="alpha"
-        mask={
-          <Rect x={0} y={0} width={containerWidth} height={height}>
-            <LinearGradient
-              start={maskStart}
-              end={maskEnd}
-              colors={sharpColors}
-              positions={reveal.positions}
-            />
-          </Rect>
-        }
-      >
-        {renderCopy(0)}
-      </Mask>
+    <Group layer={<Paint opacity={WAVE_OPACITY} />}>
+      {renderMasked(END_BLUR, blurColors)}
+      {renderMasked(0, sharpColors)}
     </Group>
   );
 };
@@ -461,22 +459,24 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
       }}
     >
       <Canvas style={styles.canvas}>
-        {[
-          { wave: wave0, idx: 0 },
-          { wave: wave1, idx: 1 },
-          { wave: wave2, idx: 2 },
-        ].map(({ wave, idx }) => (
-          <MaskedWave
-            key={idx}
-            path={wave.path}
-            strokeWidth={wave.strokeWidth}
-            reveal={WAVE_BLUR_REVEALS[idx]}
-            containerWidth={containerWidth}
-            height={height}
-            gradientColors={recordingWaveGradients[idx].colors}
-            gradientLocations={recordingWaveGradients[idx].locations}
-          />
-        ))}
+        <Group transform={[{ translateY: BLUR_BLEED }]}>
+          {[
+            { wave: wave0, idx: 0 },
+            { wave: wave1, idx: 1 },
+            { wave: wave2, idx: 2 },
+          ].map(({ wave, idx }) => (
+            <MaskedWave
+              key={idx}
+              path={wave.path}
+              strokeWidth={wave.strokeWidth}
+              reveal={WAVE_BLUR_REVEALS[idx]}
+              containerWidth={containerWidth}
+              height={height}
+              gradientColors={recordingWaveGradients[idx].colors}
+              gradientLocations={recordingWaveGradients[idx].locations}
+            />
+          ))}
+        </Group>
       </Canvas>
     </View>
   );
@@ -487,6 +487,10 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   canvas: {
-    flex: 1,
+    position: "absolute",
+    top: -BLUR_BLEED,
+    bottom: -BLUR_BLEED,
+    left: 0,
+    right: 0,
   },
 });
