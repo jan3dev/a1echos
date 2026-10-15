@@ -109,6 +109,7 @@ export enum TestID {
   TextAppearancePreview = "text-appearance-preview",
   TextAppearanceSizeSlider = "text-appearance-size-slider",
   TextAppearanceBoldToggle = "text-appearance-bold-toggle",
+  TextAppearanceReset = "text-appearance-reset",
 
   // --- Microphone Timeout Settings ---
   MicTimeoutOption = "mic-timeout-option",

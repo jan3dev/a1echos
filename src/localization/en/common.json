@@ -69,6 +69,7 @@
   "fontSize": "Font Size",
   "fontWeight": "Font Weight",
   "boldText": "Bold Text",
+  "resetDefaults": "Reset Defaults",
   "auto": "System",
   "light": "Light",
   "dark": "Dark",

@@ -32,6 +32,14 @@ jest.mock("@/components", () => {
     ListItem: ({ testID, onPress }: any) => (
       <TouchableOpacity testID={testID} onPress={onPress} />
     ),
+    PRIMARY_BUTTON_HEIGHT: 56,
+    FloatingCTAModule: ({ secondary }: any) => (
+      <TouchableOpacity
+        testID={secondary.testID}
+        disabled={!secondary.enabled}
+        onPress={secondary.onPress}
+      />
+    ),
   };
 });
 
@@ -85,6 +93,26 @@ describe("TextAppearanceSettingsScreen", () => {
     });
     expect(useSettingsStore.getState().textAppearance.bold).toBe(true);
     expect(previewStyle(screen).fontFamily).toBe("Inter-Bold");
+  });
+
+  it("Reset Defaults restores defaults and is disabled at default", async () => {
+    useSettingsStore.setState({
+      textAppearance: { font: "bitter", size: 22, bold: true },
+    });
+    const screen = render(<TextAppearanceSettingsScreen />);
+    const reset = () => screen.getByTestId(TestID.TextAppearanceReset);
+    expect(reset().props.accessibilityState?.disabled).toBeFalsy();
+    await act(async () => {
+      fireEvent.press(reset());
+    });
+    expect(useSettingsStore.getState().textAppearance).toEqual(
+      DEFAULT_TEXT_APPEARANCE,
+    );
+    expect(previewStyle(screen)).toMatchObject({
+      fontFamily: "Inter",
+      fontSize: 16,
+    });
+    expect(reset().props.accessibilityState?.disabled).toBe(true);
   });
 
   it("tapping the slider snaps to the nearest tick", async () => {

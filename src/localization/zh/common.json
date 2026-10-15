@@ -61,6 +61,7 @@
   "fontSize": "字体大小",
   "fontWeight": "字体粗细",
   "boldText": "粗体文字",
+  "resetDefaults": "恢复默认设置",
   "auto": "跟随系统",
   "light": "浅色",
   "dark": "深色",

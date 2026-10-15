@@ -13,6 +13,14 @@ describe("CTAModule", () => {
     expect(queryByText("Discard")).toBeNull();
   });
 
+  it("renders a secondary button without a primary", () => {
+    const { getByText, queryByText } = render(
+      <CTAModule secondary={{ text: "Reset", onPress: jest.fn() }} />,
+    );
+    expect(getByText("Reset")).toBeTruthy();
+    expect(queryByText("Save")).toBeNull();
+  });
+
   it("renders primary and secondary buttons", () => {
     const { getByText, queryByText } = render(
       <CTAModule

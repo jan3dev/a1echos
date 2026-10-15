@@ -98,6 +98,7 @@ export const useLocalization = () => {
       fontSize: t("fontSize"),
       fontWeight: t("fontWeight"),
       boldText: t("boldText"),
+      resetDefaults: t("resetDefaults"),
       spokenLanguageTitle: t("spokenLanguageTitle"),
       spokenLanguageDescription: t("spokenLanguageDescription"),
       searchLanguage: t("searchLanguage"),

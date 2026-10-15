@@ -5,7 +5,7 @@ import { Button, ButtonProps } from "../button/Button";
 export type CTAButton = ButtonProps;
 
 export interface CTAModuleProps {
-  primary: CTAButton;
+  primary?: CTAButton;
   secondary?: CTAButton;
   tertiary?: CTAButton;
   testID?: string;
@@ -20,7 +20,7 @@ export const CTAModule = ({
   testID,
 }: CTAModuleProps) => (
   <View style={styles.container} testID={testID}>
-    <Button.primary {...primary} />
+    {primary && <Button.primary {...primary} />}
     {secondary && <Button.secondary {...secondary} />}
     {tertiary && <Button.tertiary {...tertiary} />}
   </View>

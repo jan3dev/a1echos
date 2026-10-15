@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
+  FloatingCTAModule,
   FontOptionGrid,
   FontSizeSlider,
   ListItem,
+  PRIMARY_BUTTON_HEIGHT,
   Screen,
   Text,
   TextPreviewCard,
@@ -16,8 +18,9 @@ import {
 } from "@/components";
 import { AppConstants, TestID } from "@/constants";
 import { useLocalization, useScrollSurface } from "@/hooks";
+import { DEFAULT_TEXT_APPEARANCE } from "@/models";
 import { useSetTextAppearance, useTextAppearance } from "@/stores";
-import { useTheme } from "@/theme";
+import { spacing, useTheme } from "@/theme";
 
 export default function TextAppearanceSettingsScreen() {
   const { theme } = useTheme();
@@ -34,6 +37,11 @@ export default function TextAppearanceSettingsScreen() {
     void setAppearance({ bold });
   };
 
+  const isDefault =
+    appearance.font === DEFAULT_TEXT_APPEARANCE.font &&
+    appearance.size === DEFAULT_TEXT_APPEARANCE.size &&
+    appearance.bold === DEFAULT_TEXT_APPEARANCE.bold;
+
   return (
     <Screen>
       {/* iOS 26's full-screen back swipe claims the touch at touch-down, before
@@ -48,7 +56,8 @@ export default function TextAppearanceSettingsScreen() {
             styles.scrollContent,
             {
               paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-              paddingBottom: insets.bottom + 32,
+              paddingBottom:
+                insets.bottom + PRIMARY_BUTTON_HEIGHT + 2 * spacing.md,
               backgroundColor: theme.colors.surfaceBackground,
             },
           ]}
@@ -106,6 +115,16 @@ export default function TextAppearanceSettingsScreen() {
           </View>
         </ScrollView>
       </AppBarBlurTarget>
+
+      <FloatingCTAModule
+        blurTarget={blurTargetRef}
+        secondary={{
+          testID: TestID.TextAppearanceReset,
+          text: loc.resetDefaults,
+          enabled: !isDefault,
+          onPress: () => void setAppearance(DEFAULT_TEXT_APPEARANCE),
+        }}
+      />
 
       <TopAppBar
         title={loc.textAppearanceTitle}

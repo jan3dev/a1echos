@@ -77,6 +77,7 @@
   "fontSize": "Tamanho da fonte",
   "fontWeight": "Peso da fonte",
   "boldText": "Texto em negrito",
+  "resetDefaults": "Redefinir padrões",
   "auto": "Sistema",
   "light": "Claro",
   "dark": "Escuro",

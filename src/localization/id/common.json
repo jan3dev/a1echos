@@ -61,6 +61,7 @@
   "fontSize": "Ukuran Font",
   "fontWeight": "Ketebalan Font",
   "boldText": "Teks Tebal",
+  "resetDefaults": "Atur Ulang ke Default",
   "auto": "Sistem",
   "light": "Terang",
   "dark": "Gelap",
