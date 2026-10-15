@@ -46,7 +46,11 @@ jest.mock("../../../ui/button/Button", () => ({
       const { Pressable, Text } = require("react-native");
       const { TestID: TID } = require("@/constants");
       return (
-        <Pressable testID={TID.PrimaryButton} onPress={props.onPress}>
+        <Pressable
+          testID={TID.PrimaryButton}
+          onPress={props.enabled === false ? undefined : props.onPress}
+          accessibilityState={{ disabled: props.enabled === false }}
+        >
           <Text>{props.text}</Text>
         </Pressable>
       );
@@ -136,15 +140,26 @@ describe("SessionInputModal", () => {
     expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
-  it("submits empty trimmed text when initialValue is present", () => {
+  it("disables submit when it opens empty", () => {
+    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
+    expect(getByTestId(TestID.PrimaryButton)).toBeDisabled();
+  });
+
+  it("enables submit as soon as there is one character", () => {
+    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
+    fireEvent.changeText(getByTestId(TestID.TextField), "a");
+    expect(getByTestId(TestID.PrimaryButton)).toBeEnabled();
+  });
+
+  it("disables submit after deleting all text of an initial value", () => {
     const { getByTestId } = render(
       <SessionInputModal {...defaultProps} initialValue="Old Name" />,
     );
-    const textField = getByTestId(TestID.TextField);
-    fireEvent.changeText(textField, "   ");
+    expect(getByTestId(TestID.PrimaryButton)).toBeEnabled();
+    fireEvent.changeText(getByTestId(TestID.TextField), "   ");
+    expect(getByTestId(TestID.PrimaryButton)).toBeDisabled();
     fireEvent.press(getByTestId(TestID.PrimaryButton));
-    // trimmed is empty but initialValue.length > 0, so submit is called with ''
-    expect(defaultProps.onSubmit).toHaveBeenCalledWith("");
+    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
   it("text field value updates on change", () => {

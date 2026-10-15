@@ -118,14 +118,11 @@ export const SessionInputModal = ({
     setModalHeight((prev) => (prev === height ? prev : height));
   }, []);
 
+  const trimmed = text.trim();
+  const canSubmit = trimmed.length > 0 && trimmed.length <= maxLength;
+
   const handleSubmit = () => {
-    const trimmed = text.trim();
-    if (
-      (trimmed.length > 0 || initialValue.length > 0) &&
-      trimmed.length <= maxLength
-    ) {
-      onSubmit(trimmed);
-    }
+    if (canSubmit) onSubmit(trimmed);
   };
 
   return (
@@ -207,7 +204,11 @@ export const SessionInputModal = ({
 
               <View style={styles.spacer} />
 
-              <Button.primary text={buttonText} onPress={handleSubmit} />
+              <Button.primary
+                text={buttonText}
+                onPress={handleSubmit}
+                enabled={canSubmit}
+              />
             </Pressable>
           </ScrollView>
         </Animated.View>
