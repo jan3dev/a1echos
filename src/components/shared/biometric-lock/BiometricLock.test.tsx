@@ -81,6 +81,24 @@ describe("BiometricLock", () => {
     expect(getByTestId(TestID.BiometricUnlockButton)).toBeTruthy();
   });
 
+  it("waits for the system prompt to dismiss before showing unlock", async () => {
+    setEnabled(true);
+    let resolveAuth: (value: { success: boolean }) => void = () => {};
+    authenticate.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveAuth = resolve)),
+    );
+    const { getByTestId, queryByTestId } = render(<BiometricLock />);
+    Object.defineProperty(AppState, "currentState", {
+      value: "inactive",
+      configurable: true,
+    });
+    await act(async () => resolveAuth({ success: false }));
+    expect(queryByTestId(TestID.BiometricUnlockButton)).toBeNull();
+
+    act(() => appStateListener?.("active"));
+    expect(getByTestId(TestID.BiometricUnlockButton)).toBeTruthy();
+  });
+
   it("stays locked on cancel and retries on tapping unlock", async () => {
     setEnabled(true);
     authenticate.mockResolvedValueOnce({

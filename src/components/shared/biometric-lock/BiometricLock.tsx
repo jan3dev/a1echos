@@ -2,6 +2,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, AppState, Modal, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
+import Reanimated, { Easing, Keyframe } from "react-native-reanimated";
 
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
@@ -19,8 +20,22 @@ import { UnlockGradient } from "./UnlockGradient";
 
 const LOGO_WIDTH = 193;
 const LOGO_HEIGHT = 62;
+const UNLOCK_WIDTH = 199;
 const GRADIENT_FADE_IN_MS = 300;
 const UNLOCK_FADE_OUT_MS = 200;
+const UNLOCK_POP_IN = new Keyframe({
+  0: { opacity: 0, transform: [{ scale: 0.85 }] },
+  35: {
+    opacity: 1,
+    transform: [{ scale: 1.05 }],
+    easing: Easing.out(Easing.quad),
+  },
+  100: {
+    opacity: 1,
+    transform: [{ scale: 1 }],
+    easing: Easing.inOut(Easing.quad),
+  },
+}).duration(700);
 
 export const BiometricLockView = ({
   showUnlock,
@@ -64,11 +79,13 @@ export const BiometricLockView = ({
       {/* Out of flow so the logo stays at screen center, where the splash draws it. */}
       <View style={styles.unlockSlot}>
         {showUnlock && (
-          <GlowCtaButton
-            text={loc.biometricUnlock}
-            onPress={onUnlock}
-            testID={TestID.BiometricUnlockButton}
-          />
+          <Reanimated.View entering={UNLOCK_POP_IN} style={styles.unlock}>
+            <GlowCtaButton
+              text={loc.biometricUnlock}
+              onPress={onUnlock}
+              testID={TestID.BiometricUnlockButton}
+            />
+          </Reanimated.View>
         )}
       </View>
     </View>
@@ -86,6 +103,9 @@ export const BiometricLock = () => {
   // A background launch (headless/foreground-service start) prompts on the
   // first "active" instead of at mount.
   const wasBackgrounded = useRef(AppState.currentState !== "active");
+  // The failure resolves while the system prompt is still dismissing, so the
+  // Unlock pop-in waits for "active" or it plays hidden behind the prompt.
+  const failedWhileInactive = useRef(false);
   const setAppLocked = useSetAppLocked();
   const isShown = enabled && locked;
 
@@ -97,7 +117,8 @@ export const BiometricLock = () => {
     if (fadingOut.current) return;
     const result = await authenticateBiometric(loc.biometricAuthPrompt);
     if (result === "failed") {
-      setFailed(true);
+      if (AppState.currentState === "active") setFailed(true);
+      else failedWhileInactive.current = true;
       return;
     }
     // "unavailable": the device lost its passcode/biometrics, so there is no
@@ -120,12 +141,16 @@ export const BiometricLock = () => {
       if (state === "background" && !isBiometricAuthInFlight()) {
         wasBackgrounded.current = true;
         fadingOut.current = false;
+        failedWhileInactive.current = false;
         opacity.setValue(1);
         setFailed(false);
         setLocked(true);
       } else if (state === "active" && wasBackgrounded.current) {
         wasBackgrounded.current = false;
         void unlock();
+      } else if (state === "active" && failedWhileInactive.current) {
+        failedWhileInactive.current = false;
+        setFailed(true);
       }
     });
     return () => sub.remove();
@@ -175,5 +200,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "50%",
     marginTop: LOGO_HEIGHT / 2 + spacing.xxxl,
+  },
+  unlock: {
+    width: UNLOCK_WIDTH,
   },
 });

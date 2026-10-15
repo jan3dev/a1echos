@@ -51,17 +51,20 @@ export const GlowCtaButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 56,
+    minHeight: 51,
     borderRadius: 80,
     backgroundColor: darkColors.surfaceBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     overflow: "hidden",
   },
+  // The padding lives on the label so its box spans the pill: text shadows
+  // are clipped to the Text's own bounds, which would hide the 80pt glow.
   label: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     textShadowColor: "rgba(255, 255, 255, 0.8)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 80,

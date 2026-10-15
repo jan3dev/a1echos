@@ -437,6 +437,7 @@ jest.mock("react-native-reanimated", () => ({
   SlideInDown: { duration: jest.fn().mockReturnThis() },
   SlideOutDown: { duration: jest.fn().mockReturnThis() },
   Layout: { duration: jest.fn().mockReturnThis() },
+  Keyframe: jest.fn(() => ({ duration: jest.fn().mockReturnThis() })),
   LayoutAnimationConfig: ({ children }) => children,
 }));
 
