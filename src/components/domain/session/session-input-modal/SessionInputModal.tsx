@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Keyboard,
   LayoutChangeEvent,
   PixelRatio,
   Pressable,
@@ -15,9 +14,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppConstants, TestID } from "@/constants";
 import { useKeyboardHeight, useLocalization } from "@/hooks";
 import { getShadow, useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
 import { Button } from "../../../ui/button/Button";
+import { Icon } from "../../../ui/icon/Icon";
 import { Dimmer } from "../../../ui/modal/Dimmer";
+import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
 import { TextField } from "../../../ui/textfield/TextField";
 
@@ -53,17 +55,10 @@ export const SessionInputModal = ({
   const [text, setText] = useState(initialValue);
   const [modalHeight, setModalHeight] = useState(0);
   const keyboardHeight = useKeyboardHeight();
-  const keyboardVisibleRef = useRef(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const keyboardOffset = useRef(new Animated.Value(0)).current;
 
   const maxLength = AppConstants.SESSION_NAME_MAX_LENGTH || 50;
-
-  // Mirror keyboard visibility into a ref so the dismiss handler can read it
-  // without taking `keyboardHeight` as a dependency (and recreating itself).
-  useEffect(() => {
-    keyboardVisibleRef.current = keyboardHeight > 0;
-  }, [keyboardHeight]);
 
   useEffect(() => {
     if (visible) {
@@ -118,14 +113,6 @@ export const SessionInputModal = ({
 
   const modalWidth = width >= 768 ? 343 : width - 32;
 
-  const handleDismiss = useCallback(() => {
-    if (keyboardVisibleRef.current) {
-      Keyboard.dismiss();
-      return;
-    }
-    onCancel?.();
-  }, [onCancel]);
-
   const handleLayout = useCallback((e: LayoutChangeEvent) => {
     const height = e.nativeEvent.layout.height;
     setModalHeight((prev) => (prev === height ? prev : height));
@@ -142,7 +129,7 @@ export const SessionInputModal = ({
   };
 
   return (
-    <Dimmer visible={visible} onDismiss={handleDismiss}>
+    <Dimmer visible={visible} onDismiss={() => onCancel?.()}>
       <View style={styles.overlay}>
         <Animated.View
           testID={TestID.SessionInputModalCard}
@@ -170,13 +157,32 @@ export const SessionInputModal = ({
               style={styles.card}
             >
               <View style={styles.header}>
-                <Text
-                  variant="subtitle"
-                  weight="semibold"
-                  color={theme.colors.textPrimary}
-                >
-                  {title}
-                </Text>
+                <View style={styles.titleRow}>
+                  <Text
+                    variant="subtitle"
+                    weight="semibold"
+                    color={theme.colors.textPrimary}
+                    style={styles.title}
+                  >
+                    {title}
+                  </Text>
+                  <RipplePressable
+                    testID={TestID.SessionInputModalClose}
+                    onPress={onCancel}
+                    hitSlop={10}
+                    rippleColor={theme.colors.ripple}
+                    borderless
+                    accessibilityRole="button"
+                    accessibilityLabel={loc.close}
+                    style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
+                  >
+                    <Icon
+                      name="close"
+                      size={24}
+                      color={theme.colors.textPrimary}
+                    />
+                  </RipplePressable>
+                </View>
                 <Text
                   variant="body1"
                   weight="medium"
@@ -230,6 +236,14 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 16,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  title: {
+    flex: 1,
   },
   helper: {
     marginTop: 4,

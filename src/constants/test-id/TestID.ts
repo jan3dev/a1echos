@@ -68,6 +68,7 @@ export enum TestID {
   FolderCloseButton = "folder-close-button",
   SessionInputModal = "session-input-modal",
   SessionInputModalCard = "session-input-modal-card",
+  SessionInputModalClose = "session-input-modal-close",
   SelectionMode = "selection-mode",
   RenameModal = "rename-modal",
   SubmitRename = "submit-rename",

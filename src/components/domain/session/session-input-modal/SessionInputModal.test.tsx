@@ -262,9 +262,8 @@ describe("SessionInputModal", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it("dismiss calls Keyboard.dismiss when keyboard is visible", () => {
+  it("dismiss calls onCancel in one tap when keyboard is visible", () => {
     const kb = mockKeyboardListeners();
-    const dismissSpy = jest.spyOn(Keyboard, "dismiss").mockImplementation();
     const onCancel = jest.fn();
 
     const { getByTestId } = render(
@@ -277,8 +276,16 @@ describe("SessionInputModal", () => {
     kb.show(320);
 
     fireEvent.press(getByTestId(TestID.DimmerBackdrop));
-    expect(dismissSpy).toHaveBeenCalled();
-    expect(onCancel).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("close button calls onCancel", () => {
+    const onCancel = jest.fn();
+    const { getByTestId } = render(
+      <SessionInputModal {...defaultProps} onCancel={onCancel} />,
+    );
+    fireEvent.press(getByTestId(TestID.SessionInputModalClose));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it("lifts above the keyboard then settles when it hides", () => {
