@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { Keyboard } from "react-native";
+import { Animated, Keyboard, PixelRatio } from "react-native";
 
 import { TestID } from "@/constants";
 
@@ -300,6 +300,22 @@ describe("SessionInputModal", () => {
 
     fireEvent.press(getByTestId(TestID.DimmerBackdrop));
     expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("snaps the keyboard lift to the pixel grid", () => {
+    const kb = mockKeyboardListeners();
+    const timingSpy = jest.spyOn(Animated, "timing");
+
+    const { getByTestId } = render(<SessionInputModal {...defaultProps} />);
+    fireEvent(getByTestId(TestID.SessionInputModalCard), "layout", {
+      nativeEvent: { layout: { height: 600.3 } },
+    });
+    kb.show(400);
+
+    const toValue = timingSpy.mock.calls.at(-1)?.[1].toValue as number;
+    expect(toValue).toBeLessThan(0);
+    expect(Number.isInteger(toValue * PixelRatio.get())).toBe(true);
+    timingSpy.mockRestore();
   });
 
   it("ignores a repeated layout with the same height", () => {

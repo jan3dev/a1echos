@@ -3,6 +3,7 @@ import {
   Animated,
   Keyboard,
   LayoutChangeEvent,
+  PixelRatio,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -93,7 +94,9 @@ export const SessionInputModal = ({
         // Never lift the modal under the status bar / notch.
         const minTop = KEYBOARD_GAP + topInset;
         const maxShift = Math.max(0, center - modalHeight / 2 - minTop);
-        shift = Math.min(overlap, maxShift);
+        // Snap to the pixel grid: a fractional translate makes the 1px field
+        // border rasterize thicker on one edge.
+        shift = PixelRatio.roundToNearestPixel(Math.min(overlap, maxShift));
       }
     }
     Animated.timing(keyboardOffset, {
