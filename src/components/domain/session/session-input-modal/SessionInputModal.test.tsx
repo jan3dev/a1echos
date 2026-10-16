@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { Animated, Keyboard, PixelRatio } from "react-native";
+import { Animated, Keyboard, PixelRatio, Platform } from "react-native";
 
 import { TestID } from "@/constants";
 
 import { SessionInputModal } from "./SessionInputModal";
 
 jest.mock("../../../ui/modal/Dimmer", () => ({
-  Dimmer: ({ children, visible, onDismiss }: any) => {
+  Dimmer: ({ children, visible, onDismiss, onShow }: any) => {
     const { View, Pressable } = require("react-native");
     const { TestID: TID } = require("@/constants");
     return visible ? (
-      <View testID={TID.Dimmer}>
+      <View testID={TID.Dimmer} onShow={onShow}>
         <Pressable testID={TID.DimmerBackdrop} onPress={onDismiss} />
         {children}
       </View>
@@ -401,5 +401,23 @@ describe("SessionInputModal", () => {
     const { unmount } = render(<SessionInputModal {...defaultProps} />);
     unmount();
     expect(kb.remove).toHaveBeenCalled();
+  });
+
+  it("on Android, forces focus only once the modal window is shown", () => {
+    const original = Platform.OS;
+    Platform.OS = "android";
+    try {
+      const { getByTestId, UNSAFE_getByProps } = render(
+        <SessionInputModal {...defaultProps} />,
+      );
+      const { TextField } = require("../../../ui/textfield/TextField");
+      const field = () => UNSAFE_getByProps({ debounceTime: 0 });
+      expect(field().type).toBe(TextField);
+      expect(field().props.forceFocus).toBe(false);
+      act(() => getByTestId(TestID.Dimmer).props.onShow());
+      expect(field().props.forceFocus).toBe(true);
+    } finally {
+      Platform.OS = original;
+    }
   });
 });

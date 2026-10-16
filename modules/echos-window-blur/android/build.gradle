@@ -1,0 +1,34 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.a1lab.echos.windowblur'
+version = '0.0.1'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+android {
+  namespace "com.a1lab.echos.windowblur"
+  compileSdkVersion safeExtGet("compileSdkVersion", 35)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 26)
+    targetSdkVersion safeExtGet("targetSdkVersion", 34)
+    versionCode 1
+    versionName "0.0.1"
+  }
+
+  buildFeatures {
+    buildConfig true
+  }
+
+  publishing {
+    singleVariant("release") {
+      withSourcesJar()
+    }
+  }
+}
+

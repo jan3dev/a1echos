@@ -3,6 +3,7 @@ import {
   Animated,
   LayoutChangeEvent,
   PixelRatio,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -54,6 +55,7 @@ export const SessionInputModal = ({
   const { top: topInset } = useSafeAreaInsets();
   const [text, setText] = useState(initialValue);
   const [modalHeight, setModalHeight] = useState(0);
+  const [shown, setShown] = useState(false);
   const keyboardHeight = useKeyboardHeight();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const keyboardOffset = useRef(new Animated.Value(0)).current;
@@ -72,6 +74,7 @@ export const SessionInputModal = ({
     } else {
       slideAnim.setValue(0);
       keyboardOffset.setValue(0);
+      setShown(false);
     }
   }, [visible, initialValue, slideAnim, keyboardOffset]);
 
@@ -126,7 +129,11 @@ export const SessionInputModal = ({
   };
 
   return (
-    <Dimmer visible={visible} onDismiss={() => onCancel?.()}>
+    <Dimmer
+      visible={visible}
+      onDismiss={() => onCancel?.()}
+      onShow={() => setShown(true)}
+    >
       <View style={styles.overlay}>
         <Animated.View
           testID={TestID.SessionInputModalCard}
@@ -198,7 +205,9 @@ export const SessionInputModal = ({
                 maxLength={maxLength}
                 showClearIcon
                 onClear={() => setText("")}
-                forceFocus={visible}
+                // Android ignores showSoftInput until the Modal's Dialog
+                // window is shown, so focusing on mount races it.
+                forceFocus={visible && (Platform.OS !== "android" || shown)}
                 debounceTime={0}
               />
 
