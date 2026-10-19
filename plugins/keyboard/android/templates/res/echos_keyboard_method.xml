@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <input-method
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:settingsActivity="com.a1lab.echos.ime.ImeSettingsActivity">
+    android:settingsActivity="com.a1lab.echos.ime.ImeSettingsActivity"
+    android:supportsSwitchingToNextInputMethod="true">
     <subtype
         android:label="English (US)"
         android:imeSubtypeLocale="en_US"

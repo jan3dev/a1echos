@@ -14,6 +14,7 @@ interface RecordingControlsViewProps {
   enabled?: boolean;
   spacing?: number;
   colors: AquaColors;
+  paused?: boolean;
 }
 
 export const RecordingControlsView = ({
@@ -24,6 +25,7 @@ export const RecordingControlsView = ({
   enabled = true,
   spacing = 16.0,
   colors,
+  paused,
 }: RecordingControlsViewProps) => {
   const controlsHeight = 96.0;
 
@@ -42,6 +44,7 @@ export const RecordingControlsView = ({
             onRecordingStop={onRecordingStop}
             enabled={enabled}
             colors={colors}
+            paused={paused}
           />
         </View>
       </View>

@@ -5,7 +5,7 @@ import {
   Skottie,
   type SkSkottieAnimation,
 } from "@shopify/react-native-skia";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useDerivedValue, useSharedValue } from "react-native-reanimated";
 
 import { useLocalization } from "@/hooks";
@@ -53,18 +53,22 @@ export function IosSettingsDemo({ t, dark, testID }: DemoProps) {
   ]);
 
   return (
-    <Canvas
+    <View
       testID={testID ? `${testID}-animation` : undefined}
       style={styles.canvas}
-      onSize={canvasSize}
+      onLayout={(e) => {
+        canvasSize.value = e.nativeEvent.layout;
+      }}
       accessible
       accessibilityRole="image"
       accessibilityLabel={loc.onboardingEnableKeyboardTooltip}
     >
-      <Group transform={transform}>
-        <Skottie animation={animationFor(dark)} frame={frame} />
-      </Group>
-    </Canvas>
+      <Canvas style={StyleSheet.absoluteFill}>
+        <Group transform={transform}>
+          <Skottie animation={animationFor(dark)} frame={frame} />
+        </Group>
+      </Canvas>
+    </View>
   );
 }
 

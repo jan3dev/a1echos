@@ -71,17 +71,21 @@ export const AllSetScreen = ({
         ]}
       >
         <View style={styles.center}>
-          <Canvas
+          <View
             testID={testID ? `${testID}-check` : undefined}
             style={styles.check}
-            onSize={canvasSize}
+            onLayout={(e) => {
+              canvasSize.value = e.nativeEvent.layout;
+            }}
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           >
-            <Group transform={scale}>
-              <Skottie animation={CHECK_ANIMATION} frame={frame} />
-            </Group>
-          </Canvas>
+            <Canvas style={StyleSheet.absoluteFill}>
+              <Group transform={scale}>
+                <Skottie animation={CHECK_ANIMATION} frame={frame} />
+              </Group>
+            </Canvas>
+          </View>
           <View style={styles.copy}>
             <Text
               variant="h3"

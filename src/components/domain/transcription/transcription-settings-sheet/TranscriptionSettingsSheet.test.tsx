@@ -159,6 +159,32 @@ describe("TranscriptionSettingsSheet", () => {
     expect(mockShowLargerModelSuggestion).toHaveBeenCalled();
   });
 
+  it("hands the footer off around the fade and closes after it", () => {
+    jest.useFakeTimers();
+    const { Modal } = require("react-native");
+    const onFooterShownChange = jest.fn();
+    const { rerender, UNSAFE_getByType } = renderSheet({
+      onFooterShownChange,
+    });
+    act(() => UNSAFE_getByType(Modal).props.onShow());
+    expect(onFooterShownChange).toHaveBeenLastCalledWith(true);
+
+    rerender(
+      <TranscriptionSettingsSheet
+        visible={false}
+        onDismiss={jest.fn()}
+        footer={<Text>footer</Text>}
+        onFooterShownChange={onFooterShownChange}
+      />,
+    );
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(true);
+    expect(onFooterShownChange).toHaveBeenLastCalledWith(true);
+    act(() => jest.runAllTimers());
+    expect(onFooterShownChange).toHaveBeenLastCalledWith(false);
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(false);
+    jest.useRealTimers();
+  });
+
   it("back button on the language page returns instead of closing", () => {
     const onDismiss = jest.fn();
     const { getByTestId, UNSAFE_getByType, getByText } = renderSheet({

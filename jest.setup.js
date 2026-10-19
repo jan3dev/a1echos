@@ -603,6 +603,11 @@ jest.mock("@supersami/rn-foreground-service", () => ({
   },
 }));
 
+jest.mock("@react-navigation/native", () => ({
+  ...jest.requireActual("@react-navigation/native"),
+  useIsFocused: jest.fn(() => true),
+}));
+
 // ---------------------------------------------------------------------------
 // Shopify Skia
 // ---------------------------------------------------------------------------
@@ -625,7 +630,7 @@ jest.mock("@shopify/react-native-skia", () => ({
   rrect: (r, rx, ry) => ({ rect: r, rx, ry }),
   Skia: {
     Path: { Make: jest.fn() },
-    Color: jest.fn(),
+    Color: jest.fn(() => Float32Array.of(0, 0, 0, 1)),
     Skottie: { Make: jest.fn(() => ({ duration: () => 1, fps: () => 30 })) },
   },
   useValue: jest.fn(() => ({ current: 0 })),

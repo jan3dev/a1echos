@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import { useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
@@ -39,6 +40,7 @@ export const AllowMicrophoneScreen = ({
   testID,
 }: AllowMicrophoneScreenProps) => {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const frame = useSafeAreaFrame();
   const landscape = frame.width > frame.height;
   const { loc } = useLocalization();
@@ -93,7 +95,11 @@ export const AllowMicrophoneScreen = ({
           <View style={styles.art} onLayout={onArtLayout}>
             <GradientBars testID={childTestID("bars")} height={barsHeight} />
             <View style={styles.recordButton}>
-              <RecordingButton colors={darkColors} onRecordingStart={onAllow} />
+              <RecordingButton
+                colors={darkColors}
+                onRecordingStart={onAllow}
+                paused={!isFocused}
+              />
             </View>
           </View>
         </View>

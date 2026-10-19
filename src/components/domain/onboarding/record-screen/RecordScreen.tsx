@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
@@ -103,6 +104,7 @@ export const RecordScreen = ({
   testID,
 }: RecordScreenProps) => {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const { loc } = useLocalization();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState(() => new Date());
@@ -257,6 +259,7 @@ export const RecordScreen = ({
             onRecordingStart={onRecordingStart}
             onRecordingStop={onRecordingStop}
             colors={darkColors}
+            paused={!isFocused}
           />
         </View>
       )}

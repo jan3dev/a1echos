@@ -1,5 +1,6 @@
 package com.a1lab.echos.windowblur
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Build
 import android.view.WindowManager
@@ -26,22 +27,52 @@ class EchosWindowBlurView(context: Context, appContext: AppContext) : ExpoView(c
   var radiusDp = 0f
     set(value) {
       field = value
-      applyBlur()
+      applyBlur(animate = true)
     }
+
+  private var appliedPx = 0
+  private var animator: ValueAnimator? = null
 
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
-    applyBlur()
+    applyBlur(animate = false)
   }
 
-  private fun applyBlur() {
+  override fun onDetachedFromWindow() {
+    animator?.cancel()
+    super.onDetachedFromWindow()
+  }
+
+  // Radius changes after attach ease in: the blur sits on the window, so a
+  // fading parent View can't fade it.
+  private fun applyBlur(animate: Boolean) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !isAttachedToWindow) return
     val root = rootView
     val params = root.layoutParams as? WindowManager.LayoutParams ?: return
     // Never blur behind the activity's own window.
     if (params.type == WindowManager.LayoutParams.TYPE_BASE_APPLICATION) return
-    params.flags = params.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
-    params.blurBehindRadius = (radiusDp * resources.displayMetrics.density).toInt()
-    root.context.getSystemService(WindowManager::class.java).updateViewLayout(root, params)
+    val windowManager = root.context.getSystemService(WindowManager::class.java)
+    val setRadius = { px: Int ->
+      params.flags = params.flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+      params.blurBehindRadius = px
+      windowManager.updateViewLayout(root, params)
+      appliedPx = px
+    }
+    val target = (radiusDp * resources.displayMetrics.density).toInt()
+    animator?.cancel()
+    if (!animate || target == appliedPx) {
+      setRadius(target)
+      return
+    }
+    animator = ValueAnimator.ofInt(appliedPx, target).apply {
+      duration = RADIUS_ANIMATION_MS
+      addUpdateListener { if (isAttachedToWindow) setRadius(it.animatedValue as Int) }
+      start()
+    }
+  }
+
+  private companion object {
+    // Matches the JS backdrop fade (TranscriptionSettingsSheet CLOSE_FADE_MS).
+    const val RADIUS_ANIMATION_MS = 200L
   }
 }

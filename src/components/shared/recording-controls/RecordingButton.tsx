@@ -55,6 +55,8 @@ interface RecordingButtonProps {
   scaleAnimationDuration?: number;
   debounceDuration?: number;
   colors: AquaColors;
+  /** Stops the idle gradient loop, e.g. while a covered stack screen keeps it mounted. */
+  paused?: boolean;
 }
 
 const PRESS_DOWN_SCALE = 0.9;
@@ -290,6 +292,7 @@ export const RecordingButton = ({
   scaleAnimationDuration = 250,
   debounceDuration = 800,
   colors,
+  paused = false,
 }: RecordingButtonProps) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
@@ -545,7 +548,7 @@ export const RecordingButton = ({
           <View style={[styles.buttonContainer, circleSize]}>
             <AnimatedGradientCircle
               size={size}
-              active={!showSurface}
+              active={!showSurface && !paused}
               fast={isProcessing}
             />
             <Animated.View

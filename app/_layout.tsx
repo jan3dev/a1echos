@@ -349,6 +349,7 @@ function GlobalRecordingControls() {
   const blurTarget = useRecordingControlsBlurTarget();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [footerShown, setFooterShown] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
@@ -427,7 +428,7 @@ function GlobalRecordingControls() {
             ) : (
               <View style={styles.settingsHandle} pointerEvents="none" />
             )}
-            {controls}
+            <View style={footerShown && styles.hidden}>{controls}</View>
           </View>
         </GestureDetector>
       )}
@@ -435,6 +436,7 @@ function GlobalRecordingControls() {
         visible={settingsOpen}
         onDismiss={closeSettings}
         footer={controls}
+        onFooterShownChange={setFooterShown}
       />
     </View>
   );
@@ -602,6 +604,9 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  hidden: {
+    opacity: 0,
+  },
   globalTooltipContainer: {
     position: "absolute",
     left: 16,

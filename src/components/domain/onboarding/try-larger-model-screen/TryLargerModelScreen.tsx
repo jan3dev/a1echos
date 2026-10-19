@@ -1,3 +1,4 @@
+import { useIsFocused } from "@react-navigation/native";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
@@ -45,6 +46,7 @@ export const TryLargerModelScreen = ({
   testID,
 }: TryLargerModelScreenProps) => {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const frame = useSafeAreaFrame();
   const landscape = frame.width > frame.height;
   const { loc } = useLocalization();
@@ -113,7 +115,7 @@ export const TryLargerModelScreen = ({
             onDownload={onDownload}
             onCancelDownload={onCancelDownload}
             onRetry={onDownload}
-            highlightDownload
+            highlightDownload={isFocused}
             colors={darkColors}
           />
         </ScrollView>

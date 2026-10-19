@@ -23,7 +23,7 @@ const ANDROID_WINDOW_BLUR_RADIUS_DP = 30;
  * Modal: on Android expo-blur can't reach content in another window, so the
  * Modal's window blurs what's behind it (Android 12+, else just the tint).
  */
-export const DimmerBackdrop = () => {
+export const DimmerBackdrop = ({ blurred = true }: { blurred?: boolean }) => {
   const { isDark, theme } = useTheme();
 
   return (
@@ -31,7 +31,7 @@ export const DimmerBackdrop = () => {
       {WindowBlurView && (
         <WindowBlurView
           style={StyleSheet.absoluteFill}
-          radius={ANDROID_WINDOW_BLUR_RADIUS_DP}
+          radius={blurred ? ANDROID_WINDOW_BLUR_RADIUS_DP : 0}
         />
       )}
       <BlurView

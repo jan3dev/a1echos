@@ -39,6 +39,16 @@ describe("AmbientGlow", () => {
     expect(Reanimated.withRepeat).not.toHaveBeenCalled();
   });
 
+  it("freezes the loops while its screen is not focused", () => {
+    const Navigation = jest.requireMock("@react-navigation/native") as {
+      useIsFocused: jest.Mock;
+    };
+    Navigation.useIsFocused.mockReturnValueOnce(false);
+    Reanimated.withRepeat.mockClear();
+    render(<AmbientGlow testID="glow" />);
+    expect(Reanimated.withRepeat).not.toHaveBeenCalled();
+  });
+
   it("accepts custom accent colors and intensity", () => {
     const { getByTestId } = render(
       <AmbientGlow

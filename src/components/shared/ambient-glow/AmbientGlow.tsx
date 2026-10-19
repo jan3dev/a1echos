@@ -1,14 +1,23 @@
-import { useEffect, useId, useState } from "react";
+import { useIsFocused } from "@react-navigation/native";
+import {
+  Canvas,
+  Group,
+  RadialGradient,
+  Rect,
+  Skia,
+  vec,
+} from "@shopify/react-native-skia";
+import { useEffect, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, View } from "react-native";
-import Animated, {
+import {
   cancelAnimation,
-  useAnimatedStyle,
+  useDerivedValue,
   useReducedMotion,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
-import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 import { AquaPrimitiveColors } from "@/theme";
 
@@ -28,56 +37,13 @@ export interface AmbientGlowProps {
 const DEFAULT_LEFT = AquaPrimitiveColors.neonBlue400;
 const DEFAULT_RIGHT = AquaPrimitiveColors.neonBlue500;
 
-/**
- * Elliptical radial fill in pixel space. A screen-sized SVG clips an opaque
- * circle into a hard rectangle once drift/scale slides it; the caller paints
- * this on an overscanned canvas so those edges stay off-screen.
- */
-const RadialGlow = ({
-  gradientId,
-  svgWidth,
-  svgHeight,
-  cx,
-  cy,
-  rx,
-  ry,
-  color,
-  intensity,
-}: {
-  gradientId: string;
-  svgWidth: number;
-  svgHeight: number;
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-  color: string;
-  intensity: number;
-}) => (
-  <Svg width={svgWidth} height={svgHeight}>
-    <Defs>
-      <RadialGradient
-        id={gradientId}
-        gradientUnits="userSpaceOnUse"
-        cx={0}
-        cy={0}
-        r={1}
-        gradientTransform={`translate(${cx}, ${cy}) scale(${rx}, ${ry})`}
-      >
-        <Stop offset="0" stopColor={color} stopOpacity={intensity} />
-        <Stop offset="0.55" stopColor={color} stopOpacity={intensity * 0.35} />
-        <Stop offset="1" stopColor={color} stopOpacity={0} />
-      </RadialGradient>
-    </Defs>
-    <Rect
-      x={0}
-      y={0}
-      width={svgWidth}
-      height={svgHeight}
-      fill={`url(#${gradientId})`}
-    />
-  </Svg>
-);
+const glowStops = (color: string, intensity: number) => {
+  const [r, g, b, a] = Skia.Color(color);
+  return [intensity, intensity * 0.35, 0].map((o) =>
+    Float32Array.of(r, g, b, a * o),
+  );
+};
+const GLOW_POSITIONS = [0, 0.55, 1];
 
 /**
  * Soft ambient light rising from the bottom of its container. Two large radial
@@ -95,15 +61,10 @@ export const AmbientGlow = ({
   const leftColor = accentLeft ?? DEFAULT_LEFT;
   const rightColor = accentRight ?? DEFAULT_RIGHT;
 
-  // Unique per instance so multiple AmbientGlows can't share gradient IDs and
-  // collide in the SVG namespace. `useId` may contain ':' which is invalid in
-  // a url(#…) reference, so strip it.
-  const uid = useId().replace(/:/g, "");
-  const leftId = `ambientGlowLeft-${uid}`;
-  const rightId = `ambientGlowRight-${uid}`;
-
   const reducedMotion = useReducedMotion();
   const isAnimated = animated && !reducedMotion;
+  // Covered stack screens stay mounted, so freeze the loops while hidden.
+  const isFocused = useIsFocused();
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   const onLayout = (event: LayoutChangeEvent) => {
@@ -122,35 +83,38 @@ export const AmbientGlow = ({
       pulse.value = 0;
       return;
     }
+    if (!isFocused) return;
     // Long, gentle ping-pong loops at different periods so the two sources
-    // drift independently and never visibly sync up.
-    drift.value = withRepeat(withTiming(1, { duration: 5500 }), -1, true);
-    pulse.value = withRepeat(withTiming(1, { duration: 4000 }), -1, true);
+    // drift independently and never visibly sync up. A refocus first eases
+    // back from wherever the blur froze them so the glow doesn't jump.
+    const loop = (sv: typeof drift, duration: number) => {
+      sv.value = withSequence(
+        withTiming(0, { duration: duration * sv.value }),
+        withRepeat(withTiming(1, { duration }), -1, true),
+      );
+    };
+    loop(drift, 5500);
+    loop(pulse, 4000);
     return () => {
       cancelAnimation(drift);
       cancelAnimation(pulse);
     };
-  }, [isAnimated, drift, pulse]);
+  }, [isAnimated, isFocused, drift, pulse]);
 
   // Only horizontal drift + scale are animated: a full-screen layer's bright
   // bottom edge must never rise above the screen edge, so we avoid translateY
   // and keep scale >= 1 (scaling from center pushes the bottom edge down/off,
   // never up — so no hard seam appears).
-  const leftStyle = useAnimatedStyle(() => ({
-    opacity: 0.5 + 0.5 * pulse.value,
-    transform: [
-      { translateX: -90 * drift.value },
-      { scale: 1.04 + 0.2 * pulse.value },
-    ],
-  }));
-
-  const rightStyle = useAnimatedStyle(() => ({
-    opacity: 1 - 0.5 * pulse.value,
-    transform: [
-      { translateX: 90 * drift.value },
-      { scale: 1.24 - 0.2 * pulse.value },
-    ],
-  }));
+  const leftTransform = useDerivedValue(() => [
+    { translateX: -90 * drift.value },
+    { scale: 1.04 + 0.2 * pulse.value },
+  ]);
+  const leftOpacity = useDerivedValue(() => 0.5 + 0.5 * pulse.value);
+  const rightTransform = useDerivedValue(() => [
+    { translateX: 90 * drift.value },
+    { scale: 1.24 - 0.2 * pulse.value },
+  ]);
+  const rightOpacity = useDerivedValue(() => 1 - 0.5 * pulse.value);
 
   const { width, height } = size;
   const ready = width > 0 && height > 0;
@@ -158,73 +122,62 @@ export const AmbientGlow = ({
   // never thinner than 35% of the longer side so landscape doesn't collapse.
   const rx = Math.max(width * 0.62, height * 0.35);
   const ry = Math.max(height * 0.62, width * 0.35);
-  // Drift is ±90 and scale goes to 1.24; pad past the ellipse so the SVG
-  // rect never shows as a hard edge inside the screen.
-  const padX = rx + 90;
-  const padY = ry + 40;
-  const svgWidth = width + padX * 2;
-  const svgHeight = height + padY * 2;
-  const canvasStyle = {
-    position: "absolute" as const,
-    left: -padX,
-    top: -padY,
-    width: svgWidth,
-    height: svgHeight,
+  const origin = vec(width / 2, height / 2);
+  // Drift is ±90 and scale goes to 1.24; overdraw past the ellipse so the
+  // fill never shows a hard edge inside the canvas. Skia clips it for free.
+  const fill = {
+    x: -(rx + 90),
+    y: -(ry + 40),
+    width: width + 2 * (rx + 90),
+    height: height + 2 * (ry + 40),
   };
+  const leftCenter = vec(width * 0.28, height * 1.06);
+  const rightCenter = vec(width * 0.74, height * 1.1);
 
   return (
     <View
-      style={[StyleSheet.absoluteFill, styles.clip]}
+      style={StyleSheet.absoluteFill}
       pointerEvents="none"
       testID={testID}
       accessible={false}
       onLayout={onLayout}
     >
       {ready ? (
-        <>
-          <Animated.View
-            style={[StyleSheet.absoluteFill, styles.clip, leftStyle]}
+        <Canvas style={StyleSheet.absoluteFill}>
+          <Group
+            transform={leftTransform}
+            origin={origin}
+            opacity={leftOpacity}
           >
-            <View style={canvasStyle}>
-              <RadialGlow
-                gradientId={leftId}
-                svgWidth={svgWidth}
-                svgHeight={svgHeight}
-                cx={padX + width * 0.28}
-                cy={padY + height * 1.06}
-                rx={rx}
-                ry={ry}
-                color={leftColor}
-                intensity={intensity}
+            <Rect {...fill}>
+              <RadialGradient
+                c={leftCenter}
+                r={ry}
+                transform={[{ scaleX: rx / ry }]}
+                origin={leftCenter}
+                colors={glowStops(leftColor, intensity)}
+                positions={GLOW_POSITIONS}
               />
-            </View>
-          </Animated.View>
-
-          <Animated.View
-            style={[StyleSheet.absoluteFill, styles.clip, rightStyle]}
+            </Rect>
+          </Group>
+          <Group
+            transform={rightTransform}
+            origin={origin}
+            opacity={rightOpacity}
           >
-            <View style={canvasStyle}>
-              <RadialGlow
-                gradientId={rightId}
-                svgWidth={svgWidth}
-                svgHeight={svgHeight}
-                cx={padX + width * 0.74}
-                cy={padY + height * 1.1}
-                rx={rx * 1.03}
-                ry={ry * 1.03}
-                color={rightColor}
-                intensity={intensity}
+            <Rect {...fill}>
+              <RadialGradient
+                c={rightCenter}
+                r={ry * 1.03}
+                transform={[{ scaleX: rx / ry }]}
+                origin={rightCenter}
+                colors={glowStops(rightColor, intensity)}
+                positions={GLOW_POSITIONS}
               />
-            </View>
-          </Animated.View>
-        </>
+            </Rect>
+          </Group>
+        </Canvas>
       ) : null}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  clip: {
-    overflow: "visible",
-  },
-});

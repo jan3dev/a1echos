@@ -1,4 +1,4 @@
-import { ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Animated,
   Modal,
@@ -44,18 +44,26 @@ import { TranscriptionModeSelector } from "../../settings/model-card/ModelCard";
 
 const LANGUAGE_LIST_HEIGHT = 409;
 const FOOTER_GAP = 16;
+const FADE_MS = 200;
 
 interface TranscriptionSettingsSheetProps {
   visible: boolean;
   onDismiss: () => void;
   /** Recording controls, drawn where the global ones sit so the button stays put. */
   footer?: ReactNode;
+  /**
+   * True once the footer is on screen and the backdrop is still unblurred,
+   * false again just before it leaves. Hide the global controls in between:
+   * the blur smears them into a halo around the footer's copy.
+   */
+  onFooterShownChange?: (shown: boolean) => void;
 }
 
 export const TranscriptionSettingsSheet = ({
   visible,
   onDismiss,
   footer,
+  onFooterShownChange,
 }: TranscriptionSettingsSheetProps) => {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -76,22 +84,69 @@ export const TranscriptionSettingsSheet = ({
   const afterDismissRef = useRef<(() => void) | null>(null);
   const savingRef = useRef(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const { dragY, panHandlers } = useSwipeToDismiss(visible, onDismiss);
+
+  // The Modal itself never fades: the footer must stay crisp while it swaps
+  // with the global controls, so only the backdrop and sheet fade, and the
+  // blur ramps from and back to zero around the swap.
+  const [shown, setShown] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    setClosing(!visible);
+  }
+
+  const handleShow = () => {
+    setShown(true);
+    onFooterShownChange?.(true);
+  };
+
+  useEffect(() => {
+    if (!closing) return;
+    let frame: number | undefined;
+    const anim = Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: FADE_MS,
+      useNativeDriver: true,
+    });
+    anim.start(({ finished }) => {
+      if (!finished) return;
+      onFooterShownChange?.(false);
+      // Give the global controls a frame to reappear before the footer goes.
+      frame = requestAnimationFrame(() => {
+        setShown(false);
+        setClosing(false);
+      });
+    });
+    return () => {
+      anim.stop();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [closing, fadeAnim, onFooterShownChange]);
 
   // Reset before paint so the sheet never flashes its last page/position on open.
   useLayoutEffect(() => {
     if (!visible) return;
     setPage("main");
     slideAnim.setValue(0);
-    const anim = Animated.spring(slideAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 65,
-      friction: 10,
-    });
+    const anim = Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 10,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: FADE_MS,
+        useNativeDriver: true,
+      }),
+    ]);
     anim.start();
     return () => anim.stop();
-  }, [visible, slideAnim]);
+  }, [visible, slideAnim, fadeAnim]);
 
   const runAfterDismiss = () => {
     afterDismissRef.current?.();
@@ -252,9 +307,10 @@ export const TranscriptionSettingsSheet = ({
 
   return (
     <Modal
-      visible={visible}
+      visible={visible || closing}
       transparent
-      animationType="fade"
+      animationType="none"
+      onShow={handleShow}
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={page === "language" ? () => setPage("main") : onDismiss}
@@ -267,7 +323,9 @@ export const TranscriptionSettingsSheet = ({
         accessibilityRole="button"
         accessibilityLabel={loc.close}
       >
-        <DimmerBackdrop />
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+          <DimmerBackdrop blurred={shown && !closing} />
+        </Animated.View>
       </Pressable>
       <Animated.View
         testID={TestID.TranscriptionSettingsSheet}
@@ -282,6 +340,7 @@ export const TranscriptionSettingsSheet = ({
               FOOTER_GAP +
               (showFooter ? AppConstants.RECORDING_CONTROLS_HEIGHT : 0),
             transform: [{ translateY }],
+            opacity: fadeAnim,
           },
         ]}
       >

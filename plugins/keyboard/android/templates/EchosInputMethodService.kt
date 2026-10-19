@@ -19,6 +19,9 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import java.text.BreakIterator
 import java.util.Locale
 
@@ -194,6 +197,26 @@ class EchosInputMethodService : InputMethodService(),
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             )
+            // Opaque fallback behind the keyboard column and the nav bar
+            // padding. The top bar and keyboard view paint their own
+            // backgrounds, but a transitional frame (e.g. installing the
+            // emoji picker, or a light-mode swap) could otherwise show host
+            // content through this column for one frame.
+            val bgId = resources.getIdentifier(
+                "keyboard_background", "color", packageName,
+            )
+            if (bgId != 0) {
+                setBackgroundColor(ContextCompat.getColor(this@EchosInputMethodService, bgId))
+            }
+            // targetSdk 35+ draws the IME window edge-to-edge, so a 3-button
+            // nav bar (bottom, or a side in landscape) would cover keys.
+            // Padding the root insets the column and overlay together, so
+            // popup coordinates stay aligned with the keys.
+            ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+                val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+                v.updatePadding(left = nav.left, right = nav.right, bottom = nav.bottom)
+                insets
+            }
         }
 
         container = LinearLayout(this).apply {
@@ -202,17 +225,6 @@ class EchosInputMethodService : InputMethodService(),
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
             )
-            // Opaque fallback behind the entire keyboard column. The
-            // top bar and keyboard view paint their own backgrounds,
-            // but a transitional frame (e.g. installing the emoji
-            // picker, or a light-mode swap) could otherwise show host
-            // content through this column for one frame.
-            val bgId = resources.getIdentifier(
-                "keyboard_background", "color", packageName,
-            )
-            if (bgId != 0) {
-                setBackgroundColor(ContextCompat.getColor(this@EchosInputMethodService, bgId))
-            }
         }
 
         topBarHeightPx = resources.getIdentifier("keyboard_top_bar_height", "dimen", packageName)
@@ -265,20 +277,21 @@ class EchosInputMethodService : InputMethodService(),
                 return
             }
             val width = MeasureSpec.getSize(widthMeasureSpec)
+            val innerWidth = width - paddingLeft - paddingRight
             // Measure the column with its own (WRAP_CONTENT) constraints to
             // discover the natural keyboard height.
             column.measure(
-                MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(innerWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
             )
             val height = column.measuredHeight
             // Force every other child (the overlay) to the same bounds.
-            val exactW = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
+            val exactW = MeasureSpec.makeMeasureSpec(innerWidth, MeasureSpec.EXACTLY)
             val exactH = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
             for (i in 1 until childCount) {
                 getChildAt(i).measure(exactW, exactH)
             }
-            setMeasuredDimension(width, height)
+            setMeasuredDimension(width, height + paddingTop + paddingBottom)
         }
     }
 
