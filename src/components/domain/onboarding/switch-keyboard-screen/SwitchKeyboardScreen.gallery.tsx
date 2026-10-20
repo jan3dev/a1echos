@@ -8,6 +8,7 @@ export const Default = () => (
     <SwitchKeyboardScreen
       onBack={() => console.log("Back")}
       onSkip={() => console.log("Skip")}
+      onChooseKeyboard={() => console.log("Choose keyboard")}
     />
   </View>
 );

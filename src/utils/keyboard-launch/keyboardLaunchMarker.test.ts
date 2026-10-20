@@ -1,4 +1,7 @@
 import { File } from "expo-file-system";
+import { Platform } from "react-native";
+
+import { EchosInputMethod } from "@modules/echos-input-method/src";
 
 import * as logModule from "../log/log";
 
@@ -6,6 +9,7 @@ import {
   clearKeyboardLaunchMarker,
   readKeyboardLaunchMarker,
   readKeyboardEnabled,
+  readKeyboardSelected,
   readKeyboardShownAt,
 } from "./keyboardLaunchMarker";
 
@@ -98,6 +102,26 @@ describe("keyboardLaunchMarker", () => {
       expect(await readKeyboardEnabled()).toBeNull();
       setupFile({ text: "{}" });
       expect(await readKeyboardEnabled()).toBeNull();
+    });
+
+    it("asks the system on Android", async () => {
+      const originalOS = Platform.OS;
+      Platform.OS = "android";
+      try {
+        (EchosInputMethod!.isEnabled as jest.Mock).mockReturnValueOnce(false);
+        expect(await readKeyboardEnabled()).toBe(false);
+        expect(await readKeyboardEnabled()).toBe(true);
+      } finally {
+        Platform.OS = originalOS;
+      }
+    });
+  });
+
+  describe("readKeyboardSelected", () => {
+    it("asks the system", () => {
+      (EchosInputMethod!.isSelected as jest.Mock).mockReturnValueOnce(true);
+      expect(readKeyboardSelected()).toBe(true);
+      expect(readKeyboardSelected()).toBe(false);
     });
   });
 

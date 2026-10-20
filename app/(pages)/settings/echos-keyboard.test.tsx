@@ -19,7 +19,7 @@ let mockOnAdded: () => void = () => {};
 jest.mock("@/hooks", () => ({
   useKeyboardSettingsCheck: ({ onAdded }: { onAdded: () => void }) => {
     mockOnAdded = onAdded;
-    return mockAddKeyboard;
+    return { goToSettings: mockAddKeyboard, checking: false };
   },
 }));
 

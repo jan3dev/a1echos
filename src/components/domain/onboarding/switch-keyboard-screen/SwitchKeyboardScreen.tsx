@@ -1,11 +1,15 @@
-import { Image, StyleSheet, TextInput, View } from "react-native";
+import { Image, Platform, StyleSheet, TextInput, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  useSafeAreaFrame,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useKeyboardHeight, useLocalization } from "@/hooks";
 import { darkColors, spacing } from "@/theme";
 
 import { AmbientGlow } from "../../../shared/ambient-glow/AmbientGlow";
+import { Button } from "../../../ui/button/Button";
 import { Text } from "../../../ui/text/Text";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
@@ -15,18 +19,32 @@ const TUTORIAL_STEP = 1;
 export interface SwitchKeyboardScreenProps {
   onBack: () => void;
   onSkip: () => void;
+  /** Android: opens the system keyboard picker. */
+  onChooseKeyboard: () => void;
   testID?: string;
 }
 
-/** Focuses a hidden input so the system keyboard, and its globe key, is up. */
+/**
+ * iOS focuses a hidden input so the keyboard, and its globe key, is up.
+ * Android opens the system picker instead (Samsung's globe only changes
+ * languages), so no keyboard covers the button.
+ */
 export const SwitchKeyboardScreen = ({
   onBack,
   onSkip,
+  onChooseKeyboard,
   testID,
 }: SwitchKeyboardScreenProps) => {
   const insets = useSafeAreaInsets();
+  const frame = useSafeAreaFrame();
+  const landscape = frame.width > frame.height;
   const keyboardHeight = useKeyboardHeight();
   const { loc } = useLocalization();
+  const android = Platform.OS === "android";
+  // Samsung hides the system's keyboard switch button by default.
+  const samsung =
+    Platform.OS === "android" &&
+    Platform.constants.Manufacturer.toLowerCase() === "samsung";
 
   return (
     <View testID={testID} style={styles.root}>
@@ -43,6 +61,7 @@ export const SwitchKeyboardScreen = ({
         style={[
           styles.content,
           {
+            paddingTop: landscape ? spacing.sm : spacing.xl,
             paddingBottom: Math.max(keyboardHeight, insets.bottom) + spacing.md,
             paddingLeft: insets.left + spacing.md,
             paddingRight: insets.right + spacing.md,
@@ -56,7 +75,9 @@ export const SwitchKeyboardScreen = ({
             align="center"
             color={darkColors.textPrimary}
           >
-            {loc.onboardingSwitchKeyboardTitle}
+            {android
+              ? loc.onboardingSwitchKeyboardTitleAndroid
+              : loc.onboardingSwitchKeyboardTitle}
           </Text>
           <Text
             variant="body1"
@@ -64,31 +85,56 @@ export const SwitchKeyboardScreen = ({
             align="center"
             color={darkColors.textSecondary}
           >
-            {loc.onboardingSwitchKeyboardSubtitle}
+            {android
+              ? loc.onboardingSwitchKeyboardSubtitleAndroid
+              : loc.onboardingSwitchKeyboardSubtitle}
           </Text>
         </View>
 
-        <View style={styles.illustration}>
-          <Image
-            source={SWITCH_KEYBOARD_IMAGE}
-            style={styles.illustrationImage}
-            accessibilityIgnoresInvertColors
-          />
-        </View>
+        {android ? (
+          <View style={styles.actions}>
+            {samsung && (
+              <Text
+                variant="body2"
+                weight="regular"
+                align="center"
+                color={darkColors.textSecondary}
+                testID={testID ? `${testID}-samsung-tip` : undefined}
+              >
+                {loc.onboardingSwitchKeyboardSamsungTip}
+              </Text>
+            )}
+            <Button.primary
+              testID={testID ? `${testID}-choose-keyboard` : undefined}
+              text={loc.onboardingChooseKeyboard}
+              onPress={onChooseKeyboard}
+            />
+          </View>
+        ) : (
+          <View style={styles.illustration}>
+            <Image
+              source={SWITCH_KEYBOARD_IMAGE}
+              style={styles.illustrationImage}
+              accessibilityIgnoresInvertColors
+            />
+          </View>
+        )}
       </View>
 
-      <TextInput
-        allowFontScaling={false}
-        testID={testID ? `${testID}-input` : undefined}
-        autoFocus
-        caretHidden
-        contextMenuHidden
-        autoCorrect={false}
-        keyboardAppearance="dark"
-        style={styles.hiddenInput}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      />
+      {!android && (
+        <TextInput
+          allowFontScaling={false}
+          testID={testID ? `${testID}-input` : undefined}
+          autoFocus
+          caretHidden
+          contextMenuHidden
+          autoCorrect={false}
+          keyboardAppearance="dark"
+          style={styles.hiddenInput}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      )}
     </View>
   );
 };
@@ -103,12 +149,16 @@ const styles = StyleSheet.create({
     minHeight: 0,
     alignItems: "center",
     gap: spacing.xl,
-    paddingTop: spacing.xl,
   },
   copy: {
     alignSelf: "stretch",
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
+  },
+  actions: {
+    alignSelf: "stretch",
+    marginTop: "auto",
+    gap: spacing.md,
   },
   // Shows only the bottom of the full-screen capture, as cropped in the design.
   illustration: {

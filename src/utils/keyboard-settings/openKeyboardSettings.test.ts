@@ -1,6 +1,13 @@
 import { Linking, Platform } from "react-native";
 
-import { openKeyboardSettings } from "./openKeyboardSettings";
+import { EchosInputMethod } from "@modules/echos-input-method/src";
+
+import * as logModule from "../log/log";
+
+import {
+  openKeyboardSettings,
+  showKeyboardPicker,
+} from "./openKeyboardSettings";
 
 const mockOpenSettings = Linking.openSettings as jest.Mock;
 const mockSendIntent = Linking.sendIntent as jest.Mock;
@@ -39,6 +46,12 @@ describe("openKeyboardSettings", () => {
     expect(result).toBe(true);
     expect(mockSendIntent).toHaveBeenCalledWith(
       "android.settings.INPUT_METHOD_SETTINGS",
+      [
+        {
+          key: ":settings:fragment_args_key",
+          value: "com.a1lab.echos/.ime.EchosInputMethodService",
+        },
+      ],
     );
     expect(mockOpenSettings).not.toHaveBeenCalled();
   });
@@ -59,5 +72,23 @@ describe("openKeyboardSettings", () => {
     const result = await openKeyboardSettings();
 
     expect(result).toBe(false);
+  });
+});
+
+describe("showKeyboardPicker", () => {
+  const mockShowPicker = EchosInputMethod!.showPicker as jest.Mock;
+
+  it("opens the system picker", async () => {
+    await showKeyboardPicker();
+    expect(mockShowPicker).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs and swallows errors", async () => {
+    const logError = jest
+      .spyOn(logModule, "logError")
+      .mockImplementation(() => undefined);
+    mockShowPicker.mockRejectedValueOnce(new Error("nope"));
+    await expect(showKeyboardPicker()).resolves.toBeUndefined();
+    expect(logError).toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
-import { AppState } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Platform } from "react-native";
 
 import { ToastOptions } from "@/components/ui/toast/useToast";
 import { openKeyboardSettings, readKeyboardEnabled } from "@/utils";
@@ -17,7 +18,10 @@ interface Options {
   resumed?: boolean;
 }
 
-/** Returns a Go to Settings handler that checks the keyboard on return. */
+/**
+ * Returns a Go to Settings handler that checks the keyboard on return, and
+ * whether that check is still settling (until the screen moves on).
+ */
 export const useKeyboardSettingsCheck = ({
   onAdded,
   showToast,
@@ -27,6 +31,13 @@ export const useKeyboardSettingsCheck = ({
   const pendingCheck = useRef<"resumed" | "settings" | null>(
     resumed ? "resumed" : null,
   );
+  const [checking, setChecking] = useState(resumed);
+  const focused = useIsFocused();
+
+  // onAdded navigates away; stay busy through the transition, not after it.
+  useEffect(() => {
+    if (!focused) setChecking(false);
+  }, [focused]);
 
   useEffect(() => {
     let active = true;
@@ -34,17 +45,21 @@ export const useKeyboardSettingsCheck = ({
       const source = pendingCheck.current;
       if (!source) return;
       pendingCheck.current = null;
-      // null = can't tell (Android, or iOS hiding the keyboard list): don't block.
+      // null = can't tell (iOS hiding the keyboard list): don't block.
       const enabled = await readKeyboardEnabled();
       if (!active) return;
-      if (enabled !== false) {
-        if (source === "settings" || enabled) onAdded();
+      if (enabled !== false && (source === "settings" || enabled)) {
+        onAdded();
         return;
       }
+      setChecking(false);
       if (source === "settings")
         showToast({
           title: loc.onboardingKeyboardNotAddedTitle,
-          message: loc.onboardingKeyboardNotAddedMessage,
+          message:
+            Platform.OS === "android"
+              ? loc.onboardingKeyboardNotAddedMessageAndroid
+              : loc.onboardingKeyboardNotAddedMessage,
           variant: "warning",
           messageMaxLines: 3,
         });
@@ -62,9 +77,15 @@ export const useKeyboardSettingsCheck = ({
     };
   }, [onAdded, showToast, loc]);
 
-  return useCallback(async () => {
+  const goToSettings = useCallback(async () => {
     pendingCheck.current = "settings";
+    setChecking(true);
     // Failure is already logged; the screen's other exits remain.
-    if (!(await openKeyboardSettings())) pendingCheck.current = null;
+    if (!(await openKeyboardSettings())) {
+      pendingCheck.current = null;
+      setChecking(false);
+    }
   }, []);
+
+  return { goToSettings, checking };
 };

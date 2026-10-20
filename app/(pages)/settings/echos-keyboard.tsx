@@ -12,7 +12,7 @@ export default function EchosKeyboardSettingsScreen() {
   const markSeen = useMarkKeyboardPromptSeen();
   const { show, toastState } = useToast();
   const close = useCallback(() => router.back(), [router]);
-  const addKeyboard = useKeyboardSettingsCheck({
+  const { goToSettings, checking } = useKeyboardSettingsCheck({
     onAdded: close,
     showToast: show,
   });
@@ -26,7 +26,8 @@ export default function EchosKeyboardSettingsScreen() {
       <EchosKeyboardScreen
         testID={TestID.EchosKeyboardScreen}
         onClose={close}
-        onAddKeyboard={addKeyboard}
+        onAddKeyboard={goToSettings}
+        checking={checking}
       />
       <Toast {...toastState} />
     </>

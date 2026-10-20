@@ -40,6 +40,19 @@ jest.mock(
   { virtual: true },
 );
 
+jest.mock(
+  "@modules/echos-input-method/src",
+  () => ({
+    EchosInputMethod: {
+      imeId: "com.a1lab.echos/.ime.EchosInputMethodService",
+      isEnabled: jest.fn(() => true),
+      isSelected: jest.fn(() => false),
+      showPicker: jest.fn(async () => undefined),
+    },
+  }),
+  { virtual: true },
+);
+
 jest.mock("@modules/echos-audio-decoder/src", () => ({
   EchosAudioDecoder: {
     decodeToWav16k: jest.fn(async () => ({ durationMs: 1000 })),

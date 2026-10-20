@@ -1,0 +1,8 @@
+{
+  "name": "echos-input-method",
+  "version": "0.0.1",
+  "description": "Android IME status and system keyboard picker for the Echos keyboard.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true
+}

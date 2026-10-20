@@ -1,4 +1,7 @@
 import { File, Paths } from "expo-file-system";
+import { Platform } from "react-native";
+
+import { EchosInputMethod } from "@modules/echos-input-method/src";
 
 import { FeatureFlag, logWarn } from "../log/log";
 
@@ -68,14 +71,19 @@ export const readKeyboardShownAt = () =>
   readMarkerTimestamp(KEYBOARD_SHOWN_FILENAME, "shownAt");
 
 /**
- * Whether the Echos keyboard is added in iOS Settings (written by the main-app
- * listener at launch and before each foreground), or `null` when unknown
- * (Android, or an iOS version that hides the keyboard list).
+ * Whether the Echos keyboard is added in Settings, or `null` when unknown (an
+ * iOS version that hides the keyboard list). Android asks the system; iOS reads
+ * what the main-app listener writes at launch and before each foreground.
  */
 export const readKeyboardEnabled = async (): Promise<boolean | null> => {
+  if (Platform.OS === "android") return EchosInputMethod?.isEnabled() ?? null;
   const value = await readMarkerField("keyboard-status.json", "enabled");
   return typeof value === "boolean" ? value : null;
 };
+
+/** Android: whether Echos is the current system keyboard. */
+export const readKeyboardSelected = (): boolean =>
+  EchosInputMethod?.isSelected() ?? false;
 
 /** Deletes the marker so the hint isn't shown again. Never throws. */
 export const clearKeyboardLaunchMarker = (): void => {

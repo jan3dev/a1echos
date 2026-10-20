@@ -910,7 +910,9 @@ class EchosInputMethodService : InputMethodService(),
     }
 
     override fun onSwitchKeyboard() {
-        switchToNextInputMethod(false)
+        // Fails when no other enabled keyboard opts into switching, which
+        // would otherwise leave the user stuck in Echos.
+        if (!switchToNextInputMethod(false)) onShowKeyboardPicker()
     }
 
     override fun onShowKeyboardPicker() {

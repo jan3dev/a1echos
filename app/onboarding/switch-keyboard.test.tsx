@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from "@testing-library/react-native";
 import React from "react";
+import { Platform } from "react-native";
 
 import SwitchKeyboard from "./switch-keyboard";
 
@@ -16,8 +17,12 @@ jest.mock("@/hooks", () => ({
 }));
 
 const mockReadShownAt = jest.fn();
+const mockShowPicker = jest.fn();
+const mockReadSelected = jest.fn();
 jest.mock("@/utils", () => ({
   readKeyboardShownAt: () => mockReadShownAt(),
+  readKeyboardSelected: () => mockReadSelected(),
+  showKeyboardPicker: () => mockShowPicker(),
 }));
 
 jest.mock("@/components", () => {
@@ -26,10 +31,12 @@ jest.mock("@/components", () => {
     SwitchKeyboardScreen: (props: {
       onBack: () => void;
       onSkip: () => void;
+      onChooseKeyboard: () => void;
     }) => (
       <View>
         <TouchableOpacity testID="back" onPress={props.onBack} />
         <TouchableOpacity testID="skip" onPress={props.onSkip} />
+        <TouchableOpacity testID="choose" onPress={props.onChooseKeyboard} />
       </View>
     ),
     Toast: () => null,
@@ -48,13 +55,15 @@ describe("SwitchKeyboard onboarding route", () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  it("wires back and skip", () => {
+  it("wires back, skip and the keyboard picker", () => {
     mockReadShownAt.mockResolvedValue(null);
     const { getByTestId } = render(<SwitchKeyboard />);
     fireEvent.press(getByTestId("back"));
     fireEvent.press(getByTestId("skip"));
+    fireEvent.press(getByTestId("choose"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
+    expect(mockShowPicker).toHaveBeenCalledTimes(1);
   });
 
   it("advances once the keyboard appears after mount, and only once", async () => {
@@ -68,6 +77,25 @@ describe("SwitchKeyboard onboarding route", () => {
     await tick();
     expect(mockReplace).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith("/onboarding/dictate");
+  });
+
+  it("on Android, advances once the system reports Echos selected", async () => {
+    const originalOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      mockReadSelected.mockReturnValue(false);
+      render(<SwitchKeyboard />);
+      await tick();
+      expect(mockReplace).not.toHaveBeenCalled();
+
+      mockReadSelected.mockReturnValue(true);
+      await tick();
+      await tick();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReadShownAt).not.toHaveBeenCalled();
+    } finally {
+      Platform.OS = originalOS;
+    }
   });
 
   it("stops polling on unmount", async () => {

@@ -24,6 +24,8 @@ export interface EnableKeyboardScreenProps {
   onBack: () => void;
   onSkip: () => void;
   onGoToSettings: () => void;
+  /** Checking the keyboard after the return from Settings. */
+  checking?: boolean;
   testID?: string;
 }
 
@@ -35,6 +37,7 @@ export const EnableKeyboardScreen = ({
   onBack,
   onSkip,
   onGoToSettings,
+  checking,
   testID,
 }: EnableKeyboardScreenProps) => {
   const insets = useSafeAreaInsets();
@@ -81,6 +84,7 @@ export const EnableKeyboardScreen = ({
             testID={testID ? `${testID}-go-to-settings` : undefined}
             text={loc.onboardingGoToSettings}
             enabled={done}
+            isLoading={checking}
             onPress={onGoToSettings}
           />
         </Animated.View>

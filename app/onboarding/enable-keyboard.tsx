@@ -15,7 +15,7 @@ export default function EnableKeyboard() {
     () => router.push(Routes.onboardingSpokenLanguage),
     [router],
   );
-  const goToSettings = useKeyboardSettingsCheck({
+  const { goToSettings, checking } = useKeyboardSettingsCheck({
     onAdded: continueOnboarding,
     showToast: show,
     resumed: !!resumed,
@@ -28,6 +28,7 @@ export default function EnableKeyboard() {
         onBack={router.back}
         onSkip={confirmSkip}
         onGoToSettings={goToSettings}
+        checking={checking}
       />
       <Toast {...toastState} />
     </>

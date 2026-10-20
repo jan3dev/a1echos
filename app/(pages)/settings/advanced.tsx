@@ -1,12 +1,6 @@
 import { useRouter } from "expo-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import {
-  AppState,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { AppState, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {

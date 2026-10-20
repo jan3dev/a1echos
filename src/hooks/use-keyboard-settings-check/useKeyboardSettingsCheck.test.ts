@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import { AppState } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
+import { AppState, Platform } from "react-native";
 
 import { useKeyboardSettingsCheck } from "./useKeyboardSettingsCheck";
 
@@ -15,6 +16,7 @@ jest.mock("../use-localization/useLocalization", () => ({
     loc: {
       onboardingKeyboardNotAddedTitle: "Not Added",
       onboardingKeyboardNotAddedMessage: "Add it",
+      onboardingKeyboardNotAddedMessageAndroid: "Turn it on",
     },
   }),
 }));
@@ -60,37 +62,63 @@ describe("useKeyboardSettingsCheck", () => {
 
   it("stays put on resume when it can't tell", async () => {
     mockRead.mockResolvedValue(null);
-    const { onAdded, showToast } = setup(true);
-    await waitFor(() => expect(mockRead).toHaveBeenCalled());
+    const { onAdded, showToast, result } = setup(true);
+    expect(result.current.checking).toBe(true);
+    await waitFor(() => expect(result.current.checking).toBe(false));
     expect(onAdded).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalled();
   });
 
   it("continues after Settings unless the keyboard is known missing", async () => {
     mockRead.mockResolvedValue(null);
-    const { onAdded, result } = setup();
-    await act(() => result.current());
+    const { onAdded, result, rerender } = setup();
+    expect(result.current.checking).toBe(false);
+    await act(() => result.current.goToSettings());
+    expect(result.current.checking).toBe(true);
     await returnFromSettings();
     expect(onAdded).toHaveBeenCalledTimes(1);
+    // Busy until the screen it navigated from loses focus.
+    expect(result.current.checking).toBe(true);
+    (useIsFocused as jest.Mock).mockReturnValueOnce(false);
+    rerender({});
+    expect(result.current.checking).toBe(false);
   });
 
   it("warns after Settings when the keyboard is still missing", async () => {
     mockRead.mockResolvedValue(false);
     const { onAdded, showToast, result } = setup();
-    await act(() => result.current());
+    await act(() => result.current.goToSettings());
     await returnFromSettings();
     expect(onAdded).not.toHaveBeenCalled();
+    expect(result.current.checking).toBe(false);
     expect(showToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Not Added", variant: "warning" }),
     );
   });
 
+  it("uses the Android copy on Android", async () => {
+    const originalOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      mockRead.mockResolvedValue(false);
+      const { showToast, result } = setup();
+      await act(() => result.current.goToSettings());
+      await returnFromSettings();
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Turn it on" }),
+      );
+    } finally {
+      Platform.OS = originalOS;
+    }
+  });
+
   it("skips the check when Settings fails to open", async () => {
     mockOpen.mockResolvedValue(false);
     const { result } = setup();
-    await act(() => result.current());
+    await act(() => result.current.goToSettings());
     await returnFromSettings();
     expect(mockRead).not.toHaveBeenCalled();
+    expect(result.current.checking).toBe(false);
   });
 
   it("drops an in-flight check after unmount", async () => {

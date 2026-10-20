@@ -19,6 +19,8 @@ import {
 export interface EchosKeyboardScreenProps {
   onClose: () => void;
   onAddKeyboard: () => void;
+  /** Checking the keyboard after the return from Settings. */
+  checking?: boolean;
   testID?: string;
 }
 
@@ -28,6 +30,7 @@ export interface EchosKeyboardScreenProps {
 export const EchosKeyboardScreen = ({
   onClose,
   onAddKeyboard,
+  checking,
   testID,
 }: EchosKeyboardScreenProps) => {
   const insets = useSafeAreaInsets();
@@ -57,6 +60,7 @@ export const EchosKeyboardScreen = ({
           <Button.primary
             testID={childTestID("add-keyboard")}
             text={loc.keyboardPromptCta}
+            isLoading={checking}
             onPress={onAddKeyboard}
           />
           <Button.secondary

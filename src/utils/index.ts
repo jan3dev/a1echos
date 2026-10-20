@@ -86,7 +86,10 @@ export {
 } from "./wav-writer/WavWriter";
 export type { PcmStreamWriter, SampleRange } from "./wav-writer/WavWriter";
 export { iosPressed } from "./ripple/ripple";
-export { openKeyboardSettings } from "./keyboard-settings/openKeyboardSettings";
+export {
+  openKeyboardSettings,
+  showKeyboardPicker,
+} from "./keyboard-settings/openKeyboardSettings";
 export {
   writeKeyboardSettings,
   type KeyboardSettingsConfig,
@@ -97,5 +100,6 @@ export {
   clearKeyboardLaunchMarker,
   readKeyboardShownAt,
   readKeyboardEnabled,
+  readKeyboardSelected,
   type KeyboardLaunchMarker,
 } from "./keyboard-launch/keyboardLaunchMarker";

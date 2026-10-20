@@ -199,6 +199,9 @@ export const useLocalization = () => {
       onboardingGoToSettings: t("onboardingGoToSettings"),
       onboardingKeyboardNotAddedTitle: t("onboardingKeyboardNotAddedTitle"),
       onboardingKeyboardNotAddedMessage: t("onboardingKeyboardNotAddedMessage"),
+      onboardingKeyboardNotAddedMessageAndroid: t(
+        "onboardingKeyboardNotAddedMessageAndroid",
+      ),
       onboardingSpokenLanguageTitle: t("onboardingSpokenLanguageTitle"),
       onboardingNext: t("onboardingNext"),
       onboardingTryLargerModelTitle: t("onboardingTryLargerModelTitle"),
@@ -208,6 +211,16 @@ export const useLocalization = () => {
       onboardingTutorialIntroSubtitle: t("onboardingTutorialIntroSubtitle"),
       onboardingSwitchKeyboardTitle: t("onboardingSwitchKeyboardTitle"),
       onboardingSwitchKeyboardSubtitle: t("onboardingSwitchKeyboardSubtitle"),
+      onboardingSwitchKeyboardTitleAndroid: t(
+        "onboardingSwitchKeyboardTitleAndroid",
+      ),
+      onboardingSwitchKeyboardSubtitleAndroid: t(
+        "onboardingSwitchKeyboardSubtitleAndroid",
+      ),
+      onboardingChooseKeyboard: t("onboardingChooseKeyboard"),
+      onboardingSwitchKeyboardSamsungTip: t(
+        "onboardingSwitchKeyboardSamsungTip",
+      ),
       onboardingDictateTitle: t("onboardingDictateTitle"),
       onboardingDictateSubtitle: t("onboardingDictateSubtitle"),
       onboardingDictatePlaceholder: t("onboardingDictatePlaceholder"),
