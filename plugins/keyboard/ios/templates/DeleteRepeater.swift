@@ -1,11 +1,11 @@
 import Foundation
 
-// Hold-to-repeat delete cadence — native iOS: char-rate after a 0.4s hold,
+// Hold-to-repeat delete cadence: char-rate (LatinIME's 50ms) after a 0.3s hold,
 // escalating to word-rate past ~1.5s. Caller owns touch arbitration and
 // suppresses the trailing tap on release when `didRepeat` is true.
 final class DeleteRepeater {
     static let initialDelay: TimeInterval = 0.3
-    static let charInterval: TimeInterval = 0.08
+    static let charInterval: TimeInterval = 0.05
     static let wordThreshold: TimeInterval = 1.5
     static let wordInterval: TimeInterval = 0.2
 

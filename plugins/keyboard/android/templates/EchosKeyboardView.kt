@@ -316,8 +316,8 @@ class EchosKeyboardView @JvmOverloads constructor(
         }
 
     // Delete-key auto-repeat: matches the iOS keyboard's cadence — char-rate
-    // after a 0.4 s hold, escalating to word-rate past ~1.5 s. Suppresses the
-    // trailing single-tap delete on `ACTION_UP` if a repeat already fired.
+    // after a 0.3 s hold, escalating to word-rate past ~1.5 s. The owner's
+    // first delete lands on key-down, so `ACTION_UP` commits nothing.
     private val deleteRepeater = KeyDeleteRepeater(
         onCharDelete = {
             KeyFeedback.keyPress(this, AudioManager.FX_KEYPRESS_DELETE)
@@ -1422,6 +1422,9 @@ class EchosKeyboardView @JvmOverloads constructor(
                 // `handlePointerUp`), matching Gboard.
                 if (!anyPointerOwnsDeleteRepeat()) {
                     state.ownsDeleteRepeat = true
+                    // Delete on key-down like iOS and Gboard; otherwise a
+                    // hold feels dead until the first repeat tick.
+                    listener?.onDeletePress()
                     deleteRepeater.start()
                 }
             }
@@ -1511,13 +1514,8 @@ class EchosKeyboardView @JvmOverloads constructor(
 
         when {
             state.ownsDeleteRepeat -> {
-                // If the hold timer fired one or more repeats, treat this
-                // as the release of an auto-repeat — skip the trailing
-                // single-tap delete so we don't double up.
-                val didRepeat = deleteRepeater.didRepeat
                 deleteRepeater.cancel()
                 state.ownsDeleteRepeat = false
-                if (!didRepeat) listener?.onDeletePress()
             }
             // Long-press already triggered (picker shown from globe or
             // space, caps-lock from shift): skip the regular tap action.
