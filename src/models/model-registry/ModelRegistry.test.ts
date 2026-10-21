@@ -5,6 +5,7 @@ import {
   MODEL_REGISTRY,
   ModelId,
   shouldSuggestLargerModel,
+  TranscriptionMode,
 } from "../";
 
 describe("ModelRegistry", () => {
@@ -30,6 +31,22 @@ describe("ModelRegistry", () => {
         /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/main$/,
       );
     }
+  });
+
+  it("only streaming Nemotron and Parakeet offer real-time", () => {
+    const realtime = getAllModels()
+      .filter((m) => m.supportedModes.includes(TranscriptionMode.REALTIME))
+      .map((m) => m.id);
+    expect(realtime.sort()).toEqual(
+      [ModelId.NEMO_PARAKEET_V3, ModelId.NEMOTRON_STREAMING_EN].sort(),
+    );
+    const nemotron = getModelInfo(ModelId.NEMOTRON_STREAMING_EN);
+    expect(nemotron.isStreaming).toBe(true);
+    expect(nemotron.supportedModes).toEqual([TranscriptionMode.REALTIME]);
+    expect(nemotron.supportedLanguageCodes).toEqual(["en"]);
+    expect(nemotron.sizeBytes).toBe(
+      nemotron.files.reduce((sum, f) => sum + f.sizeBytes, 0),
+    );
   });
 
   // https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3

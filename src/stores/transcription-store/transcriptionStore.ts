@@ -1294,6 +1294,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const captureStarted =
           await sherpaTranscriptionService.startRealtimeTranscription({
             wavOutputUri,
+            flushOnPause: isRealtime,
           });
 
         if (!captureStarted) {
@@ -1467,9 +1468,44 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     },
 
     onChunkEvent: (event: ChunkEvent) => {
-      const { text, boundary, endSample } = event;
+      const { text, boundary, endSample, partial } = event;
       const state = get();
       const split = state.smartSplit;
+
+      const previewUpdate = (
+        previewText: string,
+      ): Partial<TranscriptionStore> => {
+        const sessionId =
+          state.recordingSessionId ??
+          useSessionStore.getState().activeSessionId;
+        const canShowPreview =
+          !!sessionId &&
+          (state.state === TranscriptionState.RECORDING ||
+            state.state === TranscriptionState.STREAMING ||
+            state.state === TranscriptionState.TRANSCRIBING);
+
+        return {
+          currentStreamingText: previewText,
+          livePreview:
+            canShowPreview && sessionId
+              ? {
+                  id: "live_active_preview",
+                  text: previewText,
+                  timestamp: state.livePreview?.timestamp ?? new Date(),
+                  sessionId,
+                  audioPath: "",
+                }
+              : state.livePreview,
+          loadingPreview: canShowPreview ? null : state.loadingPreview,
+        };
+      };
+
+      // Partials preview the utterance in progress; only commits touch the item.
+      if (partial) {
+        const separator = split.currentItemText && text ? " " : "";
+        set(previewUpdate(split.currentItemText + separator + text));
+        return;
+      }
 
       let currentItemId = split.currentItemId;
       let currentItemText = split.currentItemText;
@@ -1487,28 +1523,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         const separator = currentItemText ? " " : "";
         currentItemText = currentItemText + separator + text;
 
-        const sessionId =
-          state.recordingSessionId ??
-          useSessionStore.getState().activeSessionId;
-        const canShowPreview =
-          !!sessionId &&
-          (state.state === TranscriptionState.RECORDING ||
-            state.state === TranscriptionState.STREAMING ||
-            state.state === TranscriptionState.TRANSCRIBING);
-
-        const nextLivePreview =
-          canShowPreview && sessionId
-            ? {
-                id: "live_active_preview",
-                text: currentItemText,
-                timestamp: state.livePreview?.timestamp ?? new Date(),
-                sessionId,
-                audioPath: "",
-              }
-            : state.livePreview;
-
         set({
-          currentStreamingText: currentItemText,
           smartSplit: {
             ...split,
             currentItemId,
@@ -1516,8 +1531,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             currentItemStartMs,
             currentItemStartSample,
           },
-          livePreview: nextLivePreview,
-          loadingPreview: canShowPreview ? null : state.loadingPreview,
+          ...previewUpdate(currentItemText),
         });
       }
 

@@ -12,9 +12,10 @@ const mockSetLanguage = jest.fn().mockResolvedValue(undefined);
 const mockSetTranscriptionMode = jest.fn().mockResolvedValue(undefined);
 const mockShowLargerModelSuggestion = jest.fn();
 const mockHasSeenSuggestion = jest.fn(() => true);
+const mockSelectedModelId = jest.fn(() => "whisper_tiny");
 
 jest.mock("@/stores", () => ({
-  useSelectedModelId: () => "whisper_tiny",
+  useSelectedModelId: () => mockSelectedModelId(),
   useSelectedTranscriptionMode: () => "realtime",
   useSetTranscriptionMode: () => mockSetTranscriptionMode,
   useSelectedLanguage: () => ({ code: "en", name: "English" }),
@@ -45,13 +46,19 @@ describe("TranscriptionSettingsSheet", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasSeenSuggestion.mockReturnValue(true);
+    mockSelectedModelId.mockReturnValue("whisper_tiny");
   });
 
   it("renders mode, language row and footer", () => {
-    const { getByText, getByTestId } = renderSheet();
+    mockSelectedModelId.mockReturnValue("nemo_parakeet_v3");
+    const { getByText, getByTestId, toJSON } = renderSheet();
     expect(getByText("transcriptionModeTitle")).toBeTruthy();
     expect(getByText("realtime")).toBeTruthy();
     expect(getByText("highAccuracy")).toBeTruthy();
+    const tree = JSON.stringify(toJSON());
+    expect(tree.indexOf('"highAccuracy"')).toBeLessThan(
+      tree.indexOf('"realtime"'),
+    );
     expect(getByTestId(TestID.TranscriptionSettingsLanguage)).toBeTruthy();
     expect(getByText("footer")).toBeTruthy();
   });
@@ -72,7 +79,14 @@ describe("TranscriptionSettingsSheet", () => {
     expect(draggable(TestID.TranscriptionSettingsDragHeader)).toBe(true);
   });
 
+  it("offers only file mode for Whisper", () => {
+    const { getByText, queryByText } = renderSheet();
+    expect(getByText("highAccuracyOnly")).toBeTruthy();
+    expect(queryByText("realtime")).toBeNull();
+  });
+
   it("selecting a mode saves it", async () => {
+    mockSelectedModelId.mockReturnValue("nemo_parakeet_v3");
     const { getByText } = renderSheet();
     await act(async () => {
       fireEvent.press(getByText("highAccuracy"));
@@ -84,6 +98,7 @@ describe("TranscriptionSettingsSheet", () => {
 
   it("swallows mode save failures (the store logs them)", async () => {
     mockSetTranscriptionMode.mockRejectedValueOnce(new Error("disk full"));
+    mockSelectedModelId.mockReturnValue("nemo_parakeet_v3");
     const { getByText } = renderSheet();
     await act(async () => {
       fireEvent.press(getByText("highAccuracy"));

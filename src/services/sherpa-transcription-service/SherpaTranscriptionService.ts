@@ -3,7 +3,12 @@ import { Asset } from "expo-asset";
 import { Directory, File, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import type { PcmLiveStreamHandle } from "react-native-sherpa-onnx/audio";
-import type { SttEngine } from "react-native-sherpa-onnx/stt";
+import type {
+  OnlineSTTModelType,
+  StreamingSttEngine,
+  SttEngine,
+  SttStream,
+} from "react-native-sherpa-onnx/stt";
 
 import { AppConstants } from "@/constants";
 import type { ModelInfo } from "@/models";
@@ -25,10 +30,10 @@ import { audioSessionService } from "../audio-session-service/AudioSessionServic
 // ready (e.g. the design-system gallery boot path).
 type CreatePcmLiveStream =
   typeof import("react-native-sherpa-onnx/audio").createPcmLiveStream;
-type CreateSTT = typeof import("react-native-sherpa-onnx/stt").createSTT;
+type SttModule = typeof import("react-native-sherpa-onnx/stt");
 
 let cachedCreatePcmLiveStream: CreatePcmLiveStream | null = null;
-let cachedCreateSTT: CreateSTT | null = null;
+let cachedSttModule: SttModule | null = null;
 
 const loadCreatePcmLiveStream = (): CreatePcmLiveStream => {
   if (!cachedCreatePcmLiveStream) {
@@ -38,11 +43,11 @@ const loadCreatePcmLiveStream = (): CreatePcmLiveStream => {
   return cachedCreatePcmLiveStream!;
 };
 
-const loadCreateSTT = (): CreateSTT => {
-  if (!cachedCreateSTT) {
-    cachedCreateSTT = require("react-native-sherpa-onnx/stt").createSTT;
+const loadStt = (): SttModule => {
+  if (!cachedSttModule) {
+    cachedSttModule = require("react-native-sherpa-onnx/stt");
   }
-  return cachedCreateSTT!;
+  return cachedSttModule!;
 };
 
 // Lazy-loaded Simplified → Traditional Chinese converter (OpenCC)
@@ -69,15 +74,19 @@ const IOS_NUM_THREADS = 2;
 const SAMPLE_RATE = AppConstants.AUDIO_SAMPLE_RATE;
 const NUM_CHANNELS = AppConstants.AUDIO_NUM_CHANNELS;
 const BITS_PER_SAMPLE = 16;
-const MAX_CHUNK_DURATION_MS = 5000;
+const MAX_CHUNK_SECONDS = 5;
 const MIN_CHUNK_SECONDS = 0.3;
+// A phrase-length gap: long enough to skip inter-word gaps, short enough that
+// realtime text lands right after each phrase instead of on the 5s cap.
+const PHRASE_PAUSE_MS = 500;
 // Whisper's context is 30s; stay under it with room to back off to a pause.
 const FILE_WINDOW_SECONDS = 20;
-const FILE_CUT_SEARCH_SECONDS = 3;
-const FILE_CUT_FRAME_SAMPLES = 480;
+const CUT_SEARCH_SECONDS = 3;
+const CUT_FRAME_SAMPLES = 480;
 // ~-50 dBFS: below quiet speech (~-47), above typical room tone (~-60).
-// Lower than the mic threshold because imported files aren't gain-normalized.
-const FILE_SPEECH_RMS_THRESHOLD = 0.003;
+// Gates what reaches the engine (mic chunks and imported files); lower than
+// the mic VAD threshold because imported files aren't gain-normalized.
+const SPEECH_RMS_THRESHOLD = 0.003;
 const LONG_PAUSE_MS = AppConstants.SMART_SPLIT_LONG_PAUSE_MS;
 const ENERGY_THRESHOLD = AppConstants.SMART_SPLIT_SILENCE_ENERGY_THRESHOLD;
 
@@ -90,6 +99,8 @@ export interface ChunkEvent {
   boundary: ChunkBoundary;
   /** Samples consumed from the recording when this event fired; aligns items to the WAV. */
   endSample?: number;
+  /** Uncommitted text of the utterance in progress (streaming models); replaces the previous partial. */
+  partial?: boolean;
 }
 
 export interface StartRealtimeOptions {
@@ -100,10 +111,15 @@ export interface StartRealtimeOptions {
    * same URI is returned by {@link stopRealtimeTranscription} once finalized.
    */
   wavOutputUri?: string;
+  /** Transcribe as soon as a phrase ends instead of only every 5s (realtime mode). */
+  flushOnPause?: boolean;
 }
 
 interface ServiceState {
-  sttEngine: SttEngine | null;
+  engine:
+    | { kind: "offline"; stt: SttEngine }
+    | { kind: "streaming"; stt: StreamingSttEngine }
+    | null;
   activeModelId: ModelId | null;
   activeLanguage: string | null;
   isInitialized: boolean;
@@ -117,10 +133,13 @@ interface ServiceState {
   pcmLiveStream: PcmLiveStreamHandle | null;
   pcmUnsubData: (() => void) | null;
   pcmUnsubError: (() => void) | null;
+  sttStream: SttStream | null;
+  lastPartialText: string;
   audioBuffer: Float32Array[];
   audioBufferSampleCount: number;
   consumedSampleCount: number;
-  chunkTimer: ReturnType<typeof setTimeout> | null;
+  flushOnPause: boolean;
+  bufferHasSpeech: boolean;
   lastSpeechTime: number;
   isSpeaking: boolean;
   longPauseTimer: ReturnType<typeof setTimeout> | null;
@@ -297,7 +316,7 @@ const prepareBundledModel = async (
 
 const createSherpaTranscriptionService = () => {
   const state: ServiceState = {
-    sttEngine: null,
+    engine: null,
     activeModelId: null,
     activeLanguage: null,
     isInitialized: false,
@@ -310,10 +329,13 @@ const createSherpaTranscriptionService = () => {
     pcmLiveStream: null,
     pcmUnsubData: null,
     pcmUnsubError: null,
+    sttStream: null,
+    lastPartialText: "",
     audioBuffer: [],
     audioBufferSampleCount: 0,
     consumedSampleCount: 0,
-    chunkTimer: null,
+    flushOnPause: false,
+    bufferHasSpeech: false,
     lastSpeechTime: 0,
     isSpeaking: false,
     longPauseTimer: null,
@@ -391,47 +413,47 @@ const createSherpaTranscriptionService = () => {
     });
   };
 
-  const collectBufferedSamples = (): number[] | null => {
-    if (state.audioBufferSampleCount === 0) return null;
-
+  /** Drains the buffer; a cap-triggered flush cuts at the quietest frame so
+   *  words aren't split, and the tail stays buffered for the next chunk. */
+  const collectBufferedSamples = (cutAtPause: boolean): Float32Array => {
     const combined = new Float32Array(state.audioBufferSampleCount);
     let offset = 0;
     for (const chunk of state.audioBuffer) {
       combined.set(chunk, offset);
       offset += chunk.length;
     }
-    state.audioBuffer = [];
-    state.consumedSampleCount += state.audioBufferSampleCount;
-    state.audioBufferSampleCount = 0;
-
-    // Convert to plain number[] for sherpa-onnx bridge
-    return Array.from(combined);
+    const cut = cutAtPause ? findQuietestCut(combined) : combined.length;
+    const rest = combined.slice(cut);
+    state.audioBuffer = rest.length > 0 ? [rest] : [];
+    state.audioBufferSampleCount = rest.length;
+    state.bufferHasSpeech = rest.length > 0 && state.bufferHasSpeech;
+    state.consumedSampleCount += cut;
+    return combined.subarray(0, cut);
   };
 
-  let isTranscribingChunk = false;
+  let inFlightChunk: Promise<void> | null = null;
 
-  const transcribeBufferedAudio = async (
+  const transcribeChunk = async (
+    engine: SttEngine,
     boundary: ChunkBoundary,
+    cutAtPause: boolean,
   ): Promise<void> => {
-    const isFinalChunk = boundary === "final";
-    if (!state.sttEngine || (!state.isRealtimeRecording && !isFinalChunk))
-      return;
-    if (isTranscribingChunk) return; // Prevent concurrent transcription calls
-
-    const samples = collectBufferedSamples();
-    if (!samples || samples.length < SAMPLE_RATE * MIN_CHUNK_SECONDS) {
-      // Nothing worth transcribing — emit a zero-text boundary so the store
-      // can still advance its item state for `final` / `long`.
-      if (boundary === "final" || boundary === "long") {
-        emitChunk({ text: "", boundary });
-      }
+    const samples = collectBufferedSamples(cutAtPause);
+    // Silence never reaches the engine: it costs a full inference and Whisper
+    // hallucinates text on it.
+    if (
+      samples.length < SAMPLE_RATE * MIN_CHUNK_SECONDS ||
+      !hasSpeechEnergy(samples)
+    ) {
+      // Emit a zero-text boundary so the store can still advance its item
+      // state for `final` / `long`.
+      if (boundary !== "none") emitChunk({ text: "", boundary });
       return;
     }
 
-    isTranscribingChunk = true;
     try {
-      const result = await state.sttEngine.transcribeSamples(
-        samples,
+      const result = await engine.transcribeSamples(
+        Array.from(samples),
         SAMPLE_RATE,
       );
       const rawText = result.text?.trim();
@@ -442,32 +464,88 @@ const createSherpaTranscriptionService = () => {
         flag: FeatureFlag.transcription,
         message: "Error transcribing audio chunk",
       });
-      if (boundary === "final" || boundary === "long") {
-        emitChunk({ text: "", boundary });
-      }
-    } finally {
-      isTranscribingChunk = false;
+      if (boundary !== "none") emitChunk({ text: "", boundary });
     }
   };
 
-  const scheduleMaxChunkTimer = (): void => {
-    clearChunkTimer();
-    state.chunkTimer = setTimeout(async () => {
-      if (!state.isRealtimeRecording) return;
-      await transcribeBufferedAudio("none");
-      // Re-check after the await — recording may have stopped during transcribe
-      // and cleared the timer; rescheduling would leak it.
-      if (state.isRealtimeRecording) {
-        scheduleMaxChunkTimer();
-      }
-    }, MAX_CHUNK_DURATION_MS);
+  /** Like `processAudioChunk`, but decodes everything pending and always
+   *  counts as an endpoint. `inputFinished` pads the tail so the last words
+   *  decode. */
+  const finishStream = async (
+    stream: SttStream,
+    samples: Float32Array,
+    inputFinished: boolean,
+  ) => {
+    if (samples.length > 0) {
+      await stream.acceptWaveform(Array.from(samples), SAMPLE_RATE);
+    }
+    if (inputFinished) await stream.inputFinished();
+    while (await stream.isReady()) await stream.decode();
+    return { result: await stream.getResult(), isEndpoint: true };
   };
 
-  const clearChunkTimer = (): void => {
-    if (state.chunkTimer) {
-      clearTimeout(state.chunkTimer);
-      state.chunkTimer = null;
+  /** Feeds buffered audio to the streaming recognizer. Text is emitted as a
+   *  partial until an endpoint (or a `long`/`final` boundary) commits it. */
+  const streamChunk = async (
+    stream: SttStream,
+    boundary: ChunkBoundary,
+  ): Promise<void> => {
+    const samples = collectBufferedSamples(false);
+    try {
+      const { result, isEndpoint } =
+        boundary === "none"
+          ? await stream.processAudioChunk(samples, SAMPLE_RATE)
+          : await finishStream(stream, samples, boundary === "final");
+      const trimmed = result.text.trim();
+      const text = trimmed ? postProcessText(trimmed) : "";
+
+      if (isEndpoint) {
+        await stream.reset();
+        state.lastPartialText = "";
+        emitChunk({ text, boundary });
+      } else if (text !== state.lastPartialText) {
+        state.lastPartialText = text;
+        emitChunk({ text, boundary, partial: true });
+      }
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: "Error decoding streaming audio",
+      });
+      if (boundary !== "none") emitChunk({ text: "", boundary });
     }
+  };
+
+  const transcribeBufferedAudio = async (
+    boundary: ChunkBoundary,
+    cutAtPause = false,
+  ): Promise<void> => {
+    // `none` flushes are opportunistic and retried on the next audio
+    // callback; `long`/`final` boundaries must wait their turn, never drop.
+    while (inFlightChunk) {
+      if (boundary === "none") return;
+      await inFlightChunk;
+    }
+    // Speech resumed while waiting: the next pause arms a fresh `long`.
+    if (
+      boundary === "long" &&
+      Date.now() - state.lastSpeechTime < LONG_PAUSE_MS
+    ) {
+      return;
+    }
+    const { engine, sttStream: stream } = state;
+    if (!state.isRealtimeRecording && boundary !== "final") return;
+    const work = stream
+      ? streamChunk(stream, boundary)
+      : engine?.kind === "offline"
+        ? transcribeChunk(engine.stt, boundary, cutAtPause)
+        : null;
+    if (!work) return;
+
+    inFlightChunk = work.finally(() => {
+      inFlightChunk = null;
+    });
+    return inFlightChunk;
   };
 
   const clearPauseTimers = (): void => {
@@ -505,6 +583,7 @@ const createSherpaTranscriptionService = () => {
 
     if (energy > ENERGY_THRESHOLD) {
       state.isSpeaking = true;
+      state.bufferHasSpeech = true;
       state.lastSpeechTime = now;
       clearPauseTimers();
     } else if (state.isSpeaking && !state.longPauseTimer) {
@@ -519,8 +598,23 @@ const createSherpaTranscriptionService = () => {
           return;
         }
         state.isSpeaking = false;
-        emitChunk({ text: "", boundary: "long" });
+        void transcribeBufferedAudio("long");
       }, LONG_PAUSE_MS);
+    }
+
+    if (state.sttStream) {
+      void transcribeBufferedAudio("none");
+    } else if (
+      state.audioBufferSampleCount >=
+      SAMPLE_RATE * MAX_CHUNK_SECONDS
+    ) {
+      void transcribeBufferedAudio("none", true);
+    } else if (
+      state.flushOnPause &&
+      state.bufferHasSpeech &&
+      now - state.lastSpeechTime >= PHRASE_PAUSE_MS
+    ) {
+      void transcribeBufferedAudio("none");
     }
   };
 
@@ -566,26 +660,45 @@ const createSherpaTranscriptionService = () => {
       const { language: whisperLanguage } =
         SupportedLanguages.transcribeOptionsFor(languageCode);
 
-      const sttEngine = await loadCreateSTT()({
-        modelPath: { type: "file", path: toNativePath(modelDir) },
-        modelType: modelInfo.sherpaModelType as
-          | "whisper"
-          | "nemo_transducer"
-          | "qwen3_asr",
-        preferInt8: true,
-        numThreads: Platform.OS === "ios" ? IOS_NUM_THREADS : undefined,
-        modelOptions:
-          modelInfo.sherpaModelType === "whisper"
-            ? {
-                whisper: {
-                  language: whisperLanguage ?? languageCode,
-                  task: "transcribe",
-                },
-              }
-            : undefined,
-      });
+      const modelPath = { type: "file" as const, path: toNativePath(modelDir) };
+      const numThreads = Platform.OS === "ios" ? IOS_NUM_THREADS : undefined;
 
-      state.sttEngine = sttEngine;
+      if (modelInfo.isStreaming) {
+        state.engine = {
+          kind: "streaming",
+          stt: await loadStt().createStreamingSTT({
+            modelPath,
+            modelType: modelInfo.sherpaModelType as OnlineSTTModelType,
+            numThreads,
+            // The library's per-chunk peak normalization boosts noise up to 80x
+            // and shifts gain chunk to chunk; the mic level is already sane.
+            enableInputNormalization: false,
+          }),
+        };
+      } else {
+        state.engine = {
+          kind: "offline",
+          stt: await loadStt().createSTT({
+            modelPath,
+            modelType: modelInfo.sherpaModelType as
+              | "whisper"
+              | "nemo_transducer"
+              | "qwen3_asr",
+            preferInt8: true,
+            numThreads,
+            modelOptions:
+              modelInfo.sherpaModelType === "whisper"
+                ? {
+                    whisper: {
+                      language: whisperLanguage ?? languageCode,
+                      task: "transcribe",
+                    },
+                  }
+                : undefined,
+          }),
+        };
+      }
+
       state.activeModelId = modelId;
       state.activeLanguage = languageCode;
       state.isInitialized = true;
@@ -675,19 +788,19 @@ const createSherpaTranscriptionService = () => {
     let bestEnergy = Infinity;
     const start = Math.max(
       0,
-      samples.length - SAMPLE_RATE * FILE_CUT_SEARCH_SECONDS,
+      samples.length - SAMPLE_RATE * CUT_SEARCH_SECONDS,
     );
     for (
       let f = start;
-      f + FILE_CUT_FRAME_SAMPLES <= samples.length;
-      f += FILE_CUT_FRAME_SAMPLES
+      f + CUT_FRAME_SAMPLES <= samples.length;
+      f += CUT_FRAME_SAMPLES
     ) {
       const energy = computeRawRmsFromFloat32(
-        samples.subarray(f, f + FILE_CUT_FRAME_SAMPLES),
+        samples.subarray(f, f + CUT_FRAME_SAMPLES),
       );
       if (energy < bestEnergy) {
         bestEnergy = energy;
-        best = f + FILE_CUT_FRAME_SAMPLES / 2;
+        best = f + CUT_FRAME_SAMPLES / 2;
       }
     }
     return best;
@@ -698,11 +811,11 @@ const createSherpaTranscriptionService = () => {
   const hasSpeechEnergy = (samples: Float32Array): boolean => {
     for (
       let f = 0;
-      f + FILE_CUT_FRAME_SAMPLES <= samples.length;
-      f += FILE_CUT_FRAME_SAMPLES
+      f + CUT_FRAME_SAMPLES <= samples.length;
+      f += CUT_FRAME_SAMPLES
     ) {
-      const frame = samples.subarray(f, f + FILE_CUT_FRAME_SAMPLES);
-      if (computeRawRmsFromFloat32(frame) >= FILE_SPEECH_RMS_THRESHOLD) {
+      const frame = samples.subarray(f, f + CUT_FRAME_SAMPLES);
+      if (computeRawRmsFromFloat32(frame) >= SPEECH_RMS_THRESHOLD) {
         return true;
       }
     }
@@ -714,7 +827,7 @@ const createSherpaTranscriptionService = () => {
    * disk in windows, so memory stays flat for multi-hour files.
    */
   const transcribeWavFile = async (uri: string): Promise<string> => {
-    const engine = state.sttEngine;
+    const { engine } = state;
     if (!state.isInitialized || !engine) {
       throw new Error("Transcription service not initialized");
     }
@@ -724,7 +837,9 @@ const createSherpaTranscriptionService = () => {
 
     state.isTranscribing = true;
     const handle = new File(uri).open();
+    let stream: SttStream | null = null;
     try {
+      if (engine.kind === "streaming") stream = await engine.stt.createStream();
       const totalBytes = handle.size ?? 0;
       handle.offset = WAV_HEADER_SIZE;
       const windowSamples = SAMPLE_RATE * FILE_WINDOW_SECONDS;
@@ -753,15 +868,27 @@ const createSherpaTranscriptionService = () => {
           window[carry.length + i] = pcm[i] / 32768;
         }
 
-        const cut = isLast ? window.length : findQuietestCut(window);
+        const cut = isLast || stream ? window.length : findQuietestCut(window);
         const chunk = window.subarray(0, cut);
         carry = window.slice(cut);
 
-        if (
+        if (stream) {
+          // The recognizer keeps state across windows; collect text at each
+          // endpoint (and at the end) so it doesn't grow unbounded.
+          const { result, isEndpoint } = isLast
+            ? await finishStream(stream, chunk, true)
+            : await stream.processAudioChunk(chunk, SAMPLE_RATE);
+          if (isEndpoint) {
+            const text = result.text.trim();
+            if (text) texts.push(postProcessText(text));
+            await stream.reset();
+          }
+        } else if (
+          engine.kind === "offline" &&
           chunk.length >= SAMPLE_RATE * MIN_CHUNK_SECONDS &&
           hasSpeechEnergy(chunk)
         ) {
-          const result = await engine.transcribeSamples(
+          const result = await engine.stt.transcribeSamples(
             Array.from(chunk),
             SAMPLE_RATE,
           );
@@ -775,13 +902,14 @@ const createSherpaTranscriptionService = () => {
     } finally {
       handle.close();
       state.isTranscribing = false;
+      await stream?.release();
     }
   };
 
   const startRealtimeTranscription = async (
     options: StartRealtimeOptions = {},
   ): Promise<boolean> => {
-    if (!state.isInitialized || !state.sttEngine) {
+    if (!state.isInitialized || !state.engine) {
       logError("Cannot start real-time: engine not initialized", {
         flag: FeatureFlag.transcription,
       });
@@ -807,6 +935,8 @@ const createSherpaTranscriptionService = () => {
       state.audioBuffer = [];
       state.audioBufferSampleCount = 0;
       state.consumedSampleCount = 0;
+      state.flushOnPause = options.flushOnPause ?? false;
+      state.bufferHasSpeech = false;
       state.isSpeaking = false;
       state.lastSpeechTime = 0;
       smoothedLevel = 0.0;
@@ -823,6 +953,11 @@ const createSherpaTranscriptionService = () => {
       }
 
       await configureAudioSession(100);
+
+      if (state.engine.kind === "streaming") {
+        state.lastPartialText = "";
+        state.sttStream = await state.engine.stt.createStream();
+      }
 
       const pcmStream = loadCreatePcmLiveStream()({
         sampleRate: SAMPLE_RATE,
@@ -847,9 +982,6 @@ const createSherpaTranscriptionService = () => {
       // Start capturing audio
       await pcmStream.start();
       state.isRealtimeRecording = true;
-
-      // Start max chunk timer
-      scheduleMaxChunkTimer();
 
       return true;
     } catch (error) {
@@ -878,9 +1010,8 @@ const createSherpaTranscriptionService = () => {
     let wavPath: string | null = null;
 
     try {
-      // Clear pause/chunk timers up-front so in-flight callbacks cannot emit
-      // a spurious boundary after we've flipped isRealtimeRecording.
-      clearChunkTimer();
+      // Clear the pause timer up-front so it cannot emit a spurious boundary
+      // after we've flipped isRealtimeRecording.
       clearPauseTimers();
 
       if (state.pcmLiveStream) {
@@ -908,7 +1039,6 @@ const createSherpaTranscriptionService = () => {
   };
 
   const cleanupRealtimeResources = async (): Promise<void> => {
-    clearChunkTimer();
     clearPauseTimers();
 
     if (state.pcmUnsubData) {
@@ -938,6 +1068,18 @@ const createSherpaTranscriptionService = () => {
       state.pcmStreamWriter = null;
     }
     state.wavOutputUri = null;
+
+    // A dispose racing stop's final flush must not pull the stream or engine
+    // out from under the decode.
+    await inFlightChunk;
+    if (state.sttStream) {
+      try {
+        await state.sttStream.release();
+      } catch {
+        // Engine may already be destroyed.
+      }
+      state.sttStream = null;
+    }
 
     state.audioBuffer = [];
     state.audioBufferSampleCount = 0;
@@ -980,9 +1122,9 @@ const createSherpaTranscriptionService = () => {
 
     await cleanupRealtimeResources();
 
-    if (state.sttEngine) {
+    if (state.engine) {
       try {
-        await state.sttEngine.destroy();
+        await state.engine.stt.destroy();
       } catch (error) {
         logError(error, {
           flag: FeatureFlag.model,
@@ -997,7 +1139,7 @@ const createSherpaTranscriptionService = () => {
   };
 
   const resetState = (): void => {
-    state.sttEngine = null;
+    state.engine = null;
     state.activeModelId = null;
     state.activeLanguage = null;
     state.isInitialized = false;

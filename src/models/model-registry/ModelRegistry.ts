@@ -15,8 +15,10 @@ export interface ModelInfo {
   isBundled: boolean;
   /** Base URL for downloading individual model files (HuggingFace resolve URL) */
   downloadBaseUrl?: string;
-  /** sherpa-onnx model type identifier passed to createSTT (ASR models only) */
+  /** sherpa-onnx model type: passed to createSTT, or to createStreamingSTT when `isStreaming` */
   sherpaModelType: string;
+  /** Online (streaming) model: decodes audio as it arrives with partial results. */
+  isStreaming?: boolean;
   files: ModelFileInfo[];
   languages: number;
   /** Language codes supported by this model. Undefined means all languages in SupportedLanguages. */
@@ -190,13 +192,17 @@ const PARAKEET_LANGUAGES = [
   "ru",
 ];
 
+// Only Nemotron is a streaming (online) model; real-time feeds the offline
+// ones short phrase chunks. Parakeet's encoder takes any length and is fast on
+// short clips. Whisper pads every call by 10s (sherpa-onnx tail padding) and
+// hallucinates on short audio, so it is file-only.
 export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.WHISPER_TINY]: {
     id: ModelId.WHISPER_TINY,
     name: "Whisper Tiny",
     description: "Fast, lightweight transcription",
     sizeBytes: 103_700_000,
-    supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
+    supportedModes: [TranscriptionMode.FILE],
     isBundled: true,
     sherpaModelType: "whisper",
     files: [
@@ -212,7 +218,7 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
     name: "Whisper Base",
     description: "Balanced accuracy and speed",
     sizeBytes: 160_609_290,
-    supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
+    supportedModes: [TranscriptionMode.FILE],
     isBundled: false,
     downloadBaseUrl:
       "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/resolve/main",
@@ -230,7 +236,7 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
     name: "Whisper Small",
     description: "Higher accuracy, larger model",
     sizeBytes: 375_485_327,
-    supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
+    supportedModes: [TranscriptionMode.FILE],
     isBundled: false,
     downloadBaseUrl:
       "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/main",
@@ -282,6 +288,27 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
     ],
     languages: QWEN3_LANGUAGES.length,
     supportedLanguageCodes: QWEN3_LANGUAGES,
+  },
+  [ModelId.NEMOTRON_STREAMING_EN]: {
+    id: ModelId.NEMOTRON_STREAMING_EN,
+    name: "Nemotron EN",
+    description: "Live word-by-word English",
+    sizeBytes: 661_919_416,
+    supportedModes: [TranscriptionMode.REALTIME],
+    isBundled: false,
+    // 560ms chunks: the chunk size is baked in at export time.
+    downloadBaseUrl:
+      "https://huggingface.co/csukuangfj2/sherpa-onnx-nemotron-speech-streaming-en-0.6b-560ms-int8-2026-04-25/resolve/main",
+    sherpaModelType: "transducer",
+    isStreaming: true,
+    files: [
+      { name: "encoder.int8.onnx", sizeBytes: 652_916_849 },
+      { name: "decoder.int8.onnx", sizeBytes: 7_257_753 },
+      { name: "joiner.int8.onnx", sizeBytes: 1_735_862 },
+      { name: "tokens.txt", sizeBytes: 8_952 },
+    ],
+    languages: 1,
+    supportedLanguageCodes: ["en"],
   },
 };
 

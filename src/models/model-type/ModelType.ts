@@ -10,6 +10,7 @@ export enum ModelId {
   WHISPER_SMALL = "whisper_small",
   NEMO_PARAKEET_V3 = "nemo_parakeet_v3",
   QWEN3_ASR = "qwen3_asr",
+  NEMOTRON_STREAMING_EN = "nemotron_streaming_en",
 }
 
 export enum TranscriptionMode {

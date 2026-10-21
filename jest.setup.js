@@ -591,6 +591,7 @@ jest.mock("react-native-sherpa-onnx/stt", () => ({
     })),
     release: jest.fn(async () => undefined),
   })),
+  createStreamingSTT: jest.fn(),
   ONLINE_STT_MODEL_TYPES: [],
 }));
 

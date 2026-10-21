@@ -451,22 +451,22 @@ function ModeSelector({
     return (
       <View style={styles.modeRow}>
         <ModeSelectorChip
-          icon="flash"
-          label={loc.realtime}
-          active={selectedMode === TranscriptionMode.REALTIME}
-          onPress={
-            onSelectMode
-              ? () => onSelectMode(TranscriptionMode.REALTIME)
-              : undefined
-          }
-        />
-        <ModeSelectorChip
           icon="timer"
           label={loc.highAccuracy}
           active={selectedMode === TranscriptionMode.FILE}
           onPress={
             onSelectMode
               ? () => onSelectMode(TranscriptionMode.FILE)
+              : undefined
+          }
+        />
+        <ModeSelectorChip
+          icon="flash"
+          label={loc.realtime}
+          active={selectedMode === TranscriptionMode.REALTIME}
+          onPress={
+            onSelectMode
+              ? () => onSelectMode(TranscriptionMode.REALTIME)
               : undefined
           }
         />
@@ -566,21 +566,21 @@ function ModeMetaRow({
   return (
     <View style={styles.metaWrapRow}>
       <LanguagesChip languagesText={languagesText} onPress={onLanguagesPress} />
-      {hasRealtime && (
-        <>
-          <MetaDivider />
-          <ModeMetaChip
-            icon="flash"
-            label={isSingleMode ? loc.realtimeOnly : loc.realtime}
-          />
-        </>
-      )}
       {hasFile && (
         <>
           <MetaDivider />
           <ModeMetaChip
             icon="timer"
             label={isSingleMode ? loc.highAccuracyOnly : loc.highAccuracy}
+          />
+        </>
+      )}
+      {hasRealtime && (
+        <>
+          <MetaDivider />
+          <ModeMetaChip
+            icon="flash"
+            label={isSingleMode ? loc.realtimeOnly : loc.realtime}
           />
         </>
       )}

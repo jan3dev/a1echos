@@ -974,6 +974,7 @@ describe("transcriptionStore", () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           wavOutputUri: expect.stringMatching(/rec_\d+\.wav$/),
+          flushOnPause: false,
         }),
       );
       expect(
@@ -1107,6 +1108,7 @@ describe("transcriptionStore", () => {
         sherpaTranscriptionService.startRealtimeTranscription,
       ).toHaveBeenCalledWith({
         wavOutputUri: expect.stringMatching(/rec_\d+\.wav$/),
+        flushOnPause: true,
       });
     });
 
@@ -1438,6 +1440,22 @@ describe("transcriptionStore", () => {
       expect(useTranscriptionStore.getState().livePreview!.text).toBe(
         "partial text",
       );
+    });
+
+    it("previews streaming partials after committed text without committing them", () => {
+      useTranscriptionStore.setState({
+        state: TranscriptionState.RECORDING,
+        recordingSessionId: "session-1",
+      });
+      const { onChunkEvent } = useTranscriptionStore.getState();
+
+      onChunkEvent({ text: "Hello there.", boundary: "none" });
+      onChunkEvent({ text: "How a", boundary: "none", partial: true });
+      onChunkEvent({ text: "How are you", boundary: "none", partial: true });
+
+      const state = useTranscriptionStore.getState();
+      expect(state.livePreview!.text).toBe("Hello there. How are you");
+      expect(state.smartSplit.currentItemText).toBe("Hello there.");
     });
 
     it("updates live preview when STREAMING", () => {

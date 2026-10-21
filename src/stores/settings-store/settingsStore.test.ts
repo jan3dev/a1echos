@@ -153,15 +153,29 @@ describe("settingsStore", () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(ModelId.WHISPER_TINY)
+        .mockResolvedValueOnce(ModelId.NEMO_PARAKEET_V3)
         .mockResolvedValueOnce(TranscriptionMode.REALTIME)
         .mockResolvedValueOnce("{not json")
         .mockResolvedValue(null);
 
       await useSettingsStore.getState().initialize();
       expect(useSettingsStore.getState().modelModes).toEqual({
-        [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME,
+        [ModelId.NEMO_PARAKEET_V3]: TranscriptionMode.REALTIME,
       });
+    });
+
+    it("falls back to the model's first mode when the stored one is unsupported", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(ModelId.WHISPER_TINY)
+        .mockResolvedValueOnce(TranscriptionMode.REALTIME)
+        .mockResolvedValue(null);
+
+      await useSettingsStore.getState().initialize();
+      expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
+        TranscriptionMode.FILE,
+      );
     });
 
     it("resets a stored language the stored model doesn't support", async () => {
@@ -1097,6 +1111,10 @@ describe("settingsStore", () => {
   });
 
   describe("setTranscriptionMode()", () => {
+    beforeEach(() => {
+      useSettingsStore.setState({ selectedModelId: ModelId.NEMO_PARAKEET_V3 });
+    });
+
     it("optimistically updates and persists", async () => {
       await useSettingsStore
         .getState()
@@ -1114,9 +1132,9 @@ describe("settingsStore", () => {
       await useSettingsStore
         .getState()
         .setTranscriptionMode(TranscriptionMode.REALTIME);
-      expect(useSettingsStore.getState().modelModes[ModelId.WHISPER_TINY]).toBe(
-        TranscriptionMode.REALTIME,
-      );
+      expect(
+        useSettingsStore.getState().modelModes[ModelId.NEMO_PARAKEET_V3],
+      ).toBe(TranscriptionMode.REALTIME);
     });
 
     it("rolls back on persist failure", async () => {
@@ -1148,25 +1166,26 @@ describe("settingsStore", () => {
     });
 
     it("also updates global mode when the model is active", async () => {
+      useSettingsStore.setState({ selectedModelId: ModelId.NEMO_PARAKEET_V3 });
       await useSettingsStore
         .getState()
-        .setModelMode(ModelId.WHISPER_TINY, TranscriptionMode.REALTIME);
+        .setModelMode(ModelId.NEMO_PARAKEET_V3, TranscriptionMode.REALTIME);
       const state = useSettingsStore.getState();
-      expect(state.modelModes[ModelId.WHISPER_TINY]).toBe(
+      expect(state.modelModes[ModelId.NEMO_PARAKEET_V3]).toBe(
         TranscriptionMode.REALTIME,
       );
       expect(state.selectedTranscriptionMode).toBe(TranscriptionMode.REALTIME);
     });
 
-    it("ignores modes unsupported by the target model", async () => {
-      // QWEN3_ASR only supports FILE
-      await useSettingsStore
-        .getState()
-        .setModelMode(ModelId.QWEN3_ASR, TranscriptionMode.REALTIME);
-      expect(
-        useSettingsStore.getState().modelModes[ModelId.QWEN3_ASR],
-      ).toBeUndefined();
-    });
+    it.each([ModelId.QWEN3_ASR, ModelId.WHISPER_TINY])(
+      "ignores real-time for file-only %s",
+      async (modelId) => {
+        await useSettingsStore
+          .getState()
+          .setModelMode(modelId, TranscriptionMode.REALTIME);
+        expect(useSettingsStore.getState().modelModes[modelId]).toBeUndefined();
+      },
+    );
 
     it("rolls back on persist failure", async () => {
       (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
@@ -1175,13 +1194,13 @@ describe("settingsStore", () => {
       await expect(
         useSettingsStore
           .getState()
-          .setModelMode(ModelId.WHISPER_TINY, TranscriptionMode.REALTIME),
+          .setModelMode(ModelId.NEMO_PARAKEET_V3, TranscriptionMode.REALTIME),
       ).rejects.toThrow("write fail");
       expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
         TranscriptionMode.FILE,
       );
       expect(
-        useSettingsStore.getState().modelModes[ModelId.WHISPER_TINY],
+        useSettingsStore.getState().modelModes[ModelId.NEMO_PARAKEET_V3],
       ).toBeUndefined();
     });
   });

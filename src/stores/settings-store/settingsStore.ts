@@ -325,6 +325,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ]);
       }
 
+      // A model can lose a mode across releases (Whisper lost real-time).
+      const modelInfo = getModelInfo(selectedModelId);
+      if (!modelInfo.supportedModes.includes(selectedTranscriptionMode)) {
+        selectedTranscriptionMode = modelInfo.supportedModes[0];
+      }
+
       const storedModelModes = parseModelModes(modelModesValue);
       // Seed the selected model's preference if absent (covers legacy migration)
       const modelModes: ModelModes = {
@@ -341,7 +347,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         storedLanguage &&
         SupportedLanguages.isSupported(
           storedLanguage.code,
-          getModelInfo(selectedModelId).supportedLanguageCodes,
+          modelInfo.supportedLanguageCodes,
         )
           ? storedLanguage
           : SupportedLanguages.defaultLanguage;
