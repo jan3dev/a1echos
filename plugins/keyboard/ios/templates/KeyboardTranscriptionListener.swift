@@ -750,8 +750,11 @@ import UIKit
         do {
             try session.setCategory(
                 .playAndRecord, mode: .measurement,
-                options: [.allowBluetooth, .mixWithOthers]
+                options: [.allowBluetooth, .mixWithOthers, .defaultToSpeaker]
             )
+            // iOS mutes haptics + key clicks system-wide while a record session
+            // is live, which kills keyboard feedback for the whole hot-mic window.
+            try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
             try activateSessionWithRetry(session)
         } catch {
             let nsError = error as NSError
