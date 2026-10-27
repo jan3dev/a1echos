@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import com.a1lab.echos.keyboardbridge.KeyboardTranscriptionBridge
 import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
@@ -12,6 +13,11 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineStream
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -35,6 +41,7 @@ class ImeSherpaTranscriber(private val context: Context) {
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val MAX_RECORDING_SECONDS = 30
         private const val NUM_THREADS = 2
+        private const val APP_ENGINE_TIMEOUT_SECONDS = 20L
     }
 
     private val isRecording = AtomicBoolean(false)
@@ -197,16 +204,24 @@ class ImeSherpaTranscriber(private val context: Context) {
     private fun transcribe(files: SherpaModelFiles) {
         onTranscribing?.invoke()
 
-        val samples: FloatArray
+        val pcm: ShortArray
         synchronized(pcmBufferLock) {
-            val length = pcmBufferLength
-            if (length == 0) {
+            if (pcmBufferLength == 0) {
                 onError?.invoke("No audio recorded")
                 return
             }
-            samples = FloatArray(length) { pcmBuffer[it].toFloat() / 32768f }
+            pcm = pcmBuffer.copyOf(pcmBufferLength)
             pcmBufferLength = 0
         }
+
+        if (files.appEngine) {
+            transcribeOnAppEngine(pcm)?.let {
+                onResult?.invoke(it)
+                return
+            }
+        }
+
+        val samples = FloatArray(pcm.size) { pcm[it].toFloat() / 32768f }
 
         val rec = try {
             ensureRecognizer(files)
@@ -234,6 +249,48 @@ class ImeSherpaTranscriber(private val context: Context) {
         } finally {
             stream?.release()
         }
+    }
+
+    /**
+     * Transcribes on the app's already-loaded JS engine (for models the IME
+     * can't run, e.g. Qwen3, Nemotron). Null when JS isn't running, fails or times out, so the
+     * caller falls back to the native model.
+     */
+    private fun transcribeOnAppEngine(pcm: ShortArray): String? {
+        var wav: File? = null
+        try {
+            wav = File.createTempFile("keyboard-dictation", ".wav", context.cacheDir)
+            writeWav(wav, pcm)
+            val done = CountDownLatch(1)
+            var text: String? = null
+            val id = KeyboardTranscriptionBridge.requestTranscription(wav.absolutePath) { t, e ->
+                if (e != null) Log.w(TAG, "App-engine transcription failed: $e")
+                text = t
+                done.countDown()
+            } ?: return null
+            if (!done.await(APP_ENGINE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                KeyboardTranscriptionBridge.cancel(id)
+                Log.w(TAG, "App-engine transcription timed out")
+                return null
+            }
+            return text?.trim()?.takeIf { it.isNotEmpty() }
+        } catch (e: Exception) {
+            Log.e(TAG, "App-engine transcription failed", e)
+            return null
+        } finally {
+            wav?.delete()
+        }
+    }
+
+    private fun writeWav(file: File, pcm: ShortArray) {
+        val dataBytes = pcm.size * 2
+        val buffer = ByteBuffer.allocate(44 + dataBytes).order(ByteOrder.LITTLE_ENDIAN)
+        buffer.put("RIFF".toByteArray()).putInt(36 + dataBytes).put("WAVE".toByteArray())
+        buffer.put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1)
+            .putInt(SAMPLE_RATE).putInt(SAMPLE_RATE * 2).putShort(2).putShort(16)
+        buffer.put("data".toByteArray()).putInt(dataBytes)
+        buffer.asShortBuffer().put(pcm)
+        file.writeBytes(buffer.array())
     }
 
     /**

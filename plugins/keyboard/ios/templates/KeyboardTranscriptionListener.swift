@@ -1,5 +1,6 @@
 import ActivityKit
 import AVFoundation
+internal import EchosKeyboardBridge
 import Foundation
 import UIKit
 
@@ -55,6 +56,9 @@ import UIKit
     /// transcription. The listener runs in the main app process so App Group
     /// sharing is unnecessary for this file.
     private let modelConfigFilename = "keyboard-sherpa-model.json"
+    /// Well under the keyboard's 20s result poll (`IPCClient.timeoutSeconds`)
+    /// so the native fallback still fits after an app-engine timeout.
+    private static let appEngineTimeout: TimeInterval = 12
     /// Keyboard settings JSON written by JS (`writeKeyboardSettings`) into the
     /// app's Documents directory. Mirrored into App Group `UserDefaults` (below)
     /// because the keyboard *extension* is sandboxed away from Documents and
@@ -555,7 +559,9 @@ import UIKit
     private func prewarmModel() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self,
-                  let files = self.resolveModelFiles(requestedLanguage: nil) else {
+                  let files = self.resolveModelFiles(
+                      self.loadSavedModelConfig(), requestedLanguage: nil
+                  ) else {
                 NSLog("[KeyboardTranscriptionListener] prewarm skipped (no model config)")
                 return
             }
@@ -1069,8 +1075,16 @@ import UIKit
         audioPath: String, requestID: String,
         requestedLanguage: String?, resultURL: URL
     ) {
+        let config = loadSavedModelConfig()
+        if config?["appEngine"] as? Bool == true,
+           let text = transcribeOnAppEngine(audioPath: audioPath, requestID: requestID) {
+            writeResult(to: resultURL, id: requestID, text: text, error: nil)
+            postResultNotification()
+            return
+        }
+
         let bridge = SherpaBridge.shared()
-        guard let files = resolveModelFiles(requestedLanguage: requestedLanguage) else {
+        guard let files = resolveModelFiles(config, requestedLanguage: requestedLanguage) else {
             writeResult(to: resultURL, id: requestID, text: nil,
                         error: "Echos voice model not ready. Open Echos app first.")
             postResultNotification()
@@ -1094,6 +1108,32 @@ import UIKit
         }
         postResultNotification()
         NSLog("[KeyboardTranscriptionListener] result posted for %@", requestID)
+    }
+
+    /// Transcribes on the app's already-loaded JS engine (for models the
+    /// keyboard can't run, e.g. Qwen3, Nemotron), blocking this background thread until JS replies.
+    /// Nil when JS isn't listening, fails or times out, so the caller falls
+    /// back to the native model.
+    private func transcribeOnAppEngine(audioPath: String, requestID: String) -> String? {
+        let done = DispatchSemaphore(value: 0)
+        var text: String?
+        var error: String?
+        guard let id = KeyboardTranscriptionBridge.requestTranscription(
+            path: audioPath, onResult: { text = $0; error = $1; done.signal() }
+        ) else { return nil }
+        guard done.wait(timeout: .now() + Self.appEngineTimeout) == .success else {
+            KeyboardTranscriptionBridge.cancel(id)
+            NSLog("[KeyboardTranscriptionListener] app-engine transcription timed out for %@", requestID)
+            return nil
+        }
+        guard let text = text, !text.isEmpty else {
+            NSLog("[KeyboardTranscriptionListener] app-engine transcription failed for %@: %@",
+                  requestID, error ?? "empty")
+            return nil
+        }
+        NSLog("[KeyboardTranscriptionListener] app-engine transcription OK (len=%ld) for %@",
+              text.count, requestID)
+        return text
     }
 
     /// Reply to a keyboard pre-flight ping by writing the matching ID to
@@ -1152,11 +1192,8 @@ import UIKit
 
     // MARK: - Model Resolution
 
-    /// Reads the saved model configuration from the main app's Documents
-    /// directory and returns a `SherpaModelFiles` ready for `SherpaBridge`.
-    /// The language from the keyboard request (if provided) overrides the
-    /// saved Whisper language.
-    private func resolveModelFiles(requestedLanguage: String?) -> SherpaModelFiles? {
+    /// The model config JS writes (`writeKeyboardModelConfig`) into Documents.
+    private func loadSavedModelConfig() -> [String: Any]? {
         guard let docsDir = NSSearchPathForDirectoriesInDomains(
             .documentDirectory, .userDomainMask, true
         ).first else {
@@ -1164,16 +1201,25 @@ import UIKit
             return nil
         }
         let configPath = (docsDir as NSString).appendingPathComponent(modelConfigFilename)
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            NSLog("[KeyboardTranscriptionListener] No sherpa model config at %@", configPath)
+            return nil
+        }
+        return json
+    }
 
-        guard FileManager.default.fileExists(atPath: configPath),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+    /// Turns the saved model config into a `SherpaModelFiles` ready for
+    /// `SherpaBridge`. The language from the keyboard request (if provided)
+    /// overrides the saved Whisper language.
+    private func resolveModelFiles(_ json: [String: Any]?, requestedLanguage: String?) -> SherpaModelFiles? {
+        guard let json = json,
               let modelDir = json["modelDir"] as? String,
               let modelTypeStr = json["modelType"] as? String,
               let encoder = json["encoder"] as? String,
               let decoder = json["decoder"] as? String,
               let tokens = json["tokens"] as? String else {
-            NSLog("[KeyboardTranscriptionListener] No sherpa model config at %@", configPath)
+            NSLog("[KeyboardTranscriptionListener] Incomplete sherpa model config")
             return nil
         }
 

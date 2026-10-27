@@ -2,8 +2,14 @@ import { createPcmLiveStream } from "react-native-sherpa-onnx/audio";
 import { createStreamingSTT, createSTT } from "react-native-sherpa-onnx/stt";
 
 import { ModelId } from "@/models";
+import { writeJsonAtomic } from "@/utils";
 
 import { sherpaTranscriptionService } from "./SherpaTranscriptionService";
+
+jest.mock("@/utils", () => ({
+  ...jest.requireActual("@/utils"),
+  writeJsonAtomic: jest.fn(),
+}));
 
 jest.mock("../audio-session-service/AudioSessionService", () => ({
   audioSessionService: { ensureRecordingMode: jest.fn(async () => undefined) },
@@ -235,5 +241,50 @@ describe("sherpaTranscriptionService streaming model", () => {
     expect(stream.inputFinished).toHaveBeenCalled();
     expect(stream.reset).toHaveBeenCalledTimes(2);
     expect(stream.release).toHaveBeenCalled();
+  });
+});
+
+describe("sherpaTranscriptionService keyboard config", () => {
+  it("writes the Whisper Tiny fallback and the app-engine flag for Qwen3", () => {
+    sherpaTranscriptionService.refreshKeyboardConfig(ModelId.QWEN3_ASR, "zh");
+    expect(writeJsonAtomic).toHaveBeenLastCalledWith(
+      "keyboard-sherpa-model.json",
+      expect.objectContaining({
+        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_TINY}`),
+        modelType: "whisper",
+        language: "zh",
+        appEngine: true,
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("flags Nemotron for the app engine with the English Whisper Tiny fallback", () => {
+    sherpaTranscriptionService.refreshKeyboardConfig(
+      ModelId.NEMOTRON_STREAMING_EN,
+      "en",
+    );
+    expect(writeJsonAtomic).toHaveBeenLastCalledWith(
+      "keyboard-sherpa-model.json",
+      expect.objectContaining({
+        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_TINY}`),
+        modelType: "whisper",
+        language: "en",
+        appEngine: true,
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("doesn't flag keyboard-capable models for the app engine", () => {
+    sherpaTranscriptionService.refreshKeyboardConfig(
+      ModelId.WHISPER_TINY,
+      "de",
+    );
+    expect(writeJsonAtomic).toHaveBeenLastCalledWith(
+      "keyboard-sherpa-model.json",
+      expect.not.objectContaining({ appEngine: true }),
+      expect.anything(),
+    );
   });
 });

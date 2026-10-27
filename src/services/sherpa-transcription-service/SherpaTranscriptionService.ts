@@ -200,39 +200,45 @@ const pickModelFileName = (
   modelInfo.files.find((f) => needle.test(f.name))?.name ?? null;
 
 /**
- * Writes (or clears) the keyboard config JSON so `SherpaBridge` /
- * `SherpaModelManager` can find the active model. Safe to call repeatedly —
- * errors are logged and do not propagate. Returns nothing; callers should
- * treat this as fire-and-forget.
+ * Writes the keyboard config JSON so `SherpaBridge` / `SherpaModelManager`
+ * can find the user's model. Safe to call repeatedly — errors are logged and
+ * do not propagate. No-op while the model directory isn't materialized yet
+ * (bundled assets not unpacked, or a model not downloaded).
  */
 const writeKeyboardModelConfig = (
-  modelInfo: ModelInfo,
-  modelDir: string,
+  selectedModelId: ModelId,
   languageCode: string,
 ): void => {
   try {
+    const selectedModelInfo = getModelInfo(selectedModelId);
+    // The keyboards run whisper and nemo_transducer only. Other models
+    // (Qwen3, Nemotron) send dictations to the app's loaded engine while its
+    // JS runs (`keyboardTranscriptionBridge`), with the bundled Whisper Tiny
+    // in the user's language as the fallback.
+    const isKeyboardCapable =
+      selectedModelInfo.sherpaModelType === "whisper" ||
+      selectedModelInfo.sherpaModelType === "nemo_transducer";
+    const modelInfo = isKeyboardCapable
+      ? selectedModelInfo
+      : getModelInfo(ModelId.WHISPER_TINY);
+    const modelDir = resolveModelDir(modelInfo);
+    if (!new Directory(modelDir).exists) {
+      return;
+    }
+
     const encoder = pickModelFileName(modelInfo, /encoder/i);
     const decoder = pickModelFileName(modelInfo, /decoder/i);
     const tokens = pickModelFileName(modelInfo, /tokens/i);
     const joiner = pickModelFileName(modelInfo, /joiner/i);
 
-    // The keyboard only supports model families with separate
-    // encoder/decoder/tokens files (whisper, nemo_transducer). Qwen3 ASR and
-    // similar stay in-app only, so silently skip writing the config.
     if (!encoder || !decoder || !tokens) {
-      return;
-    }
-    if (
-      modelInfo.sherpaModelType !== "whisper" &&
-      modelInfo.sherpaModelType !== "nemo_transducer"
-    ) {
       return;
     }
     if (modelInfo.sherpaModelType === "nemo_transducer" && !joiner) {
       return;
     }
 
-    const config: Record<string, string> = {
+    const config: Record<string, string | boolean> = {
       modelDir: toNativePath(modelDir),
       modelType: modelInfo.sherpaModelType,
       encoder,
@@ -240,6 +246,7 @@ const writeKeyboardModelConfig = (
       tokens,
     };
     if (joiner) config.joiner = joiner;
+    if (!isKeyboardCapable) config.appEngine = true;
 
     if (modelInfo.sherpaModelType === "whisper") {
       const { language: whisperLanguage } =
@@ -681,9 +688,7 @@ const createSherpaTranscriptionService = () => {
           stt: await loadStt().createSTT({
             modelPath,
             modelType: modelInfo.sherpaModelType as
-              | "whisper"
-              | "nemo_transducer"
-              | "qwen3_asr",
+              "whisper" | "nemo_transducer" | "qwen3_asr",
             preferInt8: true,
             numThreads,
             modelOptions:
@@ -704,8 +709,6 @@ const createSherpaTranscriptionService = () => {
       state.isInitialized = true;
       state.initializationStatus = "Ready";
 
-      writeKeyboardModelConfig(modelInfo, modelDir, languageCode);
-
       return true;
     } catch (error) {
       state.initializationStatus = `Initialization failed: ${error}`;
@@ -723,32 +726,11 @@ const createSherpaTranscriptionService = () => {
 
   /**
    * Rewrites `keyboard-sherpa-model.json` so the IME (Android) and the
-   * keyboard transcription listener (iOS) pick up the user's current
-   * model/language without needing the engine to re-initialize. Call after
-   * `setLanguage`/`setModelId` in the settings store. No-op if the model
-   * directory hasn't been materialized yet.
+   * keyboard transcription listener (iOS) follow the user's selected
+   * model/language rather than whichever engine is loaded. Call after
+   * `setLanguage`/`setModelId` and once after the store's engine init.
    */
-  const refreshKeyboardConfig = (
-    modelId: ModelId,
-    languageCode: string,
-  ): void => {
-    try {
-      const modelInfo = getModelInfo(modelId);
-      const modelDir = resolveModelDir(modelInfo);
-      // If the model dir doesn't exist yet (bundled assets not yet
-      // unpacked, or a downloadable model not yet downloaded), the
-      // keyboard would point at missing files. Bail and let the next
-      // `initialize()` write the config when the dir actually exists.
-      if (!new Directory(modelDir).exists) {
-        return;
-      }
-      writeKeyboardModelConfig(modelInfo, modelDir, languageCode);
-    } catch (error) {
-      logWarn(`Failed to refresh keyboard model config: ${error}`, {
-        flag: FeatureFlag.model,
-      });
-    }
-  };
+  const refreshKeyboardConfig = writeKeyboardModelConfig;
 
   const initialize = async (
     modelId?: ModelId,

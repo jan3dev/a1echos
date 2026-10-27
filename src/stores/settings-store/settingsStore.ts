@@ -493,10 +493,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       }
 
       // Refresh the keyboard's model config so the IME / iOS extension see
-      // the new model without waiting for the next recording. preWarmModel
-      // would also write this via `initialize()`, but it skips during
-      // recording or when the model isn't yet downloaded — refresh covers
-      // those cases too.
+      // the new model on the next mic press.
       sherpaTranscriptionService.refreshKeyboardConfig(
         modelId,
         get().selectedLanguage.code,
@@ -565,9 +562,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, language.code);
       // Update the keyboard's model config so the IME / iOS extension
-      // pick up the new spoken language on the next mic press without
-      // waiting for the next in-app recording (which is what otherwise
-      // triggers `sherpaTranscriptionService.initialize`).
+      // pick up the new spoken language on the next mic press.
       sherpaTranscriptionService.refreshKeyboardConfig(
         get().selectedModelId,
         language.code,

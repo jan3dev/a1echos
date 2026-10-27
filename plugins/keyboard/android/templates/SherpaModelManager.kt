@@ -18,6 +18,9 @@ data class SherpaModelFiles(
     val tokens: String,
     val joiner: String?,
     val language: String?,
+    /// Hand dictations to the app's JS engine (Qwen3, Nemotron); these files
+    /// are the fallback when it isn't running or fails.
+    val appEngine: Boolean = false,
 ) {
     fun encoderPath(): String = File(modelDir, encoder).absolutePath
     fun decoderPath(): String = File(modelDir, decoder).absolutePath
@@ -96,6 +99,7 @@ object SherpaModelManager {
                 tokens = json.getString("tokens"),
                 joiner = json.optString("joiner").takeIf { it.isNotEmpty() },
                 language = json.optString("language").takeIf { it.isNotEmpty() },
+                appEngine = json.optBoolean("appEngine", false),
             )
             if (!files.isValid()) {
                 Log.w(TAG, "Saved model config points to missing files: ${files.modelDir}")

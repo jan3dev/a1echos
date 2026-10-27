@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["EchosKeyboardBridgeModule"]
+  },
+  "android": {
+    "modules": ["com.a1lab.echos.keyboardbridge.EchosKeyboardBridgeModule"]
+  }
+}

@@ -52,6 +52,7 @@ import {
   initializeSettingsStore,
   initializeTranscriptionStore,
   preWarmModel,
+  startKeyboardTranscriptionBridge,
   useGlobalTooltip,
   useHideGlobalTooltip,
   useHideKeyboardPrompt,
@@ -527,6 +528,7 @@ export default function RootLayout() {
         // is in progress.
         const settings = useSettingsStore.getState();
         preWarmModel(settings.selectedModelId, settings.selectedLanguage.code);
+        startKeyboardTranscriptionBridge();
 
         setAppReady(true);
       } catch (error) {

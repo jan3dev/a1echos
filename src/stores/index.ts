@@ -79,6 +79,7 @@ export {
 } from "./transcription-store/transcriptionStore";
 export type { ImportFailureReason } from "./transcription-store/transcriptionStore";
 export { preWarmModel } from "./transcription-store/preWarmModel";
+export { startKeyboardTranscriptionBridge } from "./transcription-store/keyboardTranscriptionBridge";
 export {
   initializeModelDownloadStore,
   useIsModelDownloaded,

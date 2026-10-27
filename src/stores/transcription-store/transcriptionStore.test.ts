@@ -6,6 +6,7 @@ import { Platform } from "react-native";
 import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
 import { AppConstants } from "@/constants";
 import {
+  ModelId,
   ModelType,
   Transcription,
   TranscriptionMode,
@@ -908,6 +909,22 @@ describe("transcriptionStore", () => {
       expect(state.isEngineReady).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
       expect(sherpaTranscriptionService.initialize).toHaveBeenCalled();
+    });
+
+    it("points the keyboard config back at the selected model and language", async () => {
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
+      useSettingsStore.setState({
+        selectedModelId: ModelId.QWEN3_ASR,
+        selectedLanguage: { code: "zh", name: "Chinese" },
+      });
+
+      await useTranscriptionStore.getState().initialize();
+
+      expect(
+        sherpaTranscriptionService.refreshKeyboardConfig,
+      ).toHaveBeenLastCalledWith(ModelId.QWEN3_ASR, "zh");
     });
 
     it("whisper init failure is non-fatal", async () => {
@@ -3449,9 +3466,6 @@ describe("transcriptionStore.reprocessTranscription", () => {
       "/cache/dec_a.wav",
     );
     expect(mockRelease).toHaveBeenCalled();
-    expect(
-      sherpaTranscriptionService.refreshKeyboardConfig,
-    ).toHaveBeenCalledWith("whisper-tiny", "en");
     expect(useTranscriptionStore.getState().state).toBe(
       TranscriptionState.READY,
     );

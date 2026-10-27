@@ -116,12 +116,7 @@ interface ImportFile {
 }
 
 export type ImportFailureReason =
-  | "unsupported"
-  | "tooLong"
-  | "tooLarge"
-  | "empty"
-  | "noSpeech"
-  | "failed";
+  "unsupported" | "tooLong" | "tooLarge" | "empty" | "noSpeech" | "failed";
 
 interface ImportFailure {
   name: string;
@@ -1127,14 +1122,6 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         );
       } finally {
         await release?.();
-        // Whisper init rewrites the keyboard's model config; point it back
-        // at the user's language, not this one-off reprocess language.
-        const { selectedModelId, selectedLanguage } =
-          useSettingsStore.getState();
-        sherpaTranscriptionService.refreshKeyboardConfig(
-          selectedModelId,
-          selectedLanguage?.code ?? "en",
-        );
         get().transitionTo(TranscriptionState.READY);
       }
     },
@@ -1592,6 +1579,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         // Initialize transcription engine
         const whisperInitialized =
           await sherpaTranscriptionService.initialize();
+        // The init above unpacks the bundled Whisper Tiny, the keyboard's
+        // fallback, so the config can be written now.
+        const { selectedModelId, selectedLanguage } =
+          useSettingsStore.getState();
+        sherpaTranscriptionService.refreshKeyboardConfig(
+          selectedModelId,
+          selectedLanguage?.code ?? "en",
+        );
         if (!whisperInitialized) {
           logWarn(
             `Engine initialization failed: ${sherpaTranscriptionService.initializationStatus}`,
