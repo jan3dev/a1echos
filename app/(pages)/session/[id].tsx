@@ -1,7 +1,11 @@
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  usePreventRemove,
+  useRouter,
+} from "expo-router";
 import {
   RefObject,
   useCallback,
@@ -18,6 +22,7 @@ import {
   Platform,
   StyleSheet,
   View,
+  type HostInstance,
 } from "react-native";
 
 import {
@@ -76,7 +81,6 @@ import { delay, FeatureFlag, getErrorMessage, logError } from "@/utils";
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
   const { loc } = useLocalization();
   const { theme } = useTheme();
 
@@ -84,7 +88,7 @@ export default function SessionScreen() {
     FlatList<Transcription>
   >;
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const {
     scrolled,
     contentBelow,
@@ -281,47 +285,31 @@ export default function SessionScreen() {
     };
   }, [exitSelectionMode]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", async (e) => {
+  const disablePrevention = usePreventRemove(
+    isRecording || !!session?.isIncognito,
+    async () => {
       if (isRecording) {
-        e.preventDefault();
         await stopRecordingAndSave();
-        // Use router for safe navigation
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace(Routes.home);
-        }
-        return;
-      }
-      if (session?.isIncognito) {
-        e.preventDefault();
+      } else {
         try {
           await endIncognitoSession();
-          // Use router for safe navigation
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace(Routes.home);
-          }
         } catch (error) {
           logError(error, {
             flag: FeatureFlag.session,
             message: "Failed to end incognito session",
           });
+          return;
         }
       }
-    });
-
-    return unsubscribe;
-  }, [
-    navigation,
-    router,
-    isRecording,
-    stopRecordingAndSave,
-    session?.isIncognito,
-    endIncognitoSession,
-  ]);
+      disablePrevention();
+      // Use router for safe navigation
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(Routes.home);
+      }
+    },
+  );
 
   // Handle back button press
   useEffect(() => {

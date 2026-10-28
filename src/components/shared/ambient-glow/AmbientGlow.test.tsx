@@ -40,7 +40,7 @@ describe("AmbientGlow", () => {
   });
 
   it("freezes the loops while its screen is not focused", () => {
-    const Navigation = jest.requireMock("@react-navigation/native") as {
+    const Navigation = jest.requireMock("expo-router") as {
       useIsFocused: jest.Mock;
     };
     Navigation.useIsFocused.mockReturnValueOnce(false);

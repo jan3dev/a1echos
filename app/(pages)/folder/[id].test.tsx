@@ -11,9 +11,6 @@ const mockBack = jest.fn();
 jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ id: "f1" }),
   useRouter: () => ({ push: mockPush, back: mockBack }),
-}));
-
-jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: any) => {
     cb();
   },

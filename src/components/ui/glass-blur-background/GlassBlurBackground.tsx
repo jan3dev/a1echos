@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { RefObject } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type HostInstance } from "react-native";
 
 import { useTheme } from "@/theme";
 
@@ -16,7 +16,7 @@ export interface GlassBlurBackgroundProps {
    * show through this surface. expo-blur needs an explicit target to blur
    * underlying views; iOS blurs natively and ignores it.
    */
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
 }
 
 /**

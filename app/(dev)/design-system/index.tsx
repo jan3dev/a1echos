@@ -1,7 +1,8 @@
 import { Link, Stack } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components";
+import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { Routes } from "@/constants";
 import { useTheme } from "@/theme";
 import { DESIGN_SYSTEM_MANIFEST, GalleryGroup } from "@/design-system/manifest";
@@ -57,7 +58,7 @@ export default function DesignSystemIndex() {
                     href={Routes.designSystemDetail(entry.slug)}
                     asChild
                   >
-                    <Pressable
+                    <RipplePressable
                       style={({ pressed }) => [
                         styles.row,
                         index !== entries.length - 1 && {
@@ -77,7 +78,7 @@ export default function DesignSystemIndex() {
                         {entry.demos.length}{" "}
                         {entry.demos.length === 1 ? "demo" : "demos"}
                       </Text>
-                    </Pressable>
+                    </RipplePressable>
                   </Link>
                 ))}
               </View>

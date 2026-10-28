@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   tint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: AquaPrimitiveColors.glassSurfaceSecondaryDark,
   },
   glassTop: {

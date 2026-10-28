@@ -31,7 +31,7 @@ export const readWavPeaks = (uri: string, count: number): number[] => {
     if (window <= 0) return new Array(count).fill(0);
     const peaks = Array.from({ length: count }, (_, i) => {
       handle.offset = WAV_HEADER_SIZE + Math.floor((i * samples) / count) * 2;
-      const bytes = handle.readBytes(window * 2);
+      const bytes = handle.readBytesSync(window * 2);
       const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
       let peak = 0;
       for (let j = 0; j + 1 < bytes.length; j += 2) {
@@ -131,7 +131,8 @@ export const AudioPlayer = ({
         },
       ]}
     >
-      <Pressable
+      <RipplePressable
+        borderless
         testID={testID && `${testID}-toggle`}
         onPress={togglePlayback}
         disabled={!enabled}
@@ -150,7 +151,7 @@ export const AudioPlayer = ({
           size={18}
           color={colors.accentBrand}
         />
-      </Pressable>
+      </RipplePressable>
 
       <Pressable
         testID={testID && `${testID}-waves`}

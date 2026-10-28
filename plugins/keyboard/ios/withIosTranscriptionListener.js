@@ -281,6 +281,30 @@ function withListenerDeepLink(config) {
     }
 
     const marker = "open url: URL,";
+    // SDK 58's template has no URL override; ExpoAppSceneDelegate still
+    // re-feeds scene URLs to it, so add one for the injection below.
+    if (!contents.includes(marker)) {
+      const classEnd = /\n}\n(?=\s*class ReactNativeDelegate)/;
+      if (!classEnd.test(contents)) {
+        throw new Error(
+          "withIosTranscriptionListener: can't find the end of AppDelegate; the Expo template changed and this plugin needs updating",
+        );
+      }
+      contents = contents.replace(
+        classEnd,
+        `
+
+  public override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    return super.application(app, open: url, options: options)
+  }
+}
+`,
+      );
+    }
     const markerIdx = contents.indexOf(marker);
     if (markerIdx !== -1) {
       const boolIdx = contents.indexOf("-> Bool", markerIdx);

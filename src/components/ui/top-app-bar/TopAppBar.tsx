@@ -1,6 +1,12 @@
 import { useRouter } from "expo-router";
 import { Fragment, ReactNode, RefObject } from "react";
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+  type HostInstance,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants, TestID } from "@/constants";
@@ -32,7 +38,7 @@ export interface TopAppBarProps {
    * that should show through the blurred bar. expo-blur needs this explicit
    * target to blur underlying views; iOS blurs natively and ignores it.
    */
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
   /**
    * When false (default) the bar is a solid `surfaceBackground` that blends into
    * the screen; when true its glass/blur background fades in. Drive from the

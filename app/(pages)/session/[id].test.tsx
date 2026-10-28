@@ -33,16 +33,19 @@ jest.mock("expo-router", () => ({
     push: mockPush,
   }),
   useLocalSearchParams: () => ({ id: "session-1" }),
-}));
-
-jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: any) => {
     cb();
   },
-  useNavigation: jest.fn(() => ({
-    addListener: jest.fn(() => jest.fn()),
-  })),
+  usePreventRemove: jest.fn(() => jest.fn()),
 }));
+
+const lastPreventRemove = () => {
+  const { usePreventRemove } = jest.requireMock("expo-router");
+  return (usePreventRemove as jest.Mock).mock.calls.at(-1) as [
+    boolean,
+    () => Promise<void>,
+  ];
+};
 
 jest.mock("@/theme", () => ({
   useTheme: jest.fn(() => ({
@@ -354,11 +357,6 @@ beforeEach(() => {
     endIncognitoSession: jest.fn(),
   });
 
-  // Restore navigation
-  const nav = jest.requireMock("@react-navigation/native");
-  (nav.useNavigation as jest.Mock).mockReturnValue({
-    addListener: jest.fn(() => jest.fn()),
-  });
 });
 
 describe("SessionScreen", () => {
@@ -1179,26 +1177,15 @@ describe("SessionScreen", () => {
       (useIsRecording as jest.Mock).mockReturnValue(true);
       (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStopAndSave);
 
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
+      const [preventRemove, onPreventRemove] = lastPreventRemove();
       await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
+        await onPreventRemove();
       });
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(preventRemove).toBe(true);
       expect(mockStopAndSave).toHaveBeenCalled();
       expect(mockBack).toHaveBeenCalled();
     });
@@ -1220,26 +1207,15 @@ describe("SessionScreen", () => {
         (id: string) => mockSession,
       );
 
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
+      const [preventRemove, onPreventRemove] = lastPreventRemove();
       await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
+        await onPreventRemove();
       });
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(preventRemove).toBe(true);
       expect(mockEndIncognito).toHaveBeenCalled();
       expect(mockBack).toHaveBeenCalled();
     });
@@ -1502,26 +1478,15 @@ describe("SessionScreen", () => {
       (useStopRecordingAndSave as jest.Mock).mockReturnValue(mockStopAndSave);
       mockCanGoBack.mockReturnValue(false);
 
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
+      const [preventRemove, onPreventRemove] = lastPreventRemove();
       await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
+        await onPreventRemove();
       });
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(preventRemove).toBe(true);
       expect(mockStopAndSave).toHaveBeenCalled();
       expect(mockReplace).toHaveBeenCalledWith("/");
     });
@@ -1542,26 +1507,15 @@ describe("SessionScreen", () => {
       (useFindSessionById as jest.Mock).mockReturnValue(() => mockSession);
       mockCanGoBack.mockReturnValue(false);
 
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
+      const [preventRemove, onPreventRemove] = lastPreventRemove();
       await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
+        await onPreventRemove();
       });
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(preventRemove).toBe(true);
       expect(mockEndIncognito).toHaveBeenCalled();
       expect(mockReplace).toHaveBeenCalledWith("/");
     });
@@ -1583,26 +1537,15 @@ describe("SessionScreen", () => {
       };
       (useFindSessionById as jest.Mock).mockReturnValue(() => mockSession);
 
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
+      const [preventRemove, onPreventRemove] = lastPreventRemove();
       await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
+        await onPreventRemove();
       });
 
-      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(preventRemove).toBe(true);
       expect(mockEndIncognito).toHaveBeenCalled();
       // Should not navigate on error (no back or replace call after the error)
       const { logError } = jest.requireMock("@/utils");
@@ -1610,27 +1553,11 @@ describe("SessionScreen", () => {
     });
 
     it("beforeRemove for non-recording, non-incognito session: does nothing", async () => {
-      let beforeRemoveHandler: ((e: any) => void) | null = null;
-      const { useNavigation } = jest.requireMock("@react-navigation/native");
-      (useNavigation as jest.Mock).mockReturnValue({
-        addListener: jest.fn((event: string, handler: any) => {
-          if (event === "beforeRemove") {
-            beforeRemoveHandler = handler;
-          }
-          return jest.fn();
-        }),
-      });
-
       render(<SessionScreen />);
       await act(async () => {});
 
-      const mockPreventDefault = jest.fn();
-      await act(async () => {
-        await beforeRemoveHandler!({ preventDefault: mockPreventDefault });
-      });
-
-      // Should NOT prevent default for normal sessions
-      expect(mockPreventDefault).not.toHaveBeenCalled();
+      // Should NOT prevent removal for normal sessions
+      expect(lastPreventRemove()[0]).toBe(false);
     });
   });
 

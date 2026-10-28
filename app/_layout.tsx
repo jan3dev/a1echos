@@ -1,8 +1,7 @@
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
-import { useIsFocused } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { useLocales } from "expo-localization";
-import { Stack, usePathname, useRouter } from "expo-router";
+import { Stack, useIsFocused, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

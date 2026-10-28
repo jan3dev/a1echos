@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, TextInput, View, ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  TextInput,
+  type TextInputInstance,
+  View,
+  ViewStyle,
+} from "react-native";
 
 import { Transcription, transcriptTextStyle } from "@/models";
 import { useTextAppearance } from "@/stores";
@@ -93,7 +99,7 @@ export const TranscriptionItem = ({
   const colors = colorsOverride ?? theme.colors;
   const textStyle = transcriptTextStyle(useTextAppearance());
   const [editText, setEditText] = useState(transcription.text);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
 
   useEffect(() => {
     if (isEditing) {

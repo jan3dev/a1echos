@@ -82,7 +82,7 @@ export const createPcmStreamWriter = (
     writeQueue = writeQueue.then(async () => {
       if (isFinalized || hasError) return;
       try {
-        tempFile.write(bytes, isFirst ? undefined : { append: true });
+        tempFile.writeSync(bytes, isFirst ? undefined : { append: true });
       } catch (error) {
         hasError = true;
         logError(error, {
@@ -111,9 +111,9 @@ export const createPcmStreamWriter = (
         numChannels,
         bitsPerSample,
       );
-      outputFile.write(header);
+      outputFile.writeSync(header);
       const pcm = tempFile.bytesSync();
-      outputFile.write(pcm, { append: true });
+      outputFile.writeSync(pcm, { append: true });
       if (tempFile.exists) tempFile.delete();
       return true;
     } catch (error) {
@@ -190,7 +190,7 @@ export const sliceWavFile = (
       WAV_HEADER_SIZE + end * frameBytes,
     );
     const out = new File(`${baseUri}_${i}.wav`);
-    out.write(
+    out.writeSync(
       createWavHeaderBytes(
         pcm.byteLength,
         sampleRate,
@@ -198,7 +198,7 @@ export const sliceWavFile = (
         bitsPerSample,
       ),
     );
-    out.write(pcm, { append: true });
+    out.writeSync(pcm, { append: true });
     return out.uri;
   });
 };

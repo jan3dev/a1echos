@@ -22,6 +22,11 @@ module.exports = defineConfig([
         },
       ],
       "react/react-in-jsx-scope": "off",
+      // React Compiler rules new in eslint-config-expo 58; existing code predates them.
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   {

@@ -2,7 +2,6 @@ import * as Linking from "expo-linking";
 import {
   Image,
   Platform,
-  Pressable,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -10,7 +9,8 @@ import {
 
 import AquaLogo from "@/assets/images/aqua-logo.svg";
 import { Text } from "@/components/ui/text";
-import { FeatureFlag, logWarn } from "@/utils";
+import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
+import { FeatureFlag, iosPressed, logWarn } from "@/utils";
 
 const AQUA_APP_URLS = {
   android:
@@ -59,14 +59,14 @@ export const InAppBanner = () => {
 
   return (
     <View style={styles.wrapper}>
-      <Pressable
+      <RipplePressable
         onPress={handlePress}
         style={({ pressed }) => [
           styles.container,
           {
             width: bannerWidth,
             height: bannerHeight,
-            opacity: pressed ? 0.9 : 1,
+            opacity: iosPressed(pressed, 0.9),
           },
         ]}
         accessibilityLabel="Download AQUA Wallet"
@@ -107,7 +107,7 @@ export const InAppBanner = () => {
             </Text>
           </View>
         </View>
-      </Pressable>
+      </RipplePressable>
     </View>
   );
 };

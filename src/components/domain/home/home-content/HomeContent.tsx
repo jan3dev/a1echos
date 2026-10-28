@@ -164,7 +164,7 @@ export const HomeContent = ({
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
-          selectionMode || isHomeEmpty ? null : (
+          selectionMode || isHomeEmpty ? undefined : (
             <ListHeader
               folders={folders}
               onFolderPress={onFolderPress}

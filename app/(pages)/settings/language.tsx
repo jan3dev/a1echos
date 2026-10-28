@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -38,7 +38,7 @@ export default function LanguageSettingsScreen() {
   const { loc } = useLocalization();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
   const selectedLanguage = useSelectedLanguage();

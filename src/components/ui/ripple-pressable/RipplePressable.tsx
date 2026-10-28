@@ -1,11 +1,7 @@
 import { ReactNode } from "react";
-import {
-  Platform,
-  Pressable,
-  PressableProps,
-  TouchableNativeFeedback,
-  View,
-} from "react-native";
+import { Pressable, PressableProps } from "react-native";
+
+import { useTheme } from "@/theme";
 
 type RipplePressableProps = Omit<
   PressableProps,
@@ -19,38 +15,18 @@ type RipplePressableProps = Omit<
 export const RipplePressable = ({
   rippleColor,
   borderless = false,
-  children,
-  style,
   ...rest
 }: RipplePressableProps) => {
-  if (Platform.OS === "android" && rippleColor) {
-    const resolvedStyle =
-      typeof style === "function"
-        ? style({ pressed: false, hovered: false })
-        : style;
-
-    return (
-      <TouchableNativeFeedback
-        testID={rest.testID}
-        onPress={rest.onPress ?? undefined}
-        onLongPress={rest.onLongPress ?? undefined}
-        disabled={rest.disabled ?? undefined}
-        hitSlop={rest.hitSlop}
-        accessibilityRole={rest.accessibilityRole}
-        accessibilityState={rest.accessibilityState}
-        accessibilityLabel={rest.accessibilityLabel}
-        accessibilityHint={rest.accessibilityHint}
-        background={TouchableNativeFeedback.Ripple(rippleColor, borderless)}
-        useForeground={TouchableNativeFeedback.canUseNativeForeground()}
-      >
-        <View style={resolvedStyle}>{children}</View>
-      </TouchableNativeFeedback>
-    );
-  }
-
+  const { theme } = useTheme();
   return (
-    <Pressable style={style} {...rest}>
-      {children}
-    </Pressable>
+    <Pressable
+      // Foreground so a backgroundColor on the pressable doesn't hide it.
+      android_ripple={{
+        color: rippleColor ?? theme.colors.ripple,
+        borderless,
+        foreground: true,
+      }}
+      {...rest}
+    />
   );
 };

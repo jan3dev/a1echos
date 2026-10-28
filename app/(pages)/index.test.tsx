@@ -13,9 +13,6 @@ const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush }),
   Redirect: "Redirect",
-}));
-
-jest.mock("@react-navigation/native", () => ({
   useFocusEffect: (cb: any) => {
     cb();
   },

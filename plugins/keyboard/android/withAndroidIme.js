@@ -241,12 +241,7 @@ function withImeSources(config) {
 
       // Keyboard typeface; loaded by echosSans() in KeyTheme.kt.
       fs.copyFileSync(
-        path.join(
-          projectRoot,
-          "assets",
-          "fonts",
-          "EchosSans-Regular.ttf",
-        ),
+        path.join(projectRoot, "assets", "fonts", "EchosSans-Regular.ttf"),
         path.join(assetsDir, "EchosSans-Regular.ttf"),
       );
 
@@ -400,19 +395,22 @@ function withImeSources(config) {
  * the AAR's `libs/`). The IME's `ImeSherpaTranscriber` compiles directly
  * against those classes, so we need to add the same JAR to the app module's
  * compile classpath. The `.builtBy(...)` wires the existing extract task so
- * Gradle produces the JAR before our `:app:compileDebugKotlin` runs.
+ * Gradle produces the JAR before our `:app:compileDebugKotlin` runs. It must
+ * be a task provider, not a path string: Gradle 9.4 resolves a cross-project
+ * path at execution time and deadlocks its parallel workers.
  */
 function withImeGradleDeps(config) {
   // Escape `\${...}` so JS template-literal interpolation doesn't eat the
   // Groovy `${rootProject.projectDir}` reference.
   return appendAppGradleBlock(
     config,
-    "// Echos IME — expose sherpa-onnx Kotlin API to app sources",
-    `dependencies {
+    "// Echos IME — expose sherpa-onnx Kotlin API to app sources (task provider)",
+    `evaluationDependsOn(":react-native-sherpa-onnx")
+dependencies {
     implementation fileTree(
         dir: "\${rootProject.projectDir}/../node_modules/react-native-sherpa-onnx/android/build/sherpa-onnx-classes",
         include: ["*.jar"],
-    ).builtBy(":react-native-sherpa-onnx:extractSherpaOnnxClasses")
+    ).builtBy(project(":react-native-sherpa-onnx").tasks.named("extractSherpaOnnxClasses"))
 }`,
     "sherpa-onnx classes",
   );

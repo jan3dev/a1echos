@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -42,7 +42,7 @@ export default function FolderScreen() {
   const { loc } = useLocalization();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, contentBelow, onScroll, onContentSizeChange, onLayout } =
     useScrollSurface();
 

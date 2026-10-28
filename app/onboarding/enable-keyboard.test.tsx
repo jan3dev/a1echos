@@ -13,7 +13,7 @@ const mockRouter = { push: mockPush, back: mockBack };
 let mockParams: { resumed?: string } = {};
 jest.mock("expo-router", () => ({
   useRouter: () => mockRouter,
-  useLocalSearchParams: () => mockParams,
+  useLocalSearchParams: () => mockParams, useIsFocused: () => true,
 }));
 
 const mockOpenKeyboardSettings = jest.fn();

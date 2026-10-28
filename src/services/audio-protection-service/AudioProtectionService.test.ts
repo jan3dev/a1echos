@@ -288,13 +288,13 @@ describe("AudioProtectionService", () => {
         .mockResolvedValueOnce(true);
 
       // The crash-safe migration does:
-      //   new File(path).move(new File(bakPath))        // backup original
-      //   new File(tmpPath).move(new File(path))        // promote encrypted
+      //   new File(path).moveSync(new File(bakPath))    // backup original
+      //   new File(tmpPath).moveSync(new File(path))    // promote encrypted
       //   new File(bakPath).exists && new File(bakPath).delete()  // cleanup
       // That's 5 File constructions per migrated file. Each instance just
       // needs minimal API surface — we attach the test spies to a single
       // shared spy so we can assert calls aggregated.
-      const fileSpy = { move: jest.fn(), delete: jest.fn(), exists: true };
+      const fileSpy = { moveSync: jest.fn(), delete: jest.fn(), exists: true };
       (File as unknown as jest.Mock).mockImplementation(() => fileSpy);
 
       const result =
@@ -305,7 +305,7 @@ describe("AudioProtectionService", () => {
         1,
       );
       // Two moves: original -> backup, then encrypted-tmp -> original
-      expect(fileSpy.move).toHaveBeenCalledTimes(2);
+      expect(fileSpy.moveSync).toHaveBeenCalledTimes(2);
       // One delete: cleanup of the backup file after successful promotion
       expect(fileSpy.delete).toHaveBeenCalledTimes(1);
     });

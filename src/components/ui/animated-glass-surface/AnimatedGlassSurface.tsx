@@ -1,5 +1,11 @@
 import { RefObject, useEffect, useMemo, useRef } from "react";
-import { Animated, Platform, StyleSheet, View } from "react-native";
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  View,
+  type HostInstance,
+} from "react-native";
 
 import { useTheme } from "@/theme";
 
@@ -17,7 +23,7 @@ export interface AnimatedGlassSurfaceProps {
    * that should show through the blur. expo-blur needs this explicit target;
    * iOS blurs natively and ignores it.
    */
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
 }
 
 /**

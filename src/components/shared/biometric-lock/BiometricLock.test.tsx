@@ -19,7 +19,7 @@ beforeEach(() => {
   jest.spyOn(Animated, "timing").mockImplementation(
     (value, config) =>
       ({
-        start: (cb?: Animated.EndCallback) => {
+        start: (cb?: (result: { finished: boolean }) => void) => {
           (value as Animated.Value).setValue(config.toValue as number);
           cb?.({ finished: true });
         },
@@ -52,9 +52,8 @@ describe("BiometricLock", () => {
   it("prompts on cold start and unlocks on success", async () => {
     setEnabled(true);
     const { queryByTestId } = render(<BiometricLock />);
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
     expect(authenticate).toHaveBeenCalledTimes(1);
   });
 
@@ -64,9 +63,8 @@ describe("BiometricLock", () => {
     expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
     fireEvent(getByTestId(TestID.BiometricLockScreen).parent!, "layout");
     expect(SplashScreen.hideAsync).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
   });
 
   it("hides the unlock button until auth fails", async () => {
@@ -110,9 +108,8 @@ describe("BiometricLock", () => {
     expect(getByTestId(TestID.BiometricLockScreen)).toBeTruthy();
 
     fireEvent.press(getByTestId(TestID.BiometricUnlockButton));
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
     expect(authenticate).toHaveBeenCalledTimes(2);
   });
 
@@ -138,9 +135,8 @@ describe("BiometricLock", () => {
   it("re-locks after backgrounding, but not on inactive", async () => {
     setEnabled(true);
     const { queryByTestId } = render(<BiometricLock />);
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
 
     act(() => {
       appStateListener?.("inactive");
@@ -176,9 +172,8 @@ describe("BiometricLock", () => {
       error: "passcode_not_set",
     });
     const { queryByTestId } = render(<BiometricLock />);
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
   });
 
   it("ignores the background event from Android's PIN fallback", async () => {
@@ -192,9 +187,8 @@ describe("BiometricLock", () => {
     await act(async () => resolveAuth({ success: true }));
     act(() => appStateListener?.("active"));
 
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
     expect(authenticate).toHaveBeenCalledTimes(1);
   });
 
@@ -209,8 +203,7 @@ describe("BiometricLock", () => {
 
     await act(async () => appStateListener?.("active"));
     expect(authenticate).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull(),
-    );
+    await act(async () => {});
+    expect(queryByTestId(TestID.BiometricLockScreen)).toBeNull();
   });
 });

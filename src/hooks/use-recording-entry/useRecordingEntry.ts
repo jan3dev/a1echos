@@ -1,7 +1,6 @@
-import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { RefObject, useCallback, useEffect, useRef } from "react";
-import type { View } from "react-native";
+import type { HostInstance } from "react-native";
 
 import type { ToastOptions } from "@/components/ui/toast/useToast";
 import { Routes } from "@/constants";
@@ -24,7 +23,7 @@ interface UseRecordingEntryParams {
   hideAlertToast: () => void;
   folderId?: string;
   onStarted?: () => void;
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
 }
 
 export const useRecordingEntry = ({

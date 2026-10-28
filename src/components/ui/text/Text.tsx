@@ -55,10 +55,9 @@ export const Text = ({
     ...typographyStyle,
     color: color ?? theme.colors.textPrimary,
     textAlign: align,
+    ...(size ? { fontSize: size } : null),
+    ...(height ? { lineHeight: height } : null),
   };
-
-  if (size) textStyles.fontSize = size;
-  if (height) textStyles.lineHeight = height;
 
   return (
     <RNText allowFontScaling={false} style={[textStyles, style]} {...props} />

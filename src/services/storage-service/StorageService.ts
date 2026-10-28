@@ -60,7 +60,7 @@ const createStorageService = () => {
       const file = getPendingDeletesFile();
 
       try {
-        file.move(
+        file.moveSync(
           new File(
             Paths.document,
             `${PENDING_DELETES_FILE}.corrupted.${timestamp}`,
@@ -92,7 +92,7 @@ const createStorageService = () => {
       }
 
       const rawJson = JSON.stringify(list);
-      file.write(rawJson);
+      file.writeSync(rawJson);
     } catch (error) {
       logError(error, {
         flag: FeatureFlag.storage,
@@ -128,7 +128,7 @@ const createStorageService = () => {
         try {
           const file = new File(path);
           if (file.exists) {
-            file.write("");
+            file.writeSync("");
             file.delete();
           }
           success = true;
@@ -196,7 +196,7 @@ const createStorageService = () => {
     const encrypted = await encryptionService.encrypt(rawJson);
 
     const file = getTranscriptionsFile();
-    file.write(encrypted);
+    file.writeSync(encrypted);
   };
 
   const saveTranscription = async (
@@ -251,7 +251,7 @@ const createStorageService = () => {
 
       const sourceFile = new File(audioFilePath);
       const targetFile = new File(dir, fileName);
-      sourceFile.copy(targetFile);
+      sourceFile.copySync(targetFile);
 
       return targetFile.uri;
     } catch (error) {
@@ -280,7 +280,7 @@ const createStorageService = () => {
       try {
         const file = new File(path);
         if (file.exists) {
-          file.write("");
+          file.writeSync("");
           file.delete();
         }
       } catch (error2) {

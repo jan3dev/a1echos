@@ -8,16 +8,16 @@ jest.mock("../log/log", () => ({
 }));
 
 // `expo-file-system` is mocked globally in jest.setup.js: `File` is a jest.fn
-// whose instances expose jest.fn write/delete/move and `exists: true`.
+// whose instances expose jest.fn writeSync/delete/moveSync and `exists: true`.
 const FileMock = File as unknown as jest.Mock;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { logWarn } = require("../log/log") as { logWarn: jest.Mock };
 
 interface MockFile {
   exists: boolean;
-  write: jest.Mock;
+  writeSync: jest.Mock;
   delete: jest.Mock;
-  move: jest.Mock;
+  moveSync: jest.Mock;
 }
 
 describe("writeKeyboardSettings", () => {
@@ -39,7 +39,7 @@ describe("writeKeyboardSettings", () => {
     const tmp = FileMock.mock.results[0].value as MockFile;
     const settings = FileMock.mock.results[1].value as MockFile;
 
-    expect(tmp.write).toHaveBeenCalledWith(
+    expect(tmp.writeSync).toHaveBeenCalledWith(
       JSON.stringify({
         autocorrect: true,
         hapticFeedback: true,
@@ -47,7 +47,7 @@ describe("writeKeyboardSettings", () => {
         micTimeoutSeconds: 300,
       }),
     );
-    expect(tmp.move).toHaveBeenCalledWith(settings);
+    expect(tmp.moveSync).toHaveBeenCalledWith(settings);
     expect(logWarn).not.toHaveBeenCalled();
   });
 
@@ -60,7 +60,7 @@ describe("writeKeyboardSettings", () => {
     });
 
     const tmp = FileMock.mock.results[0].value as MockFile;
-    expect(tmp.write).toHaveBeenCalledWith(
+    expect(tmp.writeSync).toHaveBeenCalledWith(
       JSON.stringify({
         autocorrect: false,
         hapticFeedback: false,
@@ -79,7 +79,7 @@ describe("writeKeyboardSettings", () => {
     });
 
     const tmp = FileMock.mock.results[0].value as MockFile;
-    expect(tmp.write).toHaveBeenCalledWith(
+    expect(tmp.writeSync).toHaveBeenCalledWith(
       JSON.stringify({
         autocorrect: true,
         hapticFeedback: true,
@@ -107,9 +107,9 @@ describe("writeKeyboardSettings", () => {
   it("skips the delete when files do not already exist", () => {
     const handle = (): MockFile => ({
       exists: false,
-      write: jest.fn(),
+      writeSync: jest.fn(),
       delete: jest.fn(),
-      move: jest.fn(),
+      moveSync: jest.fn(),
     });
     const tmp = handle();
     const settings = handle();
@@ -126,8 +126,8 @@ describe("writeKeyboardSettings", () => {
 
     expect(tmp.delete).not.toHaveBeenCalled();
     expect(settings.delete).not.toHaveBeenCalled();
-    expect(tmp.write).toHaveBeenCalled();
-    expect(tmp.move).toHaveBeenCalledWith(settings);
+    expect(tmp.writeSync).toHaveBeenCalled();
+    expect(tmp.moveSync).toHaveBeenCalledWith(settings);
   });
 
   it("swallows errors (fire-and-forget, never throws)", () => {

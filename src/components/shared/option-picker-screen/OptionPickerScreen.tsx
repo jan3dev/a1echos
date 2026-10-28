@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants } from "@/constants";
@@ -57,7 +57,7 @@ export const OptionPickerScreen = <T extends string | number>({
   const router = useRouter();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
   // Non-null exactly while a save is in flight, doubling as the optimistic

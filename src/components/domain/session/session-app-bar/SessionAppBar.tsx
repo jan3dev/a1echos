@@ -1,5 +1,5 @@
 import { RefObject } from "react";
-import { View } from "react-native";
+import { type HostInstance } from "react-native";
 
 import { useTheme } from "@/theme";
 
@@ -17,7 +17,7 @@ interface SessionAppBarProps {
   onMorePressed?: () => void;
   onExitSelectionPressed?: () => void;
   onSelectAllPressed?: () => void;
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
   scrolled?: boolean;
 }
 

@@ -61,7 +61,7 @@ const createAudioProtectionService = () => {
     }
 
     // iOS path: move the cache file in, then ensure the protection class is set.
-    new File(sourceUri).move(targetFile);
+    new File(sourceUri).moveSync(targetFile);
 
     if (Platform.OS === "ios" && EchosFileProtection) {
       try {
@@ -193,7 +193,7 @@ const createAudioProtectionService = () => {
         const original = new File(originalPath);
         if (!original.exists) {
           try {
-            new File(uri).move(new File(originalPath));
+            new File(uri).moveSync(new File(originalPath));
           } catch (error) {
             logWarn(`Recovery rename failed for ${uri}: ${error}`, {
               flag: FeatureFlag.storage,
@@ -243,8 +243,8 @@ const createAudioProtectionService = () => {
         const tmpPath = `${path}.tmp_enc`;
         const bakPath = `${path}.tmp_bak`;
         await EchosAndroidEncryptedFile.copyToEncrypted(path, tmpPath);
-        new File(path).move(new File(bakPath));
-        new File(tmpPath).move(new File(path));
+        new File(path).moveSync(new File(bakPath));
+        new File(tmpPath).moveSync(new File(path));
         const bak = new File(bakPath);
         if (bak.exists) bak.delete();
         migrated += 1;

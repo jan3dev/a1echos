@@ -244,7 +244,7 @@ const AnimatedGradientCircle = ({
     const handleChange = (next: AppStateStatus) => {
       frameCallback.setActive(active && next === "active");
     };
-    handleChange(AppState.currentState);
+    handleChange(AppState.currentState as AppStateStatus);
     const sub = AppState.addEventListener("change", handleChange);
     return () => sub.remove();
   }, [active, frameCallback]);
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   border: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 1000,
     borderWidth: 1,
   },

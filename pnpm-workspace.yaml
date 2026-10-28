@@ -52,6 +52,9 @@ allowBuilds:
   # color pipeline. esbuild and unrs-resolver fetch/build their platform native
   # binaries (used by metro/expo and the eslint resolver). msgpackr-extract is a
   # purely optional speedup with a JS fallback, so we skip its native build.
+  # @parcel/watcher ships prebuilt binaries; its install script only builds
+  # from source as a fallback.
+  "@parcel/watcher": false
   "@shopify/react-native-skia": true
   "@supersami/rn-foreground-service": false
   # better-sqlite3 compiles its native binding (prebuild-install, else node-gyp).
@@ -63,3 +66,7 @@ allowBuilds:
   unrs-resolver: true
 
 blockExoticSubdeps: false
+
+# Optional peer of expo; without this pnpm keeps the SDK 55 copy from the old lockfile.
+overrides:
+  "@expo/dom-webview": 58.0.2

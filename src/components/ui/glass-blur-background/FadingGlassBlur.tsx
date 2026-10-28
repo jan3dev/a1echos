@@ -1,11 +1,17 @@
-import MaskedView from "@react-native-masked-view/masked-view";
+import RNMaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, View } from "react-native";
+import { ComponentType, ReactElement } from "react";
+import { StyleSheet, View, ViewProps } from "react-native";
 
 import {
   GlassBlurBackground,
   GlassBlurBackgroundProps,
 } from "./GlassBlurBackground";
+
+// masked-view 0.3.2's types extend NativeMethods, which RN 0.88 removed.
+const MaskedView = RNMaskedView as unknown as ComponentType<
+  ViewProps & { maskElement: ReactElement }
+>;
 
 export interface FadingGlassBlurProps extends GlassBlurBackgroundProps {
   /** Offset from the parent's top where the fade-in starts. */

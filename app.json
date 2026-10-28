@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "appleTeamId": "8KC4F7DWTY",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Echos needs access to your microphone to record audio for transcription.",
@@ -19,7 +19,7 @@
       "bundleIdentifier": "com.a1lab.echos"
     },
     "android": {
-      "versionCode": 10,
+      "versionCode": 11,
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon-foreground.png",
@@ -98,7 +98,6 @@
       "./plugins/withEchosKeyboard",
       "./plugins/withSqlcipher",
       "./plugins/withFileProtection",
-      "./plugins/withIosSceneLifecycle",
       [
         "expo-build-properties",
         {
@@ -106,7 +105,7 @@
             "minSdkVersion": 26
           },
           "ios": {
-            "deploymentTarget": "16.0"
+            "deploymentTarget": "16.4"
           }
         }
       ]

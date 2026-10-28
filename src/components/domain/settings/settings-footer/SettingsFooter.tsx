@@ -1,14 +1,16 @@
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { useLocalization } from "@/hooks";
 import { useShowGlobalTooltip } from "@/stores";
 import { useTheme } from "@/theme";
+import { iosPressed } from "@/utils";
 
 import { Divider } from "../../../ui/divider/Divider";
 import { Icon } from "../../../ui/icon/Icon";
+import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
 
 interface SocialTag {
@@ -71,12 +73,12 @@ export const SettingsFooter = () => {
         </Text>
         <View style={styles.socialContainer}>
           {SOCIAL_TAGS.map((tagData) => (
-            <Pressable
+            <RipplePressable
               key={tagData.handle}
               onPress={() => handleLaunchX(tagData.handle)}
               style={({ pressed }) => [
                 styles.socialLink,
-                { opacity: pressed ? 0.7 : 1 },
+                { opacity: iosPressed(pressed) },
               ]}
               accessibilityLabel={`Open ${tagData.tag} on X`}
               accessibilityRole="link"
@@ -88,7 +90,7 @@ export const SettingsFooter = () => {
               >
                 {tagData.tag}
               </Text>
-            </Pressable>
+            </RipplePressable>
           ))}
         </View>
       </View>

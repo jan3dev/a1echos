@@ -1,6 +1,13 @@
 import { useRouter } from "expo-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { AppState, Platform, ScrollView, StyleSheet, View } from "react-native";
+import {
+  AppState,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type HostInstance,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -36,7 +43,7 @@ export default function AdvancedSettingsScreen() {
   const { theme } = useTheme();
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
   const smartSplitEnabled = useSmartSplitEnabled();

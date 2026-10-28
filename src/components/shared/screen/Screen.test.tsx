@@ -26,7 +26,7 @@ describe("Screen", () => {
         <Text>child</Text>
       </Screen>,
     );
-    const tree = toJSON() as { props: { style: unknown[] } };
+    const tree = toJSON() as unknown as { props: { style: unknown[] } };
     const flatStyle = Object.assign({}, ...tree.props.style.flat(Infinity));
     expect(flatStyle.flex).toBe(1);
     expect(flatStyle.backgroundColor).toBe("#abcdef");
@@ -38,7 +38,7 @@ describe("Screen", () => {
         <View />
       </Screen>,
     );
-    const tree = toJSON() as { props: { style: unknown[] } };
+    const tree = toJSON() as unknown as { props: { style: unknown[] } };
     const flatStyle = Object.assign({}, ...tree.props.style.flat(Infinity));
     expect(flatStyle.backgroundColor).toBe("red");
     expect(flatStyle.padding).toBe(12);

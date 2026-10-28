@@ -10,7 +10,7 @@ const widthOf = (
     <DownloadProgressBar ratio={ratio} testID={testID} />,
   );
   const track = getByTestId(testID);
-  const fill = track.children[0] as { props: { style: { width?: string }[] } };
+  const fill = track.children[0] as unknown as { props: { style: { width?: string }[] } };
   return fill.props.style.flat().find((s) => s && "width" in s)?.width;
 };
 

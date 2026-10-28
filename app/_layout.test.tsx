@@ -173,10 +173,6 @@ jest.mock("@/components", () => {
   };
 });
 
-jest.mock("@react-navigation/native", () => ({
-  useIsFocused: jest.fn(() => true),
-}));
-
 jest.mock("expo-router", () => {
   const { TestID: TID } = require("@/constants");
   return {
@@ -199,6 +195,7 @@ jest.mock("expo-router", () => {
     ),
     usePathname: jest.fn(() => "/"),
     useRouter: jest.fn(() => ({ push: jest.fn() })),
+    useIsFocused: jest.fn(() => true),
   };
 });
 
@@ -534,7 +531,7 @@ describe("RootLayout", () => {
     });
 
     it("does not render the tooltip in an unfocused screen", async () => {
-      const { useIsFocused } = require("@react-navigation/native");
+      const { useIsFocused } = require("expo-router");
       (useIsFocused as jest.Mock).mockReturnValue(false);
       const { useGlobalTooltip } = require("@/stores");
       (useGlobalTooltip as jest.Mock).mockReturnValue({
@@ -836,9 +833,9 @@ describe("RootLayout", () => {
 
   describe("GlobalKeyboardPromptNavigator", () => {
     afterEach(() => {
-      (require("@/stores").useKeyboardPromptVisible as jest.Mock).mockReturnValue(
-        false,
-      );
+      (
+        require("@/stores").useKeyboardPromptVisible as jest.Mock
+      ).mockReturnValue(false);
     });
 
     it("stays put while no prompt is requested", async () => {
@@ -874,8 +871,10 @@ describe("RootLayout", () => {
     it("marks seen instead when the keyboard is already added", async () => {
       const mockPush = jest.fn();
       const mockMark = jest.fn();
-      const { useKeyboardPromptVisible, useMarkKeyboardPromptSeen } =
-        require("@/stores");
+      const {
+        useKeyboardPromptVisible,
+        useMarkKeyboardPromptSeen,
+      } = require("@/stores");
       const { useRouter } = require("expo-router");
       const { readKeyboardEnabled } = require("@/utils");
       (useKeyboardPromptVisible as jest.Mock).mockReturnValue(true);

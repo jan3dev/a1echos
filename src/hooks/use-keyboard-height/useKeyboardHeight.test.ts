@@ -16,8 +16,8 @@ describe("useKeyboardHeight", () => {
     removeSpy = jest.fn();
     addListenerSpy = jest
       .spyOn(Keyboard, "addListener")
-      .mockImplementation((event: string, cb: Listener) => {
-        listeners[event] = cb;
+      .mockImplementation((event, cb) => {
+        listeners[event] = cb as Listener;
         return { remove: removeSpy } as never;
       });
   });

@@ -76,7 +76,8 @@ describe("useSwipeToDismiss", () => {
 
   it("resets the drag offset when reopened", () => {
     const { result, rerender } = renderHook(
-      ({ visible }) => useSwipeToDismiss(visible, jest.fn()),
+      ({ visible }: { visible: boolean }) =>
+        useSwipeToDismiss(visible, jest.fn()),
       { initialProps: { visible: true } },
     );
 

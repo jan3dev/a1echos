@@ -185,11 +185,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -239,7 +239,7 @@ describe("StorageService", () => {
       await storageService.saveTranscription(t);
 
       expect(mockEncrypt).toHaveBeenCalled();
-      expect(mockFileInstance.write).toHaveBeenCalled();
+      expect(mockFileInstance.writeSync).toHaveBeenCalled();
     });
 
     it("saveTranscription updates existing transcription", async () => {
@@ -325,11 +325,11 @@ describe("StorageService", () => {
         uri: "/mock/document/audio/test.wav",
         exists: true,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       mockDirInstance = {
@@ -358,12 +358,12 @@ describe("StorageService", () => {
       expect(mockDirInstance.create).toHaveBeenCalledWith({
         intermediates: true,
       });
-      expect(mockFileInstance.copy).toHaveBeenCalled();
+      expect(mockFileInstance.copySync).toHaveBeenCalled();
       expect(result).toBe(mockFileInstance.uri);
     });
 
     it("saveAudioFile throws on error", async () => {
-      (mockFileInstance.copy as jest.Mock).mockImplementation(() => {
+      (mockFileInstance.copySync as jest.Mock).mockImplementation(() => {
         throw new Error("copy failed");
       });
 
@@ -395,11 +395,11 @@ describe("StorageService", () => {
         uri: "/mock/document/pending_deletes.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -431,7 +431,7 @@ describe("StorageService", () => {
 
       await storageService.processPendingDeletes();
 
-      expect(mockFileInstance.move).toHaveBeenCalled();
+      expect(mockFileInstance.moveSync).toHaveBeenCalled();
     });
   });
 
@@ -443,11 +443,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -553,11 +553,11 @@ describe("StorageService", () => {
         uri: "/mock/document/audio/test.wav",
         exists: true,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       mockDirInstance = {
@@ -581,7 +581,7 @@ describe("StorageService", () => {
       await storageService.saveAudioFile("/source/audio.wav", "dest.wav");
 
       expect(mockDirInstance.create).not.toHaveBeenCalled();
-      expect(mockFileInstance.copy).toHaveBeenCalled();
+      expect(mockFileInstance.copySync).toHaveBeenCalled();
     });
   });
 
@@ -642,11 +642,11 @@ describe("StorageService", () => {
         uri: "/mock/document/pending_deletes.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -670,7 +670,7 @@ describe("StorageService", () => {
       await storageService.processPendingDeletes();
 
       // write should be called as part of the overwrite-then-delete fallback
-      expect(mockFileInstance.write).toHaveBeenCalled();
+      expect(mockFileInstance.writeSync).toHaveBeenCalled();
     });
 
     it("corrupted pending deletes with backup rename failure still returns empty", async () => {
@@ -678,7 +678,7 @@ describe("StorageService", () => {
       (mockFileInstance.text as jest.Mock).mockResolvedValueOnce(
         "not-valid-json{{{",
       );
-      (mockFileInstance.move as jest.Mock).mockImplementation(() => {
+      (mockFileInstance.moveSync as jest.Mock).mockImplementation(() => {
         throw new Error("rename failed");
       });
 
@@ -709,7 +709,7 @@ describe("StorageService", () => {
         throw new Error("delete failed");
       });
       // Second attempt write('') also fails (overwrite-then-delete fallback)
-      (mockFileInstance.write as jest.Mock).mockImplementation(
+      (mockFileInstance.writeSync as jest.Mock).mockImplementation(
         (content: string) => {
           if (content === "") {
             throw new Error("write overwrite failed");
@@ -722,7 +722,7 @@ describe("StorageService", () => {
 
       // savePendingDeletes should be called with remaining items
       // The write for the pending file should have been called with the JSON list
-      expect(mockFileInstance.write).toHaveBeenCalledWith(
+      expect(mockFileInstance.writeSync).toHaveBeenCalledWith(
         expect.stringContaining("stubborn.wav"),
       );
     });
@@ -773,11 +773,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: true,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -805,7 +805,7 @@ describe("StorageService", () => {
       await storageService.deleteTranscription("1");
 
       // write should be called during the overwrite-then-delete fallback
-      expect(mockFileInstance.write).toHaveBeenCalled();
+      expect(mockFileInstance.writeSync).toHaveBeenCalled();
     });
 
     it("deleteAudioFile both attempts fail: adds to pending deletes", async () => {
@@ -821,7 +821,7 @@ describe("StorageService", () => {
       (mockFileInstance.delete as jest.Mock).mockImplementation(() => {
         throw new Error("delete failed");
       });
-      (mockFileInstance.write as jest.Mock).mockImplementation(
+      (mockFileInstance.writeSync as jest.Mock).mockImplementation(
         (...args: unknown[]) => {
           // Allow write for encrypted data but fail for overwrite-then-delete attempt
           if (args[0] === "") {
@@ -845,11 +845,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -895,11 +895,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -952,11 +952,11 @@ describe("StorageService", () => {
         uri: "/mock/document/pending_deletes.json",
         exists: false,
         text: jest.fn().mockResolvedValue(""),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);
@@ -985,11 +985,11 @@ describe("StorageService", () => {
         uri: "/mock/document/transcriptions.json",
         exists: true,
         text: jest.fn(),
-        write: jest.fn(),
+        writeSync: jest.fn(),
         delete: jest.fn(),
         create: jest.fn(),
-        copy: jest.fn(),
-        move: jest.fn(),
+        copySync: jest.fn(),
+        moveSync: jest.fn(),
         size: 0,
       };
       MockFile.mockImplementation(() => mockFileInstance);

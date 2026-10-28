@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     height: 32,
   },
   track: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 16,
     borderWidth: 2,
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     top: -6,
   },
   dialogLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },

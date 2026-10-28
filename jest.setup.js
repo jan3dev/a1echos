@@ -111,10 +111,13 @@ jest.mock("expo-file-system", () => {
     text: jest.fn().mockResolvedValue(""),
     textSync: jest.fn(() => ""),
     write: jest.fn().mockResolvedValue(undefined),
+    writeSync: jest.fn(),
     delete: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockResolvedValue(undefined),
     copy: jest.fn().mockResolvedValue(undefined),
+    copySync: jest.fn(),
     move: jest.fn().mockResolvedValue(undefined),
+    moveSync: jest.fn(),
     downloadAsync: jest.fn().mockResolvedValue(undefined),
     size: 0,
     md5: "mock-md5",
@@ -206,6 +209,7 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: jest.fn(() => ({})),
   useSegments: jest.fn(() => []),
   usePathname: jest.fn(() => "/"),
+  useIsFocused: jest.fn(() => true),
   Link: "Link",
   Stack: {
     Screen: "Screen",
@@ -615,11 +619,6 @@ jest.mock("@supersami/rn-foreground-service", () => ({
     get_task: jest.fn(() => null),
     get_all_tasks: jest.fn(() => ({})),
   },
-}));
-
-jest.mock("@react-navigation/native", () => ({
-  ...jest.requireActual("@react-navigation/native"),
-  useIsFocused: jest.fn(() => true),
 }));
 
 // ---------------------------------------------------------------------------

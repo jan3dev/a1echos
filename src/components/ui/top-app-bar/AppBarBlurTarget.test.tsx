@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
-import { Platform, Text, View } from "react-native";
+import { Platform, Text, type HostInstance } from "react-native";
 
 import { AppBarBlurTarget } from "./AppBarBlurTarget";
 
@@ -33,7 +33,7 @@ describe("AppBarBlurTarget", () => {
 
   it("forwards the targetRef and passes children through", () => {
     Platform.OS = "ios";
-    const ref = React.createRef<View>();
+    const ref = React.createRef<HostInstance>();
     const { getByText } = render(
       <AppBarBlurTarget targetRef={ref}>
         <Text>child</Text>

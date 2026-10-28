@@ -313,7 +313,7 @@ const prepareBundledModel = async (
 
     // expo-asset uses hashed filenames — move to the model dir with the real name
     const cached = new File(asset.localUri);
-    cached.move(dest);
+    cached.moveSync(dest);
   });
 
   await Promise.all(assetPromises);
@@ -835,7 +835,7 @@ const createSherpaTranscriptionService = () => {
           remainingBytes,
         );
         const bytes =
-          readBytes > 0 ? handle.readBytes(readBytes) : new Uint8Array(0);
+          readBytes > 0 ? handle.readBytesSync(readBytes) : new Uint8Array(0);
         const isLast = bytes.length >= remainingBytes;
 
         const aligned = bytes.byteOffset % 2 === 0 ? bytes : bytes.slice();

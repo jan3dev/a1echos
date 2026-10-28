@@ -1,6 +1,6 @@
 import { Redirect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, View, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -58,7 +58,7 @@ function HomeScreenContent() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<FlatList<Session>>(null);
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const {
     scrolled,
     contentBelow,

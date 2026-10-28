@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { RefObject } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, type HostInstance } from "react-native";
 
 import { Routes, TestID } from "@/constants";
 import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
@@ -15,7 +15,7 @@ interface HomeAppBarProps {
   selectionMode?: boolean;
   selectionTitle?: string;
   onExitSelectionPressed?: () => void;
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
   scrolled?: boolean;
 }
 

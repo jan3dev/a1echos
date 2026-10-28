@@ -1,6 +1,6 @@
 import { BlurTargetView } from "expo-blur";
 import { RefObject } from "react";
-import { Platform, View, ViewProps } from "react-native";
+import { Platform, View, ViewProps, type HostInstance } from "react-native";
 
 import { useTheme } from "@/theme";
 
@@ -9,7 +9,7 @@ export interface AppBarBlurTargetProps extends ViewProps {
    * Ref handed to a bar's `blurTarget` (TopAppBar). Populated and used only on
    * Android; on other platforms the forwarded ref goes unused.
    */
-  targetRef?: RefObject<View | null>;
+  targetRef?: RefObject<HostInstance | null>;
 }
 
 /**

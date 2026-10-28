@@ -4,7 +4,13 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type HostInstance,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -49,7 +55,7 @@ export default function SettingsScreen() {
   const { loc } = useLocalization();
   const { i18n } = useTranslation();
   const insets = useSafeAreaInsets();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
   const selectedTheme = useSelectedTheme();

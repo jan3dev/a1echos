@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TextInput,
   View,
+  type HostInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -88,7 +89,7 @@ export default function TranscriptionEditScreen() {
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
-  const blurTargetRef = useRef<View>(null);
+  const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
   const textStyle = transcriptTextStyle(useTextAppearance());
 

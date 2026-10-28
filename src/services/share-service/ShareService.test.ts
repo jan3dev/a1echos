@@ -105,7 +105,7 @@ describe("ShareService", () => {
 
     it("writes one uniquely named .md per session", async () => {
       const write = jest.fn();
-      const createFile = jest.fn(() => ({ write }));
+      const createFile = jest.fn(() => ({ writeSync: write }));
       (Directory.pickDirectoryAsync as jest.Mock).mockResolvedValueOnce({
         list: () => [{ name: "Standup.md" }],
         createFile,

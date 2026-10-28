@@ -1,5 +1,5 @@
 import { RefObject } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type HostInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "@/theme";
@@ -14,7 +14,7 @@ export interface FloatingCTAModuleProps extends CTAModuleProps {
    * Android only: ref to the screen's `AppBarBlurTarget` wrapping the content
    * that scrolls behind the buttons.
    */
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
 }
 
 /**

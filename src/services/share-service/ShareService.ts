@@ -78,7 +78,9 @@ const createShareService = () => {
       let name = `${base}.md`;
       for (let n = 2; taken.has(name); n++) name = `${base} (${n}).md`;
       taken.add(name);
-      directory.createFile(name, "text/markdown").write(toMarkdown(content));
+      directory
+        .createFile(name, "text/markdown")
+        .writeSync(toMarkdown(content));
     }
     return true;
   };

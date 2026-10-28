@@ -29,12 +29,12 @@ const mockWav = (bytes: Uint8Array) => {
   const handle: {
     size: number;
     offset: number | null;
-    readBytes: jest.Mock;
+    readBytesSync: jest.Mock;
     close: jest.Mock;
   } = {
     size: bytes.length,
     offset: 0 as number | null,
-    readBytes: jest.fn(
+    readBytesSync: jest.fn(
       (length: number): Uint8Array =>
         bytes.slice(handle.offset!, handle.offset! + length),
     ),

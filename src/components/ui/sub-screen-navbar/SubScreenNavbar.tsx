@@ -6,6 +6,7 @@ import {
   StyleSheet,
   View,
   ViewStyle,
+  type HostInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -44,7 +45,7 @@ export interface SubScreenNavbarProps {
    * Android only: ref to the screen's `AppBarBlurTarget` wrapping the scroll
    * content that should show through the navbar's glass background.
    */
-  blurTarget?: RefObject<View | null>;
+  blurTarget?: RefObject<HostInstance | null>;
   /**
    * When false (default) the bar is a solid `surfaceBackground`; when true its
    * glass/blur background fades in. Drive from whether the scroll content

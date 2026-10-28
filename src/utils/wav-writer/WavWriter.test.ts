@@ -14,7 +14,7 @@ const fileInstances = new Map<string, ReturnType<typeof makeFileInstance>>();
 const makeFileInstance = (uri: string) => ({
   uri,
   exists: true,
-  write: jest.fn(),
+  writeSync: jest.fn(),
   bytesSync: jest.fn((): Uint8Array => new Uint8Array([1, 2, 3, 4])),
   delete: jest.fn(),
 });
@@ -87,8 +87,8 @@ describe("createPcmStreamWriter", () => {
       );
       writer.write(makeChunk(4));
       await flush();
-      expect(tempFile().write).toHaveBeenCalledTimes(1);
-      const [bytes, options] = tempFile().write.mock.calls[0];
+      expect(tempFile().writeSync).toHaveBeenCalledTimes(1);
+      const [bytes, options] = tempFile().writeSync.mock.calls[0];
       expect(bytes).toBeInstanceOf(Uint8Array);
       expect((bytes as Uint8Array).byteLength).toBe(4);
       expect(options).toBeUndefined();
@@ -104,8 +104,8 @@ describe("createPcmStreamWriter", () => {
       writer.write(makeChunk(4));
       writer.write(makeChunk(4));
       await flush();
-      expect(tempFile().write).toHaveBeenCalledTimes(2);
-      expect(tempFile().write.mock.calls[1][1]).toEqual({ append: true });
+      expect(tempFile().writeSync).toHaveBeenCalledTimes(2);
+      expect(tempFile().writeSync.mock.calls[1][1]).toEqual({ append: true });
     });
 
     it("tracks byte count from Uint8Array lengths", () => {
@@ -154,7 +154,7 @@ describe("createPcmStreamWriter", () => {
         numChannels,
         bitsPerSample,
       );
-      tempFile().write.mockImplementationOnce(() => {
+      tempFile().writeSync.mockImplementationOnce(() => {
         throw new Error("disk full");
       });
       writer.write(makeChunk(4));
@@ -163,7 +163,7 @@ describe("createPcmStreamWriter", () => {
       // but File.write is not invoked again.
       writer.write(makeChunk(4));
       await flush();
-      expect(tempFile().write).toHaveBeenCalledTimes(1);
+      expect(tempFile().writeSync).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -180,12 +180,12 @@ describe("createPcmStreamWriter", () => {
 
       expect(result).toBe(true);
       // Output file gets two writes: header first (no options), then PCM append.
-      expect(outFile().write).toHaveBeenCalledTimes(2);
-      const [header, headerOpts] = outFile().write.mock.calls[0];
+      expect(outFile().writeSync).toHaveBeenCalledTimes(2);
+      const [header, headerOpts] = outFile().writeSync.mock.calls[0];
       expect(header).toBeInstanceOf(Uint8Array);
       expect((header as Uint8Array).byteLength).toBe(44);
       expect(headerOpts).toBeUndefined();
-      expect(outFile().write.mock.calls[1][1]).toEqual({ append: true });
+      expect(outFile().writeSync.mock.calls[1][1]).toEqual({ append: true });
       expect(tempFile().bytesSync).toHaveBeenCalled();
       expect(tempFile().delete).toHaveBeenCalled();
     });
@@ -222,7 +222,7 @@ describe("createPcmStreamWriter", () => {
         numChannels,
         bitsPerSample,
       );
-      outFile().write.mockImplementationOnce(() => {
+      outFile().writeSync.mockImplementationOnce(() => {
         throw new Error("header write failed");
       });
       writer.write(makeChunk(4));
@@ -305,8 +305,8 @@ describe("sliceWavFile", () => {
     ]);
 
     const second = getFileInstance("file:///mock/rec_1.wav");
-    const header = second.write.mock.calls[0][0] as Uint8Array;
-    const pcm = second.write.mock.calls[1][0] as Uint8Array;
+    const header = second.writeSync.mock.calls[0][0] as Uint8Array;
+    const pcm = second.writeSync.mock.calls[1][0] as Uint8Array;
     const headerView = new DataView(header.buffer);
     expect(headerView.getUint32(24, true)).toBe(16000);
     expect(headerView.getUint32(40, true)).toBe(6);
@@ -314,7 +314,7 @@ describe("sliceWavFile", () => {
     expect([0, 1, 2].map((i) => pcmView.getInt16(i * 2, true))).toEqual([
       30, 40, 50,
     ]);
-    expect(second.write.mock.calls[1][1]).toEqual({ append: true });
+    expect(second.writeSync.mock.calls[1][1]).toEqual({ append: true });
   });
 
   it("returns null for empty or out-of-range slices", () => {

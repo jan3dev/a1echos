@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type TextInputInstance,
   View,
 } from "react-native";
 
@@ -20,6 +21,7 @@ import {
 import { FeatureFlag, logError } from "@/utils";
 
 import { Icon } from "../icon/Icon";
+import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
 export type TextFieldVariant = "default" | "brand" | "outlined";
 
@@ -90,7 +92,7 @@ export const TextField = ({
   const isFocused = forceFocus || internalFocus;
 
   const [text, setText] = useState(value);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<TextInputInstance>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const labelAnimation = useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -301,7 +303,8 @@ export const TextField = ({
             {trailingIconCount > 0 && (
               <View style={styles.trailingContainer}>
                 {showClear && (
-                  <Pressable
+                  <RipplePressable
+                    borderless
                     onPress={enabled ? handleClear : undefined}
                     style={[styles.iconButton, { right: clearIconRight }]}
                     accessibilityRole="button"
@@ -315,17 +318,18 @@ export const TextField = ({
                     >
                       <Icon name="close" size={14} color={iconColor} />
                     </View>
-                  </Pressable>
+                  </RipplePressable>
                 )}
                 {showPasteIcon && (
-                  <Pressable
+                  <RipplePressable
+                    borderless
                     onPress={enabled ? handlePaste : undefined}
                     style={[styles.iconButton, { right: pasteIconRight }]}
                     accessibilityRole="button"
                     accessibilityLabel="Paste from clipboard"
                   >
                     <Icon name="paste" size={ICON_SIZE} color={iconColor} />
-                  </Pressable>
+                  </RipplePressable>
                 )}
               </View>
             )}

@@ -27,10 +27,13 @@ export const segment = (
   t: number,
   start: number,
   duration: number,
-  ease: (x: number) => number = easeOutCubic,
+  ease?: (x: number) => number,
 ) => {
   "worklet";
-  return ease(Math.min(Math.max((t - start) / duration, 0), 1));
+  // Not a default param: worklets 0.13 doesn't capture closures used only there.
+  return (ease ?? easeOutCubic)(
+    Math.min(Math.max((t - start) / duration, 0), 1),
+  );
 };
 
 export const mix = (p: number, from: number, to: number) => {

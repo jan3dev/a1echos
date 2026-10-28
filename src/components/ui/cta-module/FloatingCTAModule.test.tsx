@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
-import { View } from "react-native";
+import { type HostInstance } from "react-native";
 
 import { PRIMARY_BUTTON_HEIGHT } from "../button/Button";
 import { FadingGlassBlur } from "../glass-blur-background/FadingGlassBlur";
@@ -9,7 +9,7 @@ import { FloatingCTAModule } from "./FloatingCTAModule";
 
 describe("FloatingCTAModule", () => {
   it("renders the buttons over a blur fading in across the primary button", () => {
-    const blurTarget = React.createRef<View>();
+    const blurTarget = React.createRef<HostInstance>();
     const onPress = jest.fn();
     const { getByText, UNSAFE_getByType } = render(
       <FloatingCTAModule

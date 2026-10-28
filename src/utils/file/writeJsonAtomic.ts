@@ -20,11 +20,11 @@ export const writeJsonAtomic = (
   try {
     const tmpFile = new File(Paths.document, `${filename}.tmp`);
     if (tmpFile.exists) tmpFile.delete();
-    tmpFile.write(JSON.stringify(value));
+    tmpFile.writeSync(JSON.stringify(value));
 
     const target = new File(Paths.document, filename);
     if (target.exists) target.delete();
-    tmpFile.move(target);
+    tmpFile.moveSync(target);
   } catch (error) {
     logWarn(`Failed to write ${options.label}: ${error}`, {
       flag: options.flag,

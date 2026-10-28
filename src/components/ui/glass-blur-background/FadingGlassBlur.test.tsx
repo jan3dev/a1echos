@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, type HostInstance } from "react-native";
 
 import { darkColors, useThemeStore } from "@/theme";
 
@@ -12,7 +12,7 @@ describe("FadingGlassBlur", () => {
   });
 
   it("masks the blur and glass tint with a fade starting at `top`", () => {
-    const blurTarget = React.createRef<View>();
+    const blurTarget = React.createRef<HostInstance>();
     const { UNSAFE_getByType, UNSAFE_getAllByType, toJSON } = render(
       <FadingGlassBlur blurTarget={blurTarget} top={-28} fadeHeight={56} />,
     );

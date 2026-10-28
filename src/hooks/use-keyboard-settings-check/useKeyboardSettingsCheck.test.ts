@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused } from "expo-router";
 import { AppState, Platform } from "react-native";
 
 import { useKeyboardSettingsCheck } from "./useKeyboardSettingsCheck";

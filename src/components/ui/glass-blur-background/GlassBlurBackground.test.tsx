@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
-import { View } from "react-native";
+import { type HostInstance } from "react-native";
 
 import { lightColors, useThemeStore } from "@/theme";
 
@@ -28,7 +28,7 @@ describe("GlassBlurBackground", () => {
   });
 
   it("forwards the blurTarget ref to the BlurView", () => {
-    const ref = React.createRef<View>();
+    const ref = React.createRef<HostInstance>();
     const [blur] = render(<GlassBlurBackground blurTarget={ref} />).toJSON() as any;
     expect(blur.props.blurTarget).toBe(ref);
   });
