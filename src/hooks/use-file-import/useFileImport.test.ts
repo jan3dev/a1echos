@@ -77,12 +77,19 @@ it("does nothing when the picker is cancelled", async () => {
   expect(mockCreateSession).not.toHaveBeenCalled();
 });
 
-it("opens the picker for audio and markdown, multi-select", async () => {
+it("opens the picker for audio, markdown and zip, multi-select", async () => {
   pick.mockResolvedValueOnce({ canceled: true, assets: null });
   await run();
   expect(pick).toHaveBeenCalledWith(
     expect.objectContaining({
-      type: ["audio/*", "text/plain", "text/markdown", "text/x-markdown"],
+      type: [
+        "audio/*",
+        "text/plain",
+        "text/markdown",
+        "text/x-markdown",
+        "application/zip",
+        "application/x-zip-compressed",
+      ],
       multiple: true,
       copyToCacheDirectory: true,
     }),
@@ -97,7 +104,12 @@ it("limits the Android picker to decodable audio types", async () => {
   Platform.OS = os;
   const { type } = pick.mock.calls[0][0];
   expect(type).toEqual(
-    expect.arrayContaining(["audio/mp4", "audio/ogg", "text/plain"]),
+    expect.arrayContaining([
+      "audio/mp4",
+      "audio/ogg",
+      "text/plain",
+      "application/zip",
+    ]),
   );
   expect(type).not.toContain("audio/*");
   expect(type).not.toContain("audio/x-aiff");
@@ -139,7 +151,7 @@ it("keeps the session on partial failure and lists the reason", async () => {
   expect(showAlertToast).toHaveBeenCalledWith({
     title: "uploadFailed_1",
     message: "a.mp3: uploadErrorTooLong",
-    messageMaxLines: 1,
+    messageMaxLines: 3,
     variant: "error",
   });
 });

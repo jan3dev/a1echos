@@ -28,6 +28,7 @@
   "uploadErrorEmpty": "File is empty",
   "uploadErrorNoSpeech": "No speech detected",
   "uploadErrorFailed": "Couldn't be processed",
+  "uploadErrorNoFiles": "No audio or text files inside",
   "homeNewFolder": "New Folder",
   "folderMoreOptions": "Folder options",
   "folderCreateTitle": "Create Folder",

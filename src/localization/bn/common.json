@@ -28,6 +28,7 @@
   "uploadErrorEmpty": "ফাইলটি খালি",
   "uploadErrorNoSpeech": "কোনো কথা শনাক্ত হয়নি",
   "uploadErrorFailed": "প্রসেস করা যায়নি",
+  "uploadErrorNoFiles": "ভেতরে কোনো অডিও বা টেক্সট ফাইল নেই",
   "homeNewFolder": "নতুন ফোল্ডার",
   "folderMoreOptions": "ফোল্ডারের বিকল্প",
   "folderCreateTitle": "ফোল্ডার তৈরি করুন",

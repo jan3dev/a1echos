@@ -36,6 +36,7 @@
   "uploadErrorEmpty": "Файл пуст",
   "uploadErrorNoSpeech": "Речь не обнаружена",
   "uploadErrorFailed": "Не удалось обработать",
+  "uploadErrorNoFiles": "Внутри нет аудио- или текстовых файлов",
   "homeNewFolder": "Новая папка",
   "folderMoreOptions": "Параметры папки",
   "folderCreateTitle": "Создать папку",

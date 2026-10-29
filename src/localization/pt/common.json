@@ -32,6 +32,7 @@
   "uploadErrorEmpty": "O arquivo está vazio",
   "uploadErrorNoSpeech": "Nenhuma fala detectada",
   "uploadErrorFailed": "Não foi possível processar",
+  "uploadErrorNoFiles": "Não contém arquivos de áudio ou texto",
   "homeNewFolder": "Nova pasta",
   "folderMoreOptions": "Opções da pasta",
   "folderCreateTitle": "Criar pasta",

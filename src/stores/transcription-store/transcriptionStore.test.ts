@@ -18,7 +18,7 @@ import {
   databaseService,
   sherpaTranscriptionService,
 } from "@/services";
-import { sliceWavFile } from "@/utils";
+import { extractZip, sliceWavFile } from "@/utils";
 
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
@@ -94,6 +94,7 @@ jest.mock("@/utils", () => ({
   },
   logError: jest.fn(),
   logWarn: jest.fn(),
+  extractZip: jest.fn(),
   formatTranscriptionText: jest.fn((text: string) => text),
   sliceWavFile: jest.fn(
     (uri: string, ranges: { startSample: number; endSample: number }[]) =>
@@ -3416,6 +3417,55 @@ describe("transcriptionStore.importFiles", () => {
       TranscriptionState.READY,
     );
     expect(useTranscriptionStore.getState().loadingPreview).toBeNull();
+  });
+
+  it("imports a zip's supported entries and deletes the archive", async () => {
+    fileMocks.set("/cache/x/notes.md", { text: "Note" });
+    (extractZip as jest.Mock).mockImplementationOnce(
+      async (_uri: string, keep: (name: string) => boolean) => ({
+        files: ["a.mp3", "b.wav", "notes.md", "photo.jpg", "doc.pdf"]
+          .filter(keep)
+          .map((name) => ({ uri: `/cache/x/${name}`, name, size: 4 })),
+        skipped: ["c.flac"],
+      }),
+    );
+
+    const result = await importFiles([
+      { uri: "/cache/batch.ZIP", name: "batch.ZIP" },
+    ]);
+
+    expect(result).toEqual({
+      imported: 3,
+      failed: [{ name: "c.flac", reason: "unsupported" }],
+    });
+    expect(deleted).toEqual(
+      expect.arrayContaining([
+        "/cache/batch.ZIP",
+        "/cache/x/a.mp3",
+        "/cache/x/notes.md",
+      ]),
+    );
+  });
+
+  it.each([
+    ["noFiles", async () => ({ files: [], skipped: [] })],
+    [
+      "failed",
+      async () => {
+        throw new Error("corrupt");
+      },
+    ],
+  ])("reports a zip as %s", async (reason, impl) => {
+    (extractZip as jest.Mock).mockImplementationOnce(impl);
+    const result = await importFiles([{ uri: "/cache/z.zip", name: "z.zip" }]);
+    expect(result).toEqual({
+      imported: 0,
+      failed: [{ name: "z.zip", reason }],
+    });
+    expect(deleted).toContain("/cache/z.zip");
+    expect(
+      useSessionStore.getState().updateSessionModifiedTimestamp,
+    ).not.toHaveBeenCalled();
   });
 
   it("exposes importFiles via useImportFiles", () => {

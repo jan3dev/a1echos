@@ -136,6 +136,7 @@ jest.mock("expo-file-system", () => {
   return {
     File: mockFile,
     Directory: mockDirectory,
+    FileMode: { ReadOnly: "r", WriteOnly: "w" },
     Paths: {
       document: "/mock/document",
       cache: "/mock/cache",

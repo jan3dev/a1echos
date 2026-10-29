@@ -40,6 +40,7 @@ export const useLocalization = () => {
       uploadErrorEmpty: t("uploadErrorEmpty"),
       uploadErrorNoSpeech: t("uploadErrorNoSpeech"),
       uploadErrorFailed: t("uploadErrorFailed"),
+      uploadErrorNoFiles: t("uploadErrorNoFiles"),
       homeNewFolder: t("homeNewFolder"),
       folderMoreOptions: t("folderMoreOptions"),
       folderCreateTitle: t("folderCreateTitle"),

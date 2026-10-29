@@ -28,6 +28,7 @@
   "uploadErrorEmpty": "فائل خالی ہے",
   "uploadErrorNoSpeech": "کوئی بولی گئی بات نہیں ملی",
   "uploadErrorFailed": "پروسیس نہیں ہو سکی",
+  "uploadErrorNoFiles": "اس میں کوئی آڈیو یا ٹیکسٹ فائل نہیں ہے",
   "homeNewFolder": "نیا فولڈر",
   "folderMoreOptions": "فولڈر کے اختیارات",
   "folderCreateTitle": "فولڈر بنائیں",

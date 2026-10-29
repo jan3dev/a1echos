@@ -32,6 +32,7 @@
   "uploadErrorEmpty": "El archivo está vacío",
   "uploadErrorNoSpeech": "No se detectó voz",
   "uploadErrorFailed": "No se pudo procesar",
+  "uploadErrorNoFiles": "No contiene archivos de audio ni de texto",
   "homeNewFolder": "Nueva carpeta",
   "folderMoreOptions": "Opciones de carpeta",
   "folderCreateTitle": "Crear carpeta",

@@ -94,6 +94,7 @@ export {
   writeKeyboardSettings,
   type KeyboardSettingsConfig,
 } from "./keyboard-settings/writeKeyboardSettings";
+export { extractZip } from "./file/extractZip";
 export { writeJsonAtomic } from "./file/writeJsonAtomic";
 export {
   readKeyboardLaunchMarker,

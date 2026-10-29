@@ -20,6 +20,7 @@ import { useLocalization } from "../use-localization/useLocalization";
 import { useSessionOperations } from "../use-session-operations/useSessionOperations";
 
 const TEXT_TYPES = ["text/plain", "text/markdown", "text/x-markdown"];
+const ZIP_TYPES = ["application/zip", "application/x-zip-compressed"];
 
 // MIME types Android providers report for the formats its decoder handles.
 // audio/mpeg also matches .mp2, which then fails per file.
@@ -42,9 +43,9 @@ const ANDROID_AUDIO_TYPES = [
 
 const pickerTypes = () =>
   Platform.OS === "android"
-    ? [...ANDROID_AUDIO_TYPES, ...TEXT_TYPES]
+    ? [...ANDROID_AUDIO_TYPES, ...TEXT_TYPES, ...ZIP_TYPES]
     : // .aifc/.caf/.m4b/.opus have no iOS MIME mapping; unsupported audio fails per file.
-      ["audio/*", ...TEXT_TYPES];
+      ["audio/*", ...TEXT_TYPES, ...ZIP_TYPES];
 
 interface UseFileImportParams {
   showAlertToast: (options: ToastOptions) => void;
@@ -73,6 +74,7 @@ export const useFileImport = ({
       tooLarge: loc.uploadErrorTooLarge,
       empty: loc.uploadErrorEmpty,
       noSpeech: loc.uploadErrorNoSpeech,
+      noFiles: loc.uploadErrorNoFiles,
       failed: loc.uploadErrorFailed,
     };
 
@@ -126,7 +128,7 @@ export const useFileImport = ({
           message: failed
             .map((f) => `${f.name}: ${reasonText[f.reason]}`)
             .join("\n"),
-          messageMaxLines: Math.min(failed.length, 5),
+          messageMaxLines: 3,
           variant: "error",
         });
       }

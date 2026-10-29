@@ -24,6 +24,7 @@
   "uploadErrorEmpty": "文件为空",
   "uploadErrorNoSpeech": "未检测到语音",
   "uploadErrorFailed": "无法处理",
+  "uploadErrorNoFiles": "其中没有音频或文本文件",
   "homeNewFolder": "新建文件夹",
   "folderMoreOptions": "文件夹选项",
   "folderCreateTitle": "创建文件夹",

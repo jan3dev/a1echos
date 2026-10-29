@@ -43,6 +43,7 @@
   "uploadErrorEmpty": "الملف فارغ",
   "uploadErrorNoSpeech": "لم يُكتشف أي كلام",
   "uploadErrorFailed": "تعذّرت المعالجة",
+  "uploadErrorNoFiles": "لا يحتوي على ملفات صوتية أو نصية",
   "homeNewFolder": "مجلد جديد",
   "folderMoreOptions": "خيارات المجلد",
   "folderCreateTitle": "إنشاء مجلد",

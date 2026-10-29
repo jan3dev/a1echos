@@ -17,6 +17,7 @@ import {
   sherpaTranscriptionService,
 } from "@/services";
 import {
+  extractZip,
   FeatureFlag,
   formatTranscriptionText,
   logError,
@@ -116,7 +117,13 @@ interface ImportFile {
 }
 
 export type ImportFailureReason =
-  "unsupported" | "tooLong" | "tooLarge" | "empty" | "noSpeech" | "failed";
+  | "unsupported"
+  | "tooLong"
+  | "tooLarge"
+  | "empty"
+  | "noSpeech"
+  | "noFiles"
+  | "failed";
 
 interface ImportFailure {
   name: string;
@@ -418,19 +425,48 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
     }
   };
 
+  const extensionOf = (name: string) =>
+    name.split(".").pop()?.toLowerCase() ?? "";
+
+  const isAudioName = (name: string) =>
+    (Platform.OS === "android"
+      ? ANDROID_AUDIO_EXTENSIONS
+      : IOS_AUDIO_EXTENSIONS
+    ).has(extensionOf(name));
+
+  const isTextName = (name: string) =>
+    ["md", "txt"].includes(extensionOf(name));
+
+  // Audio either platform decodes is extracted so the other one reports it
+  // as unsupported instead of dropping it silently.
+  const isImportableZipEntry = (name: string) =>
+    IOS_AUDIO_EXTENSIONS.has(extensionOf(name)) ||
+    ANDROID_AUDIO_EXTENSIONS.has(extensionOf(name)) ||
+    isTextName(name);
+
+  /** Extracts a zip's importable entries; the caller deletes the archive. */
+  const expandZip = async (
+    file: ImportFile,
+    failed: ImportFailure[],
+  ): Promise<ImportFile[]> => {
+    const { files, skipped } = await extractZip(file.uri, isImportableZipEntry);
+    failed.push(
+      ...skipped.map((name) => ({ name, reason: "unsupported" as const })),
+    );
+    if (files.length === 0 && skipped.length === 0) {
+      throw new ImportError("noFiles");
+    }
+    return files;
+  };
+
   const importFile = async (
     file: ImportFile,
     sessionId: string,
   ): Promise<Transcription> => {
-    const extension = file.name.split(".").pop()?.toLowerCase();
     let content: Pick<Transcription, "text" | "audioPath">;
-    const audioExtensions =
-      Platform.OS === "android"
-        ? ANDROID_AUDIO_EXTENSIONS
-        : IOS_AUDIO_EXTENSIONS;
-    if (extension && audioExtensions.has(extension)) {
+    if (isAudioName(file.name)) {
       content = await transcribeAudioFile(file.uri);
-    } else if (extension === "md" || extension === "txt") {
+    } else if (isTextName(file.name)) {
       const source = new File(file.uri);
       if (
         (file.size ?? source.size ?? 0) > AppConstants.IMPORT_MAX_TEXT_BYTES
@@ -1146,17 +1182,25 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       const isIncognito =
         useSessionStore.getState().incognitoSession?.id === sessionId;
       const failed: ImportFailure[] = [];
+      let imported = 0;
 
       try {
-        for (const file of files) {
+        const queue = [...files];
+        while (queue.length > 0) {
+          const file = queue.shift()!;
           let audioPath = "";
           try {
+            if (extensionOf(file.name) === "zip") {
+              queue.unshift(...(await expandZip(file, failed)));
+              continue;
+            }
             const transcription = await importFile(file, sessionId);
             audioPath = transcription.audioPath;
             if (!isIncognito) {
               await databaseService.upsertTranscription(transcription);
             }
             get().addTranscription(transcription);
+            imported++;
           } catch (error) {
             if (audioPath) await audioProtectionService.deleteAudio(audioPath);
             if (!(error instanceof ImportError)) {
@@ -1174,7 +1218,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
             if (picked.exists) picked.delete();
           }
         }
-        if (failed.length < files.length && !isIncognito) {
+        if (imported > 0 && !isIncognito) {
           await useSessionStore
             .getState()
             .updateSessionModifiedTimestamp(sessionId);
@@ -1184,7 +1228,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         get().transitionTo(TranscriptionState.READY);
       }
 
-      return { imported: files.length - failed.length, failed };
+      return { imported, failed };
     },
 
     startRecording: async () => {

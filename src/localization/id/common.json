@@ -24,6 +24,7 @@
   "uploadErrorEmpty": "File kosong",
   "uploadErrorNoSpeech": "Tidak ada ucapan yang terdeteksi",
   "uploadErrorFailed": "Tidak dapat diproses",
+  "uploadErrorNoFiles": "Tidak ada file audio atau teks di dalamnya",
   "homeNewFolder": "Folder Baru",
   "folderMoreOptions": "Opsi folder",
   "folderCreateTitle": "Buat Folder",

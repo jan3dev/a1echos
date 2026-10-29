@@ -32,6 +32,7 @@
   "uploadErrorEmpty": "Le fichier est vide",
   "uploadErrorNoSpeech": "Aucune parole détectée",
   "uploadErrorFailed": "Traitement impossible",
+  "uploadErrorNoFiles": "Aucun fichier audio ou texte à l’intérieur",
   "homeNewFolder": "Nouveau dossier",
   "folderMoreOptions": "Options du dossier",
   "folderCreateTitle": "Créer un dossier",
