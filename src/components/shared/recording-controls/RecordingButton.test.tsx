@@ -40,7 +40,7 @@ describe("RecordingButton", () => {
     const { getByLabelText } = render(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
   });
 
   it.each([
@@ -79,7 +79,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Stop Recording")).toBeTruthy();
+    expect(getByLabelText("stopRecording")).toBeTruthy();
   });
 
   it('renders with "Transcribing" accessibility label in TRANSCRIBING state', () => {
@@ -89,7 +89,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Transcribing")).toBeTruthy();
+    expect(getByLabelText("transcribing")).toBeTruthy();
   });
 
   it("pressing start triggers onRecordingStart callback and haptic feedback", () => {
@@ -104,7 +104,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     // Haptic fires synchronously; callback fires after the shrink phase.
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
       Haptics.ImpactFeedbackStyle.Medium,
@@ -130,7 +130,7 @@ describe("RecordingButton", () => {
           "rgba(255,255,255,0.04)",
       );
     expect(hasBorder()).toBe(false);
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     expect(hasBorder()).toBe(true);
     advance(2000);
     expect(hasBorder()).toBe(false);
@@ -147,7 +147,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
       Haptics.ImpactFeedbackStyle.Medium,
     );
@@ -163,7 +163,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     expect(onRecordingStart).not.toHaveBeenCalled();
   });
 
@@ -174,19 +174,19 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Transcribing")).toBeTruthy();
+    expect(getByLabelText("transcribing")).toBeTruthy();
   });
 
   it("renders default READY state when no state prop provided", () => {
     const { getByLabelText } = render(<RecordingButton colors={mockColors} />);
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
   });
 
   it("renders READY state for ERROR state (default case in switch)", () => {
     const { getByLabelText } = render(
       <RecordingButton state={TranscriptionState.ERROR} colors={mockColors} />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
   });
 
   it("renders READY state for STREAMING state (default case in switch)", () => {
@@ -196,7 +196,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
   });
 
   it("stop recording fires the same haptic as start", () => {
@@ -209,7 +209,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     expect(Haptics.impactAsync).toHaveBeenCalledWith(
       Haptics.ImpactFeedbackStyle.Medium,
     );
@@ -220,7 +220,7 @@ describe("RecordingButton", () => {
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
     expect(() => {
-      fireEvent.press(getByLabelText("Start Recording"));
+      fireEvent.press(getByLabelText("startRecording"));
     }).not.toThrow();
   });
 
@@ -232,7 +232,7 @@ describe("RecordingButton", () => {
       />,
     );
     expect(() => {
-      fireEvent.press(getByLabelText("Stop Recording"));
+      fireEvent.press(getByLabelText("stopRecording"));
     }).not.toThrow();
   });
 
@@ -247,8 +247,8 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Start Recording"));
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
+    fireEvent.press(getByLabelText("startRecording"));
     // Both presses scheduled before timers advance — only the first one
     // gets through because the second is blocked by debouncing.
     advance(100);
@@ -314,10 +314,10 @@ describe("RecordingButton", () => {
     rerender(
       <RecordingButton state={TranscriptionState.READY} colors={mockColors} />,
     );
-    expect(getByLabelText("Transcribing")).toBeTruthy();
+    expect(getByLabelText("transcribing")).toBeTruthy();
     expect(queryByTestId("icon-mic")).toBeNull();
     advance(1000);
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
     expect(queryByTestId("processing-icon")).toBeNull();
     jest.useRealTimers();
   });
@@ -341,7 +341,7 @@ describe("RecordingButton", () => {
     );
     // The transcribing button's accessibility label is "Transcribing"
     // and the TouchableOpacity has disabled={true}
-    const button = getByLabelText("Transcribing");
+    const button = getByLabelText("transcribing");
     expect(button.props.accessibilityRole).toBe("button");
   });
 
@@ -353,7 +353,7 @@ describe("RecordingButton", () => {
         size={48}
       />,
     );
-    expect(getByLabelText("Start Recording")).toBeTruthy();
+    expect(getByLabelText("startRecording")).toBeTruthy();
   });
 
   it("cleanup timer refs on unmount", () => {
@@ -379,7 +379,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     expect(onRecordingStop).not.toHaveBeenCalled();
     advance(100);
     expect(onRecordingStop).toHaveBeenCalledTimes(1);
@@ -418,7 +418,7 @@ describe("RecordingButton", () => {
     );
     // The component catches errors in handleRecordingAction
     expect(() => {
-      fireEvent.press(getByLabelText("Start Recording"));
+      fireEvent.press(getByLabelText("startRecording"));
     }).not.toThrow();
   });
 
@@ -434,7 +434,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     // Advance past pulse duration (50*2 = 100ms)
     await act(async () => {
       jest.advanceTimersByTime(100);
@@ -473,9 +473,9 @@ describe("RecordingButton", () => {
       />,
     );
     // First press sets debouncing
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     // Second press while debouncing should be ignored
-    fireEvent.press(getByLabelText("Stop Recording"));
+    fireEvent.press(getByLabelText("stopRecording"));
     // Only one stop should eventually fire
     await act(async () => {
       jest.advanceTimersByTime(200); // past pulse duration (100*2)
@@ -496,7 +496,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     await act(async () => {
       jest.advanceTimersByTime(100); // past press-down → action fires
     });
@@ -519,7 +519,7 @@ describe("RecordingButton", () => {
     );
 
     // Should be able to press again
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     await act(async () => {
       jest.advanceTimersByTime(100);
     });
@@ -539,7 +539,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     await act(async () => {
       jest.advanceTimersByTime(100);
     });
@@ -550,7 +550,7 @@ describe("RecordingButton", () => {
       jest.advanceTimersByTime(100);
     });
 
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     await act(async () => {
       jest.advanceTimersByTime(100);
     });
@@ -568,7 +568,7 @@ describe("RecordingButton", () => {
       />,
     );
 
-    const button = getByLabelText("Preparing recording");
+    const button = getByLabelText("preparingRecording");
     expect(button.props.accessibilityRole).toBe("button");
     expect(button.props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true, busy: true }),
@@ -585,8 +585,8 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Preparing recording")).toBeTruthy();
-    expect(queryByLabelText("Start Recording")).toBeNull();
+    expect(getByLabelText("preparingRecording")).toBeTruthy();
+    expect(queryByLabelText("startRecording")).toBeNull();
   });
 
   it("renders the spinner when isInitializing is true and state is ERROR", () => {
@@ -597,7 +597,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Preparing recording")).toBeTruthy();
+    expect(getByLabelText("preparingRecording")).toBeTruthy();
   });
 
   it("ignores isInitializing while RECORDING (stop button stays visible)", () => {
@@ -608,7 +608,7 @@ describe("RecordingButton", () => {
         colors={mockColors}
       />,
     );
-    expect(getByLabelText("Stop Recording")).toBeTruthy();
+    expect(getByLabelText("stopRecording")).toBeTruthy();
   });
 
   it("state change to READY resets gesture isolation", () => {
@@ -634,7 +634,7 @@ describe("RecordingButton", () => {
     );
     advance(100); // past any debounce
 
-    fireEvent.press(getByLabelText("Start Recording"));
+    fireEvent.press(getByLabelText("startRecording"));
     advance(100); // past press-down → action fires
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
     jest.useRealTimers();

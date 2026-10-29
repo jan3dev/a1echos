@@ -73,7 +73,7 @@ describe("TextField", () => {
       jest.runAllTimers();
     });
 
-    fireEvent.press(getByLabelText("Clear text"));
+    fireEvent.press(getByLabelText("clearText"));
 
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(onChangeText).toHaveBeenCalledWith("");
@@ -98,7 +98,7 @@ describe("TextField", () => {
     // Type to start a debounce timer.
     fireEvent.changeText(getByDisplayValue(""), "typed");
     // Press clear before the debounce fires.
-    fireEvent.press(getByLabelText("Clear text"));
+    fireEvent.press(getByLabelText("clearText"));
 
     // onChangeText is called immediately with "" by handleClear, and the
     // pending debounce timer is cancelled (no second call after timers run).
@@ -129,7 +129,7 @@ describe("TextField", () => {
     fireEvent.changeText(getByDisplayValue(""), "typed");
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
     await waitFor(() => {
       expect(onChangeText).toHaveBeenCalledWith("from clip");
@@ -280,8 +280,8 @@ describe("TextField", () => {
       jest.runAllTimers();
     });
 
-    expect(empty.getByLabelText("Paste from clipboard")).toBeTruthy();
-    expect(filled.getByLabelText("Paste from clipboard")).toBeTruthy();
+    expect(empty.getByLabelText("pasteFromClipboard")).toBeTruthy();
+    expect(filled.getByLabelText("pasteFromClipboard")).toBeTruthy();
   });
 
   it("paste icon invokes Clipboard.getStringAsync and updates value via onChangeText + onPaste", async () => {
@@ -304,7 +304,7 @@ describe("TextField", () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
 
     expect(Clipboard.getStringAsync).toHaveBeenCalled();
@@ -334,7 +334,7 @@ describe("TextField", () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
 
     await waitFor(() => {
@@ -364,7 +364,7 @@ describe("TextField", () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
     await act(async () => {
       await Promise.resolve();
@@ -393,7 +393,7 @@ describe("TextField", () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
 
     await act(async () => {
@@ -422,7 +422,7 @@ describe("TextField", () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByLabelText("Paste from clipboard"));
+      fireEvent.press(getByLabelText("pasteFromClipboard"));
     });
     await act(async () => {
       await Promise.resolve();
@@ -441,8 +441,8 @@ describe("TextField", () => {
       jest.runAllTimers();
     });
 
-    expect(getByLabelText("Clear text")).toBeTruthy();
-    expect(getByLabelText("Paste from clipboard")).toBeTruthy();
+    expect(getByLabelText("clearText")).toBeTruthy();
+    expect(getByLabelText("pasteFromClipboard")).toBeTruthy();
 
     const json = JSON.stringify(toJSON());
     expect(json).toContain('"borderRadius":9');
@@ -465,7 +465,7 @@ describe("TextField", () => {
       jest.runAllTimers();
     });
 
-    fireEvent.press(getByLabelText("Clear text"));
+    fireEvent.press(getByLabelText("clearText"));
     expect(onClear).not.toHaveBeenCalled();
     expect(onChangeText).not.toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { I18nManager, StyleSheet, View } from "react-native";
 import Animated, {
   interpolateColor,
   type SharedValue,
@@ -61,6 +61,7 @@ const ROW_HEIGHT = 64;
 const DIALOG_WIDTH = 296;
 const DIALOG_ROOM = 200;
 const THUMB_BOX = 28;
+const THUMB_X_SIGN = I18nManager.isRTL ? -1 : 1;
 
 // Timeline (ms). Each TAP_* is the moment the finger presses down.
 const TAP_TOGGLE = 1150;
@@ -212,7 +213,7 @@ function MaterialSwitch({ t, c }: { t: SharedValue<number>; c: Palette }) {
     return {
       backgroundColor: interpolateColor(on, [0, 1], [c.outline, c.onPrimary]),
       transform: [
-        { translateX: mix(on, 16, 36) - THUMB_BOX / 2 },
+        { translateX: THUMB_X_SIGN * (mix(on, 16, 36) - THUMB_BOX / 2) },
         { scale: diameter / THUMB_BOX },
       ],
     };

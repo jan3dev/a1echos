@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import {
   type AccessibilityActionEvent,
   type GestureResponderEvent,
+  I18nManager,
   PanResponder,
   StyleSheet,
   View,
@@ -97,7 +98,8 @@ export const FontSizeSlider = ({
   const selectAt = (event: GestureResponderEvent) => {
     if (!trackWidth) return;
     const x = event.nativeEvent.pageX - trackPageX.current;
-    selectIndex(Math.round((x / trackWidth) * LAST_INDEX));
+    const fromStart = I18nManager.isRTL ? trackWidth - x : x;
+    selectIndex(Math.round((fromStart / trackWidth) * LAST_INDEX));
   };
 
   const endSlide = () => {
@@ -170,7 +172,7 @@ export const FontSizeSlider = ({
             <View
               style={[
                 styles.thumb,
-                { left: (index / LAST_INDEX) * trackWidth - THUMB_SIZE / 2 },
+                { start: (index / LAST_INDEX) * trackWidth - THUMB_SIZE / 2 },
               ]}
             />
           )}

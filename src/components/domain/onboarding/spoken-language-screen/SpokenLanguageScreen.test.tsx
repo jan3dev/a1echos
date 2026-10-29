@@ -84,7 +84,7 @@ describe("SpokenLanguageScreen", () => {
     fireEvent.changeText(search, "Klingon");
     expect(getByTestId("no-languages-found")).toBeTruthy();
 
-    fireEvent.press(getByLabelText("Clear text"));
+    fireEvent.press(getByLabelText("clearText"));
     expect(getByText("English")).toBeTruthy();
     expect(getByText("Portuguese")).toBeTruthy();
   });

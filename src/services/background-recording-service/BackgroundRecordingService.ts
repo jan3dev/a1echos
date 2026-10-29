@@ -1,5 +1,6 @@
 import { PermissionsAndroid, Platform } from "react-native";
 
+import { i18n } from "@/localization";
 import { FeatureFlag, logError, logWarn } from "@/utils";
 
 const NOTIFICATION_ID = 1001;
@@ -8,8 +9,7 @@ const TASK_ID = "echos_recording_task";
 let isRegistered = false;
 let notificationPermissionGranted: boolean | null = null;
 let ForegroundService:
-  | typeof import("@supersami/rn-foreground-service").default
-  | null = null;
+  typeof import("@supersami/rn-foreground-service").default | null = null;
 
 const getForegroundService = async () => {
   if (Platform.OS !== "android") {
@@ -119,7 +119,7 @@ const createBackgroundRecordingService = () => {
         await service.start({
           id: NOTIFICATION_ID,
           title: "Echos",
-          message: "Recording in progress...",
+          message: i18n.t("recordingInProgress"),
           icon: "ic_launcher",
           largeIcon: "ic_launcher",
           importance: "high",

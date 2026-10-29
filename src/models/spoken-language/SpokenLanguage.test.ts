@@ -1,3 +1,5 @@
+import { i18n } from "@/localization";
+
 import { SupportedLanguages, getCountryCode } from "./SpokenLanguage";
 
 describe("SpokenLanguage", () => {
@@ -118,6 +120,20 @@ describe("SpokenLanguage", () => {
 
     it("returns an empty list when nothing matches", () => {
       expect(SupportedLanguages.search(languages, "Klingon")).toEqual([]);
+    });
+
+    it("names languages in the app language and matches it or English", async () => {
+      await i18n.changeLanguage("fr");
+      try {
+        const french = SupportedLanguages.forCodes(["de", "en"]);
+        expect(french.map((l) => l.name)).toEqual(["Anglais", "Allemand"]);
+        const codes = (query: string) =>
+          SupportedLanguages.search(french, query).map((l) => l.code);
+        expect(codes("allem")).toEqual(["de"]);
+        expect(codes("german")).toEqual(["de"]);
+      } finally {
+        await i18n.changeLanguage("en");
+      }
     });
   });
 

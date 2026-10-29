@@ -1,4 +1,6 @@
-import i18n, { resolveAppLanguage } from "./i18n";
+import { I18nManager } from "react-native";
+
+import i18n, { resolveAppLanguage, syncLayoutDirection } from "./i18n";
 
 const en = require("../en/common.json") as Record<string, string>;
 
@@ -15,9 +17,6 @@ const LOCALES: Record<string, Record<string, string>> = {
   zh: require("../zh/common.json"),
 };
 
-// Translated but not loaded by the app until right-to-left layout is supported.
-const HIDDEN_LOCALES = new Set(["ar", "ur"]);
-
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 
 const placeholders = (text: string) =>
@@ -31,8 +30,6 @@ const pluralBases = new Set(
 const plainKeys = Object.keys(en).filter((key) => !PLURAL_SUFFIX.test(key));
 
 describe.each(Object.entries(LOCALES))("%s translations", (lng, strings) => {
-  const itLoaded = HIDDEN_LOCALES.has(lng) ? it.skip : it;
-
   const categories = new Intl.PluralRules(lng).resolvedOptions()
     .pluralCategories;
 
@@ -81,13 +78,13 @@ describe.each(Object.entries(LOCALES))("%s translations", (lng, strings) => {
     }
   });
 
-  itLoaded("registers the translations used by the app", () => {
+  it("registers the translations used by the app", () => {
     for (const [key, value] of Object.entries(strings)) {
       expect(i18n.getResource(lng, "common", key)).toBe(value);
     }
   });
 
-  itLoaded.each([0, 1, 2, 3, 5, 11, 21, 100, 101, 1000000])(
+  it.each([0, 1, 2, 3, 5, 11, 21, 100, 101, 1000000])(
     "renders plural messages for count %i without falling back to English",
     (count) => {
       const category = new Intl.PluralRules(lng).select(count);
@@ -113,20 +110,22 @@ describe("i18n resources", () => {
     expect(i18n.t("sessionCount", { count: 3 })).toBe("3 сессии");
     expect(i18n.t("sessionCount", { count: 5 })).toBe("5 сессий");
 
+    await i18n.changeLanguage("ar");
+    expect(i18n.t("sessionCount", { count: 2 })).toBe("جلستان");
+
     await i18n.changeLanguage("zh");
     expect(i18n.t("selectedCount", { count: 0 })).toBe("选择项目");
     expect(i18n.t("selectedCount", { count: 4 })).toBe("已选择 4 项");
   });
 
-  it("does not load right-to-left languages", () => {
-    for (const lng of HIDDEN_LOCALES) {
-      expect(i18n.hasResourceBundle(lng, "common")).toBe(false);
+  it("translates every language name in every locale", async () => {
+    const codes = Object.keys(i18n.getResourceBundle("en", "languages")).sort();
+    for (const lng of Object.keys(LOCALES)) {
+      const names = i18n.getResourceBundle(lng, "languages");
+      expect(Object.keys(names).sort()).toEqual(codes);
     }
-  });
-
-  it("falls back to English for keys only English has", async () => {
     await i18n.changeLanguage("fr");
-    expect(i18n.t("english", { ns: "languages" })).toBe("English");
+    expect(i18n.t("zh-hant", { ns: "languages" })).toBe("Chinois (繁體)");
   });
 });
 
@@ -136,5 +135,33 @@ describe("resolveAppLanguage", () => {
     expect(resolveAppLanguage("de")).toBe("en");
     expect(resolveAppLanguage("toString")).toBe("en");
     expect(resolveAppLanguage(null)).toBe("en");
+  });
+});
+
+describe("syncLayoutDirection", () => {
+  beforeEach(() => {
+    jest.spyOn(I18nManager, "allowRTL").mockImplementation(() => undefined);
+    jest.spyOn(I18nManager, "forceRTL").mockImplementation(() => undefined);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it.each([
+    ["ar", false],
+    ["ur", false],
+    ["en", true],
+  ])("forces %s when the launch direction differs", (lng, launchedRTL) => {
+    jest.replaceProperty(I18nManager, "isRTL", launchedRTL);
+    expect(syncLayoutDirection(lng)).toBe(true);
+    expect(I18nManager.allowRTL).toHaveBeenCalledWith(!launchedRTL);
+    expect(I18nManager.forceRTL).toHaveBeenCalledWith(!launchedRTL);
+  });
+
+  it.each([
+    ["ar", true],
+    ["en", false],
+  ])("leaves %s alone when the direction already matches", (lng, isRTL) => {
+    jest.replaceProperty(I18nManager, "isRTL", isRTL);
+    expect(syncLayoutDirection(lng)).toBe(false);
+    expect(I18nManager.forceRTL).not.toHaveBeenCalled();
   });
 });

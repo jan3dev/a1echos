@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "Echos a besoin d’accéder à votre micro pour enregistrer l’audio à transcrire.",
+    "NSFaceIDUsageDescription": "Autorisez Echos à utiliser Face ID pour déverrouiller l’app."
+  }
+}

@@ -34,6 +34,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { TestID } from "@/constants";
+import { useLocalization } from "@/hooks";
 import { TranscriptionState } from "@/models";
 import {
   AquaColors,
@@ -294,6 +295,7 @@ export const RecordingButton = ({
   colors,
   paused = false,
 }: RecordingButtonProps) => {
+  const { loc } = useLocalization();
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [gestureIsolationActive, setGestureIsolationActive] = useState(false);
   const [startPressed, setStartPressed] = useState(false);
@@ -443,12 +445,11 @@ export const RecordingButton = ({
   const isBusy = isStarting || isProcessing;
   const showSurface = isStarting || isRecording || startPressed;
 
-  const busyLabel =
-    isStarting || isInitializingIdle ? "Preparing recording" : "Transcribing";
-  const busyTestID =
-    busyLabel === "Transcribing"
-      ? TestID.RecordingButtonTranscribing
-      : TestID.RecordingButtonStarting;
+  const isPreparing = isStarting || isInitializingIdle;
+  const busyLabel = isPreparing ? loc.preparingRecording : loc.transcribing;
+  const busyTestID = isPreparing
+    ? TestID.RecordingButtonStarting
+    : TestID.RecordingButtonTranscribing;
 
   // 0 = gradient fills the button, 1 = surface disc has pushed it out past
   // the edge. Driven by shared values so a mid-transition state change reverses
@@ -538,8 +539,8 @@ export const RecordingButton = ({
             isBusy
               ? busyLabel
               : isRecording
-                ? "Stop Recording"
-                : "Start Recording"
+                ? loc.stopRecording
+                : loc.startRecording
           }
           accessibilityState={
             isBusy ? { disabled: true, busy: true } : undefined

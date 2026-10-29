@@ -3,6 +3,7 @@ import { RefObject } from "react";
 import { Pressable, type HostInstance } from "react-native";
 
 import { Routes, TestID } from "@/constants";
+import { useLocalization } from "@/hooks";
 import { useIsIncognitoMode, useSetIncognitoMode } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -27,6 +28,7 @@ export const HomeAppBar = ({
   scrolled = false,
 }: HomeAppBarProps) => {
   const { theme } = useTheme();
+  const { loc } = useLocalization();
   const router = useRouter();
   const isIncognitoMode = useIsIncognitoMode();
   const setIncognitoMode = useSetIncognitoMode();
@@ -49,7 +51,7 @@ export const HomeAppBar = ({
             rippleColor={theme.colors.ripple}
             borderless
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={loc.back}
           >
             <Icon
               name="chevron_left"
@@ -66,7 +68,7 @@ export const HomeAppBar = ({
             rippleColor={theme.colors.ripple}
             borderless
             accessibilityRole="button"
-            accessibilityLabel="Exit selection mode"
+            accessibilityLabel={loc.exitSelectionMode}
           >
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
           </RipplePressable>,
@@ -78,7 +80,7 @@ export const HomeAppBar = ({
   const leading = (
     <GlassIconButton
       onPress={() => router.push(Routes.settings)}
-      accessibilityLabel="Settings"
+      accessibilityLabel={loc.settingsTitle}
       testID={TestID.HomeSettingsButton}
     >
       <Icon name="menu" size={24} color={theme.colors.textPrimary} />
@@ -106,7 +108,7 @@ export const HomeAppBar = ({
       key="ghost"
       onPress={handleIncognitoToggle}
       accessibilityLabel={
-        isIncognitoMode ? "Disable incognito mode" : "Enable incognito mode"
+        isIncognitoMode ? loc.disableIncognitoMode : loc.enableIncognitoMode
       }
       accessibilityState={{ selected: isIncognitoMode }}
     >

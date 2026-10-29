@@ -93,7 +93,7 @@ export const Toggle = ({
           style={[
             styles.thumb,
             {
-              left: thumbPosition,
+              start: thumbPosition,
               backgroundColor: thumbColorValue,
               shadowColor: AquaPrimitiveColors.black,
               shadowOffset: {

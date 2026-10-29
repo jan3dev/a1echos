@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "ٹرانسکرپشن کے لیے آڈیو ریکارڈ کرنے کے لیے Echos کو آپ کے مائیکروفون تک رسائی درکار ہے۔",
+    "NSFaceIDUsageDescription": "ایپ ان لاک کرنے کے لیے Echos کو Face ID استعمال کرنے کی اجازت دیں۔"
+  }
+}

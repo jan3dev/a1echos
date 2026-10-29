@@ -7,6 +7,18 @@
     "icon": "./assets/images/icon-dark.png",
     "scheme": "echos",
     "userInterfaceStyle": "automatic",
+    "locales": {
+      "ar": "./src/localization/ar/native.json",
+      "bn": "./src/localization/bn/native.json",
+      "es": "./src/localization/es/native.json",
+      "fr": "./src/localization/fr/native.json",
+      "hi": "./src/localization/hi/native.json",
+      "id": "./src/localization/id/native.json",
+      "pt": "./src/localization/pt/native.json",
+      "ru": "./src/localization/ru/native.json",
+      "ur": "./src/localization/ur/native.json",
+      "zh-Hans": "./src/localization/zh/native.json"
+    },
     "ios": {
       "appleTeamId": "8KC4F7DWTY",
       "buildNumber": "18",

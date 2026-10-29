@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "Echos 需要访问麦克风来录制音频并进行转录。",
+    "NSFaceIDUsageDescription": "允许 Echos 使用面容 ID 解锁应用。"
+  }
+}

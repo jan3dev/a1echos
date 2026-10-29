@@ -40,8 +40,8 @@ export const SettingsFooter = () => {
       Constants.expoConfig?.ios?.buildNumber ??
       Constants.expoConfig?.android?.versionCode?.toString() ??
       "1";
-    setVersion(`App Version ${appVersion} (${buildNumber})`);
-  }, []);
+    setVersion(loc.appVersion(appVersion, buildNumber));
+  }, [loc]);
 
   const handleLaunchX = async (handle: string) => {
     const sanitizedHandle = handle.replace(/^@/, "");

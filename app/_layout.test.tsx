@@ -44,7 +44,10 @@ jest.mock("@/theme", () => ({
 
 // Define mock fns INSIDE the factory so they exist at evaluation time
 const mockSetOnboardingStep = jest.fn();
+let mockEngineState = "ready";
+let mockIncognitoSession: object | null = null;
 jest.mock("@/stores", () => ({
+  AUDIO_BUSY_STATES: new Set(["recording"]),
   initializeModelDownloadStore: jest.fn(),
   initializeSettingsStore: jest.fn().mockResolvedValue(undefined),
   initializeSessionStore: jest.fn().mockResolvedValue(undefined),
@@ -68,6 +71,10 @@ jest.mock("@/stores", () => ({
     })),
   },
   useTranscriptionState: jest.fn(() => "IDLE"),
+  useTranscriptionStore: (sel: (s: { state: string }) => unknown) =>
+    sel({ state: mockEngineState }),
+  useSessionStore: (sel: (s: { incognitoSession: object | null }) => unknown) =>
+    sel({ incognitoSession: mockIncognitoSession }),
   useKeyboardPromptVisible: jest.fn(() => false),
   useHideKeyboardPrompt: jest.fn(() => jest.fn()),
   useMarkKeyboardPromptSeen: jest.fn(() => jest.fn()),
@@ -114,9 +121,18 @@ jest.mock("@/utils", () => ({
 }));
 
 const mockChangeLanguage = jest.fn();
+const mockSyncLayoutDirection = jest.fn((_lng: string) => false);
 jest.mock("@/localization", () => ({
   i18n: { changeLanguage: (lng: string) => mockChangeLanguage(lng) },
-  resolveAppLanguage: (code?: string | null) => (code === "fr" ? "fr" : "en"),
+  resolveAppLanguage: (code?: string | null) =>
+    code === "fr" || code === "ar" ? code : "en",
+  syncLayoutDirection: (lng: string) => mockSyncLayoutDirection(lng),
+}));
+
+const mockReloadAppAsync = jest.fn().mockResolvedValue(undefined);
+jest.mock("expo", () => ({
+  ...jest.requireActual("expo"),
+  reloadAppAsync: (reason: string) => mockReloadAppAsync(reason),
 }));
 
 jest.mock("@/components", () => {
@@ -1010,6 +1026,55 @@ describe("RootLayout", () => {
     rerender(<RootLayout />);
     expect(mockChangeLanguage).toHaveBeenLastCalledWith("fr");
     (useLocales as jest.Mock).mockReturnValue([{ languageCode: "en" }]);
+  });
+
+  describe("layout direction", () => {
+    const { getLocales, useLocales } = require("expo-localization");
+    const { openAndPrepareDatabase } = require("@/db");
+
+    beforeEach(() => {
+      mockSyncLayoutDirection.mockImplementation((lng) => lng === "ar");
+    });
+    afterEach(() => {
+      mockSyncLayoutDirection.mockImplementation(() => false);
+      (getLocales as jest.Mock).mockReturnValue([{ languageCode: "en" }]);
+      (useLocales as jest.Mock).mockReturnValue([{ languageCode: "en" }]);
+      mockEngineState = "ready";
+      mockIncognitoSession = null;
+    });
+
+    it("reloads at launch before any initialization runs", async () => {
+      (getLocales as jest.Mock).mockReturnValue([{ languageCode: "ar" }]);
+      (useLocales as jest.Mock).mockReturnValue([{ languageCode: "ar" }]);
+      render(<RootLayout />);
+      await waitFor(() => expect(mockReloadAppAsync).toHaveBeenCalledTimes(1));
+      expect(openAndPrepareDatabase).not.toHaveBeenCalled();
+    });
+
+    it("waits for audio work and the incognito session before reloading", async () => {
+      const { rerender } = await renderAndWaitForInit();
+      mockEngineState = "recording";
+      mockIncognitoSession = {};
+      (useLocales as jest.Mock).mockReturnValue([{ languageCode: "ar" }]);
+      rerender(<RootLayout />);
+      expect(mockChangeLanguage).toHaveBeenLastCalledWith("ar");
+
+      mockEngineState = "ready";
+      rerender(<RootLayout />);
+      expect(mockReloadAppAsync).not.toHaveBeenCalled();
+
+      mockIncognitoSession = null;
+      rerender(<RootLayout />);
+      expect(mockReloadAppAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves the language alone when only the engine state changes", async () => {
+      const { rerender } = await renderAndWaitForInit();
+      const calls = mockChangeLanguage.mock.calls.length;
+      mockEngineState = "recording";
+      rerender(<RootLayout />);
+      expect(mockChangeLanguage).toHaveBeenCalledTimes(calls);
+    });
   });
 
   describe("Platform-specific rendering", () => {

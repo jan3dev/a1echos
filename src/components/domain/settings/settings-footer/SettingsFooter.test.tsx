@@ -7,6 +7,11 @@ import { SettingsFooter } from "./SettingsFooter";
 
 beforeEach(() => {
   jest.clearAllMocks();
+  const { useTranslation } = require("react-i18next");
+  (useTranslation as jest.Mock).mockImplementation(() => ({
+    t: (key: string, opts?: Record<string, string>) =>
+      opts ? `${key}:${Object.values(opts).join(",")}` : key,
+  }));
   (Linking as any).openURL = jest.fn(async () => undefined);
 });
 
@@ -64,7 +69,7 @@ describe("SettingsFooter", () => {
 
   it("renders app version text", () => {
     const { getByText } = render(<SettingsFooter />);
-    expect(getByText("App Version 1.2.3 (42)")).toBeTruthy();
+    expect(getByText("appVersion:1.2.3,42")).toBeTruthy();
   });
 
   it("prefers native binary version/build over expoConfig", () => {
@@ -72,7 +77,7 @@ describe("SettingsFooter", () => {
     Constants.nativeApplicationVersion = "9.9.9";
     Constants.nativeBuildVersion = "777";
     const { getByText } = render(<SettingsFooter />);
-    expect(getByText("App Version 9.9.9 (777)")).toBeTruthy();
+    expect(getByText("appVersion:9.9.9,777")).toBeTruthy();
     Constants.nativeApplicationVersion = null;
     Constants.nativeBuildVersion = null;
   });

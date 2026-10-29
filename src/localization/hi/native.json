@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "ट्रांसक्रिप्शन के लिए ऑडियो रिकॉर्ड करने हेतु Echos को आपके माइक्रोफ़ोन का एक्सेस चाहिए।",
+    "NSFaceIDUsageDescription": "ऐप अनलॉक करने के लिए Echos को Face ID इस्तेमाल करने दें।"
+  }
+}

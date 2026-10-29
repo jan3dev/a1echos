@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "O Echos precisa de acesso ao microfone para gravar áudio para transcrição.",
+    "NSFaceIDUsageDescription": "Permita que o Echos use o Face ID para desbloquear o app."
+  }
+}

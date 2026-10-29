@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { render } from "@testing-library/react-native";
 import React from "react";
+import { I18nManager, StyleSheet } from "react-native";
 
 import { TestID } from "@/constants";
 
@@ -13,34 +14,25 @@ jest.mock("@/utils", () => ({
 }));
 
 // Mock iconMap to provide controlled test icons
-jest.mock("./iconMap", () => ({
-  iconMap: {
-    check: jest.fn(
-      (props: { width?: number; height?: number; color?: string }) => {
-        const { View } = require("react-native");
-        const { TestID: TID } = require("@/constants");
-        return (
-          <View
-            testID={TID.MockSvg}
-            style={{ width: props.width, height: props.height }}
-          />
-        );
-      },
-    ),
-    settings: jest.fn(
-      (props: { width?: number; height?: number; color?: string }) => {
-        const { View } = require("react-native");
-        const { TestID: TID } = require("@/constants");
-        return (
-          <View
-            testID={TID.MockSvg}
-            style={{ width: props.width, height: props.height }}
-          />
-        );
-      },
-    ),
-  },
-}));
+jest.mock("./iconMap", () => {
+  const mockSvg = (props: { width?: number; height?: number }) => {
+    const { View } = require("react-native");
+    const { TestID: TID } = require("@/constants");
+    return (
+      <View
+        testID={TID.MockSvg}
+        style={{ width: props.width, height: props.height }}
+      />
+    );
+  };
+  return {
+    iconMap: {
+      check: jest.fn(mockSvg),
+      chevron_right: jest.fn(mockSvg),
+      settings: jest.fn(mockSvg),
+    },
+  };
+});
 
 describe("Icon", () => {
   beforeEach(() => {
@@ -62,6 +54,26 @@ describe("Icon", () => {
     expect(mockLogWarn).toHaveBeenCalledWith(
       "Icon not found: nonexistent_icon_xyz",
     );
+  });
+
+  describe("in RTL", () => {
+    beforeEach(() => {
+      jest.replaceProperty(I18nManager, "isRTL", true);
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    const transformOf = (name: string) => {
+      const { toJSON } = render(<Icon name={name as any} />);
+      return StyleSheet.flatten((toJSON() as any).props.style).transform;
+    };
+
+    it("mirrors directional icons", () => {
+      expect(transformOf("chevron_right")).toEqual([{ scaleX: -1 }]);
+    });
+
+    it("leaves other icons as drawn", () => {
+      expect(transformOf("check")).toBeUndefined();
+    });
   });
 
   it("applies custom size and color to the icon", () => {

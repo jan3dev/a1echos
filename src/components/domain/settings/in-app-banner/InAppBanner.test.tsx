@@ -11,9 +11,9 @@ beforeEach(() => {
 });
 
 describe("InAppBanner", () => {
-  it('has accessibility label "Download AQUA Wallet"', () => {
+  it("has a localized accessibility label", () => {
     const { getByLabelText } = render(<InAppBanner />);
-    expect(getByLabelText("Download AQUA Wallet")).toBeTruthy();
+    expect(getByLabelText("aquaBannerAccessibilityLabel")).toBeTruthy();
   });
 
   it('has accessibility role "link"', () => {

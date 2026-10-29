@@ -1,6 +1,7 @@
 import { migrate } from "drizzle-orm/expo-sqlite/migrator";
+import { reloadAppAsync } from "expo";
 import { useFonts } from "expo-font";
-import { useLocales } from "expo-localization";
+import { getLocales, useLocales } from "expo-localization";
 import { Stack, useIsFocused, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
@@ -36,7 +37,7 @@ import {
 } from "@/hooks";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
-import { i18n, resolveAppLanguage } from "@/localization";
+import { i18n, resolveAppLanguage, syncLayoutDirection } from "@/localization";
 import { TranscriptionState } from "@/models";
 import migrationsBundle from "@/db/migrations/migrations.js";
 import {
@@ -46,6 +47,7 @@ import {
 } from "@/db/runtime-migration";
 import { registerForegroundService } from "@/services";
 import {
+  AUDIO_BUSY_STATES,
   initializeModelDownloadStore,
   initializeSessionStore,
   initializeSettingsStore,
@@ -74,8 +76,10 @@ import {
   useRecordingControlsEnabled,
   useRecordingControlsBlurTarget,
   useRecordingControlsVisible,
+  useSessionStore,
   useSettingsStore,
   useTranscriptionState,
+  useTranscriptionStore,
 } from "@/stores";
 import { spacing, useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, readKeyboardEnabled } from "@/utils";
@@ -136,6 +140,19 @@ const isSessionListRoute = (pathname: string) =>
 
 const isTranscriptionEditRoute = (pathname: string) =>
   /^\/transcription\/[^/]+$/.test(pathname);
+
+// Resolves false when the reload failed and the app should carry on.
+const reloadForLayoutDirection = () =>
+  reloadAppAsync("Layout direction changed").then(
+    () => true,
+    (error) => {
+      logError(error, {
+        flag: FeatureFlag.general,
+        message: "Failed to reload for layout direction",
+      });
+      return false;
+    },
+  );
 
 const isRecordingRoute = (pathname: string) =>
   isSessionListRoute(pathname) || pathname.startsWith("/session/");
@@ -476,11 +493,31 @@ export default function RootLayout() {
     if (pathname.startsWith("/onboarding/")) void setOnboardingStep(pathname);
   }, [pathname, setOnboardingStep]);
 
-  // Android 13+ switches the per-app language without restarting the app.
   const [{ languageCode }] = useLocales();
+  const language = resolveAppLanguage(languageCode);
   useEffect(() => {
-    void i18n.changeLanguage(resolveAppLanguage(languageCode));
-  }, [languageCode]);
+    void i18n.changeLanguage(language);
+  }, [language]);
+
+  // Android 13+ switches the per-app language without restarting the app.
+  // A layout direction change needs a reload, which would drop in-flight audio
+  // work or the in-memory incognito session, so it waits for both to end.
+  const isEngineBusy = useTranscriptionStore((s) =>
+    AUDIO_BUSY_STATES.has(s.state),
+  );
+  const hasIncognitoSession = useSessionStore(
+    (s) => s.incognitoSession !== null,
+  );
+  useEffect(() => {
+    if (
+      appReady &&
+      !isEngineBusy &&
+      !hasIncognitoSession &&
+      syncLayoutDirection(language)
+    ) {
+      void reloadForLayoutDirection();
+    }
+  }, [appReady, language, isEngineBusy, hasIncognitoSession]);
 
   // Install global error handler once
   useEffect(() => {
@@ -499,6 +536,14 @@ export default function RootLayout() {
   // Initialize stores and services
   useEffect(() => {
     async function initializeApp() {
+      // Reload before any migration or model init starts, not midway through.
+      const [locale] = getLocales();
+      if (
+        syncLayoutDirection(resolveAppLanguage(locale?.languageCode)) &&
+        (await reloadForLayoutDirection())
+      ) {
+        return;
+      }
       try {
         await initTheme();
 

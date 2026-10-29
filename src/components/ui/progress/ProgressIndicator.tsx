@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing } from "react-native";
 
+import { useLocalization } from "@/hooks";
+
 import { Icon } from "../icon/Icon";
 
 interface ProgressIndicatorProps {
@@ -12,6 +14,7 @@ export const ProgressIndicator = ({
   color,
   size = 24,
 }: ProgressIndicatorProps) => {
+  const { loc } = useLocalization();
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,7 +47,7 @@ export const ProgressIndicator = ({
     <Animated.View
       style={{ transform: [{ rotate }] }}
       accessibilityRole="progressbar"
-      accessibilityLabel="Loading"
+      accessibilityLabel={loc.loading}
       accessibilityLiveRegion="polite"
     >
       <Icon name="circular_progress" size={size} color={color} />

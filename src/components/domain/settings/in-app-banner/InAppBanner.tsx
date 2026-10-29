@@ -10,6 +10,7 @@ import {
 import AquaLogo from "@/assets/images/aqua-logo.svg";
 import { Text } from "@/components/ui/text";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
+import { useLocalization } from "@/hooks";
 import { FeatureFlag, iosPressed, logWarn } from "@/utils";
 
 const AQUA_APP_URLS = {
@@ -29,10 +30,11 @@ const AQUA_COLORS = {
 const DESIGN_WIDTH = 343;
 const DESIGN_HEIGHT = 211;
 const MAX_BANNER_WIDTH = 633;
-const PHONE = { left: 202.07, top: 26.07, width: 115.87, height: 184.93 };
+const PHONE = { start: 202.07, top: 26.07, width: 115.87, height: 184.93 };
 
 export const InAppBanner = () => {
   const { width: screenWidth } = useWindowDimensions();
+  const { loc } = useLocalization();
 
   const handlePress = async () => {
     try {
@@ -69,7 +71,7 @@ export const InAppBanner = () => {
             opacity: iosPressed(pressed, 0.9),
           },
         ]}
-        accessibilityLabel="Download AQUA Wallet"
+        accessibilityLabel={loc.aquaBannerAccessibilityLabel}
         accessibilityRole="link"
       >
         <Image
@@ -85,7 +87,7 @@ export const InAppBanner = () => {
           source={require("@/assets/images/aqua-banner-phone.png")}
           style={{
             position: "absolute",
-            left: PHONE.left * scale,
+            start: PHONE.start * scale,
             top: PHONE.top * scale,
             width: PHONE.width * scale,
             height: PHONE.height * scale,
@@ -95,7 +97,7 @@ export const InAppBanner = () => {
         <View style={styles.content}>
           <AquaLogo width={96.55} height={18} />
           <Text variant="body1" weight="medium" size={18} color="#FFFFFF">
-            Do you need a Bitcoin Wallet?
+            {loc.aquaBannerTitle}
           </Text>
           <View style={styles.button}>
             <Text
@@ -103,7 +105,7 @@ export const InAppBanner = () => {
               weight="semibold"
               color={AQUA_COLORS.buttonText}
             >
-              Get AQUA
+              {loc.aquaBannerButton}
             </Text>
           </View>
         </View>

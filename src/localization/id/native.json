@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "Echos memerlukan akses ke mikrofon Anda untuk merekam audio yang akan ditranskripsi.",
+    "NSFaceIDUsageDescription": "Izinkan Echos menggunakan Face ID untuk membuka kunci aplikasi."
+  }
+}

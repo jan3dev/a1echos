@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "يحتاج Echos إلى الوصول إلى الميكروفون لتسجيل الصوت وتفريغه.",
+    "NSFaceIDUsageDescription": "اسمح لـ Echos باستخدام Face ID لفتح التطبيق."
+  }
+}

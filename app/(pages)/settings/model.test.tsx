@@ -61,6 +61,9 @@ jest.mock("@/hooks", () => ({
       {
         get: (_, p: string) => {
           if (typeof p !== "string") return undefined;
+          if (p === "modelDescription") {
+            return (id: string) => `modelDescription:${id}`;
+          }
           if (p === "insufficientSpace") {
             return (required: string, available: string) =>
               `insufficientSpace:${required},${available}`;
@@ -75,7 +78,6 @@ jest.mock("@/hooks", () => ({
 const whisperModel = {
   id: "whisper_tiny",
   name: "Whisper Tiny",
-  description: "Fast",
   sizeBytes: 100_000_000,
   supportedModes: ["file", "realtime"],
   isBundled: true,
@@ -85,7 +87,6 @@ const whisperModel = {
 const parakeetModel = {
   id: "nemo_parakeet_v3",
   name: "Parakeet V3",
-  description: "High accuracy",
   sizeBytes: 670_000_000,
   supportedModes: ["file", "realtime"],
   isBundled: false,

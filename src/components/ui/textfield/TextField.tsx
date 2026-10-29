@@ -18,6 +18,7 @@ import {
   getShadow,
   useTheme,
 } from "@/theme";
+import { useLocalization } from "@/hooks";
 import { FeatureFlag, logError } from "@/utils";
 
 import { Icon } from "../icon/Icon";
@@ -52,9 +53,9 @@ const LINE_HEIGHT = 24;
 const PADDING = 16;
 const TEXTFIELD_HEIGHT = LINE_HEIGHT + PADDING * 2;
 const LABEL_TOP_POSITION_ACTIVE = 12;
-const LABEL_LEFT_POSITION = 16;
+const LABEL_START = 16;
 const LABEL_OFFSET_ACTIVE = 16;
-const TRAILING_ICON_RIGHT = 16;
+const TRAILING_ICON_END = 16;
 const CONTENT_HORIZONTAL_PADDING = 16;
 const CONTENT_VERTICAL_PADDING = 8;
 const CONTENT_TRAILING_PADDING = 12;
@@ -88,6 +89,7 @@ export const TextField = ({
   const { theme } = useTheme();
   const colors = colorsOverride ?? theme.colors;
 
+  const { loc } = useLocalization();
   const [internalFocus, setInternalFocus] = useState(false);
   const isFocused = forceFocus || internalFocus;
 
@@ -201,7 +203,7 @@ export const TextField = ({
     if (trailingIconCount === 0) return CONTENT_TRAILING_PADDING;
     const iconsWidth =
       trailingIconCount * ICON_SIZE + (trailingIconCount - 1) * ICON_SPACING;
-    return TRAILING_ICON_RIGHT + iconsWidth + ICON_SPACING;
+    return TRAILING_ICON_END + iconsWidth + ICON_SPACING;
   };
 
   const idleBorderColor = {
@@ -222,10 +224,9 @@ export const TextField = ({
   const textColor = enabled ? colors.textPrimary : colors.textTertiary;
   const iconColor = colors.textSecondary;
 
-  const pasteIconRight = TRAILING_ICON_RIGHT;
-  const clearIconRight = showPasteIcon
-    ? TRAILING_ICON_RIGHT + ICON_SIZE + ICON_SPACING
-    : TRAILING_ICON_RIGHT;
+  const clearIconEnd = showPasteIcon
+    ? TRAILING_ICON_END + ICON_SIZE + ICON_SPACING
+    : TRAILING_ICON_END;
 
   return (
     <View style={[styles.wrapper, { opacity: enabled ? 1 : 0.5 }]}>
@@ -250,7 +251,7 @@ export const TextField = ({
                 style={[
                   styles.label,
                   {
-                    left: LABEL_LEFT_POSITION,
+                    start: LABEL_START,
                     top: labelTop,
                     fontSize: labelFontSize,
                     color: labelColor,
@@ -271,7 +272,7 @@ export const TextField = ({
                   marginTop: label ? LABEL_OFFSET_ACTIVE : 0,
                   paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
                   paddingVertical: CONTENT_VERTICAL_PADDING,
-                  paddingRight: calculateTrailingPadding(),
+                  paddingEnd: calculateTrailingPadding(),
                 },
               ]}
             >
@@ -306,9 +307,9 @@ export const TextField = ({
                   <RipplePressable
                     borderless
                     onPress={enabled ? handleClear : undefined}
-                    style={[styles.iconButton, { right: clearIconRight }]}
+                    style={[styles.iconButton, { end: clearIconEnd }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Clear text"
+                    accessibilityLabel={loc.clearText}
                   >
                     <View
                       style={[
@@ -324,9 +325,9 @@ export const TextField = ({
                   <RipplePressable
                     borderless
                     onPress={enabled ? handlePaste : undefined}
-                    style={[styles.iconButton, { right: pasteIconRight }]}
+                    style={[styles.iconButton, { end: TRAILING_ICON_END }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Paste from clipboard"
+                    accessibilityLabel={loc.pasteFromClipboard}
                   >
                     <Icon name="paste" size={ICON_SIZE} color={iconColor} />
                   </RipplePressable>

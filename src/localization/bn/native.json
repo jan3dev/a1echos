@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "ট্রান্সক্রিপশনের জন্য অডিও রেকর্ড করতে Echos-এর আপনার মাইক্রোফোনে অ্যাক্সেস প্রয়োজন।",
+    "NSFaceIDUsageDescription": "অ্যাপ আনলক করতে Echos-কে Face ID ব্যবহারের অনুমতি দিন।"
+  }
+}

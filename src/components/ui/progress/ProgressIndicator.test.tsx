@@ -18,7 +18,7 @@ describe("ProgressIndicator", () => {
 
   it('renders with accessibility label "Loading"', () => {
     const { getByLabelText } = render(<ProgressIndicator />);
-    expect(getByLabelText("Loading")).toBeTruthy();
+    expect(getByLabelText("loading")).toBeTruthy();
   });
 
   it("accepts custom color prop", () => {

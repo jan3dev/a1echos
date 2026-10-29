@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { ModelId } from "@/models";
+
 export const useLocalization = () => {
   const { t } = useTranslation();
 
@@ -241,6 +243,22 @@ export const useLocalization = () => {
       biometricAuthPrompt: t("biometricAuthPrompt"),
       biometricAuthUnavailable: t("biometricAuthUnavailable"),
       biometricUnlock: t("biometricUnlock"),
+      modelDescription: (id: ModelId) => t(`modelDescription_${id}`),
+      aquaBannerTitle: t("aquaBannerTitle"),
+      aquaBannerButton: t("aquaBannerButton"),
+      aquaBannerAccessibilityLabel: t("aquaBannerAccessibilityLabel"),
+      appVersion: (version: string, build: string) =>
+        t("appVersion", { version, build }),
+      clearText: t("clearText"),
+      pasteFromClipboard: t("pasteFromClipboard"),
+      exitSelectionMode: t("exitSelectionMode"),
+      enableIncognitoMode: t("enableIncognitoMode"),
+      disableIncognitoMode: t("disableIncognitoMode"),
+      startRecording: t("startRecording"),
+      stopRecording: t("stopRecording"),
+      preparingRecording: t("preparingRecording"),
+      transcribing: t("transcribing"),
+      loading: t("loading"),
     }),
     [t],
   );

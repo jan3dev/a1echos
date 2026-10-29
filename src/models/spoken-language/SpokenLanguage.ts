@@ -1,3 +1,5 @@
+import { i18n } from "@/localization";
+
 export interface SpokenLanguage {
   code: string;
   name: string;
@@ -10,121 +12,118 @@ export interface TranscribeOptions {
 
 interface LanguageInfo {
   countryCode: string;
-  name: string;
   whisperLanguage?: string;
   prompt?: string;
 }
 
 const languageData: Record<string, LanguageInfo> = {
-  en: { countryCode: "united_states", name: "English" },
+  en: { countryCode: "united_states" },
   zh: {
     countryCode: "china",
-    name: "Chinese (简体)",
     prompt: "以下是普通话的句子。",
   },
   "zh-hant": {
     countryCode: "taiwan",
-    name: "Chinese (繁體)",
     whisperLanguage: "zh",
     prompt: "以下是普通話的句子。",
   },
-  de: { countryCode: "germany", name: "German" },
-  es: { countryCode: "spain", name: "Spanish" },
-  ru: { countryCode: "russia", name: "Russian" },
-  ko: { countryCode: "south_korea", name: "Korean" },
-  fr: { countryCode: "france", name: "French" },
-  ja: { countryCode: "japan", name: "Japanese" },
-  pt: { countryCode: "portugal", name: "Portuguese" },
-  tr: { countryCode: "turkey", name: "Turkish" },
-  pl: { countryCode: "poland", name: "Polish" },
-  ca: { countryCode: "spain", name: "Catalan" },
-  nl: { countryCode: "netherlands", name: "Dutch" },
-  ar: { countryCode: "saudi_arabia", name: "Arabic" },
-  sv: { countryCode: "sweden", name: "Swedish" },
-  it: { countryCode: "italy", name: "Italian" },
-  id: { countryCode: "indonesia", name: "Indonesian" },
-  hi: { countryCode: "india", name: "Hindi" },
-  fi: { countryCode: "finland", name: "Finnish" },
-  vi: { countryCode: "vietnam", name: "Vietnamese" },
-  he: { countryCode: "israel", name: "Hebrew" },
-  uk: { countryCode: "ukraine", name: "Ukrainian" },
-  el: { countryCode: "greece", name: "Greek" },
-  ms: { countryCode: "malaysia", name: "Malay" },
-  cs: { countryCode: "czech_republic", name: "Czech" },
-  ro: { countryCode: "romania", name: "Romanian" },
-  da: { countryCode: "denmark", name: "Danish" },
-  hu: { countryCode: "hungary", name: "Hungarian" },
-  ta: { countryCode: "india", name: "Tamil" },
-  no: { countryCode: "norway", name: "Norwegian" },
-  th: { countryCode: "thailand", name: "Thai" },
-  ur: { countryCode: "pakistan", name: "Urdu" },
-  hr: { countryCode: "croatia", name: "Croatian" },
-  bg: { countryCode: "bulgaria", name: "Bulgarian" },
-  lt: { countryCode: "lithuania", name: "Lithuanian" },
-  la: { countryCode: "vatican_city", name: "Latin" },
-  mi: { countryCode: "new_zealand", name: "Maori" },
-  ml: { countryCode: "india", name: "Malayalam" },
-  cy: { countryCode: "wales", name: "Welsh" },
-  sk: { countryCode: "slovakia", name: "Slovak" },
-  te: { countryCode: "india", name: "Telugu" },
-  fa: { countryCode: "iran", name: "Persian" },
-  lv: { countryCode: "latvia", name: "Latvian" },
-  bn: { countryCode: "bangladesh", name: "Bengali" },
-  sr: { countryCode: "serbia", name: "Serbian" },
-  az: { countryCode: "azerbaijan", name: "Azerbaijani" },
-  sl: { countryCode: "slovenia", name: "Slovenian" },
-  kn: { countryCode: "india", name: "Kannada" },
-  et: { countryCode: "estonia", name: "Estonian" },
-  mk: { countryCode: "north_macedonia", name: "Macedonian" },
-  br: { countryCode: "france", name: "Breton" },
-  eu: { countryCode: "spain", name: "Basque" },
-  is: { countryCode: "iceland", name: "Icelandic" },
-  hy: { countryCode: "armenia", name: "Armenian" },
-  ne: { countryCode: "nepal", name: "Nepali" },
-  mn: { countryCode: "mongolia", name: "Mongolian" },
-  bs: { countryCode: "bosnia_and_herzegovina", name: "Bosnian" },
-  kk: { countryCode: "kazakhstan", name: "Kazakh" },
-  sq: { countryCode: "albania", name: "Albanian" },
-  sw: { countryCode: "tanzania", name: "Swahili" },
-  gl: { countryCode: "spain", name: "Galician" },
-  mr: { countryCode: "india", name: "Marathi" },
-  pa: { countryCode: "india", name: "Punjabi" },
-  si: { countryCode: "sri_lanka", name: "Sinhala" },
-  km: { countryCode: "cambodia", name: "Khmer" },
-  sn: { countryCode: "zimbabwe", name: "Shona" },
-  yo: { countryCode: "nigeria", name: "Yoruba" },
-  so: { countryCode: "somalia", name: "Somali" },
-  af: { countryCode: "south_africa", name: "Afrikaans" },
-  oc: { countryCode: "france", name: "Occitan" },
-  ka: { countryCode: "georgia", name: "Georgian" },
-  be: { countryCode: "belarus", name: "Belarusian" },
-  tg: { countryCode: "tajikistan", name: "Tajik" },
-  sd: { countryCode: "pakistan", name: "Sindhi" },
-  gu: { countryCode: "india", name: "Gujarati" },
-  am: { countryCode: "ethiopia", name: "Amharic" },
-  yi: { countryCode: "israel", name: "Yiddish" },
-  lo: { countryCode: "laos", name: "Lao" },
-  uz: { countryCode: "uzbekistan", name: "Uzbek" },
-  fo: { countryCode: "denmark", name: "Faroese" },
-  ht: { countryCode: "haiti", name: "Haitian Creole" },
-  ps: { countryCode: "afghanistan", name: "Pashto" },
-  tk: { countryCode: "turkmenistan", name: "Turkmen" },
-  nn: { countryCode: "norway", name: "Norwegian Nynorsk" },
-  mt: { countryCode: "malta", name: "Maltese" },
-  sa: { countryCode: "india", name: "Sanskrit" },
-  lb: { countryCode: "luxembourg", name: "Luxembourgish" },
-  my: { countryCode: "myanmar", name: "Burmese" },
-  bo: { countryCode: "tibet", name: "Tibetan" },
-  tl: { countryCode: "philippines", name: "Tagalog" },
-  mg: { countryCode: "madagascar", name: "Malagasy" },
-  as: { countryCode: "india", name: "Assamese" },
-  tt: { countryCode: "russia", name: "Tatar" },
-  haw: { countryCode: "hawaii", name: "Hawaiian" },
-  ln: { countryCode: "democratic_republic_of_congo", name: "Lingala" },
-  ha: { countryCode: "nigeria", name: "Hausa" },
-  ba: { countryCode: "russia", name: "Bashkir" },
-  jw: { countryCode: "indonesia", name: "Javanese" },
-  su: { countryCode: "indonesia", name: "Sundanese" },
+  de: { countryCode: "germany" },
+  es: { countryCode: "spain" },
+  ru: { countryCode: "russia" },
+  ko: { countryCode: "south_korea" },
+  fr: { countryCode: "france" },
+  ja: { countryCode: "japan" },
+  pt: { countryCode: "portugal" },
+  tr: { countryCode: "turkey" },
+  pl: { countryCode: "poland" },
+  ca: { countryCode: "spain" },
+  nl: { countryCode: "netherlands" },
+  ar: { countryCode: "saudi_arabia" },
+  sv: { countryCode: "sweden" },
+  it: { countryCode: "italy" },
+  id: { countryCode: "indonesia" },
+  hi: { countryCode: "india" },
+  fi: { countryCode: "finland" },
+  vi: { countryCode: "vietnam" },
+  he: { countryCode: "israel" },
+  uk: { countryCode: "ukraine" },
+  el: { countryCode: "greece" },
+  ms: { countryCode: "malaysia" },
+  cs: { countryCode: "czech_republic" },
+  ro: { countryCode: "romania" },
+  da: { countryCode: "denmark" },
+  hu: { countryCode: "hungary" },
+  ta: { countryCode: "india" },
+  no: { countryCode: "norway" },
+  th: { countryCode: "thailand" },
+  ur: { countryCode: "pakistan" },
+  hr: { countryCode: "croatia" },
+  bg: { countryCode: "bulgaria" },
+  lt: { countryCode: "lithuania" },
+  la: { countryCode: "vatican_city" },
+  mi: { countryCode: "new_zealand" },
+  ml: { countryCode: "india" },
+  cy: { countryCode: "wales" },
+  sk: { countryCode: "slovakia" },
+  te: { countryCode: "india" },
+  fa: { countryCode: "iran" },
+  lv: { countryCode: "latvia" },
+  bn: { countryCode: "bangladesh" },
+  sr: { countryCode: "serbia" },
+  az: { countryCode: "azerbaijan" },
+  sl: { countryCode: "slovenia" },
+  kn: { countryCode: "india" },
+  et: { countryCode: "estonia" },
+  mk: { countryCode: "north_macedonia" },
+  br: { countryCode: "france" },
+  eu: { countryCode: "spain" },
+  is: { countryCode: "iceland" },
+  hy: { countryCode: "armenia" },
+  ne: { countryCode: "nepal" },
+  mn: { countryCode: "mongolia" },
+  bs: { countryCode: "bosnia_and_herzegovina" },
+  kk: { countryCode: "kazakhstan" },
+  sq: { countryCode: "albania" },
+  sw: { countryCode: "tanzania" },
+  gl: { countryCode: "spain" },
+  mr: { countryCode: "india" },
+  pa: { countryCode: "india" },
+  si: { countryCode: "sri_lanka" },
+  km: { countryCode: "cambodia" },
+  sn: { countryCode: "zimbabwe" },
+  yo: { countryCode: "nigeria" },
+  so: { countryCode: "somalia" },
+  af: { countryCode: "south_africa" },
+  oc: { countryCode: "france" },
+  ka: { countryCode: "georgia" },
+  be: { countryCode: "belarus" },
+  tg: { countryCode: "tajikistan" },
+  sd: { countryCode: "pakistan" },
+  gu: { countryCode: "india" },
+  am: { countryCode: "ethiopia" },
+  yi: { countryCode: "israel" },
+  lo: { countryCode: "laos" },
+  uz: { countryCode: "uzbekistan" },
+  fo: { countryCode: "denmark" },
+  ht: { countryCode: "haiti" },
+  ps: { countryCode: "afghanistan" },
+  tk: { countryCode: "turkmenistan" },
+  nn: { countryCode: "norway" },
+  mt: { countryCode: "malta" },
+  sa: { countryCode: "india" },
+  lb: { countryCode: "luxembourg" },
+  my: { countryCode: "myanmar" },
+  bo: { countryCode: "tibet" },
+  tl: { countryCode: "philippines" },
+  mg: { countryCode: "madagascar" },
+  as: { countryCode: "india" },
+  tt: { countryCode: "russia" },
+  haw: { countryCode: "hawaii" },
+  ln: { countryCode: "democratic_republic_of_congo" },
+  ha: { countryCode: "nigeria" },
+  ba: { countryCode: "russia" },
+  jw: { countryCode: "indonesia" },
+  su: { countryCode: "indonesia" },
 };
 
 // Locale-independent lowercasing: a Turkish locale would turn "I" into "ı".
@@ -134,32 +133,43 @@ const searchWords = (text: string) =>
     .replace(/[()\s]+/g, " ")
     .trim()}`;
 
-const allLanguages = Object.keys(languageData).map((code) => ({
+const allCodes = Object.keys(languageData);
+
+// Names come from the app language at call time; settings store the code only.
+const toLanguage = (code: string): SpokenLanguage => ({
   code,
-  name: languageData[code].name,
-}));
+  name: i18n.t(code, { ns: "languages" }),
+});
+
+const englishName = (code: string) =>
+  i18n.t(code, { ns: "languages", lng: "en" });
 
 export const SupportedLanguages = {
   get all(): SpokenLanguage[] {
-    return allLanguages;
+    return allCodes.map(toLanguage);
   },
 
   get defaultLanguage(): SpokenLanguage {
-    return { code: "en", name: "English" };
+    return toLanguage("en");
   },
 
   /** Returns languages filtered to those supported by the given language codes. */
   forCodes(codes: string[] | undefined): SpokenLanguage[] {
-    if (!codes) return allLanguages;
+    if (!codes) return SupportedLanguages.all;
     const codeSet = new Set(codes);
-    return allLanguages.filter((lang) => codeSet.has(lang.code));
+    return allCodes.filter((code) => codeSet.has(code)).map(toLanguage);
   },
 
-  /** Case-insensitive match on the start of any word in the language name. */
+  /** Case-insensitive match on the start of any word in the language name,
+   *  in the app language or in English. */
   search(languages: SpokenLanguage[], query: string): SpokenLanguage[] {
     const needle = searchWords(query);
     if (needle === " ") return languages;
-    return languages.filter((lang) => searchWords(lang.name).includes(needle));
+    return languages.filter(
+      (lang) =>
+        searchWords(lang.name).includes(needle) ||
+        searchWords(englishName(lang.code)).includes(needle),
+    );
   },
 
   /** Returns a copy with the given language moved to the front. */
@@ -177,9 +187,7 @@ export const SupportedLanguages = {
 
   findByCode(code: string): SpokenLanguage | null {
     const normalizedCode = code.toLowerCase();
-    return languageData[normalizedCode]
-      ? { code: normalizedCode, name: languageData[normalizedCode].name }
-      : null;
+    return languageData[normalizedCode] ? toLanguage(normalizedCode) : null;
   },
 
   countryCodeFor(code: string): string {

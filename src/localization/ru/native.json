@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSMicrophoneUsageDescription": "Echos нужен доступ к микрофону, чтобы записывать аудио для транскрибации.",
+    "NSFaceIDUsageDescription": "Разрешите Echos использовать Face ID для разблокировки приложения."
+  }
+}

@@ -1,6 +1,6 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
-import { ScrollView, StyleSheet } from "react-native";
+import { I18nManager, ScrollView, StyleSheet } from "react-native";
 
 import { TestID, dynamicTestID } from "@/constants";
 import { DEFAULT_TEXT_APPEARANCE } from "@/models";
@@ -68,6 +68,7 @@ describe("TextAppearanceSettingsScreen", () => {
     jest.clearAllMocks();
     useSettingsStore.setState({ textAppearance: DEFAULT_TEXT_APPEARANCE });
   });
+  afterEach(() => jest.restoreAllMocks());
 
   it("previews the default appearance", () => {
     const screen = render(<TextAppearanceSettingsScreen />);
@@ -124,6 +125,17 @@ describe("TextAppearanceSettingsScreen", () => {
     });
     expect(useSettingsStore.getState().textAppearance.size).toBe(26);
     expect(previewStyle(screen).fontSize).toBe(26);
+  });
+
+  it("maps touches from the right edge in RTL", async () => {
+    jest.replaceProperty(I18nManager, "isRTL", true);
+    const screen = render(<TextAppearanceSettingsScreen />);
+    layoutSlider(screen);
+    const slider = screen.getByTestId(TestID.TextAppearanceSizeSlider);
+    await act(async () => {
+      slider.props.onResponderGrant(touch(0));
+    });
+    expect(useSettingsStore.getState().textAppearance.size).toBe(26);
   });
 
   it("drag pauses scrolling, ticks and long-press fire haptics", async () => {

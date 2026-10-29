@@ -102,7 +102,7 @@ export const TryLargerModelScreen = ({
           <ModelCard
             testID={childTestID("model")}
             name={model.name}
-            description={model.description}
+            description={loc.modelDescription(model.id)}
             languageCount={model.languages}
             sizeLabel={formatBytes(model.sizeBytes)}
             isBundled={model.isBundled}

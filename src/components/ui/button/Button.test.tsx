@@ -31,7 +31,7 @@ describe("Button", () => {
     const { getByLabelText, queryByText } = render(
       <Button.primary text="Submit" onPress={jest.fn()} isLoading={true} />,
     );
-    expect(getByLabelText("Loading")).toBeTruthy();
+    expect(getByLabelText("loading")).toBeTruthy();
     expect(queryByText("Submit")).toBeNull();
   });
 
@@ -39,7 +39,7 @@ describe("Button", () => {
     const { getByLabelText, queryByText } = render(
       <Button.secondary text="Save" onPress={jest.fn()} isLoading={true} />,
     );
-    expect(getByLabelText("Loading")).toBeTruthy();
+    expect(getByLabelText("loading")).toBeTruthy();
     expect(queryByText("Save")).toBeNull();
   });
 
@@ -47,7 +47,7 @@ describe("Button", () => {
     const { getByLabelText, queryByText } = render(
       <Button.tertiary text="More" onPress={jest.fn()} isLoading={true} />,
     );
-    expect(getByLabelText("Loading")).toBeTruthy();
+    expect(getByLabelText("loading")).toBeTruthy();
     expect(queryByText("More")).toBeNull();
   });
 
@@ -55,7 +55,7 @@ describe("Button", () => {
     const { getByLabelText, queryByText } = render(
       <Button.utility text="Action" onPress={jest.fn()} isLoading={true} />,
     );
-    expect(getByLabelText("Loading")).toBeTruthy();
+    expect(getByLabelText("loading")).toBeTruthy();
     expect(queryByText("Action")).toBeNull();
   });
 

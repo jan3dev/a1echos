@@ -231,7 +231,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
+  // Media playback progress stays left-to-right in RTL (Apple HIG, Material).
   waves: {
+    direction: "ltr",
     flex: 1,
     height: MAX_BAR_HEIGHT,
     flexDirection: "row",

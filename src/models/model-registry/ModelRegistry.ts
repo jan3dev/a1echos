@@ -9,7 +9,6 @@ export interface ModelFileInfo {
 export interface ModelInfo {
   id: ModelId;
   name: string;
-  description: string;
   sizeBytes: number;
   supportedModes: TranscriptionMode[];
   isBundled: boolean;
@@ -200,7 +199,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.WHISPER_TINY]: {
     id: ModelId.WHISPER_TINY,
     name: "Whisper Tiny",
-    description: "Fast, lightweight transcription",
     sizeBytes: 103_700_000,
     supportedModes: [TranscriptionMode.FILE],
     isBundled: true,
@@ -216,7 +214,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.WHISPER_BASE]: {
     id: ModelId.WHISPER_BASE,
     name: "Whisper Base",
-    description: "Balanced accuracy and speed",
     sizeBytes: 160_609_290,
     supportedModes: [TranscriptionMode.FILE],
     isBundled: false,
@@ -234,7 +231,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.WHISPER_SMALL]: {
     id: ModelId.WHISPER_SMALL,
     name: "Whisper Small",
-    description: "Higher accuracy, larger model",
     sizeBytes: 375_485_327,
     supportedModes: [TranscriptionMode.FILE],
     isBundled: false,
@@ -252,7 +248,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.NEMO_PARAKEET_V3]: {
     id: ModelId.NEMO_PARAKEET_V3,
     name: "Parakeet V3",
-    description: "High accuracy, high speed",
     sizeBytes: 670_000_000,
     supportedModes: [TranscriptionMode.FILE, TranscriptionMode.REALTIME],
     isBundled: false,
@@ -271,7 +266,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.QWEN3_ASR]: {
     id: ModelId.QWEN3_ASR,
     name: "Qwen3 ASR",
-    description: "High accuracy, 22 Chinese dialects",
     sizeBytes: 982_571_347,
     supportedModes: [TranscriptionMode.FILE],
     isBundled: false,
@@ -292,7 +286,6 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   [ModelId.NEMOTRON_STREAMING_EN]: {
     id: ModelId.NEMOTRON_STREAMING_EN,
     name: "Nemotron EN",
-    description: "Live word-by-word English",
     sizeBytes: 661_919_416,
     supportedModes: [TranscriptionMode.REALTIME],
     isBundled: false,

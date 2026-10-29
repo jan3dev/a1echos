@@ -199,7 +199,7 @@ export default function ModelSettingsScreen() {
         key={model.id}
         testID={`model-card-${model.id}`}
         name={model.name}
-        description={model.description}
+        description={loc.modelDescription(model.id)}
         languageCount={model.languages}
         sizeLabel={formatBytes(model.sizeBytes)}
         isBundled={model.isBundled}
