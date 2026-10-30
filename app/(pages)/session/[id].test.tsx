@@ -1520,6 +1520,31 @@ describe("SessionScreen", () => {
       expect(mockReplace).toHaveBeenCalledWith("/");
     });
 
+    it("navigates back once when ending incognito clears the session", async () => {
+      const { useSessionOperations } = jest.requireMock("@/hooks");
+      (useSessionOperations as jest.Mock).mockReturnValue({
+        deleteSession: jest.fn(),
+        endIncognitoSession: jest.fn().mockResolvedValue(undefined),
+      });
+      mockSession = { id: "session-1", name: "Incognito", isIncognito: true };
+      (useFindSessionById as jest.Mock).mockReturnValue(() => mockSession);
+
+      mockCanGoBack.mockReturnValue(true);
+
+      const { rerender } = render(<SessionScreen />);
+      await act(async () => {});
+
+      const [, onPreventRemove] = lastPreventRemove();
+      await act(async () => {
+        await onPreventRemove();
+      });
+      (useFindSessionById as jest.Mock).mockReturnValue(() => undefined);
+      rerender(<SessionScreen />);
+      await act(async () => {});
+
+      expect(mockBack).toHaveBeenCalledTimes(1);
+    });
+
     it("beforeRemove for incognito with error in endIncognitoSession", async () => {
       const mockEndIncognito = jest
         .fn()

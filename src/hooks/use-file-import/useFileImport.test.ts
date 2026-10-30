@@ -17,11 +17,13 @@ const mockImportFiles = jest.fn(async (..._args: unknown[]) => ({
 const mockDeleteSession = jest.fn(async (_id: string) => undefined);
 const mockShowGlobalTooltip = jest.fn();
 let mockState = "ready";
+let mockIsIncognito = false;
 
 jest.mock("@/stores", () => ({
   AUDIO_BUSY_STATES: new Set(["recording"]),
   useCreateSession: () => mockCreateSession,
   useImportFiles: () => mockImportFiles,
+  useIsIncognitoMode: () => mockIsIncognito,
   useShowGlobalTooltip: () => mockShowGlobalTooltip,
   useTranscriptionStore: { getState: () => ({ state: mockState }) },
 }));
@@ -64,6 +66,7 @@ const run = async (folderId?: string, sessionId?: string) => {
 
 beforeEach(() => {
   mockState = TranscriptionState.READY;
+  mockIsIncognito = false;
   currentRoute = { params: { id: "new-session" } };
   (useRouter as jest.Mock).mockReturnValue({ push: mockPush, back: mockBack });
   (useNavigationContainerRef as jest.Mock).mockReturnValue({
@@ -132,6 +135,15 @@ it("names the session after a single file, navigates, then imports", async () =>
   expect(mockImportFiles).toHaveBeenCalledWith("new-session", files);
   expect(mockDeleteSession).not.toHaveBeenCalled();
   expect(showAlertToast).not.toHaveBeenCalled();
+});
+
+it("creates an incognito session in incognito mode", async () => {
+  mockIsIncognito = true;
+  pick.mockResolvedValueOnce({ canceled: false, assets: [asset("a.mp3")] });
+
+  await run();
+
+  expect(mockCreateSession.mock.calls[0][1]).toBe(true);
 });
 
 it("keeps the session on partial failure and lists the reason", async () => {

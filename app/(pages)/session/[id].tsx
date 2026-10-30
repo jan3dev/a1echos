@@ -100,6 +100,9 @@ export default function SessionScreen() {
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [showRenameModal, setShowRenameModal] = useState(false);
+  // Ending incognito drops the session from the store; the init effect must
+  // not treat that as "not found" and navigate back a second time.
+  const leavingIncognitoRef = useRef(false);
 
   const findSessionById = useFindSessionById();
   const renameSessionAction = useRenameSession();
@@ -240,6 +243,7 @@ export default function SessionScreen() {
   useEffect(() => {
     const initSession = async () => {
       if (!session) {
+        if (leavingIncognitoRef.current) return;
         showToast(loc.sessionNotFound, "error");
         router.back();
         return;
@@ -291,9 +295,11 @@ export default function SessionScreen() {
       if (isRecording) {
         await stopRecordingAndSave();
       } else {
+        leavingIncognitoRef.current = true;
         try {
           await endIncognitoSession();
         } catch (error) {
+          leavingIncognitoRef.current = false;
           logError(error, {
             flag: FeatureFlag.session,
             message: "Failed to end incognito session",

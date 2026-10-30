@@ -11,6 +11,7 @@ import {
   type ImportFailureReason,
   useCreateSession,
   useImportFiles,
+  useIsIncognitoMode,
   useShowGlobalTooltip,
   useTranscriptionStore,
 } from "@/stores";
@@ -64,6 +65,7 @@ export const useFileImport = ({
   const { loc } = useLocalization();
   const createSession = useCreateSession();
   const importFiles = useImportFiles();
+  const isIncognitoMode = useIsIncognitoMode();
   const { deleteSession } = useSessionOperations();
   const showGlobalTooltip = useShowGlobalTooltip();
 
@@ -100,7 +102,7 @@ export const useFileImport = ({
             : undefined;
         sessionId = await createSession(
           sessionName,
-          false,
+          isIncognitoMode,
           loc.recordingPrefix,
           loc.incognitoModeTitle,
           folderId,
@@ -148,6 +150,7 @@ export const useFileImport = ({
     deleteSession,
     folderId,
     importFiles,
+    isIncognitoMode,
     loc,
     navigation,
     router,

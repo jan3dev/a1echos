@@ -80,8 +80,6 @@ export const HomeContent = ({
     [sessions, limit],
   );
   const hasMore = sessions.length > limit;
-  const isHomeEmpty =
-    !folderId && sessions.length === 0 && folders.length === 0;
 
   const handleEndReached = useCallback(() => {
     if (!hasMore) return;
@@ -143,6 +141,7 @@ export const HomeContent = ({
           },
         ]}
       >
+        <ListHeader folders={NO_FOLDERS} onUploadPress={onUploadPress} />
         <IncognitoEmptyState />
       </View>
     );
@@ -164,7 +163,7 @@ export const HomeContent = ({
         onEndReachedThreshold={0.4}
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
-          selectionMode || isHomeEmpty ? undefined : (
+          selectionMode ? undefined : (
             <ListHeader
               folders={folders}
               onFolderPress={onFolderPress}

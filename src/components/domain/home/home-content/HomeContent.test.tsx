@@ -82,13 +82,13 @@ describe("HomeContent", () => {
     expect(queryByText("AQUA")).toBeNull();
   });
 
-  it("hides quick actions on an empty home", () => {
+  it("shows quick actions on an empty home", () => {
     seedSessions(0);
-    const { queryByText } = render(
+    const { getByText } = render(
       <HomeContent {...defaultProps} onCreateFolderPress={jest.fn()} />,
     );
-    expect(queryByText("homeFolder")).toBeNull();
-    expect(queryByText("homeUpload")).toBeNull();
+    expect(getByText("homeFolder")).toBeTruthy();
+    expect(getByText("homeUpload")).toBeTruthy();
   });
 
   it("keeps the upload action in an empty folder", () => {
@@ -197,6 +197,21 @@ describe("HomeContent", () => {
     );
     expect(getByTestId(TestID.IncognitoEmptyState)).toBeTruthy();
     expect(queryByTestId(TestID.SessionList)).toBeNull();
+  });
+
+  it("shows only the upload action in incognito mode", () => {
+    useSettingsStore.setState({ isIncognitoMode: true });
+    const onUploadPress = jest.fn();
+    const { getByText, queryByText } = render(
+      <HomeContent
+        {...defaultProps}
+        onCreateFolderPress={jest.fn()}
+        onUploadPress={onUploadPress}
+      />,
+    );
+    expect(queryByText("homeFolder")).toBeNull();
+    fireEvent.press(getByText("homeUpload"));
+    expect(onUploadPress).toHaveBeenCalledTimes(1);
   });
 
   it("renders only the first 30 sessions initially when more exist", () => {
