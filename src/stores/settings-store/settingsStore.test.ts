@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react-native";
 
 import {
   AppTheme,
+  LlmModelId,
   ModelId,
   ModelType,
   SupportedLanguages,
@@ -13,6 +14,8 @@ import {
   initializeSettingsStore,
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useBiometricAuthEnabled,
+  useSelectedLlmId,
+  useSetLlmId,
   useHasSeenKeyboardPrompt,
   useHasSeenLargerModelSuggestion,
   useMarkLargerModelSuggestionSeen,
@@ -475,6 +478,65 @@ describe("settingsStore", () => {
       expect(
         renderHook(() => useSetBiometricAuthEnabled()).result.current,
       ).toBe(useSettingsStore.getState().setBiometricAuthEnabled);
+    });
+  });
+
+  describe("setLlmId()", () => {
+    it("defaults to none and persists a selection", async () => {
+      expect(useSettingsStore.getState().selectedLlmId).toBeNull();
+
+      await useSettingsStore.getState().setLlmId(LlmModelId.QWEN35_2B);
+
+      expect(useSettingsStore.getState().selectedLlmId).toBe(
+        LlmModelId.QWEN35_2B,
+      );
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "selected_llm_id",
+        LlmModelId.QWEN35_2B,
+      );
+    });
+
+    it("removes the key when cleared", async () => {
+      useSettingsStore.setState({ selectedLlmId: LlmModelId.QWEN35_2B });
+
+      await useSettingsStore.getState().setLlmId(null);
+
+      expect(useSettingsStore.getState().selectedLlmId).toBeNull();
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith("selected_llm_id");
+    });
+
+    it("rolls back on persist failure", async () => {
+      useSettingsStore.setState({ selectedLlmId: null });
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
+        new Error("write fail"),
+      );
+
+      await useSettingsStore.getState().setLlmId(LlmModelId.QWEN35_4B);
+
+      expect(useSettingsStore.getState().selectedLlmId).toBeNull();
+    });
+
+    it.each([
+      [LlmModelId.QWEN35_0_8B, LlmModelId.QWEN35_0_8B],
+      ["removed_model", null],
+    ])("initialize() reads %s as %s", async (stored, expected) => {
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key) =>
+        key === "selected_llm_id" ? stored : null,
+      );
+
+      await useSettingsStore.getState().initialize();
+
+      expect(useSettingsStore.getState().selectedLlmId).toBe(expected);
+    });
+
+    it("selectors expose the selection and its setter", () => {
+      useSettingsStore.setState({ selectedLlmId: LlmModelId.QWEN35_0_8B });
+      expect(renderHook(() => useSelectedLlmId()).result.current).toBe(
+        LlmModelId.QWEN35_0_8B,
+      );
+      expect(renderHook(() => useSetLlmId()).result.current).toBe(
+        useSettingsStore.getState().setLlmId,
+      );
     });
   });
 

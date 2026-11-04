@@ -15,9 +15,15 @@ export {
 export type {
   Transcription,
   TranscriptionJSON,
+  TranscriptionKind,
 } from "./transcription/Transcription";
 
-export { ModelId, ModelType, TranscriptionMode } from "./model-type/ModelType";
+export {
+  LlmModelId,
+  ModelId,
+  ModelType,
+  TranscriptionMode,
+} from "./model-type/ModelType";
 
 export {
   getAllModels,
@@ -27,6 +33,19 @@ export {
   MODEL_REGISTRY,
 } from "./model-registry/ModelRegistry";
 export type { ModelFileInfo, ModelInfo } from "./model-registry/ModelRegistry";
+
+export {
+  getAllDownloadableModels,
+  getAllLlms,
+  getDownloadableModel,
+  getLlmInfo,
+  getRecommendedLlmId,
+  LLM_REGISTRY,
+} from "./model-registry/LlmRegistry";
+export type {
+  DownloadableModelId,
+  LlmModelInfo,
+} from "./model-registry/LlmRegistry";
 
 export { AppTheme, getThemeByName, getThemeName } from "./app-theme/AppTheme";
 

@@ -241,5 +241,22 @@
   "preparingRecording": "রেকর্ডিং প্রস্তুত হচ্ছে",
   "transcribing": "ট্রান্সক্রাইব করা হচ্ছে",
   "loading": "লোড হচ্ছে",
-  "recordingInProgress": "রেকর্ডিং চলছে…"
+  "recordingInProgress": "রেকর্ডিং চলছে…",
+  "intelligenceTitle": "ইন্টেলিজেন্স",
+  "intelligenceDescription": "বিভিন্ন AI বিকল্প ব্যবহার করে আপনার ট্রান্সক্রিপ্ট সারসংক্ষেপ ও ফরম্যাট করুন।",
+  "llmCapabilitySummarization": "সারসংক্ষেপ",
+  "llmCapabilityTextCleanup": "টেক্সট পরিষ্কার",
+  "llmCapabilitiesSummary": "পরিষ্কার ও সারসংক্ষেপ",
+  "llmEnglishOnlyWarning": "আপনার ট্রান্সক্রিপশনের ভাষা ইংরেজি নয়। এই মডেলটি শুধু ইংরেজিতে ভালো কাজ করে।",
+  "llmDescription_qwen35_0_8b": "ছোট ও দ্রুত, সব ভাষার জন্য",
+  "llmDescription_qwen35_0_8b_en": "সবচেয়ে ছোট ও দ্রুত, শুধু ইংরেজি",
+  "llmDescription_qwen35_2b": "মান ও গতির ভারসাম্য",
+  "llmDescription_qwen35_4b": "সেরা মান, নতুন ফোন প্রয়োজন",
+  "recommended": "প্রস্তাবিত",
+  "summary": "সারসংক্ষেপ",
+  "summaryProgress": "{{total}}-এর মধ্যে অংশ {{part}}",
+  "summaryNeedsModel": "সারসংক্ষেপ তৈরি করতে একটি AI মডেল ডাউনলোড করুন।",
+  "summaryFailed": "সারসংক্ষেপ ব্যর্থ",
+  "summaryStopped": "সারসংক্ষেপ থামানো হয়েছে",
+  "stop": "থামান"
 }

@@ -34,6 +34,20 @@ export default function DesignSystemIndex() {
         style={{ backgroundColor: theme.colors.surfaceBackground }}
         contentContainerStyle={styles.container}
       >
+        <Link href={Routes.llmBench} asChild>
+          <RipplePressable
+            style={({ pressed }) => [
+              styles.row,
+              styles.list,
+              { backgroundColor: theme.colors.surfacePrimary },
+              pressed && { opacity: 0.6 },
+            ]}
+          >
+            <Text variant="body1" color={theme.colors.textPrimary}>
+              LLM Bench
+            </Text>
+          </RipplePressable>
+        </Link>
         {GROUPED_ENTRIES.map(({ group, entries }) => {
           if (entries.length === 0) return null;
           return (

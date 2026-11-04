@@ -120,6 +120,13 @@ export default function SettingsScreen() {
                 onPress={() => router.push(Routes.settingsModel)}
               />
               <ListItem
+                testID={TestID.SettingsIntelligence}
+                title={loc.intelligenceTitle}
+                iconLeading={<Icon name="ai" size={24} color={secondary} />}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsIntelligence)}
+              />
+              <ListItem
                 testID={TestID.SettingsAdvanced}
                 title={loc.advancedSettingsTitle}
                 iconLeading={

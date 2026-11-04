@@ -241,5 +241,22 @@
   "preparingRecording": "ریکارڈنگ کی تیاری ہو رہی ہے",
   "transcribing": "ٹرانسکرائب ہو رہا ہے",
   "loading": "لوڈ ہو رہا ہے",
-  "recordingInProgress": "ریکارڈنگ جاری ہے…"
+  "recordingInProgress": "ریکارڈنگ جاری ہے…",
+  "intelligenceTitle": "انٹیلیجنس",
+  "intelligenceDescription": "مختلف AI آپشنز سے اپنی ٹرانسکرپٹس کا خلاصہ بنائیں اور انہیں فارمیٹ کریں۔",
+  "llmCapabilitySummarization": "خلاصہ",
+  "llmCapabilityTextCleanup": "متن کی صفائی",
+  "llmCapabilitiesSummary": "صفائی اور خلاصہ",
+  "llmEnglishOnlyWarning": "آپ کی ٹرانسکرپشن کی زبان انگریزی نہیں ہے۔ یہ ماڈل صرف انگریزی میں اچھا کام کرتا ہے۔",
+  "llmDescription_qwen35_0_8b": "چھوٹا اور تیز، تمام زبانوں کے لیے",
+  "llmDescription_qwen35_0_8b_en": "سب سے چھوٹا اور تیز، صرف انگریزی",
+  "llmDescription_qwen35_2b": "معیار اور رفتار میں توازن",
+  "llmDescription_qwen35_4b": "بہترین معیار، نیا فون درکار ہے",
+  "recommended": "تجویز کردہ",
+  "summary": "خلاصہ",
+  "summaryProgress": "{{total}} میں سے حصہ {{part}}",
+  "summaryNeedsModel": "خلاصے بنانے کے لیے ایک AI ماڈل ڈاؤن لوڈ کریں۔",
+  "summaryFailed": "خلاصہ ناکام",
+  "summaryStopped": "خلاصہ روک دیا گیا",
+  "stop": "روکیں"
 }

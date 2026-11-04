@@ -1,0 +1,1 @@
+ALTER TABLE `transcriptions` ADD `kind` text DEFAULT 'transcript' NOT NULL;

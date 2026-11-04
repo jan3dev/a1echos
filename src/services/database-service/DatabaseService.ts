@@ -161,6 +161,7 @@ const createDatabaseService = () => {
           text: row.text,
           timestampMs: row.timestampMs,
           audioPath: row.audioPath,
+          kind: row.kind,
         },
       })
       .run();

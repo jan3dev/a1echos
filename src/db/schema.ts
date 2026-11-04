@@ -29,6 +29,9 @@ export const transcriptions = sqliteTable(
     text: text("text").notNull(),
     timestampMs: integer("timestamp_ms").notNull(),
     audioPath: text("audio_path").notNull().default(""),
+    kind: text("kind", { enum: ["transcript", "summary"] })
+      .notNull()
+      .default("transcript"),
   },
   (t) => ({
     sessionIdIdx: index("transcriptions_session_id_idx").on(t.sessionId),

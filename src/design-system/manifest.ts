@@ -50,6 +50,7 @@ import sessionGallery from "@/components/domain/session/Session.gallery";
 import echosKeyboardScreenGallery from "@/components/domain/settings/echos-keyboard-screen/EchosKeyboardScreen.gallery";
 import settingsGallery from "@/components/domain/settings/Settings.gallery";
 import textAppearanceGallery from "@/components/domain/settings/text-appearance/TextAppearance.gallery";
+import llmCardGallery from "@/components/domain/settings/llm-card/LlmCard.gallery";
 import transcriptionGallery from "@/components/domain/transcription/Transcription.gallery";
 import transcriptionSettingsSheetGallery from "@/components/domain/transcription/transcription-settings-sheet/TranscriptionSettingsSheet.gallery";
 
@@ -124,6 +125,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   sessionGallery,
   echosKeyboardScreenGallery,
   settingsGallery,
+  llmCardGallery,
   textAppearanceGallery,
   transcriptionGallery,
   transcriptionSettingsSheetGallery,

@@ -972,6 +972,10 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       if (selected.length < 2) {
         throw new Error("Select at least two transcriptions to merge");
       }
+      // A merged summary would be re-summarized; a merged transcript hidden.
+      if (new Set(selected.map((t) => t.kind ?? "transcript")).size > 1) {
+        throw new Error("Summaries can only be merged with summaries");
+      }
 
       const [target, ...rest] = selected;
       const restIds = new Set(rest.map((t) => t.id));

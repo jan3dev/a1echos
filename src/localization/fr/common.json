@@ -249,5 +249,22 @@
   "preparingRecording": "Préparation de l’enregistrement",
   "transcribing": "Transcription en cours",
   "loading": "Chargement",
-  "recordingInProgress": "Enregistrement en cours…"
+  "recordingInProgress": "Enregistrement en cours…",
+  "intelligenceTitle": "Intelligence",
+  "intelligenceDescription": "Résumez et mettez en forme vos transcriptions avec différentes options d’IA.",
+  "llmCapabilitySummarization": "Résumé",
+  "llmCapabilityTextCleanup": "Nettoyage du texte",
+  "llmCapabilitiesSummary": "Nettoyage et Résumé",
+  "llmEnglishOnlyWarning": "Votre langue de transcription n’est pas l’anglais. Ce modèle ne fonctionne bien qu’en anglais.",
+  "llmDescription_qwen35_0_8b": "Petit et rapide, toutes les langues",
+  "llmDescription_qwen35_0_8b_en": "Le plus petit et le plus rapide, anglais uniquement",
+  "llmDescription_qwen35_2b": "Équilibre entre qualité et vitesse",
+  "llmDescription_qwen35_4b": "Meilleure qualité, nécessite un téléphone récent",
+  "recommended": "Recommandé",
+  "summary": "Résumé",
+  "summaryProgress": "Partie {{part}} sur {{total}}",
+  "summaryNeedsModel": "Téléchargez un modèle d’IA pour créer des résumés.",
+  "summaryFailed": "Échec du Résumé",
+  "summaryStopped": "Résumé Interrompu",
+  "stop": "Arrêter"
 }

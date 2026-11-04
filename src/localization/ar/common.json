@@ -272,5 +272,22 @@
   "preparingRecording": "جارٍ تحضير التسجيل",
   "transcribing": "جارٍ التفريغ",
   "loading": "جارٍ التحميل",
-  "recordingInProgress": "التسجيل قيد التقدم…"
+  "recordingInProgress": "التسجيل قيد التقدم…",
+  "intelligenceTitle": "الذكاء",
+  "intelligenceDescription": "لخّص نصوصك المفرغة ونسّقها باستخدام خيارات ذكاء اصطناعي مختلفة.",
+  "llmCapabilitySummarization": "التلخيص",
+  "llmCapabilityTextCleanup": "تنظيف النص",
+  "llmCapabilitiesSummary": "التنظيف والتلخيص",
+  "llmEnglishOnlyWarning": "لغة النسخ لديك ليست الإنجليزية. يعمل هذا النموذج جيدًا بالإنجليزية فقط.",
+  "llmDescription_qwen35_0_8b": "صغير وسريع، لجميع اللغات",
+  "llmDescription_qwen35_0_8b_en": "الأصغر والأسرع، للإنجليزية فقط",
+  "llmDescription_qwen35_2b": "توازن بين الجودة والسرعة",
+  "llmDescription_qwen35_4b": "أفضل جودة، يحتاج إلى هاتف حديث",
+  "recommended": "موصى به",
+  "summary": "ملخص",
+  "summaryProgress": "الجزء {{part}} من {{total}}",
+  "summaryNeedsModel": "نزّل نموذج ذكاء اصطناعي لإنشاء الملخصات.",
+  "summaryFailed": "فشل الملخص",
+  "summaryStopped": "توقف الملخص",
+  "stop": "إيقاف"
 }

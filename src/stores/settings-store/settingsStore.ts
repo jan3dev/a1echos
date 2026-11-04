@@ -6,6 +6,7 @@ import {
   DEFAULT_TEXT_APPEARANCE,
   getModelInfo,
   getThemeByName,
+  LlmModelId,
   ModelId,
   ModelType,
   parseTextAppearance,
@@ -38,6 +39,7 @@ const STORAGE_KEYS = {
   ONBOARDING_STEP: "onboarding_step",
   LARGER_MODEL_SUGGESTION_SEEN: "larger_model_suggestion_seen",
   TEXT_APPEARANCE: "text_appearance",
+  LLM_ID: "selected_llm_id",
 };
 
 type ModelModes = Partial<Record<ModelId, TranscriptionMode>>;
@@ -95,6 +97,8 @@ interface SettingsStore {
   hasSeenLargerModelSuggestion: boolean;
   /** Font, size and weight of transcript text only. */
   textAppearance: TextAppearance;
+  /** Downloaded LLM used for summaries; null until one is downloaded. */
+  selectedLlmId: LlmModelId | null;
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
@@ -116,6 +120,7 @@ interface SettingsStore {
   markWelcomeSeen: () => Promise<void>;
   markLargerModelSuggestionSeen: () => Promise<void>;
   setTextAppearance: (patch: Partial<TextAppearance>) => Promise<void>;
+  setLlmId: (llmId: LlmModelId | null) => Promise<void>;
 }
 
 const getDefaultModelType = (): ModelType => {
@@ -240,6 +245,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   onboardingStep: null,
   hasSeenLargerModelSuggestion: false,
   textAppearance: DEFAULT_TEXT_APPEARANCE,
+  selectedLlmId: null,
 
   initialize: async () => {
     try {
@@ -262,6 +268,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         textAppearanceValue,
         biometricAuthValue,
         onboardingStep,
+        llmIdValue,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.THEME),
         AsyncStorage.getItem(STORAGE_KEYS.MODEL_TYPE),
@@ -281,6 +288,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(STORAGE_KEYS.TEXT_APPEARANCE),
         AsyncStorage.getItem(STORAGE_KEYS.BIOMETRIC_AUTH_ENABLED),
         AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_STEP),
+        AsyncStorage.getItem(STORAGE_KEYS.LLM_ID),
       ]);
 
       const selectedTheme = themeValue
@@ -389,6 +397,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         onboardingStep,
         hasSeenLargerModelSuggestion,
         textAppearance: parseTextAppearance(textAppearanceValue),
+        selectedLlmId: Object.values(LlmModelId).includes(
+          llmIdValue as LlmModelId,
+        )
+          ? (llmIdValue as LlmModelId)
+          : null,
       });
 
       // Mirror the preferences to the keyboard config file so the native
@@ -419,6 +432,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         onboardingStep: null,
         hasSeenLargerModelSuggestion: false,
         textAppearance: DEFAULT_TEXT_APPEARANCE,
+        selectedLlmId: null,
       });
     }
   },
@@ -630,6 +644,24 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }
   },
 
+  setLlmId: async (llmId: LlmModelId | null) => {
+    const previousValue = get().selectedLlmId;
+    set({ selectedLlmId: llmId });
+    try {
+      if (llmId) {
+        await AsyncStorage.setItem(STORAGE_KEYS.LLM_ID, llmId);
+      } else {
+        await AsyncStorage.removeItem(STORAGE_KEYS.LLM_ID);
+      }
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.settings,
+        message: "Failed to save LLM selection",
+      });
+      set({ selectedLlmId: previousValue });
+    }
+  },
+
   markKeyboardPromptSeen: async () => {
     if (get().hasSeenKeyboardPrompt) return;
     set({ hasSeenKeyboardPrompt: true });
@@ -805,6 +837,8 @@ export const useTextAppearance = () =>
   useSettingsStore((s) => s.textAppearance);
 export const useSetTextAppearance = () =>
   useSettingsStore((s) => s.setTextAppearance);
+export const useSelectedLlmId = () => useSettingsStore((s) => s.selectedLlmId);
+export const useSetLlmId = () => useSettingsStore((s) => s.setLlmId);
 export const initializeSettingsStore = async (): Promise<void> => {
   await useSettingsStore.getState().initialize();
 };

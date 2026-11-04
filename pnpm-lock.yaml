@@ -7,6 +7,9 @@ settings:
 overrides:
   '@expo/dom-webview': 58.0.2
 
+patchedDependencies:
+  llama.rn@0.12.9: f8768c96d8968f6470793643c3d99a55142624152869936eb671bc0232725649
+
 importers:
 
   .:
@@ -104,6 +107,9 @@ importers:
       i18next:
         specifier: 25.7.1
         version: 25.7.1(typescript@6.0.3)
+      llama.rn:
+        specifier: 0.12.9
+        version: 0.12.9(patch_hash=f8768c96d8968f6470793643c3d99a55142624152869936eb671bc0232725649)(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
       opencc-js:
         specifier: 1.0.5
         version: 1.0.5
@@ -4474,6 +4480,14 @@ packages:
 
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
+
+  llama.rn@0.12.9:
+    resolution: {integrity: sha512-uRsTVARp1KnDkDg00FvOGIrN6SZfMqYVJfCOdxN9FSyGufLC+Aad6oFWZVEO8vmtNqu+JBlsCGevP4sJGifAvg==}
+    engines: {node: '>= 16.0.0'}
+    hasBin: true
+    peerDependencies:
+      react: '*'
+      react-native: '*'
 
   locate-path@5.0.0:
     resolution: {integrity: sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g==}
@@ -11043,6 +11057,11 @@ snapshots:
       lightningcss-win32-x64-msvc: 1.32.0
 
   lines-and-columns@1.2.4: {}
+
+  llama.rn@0.12.9(patch_hash=f8768c96d8968f6470793643c3d99a55142624152869936eb671bc0232725649)(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+    dependencies:
+      react: 19.3.0
+      react-native: 0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0)
 
   locate-path@5.0.0:
     dependencies:

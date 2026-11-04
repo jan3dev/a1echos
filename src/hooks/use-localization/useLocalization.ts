@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ModelId } from "@/models";
+import type { LlmModelId, ModelId } from "@/models";
 
 export const useLocalization = () => {
   const { t } = useTranslation();
@@ -245,6 +245,21 @@ export const useLocalization = () => {
       biometricAuthUnavailable: t("biometricAuthUnavailable"),
       biometricUnlock: t("biometricUnlock"),
       modelDescription: (id: ModelId) => t(`modelDescription_${id}`),
+      llmDescription: (id: LlmModelId) => t(`llmDescription_${id}`),
+      recommended: t("recommended"),
+      summary: t("summary"),
+      stop: t("stop"),
+      summaryProgress: (part: number, total: number) =>
+        t("summaryProgress", { part, total }),
+      summaryNeedsModel: t("summaryNeedsModel"),
+      summaryFailed: t("summaryFailed"),
+      summaryStopped: t("summaryStopped"),
+      intelligenceTitle: t("intelligenceTitle"),
+      intelligenceDescription: t("intelligenceDescription"),
+      llmCapabilitySummarization: t("llmCapabilitySummarization"),
+      llmCapabilityTextCleanup: t("llmCapabilityTextCleanup"),
+      llmCapabilitiesSummary: t("llmCapabilitiesSummary"),
+      llmEnglishOnlyWarning: t("llmEnglishOnlyWarning"),
       aquaBannerTitle: t("aquaBannerTitle"),
       aquaBannerButton: t("aquaBannerButton"),
       aquaBannerAccessibilityLabel: t("aquaBannerAccessibilityLabel"),

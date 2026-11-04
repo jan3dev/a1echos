@@ -7,6 +7,7 @@ import {
   ViewStyle,
 } from "react-native";
 
+import { useLocalization } from "@/hooks";
 import { Transcription, transcriptTextStyle } from "@/models";
 import { useTextAppearance } from "@/stores";
 import { AquaColors, useTheme } from "@/theme";
@@ -73,6 +74,9 @@ interface TranscriptionItemProps {
   onEndEdit?: () => void;
   onTranscriptionUpdate?: (updated: Transcription) => void;
   style?: ViewStyle;
+  /** Shown after the Summary label while a long session is summarized in
+   *  parts, e.g. "Part 2 of 5". */
+  progressLabel?: string;
   /** Pins colors on screens that ignore the app theme. */
   colors?: AquaColors;
 }
@@ -93,6 +97,7 @@ export const TranscriptionItem = ({
   onEndEdit,
   onTranscriptionUpdate,
   style,
+  progressLabel,
   colors: colorsOverride,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
@@ -183,6 +188,17 @@ export const TranscriptionItem = ({
                 colors={colors}
               />
             )}
+            {transcription.kind === "summary" && (
+              <>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.surfaceBorderPrimary },
+                  ]}
+                />
+                <SummaryLabel colors={colors} progressLabel={progressLabel} />
+              </>
+            )}
           </View>
 
           <View style={styles.actionsContainer}>
@@ -256,6 +272,30 @@ export const TranscriptionItem = ({
   );
 };
 
+// Own component so only summary rows subscribe to localization.
+function SummaryLabel({
+  colors,
+  progressLabel,
+}: {
+  colors: AquaColors;
+  progressLabel?: string;
+}) {
+  const { loc } = useLocalization();
+  return (
+    <View style={styles.summaryLabel}>
+      <Icon name="ai" size={16} color={colors.accentBrand} />
+      <Text variant="caption1" weight="semibold" color={colors.accentBrand}>
+        {loc.summary}
+      </Text>
+      {progressLabel && (
+        <Text variant="caption1" color={colors.textTertiary}>
+          {progressLabel}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: 16,
@@ -274,6 +314,19 @@ const styles = StyleSheet.create({
   },
   timestampContainer: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    gap: 8,
+  },
+  divider: {
+    width: 1,
+    alignSelf: "stretch",
+  },
+  summaryLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   actionsContainer: {
     flexDirection: "row",

@@ -132,6 +132,8 @@ jest.mock("@/stores", () => ({
   useSwitchSession: jest.fn(() => mockSwitchSession),
   useSelectedModelType: jest.fn(() => "whisper_file"),
   useSelectedTranscriptionMode: jest.fn(() => "file"),
+  useSelectedLlmId: jest.fn(() => null),
+  useSelectedLanguage: jest.fn(() => ({ code: "en" })),
   useIsRecording: jest.fn(() => false),
   useStartRecording: jest.fn(() => jest.fn()),
   useStopRecordingAndSave: jest.fn(() => jest.fn()),
@@ -157,6 +159,10 @@ jest.mock("@/stores", () => ({
   useSelectAllTranscriptions: jest.fn(() => jest.fn()),
   useDeleteTranscriptions: jest.fn(() => jest.fn()),
   useMergeTranscriptions: jest.fn(() => jest.fn()),
+  useIsSummaryBlocked: jest.fn(() => false),
+  useSummarySessionId: jest.fn(() => null),
+  useSummarizeSession: jest.fn(() => jest.fn()),
+  useCancelSummary: jest.fn(() => jest.fn()),
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
@@ -305,6 +311,11 @@ beforeEach(() => {
   (stores.useShowGlobalTooltip as jest.Mock).mockReturnValue(jest.fn());
   (stores.useSessionTranscriptions as jest.Mock).mockReturnValue([]);
   (stores.useLivePreview as jest.Mock).mockReturnValue(null);
+  (stores.useSummarySessionId as jest.Mock).mockReturnValue(null);
+  (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(false);
+  (stores.useSummarizeSession as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useSelectedLlmId as jest.Mock).mockReturnValue(null);
+  (stores.useSelectedLanguage as jest.Mock).mockReturnValue({ code: "en" });
   (stores.useSetRecordingCallbacks as jest.Mock).mockReturnValue(
     mockSetRecordingCallbacks,
   );
@@ -356,7 +367,6 @@ beforeEach(() => {
     deleteSession: jest.fn(),
     endIncognitoSession: jest.fn(),
   });
-
 });
 
 describe("SessionScreen", () => {
@@ -1651,6 +1661,120 @@ describe("SessionScreen", () => {
         { id: "t1", text: "Hello" },
         { id: "t2", text: "World" },
       ]);
+    });
+
+    describe("summary", () => {
+      const stores = jest.requireMock("@/stores");
+      const setup = (outcome: Promise<string>) => {
+        const tooltip = jest.fn();
+        const summarize = jest.fn(() => outcome);
+        (useSessionTranscriptions as jest.Mock).mockReturnValue([
+          { id: "t1", text: "Ship on Wednesday" },
+        ]);
+        (stores.useShowGlobalTooltip as jest.Mock).mockReturnValue(tooltip);
+        (stores.useSummarizeSession as jest.Mock).mockReturnValue(summarize);
+        return { tooltip, summarize };
+      };
+      const press = async () => {
+        const { getByTestId } = render(<SessionScreen />);
+        await act(async () => {});
+        await act(async () => {
+          fireEvent.press(getByTestId(TestID.SessionSummary));
+        });
+      };
+
+      it("summarizes this session", async () => {
+        const { summarize, tooltip } = setup(Promise.resolve("done"));
+        await press();
+        expect(summarize).toHaveBeenCalledWith("session-1");
+        expect(tooltip).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ["qwen35_0_8b_en", "de", true],
+        ["qwen35_0_8b_en", "en", false],
+        ["qwen35_0_8b", "de", false],
+      ])(
+        "with %s and %s, warns about English-only: %s",
+        async (llmId, code, warns) => {
+          const { summarize, tooltip } = setup(Promise.resolve("done"));
+          (stores.useSelectedLlmId as jest.Mock).mockReturnValue(llmId);
+          (stores.useSelectedLanguage as jest.Mock).mockReturnValue({ code });
+          await press();
+          expect(summarize).toHaveBeenCalledWith("session-1");
+          expect(tooltip.mock.calls.map((c) => String(c[0]))).toEqual(
+            warns ? ["llmEnglishOnlyWarning"] : [],
+          );
+        },
+      );
+
+      it("sends the user to download a model when none is ready", async () => {
+        const { tooltip } = setup(Promise.resolve("no-model"));
+        await press();
+        expect(tooltip).toHaveBeenCalledWith(expect.anything(), "normal", 4000);
+        expect(mockPush).toHaveBeenCalledWith(Routes.settingsIntelligence);
+      });
+
+      it("says when the summary was stopped", async () => {
+        const { tooltip } = setup(Promise.resolve("cancelled"));
+        await press();
+        expect(tooltip).toHaveBeenCalledWith(expect.anything(), "normal", 3000);
+      });
+
+      it("says when the summary failed", async () => {
+        const { tooltip } = setup(Promise.reject(new Error("oom")));
+        await press();
+        expect(tooltip).toHaveBeenCalledWith(expect.anything(), "error", 5000);
+      });
+
+      it("turns into Stop while this session is summarized", async () => {
+        const cancel = jest.fn();
+        let resolveSummary!: (outcome: string) => void;
+        const { tooltip, summarize } = setup(
+          new Promise((r) => (resolveSummary = r)),
+        );
+        (stores.useCancelSummary as jest.Mock).mockReturnValue(cancel);
+        const { getByTestId, rerender } = render(<SessionScreen />);
+        await act(async () => {});
+        fireEvent.press(getByTestId(TestID.SessionSummary));
+        expect(summarize).toHaveBeenCalled();
+
+        (stores.useSummarySessionId as jest.Mock).mockReturnValue("session-1");
+        rerender(<SessionScreen />);
+        const button = getByTestId(TestID.SessionSummary);
+        expect(button.props.accessibilityState.disabled).toBe(false);
+        fireEvent.press(button);
+        expect(cancel).toHaveBeenCalled();
+
+        // The user stopped it, so no "Summary Stopped" tooltip.
+        await act(async () => resolveSummary("stopped"));
+        expect(tooltip).not.toHaveBeenCalled();
+      });
+
+      it("is disabled with only summaries, while recording, or while another summary runs", async () => {
+        const disabled = async () => {
+          const { getByTestId } = render(<SessionScreen />);
+          await act(async () => {});
+          return getByTestId(TestID.SessionSummary).props.accessibilityState
+            .disabled;
+        };
+        (useSessionTranscriptions as jest.Mock).mockReturnValue([
+          { id: "s1", text: "- Old", kind: "summary" },
+        ]);
+        expect(await disabled()).toBe(true);
+
+        (useSessionTranscriptions as jest.Mock).mockReturnValue([
+          { id: "t1", text: "Hello" },
+        ]);
+        expect(await disabled()).toBe(false);
+
+        (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(true);
+        expect(await disabled()).toBe(true);
+
+        (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(false);
+        (stores.useSummarySessionId as jest.Mock).mockReturnValue("other");
+        expect(await disabled()).toBe(true);
+      });
     });
 
     it("disables Share for an empty session and hides actions in selection mode", async () => {

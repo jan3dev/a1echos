@@ -6,6 +6,7 @@ import { Transcription } from "@/models";
 import {
   useSessionTranscriptions,
   useSettingsStore,
+  useSummaryJob,
   useTranscriptionStore,
 } from "@/stores";
 
@@ -15,6 +16,8 @@ jest.mock("@/stores", () => ({
   useSessionTranscriptions: jest.fn(() => []),
   useTranscriptionStore: jest.fn(),
   useSettingsStore: jest.fn(),
+  useSessionStore: jest.fn((sel: any) => sel({ activeSessionId: "s1" })),
+  useSummaryJob: jest.fn(() => null),
 }));
 
 const SimpleItem = (props: any) => {
@@ -80,6 +83,64 @@ describe("TranscriptionList", () => {
     (useSettingsStore as unknown as jest.Mock).mockReturnValue(
       mockSettingsDefaults,
     );
+    (useSummaryJob as jest.Mock).mockReturnValue(null);
+  });
+
+  describe("summary in progress", () => {
+    const itemProps = () => {
+      const props: any[] = [];
+      jest.requireMock(
+        "../transcription-item/TranscriptionItem",
+      ).TranscriptionItem = (p: any) => {
+        props.push(p);
+        return SimpleItem(p);
+      };
+      return props;
+    };
+    const job = (patch: object) => ({
+      sessionId: "s1",
+      startedAt: new Date("2024-01-03"),
+      text: "",
+      part: 0,
+      parts: 0,
+      ...patch,
+    });
+    const preview = (props: any[]) =>
+      props.filter((p) => p.transcription.id === "summary_preview").pop();
+
+    beforeEach(() => {
+      (useSessionTranscriptions as jest.Mock).mockReturnValue(
+        mockTranscriptions,
+      );
+    });
+
+    it("shows a skeleton summary card with chunk progress", () => {
+      (useSummaryJob as jest.Mock).mockReturnValue(job({ part: 2, parts: 5 }));
+      const props = itemProps();
+      render(<TranscriptionList {...defaultProps} />);
+      const p = preview(props);
+      expect(p.transcription.kind).toBe("summary");
+      expect(p.isLoadingWhisperResult).toBe(true);
+      expect(p.progressLabel).toEqual(expect.anything());
+    });
+
+    it("streams the final pass into the card without progress", () => {
+      (useSummaryJob as jest.Mock).mockReturnValue(
+        job({ text: "- Ship", part: 3, parts: 3 }),
+      );
+      const props = itemProps();
+      const { getByText } = render(<TranscriptionList {...defaultProps} />);
+      expect(getByText("- Ship")).toBeTruthy();
+      const p = preview(props);
+      expect(p.isLivePreviewItem).toBe(true);
+      expect(p.progressLabel).toBeUndefined();
+    });
+
+    it("ignores a summary running for another session", () => {
+      (useSummaryJob as jest.Mock).mockReturnValue(job({ sessionId: "s2" }));
+      const { queryByTestId } = render(<TranscriptionList {...defaultProps} />);
+      expect(queryByTestId("transcription-item-summary_preview")).toBeNull();
+    });
   });
 
   it("renders TranscriptionItem for each transcription", () => {

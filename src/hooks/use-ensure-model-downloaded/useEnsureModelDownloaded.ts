@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import type { ModelId } from "@/models";
+import type { DownloadableModelId } from "@/models";
 import { modelDownloadService } from "@/services";
 import { useModelDownloadStore, useShowGlobalTooltip } from "@/stores";
 import { formatBytes } from "@/utils";
@@ -24,7 +24,7 @@ export const useEnsureModelDownloaded = () => {
   const { loc } = useLocalization();
 
   return useCallback(
-    async (modelId: ModelId): Promise<boolean> => {
+    async (modelId: DownloadableModelId): Promise<boolean> => {
       if (downloadStore.getProgress(modelId)?.status === "downloading") {
         return false;
       }

@@ -257,5 +257,22 @@
   "preparingRecording": "Подготовка к записи",
   "transcribing": "Транскрибация",
   "loading": "Загрузка",
-  "recordingInProgress": "Идёт запись…"
+  "recordingInProgress": "Идёт запись…",
+  "intelligenceTitle": "Интеллект",
+  "intelligenceDescription": "Создавайте краткие изложения и форматируйте расшифровки с помощью разных ИИ-моделей.",
+  "llmCapabilitySummarization": "Краткое изложение",
+  "llmCapabilityTextCleanup": "Очистка текста",
+  "llmCapabilitiesSummary": "Очистка и Краткое изложение",
+  "llmEnglishOnlyWarning": "Язык транскрипции не английский. Эта модель хорошо работает только на английском.",
+  "llmDescription_qwen35_0_8b": "Маленькая и быстрая, все языки",
+  "llmDescription_qwen35_0_8b_en": "Самая маленькая и быстрая, только английский",
+  "llmDescription_qwen35_2b": "Баланс качества и скорости",
+  "llmDescription_qwen35_4b": "Лучшее качество, нужен новый телефон",
+  "recommended": "Рекомендуется",
+  "summary": "Краткое изложение",
+  "summaryProgress": "Часть {{part}} из {{total}}",
+  "summaryNeedsModel": "Скачайте ИИ-модель, чтобы создавать краткие изложения.",
+  "summaryFailed": "Не Удалось Создать Изложение",
+  "summaryStopped": "Изложение Остановлено",
+  "stop": "Остановить"
 }

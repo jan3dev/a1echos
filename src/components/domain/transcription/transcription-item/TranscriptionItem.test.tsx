@@ -2,7 +2,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
-import { TestID } from "@/constants";
+import { dynamicTestID, TestID } from "@/constants";
 import { Transcription } from "@/models";
 
 import { TranscriptionItem } from "./TranscriptionItem";
@@ -77,6 +77,29 @@ describe("TranscriptionItem", () => {
   it("renders transcription text", () => {
     const { getByText } = render(<TranscriptionItem {...defaultProps} />);
     expect(getByText("Hello world transcription")).toBeTruthy();
+  });
+
+  it("labels a summary, with progress while it is being written", () => {
+    const summary = { ...mockTranscription, kind: "summary" as const };
+    const { getByText, getByTestId, rerender } = render(
+      <TranscriptionItem {...defaultProps} transcription={summary} />,
+    );
+    expect(getByText("summary")).toBeTruthy();
+    expect(getByTestId(dynamicTestID.icon("ai"))).toBeTruthy();
+
+    rerender(
+      <TranscriptionItem
+        {...defaultProps}
+        transcription={summary}
+        progressLabel="Part 2 of 5"
+      />,
+    );
+    expect(getByText("Part 2 of 5")).toBeTruthy();
+  });
+
+  it("shows no Summary label on a transcript", () => {
+    const { queryByText } = render(<TranscriptionItem {...defaultProps} />);
+    expect(queryByText("summary")).toBeNull();
   });
 
   it("renders timestamp", () => {

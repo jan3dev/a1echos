@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { create } from "zustand";
 
 import { i18n } from "@/localization";
-import { ModelId, getAllModels } from "@/models";
+import { getAllDownloadableModels, type DownloadableModelId } from "@/models";
 import { modelDownloadService } from "@/services";
 import type { DownloadProgress } from "@/services";
 import { FeatureFlag, logError, logWarn } from "@/utils";
@@ -62,18 +62,18 @@ const notifyDownloadComplete = () => {
 
 interface ModelDownloadStore {
   /** Current download progress per model */
-  downloadStates: Partial<Record<ModelId, DownloadProgress>>;
+  downloadStates: Partial<Record<DownloadableModelId, DownloadProgress>>;
   /** Set of model IDs that are verified as downloaded */
-  downloadedModels: Set<ModelId>;
+  downloadedModels: Set<DownloadableModelId>;
   /** Whether the store has been initialized */
   isInitialized: boolean;
 
   initialize: () => void;
-  startDownload: (modelId: ModelId) => Promise<boolean>;
-  cancelDownload: (modelId: ModelId) => void;
-  deleteModel: (modelId: ModelId) => Promise<boolean>;
-  isDownloaded: (modelId: ModelId) => boolean;
-  getProgress: (modelId: ModelId) => DownloadProgress | undefined;
+  startDownload: (modelId: DownloadableModelId) => Promise<boolean>;
+  cancelDownload: (modelId: DownloadableModelId) => void;
+  deleteModel: (modelId: DownloadableModelId) => Promise<boolean>;
+  isDownloaded: (modelId: DownloadableModelId) => boolean;
+  getProgress: (modelId: DownloadableModelId) => DownloadProgress | undefined;
 }
 
 export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
@@ -83,8 +83,8 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
 
   initialize: () => {
     // Scan filesystem for already-downloaded models
-    const downloaded = new Set<ModelId>();
-    for (const model of getAllModels()) {
+    const downloaded = new Set<DownloadableModelId>();
+    for (const model of getAllDownloadableModels()) {
       if (modelDownloadService.isModelDownloaded(model.id)) {
         downloaded.add(model.id);
       }
@@ -92,7 +92,7 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
     set({ downloadedModels: downloaded, isInitialized: true });
   },
 
-  startDownload: async (modelId: ModelId): Promise<boolean> => {
+  startDownload: async (modelId: DownloadableModelId): Promise<boolean> => {
     const current = get().downloadStates[modelId];
     if (current?.status === "downloading") {
       return false; // Already downloading
@@ -130,7 +130,7 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
     }
   },
 
-  cancelDownload: (modelId: ModelId) => {
+  cancelDownload: (modelId: DownloadableModelId) => {
     modelDownloadService.cancelDownload(modelId);
     // Optimistically update UI state so progress bar disappears immediately
     const current = get().downloadStates[modelId];
@@ -144,7 +144,7 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
     }
   },
 
-  deleteModel: async (modelId: ModelId): Promise<boolean> => {
+  deleteModel: async (modelId: DownloadableModelId): Promise<boolean> => {
     const success = await modelDownloadService.deleteModel(modelId);
     if (success) {
       set((state) => {
@@ -158,19 +158,19 @@ export const useModelDownloadStore = create<ModelDownloadStore>((set, get) => ({
     return success;
   },
 
-  isDownloaded: (modelId: ModelId): boolean => {
+  isDownloaded: (modelId: DownloadableModelId): boolean => {
     return get().downloadedModels.has(modelId);
   },
 
-  getProgress: (modelId: ModelId): DownloadProgress | undefined => {
+  getProgress: (modelId: DownloadableModelId): DownloadProgress | undefined => {
     return get().downloadStates[modelId];
   },
 }));
 
-export const useIsModelDownloaded = (modelId: ModelId) =>
+export const useIsModelDownloaded = (modelId: DownloadableModelId) =>
   useModelDownloadStore((s) => s.downloadedModels.has(modelId));
 
-export const useModelDownloadProgress = (modelId: ModelId) =>
+export const useModelDownloadProgress = (modelId: DownloadableModelId) =>
   useModelDownloadStore((s) => s.downloadStates[modelId]);
 
 export const initializeModelDownloadStore = (): void => {

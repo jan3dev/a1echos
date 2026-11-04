@@ -74,10 +74,24 @@ describe("db/types", () => {
       text: "Hello world",
       timestampMs: t.timestamp.getTime(),
       audioPath: "/audio/test.wav",
+      kind: "transcript",
     });
 
     const back = transcriptionFromRow(row);
     expect(back).toEqual(t);
+  });
+
+  it("round-trips a summary's kind", () => {
+    const t: Transcription = {
+      id: "t3",
+      sessionId: "s1",
+      text: "- Ship Wednesday",
+      timestamp: new Date("2024-04-03T00:00:00.000Z"),
+      audioPath: "",
+      kind: "summary",
+    };
+    expect(transcriptionToRow(t).kind).toBe("summary");
+    expect(transcriptionFromRow(transcriptionToRow(t))).toEqual(t);
   });
 
   it("preserves empty audioPath", () => {

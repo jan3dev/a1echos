@@ -30,7 +30,7 @@ const ATTENTION_FLOAT = 3;
 // Always provided by ModelCard, which resolves the override against the theme.
 const CardColorsContext = createContext<AquaColors | null>(null);
 
-const useCardColors = () => useContext(CardColorsContext)!;
+export const useCardColors = () => useContext(CardColorsContext)!;
 
 interface ModelCardProps {
   name: string;
@@ -88,13 +88,93 @@ export const ModelCard = ({
   const isDownloading = downloadProgress?.status === "downloading";
   const hasError = downloadProgress?.status === "error";
 
-  const borderColor = isSelected
-    ? colors.surfaceBorderSelected
-    : colors.surfaceBorderPrimary;
-
   const canSelect = isDownloaded && !disabled && !isDownloading;
 
   const languagesText = loc.languageCount(languageCount);
+
+  const modeMeta = (
+    <ModeMetaRow
+      languagesText={languagesText}
+      supportedModes={supportedModes}
+      onLanguagesPress={onLanguagesPress}
+    />
+  );
+
+  return (
+    <ModelCardFrame
+      testID={testID}
+      name={name}
+      description={description}
+      badge={isBundled ? loc.included : undefined}
+      isSelected={isSelected}
+      showRadio={isDownloaded && !isDownloading}
+      canSelect={canSelect}
+      onSelect={onSelect}
+      colors={colors}
+    >
+      {isDownloaded ? (
+        <DownloadedBody
+          languagesText={languagesText}
+          sizeLabel={sizeLabel}
+          isBundled={isBundled}
+          isSelected={isSelected}
+          supportedModes={supportedModes}
+          selectedMode={selectedMode}
+          onSelectMode={onSelectMode}
+          onDelete={onDelete}
+          onLanguagesPress={onLanguagesPress}
+        />
+      ) : isDownloading && downloadProgress ? (
+        <DownloadProgressSection
+          meta={modeMeta}
+          progress={downloadProgress}
+          onCancel={onCancelDownload}
+        />
+      ) : hasError ? (
+        <DownloadErrorSection meta={modeMeta} onRetry={onRetry} />
+      ) : (
+        <AvailableSection
+          meta={modeMeta}
+          sizeLabel={sizeLabel}
+          onDownload={onDownload}
+          highlightDownload={highlightDownload}
+        />
+      )}
+    </ModelCardFrame>
+  );
+};
+
+// --- Card frame (header + selection), shared with LlmCard ---
+
+interface ModelCardFrameProps {
+  name: string;
+  description: string;
+  /** Chip next to the name, e.g. "Included". */
+  badge?: string;
+  isSelected: boolean;
+  showRadio: boolean;
+  canSelect: boolean;
+  onSelect?: () => void;
+  colors: AquaColors;
+  testID?: string;
+  children: ReactNode;
+}
+
+export function ModelCardFrame({
+  name,
+  description,
+  badge,
+  isSelected,
+  showRadio,
+  canSelect,
+  onSelect,
+  colors,
+  testID,
+  children,
+}: ModelCardFrameProps) {
+  const borderColor = isSelected
+    ? colors.surfaceBorderSelected
+    : colors.surfaceBorderPrimary;
 
   return (
     <CardColorsContext.Provider value={colors}>
@@ -123,7 +203,7 @@ export const ModelCard = ({
               >
                 {name}
               </Text>
-              {isBundled && <Chip size="small" label={loc.included} />}
+              {badge && <Chip size="small" label={badge} />}
             </View>
             <Text
               variant="body2"
@@ -135,7 +215,7 @@ export const ModelCard = ({
             </Text>
           </View>
 
-          {isDownloaded && !isDownloading && (
+          {showRadio && (
             <View style={styles.radioWrapper}>
               <Radio<boolean>
                 value={true}
@@ -149,47 +229,11 @@ export const ModelCard = ({
           )}
         </View>
 
-        {isDownloaded ? (
-          <DownloadedBody
-            languagesText={languagesText}
-            sizeLabel={sizeLabel}
-            isBundled={isBundled}
-            isSelected={isSelected}
-            supportedModes={supportedModes}
-            selectedMode={selectedMode}
-            onSelectMode={onSelectMode}
-            onDelete={onDelete}
-            onLanguagesPress={onLanguagesPress}
-          />
-        ) : isDownloading && downloadProgress ? (
-          <DownloadProgressSection
-            progress={downloadProgress}
-            onCancel={onCancelDownload}
-            languagesText={languagesText}
-            supportedModes={supportedModes}
-            onLanguagesPress={onLanguagesPress}
-          />
-        ) : hasError ? (
-          <ErrorSection
-            languagesText={languagesText}
-            supportedModes={supportedModes}
-            onRetry={onRetry}
-            onLanguagesPress={onLanguagesPress}
-          />
-        ) : (
-          <AvailableBody
-            languagesText={languagesText}
-            sizeLabel={sizeLabel}
-            supportedModes={supportedModes}
-            onDownload={onDownload}
-            highlightDownload={highlightDownload}
-            onLanguagesPress={onLanguagesPress}
-          />
-        )}
+        {children}
       </RipplePressable>
     </CardColorsContext.Provider>
   );
-};
+}
 
 // --- Downloaded (meta + mode selector) ---
 
@@ -261,35 +305,25 @@ function DownloadedBody({
   );
 }
 
-// --- Available (not downloaded, idle) ---
+// --- Available / downloading / error sections, shared with LlmCard ---
 
-interface AvailableBodyProps {
-  languagesText: string;
-  sizeLabel: string;
-  supportedModes: TranscriptionMode[];
-  onDownload?: () => void;
-  highlightDownload?: boolean;
-  onLanguagesPress?: () => void;
-}
-
-function AvailableBody({
-  languagesText,
+export function AvailableSection({
+  meta,
   sizeLabel,
-  supportedModes,
   onDownload,
   highlightDownload,
-  onLanguagesPress,
-}: AvailableBodyProps) {
+}: {
+  meta: ReactNode;
+  sizeLabel: string;
+  onDownload?: () => void;
+  highlightDownload?: boolean;
+}) {
   const colors = useCardColors();
   const { loc } = useLocalization();
 
   return (
     <>
-      <ModeMetaRow
-        languagesText={languagesText}
-        supportedModes={supportedModes}
-        onLanguagesPress={onLanguagesPress}
-      />
+      {meta}
 
       <View
         style={[
@@ -316,23 +350,15 @@ function AvailableBody({
   );
 }
 
-// --- Downloading progress ---
-
-interface DownloadProgressSectionProps {
-  progress: DownloadProgress;
-  onCancel?: () => void;
-  languagesText: string;
-  supportedModes: TranscriptionMode[];
-  onLanguagesPress?: () => void;
-}
-
-function DownloadProgressSection({
+export function DownloadProgressSection({
+  meta,
   progress,
   onCancel,
-  languagesText,
-  supportedModes,
-  onLanguagesPress,
-}: DownloadProgressSectionProps) {
+}: {
+  meta: ReactNode;
+  progress: DownloadProgress;
+  onCancel?: () => void;
+}) {
   const colors = useCardColors();
   const { loc } = useLocalization();
 
@@ -340,11 +366,7 @@ function DownloadProgressSection({
 
   return (
     <View style={styles.progressSection}>
-      <ModeMetaRow
-        languagesText={languagesText}
-        supportedModes={supportedModes}
-        onLanguagesPress={onLanguagesPress}
-      />
+      {meta}
 
       <DownloadProgressBar ratio={progress.progressRatio} colors={colors} />
 
@@ -372,31 +394,19 @@ function DownloadProgressSection({
   );
 }
 
-// --- Error section ---
-
-interface ErrorSectionProps {
-  languagesText: string;
-  supportedModes: TranscriptionMode[];
-  onRetry?: () => void;
-  onLanguagesPress?: () => void;
-}
-
-function ErrorSection({
-  languagesText,
-  supportedModes,
+export function DownloadErrorSection({
+  meta,
   onRetry,
-  onLanguagesPress,
-}: ErrorSectionProps) {
+}: {
+  meta: ReactNode;
+  onRetry?: () => void;
+}) {
   const colors = useCardColors();
   const { loc } = useLocalization();
 
   return (
     <View style={styles.errorSection}>
-      <ModeMetaRow
-        languagesText={languagesText}
-        supportedModes={supportedModes}
-        onLanguagesPress={onLanguagesPress}
-      />
+      {meta}
       <View
         style={[
           styles.errorBar,
@@ -602,7 +612,7 @@ function ModeMetaChip({ icon, label }: { icon: IconName; label: string }) {
 
 // --- Shared primitives ---
 
-function ActionButton({
+export function ActionButton({
   icon,
   label,
   color,
@@ -734,7 +744,7 @@ function PressableCluster({
   );
 }
 
-function MetaDivider() {
+export function MetaDivider() {
   const colors = useCardColors();
   return (
     <View

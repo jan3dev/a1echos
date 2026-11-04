@@ -241,5 +241,22 @@
   "preparingRecording": "रिकॉर्डिंग की तैयारी हो रही है",
   "transcribing": "ट्रांसक्राइब हो रहा है",
   "loading": "लोड हो रहा है",
-  "recordingInProgress": "रिकॉर्डिंग जारी है…"
+  "recordingInProgress": "रिकॉर्डिंग जारी है…",
+  "intelligenceTitle": "इंटेलिजेंस",
+  "intelligenceDescription": "अलग-अलग AI विकल्पों से अपने ट्रांसक्रिप्ट का सारांश बनाएँ और उन्हें फ़ॉर्मैट करें।",
+  "llmCapabilitySummarization": "सारांश",
+  "llmCapabilityTextCleanup": "टेक्स्ट की सफ़ाई",
+  "llmCapabilitiesSummary": "सफ़ाई और सारांश",
+  "llmEnglishOnlyWarning": "आपकी ट्रांसक्रिप्शन भाषा अंग्रेज़ी नहीं है। यह मॉडल सिर्फ़ अंग्रेज़ी में अच्छा काम करता है।",
+  "llmDescription_qwen35_0_8b": "छोटा और तेज़, सभी भाषाओं के लिए",
+  "llmDescription_qwen35_0_8b_en": "सबसे छोटा और तेज़, सिर्फ़ अंग्रेज़ी",
+  "llmDescription_qwen35_2b": "गुणवत्ता और गति में संतुलन",
+  "llmDescription_qwen35_4b": "सबसे अच्छी गुणवत्ता, नया फ़ोन चाहिए",
+  "recommended": "अनुशंसित",
+  "summary": "सारांश",
+  "summaryProgress": "{{total}} में से भाग {{part}}",
+  "summaryNeedsModel": "सारांश बनाने के लिए एक AI मॉडल डाउनलोड करें।",
+  "summaryFailed": "सारांश विफल",
+  "summaryStopped": "सारांश रोका गया",
+  "stop": "रोकें"
 }

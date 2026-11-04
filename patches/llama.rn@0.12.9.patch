@@ -1,0 +1,105 @@
+diff --git a/android/src/main/java/com/rnllama/RNLlamaModule.java b/android/src/main/java/com/rnllama/RNLlamaModule.java
+index 407a62cb99c211778fcb4b946ff9b75764d3b8fb..a4029bc4cc742563419c82b8184646474bc67f56 100644
+--- a/android/src/main/java/com/rnllama/RNLlamaModule.java
++++ b/android/src/main/java/com/rnllama/RNLlamaModule.java
+@@ -35,7 +35,7 @@ public class RNLlamaModule extends NativeRNLlamaSpec {
+ 
+       long jsContextPointer = context.getJavaScriptContextHolder().get();
+       CallInvokerHolderImpl holder =
+-        (CallInvokerHolderImpl) context.getCatalystInstance().getJSCallInvokerHolder();
++        (CallInvokerHolderImpl) context.getJSCallInvokerHolder();
+ 
+       if (jsContextPointer == 0 || holder == null) {
+         promise.resolve(false);
+diff --git a/ios/RNLlama.h b/ios/RNLlama.h
+index 9b8f49834fb17aceebd7dcb81dd1d4b76cbd1787..eae5861490e4a18e67a6b04e131de3abd2078e5e 100644
+--- a/ios/RNLlama.h
++++ b/ios/RNLlama.h
+@@ -1,6 +1,9 @@
+ #import <React/RCTBridgeModule.h>
+ #import <React/RCTBridge+Private.h>
++#import <React/RCTCallInvoker.h>
++#import <React/RCTCallInvokerModule.h>
+ #import <ReactCommon/RCTTurboModule.h>
++#import <ReactCommon/RCTTurboModuleWithJSIBindings.h>
+ 
+ #if RNLLAMA_BUILD_FROM_SOURCE
+ #import "json.hpp"
+@@ -8,6 +11,9 @@
+ #import <rnllama/nlohmann/json.hpp>
+ #endif
+ 
+-@interface RNLlama : NSObject <RCTBridgeModule>
++@interface RNLlama : NSObject <RCTBridgeModule, RCTCallInvokerModule, RCTTurboModuleWithJSIBindings>
++
++// strong: this file compiles without ARC, and the default would be assign.
++@property (nonatomic, strong, nullable, readwrite) RCTCallInvoker *callInvoker;
+ 
+ @end
+diff --git a/ios/RNLlama.mm b/ios/RNLlama.mm
+index 603904200362e444f57eaa9fc90c077514b69503..e4dc2672cf38d33a85f3da8b64b2ce090049f8df 100644
+--- a/ios/RNLlama.mm
++++ b/ios/RNLlama.mm
+@@ -87,37 +87,37 @@ - (void)setBridge:(RCTBridge *)bridge {
+     _bridge = bridge;
+ }
+ 
+-RCT_EXPORT_METHOD(install:(RCTPromiseResolveBlock)resolve
+-                 withRejecter:(RCTPromiseRejectBlock)reject)
+-{
+-    RCTBridge *bridge = self.bridge ?: [RCTBridge currentBridge];
+-    if (!bridge) {
+-        resolve(@false);
+-        return;
+-    }
++@synthesize callInvoker = _callInvoker;
+ 
+-    RCTCxxBridge *cxxBridge = (RCTCxxBridge *)bridge.batchedBridge;
+-    if (!cxxBridge) {
+-        cxxBridge = (RCTCxxBridge *)bridge;
+-    }
+-    auto callInvoker = cxxBridge.jsCallInvoker ?: bridge.jsCallInvoker;
+-    if (!cxxBridge.runtime) {
+-        resolve(@false);
+-        return;
+-    }
++- (void)dealloc {
++    [_callInvoker release];
++    [super dealloc];
++}
+ 
+-    facebook::jsi::Runtime *runtime = static_cast<facebook::jsi::Runtime *>(cxxBridge.runtime);
++// RN 0.88 removed RCTCxxBridge. Bindings are installed when the TurboModule is
++// created and, as a fallback, from install() via the injected call invoker.
++- (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime &)runtime
++                          callInvoker:(const std::shared_ptr<facebook::react::CallInvoker> &)callInvoker
++{
++    rnllama_jsi::installJSIBindings(runtime, callInvoker);
++}
+ 
+-    if (callInvoker) {
+-        callInvoker->invokeAsync([runtime, callInvoker]() {
+-            rnllama_jsi::installJSIBindings(*runtime, callInvoker);
+-        });
+-    } else {
++RCT_EXPORT_METHOD(install:(RCTPromiseResolveBlock)resolve
++                 withRejecter:(RCTPromiseRejectBlock)reject)
++{
++    std::shared_ptr<facebook::react::CallInvoker> callInvoker = [_callInvoker callInvoker];
++    if (!callInvoker) {
+         resolve(@false);
+         return;
+     }
+-
+-    resolve(@true);
++    // Resolve only once the bindings exist: JS reads them right after await.
++    // Manual retain/release: this file compiles without ARC.
++    RCTPromiseResolveBlock resolveCopy = [resolve copy];
++    callInvoker->invokeAsync([callInvoker, resolveCopy](facebook::jsi::Runtime &runtime) {
++        rnllama_jsi::installJSIBindings(runtime, callInvoker);
++        resolveCopy(@true);
++        [resolveCopy release];
++    });
+ }
+ 
+ - (void)invalidate {

@@ -709,6 +709,17 @@ describe("transcriptionStore", () => {
         timestamp: new Date("2024-01-03"),
       });
 
+      it("refuses to merge a summary with transcripts", async () => {
+        const summary = { ...c, kind: "summary" as const };
+        useTranscriptionStore.setState({ transcriptions: [a, summary] });
+        await expect(
+          useTranscriptionStore
+            .getState()
+            .mergeTranscriptions(new Set(["a", "c"])),
+        ).rejects.toThrow("Summaries can only be merged with summaries");
+        expect(databaseService.mergeTranscriptions).not.toHaveBeenCalled();
+      });
+
       it("joins text into the oldest selected item and deletes the rest", async () => {
         useSessionStore.setState({ sessions: [testSession] });
         useTranscriptionStore.setState({ transcriptions: [a, b, c] });

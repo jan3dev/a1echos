@@ -1,11 +1,11 @@
 import { Directory, File, Paths } from "expo-file-system";
 import * as LegacyFileSystem from "expo-file-system/legacy";
 
-import { ModelId, getModelInfo } from "@/models";
+import { getDownloadableModel, type DownloadableModelId } from "@/models";
 import { FeatureFlag, logError } from "@/utils";
 
 export interface DownloadProgress {
-  modelId: ModelId;
+  modelId: DownloadableModelId;
   totalBytes: number;
   downloadedBytes: number;
   progressRatio: number;
@@ -24,14 +24,14 @@ const getModelsDir = (): string => {
   return cachedModelsDir;
 };
 
-const getModelDir = (modelId: ModelId): string =>
+const getModelDir = (modelId: DownloadableModelId): string =>
   `${getModelsDir()}/${modelId}`;
 
 const PROGRESS_THROTTLE_MS = 1000;
 
 const createModelDownloadService = () => {
   const activeDownloads = new Map<
-    ModelId,
+    DownloadableModelId,
     {
       cancelled: boolean;
       resumable?: LegacyFileSystem.DownloadResumable;
@@ -45,7 +45,7 @@ const createModelDownloadService = () => {
     }
   };
 
-  const ensureModelDir = (modelId: ModelId): string => {
+  const ensureModelDir = (modelId: DownloadableModelId): string => {
     ensureModelsDir();
     const modelDir = getModelDir(modelId);
     const dir = new Directory(modelDir);
@@ -55,8 +55,8 @@ const createModelDownloadService = () => {
     return modelDir;
   };
 
-  const isModelDownloaded = (modelId: ModelId): boolean => {
-    const modelInfo = getModelInfo(modelId);
+  const isModelDownloaded = (modelId: DownloadableModelId): boolean => {
+    const modelInfo = getDownloadableModel(modelId);
     if (modelInfo.isBundled) return true;
 
     const modelDir = getModelDir(modelId);
@@ -74,12 +74,8 @@ const createModelDownloadService = () => {
     });
   };
 
-  const getDownloadedModelIds = (): ModelId[] => {
-    return Object.values(ModelId).filter((id) => isModelDownloaded(id));
-  };
-
-  const getDownloadedModelSize = (modelId: ModelId): number => {
-    const modelInfo = getModelInfo(modelId);
+  const getDownloadedModelSize = (modelId: DownloadableModelId): number => {
+    const modelInfo = getDownloadableModel(modelId);
     const modelDir = getModelDir(modelId);
     const dir = new Directory(modelDir);
     if (!dir.exists) return 0;
@@ -95,13 +91,13 @@ const createModelDownloadService = () => {
   };
 
   const checkDiskSpace = async (
-    modelId: ModelId,
+    modelId: DownloadableModelId,
   ): Promise<{
     available: number;
     required: number;
     sufficient: boolean;
   }> => {
-    const modelInfo = getModelInfo(modelId);
+    const modelInfo = getDownloadableModel(modelId);
     const required = modelInfo.sizeBytes;
 
     try {
@@ -113,10 +109,10 @@ const createModelDownloadService = () => {
   };
 
   const downloadModel = async (
-    modelId: ModelId,
+    modelId: DownloadableModelId,
     onProgress: (progress: DownloadProgress) => void,
   ): Promise<boolean> => {
-    const modelInfo = getModelInfo(modelId);
+    const modelInfo = getDownloadableModel(modelId);
     if (modelInfo.isBundled) return true;
     if (!modelInfo.downloadBaseUrl) {
       throw new Error(`No download URL for model: ${modelId}`);
@@ -267,7 +263,7 @@ const createModelDownloadService = () => {
     }
   };
 
-  const cancelDownload = (modelId: ModelId): void => {
+  const cancelDownload = (modelId: DownloadableModelId): void => {
     const download = activeDownloads.get(modelId);
     if (download) {
       download.cancelled = true;
@@ -277,8 +273,10 @@ const createModelDownloadService = () => {
     }
   };
 
-  const deleteModel = async (modelId: ModelId): Promise<boolean> => {
-    const modelInfo = getModelInfo(modelId);
+  const deleteModel = async (
+    modelId: DownloadableModelId,
+  ): Promise<boolean> => {
+    const modelInfo = getDownloadableModel(modelId);
     if (modelInfo.isBundled) return false; // Don't delete bundled models
 
     try {
@@ -297,14 +295,13 @@ const createModelDownloadService = () => {
     }
   };
 
-  const getModelPath = (modelId: ModelId): string | null => {
+  const getModelPath = (modelId: DownloadableModelId): string | null => {
     if (!isModelDownloaded(modelId)) return null;
     return getModelDir(modelId);
   };
 
   return {
     isModelDownloaded,
-    getDownloadedModelIds,
     getDownloadedModelSize,
     checkDiskSpace,
     downloadModel,

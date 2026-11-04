@@ -22,8 +22,10 @@ import { AppConstants } from "@/constants";
 import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
 import {
+  useSessionStore,
   useSessionTranscriptions,
   useSettingsStore,
+  useSummaryJob,
   useTranscriptionStore,
 } from "@/stores";
 import { useTheme } from "@/theme";
@@ -51,6 +53,7 @@ interface ActivePreviewState {
   isStreamingLive: boolean;
   isLoadingResult: boolean;
   isRecording: boolean;
+  progressLabel?: string;
 }
 
 const EmptyPreviewState: ActivePreviewState = {
@@ -91,6 +94,8 @@ export const TranscriptionList = ({
   const isRecording = transcriptionStore.isRecording();
   const isTranscribing = transcriptionStore.isTranscribing();
   const transcriptionMode = settingsStore.selectedTranscriptionMode;
+  const sessionId = useSessionStore((s) => s.activeSessionId);
+  const summaryJob = useSummaryJob();
 
   const previewState = useMemo((): ActivePreviewState => {
     const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
@@ -142,6 +147,26 @@ export const TranscriptionList = ({
       }
     }
 
+    if (summaryJob?.sessionId === sessionId) {
+      return {
+        item: {
+          id: "summary_preview",
+          sessionId,
+          text: summaryJob.text,
+          timestamp: summaryJob.startedAt,
+          audioPath: "",
+          kind: "summary",
+        },
+        isStreamingLive: summaryJob.text !== "",
+        isLoadingResult: summaryJob.text === "",
+        isRecording: false,
+        progressLabel:
+          summaryJob.parts > 1 && !summaryJob.text
+            ? loc.summaryProgress(summaryJob.part, summaryJob.parts)
+            : undefined,
+      };
+    }
+
     return EmptyPreviewState;
   }, [
     livePreview,
@@ -150,6 +175,9 @@ export const TranscriptionList = ({
     isTranscribing,
     transcriptionMode,
     activeSessionId,
+    summaryJob,
+    sessionId,
+    loc,
   ]);
 
   // Chronological: oldest first, preview appended at the end (visual bottom).
@@ -292,6 +320,7 @@ export const TranscriptionList = ({
           isLoadingWhisperResult={itemState.isLoadingResult}
           isWhisperRecording={itemState.isRecording}
           editDisabled={isRecording || isTranscribing}
+          progressLabel={itemState.progressLabel}
           onStartEdit={() => onTranscriptionEdit?.(item.id)}
           onTap={() => {
             if (!isPreview) {

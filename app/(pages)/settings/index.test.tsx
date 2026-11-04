@@ -179,6 +179,9 @@ describe("SettingsScreen", () => {
     fireEvent.press(getByTestId("list-item-textAppearanceTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/text-appearance");
 
+    fireEvent.press(getByTestId("list-item-intelligenceTitle"));
+    expect(mockPush).toHaveBeenCalledWith("/settings/intelligence");
+
     fireEvent.press(getByTestId("list-item-advancedSettingsTitle"));
     expect(mockPush).toHaveBeenCalledWith("/settings/advanced");
   });

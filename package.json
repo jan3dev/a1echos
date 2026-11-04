@@ -14,6 +14,7 @@
     "build:dictionary": "node scripts/keyboard-dictionary/build.js",
     "bench:dictionary": "node scripts/keyboard-dictionary/benchmark.js",
     "bench:keyboard-lm": "python3 scripts/keyboard-lm/bench.py",
+    "bench:llm": "node scripts/llm-summary/bench.js",
     "distill:keyboard-lm": "python3 scripts/keyboard-lm/distill-generate.py",
     "test:parity:ios": "scripts/keyboard-dictionary/parity/run-swift-parity.sh",
     "test:parity:android": "cd android && ./gradlew :app:testDebugUnitTest --tests \"com.a1lab.echos.ime.*\""
@@ -50,6 +51,7 @@
     "expo-system-ui": "~58.0.6",
     "fflate": "0.8.3",
     "i18next": "25.7.1",
+    "llama.rn": "0.12.9",
     "opencc-js": "1.0.5",
     "react": "19.3.0",
     "react-i18next": "16.3.5",

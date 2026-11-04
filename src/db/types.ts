@@ -47,6 +47,7 @@ export function transcriptionFromRow(row: TranscriptionRow): Transcription {
     text: row.text,
     timestamp: new Date(row.timestampMs),
     audioPath: row.audioPath,
+    ...(row.kind === "summary" && { kind: row.kind }),
   };
 }
 
@@ -57,5 +58,6 @@ export function transcriptionToRow(t: Transcription): TranscriptionRow {
     text: t.text,
     timestampMs: t.timestamp.getTime(),
     audioPath: t.audioPath,
+    kind: t.kind ?? "transcript",
   };
 }

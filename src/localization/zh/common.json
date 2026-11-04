@@ -233,5 +233,22 @@
   "preparingRecording": "正在准备录音",
   "transcribing": "正在转录",
   "loading": "正在加载",
-  "recordingInProgress": "正在录音…"
+  "recordingInProgress": "正在录音…",
+  "intelligenceTitle": "智能",
+  "intelligenceDescription": "使用不同的 AI 选项总结和整理你的转写内容。",
+  "llmCapabilitySummarization": "摘要",
+  "llmCapabilityTextCleanup": "文本整理",
+  "llmCapabilitiesSummary": "整理与摘要",
+  "llmEnglishOnlyWarning": "你的转写语言不是英语。此模型仅在英语下效果良好。",
+  "llmDescription_qwen35_0_8b": "小巧快速，支持所有语言",
+  "llmDescription_qwen35_0_8b_en": "最小最快，仅限英语",
+  "llmDescription_qwen35_2b": "质量与速度兼顾",
+  "llmDescription_qwen35_4b": "质量最佳，需要较新的手机",
+  "recommended": "推荐",
+  "summary": "摘要",
+  "summaryProgress": "第 {{part}} 部分，共 {{total}} 部分",
+  "summaryNeedsModel": "下载 AI 模型以创建摘要。",
+  "summaryFailed": "摘要失败",
+  "summaryStopped": "摘要已停止",
+  "stop": "停止"
 }

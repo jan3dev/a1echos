@@ -42,6 +42,7 @@ export const Routes = {
     }) as unknown as Href,
   settings: "/settings" as Href,
   settingsModel: "/settings/model" as Href,
+  settingsIntelligence: "/settings/intelligence" as Href,
   settingsTheme: "/settings/theme" as Href,
   settingsTextAppearance: "/settings/text-appearance" as Href,
   settingsLanguage: "/settings/language" as Href,
@@ -54,6 +55,7 @@ export const Routes = {
       params: { modelId },
     }) as unknown as Href,
   designSystem: "/(dev)/design-system" as Href,
+  llmBench: "/(dev)/llm-bench" as Href,
   designSystemDetail: (slug: string): Href =>
     ({
       pathname: "/(dev)/design-system/[slug]",

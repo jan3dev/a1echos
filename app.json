@@ -110,6 +110,7 @@
       "./plugins/withEchosKeyboard",
       "./plugins/withSqlcipher",
       "./plugins/withFileProtection",
+      "llama.rn",
       [
         "expo-build-properties",
         {

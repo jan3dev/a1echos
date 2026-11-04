@@ -17,3 +17,10 @@ export enum TranscriptionMode {
   FILE = "file",
   REALTIME = "realtime",
 }
+
+export enum LlmModelId {
+  QWEN35_0_8B_EN = "qwen35_0_8b_en",
+  QWEN35_0_8B = "qwen35_0_8b",
+  QWEN35_2B = "qwen35_2b",
+  QWEN35_4B = "qwen35_4b",
+}

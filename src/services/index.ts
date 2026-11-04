@@ -47,3 +47,15 @@ export {
   default as modelDownloadServiceDefault,
 } from "./model-download-service/ModelDownloadService";
 export type { DownloadProgress } from "./model-download-service/ModelDownloadService";
+
+export { llmService } from "./llm-service/LlmService";
+export type {
+  LlmLoadOptions,
+  LlmResult,
+  LlmRunOptions,
+  LlmTask,
+} from "./llm-service/LlmService";
+export {
+  summarize,
+  SummaryCancelledError,
+} from "./llm-service/summarize";

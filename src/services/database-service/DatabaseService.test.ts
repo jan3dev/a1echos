@@ -105,6 +105,7 @@ const transcriptionRowFor = (t: Transcription) => ({
   text: t.text,
   timestampMs: t.timestamp.getTime(),
   audioPath: t.audioPath,
+  kind: t.kind ?? "transcript",
 });
 
 beforeEach(() => {

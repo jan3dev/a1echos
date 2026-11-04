@@ -1,9 +1,14 @@
+/** A summary is LLM output about the rest of its session, not speech. */
+export type TranscriptionKind = "transcript" | "summary";
+
 export interface Transcription {
   id: string;
   sessionId: string;
   text: string;
   timestamp: Date;
   audioPath: string;
+  /** Absent means "transcript". */
+  kind?: TranscriptionKind;
 }
 
 export interface TranscriptionJSON {

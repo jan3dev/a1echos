@@ -47,7 +47,7 @@ import {
   useScrollSurface,
   useSessionOperations,
 } from "@/hooks";
-import { Transcription, TranscriptionMode } from "@/models";
+import { getLlmInfo, Transcription, TranscriptionMode } from "@/models";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
@@ -61,6 +61,8 @@ import {
   useMergeTranscriptions,
   useRenameSession,
   useSelectAllTranscriptions,
+  useSelectedLanguage,
+  useSelectedLlmId,
   useSelectedTranscriptionIdsSet,
   useSelectedTranscriptionMode,
   useSessionStore,
@@ -72,6 +74,10 @@ import {
   useShowToast,
   useStartRecording,
   useStopRecordingAndSave,
+  useCancelSummary,
+  useSummarizeSession,
+  useIsSummaryBlocked,
+  useSummarySessionId,
   useSwitchSession,
   useToggleTranscriptionSelection,
 } from "@/stores";
@@ -115,6 +121,12 @@ export default function SessionScreen() {
   const showToast = useShowToast();
   const showGlobalTooltip = useShowGlobalTooltip();
   const transcriptions = useSessionTranscriptions(id);
+  const isSummaryBlocked = useIsSummaryBlocked();
+  const summarySessionId = useSummarySessionId();
+  const summarizeSession = useSummarizeSession();
+  const selectedLlmId = useSelectedLlmId();
+  const languageCode = useSelectedLanguage().code;
+  const cancelSummary = useCancelSummary();
   const livePreview = useLivePreview();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
@@ -232,6 +244,41 @@ export default function SessionScreen() {
 
   const ensureMicPermission = useMicPermission(showAlertToast, hideAlertToast);
   const handleUpload = useFileImport({ showAlertToast, sessionId: id });
+
+  const canSummarize = transcriptions.some(
+    (t) => t.kind !== "summary" && t.text.trim(),
+  );
+
+  const handleSummaryPressed = useCallback(async () => {
+    if (
+      selectedLlmId &&
+      getLlmInfo(selectedLlmId).englishOnly &&
+      languageCode !== "en"
+    ) {
+      showGlobalTooltip(loc.llmEnglishOnlyWarning, "normal", 5000);
+    }
+    try {
+      const outcome = await summarizeSession(id);
+      if (outcome === "no-model") {
+        showGlobalTooltip(loc.summaryNeedsModel, "normal", 4000);
+        router.push(Routes.settingsIntelligence);
+      } else if (outcome === "cancelled") {
+        showGlobalTooltip(loc.summaryStopped, "normal", 3000);
+      }
+    } catch {
+      showGlobalTooltip(loc.summaryFailed, "error", 5000);
+    }
+  }, [
+    id,
+    languageCode,
+    loc,
+    router,
+    selectedLlmId,
+    showGlobalTooltip,
+    summarizeSession,
+  ]);
+
+  const isSummarizingHere = summarySessionId === id;
 
   // Clear stale app-bar glass when the list isn't shown (loading/error/empty
   // all coincide with no transcriptions): no scroll event fires to reset it.
@@ -681,6 +728,24 @@ export default function SessionScreen() {
                       icon={
                         <Icon
                           name="document_upload"
+                          size={18}
+                          color={theme.colors.textPrimary}
+                        />
+                      }
+                    />
+                    <Button.utility
+                      testID={TestID.SessionSummary}
+                      text={isSummarizingHere ? loc.stop : loc.summary}
+                      enabled={
+                        isSummarizingHere ||
+                        (canSummarize && !summarySessionId && !isSummaryBlocked)
+                      }
+                      onPress={
+                        isSummarizingHere ? cancelSummary : handleSummaryPressed
+                      }
+                      icon={
+                        <Icon
+                          name={isSummarizingHere ? "close_circle" : "magicpen"}
                           size={18}
                           color={theme.colors.textPrimary}
                         />

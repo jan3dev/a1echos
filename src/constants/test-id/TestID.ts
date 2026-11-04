@@ -55,6 +55,7 @@ export enum TestID {
   SessionShareVia = "session-share-via",
   SessionShareSheet = "session-share-sheet",
   SessionUpload = "session-upload",
+  SessionSummary = "session-summary",
   SessionShare = "session-share",
   AddToFolderClose = "add-to-folder-close",
   AddToFolderSave = "add-to-folder-save",
@@ -80,6 +81,7 @@ export enum TestID {
 
   // --- Settings ---
   SettingsModel = "settings-model",
+  SettingsIntelligence = "settings-intelligence",
   SettingsTheme = "settings-theme",
   SettingsTextAppearance = "settings-text-appearance",
   SettingsAppLanguage = "settings-app-language",

@@ -1,0 +1,172 @@
+[
+  {
+    "id": "en-meeting",
+    "lang": "en",
+    "transcript": "Okay so, um, quick sync on the launch. So the plan is we ship version two point four on Tuesday, no wait, sorry, Wednesday the twelfth because QA needs one more day. Uh, Maria is going to own the release notes, and Daniel, you're on the App Store screenshots, right? Yeah. Budget for the launch ads is four thousand five hundred euros, we agreed to not go over that. The big risk is the Android crash on Samsung devices, the one with the audio recorder, so Priya is looking at that today and if it's not fixed by Monday we pull Android from the launch and do iOS only. Um, oh and we still need legal to sign off on the new privacy text. That's, uh, that's on me, I'll ping them this afternoon. Anything else? No? Okay, cool, thanks everyone.",
+    "facts": [
+      ["2.4", "two point four"],
+      ["wednesday"],
+      ["12", "twelfth"],
+      ["maria"],
+      ["release notes"],
+      ["daniel"],
+      ["screenshot"],
+      ["4,500", "4500", "4.500", "four thousand five hundred"],
+      ["samsung"],
+      ["priya"],
+      ["monday"],
+      [
+        "ios only",
+        "only ios",
+        "only on ios",
+        "ios-only",
+        "drop android",
+        "pull android",
+        "without android"
+      ],
+      ["legal"]
+    ],
+    "forbidden": ["tuesday"],
+    "fillers": ["um", "uh"]
+  },
+  {
+    "id": "en-memo",
+    "lang": "en",
+    "transcript": "Note to self. Uh, things to do before the trip. Renew the passport, the appointment is on the third at nine thirty. Buy a travel adapter, the UK kind. Ask Tom to water the plants, he said yes last time so probably fine. Um, cancel the gym membership before the end of the month otherwise they charge me again, it's like sixty dollars. And book the airport taxi for six a.m. Oh, and pick up the dry cleaning, I keep forgetting that.",
+    "facts": [
+      ["passport"],
+      ["third", "3rd"],
+      ["9:30", "nine thirty", "9.30"],
+      ["adapter"],
+      ["tom"],
+      ["plants"],
+      ["gym"],
+      ["$60", "60", "sixty"],
+      ["taxi"],
+      ["6 a.m", "6am", "6 am", "six a.m", "6:00", "six am"],
+      ["dry cleaning"]
+    ],
+    "forbidden": [],
+    "fillers": ["uh", "um"]
+  },
+  {
+    "id": "en-long-idea",
+    "lang": "en",
+    "transcript": "Alright, I want to get this idea down before I lose it. So the problem with our onboarding is people drop off at the microphone permission screen. We see something like forty percent of new users never get past that step, which is, you know, huge. My theory is they don't understand why we need the mic before they've seen anything. So the idea is to flip the order. Let them try the app first with a sample recording that's already transcribed, so they see the value, and only ask for the microphone when they tap record for the first time. Um, there's a risk that iOS reviewers don't like it if we show a fake recording, but I think if we label it clearly as a sample it's fine. Second part of the idea. Right now we show three screens of text before anything happens. Nobody reads those. I'd cut it to one screen with a single sentence and a big button. Third thing, and this is more of a maybe, we could detect the device language and pre-select the spoken language, because right now everyone has to scroll through ninety-nine languages to find theirs, which is silly. Uh, for measuring this, I'd run it as an A/B test for two weeks, fifty-fifty split, and the main metric is the percentage of users who complete their first recording within the first session. Secondary metric is day seven retention. If the first recording rate goes up by at least ten points, we ship it. If retention drops, we roll back even if the first metric looks good. Okay, I think that's it. Oh, one more thing, we should talk to Jen from design before building anything, she had concerns about the sample recording looking like a real user's data. Okay, done.",
+    "facts": [
+      ["microphone", "mic"],
+      ["40", "forty"],
+      ["sample"],
+      ["one screen", "single screen", "1 screen"],
+      ["device language", "language"],
+      ["a/b", "ab test", "experiment"],
+      ["two weeks", "2 weeks", "2-week", "two-week"],
+      ["first recording"],
+      ["retention"],
+      ["ten points", "10 points", "10 percentage", "10%"],
+      ["roll back", "rollback"],
+      ["jen"]
+    ],
+    "forbidden": [],
+    "fillers": ["um", "uh", "you know"]
+  },
+  {
+    "id": "de-call",
+    "lang": "de",
+    "transcript": "Ja, hallo, hier ist Stefan von der Hausverwaltung. Äh, es geht um die Heizung in Ihrer Wohnung. Der Techniker kommt am Donnerstag zwischen acht und zwölf Uhr, bitte sorgen Sie dafür, dass jemand zu Hause ist. Ähm, außerdem wird im März das Treppenhaus gestrichen, da kann es ein bisschen laut werden. Und die Nebenkostenabrechnung kommt diesmal etwas später, wahrscheinlich Ende April. Bei Fragen erreichen Sie mich unter null eins sieben sechs, zwei drei vier, fünf sechs sieben. Danke, tschüss.",
+    "facts": [
+      ["stefan"],
+      ["heizung"],
+      ["techniker"],
+      ["donnerstag"],
+      ["8", "acht"],
+      ["12", "zwölf"],
+      ["märz"],
+      ["treppenhaus"],
+      ["nebenkosten"],
+      ["april"],
+      ["0176", "234", "567", "null eins sieben sechs"]
+    ],
+    "forbidden": [],
+    "fillers": ["äh", "ähm"]
+  },
+  {
+    "id": "es-note",
+    "lang": "es",
+    "transcript": "Bueno, eh, apuntes de la reunión con el cliente. Quieren la nueva versión de la web para el quince de junio. El presupuesto máximo es de doce mil euros y no quieren pagar por adelantado, solo al final. Eh, nos pidieron que la tienda online acepte Bizum además de tarjeta. Lucía va a preparar el diseño la semana que viene y Javier se encarga de la parte técnica. Ah, y el cliente insiste en que la web tiene que estar en español y en catalán desde el primer día.",
+    "facts": [
+      ["15", "quince"],
+      ["junio"],
+      ["12.000", "12000", "12 000", "doce mil"],
+      ["final"],
+      ["bizum"],
+      ["lucía", "lucia"],
+      ["diseño"],
+      ["javier"],
+      ["catalán", "catalan"]
+    ],
+    "forbidden": [],
+    "fillers": ["eh"]
+  },
+  {
+    "id": "ar-note",
+    "lang": "ar",
+    "transcript": "طيب، ملاحظات سريعة. الاجتماع مع المورد سيكون يوم الأحد الساعة العاشرة صباحاً. يجب أن نطلب خمسمئة كرتونة قبل نهاية الشهر لأن الأسعار سترتفع في الشهر القادم. أحمد سيتابع موضوع الشحن، وسارة ستراجع العقد. أيضاً لا تنسَ أن تسأل عن خصم الدفع المبكر.",
+    "facts": [
+      ["المورد"],
+      ["الأحد"],
+      ["العاشرة", "10"],
+      ["خمسمئة", "500", "٥٠٠"],
+      ["كرتونة", "كرتون"],
+      ["الأسعار"],
+      ["أحمد"],
+      ["الشحن"],
+      ["سارة"],
+      ["العقد"],
+      ["خصم"]
+    ],
+    "forbidden": [],
+    "fillers": []
+  },
+  {
+    "id": "zh-meeting",
+    "lang": "zh",
+    "transcript": "嗯，那我们简单过一下。新版本下周五上线，测试那边还剩三个问题要修。小王负责安卓的崩溃问题，李娜负责改登录页面的文案。嗯，市场部的预算是两万块，主要投在小红书上。还有就是客服反馈很多用户找不到导出功能，所以我们要把导出按钮放到首页。下次会议是周三下午三点。",
+    "facts": [
+      ["周五", "星期五"],
+      ["三个", "3个", "3 个"],
+      ["小王"],
+      ["安卓", "android"],
+      ["李娜"],
+      ["登录"],
+      ["两万", "20000", "2万", "20,000"],
+      ["小红书"],
+      ["导出"],
+      ["首页"],
+      ["周三", "星期三"],
+      ["三点", "3点", "15:00", "下午3"]
+    ],
+    "forbidden": [],
+    "fillers": ["嗯"]
+  },
+  {
+    "id": "ja-memo",
+    "lang": "ja",
+    "transcript": "えーと、来週の出張のメモです。月曜日の朝七時の新幹線で大阪に行きます。ホテルは駅の近くで二泊。火曜日の午後二時から田中さんの会社で打ち合わせ、資料は二十部印刷して持っていく。あの、帰りは水曜日の夕方です。経費の上限は五万円なので注意。",
+    "facts": [
+      ["出張"],
+      ["月曜"],
+      ["7時", "七時", "7:00"],
+      ["新幹線"],
+      ["大阪"],
+      ["二泊", "2泊"],
+      ["火曜"],
+      ["田中"],
+      ["二十部", "20部"],
+      ["水曜"],
+      ["五万円", "5万円", "50,000", "50000"]
+    ],
+    "forbidden": [],
+    "fillers": ["えーと", "あの"]
+  }
+]

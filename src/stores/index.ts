@@ -56,6 +56,8 @@ export {
   KEYBOARD_MIC_TIMEOUT_OPTIONS,
   useTextAppearance,
   useSetTextAppearance,
+  useSelectedLlmId,
+  useSetLlmId,
 } from "./settings-store/settingsStore";
 export {
   AUDIO_BUSY_STATES,
@@ -128,3 +130,17 @@ export type {
   Toast,
   ToastVariant,
 } from "./ui-store/uiStore";
+export {
+  blocksSummary,
+  summarizableText,
+  useCancelSummary,
+  useIsSummaryBlocked,
+  useSummarizeSession,
+  useSummaryJob,
+  useSummarySessionId,
+  useSummaryStore,
+} from "./summary-store/summaryStore";
+export type {
+  SummarizeOutcome,
+  SummaryJob,
+} from "./summary-store/summaryStore";

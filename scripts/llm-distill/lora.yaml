@@ -1,0 +1,26 @@
+# mlx_lm.lora config; paths are relative to ~/.cache/echos-distill (see README.md).
+model: qwen35-0.8b-hf
+train: true
+fine_tune_type: lora
+data: data
+mask_prompt: true
+adapter_path: adapters
+batch_size: 4
+iters: 1500
+learning_rate: 1e-4
+lr_schedule:
+  name: cosine_decay
+  warmup: 50
+  arguments: [1e-4, 1500, 1e-6]
+num_layers: -1
+lora_parameters:
+  rank: 32
+  scale: 20.0
+  dropout: 0.05
+max_seq_length: 8192
+grad_checkpoint: true
+steps_per_report: 25
+steps_per_eval: 250
+val_batches: -1
+save_every: 250
+seed: 0

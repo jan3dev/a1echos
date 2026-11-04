@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { SvgProps } from "react-native-svg";
 
+import Ai from "@/assets/icons/ai.svg";
 import BiometricFingerprint from "@/assets/icons/biometric_fingerprint.svg";
 import Blend from "@/assets/icons/blend.svg";
 import Check from "@/assets/icons/check.svg";
@@ -30,6 +31,7 @@ import HelpSupport from "@/assets/icons/help_support.svg";
 import InfoCircle from "@/assets/icons/info_circle.svg";
 import Keyboard from "@/assets/icons/keyboard.svg";
 import Language from "@/assets/icons/language.svg";
+import Magicpen from "@/assets/icons/magicpen.svg";
 import Menu from "@/assets/icons/menu.svg";
 import Mic from "@/assets/icons/mic.svg";
 import More from "@/assets/icons/more.svg";
@@ -53,6 +55,7 @@ import VoiceCircle from "@/assets/icons/voice_circle.svg";
 import Warning from "@/assets/icons/warning.svg";
 
 export const iconMap: Record<string, FC<SvgProps>> = {
+  ai: Ai,
   biometric_fingerprint: BiometricFingerprint,
   blend: Blend,
   check: Check,
@@ -82,6 +85,7 @@ export const iconMap: Record<string, FC<SvgProps>> = {
   info_circle: InfoCircle,
   keyboard: Keyboard,
   language: Language,
+  magicpen: Magicpen,
   menu: Menu,
   mic: Mic,
   more: More,
