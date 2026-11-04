@@ -289,5 +289,9 @@
   "summaryNeedsModel": "نزّل نموذج ذكاء اصطناعي لإنشاء الملخصات.",
   "summaryFailed": "فشل الملخص",
   "summaryStopped": "توقف الملخص",
+  "structureNotes": "تنظيم الملاحظات",
+  "structureNeedsModel": "نزّل نموذج ذكاء اصطناعي لتنظيم الملاحظات.",
+  "structureFailed": "فشل التنظيم",
+  "structureStopped": "توقف التنظيم",
   "stop": "إيقاف"
 }

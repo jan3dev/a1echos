@@ -6,6 +6,7 @@ import { TranscriptionState, type Transcription } from "@/models";
 import {
   databaseService,
   llmService,
+  structure,
   summarize,
   SummaryCancelledError,
 } from "@/services";
@@ -15,6 +16,7 @@ import {
   summarizableText,
   useCancelSummary,
   useIsSummaryBlocked,
+  useStructureText,
   useSummarizeSession,
   useSummaryJob,
   useSummarySessionId,
@@ -45,6 +47,7 @@ jest.mock("@/services", () => {
       release: jest.fn(async () => {}),
     },
     summarize: jest.fn(),
+    structure: jest.fn(),
     SummaryCancelledError: MockCancelled,
   };
 });
@@ -143,7 +146,7 @@ const pendingSummary = () => {
 describe("summaryStore", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useSummaryStore.setState({ job: null });
+    useSummaryStore.setState({ job: null, isStructuring: false });
     mockSessions = { s1: { ...mockSession } };
     mockLlmId = "qwen35_2b";
     mockDownloaded = true;
@@ -396,5 +399,90 @@ describe("summaryStore", () => {
     (llmService.release as jest.Mock).mockRejectedValueOnce(new Error("x"));
     await expect(start()).rejects.toThrow("oom");
     expect(useSummaryStore.getState().job).toBeNull();
+  });
+
+  describe("structureText", () => {
+    const run = (text = "um so we ship wednesday") =>
+      useSummaryStore.getState().structureText(text);
+
+    it("formats with the model's budgets, then frees the model", async () => {
+      (structure as jest.Mock).mockImplementationOnce(async (_text, d) => {
+        expect(useSummaryStore.getState().isStructuring).toBe(true);
+        await d.countTokens("x");
+        await d.complete("structure", "in", { maxOutputTokens: 9 });
+        return `Plans:\n- Ship Wednesday (${d.budget}, ${d.finalOutputTokens(100)})`;
+      });
+      await expect(run()).resolves.toEqual({
+        outcome: "done",
+        text: "Plans:\n- Ship Wednesday (6656, 7580)",
+      });
+      expect(structure).toHaveBeenCalledWith(
+        "um so we ship wednesday",
+        expect.anything(),
+      );
+      expect(llmService.run).toHaveBeenCalledWith(
+        "qwen35_2b",
+        "structure",
+        "in",
+        { maxOutputTokens: 9, isCancelled: expect.any(Function) },
+      );
+      expect(useSummaryStore.getState().isStructuring).toBe(false);
+      expect(llmService.release).toHaveBeenCalled();
+      expect(mockAddTranscription).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["no model is selected", () => (mockLlmId = null), "no-model", "hi"],
+      ["the text is blank", () => {}, "empty", "  "],
+      [
+        "a recording runs",
+        () => (mockTranscriptionState.state = TranscriptionState.RECORDING),
+        "cancelled",
+        "hi",
+      ],
+    ])("skips when %s", async (_why, setup, outcome, text) => {
+      setup();
+      await expect(run(text)).resolves.toEqual({ outcome });
+      expect(structure).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["the user", () => useSummaryStore.getState().cancelSummary(), "stopped"],
+      ["the app", () => appStateListener!("background"), "cancelled"],
+    ])("stops when %s cancels", async (_who, trigger, outcome) => {
+      (structure as jest.Mock).mockImplementationOnce(async (_text, d) => {
+        trigger();
+        expect(d.isCancelled()).toBe(true);
+        throw new SummaryCancelledError();
+      });
+      await expect(run()).resolves.toEqual({ outcome });
+      expect(llmService.stop).toHaveBeenCalledTimes(1);
+      expect(useSummaryStore.getState().isStructuring).toBe(false);
+    });
+
+    it("doesn't run alongside a summary", async () => {
+      const pending = pendingSummary();
+      const summary = start();
+      await expect(run()).rejects.toThrow("already running");
+      pending.resolve("- ok");
+      await summary;
+
+      useSummaryStore.setState({ isStructuring: true });
+      await expect(start()).rejects.toThrow("already running");
+    });
+
+    it("fails on empty notes or a model error", async () => {
+      (structure as jest.Mock).mockResolvedValueOnce("");
+      await expect(run()).rejects.toThrow("empty notes");
+      (structure as jest.Mock).mockRejectedValueOnce(new Error("oom"));
+      await expect(run()).rejects.toThrow("oom");
+      expect(useSummaryStore.getState().isStructuring).toBe(false);
+    });
+
+    it("exposes the action", () => {
+      const { result, unmount } = renderHook(() => useStructureText());
+      unmount();
+      expect(result.current).toBe(useSummaryStore.getState().structureText);
+    });
   });
 });

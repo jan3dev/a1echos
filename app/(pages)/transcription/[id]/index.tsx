@@ -31,14 +31,21 @@ import {
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useKeyboardHeight, useLocalization, useScrollSurface } from "@/hooks";
-import { Transcription, transcriptTextStyle } from "@/models";
+import { getLlmInfo, Transcription, transcriptTextStyle } from "@/models";
 import { audioProtectionService, shareService } from "@/services";
 import {
+  useCancelSummary,
   useDeleteTranscription,
   useDeleteTranscriptionAudio,
   useReprocessTranscription,
+  useIsStructuring,
+  useIsSummaryBlocked,
   useSelectedLanguage,
+  useSelectedLlmId,
   useShowGlobalTooltip,
+  useStructureText,
+  useSummarySessionId,
+  useSummaryStore,
   useTextAppearance,
   useTranscriptionStore,
   useUpdateTranscription,
@@ -106,6 +113,12 @@ export default function TranscriptionEditScreen() {
   const deleteTranscription = useDeleteTranscription();
   const deleteTranscriptionAudio = useDeleteTranscriptionAudio();
   const reprocessTranscription = useReprocessTranscription();
+  const structureText = useStructureText();
+  const cancelLlm = useCancelSummary();
+  const selectedLlmId = useSelectedLlmId();
+  const isSummarizing = useSummarySessionId() !== null;
+  const isStructuring = useIsStructuring();
+  const isLlmBlocked = useIsSummaryBlocked();
   const showGlobalTooltip = useShowGlobalTooltip();
   const { show: showToast, hide: hideToast, toastState } = useToast();
 
@@ -113,6 +126,14 @@ export default function TranscriptionEditScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Leaving the screen discards the notes, so don't keep the model running.
+  useEffect(
+    () => () => {
+      if (useSummaryStore.getState().isStructuring) cancelLlm();
+    },
+    [cancelLlm],
+  );
 
   const storedAudioPath = stored?.audioPath ?? "";
   const audioPath = useMemo(
@@ -128,11 +149,11 @@ export default function TranscriptionEditScreen() {
   if (!transcription) return null;
 
   const trimmed = text.trim();
+  const isBusy = isReprocessing || isStructuring;
   const canSave =
-    trimmed !== "" &&
-    trimmed !== transcription.text &&
-    !isSaving &&
-    !isReprocessing;
+    trimmed !== "" && trimmed !== transcription.text && !isSaving && !isBusy;
+  const canStructure =
+    trimmed !== "" && !isBusy && !isSummarizing && !isLlmBlocked;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -162,6 +183,28 @@ export default function TranscriptionEditScreen() {
       showGlobalTooltip(loc.reprocessFailed);
     } finally {
       setIsReprocessing(false);
+    }
+  };
+
+  const handleStructure = async () => {
+    if (
+      selectedLlmId &&
+      getLlmInfo(selectedLlmId).englishOnly &&
+      languageCode !== "en"
+    ) {
+      showGlobalTooltip(loc.llmEnglishOnlyWarning, "normal", 5000);
+    }
+    try {
+      const result = await structureText(trimmed);
+      if (result.outcome === "done") setText(result.text);
+      else if (result.outcome === "no-model") {
+        showGlobalTooltip(loc.structureNeedsModel, "normal", 4000);
+        router.push(Routes.settingsIntelligence);
+      } else if (result.outcome === "cancelled") {
+        showGlobalTooltip(loc.structureStopped, "normal", 3000);
+      }
+    } catch {
+      showGlobalTooltip(loc.structureFailed, "error", 5000);
     }
   };
 
@@ -298,7 +341,7 @@ export default function TranscriptionEditScreen() {
                 onChangeText={setText}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                editable={!isReprocessing}
+                editable={!isBusy}
                 multiline
                 scrollEnabled={false}
                 disableFullscreenUI
@@ -350,10 +393,26 @@ export default function TranscriptionEditScreen() {
                       chevron
                     )
                   }
-                  onPress={isReprocessing ? undefined : handleReprocess}
+                  onPress={isBusy ? undefined : handleReprocess}
                 />
               </>
             )}
+
+            <ListItem
+              testID={TestID.TranscriptionEditStructure}
+              title={loc.structureNotes}
+              iconLeading={
+                <Icon name="ai" size={24} color={colors.textSecondary} />
+              }
+              iconTrailing={
+                isStructuring ? (
+                  <ProgressIndicator color={colors.accentBrand} size={18} />
+                ) : (
+                  chevron
+                )
+              }
+              onPress={canStructure ? handleStructure : undefined}
+            />
 
             <Button.primary
               testID={TestID.TranscriptionEditSave}

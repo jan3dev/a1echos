@@ -65,6 +65,7 @@ export enum TestID {
   TranscriptionEditAudio = "transcription-edit-audio",
   TranscriptionEditLanguage = "transcription-edit-language",
   TranscriptionEditReprocess = "transcription-edit-reprocess",
+  TranscriptionEditStructure = "transcription-edit-structure",
   SessionList = "session-list",
   FolderCloseButton = "folder-close-button",
   SessionInputModal = "session-input-modal",

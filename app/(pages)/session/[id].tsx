@@ -76,6 +76,7 @@ import {
   useStopRecordingAndSave,
   useCancelSummary,
   useSummarizeSession,
+  useIsStructuring,
   useIsSummaryBlocked,
   useSummarySessionId,
   useSwitchSession,
@@ -123,6 +124,7 @@ export default function SessionScreen() {
   const transcriptions = useSessionTranscriptions(id);
   const isSummaryBlocked = useIsSummaryBlocked();
   const summarySessionId = useSummarySessionId();
+  const isStructuring = useIsStructuring();
   const summarizeSession = useSummarizeSession();
   const selectedLlmId = useSelectedLlmId();
   const languageCode = useSelectedLanguage().code;
@@ -738,7 +740,10 @@ export default function SessionScreen() {
                       text={isSummarizingHere ? loc.stop : loc.summary}
                       enabled={
                         isSummarizingHere ||
-                        (canSummarize && !summarySessionId && !isSummaryBlocked)
+                        (canSummarize &&
+                          !summarySessionId &&
+                          !isStructuring &&
+                          !isSummaryBlocked)
                       }
                       onPress={
                         isSummarizingHere ? cancelSummary : handleSummaryPressed

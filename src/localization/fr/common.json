@@ -266,5 +266,9 @@
   "summaryNeedsModel": "Téléchargez un modèle d’IA pour créer des résumés.",
   "summaryFailed": "Échec du Résumé",
   "summaryStopped": "Résumé Interrompu",
+  "structureNotes": "Structurer les Notes",
+  "structureNeedsModel": "Téléchargez un modèle d’IA pour structurer vos notes.",
+  "structureFailed": "Échec de la Structuration",
+  "structureStopped": "Structuration Interrompue",
   "stop": "Arrêter"
 }

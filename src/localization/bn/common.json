@@ -258,5 +258,9 @@
   "summaryNeedsModel": "সারসংক্ষেপ তৈরি করতে একটি AI মডেল ডাউনলোড করুন।",
   "summaryFailed": "সারসংক্ষেপ ব্যর্থ",
   "summaryStopped": "সারসংক্ষেপ থামানো হয়েছে",
+  "structureNotes": "নোট সাজান",
+  "structureNeedsModel": "নোট সাজাতে একটি AI মডেল ডাউনলোড করুন।",
+  "structureFailed": "সাজানো ব্যর্থ হয়েছে",
+  "structureStopped": "সাজানো থামানো হয়েছে",
   "stop": "থামান"
 }

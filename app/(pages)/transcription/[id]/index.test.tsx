@@ -57,6 +57,14 @@ const mockDelete = jest.fn(async (..._args: any[]) => undefined);
 const mockDeleteAudio = jest.fn(async (..._args: any[]) => undefined);
 const mockReprocess = jest.fn(async (..._args: any[]) => "Hola mundo");
 const mockTooltip = jest.fn();
+const mockStructure = jest.fn(async (..._args: any[]): Promise<any> => ({
+  outcome: "done",
+  text: "Plans:\n- Hello world",
+}));
+const mockCancelLlm = jest.fn();
+let mockLlmId: string | null = "qwen35_2b";
+let mockSummarySessionId: string | null = null;
+let mockIsStructuring = false;
 jest.mock("@/stores", () => ({
   useTranscriptionStore: (selector: any) =>
     selector({ transcriptions: mockTranscriptions }),
@@ -67,10 +75,18 @@ jest.mock("@/stores", () => ({
   useDeleteTranscriptionAudio: () => mockDeleteAudio,
   useReprocessTranscription: () => mockReprocess,
   useShowGlobalTooltip: () => mockTooltip,
+  useStructureText: () => mockStructure,
+  useCancelSummary: () => mockCancelLlm,
+  useSelectedLlmId: () => mockLlmId,
+  useSummarySessionId: () => mockSummarySessionId,
+  useIsSummaryBlocked: () => false,
+  useIsStructuring: () => mockIsStructuring,
+  useSummaryStore: { getState: () => ({ isStructuring: mockIsStructuring }) },
 }));
 
 jest.mock("@/models", () => ({
   transcriptTextStyle: () => ({}),
+  getLlmInfo: (id: string) => ({ englishOnly: id.endsWith("_en") }),
 }));
 
 const mockShowToast = jest.fn();
@@ -140,6 +156,106 @@ describe("TranscriptionEditScreen", () => {
     mockParams = { id: "t1" };
     mockTranscriptions = [baseItem];
     mockPlayerUri = null;
+    mockLlmId = "qwen35_2b";
+    mockSummarySessionId = null;
+    mockIsStructuring = false;
+  });
+
+  const pressStructure = async (getByTestId: (id: string) => any) => {
+    await act(async () => {
+      fireEvent.press(getByTestId(TestID.TranscriptionEditStructure));
+    });
+  };
+
+  it("structures the current text into the editor, even without audio", async () => {
+    mockTranscriptions = [{ ...baseItem, audioPath: "" }];
+    const { getByTestId } = await renderScreen();
+    fireEvent.changeText(getByTestId(TestID.TranscriptionEditInput), " Hi ");
+
+    await pressStructure(getByTestId);
+
+    expect(mockStructure).toHaveBeenCalledWith("Hi");
+    expect(getByTestId(TestID.TranscriptionEditInput).props.value).toBe(
+      "Plans:\n- Hello world",
+    );
+    expect(mockTooltip).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("warns when an English-only model structures another language", async () => {
+    mockLlmId = "qwen35_0_8b_en";
+    mockParams = { id: "t1", language: "es" };
+    const { getByTestId } = await renderScreen();
+
+    await pressStructure(getByTestId);
+
+    expect(String(mockTooltip.mock.calls[0][0])).toBe("llmEnglishOnlyWarning");
+  });
+
+  it.each([
+    [{ outcome: "no-model" }, "structureNeedsModel"],
+    [{ outcome: "cancelled" }, "structureStopped"],
+    [{ outcome: "stopped" }, undefined],
+  ])("reports %o", async (result, tooltip) => {
+    mockStructure.mockResolvedValueOnce(result);
+    const { getByTestId } = await renderScreen();
+
+    await pressStructure(getByTestId);
+
+    expect(mockTooltip.mock.calls[0]?.[0]?.toString()).toBe(tooltip);
+    expect(getByTestId(TestID.TranscriptionEditInput).props.value).toBe(
+      "Hello world",
+    );
+    if (result.outcome === "no-model") {
+      expect(mockPush).toHaveBeenCalledWith(Routes.settingsIntelligence);
+    }
+  });
+
+  it("reports a failed structuring", async () => {
+    mockStructure.mockRejectedValueOnce(new Error("oom"));
+    const { getByTestId } = await renderScreen();
+
+    await pressStructure(getByTestId);
+
+    expect(String(mockTooltip.mock.calls[0][0])).toBe("structureFailed");
+  });
+
+  it.each([
+    ["a summary runs", () => (mockSummarySessionId = "s1"), "Hello world"],
+    ["the text is empty", () => {}, "  "],
+  ])("can't structure while %s", async (_why, setup, text) => {
+    setup();
+    const { getByTestId } = await renderScreen();
+    fireEvent.changeText(getByTestId(TestID.TranscriptionEditInput), text);
+
+    await pressStructure(getByTestId);
+
+    expect(mockStructure).not.toHaveBeenCalled();
+  });
+
+  it("locks editing while structuring and stops it on leaving", async () => {
+    mockIsStructuring = true;
+    const { getByTestId, unmount } = await renderScreen();
+
+    await pressStructure(getByTestId);
+
+    expect(mockStructure).not.toHaveBeenCalled();
+    expect(getByTestId(TestID.TranscriptionEditInput).props.editable).toBe(
+      false,
+    );
+    await act(async () => {
+      fireEvent.press(getByTestId(TestID.TranscriptionEditReprocess));
+    });
+    expect(mockReprocess).not.toHaveBeenCalled();
+
+    unmount();
+    expect(mockCancelLlm).toHaveBeenCalled();
+  });
+
+  it("leaves the model alone when leaving while idle", async () => {
+    const { unmount } = await renderScreen();
+    unmount();
+    expect(mockCancelLlm).not.toHaveBeenCalled();
   });
 
   it("saves the trimmed edited text and closes", async () => {

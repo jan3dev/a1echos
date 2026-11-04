@@ -266,5 +266,9 @@
   "summaryNeedsModel": "Baixe um modelo de IA para criar resumos.",
   "summaryFailed": "Falha no Resumo",
   "summaryStopped": "Resumo Interrompido",
+  "structureNotes": "Estruturar Notas",
+  "structureNeedsModel": "Baixe um modelo de IA para estruturar notas.",
+  "structureFailed": "Falha ao Estruturar",
+  "structureStopped": "Estruturação Interrompida",
   "stop": "Parar"
 }

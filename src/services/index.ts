@@ -56,6 +56,8 @@ export type {
   LlmTask,
 } from "./llm-service/LlmService";
 export {
+  structure,
   summarize,
   SummaryCancelledError,
 } from "./llm-service/summarize";
+export type { StructureDeps } from "./llm-service/summarize";

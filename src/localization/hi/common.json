@@ -258,5 +258,9 @@
   "summaryNeedsModel": "सारांश बनाने के लिए एक AI मॉडल डाउनलोड करें।",
   "summaryFailed": "सारांश विफल",
   "summaryStopped": "सारांश रोका गया",
+  "structureNotes": "नोट्स व्यवस्थित करें",
+  "structureNeedsModel": "नोट्स व्यवस्थित करने के लिए एक AI मॉडल डाउनलोड करें।",
+  "structureFailed": "व्यवस्थित करना विफल रहा",
+  "structureStopped": "व्यवस्थित करना रोका गया",
   "stop": "रोकें"
 }

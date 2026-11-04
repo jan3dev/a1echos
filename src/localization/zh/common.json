@@ -250,5 +250,9 @@
   "summaryNeedsModel": "下载 AI 模型以创建摘要。",
   "summaryFailed": "摘要失败",
   "summaryStopped": "摘要已停止",
+  "structureNotes": "整理笔记",
+  "structureNeedsModel": "下载 AI 模型以整理笔记。",
+  "structureFailed": "整理失败",
+  "structureStopped": "整理已停止",
   "stop": "停止"
 }

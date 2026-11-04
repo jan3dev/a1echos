@@ -258,5 +258,9 @@
   "summaryNeedsModel": "Download an AI model to create summaries.",
   "summaryFailed": "Summary Failed",
   "summaryStopped": "Summary Stopped",
+  "structureNotes": "Structure Notes",
+  "structureNeedsModel": "Download an AI model to structure notes.",
+  "structureFailed": "Structuring Failed",
+  "structureStopped": "Structuring Stopped",
   "stop": "Stop"
 }

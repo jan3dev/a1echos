@@ -160,6 +160,7 @@ jest.mock("@/stores", () => ({
   useDeleteTranscriptions: jest.fn(() => jest.fn()),
   useMergeTranscriptions: jest.fn(() => jest.fn()),
   useIsSummaryBlocked: jest.fn(() => false),
+  useIsStructuring: jest.fn(() => false),
   useSummarySessionId: jest.fn(() => null),
   useSummarizeSession: jest.fn(() => jest.fn()),
   useCancelSummary: jest.fn(() => jest.fn()),
@@ -313,6 +314,7 @@ beforeEach(() => {
   (stores.useLivePreview as jest.Mock).mockReturnValue(null);
   (stores.useSummarySessionId as jest.Mock).mockReturnValue(null);
   (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(false);
+  (stores.useIsStructuring as jest.Mock).mockReturnValue(false);
   (stores.useSummarizeSession as jest.Mock).mockReturnValue(jest.fn());
   (stores.useSelectedLlmId as jest.Mock).mockReturnValue(null);
   (stores.useSelectedLanguage as jest.Mock).mockReturnValue({ code: "en" });
@@ -1751,7 +1753,7 @@ describe("SessionScreen", () => {
         expect(tooltip).not.toHaveBeenCalled();
       });
 
-      it("is disabled with only summaries, while recording, or while another summary runs", async () => {
+      it("is disabled with only summaries, while recording, or while the model runs elsewhere", async () => {
         const disabled = async () => {
           const { getByTestId } = render(<SessionScreen />);
           await act(async () => {});
@@ -1773,6 +1775,10 @@ describe("SessionScreen", () => {
 
         (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(false);
         (stores.useSummarySessionId as jest.Mock).mockReturnValue("other");
+        expect(await disabled()).toBe(true);
+
+        (stores.useSummarySessionId as jest.Mock).mockReturnValue(null);
+        (stores.useIsStructuring as jest.Mock).mockReturnValue(true);
         expect(await disabled()).toBe(true);
       });
     });

@@ -250,5 +250,9 @@
   "summaryNeedsModel": "Unduh model AI untuk membuat ringkasan.",
   "summaryFailed": "Ringkasan Gagal",
   "summaryStopped": "Ringkasan Dihentikan",
+  "structureNotes": "Susun Catatan",
+  "structureNeedsModel": "Unduh model AI untuk menyusun catatan.",
+  "structureFailed": "Gagal Menyusun",
+  "structureStopped": "Penyusunan Dihentikan",
   "stop": "Hentikan"
 }

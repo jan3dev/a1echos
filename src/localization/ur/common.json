@@ -258,5 +258,9 @@
   "summaryNeedsModel": "خلاصے بنانے کے لیے ایک AI ماڈل ڈاؤن لوڈ کریں۔",
   "summaryFailed": "خلاصہ ناکام",
   "summaryStopped": "خلاصہ روک دیا گیا",
+  "structureNotes": "نوٹس ترتیب دیں",
+  "structureNeedsModel": "نوٹس ترتیب دینے کے لیے ایک AI ماڈل ڈاؤن لوڈ کریں۔",
+  "structureFailed": "ترتیب دینا ناکام رہا",
+  "structureStopped": "ترتیب دینا روک دیا گیا",
   "stop": "روکیں"
 }

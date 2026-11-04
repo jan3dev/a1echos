@@ -266,5 +266,9 @@
   "summaryNeedsModel": "Descarga un modelo de IA para crear resúmenes.",
   "summaryFailed": "Error en el Resumen",
   "summaryStopped": "Resumen Detenido",
+  "structureNotes": "Estructurar Notas",
+  "structureNeedsModel": "Descarga un modelo de IA para estructurar notas.",
+  "structureFailed": "Error al Estructurar",
+  "structureStopped": "Estructuración Detenida",
   "stop": "Detener"
 }

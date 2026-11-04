@@ -134,13 +134,16 @@ export {
   blocksSummary,
   summarizableText,
   useCancelSummary,
+  useIsStructuring,
   useIsSummaryBlocked,
+  useStructureText,
   useSummarizeSession,
   useSummaryJob,
   useSummarySessionId,
   useSummaryStore,
 } from "./summary-store/summaryStore";
 export type {
+  StructureResult,
   SummarizeOutcome,
   SummaryJob,
 } from "./summary-store/summaryStore";
