@@ -61,6 +61,7 @@ export enum TestID {
   AddToFolderSave = "add-to-folder-save",
   TranscriptionEditInput = "transcription-edit-input",
   TranscriptionEditSave = "transcription-edit-save",
+  TranscriptionEditSaveBar = "transcription-edit-save-bar",
   TranscriptionEditClose = "transcription-edit-close",
   TranscriptionEditAudio = "transcription-edit-audio",
   TranscriptionEditLanguage = "transcription-edit-language",

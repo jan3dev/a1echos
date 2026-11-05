@@ -3,11 +3,12 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
   type HostInstance,
 } from "react-native";
@@ -19,14 +20,16 @@ import {
   Button,
   Icon,
   ListItem,
+  PRIMARY_BUTTON_HEIGHT,
   ProgressIndicator,
   Screen,
+  SUB_SCREEN_NAVBAR_HEIGHT,
   SubScreenNavbarActions,
-  type SubScreenNavbarAction,
   Toast,
   TopAppBar,
   TranscriptionTimestamp,
   useToast,
+  type SubScreenNavbarAction,
 } from "@/components";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { AppConstants, Routes, TestID } from "@/constants";
@@ -37,9 +40,9 @@ import {
   useCancelSummary,
   useDeleteTranscription,
   useDeleteTranscriptionAudio,
-  useReprocessTranscription,
   useIsStructuring,
   useIsSummaryBlocked,
+  useReprocessTranscription,
   useSelectedLanguage,
   useSelectedLlmId,
   useShowGlobalTooltip,
@@ -52,6 +55,9 @@ import {
 } from "@/stores";
 import { useTheme } from "@/theme";
 import { FeatureFlag, getErrorMessage, logError } from "@/utils";
+
+const SAVE_BAR_HEIGHT = SUB_SCREEN_NAVBAR_HEIGHT;
+const SAVE_BAR_GAP = (SAVE_BAR_HEIGHT - PRIMARY_BUTTON_HEIGHT) / 2;
 
 const toFileUri = (path: string) =>
   path.startsWith("file://") ? path : `file://${path}`;
@@ -95,7 +101,10 @@ export default function TranscriptionEditScreen() {
   const { theme } = useTheme();
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const keyboardOpen = useKeyboardHeight() > 0;
+  const { width, height } = useWindowDimensions();
+  // Landscape has no room for the bar over the text, so Save stays in-page.
+  const floatSave = keyboardOpen && height > width;
   const blurTargetRef = useRef<HostInstance>(null);
   const { scrolled, onScroll } = useScrollSurface();
   const textStyle = transcriptTextStyle(useTextAppearance());
@@ -126,6 +135,31 @@ export default function TranscriptionEditScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // While the keyboard is open, Save floats above it until the user scrolls
+  // its in-page slot up to the same spot; the bar then steps aside (native
+  // driver) and the in-page Save, hidden behind it until now, takes over.
+  const [scrollY] = useState(() => new Animated.Value(0));
+  const [slotBottom, setSlotBottom] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const dockAt = slotBottom - viewportHeight + SAVE_BAR_GAP;
+  const saveBarTranslateY = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [dockAt - 0.01, dockAt],
+        outputRange: [0, SAVE_BAR_HEIGHT],
+        extrapolate: "clamp",
+      }),
+    [scrollY, dockAt],
+  );
+  const handleScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: true,
+        listener: onScroll,
+      }),
+    [scrollY, onScroll],
+  );
 
   // Leaving the screen discards the notes, so don't keep the model running.
   useEffect(
@@ -294,6 +328,16 @@ export default function TranscriptionEditScreen() {
     { key: "share", icon: "export", label: loc.share, onPress: handleShare },
   ];
 
+  const saveButton = (
+    <Button.primary
+      testID={TestID.TranscriptionEditSave}
+      text={loc.save}
+      enabled={canSave}
+      isLoading={isSaving}
+      onPress={handleSave}
+    />
+  );
+
   const chevron = (
     <Icon name="chevron_right" size={18} color={colors.textSecondary} />
   );
@@ -305,132 +349,167 @@ export default function TranscriptionEditScreen() {
           style={styles.flex}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <ScrollView
-            style={styles.flex}
-            contentContainerStyle={[
-              styles.content,
-              {
-                paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
-                backgroundColor: colors.surfaceBackground,
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-          >
-            <View
-              style={[
-                styles.card,
+          <View style={styles.viewport}>
+            <Animated.ScrollView
+              style={styles.flex}
+              contentContainerStyle={[
+                styles.content,
                 {
-                  backgroundColor: colors.surfacePrimary,
-                  borderColor: isFocused
-                    ? colors.accentBrand
-                    : colors.surfaceBorderPrimary,
+                  paddingTop: insets.top + AppConstants.APP_BAR_HEIGHT + 16,
+                  paddingBottom: floatSave ? SAVE_BAR_HEIGHT : 16,
+                  backgroundColor: colors.surfaceBackground,
                 },
               ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
             >
-              <TranscriptionTimestamp
-                timestamp={transcription.timestamp}
-                colors={colors}
-              />
-              <TextInput
-                testID={TestID.TranscriptionEditInput}
-                allowFontScaling={false}
-                value={text}
-                onChangeText={setText}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                editable={!isBusy}
-                multiline
-                scrollEnabled={false}
-                disableFullscreenUI
-                style={[styles.input, { color: colors.textPrimary }, textStyle]}
-              />
-            </View>
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: colors.surfacePrimary,
+                    borderColor: isFocused
+                      ? colors.accentBrand
+                      : colors.surfaceBorderPrimary,
+                  },
+                ]}
+              >
+                <TranscriptionTimestamp
+                  timestamp={transcription.timestamp}
+                  colors={colors}
+                />
+                <TextInput
+                  testID={TestID.TranscriptionEditInput}
+                  allowFontScaling={false}
+                  value={text}
+                  onChangeText={setText}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  editable={!isBusy}
+                  multiline
+                  scrollEnabled={false}
+                  disableFullscreenUI
+                  style={[
+                    styles.input,
+                    { color: colors.textPrimary },
+                    textStyle,
+                  ]}
+                />
+              </View>
 
-            {audioPath !== "" && (
-              <>
-                <AudioPlayer
-                  testID={TestID.TranscriptionEditAudio}
-                  uri={playableUri}
-                  onDelete={handleDeleteAudio}
-                  playAccessibilityLabel={loc.play}
-                  pauseAccessibilityLabel={loc.pause}
-                  deleteAccessibilityLabel={loc.deleteAudio}
-                />
-                <ListItem
-                  testID={TestID.TranscriptionEditLanguage}
-                  title={loc.spokenLanguageTitle}
-                  titleTrailing={languageCode.toUpperCase()}
-                  iconLeading={
-                    <Icon
-                      name="language"
-                      size={24}
-                      color={colors.textSecondary}
-                    />
-                  }
-                  iconTrailing={chevron}
-                  onPress={() =>
-                    router.push(
-                      Routes.transcriptionLanguage(
-                        transcription.id,
-                        languageCode,
-                      ),
-                    )
-                  }
-                />
-                <ListItem
-                  testID={TestID.TranscriptionEditReprocess}
-                  title={loc.reprocessTranscription}
-                  iconLeading={
-                    <Icon name="redo" size={24} color={colors.textSecondary} />
-                  }
-                  iconTrailing={
-                    isReprocessing ? (
-                      <ProgressIndicator color={colors.accentBrand} size={18} />
-                    ) : (
-                      chevron
-                    )
-                  }
-                  onPress={isBusy ? undefined : handleReprocess}
-                />
-              </>
+              {audioPath !== "" && (
+                <>
+                  <AudioPlayer
+                    testID={TestID.TranscriptionEditAudio}
+                    uri={playableUri}
+                    onDelete={handleDeleteAudio}
+                    playAccessibilityLabel={loc.play}
+                    pauseAccessibilityLabel={loc.pause}
+                    deleteAccessibilityLabel={loc.deleteAudio}
+                  />
+                  <ListItem
+                    testID={TestID.TranscriptionEditLanguage}
+                    title={loc.spokenLanguageTitle}
+                    titleTrailing={languageCode.toUpperCase()}
+                    iconLeading={
+                      <Icon
+                        name="language"
+                        size={24}
+                        color={colors.textSecondary}
+                      />
+                    }
+                    iconTrailing={chevron}
+                    onPress={() =>
+                      router.push(
+                        Routes.transcriptionLanguage(
+                          transcription.id,
+                          languageCode,
+                        ),
+                      )
+                    }
+                  />
+                  <ListItem
+                    testID={TestID.TranscriptionEditReprocess}
+                    title={loc.reprocessTranscription}
+                    iconLeading={
+                      <Icon
+                        name="redo"
+                        size={24}
+                        color={colors.textSecondary}
+                      />
+                    }
+                    iconTrailing={
+                      isReprocessing ? (
+                        <ProgressIndicator
+                          color={colors.accentBrand}
+                          size={18}
+                        />
+                      ) : (
+                        chevron
+                      )
+                    }
+                    onPress={isBusy ? undefined : handleReprocess}
+                  />
+                </>
+              )}
+
+              <ListItem
+                testID={TestID.TranscriptionEditStructure}
+                title={loc.structureNotes}
+                iconLeading={
+                  <Icon name="ai" size={24} color={colors.textSecondary} />
+                }
+                iconTrailing={
+                  isStructuring ? (
+                    <ProgressIndicator color={colors.accentBrand} size={18} />
+                  ) : (
+                    chevron
+                  )
+                }
+                onPress={canStructure ? handleStructure : undefined}
+              />
+
+              <View
+                onLayout={(e) => {
+                  const { y, height } = e.nativeEvent.layout;
+                  setSlotBottom(y + height);
+                }}
+              >
+                {saveButton}
+              </View>
+            </Animated.ScrollView>
+
+            {floatSave && (
+              <Animated.View
+                testID={TestID.TranscriptionEditSaveBar}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={[
+                  styles.saveBar,
+                  {
+                    backgroundColor: colors.surfaceBackground,
+                    transform: [{ translateY: saveBarTranslateY }],
+                  },
+                ]}
+              >
+                {saveButton}
+              </Animated.View>
             )}
-
-            <ListItem
-              testID={TestID.TranscriptionEditStructure}
-              title={loc.structureNotes}
-              iconLeading={
-                <Icon name="ai" size={24} color={colors.textSecondary} />
-              }
-              iconTrailing={
-                isStructuring ? (
-                  <ProgressIndicator color={colors.accentBrand} size={18} />
-                ) : (
-                  chevron
-                )
-              }
-              onPress={canStructure ? handleStructure : undefined}
-            />
-
-            <Button.primary
-              testID={TestID.TranscriptionEditSave}
-              text={loc.save}
-              enabled={canSave}
-              isLoading={isSaving}
-              onPress={handleSave}
-            />
-          </ScrollView>
-
-          <View
-            style={{
-              paddingBottom: keyboardHeight > 0 ? 0 : insets.bottom,
-              backgroundColor: colors.surfaceBackground,
-            }}
-          >
-            <SubScreenNavbarActions actions={actions} />
           </View>
+
+          {!keyboardOpen && (
+            <View
+              style={{
+                paddingBottom: insets.bottom,
+                backgroundColor: colors.surfaceBackground,
+              }}
+            >
+              <SubScreenNavbarActions actions={actions} />
+            </View>
+          )}
         </KeyboardAvoidingView>
       </AppBarBlurTarget>
 
@@ -463,10 +542,22 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  // Clips the Save bar once it slides below the keyboard edge.
+  viewport: {
+    flex: 1,
+    overflow: "hidden",
+  },
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
     gap: 16,
+  },
+  saveBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingVertical: SAVE_BAR_GAP,
   },
   card: {
     borderRadius: 16,

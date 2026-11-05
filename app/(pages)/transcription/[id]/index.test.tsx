@@ -2,6 +2,7 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import React from "react";
+import { ScrollView, StyleSheet } from "react-native";
 
 import { Routes, TestID } from "@/constants";
 import { audioProtectionService, shareService } from "@/services";
@@ -117,6 +118,8 @@ jest.mock("@/components", () => {
       ),
     },
     Icon: () => null,
+    PRIMARY_BUTTON_HEIGHT: 56,
+    SUB_SCREEN_NAVBAR_HEIGHT: 72,
     ListItem: (props: any) => (
       <Pressable testID={props.testID} onPress={props.onPress}>
         <Text>{props.titleTrailing}</Text>
@@ -151,8 +154,11 @@ const renderScreen = async () => {
 };
 
 describe("TranscriptionEditScreen", () => {
+  afterEach(() => jest.restoreAllMocks());
+
   beforeEach(() => {
     jest.clearAllMocks();
+    require("@/hooks").useKeyboardHeight.mockReturnValue(0);
     mockParams = { id: "t1" };
     mockTranscriptions = [baseItem];
     mockPlayerUri = null;
@@ -401,6 +407,47 @@ describe("TranscriptionEditScreen", () => {
     expect(shareService.shareTranscriptions).toHaveBeenCalledWith([
       { ...baseItem, text: "Edited" },
     ]);
+  });
+
+  it("floats Save above the keyboard and hides the actions", async () => {
+    require("@/hooks").useKeyboardHeight.mockReturnValue(300);
+    const { getAllByTestId, queryByTestId } = await renderScreen();
+
+    expect(getAllByTestId(TestID.TranscriptionEditSave)).toHaveLength(1);
+    expect(
+      getAllByTestId(TestID.TranscriptionEditSave, {
+        includeHiddenElements: true,
+      }),
+    ).toHaveLength(2);
+    expect(queryByTestId("action-copy")).toBeNull();
+  });
+
+  it("steps the Save bar aside once the in-page Save is in view", async () => {
+    require("@/hooks").useKeyboardHeight.mockReturnValue(300);
+    const { getByTestId, UNSAFE_getByType } = await renderScreen();
+    const barOffset = () =>
+      StyleSheet.flatten(
+        getByTestId(TestID.TranscriptionEditSaveBar, {
+          includeHiddenElements: true,
+        }).props.style,
+      ).transform[0].translateY;
+
+    expect(barOffset()).toBe(0);
+    fireEvent(UNSAFE_getByType(ScrollView), "layout", {
+      nativeEvent: { layout: { height: 10000 } },
+    });
+    expect(barOffset()).toBeGreaterThan(0);
+  });
+
+  it("keeps Save in-page above the landscape keyboard", async () => {
+    require("@/hooks").useKeyboardHeight.mockReturnValue(200);
+    jest
+      .spyOn(require("react-native"), "useWindowDimensions")
+      .mockReturnValue({ width: 844, height: 390, scale: 3, fontScale: 1 });
+    const { getAllByTestId, queryByTestId } = await renderScreen();
+
+    expect(getAllByTestId(TestID.TranscriptionEditSave)).toHaveLength(1);
+    expect(queryByTestId("action-copy")).toBeNull();
   });
 
   it("closes from the app bar", async () => {
