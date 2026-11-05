@@ -224,7 +224,7 @@ const deriveState = ({
   return "default";
 };
 
-const getBackgroundColor = (
+export const getBackgroundColor = (
   type: ButtonType,
   state: ButtonState,
   colors: AquaColors,
@@ -234,12 +234,12 @@ const getBackgroundColor = (
       return colors.buttonPrimaryBackgroundFlat;
     return "transparent";
   }
-  if (type === "secondary") return colors.surfaceSecondary;
-  if (type === "tertiary") {
-    if (state === "focus") return colors.surfacePrimary;
-    if (state === "active" || state === "hover") return colors.surfaceTertiary;
-    return "transparent";
-  }
+  if (type === "secondary")
+    return state === "active"
+      ? colors.surfaceSecondary
+      : colors.surfaceTertiary;
+  if (type === "tertiary")
+    return state === "focus" ? colors.surfacePrimary : "transparent";
   return colors.surfacePrimary;
 };
 

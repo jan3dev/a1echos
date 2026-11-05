@@ -3,8 +3,9 @@ import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 
 import { TestID } from "@/constants";
+import { darkColors } from "@/theme";
 
-import { Button } from "./Button";
+import { Button, getBackgroundColor } from "./Button";
 
 describe("Button", () => {
   it.each([["primary"], ["secondary"], ["tertiary"], ["utility"]] as const)(
@@ -164,4 +165,26 @@ describe("Button", () => {
     fireEvent(button, "blur");
     expect(queryByTestId("focus-btn-focus-ring")).toBeNull();
   });
+
+  it.each([
+    ["default", "surfaceTertiary"],
+    ["hover", "surfaceTertiary"],
+    ["focus", "surfaceTertiary"],
+    ["disabled", "surfaceTertiary"],
+    ["loading", "surfaceTertiary"],
+    ["active", "surfaceSecondary"],
+  ] as const)("secondary %s background is %s", (state, token) => {
+    expect(getBackgroundColor("secondary", state, darkColors)).toBe(
+      darkColors[token],
+    );
+  });
+
+  it.each([["hover"], ["active"]] as const)(
+    "tertiary %s has no background",
+    (state) => {
+      expect(getBackgroundColor("tertiary", state, darkColors)).toBe(
+        "transparent",
+      );
+    },
+  );
 });
