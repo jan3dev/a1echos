@@ -102,7 +102,7 @@ export const darkColors: AquaColors = {
   surfaceBorderPrimary: AquaPrimitiveColors.metal900,
   surfaceSecondary: AquaPrimitiveColors.metal900,
   surfaceBorderSecondary: AquaPrimitiveColors.metal850,
-  surfaceTertiary: AquaPrimitiveColors.metal850,
+  surfaceTertiary: AquaPrimitiveColors.metal750,
   surfaceInverse: AquaPrimitiveColors.white,
   surfaceBackground: AquaPrimitiveColors.metal1000,
   surfaceSelected: AquaPrimitiveColors.neonBlue8,
