@@ -1,4 +1,4 @@
-/** @deprecated Use ModelId + TranscriptionMode instead. Kept for settings migration. */
+/** Pre-ModelId setting, only read to migrate old installs to ModelId + TranscriptionMode. */
 export enum ModelType {
   WHISPER_FILE = "whisper_file",
   WHISPER_REALTIME = "whisper_realtime",

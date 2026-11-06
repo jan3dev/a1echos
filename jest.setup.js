@@ -401,7 +401,16 @@ jest.mock("react-native-reanimated", () => ({
     Extrapolate: { CLAMP: "clamp" },
     useAnimatedGestureHandler: jest.fn(),
     useAnimatedScrollHandler: jest.fn(),
-    useSharedValue: jest.fn((v) => ({ value: v })),
+    useSharedValue: jest.fn((v) => {
+      const sv = {
+        value: v,
+        get: () => sv.value,
+        set: (n) => {
+          sv.value = typeof n === "function" ? n(sv.value) : n;
+        },
+      };
+      return sv;
+    }),
     useAnimatedStyle: jest.fn(() => ({})),
     useDerivedValue: jest.fn((fn) => ({ value: fn() })),
     useAnimatedRef: jest.fn(() => ({ current: null })),
@@ -424,10 +433,20 @@ jest.mock("react-native-reanimated", () => ({
     runOnUI: jest.fn((fn) => fn),
     runOnJS: jest.fn((fn) => fn),
   },
-  useSharedValue: jest.fn((v) => ({ value: v })),
+  useSharedValue: jest.fn((v) => {
+    const sv = {
+      value: v,
+      get: () => sv.value,
+      set: (n) => {
+        sv.value = typeof n === "function" ? n(sv.value) : n;
+      },
+    };
+    return sv;
+  }),
   useAnimatedStyle: jest.fn(() => ({})),
   useDerivedValue: jest.fn((fn) => ({ value: fn() })),
   useReducedMotion: jest.fn(() => false),
+  useAnimatedReaction: jest.fn(),
   useFrameCallback: jest.fn(() => ({ setActive: jest.fn() })),
   useAnimatedRef: jest.fn(() => ({ current: null })),
   withTiming: jest.fn((v) => v),
@@ -548,19 +567,16 @@ jest.mock("react-native-gesture-handler", () => {
         onStart: jest.fn().mockReturnThis(),
         onEnd: jest.fn().mockReturnThis(),
       })),
-      Pan: jest.fn(() => ({
-        enabled: jest.fn().mockReturnThis(),
-        activeOffsetY: jest.fn().mockReturnThis(),
-        failOffsetX: jest.fn().mockReturnThis(),
-        runOnJS: jest.fn().mockReturnThis(),
-        onStart: jest.fn().mockReturnThis(),
-        onUpdate: jest.fn().mockReturnThis(),
-        onEnd: jest.fn().mockReturnThis(),
-      })),
     },
     GestureDetector: View,
+    usePanGesture: jest.fn((config) => config),
   };
 });
+
+jest.mock("react-native-worklets", () => ({
+  scheduleOnRN: jest.fn((fn, ...args) => fn(...args)),
+  scheduleOnUI: jest.fn((fn, ...args) => fn(...args)),
+}));
 
 // ---------------------------------------------------------------------------
 // Sherpa-ONNX (on-device STT engine)
@@ -628,6 +644,7 @@ jest.mock("@supersami/rn-foreground-service", () => ({
 jest.mock("@shopify/react-native-skia", () => ({
   Canvas: "Canvas",
   Path: "SkiaPath",
+  Image: "SkiaImage",
   Blur: "SkiaBlur",
   BlurMask: "SkiaBlurMask",
   Circle: "SkiaCircle",
@@ -643,7 +660,7 @@ jest.mock("@shopify/react-native-skia", () => ({
   rect: (x, y, width, height) => ({ x, y, width, height }),
   rrect: (r, rx, ry) => ({ rect: r, rx, ry }),
   Skia: {
-    Path: { Make: jest.fn() },
+    Path: { Make: jest.fn(), MakeFromSVGString: jest.fn(() => ({})) },
     Color: jest.fn(() => Float32Array.of(0, 0, 0, 1)),
     Skottie: { Make: jest.fn(() => ({ duration: () => 1, fps: () => 30 })) },
   },
@@ -653,6 +670,8 @@ jest.mock("@shopify/react-native-skia", () => ({
   useClockValue: jest.fn(() => ({ current: 0 })),
   useDerivedValue: jest.fn(() => ({ current: 0 })),
   usePathValue: jest.fn(() => ({ current: 0 })),
+  usePathInterpolation: jest.fn(() => ({ value: null })),
+  makeImageFromView: jest.fn(async () => null),
 }));
 
 // ---------------------------------------------------------------------------

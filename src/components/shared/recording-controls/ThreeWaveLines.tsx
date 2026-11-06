@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import {
+  SharedValue,
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
@@ -110,13 +111,13 @@ const alphaMaskColor = (a: number) => `rgba(255, 255, 255, ${a})`;
 
 const useAnimatedWave = (
   waveIndex: number,
-  audioLevel: { value: number },
-  width: { value: number },
+  audioLevel: SharedValue<number>,
+  width: SharedValue<number>,
   height: number,
   centerY: number,
-  isActive: { value: boolean },
-  initialBlipTarget: { value: number },
-  hasTriggeredInitialBlip: { value: boolean },
+  isActive: SharedValue<boolean>,
+  initialBlipTarget: SharedValue<number>,
+  hasTriggeredInitialBlip: SharedValue<boolean>,
 ) => {
   const profile = WAVE_PROFILES[waveIndex];
   const freqTwoPi = profile.frequency * 2 * Math.PI;
@@ -147,7 +148,7 @@ const useAnimatedWave = (
       initialBlipTarget.value === waveIndex
     ) {
       initialBlipAmount.value = 5.0;
-      hasTriggeredInitialBlip.value = true;
+      hasTriggeredInitialBlip.set(true);
     }
 
     if (initialBlipAmount.value > 0) {
@@ -378,17 +379,17 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
   const containerWidth = useSharedValue(400);
   const audioLevel = useSharedValue(0);
   const isActive = useSharedValue(AppState.currentState === "active");
-  const initialBlipTarget = useSharedValue(Math.floor(Math.random() * 3));
+  const initialBlipTarget = useSharedValue(0);
   const hasTriggeredInitialBlip = useSharedValue(false);
 
   useEffect(() => {
-    hasTriggeredInitialBlip.value = false;
-    initialBlipTarget.value = Math.floor(Math.random() * 3);
+    hasTriggeredInitialBlip.set(false);
+    initialBlipTarget.set(Math.floor(Math.random() * 3));
   }, [hasTriggeredInitialBlip, initialBlipTarget]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      isActive.value = nextAppState === "active";
+      isActive.set(nextAppState === "active");
     };
 
     const subscription = AppState.addEventListener(
@@ -402,7 +403,7 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
     let prevLevel = useTranscriptionStore.getState().audioLevel;
     const updateAudioLevel = (level: number) => {
       "worklet";
-      audioLevel.value = level < 0 ? 0 : level > 1 ? 1 : level;
+      audioLevel.set(level < 0 ? 0 : level > 1 ? 1 : level);
     };
 
     const unsubscribe = useTranscriptionStore.subscribe((zustandState) => {
@@ -454,7 +455,7 @@ export const ThreeWaveLines = ({ height = 42 }: ThreeWaveLinesProps) => {
       onLayout={(event) => {
         const { width } = event.nativeEvent.layout;
         if (width > 0) {
-          containerWidth.value = width;
+          containerWidth.set(width);
         }
       }}
     >

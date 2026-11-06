@@ -33,10 +33,10 @@ export const transcriptions = sqliteTable(
       .notNull()
       .default("transcript"),
   },
-  (t) => ({
-    sessionIdIdx: index("transcriptions_session_id_idx").on(t.sessionId),
-    timestampIdx: index("transcriptions_timestamp_idx").on(t.timestampMs),
-  }),
+  (t) => [
+    index("transcriptions_session_id_idx").on(t.sessionId),
+    index("transcriptions_timestamp_idx").on(t.timestampMs),
+  ],
 );
 
 export const meta = sqliteTable("meta", {

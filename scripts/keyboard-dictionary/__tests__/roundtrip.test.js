@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+
 const { encode } = require("../encoder");
 const { decode, evaluate, nextWords, search } = require("../decoder");
 const { readSources, OUTPUT } = require("../build");

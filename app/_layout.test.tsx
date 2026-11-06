@@ -135,12 +135,18 @@ jest.mock("expo", () => ({
   reloadAppAsync: (reason: string) => mockReloadAppAsync(reason),
 }));
 
+const mockSheetProps: { current: any } = { current: null };
+
 jest.mock("@/components", () => {
   const { View } = require("react-native");
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
+    ...jest.requireActual(
+      "@/components/domain/transcription/transcription-settings-sheet/recordingPanelMotion",
+    ),
     BiometricLock: () => null,
     FadingGlassBlur: () => null,
+    GrabberArc: () => null,
     RECORDING_BUTTON_SIZE: 80,
     AppErrorBoundary: ({ children }: any) => (
       <View testID={TID.AppErrorBoundary}>{children}</View>
@@ -151,7 +157,9 @@ jest.mock("@/components", () => {
     PRIMARY_BUTTON_HEIGHT: 56,
     TOOLTIP_FADE_DURATION_MS: 200,
     Tooltip: () => <View testID={TID.Tooltip} />,
-    TranscriptionSettingsSheet: ({ visible, onDismiss, footer }: any) => {
+    TranscriptionSettingsSheet: (props: any) => {
+      const { visible, onDismiss, footer } = props;
+      mockSheetProps.current = props;
       const { TouchableOpacity } = require("react-native");
       if (!visible) return null;
       return (
@@ -727,11 +735,15 @@ describe("RootLayout", () => {
   });
 
   describe("GlobalRecordingControls - transcription settings sheet", () => {
-    const { Gesture } = jest.requireMock("react-native-gesture-handler");
+    const { usePanGesture } = jest.requireMock("react-native-gesture-handler");
+    // Only the recording controls' pan activates upward-only.
+    const swipeUpPan = () =>
+      (usePanGesture as jest.Mock).mock.calls
+        .map(([config]) => config)
+        .findLast((c) => !Array.isArray(c.activeOffsetY));
     const swipeUp = async () => {
-      const pan = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
-      const onStart = pan.onStart.mock.calls.at(-1)[0];
-      await act(async () => onStart());
+      const { onActivate } = swipeUpPan();
+      await act(async () => onActivate({ translationY: -8 }));
     };
 
     beforeEach(() => {
@@ -757,6 +769,55 @@ describe("RootLayout", () => {
       expect(queryByTestId(TestID.TranscriptionSettingsSheet)).toBeNull();
     });
 
+    it("anchors the panel's copies to the measured controls and grabber", async () => {
+      const result = await renderAndWaitForInit();
+      const measured = result.UNSAFE_root.findAll(
+        (n) =>
+          typeof n.type === "string" && typeof n.props.onLayout === "function",
+      );
+      const currentTarget = {
+        measureInWindow: (cb: (x: number, y: number) => void) => cb(0, 700),
+      };
+      await act(async () => {
+        measured.forEach((n) =>
+          n.props.onLayout({ currentTarget, nativeEvent: { layout: {} } }),
+        );
+      });
+      expect(mockSheetProps.current).toMatchObject({
+        footerTop: 700,
+        grabberTop: 700,
+      });
+    });
+
+    it("on Android, drags the panel open through the JS responder", async () => {
+      const { Platform, PanResponder } = require("react-native");
+      const original = Platform.OS;
+      Platform.OS = "android";
+      let config: any;
+      const create = jest
+        .spyOn(PanResponder, "create")
+        .mockImplementation((c: any) => {
+          config = c;
+          return { panHandlers: {} };
+        });
+      const { getByTestId, queryByTestId } = await renderAndWaitForInit();
+
+      expect(
+        config.onMoveShouldSetPanResponderCapture({}, { dx: 0, dy: -20 }),
+      ).toBe(true);
+      expect(config.onPanResponderTerminationRequest()).toBe(false);
+      await act(async () => config.onPanResponderGrant({}, { dy: -20 }));
+      expect(getByTestId(TestID.TranscriptionSettingsSheet)).toBeTruthy();
+      act(() => config.onPanResponderMove({}, { dy: -400 }));
+      await act(async () => config.onPanResponderRelease({}, { vy: -1 }));
+      expect(getByTestId(TestID.TranscriptionSettingsSheet)).toBeTruthy();
+      await act(async () => config.onPanResponderTerminate({}, { vy: 1 }));
+      expect(queryByTestId(TestID.TranscriptionSettingsSheet)).toBeNull();
+
+      create.mockRestore();
+      Platform.OS = original;
+    });
+
     it("tapping the grabber opens the sheet", async () => {
       const { getByTestId } = await renderAndWaitForInit();
       await act(async () => {
@@ -769,8 +830,7 @@ describe("RootLayout", () => {
       const { useTranscriptionState } = require("@/stores");
       (useTranscriptionState as jest.Mock).mockReturnValue("recording");
       const { queryByTestId } = await renderAndWaitForInit();
-      const pan = (Gesture.Pan as jest.Mock).mock.results.at(-1)!.value;
-      expect(pan.enabled).toHaveBeenLastCalledWith(false);
+      expect(swipeUpPan().enabled).toBe(false);
       expect(queryByTestId(TestID.TranscriptionSettingsHandle)).toBeNull();
     });
 

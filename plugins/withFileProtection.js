@@ -13,14 +13,15 @@
  *          A backup of an encrypted DB without the Keystore-backed master key
  *          looks like data loss to the user — excluding avoids the confusion.
  */
+const path = require("path");
+const fs = require("fs");
+
 const {
   withInfoPlist,
   withAndroidManifest,
   withDangerousMod,
   AndroidConfig,
 } = require("@expo/config-plugins");
-const path = require("path");
-const fs = require("fs");
 
 const PROTECTION_CLASS = "NSFileProtectionCompleteUntilFirstUserAuthentication";
 const BACKUP_RULES_FILENAME = "echos_backup_rules.xml";

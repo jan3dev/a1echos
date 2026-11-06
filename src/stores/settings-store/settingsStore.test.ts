@@ -35,13 +35,11 @@ import {
   useModelModes,
   useSelectedLanguage,
   useSelectedModelId,
-  useSelectedModelType,
   useSelectedTheme,
   useSelectedTranscriptionMode,
   useSetLanguage,
   useSetModelId,
   useSetModelMode,
-  useSetModelType,
   useSetSmartSplitEnabled,
   useSetTheme,
   useSettingsStore,
@@ -73,7 +71,6 @@ const { preWarmModel } = require("../transcription-store/preWarmModel") as {
 
 const initialState = {
   selectedTheme: AppTheme.AUTO,
-  selectedModelType: ModelType.WHISPER_FILE,
   selectedModelId: ModelId.WHISPER_TINY,
   selectedTranscriptionMode: TranscriptionMode.FILE,
   modelModes: {},
@@ -99,7 +96,6 @@ describe("settingsStore", () => {
     it("has correct defaults", () => {
       const state = useSettingsStore.getState();
       expect(state.selectedTheme).toBe(AppTheme.AUTO);
-      expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
       expect(state.smartSplitEnabled).toBe(true);
@@ -122,7 +118,6 @@ describe("settingsStore", () => {
       const state = useSettingsStore.getState();
 
       expect(state.selectedTheme).toBe(AppTheme.DARK);
-      expect(state.selectedModelType).toBe(ModelType.WHISPER_REALTIME);
       expect(state.selectedLanguage).toEqual({ code: "fr", name: "French" });
       expect(state.isIncognitoMode).toBe(true);
     });
@@ -204,7 +199,6 @@ describe("settingsStore", () => {
       const state = useSettingsStore.getState();
 
       expect(state.selectedTheme).toBe(AppTheme.AUTO);
-      expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.selectedLanguage).toEqual({ code: "en", name: "English" });
       expect(state.isIncognitoMode).toBe(false);
     });
@@ -216,8 +210,8 @@ describe("settingsStore", () => {
         .mockResolvedValue(null);
 
       await useSettingsStore.getState().initialize();
-      expect(useSettingsStore.getState().selectedModelType).toBe(
-        ModelType.WHISPER_FILE,
+      expect(useSettingsStore.getState().selectedTranscriptionMode).toBe(
+        TranscriptionMode.FILE,
       );
     });
 
@@ -268,7 +262,6 @@ describe("settingsStore", () => {
       const state = useSettingsStore.getState();
 
       expect(state.selectedTheme).toBe(AppTheme.AUTO);
-      expect(state.selectedModelType).toBe(ModelType.WHISPER_FILE);
       expect(state.isIncognitoMode).toBe(false);
     });
   });
@@ -294,36 +287,6 @@ describe("settingsStore", () => {
       ).rejects.toThrow("write fail");
 
       expect(useSettingsStore.getState().selectedTheme).toBe(AppTheme.AUTO);
-    });
-  });
-
-  describe("setModelType()", () => {
-    it("optimistically updates and persists", async () => {
-      await useSettingsStore
-        .getState()
-        .setModelType(ModelType.WHISPER_REALTIME);
-
-      expect(useSettingsStore.getState().selectedModelType).toBe(
-        ModelType.WHISPER_REALTIME,
-      );
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        "selected_model_type",
-        ModelType.WHISPER_REALTIME,
-      );
-    });
-
-    it("rolls back on persist failure", async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
-        new Error("write fail"),
-      );
-
-      await expect(
-        useSettingsStore.getState().setModelType(ModelType.WHISPER_REALTIME),
-      ).rejects.toThrow("write fail");
-
-      expect(useSettingsStore.getState().selectedModelType).toBe(
-        ModelType.WHISPER_FILE,
-      );
     });
   });
 
@@ -1297,11 +1260,6 @@ describe("settingsStore", () => {
       expect(result.current).toBe(AppTheme.AUTO);
     });
 
-    it("useSelectedModelType returns ModelType.WHISPER_FILE by default", () => {
-      const { result } = renderHook(() => useSelectedModelType());
-      expect(result.current).toBe(ModelType.WHISPER_FILE);
-    });
-
     it("useSelectedLanguage returns default language by default", () => {
       const { result } = renderHook(() => useSelectedLanguage());
       expect(result.current).toEqual(SupportedLanguages.defaultLanguage);
@@ -1314,11 +1272,6 @@ describe("settingsStore", () => {
 
     it("useSetLanguage returns a function", () => {
       const { result } = renderHook(() => useSetLanguage());
-      expect(typeof result.current).toBe("function");
-    });
-
-    it("useSetModelType returns a function", () => {
-      const { result } = renderHook(() => useSetModelType());
       expect(typeof result.current).toBe("function");
     });
 

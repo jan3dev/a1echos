@@ -356,6 +356,8 @@ export default function SessionScreen() {
           return;
         }
       }
+      // Only called after the hook has returned.
+      // eslint-disable-next-line react-hooks/immutability
       disablePrevention();
       // Use router for safe navigation
       if (router.canGoBack()) {

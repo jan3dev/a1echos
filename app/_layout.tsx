@@ -6,28 +6,44 @@ import { Stack, useIsFocused, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+  LayoutChangeEvent,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
-  Gesture,
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
+import { scheduleOnUI } from "react-native-worklets";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppErrorBoundary,
+  beginDrag,
   BiometricLock,
+  DRAG_ACTIVATION,
   FadingGlassBlur,
+  GrabberArc,
   Icon,
+  isUpwardDrag,
   LargerModelSuggestionModal,
   PRIMARY_BUTTON_HEIGHT,
+  releaseDrag,
   RECORDING_BUTTON_SIZE,
   RecordingControlsView,
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
   Tooltip,
   TranscriptionSettingsSheet,
+  updateDrag,
+  usePanelMotion,
+  usePanelPan,
   VoiceSessionHintModal,
 } from "@/components";
 import {
@@ -83,7 +99,6 @@ import {
 } from "@/stores";
 import { spacing, useTheme, useThemeStore } from "@/theme";
 import { FeatureFlag, logError, readKeyboardEnabled } from "@/utils";
-import GrabberArc from "@/assets/icons/grabber_arc.svg";
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
@@ -123,8 +138,6 @@ export const unstable_settings = {
 };
 
 const TOOLTIP_GAP_ABOVE_FOOTER = 16;
-const SETTINGS_SWIPE_ACTIVATION = 8;
-const SETTINGS_SWIPE_MAX_DRIFT_X = 30;
 const SETTINGS_HANDLE_HIT_ABOVE = 16;
 const GRABBER_TOP_INSET = 9;
 const SETTINGS_HANDLE_HEIGHT =
@@ -367,6 +380,26 @@ function GlobalRecordingControls() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [footerShown, setFooterShown] = useState(false);
+  const panelMotion = usePanelMotion();
+  // Where the settings panel draws its copies of the controls and grabber.
+  const [anchors, setAnchors] = useState<{
+    controls?: number;
+    grabber?: number;
+  }>({});
+  const measureAnchor =
+    (key: "controls" | "grabber") =>
+    ({ currentTarget }: LayoutChangeEvent) => {
+      // A number only on the legacy renderer.
+      if (typeof currentTarget === "number") return;
+      currentTarget.measureInWindow((_x, y) =>
+        setAnchors((a) => (a[key] === y ? a : { ...a, [key]: y })),
+      );
+    };
+  // Never two grabbers apart: once the panel's grabber leaves home, this one
+  // hides, whatever the footer hand-off timing.
+  const grabberStyle = useAnimatedStyle(() => ({
+    opacity: panelMotion.q.value > 0 ? 0 : 1,
+  }));
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
@@ -391,16 +424,34 @@ function GlobalRecordingControls() {
     if (!canOpenSettings) setSettingsOpen(false);
   }, [canOpenSettings]);
 
-  const swipeUp = useMemo(
-    () =>
-      Gesture.Pan()
-        .enabled(canOpenSettings)
-        .activeOffsetY(-SETTINGS_SWIPE_ACTIVATION)
-        .failOffsetX([-SETTINGS_SWIPE_MAX_DRIFT_X, SETTINGS_SWIPE_MAX_DRIFT_X])
-        .runOnJS(true)
-        .onStart(openSettings),
-    [canOpenSettings, openSettings],
+  // The panel follows the finger from here; it takes over once it shows.
+  const swipeUp = usePanelPan(
+    panelMotion,
+    setSettingsOpen,
+    canOpenSettings && Platform.OS !== "android",
+    -DRAG_ACTIVATION,
   );
+  // Android: a gesture-handler pan still active when the panel's Modal window
+  // appears leaves the first touches in that window dropped. The JS responder
+  // hands off cleanly.
+  // Shared values read on the JS thread can be stale, so the drag math runs
+  // on the UI thread.
+  const swipeUpResponder = useMemo(() => {
+    const release = (vy: number) =>
+      scheduleOnUI(releaseDrag, panelMotion, vy * 1000, setSettingsOpen);
+    return PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        canOpenSettings && isUpwardDrag(g.dx, g.dy),
+      onPanResponderGrant: (_, g) => {
+        scheduleOnUI(beginDrag, panelMotion, g.dy);
+        setSettingsOpen(true);
+      },
+      onPanResponderMove: (_, g) => scheduleOnUI(updateDrag, panelMotion, g.dy),
+      onPanResponderRelease: (_, g) => release(g.vy),
+      onPanResponderTerminate: (_, g) => release(g.vy),
+      onPanResponderTerminationRequest: () => false,
+    });
+  }, [canOpenSettings, panelMotion]);
 
   const controls = (
     <RecordingControlsView
@@ -429,8 +480,9 @@ function GlobalRecordingControls() {
         <GestureDetector gesture={swipeUp}>
           <View
             collapsable={false}
-            pointerEvents="box-none"
+            pointerEvents={Platform.OS === "android" ? "auto" : "box-none"}
             style={{ paddingBottom: insets.bottom }}
+            {...(Platform.OS === "android" && swipeUpResponder.panHandlers)}
           >
             {canOpenSettings ? (
               <Pressable
@@ -440,18 +492,35 @@ function GlobalRecordingControls() {
                 accessibilityRole="button"
                 accessibilityLabel={loc.transcriptionSettings}
               >
-                <GrabberArc color={theme.colors.systemBackgroundColor} />
+                <Reanimated.View
+                  collapsable={false}
+                  onLayout={measureAnchor("grabber")}
+                  style={grabberStyle}
+                >
+                  <GrabberArc
+                    color={theme.colors.systemBackgroundColor}
+                    style={footerShown && styles.hidden}
+                  />
+                </Reanimated.View>
               </Pressable>
             ) : (
               <View style={styles.settingsHandle} pointerEvents="none" />
             )}
-            <View style={footerShown && styles.hidden}>{controls}</View>
+            <View
+              onLayout={measureAnchor("controls")}
+              style={footerShown && styles.hidden}
+            >
+              {controls}
+            </View>
           </View>
         </GestureDetector>
       )}
       <TranscriptionSettingsSheet
         visible={settingsOpen}
         onDismiss={closeSettings}
+        motion={panelMotion}
+        footerTop={anchors.controls}
+        grabberTop={anchors.grabber}
         footer={controls}
         onFooterShownChange={setFooterShown}
       />

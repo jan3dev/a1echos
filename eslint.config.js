@@ -5,7 +5,7 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    ignores: ["dist/*", ".expo/*"],
     rules: {
       "import/order": [
         "error",
@@ -22,11 +22,23 @@ module.exports = defineConfig([
         },
       ],
       "react/react-in-jsx-scope": "off",
-      // React Compiler rules new in eslint-config-expo 58; existing code predates them.
-      "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/set-state-in-effect": "warn",
+      // Mostly false positives here: refs read in handlers built during
+      // render, and effects that sync state from props or native events.
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  {
+    files: ["plugins/**/*.js", "scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        __dirname: "readonly",
+        Buffer: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+      },
     },
   },
   {

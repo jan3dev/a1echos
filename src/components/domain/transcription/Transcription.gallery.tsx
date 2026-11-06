@@ -2,13 +2,8 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { Toast, ToastVariant, TranscriptionItem } from "@/components";
-import { ModelType, Transcription, TranscriptionState } from "@/models";
-import {
-  useSessionStore,
-  useSettingsStore,
-  useTranscriptionStore,
-  useUIStore,
-} from "@/stores";
+import { Transcription, TranscriptionState } from "@/models";
+import { useSessionStore, useTranscriptionStore, useUIStore } from "@/stores";
 import type { GalleryEntry } from "@/design-system/manifest";
 
 const dummyTranscriptions: Transcription[] = [
@@ -61,10 +56,6 @@ const useSeedStore = () => {
     useTranscriptionStore.setState({
       transcriptions: dummyTranscriptions,
       state: TranscriptionState.READY,
-    });
-
-    useSettingsStore.setState({
-      selectedModelType: ModelType.WHISPER_REALTIME,
     });
   }, []);
 };

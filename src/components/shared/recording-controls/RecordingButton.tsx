@@ -252,9 +252,12 @@ const AnimatedGradientCircle = ({
 
   return (
     // Skia's surface ignores the parent View's rounded clip on iOS.
+    // androidWarmup: draws the first frame (and after being hidden) without
+    // waiting for the GPU surface, e.g. in the settings panel's footer copy.
     <Canvas
       pointerEvents="none"
       style={{ position: "absolute", width: size, height: size }}
+      androidWarmup
     >
       <Group clip={rrect(rect(0, 0, size, size), size / 2, size / 2)}>
         <Rect x={0} y={0} width={size} height={size} color={GRADIENT.base} />

@@ -7,7 +7,6 @@ import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
 import { AppConstants } from "@/constants";
 import {
   ModelId,
-  ModelType,
   Transcription,
   TranscriptionMode,
   TranscriptionState,
@@ -185,7 +184,6 @@ describe("transcriptionStore", () => {
       needsSort: false,
     });
     useSettingsStore.setState({
-      selectedModelType: ModelType.WHISPER_FILE,
       selectedTranscriptionMode: TranscriptionMode.FILE,
       selectedLanguage: { code: "en", name: "English" },
       smartSplitEnabled: true,
@@ -985,7 +983,6 @@ describe("transcriptionStore", () => {
         lastOperationTime: null,
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
     });
@@ -1118,7 +1115,6 @@ describe("transcriptionStore", () => {
         lastOperationTime: null,
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
     });
@@ -1168,7 +1164,6 @@ describe("transcriptionStore", () => {
         recordingSessionId: "session-1",
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
     });
@@ -1375,7 +1370,6 @@ describe("transcriptionStore", () => {
         realtimeAudioLevelUnsubscribe: mockAudioLevelUnsub,
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
     });
@@ -1650,7 +1644,6 @@ describe("transcriptionStore", () => {
 
     it("logs warning but continues when background service fails to start (file mode)", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
@@ -1666,7 +1659,6 @@ describe("transcriptionStore", () => {
 
     it("stops background service when file-mode capture start fails and bg was started", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
@@ -1688,7 +1680,6 @@ describe("transcriptionStore", () => {
 
     it("does NOT stop background service when file-mode start fails and bg was not started", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
@@ -1707,7 +1698,6 @@ describe("transcriptionStore", () => {
 
     it("stops background service when realtime start fails and bg was started", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
@@ -1727,7 +1717,6 @@ describe("transcriptionStore", () => {
 
     it("does NOT stop background service when realtime start fails and bg was not started", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
@@ -1746,7 +1735,6 @@ describe("transcriptionStore", () => {
 
     it("handles unexpected exception during startRecording and cleans up subscriptions", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       const mockAudioUnsub = jest.fn();
@@ -1776,7 +1764,6 @@ describe("transcriptionStore", () => {
 
     it("logs warning but continues when background service fails to start (realtime mode)", async () => {
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       (
@@ -1831,7 +1818,6 @@ describe("transcriptionStore", () => {
         recordingSessionId: "session-1",
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
@@ -1856,7 +1842,6 @@ describe("transcriptionStore", () => {
         recordingSessionId: null,
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
 
@@ -1882,7 +1867,6 @@ describe("transcriptionStore", () => {
         recordingSessionId: "session-1",
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       primeChunkCallback();
@@ -1914,7 +1898,6 @@ describe("transcriptionStore", () => {
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       primeChunkCallback();
@@ -1937,7 +1920,6 @@ describe("transcriptionStore", () => {
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       primeChunkCallback();
@@ -1969,7 +1951,6 @@ describe("transcriptionStore", () => {
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       primeChunkCallback();
@@ -2026,7 +2007,6 @@ describe("transcriptionStore", () => {
         realtimeAudioLevelUnsubscribe: jest.fn(),
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       primeChunkCallback();
@@ -2045,7 +2025,6 @@ describe("transcriptionStore", () => {
         recordingSessionId: "session-1",
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_FILE,
         selectedTranscriptionMode: TranscriptionMode.FILE,
       });
       (
@@ -2904,7 +2883,6 @@ describe("transcriptionStore", () => {
         lastOperationTime: null,
       });
       useSettingsStore.setState({
-        selectedModelType: ModelType.WHISPER_REALTIME,
         selectedTranscriptionMode: TranscriptionMode.REALTIME,
       });
       // Run the real startRecording so subscribeToChunk / subscribeToAudioLevel

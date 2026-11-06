@@ -22,6 +22,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+
 const { decode, evaluate } = require("../keyboard-dictionary/decoder");
 const { UNKNOWN_WORD_LOGPROB } = require("../keyboard-dictionary/lm-stub");
 

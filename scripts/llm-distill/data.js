@@ -20,6 +20,7 @@ const path = require("path");
 
 const { startServer, complete, PORT } = require("../llm-summary/bench");
 const { scoreOutput } = require("../llm-summary/score");
+const PROMPTS = require("../../src/services/llm-service/prompts.json");
 
 const ROOT = path.join(os.homedir(), ".cache", "echos-distill");
 const DATA = path.join(ROOT, "data");
@@ -332,8 +333,6 @@ const teach = async () => {
   );
   out.end();
 };
-
-const PROMPTS = require("../../src/services/llm-service/prompts.json");
 
 // Facts are exact substrings, but the teacher rightly normalizes ("cinq
 // kilomètres" → "5 km"), so recall is too noisy to filter on; it's for eval.

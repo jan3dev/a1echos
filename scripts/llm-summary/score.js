@@ -4,8 +4,6 @@
  * (src/services/llm-service/prompts.json); re-run the bench after editing.
  */
 
-const PROMPTS = require("../../src/services/llm-service/prompts.json");
-
 const SCRIPTS = {
   ar: /[؀-ۿ]/g,
   ur: /[؀-ۿ]/g,

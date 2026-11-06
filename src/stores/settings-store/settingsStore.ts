@@ -63,8 +63,6 @@ const parseMicTimeout = (raw: string | null): number => {
 
 interface SettingsStore {
   selectedTheme: AppTheme;
-  /** @deprecated Use selectedModelId + selectedTranscriptionMode */
-  selectedModelType: ModelType;
   selectedModelId: ModelId;
   selectedTranscriptionMode: TranscriptionMode;
   /** Per-model transcription mode preference */
@@ -102,8 +100,6 @@ interface SettingsStore {
 
   initialize: () => Promise<void>;
   setTheme: (theme: AppTheme) => Promise<void>;
-  /** @deprecated Use setModelId + setTranscriptionMode */
-  setModelType: (modelType: ModelType) => Promise<void>;
   setModelId: (modelId: ModelId) => Promise<void>;
   setTranscriptionMode: (mode: TranscriptionMode) => Promise<void>;
   setModelMode: (modelId: ModelId, mode: TranscriptionMode) => Promise<void>;
@@ -123,13 +119,9 @@ interface SettingsStore {
   setLlmId: (llmId: LlmModelId | null) => Promise<void>;
 }
 
-const getDefaultModelType = (): ModelType => {
-  return ModelType.WHISPER_FILE;
-};
-
 /** Migrate old ModelType to new ModelId + TranscriptionMode */
 const migrateModelType = (
-  modelType: string,
+  modelType: string | null,
 ): { modelId: ModelId; mode: TranscriptionMode } => {
   switch (modelType) {
     case ModelType.WHISPER_REALTIME:
@@ -228,7 +220,6 @@ const persistKeyboardSetting = async <F extends KeyboardSettingField>(
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedTheme: AppTheme.AUTO,
-  selectedModelType: getDefaultModelType(),
   selectedModelId: ModelId.WHISPER_TINY,
   selectedTranscriptionMode: TranscriptionMode.FILE,
   modelModes: {},
@@ -295,13 +286,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ? getThemeByName(themeValue)
         : AppTheme.AUTO;
 
-      // Legacy model type (kept for backward compat)
-      const selectedModelType = modelTypeValue
-        ? Object.values(ModelType).includes(modelTypeValue as ModelType)
-          ? (modelTypeValue as ModelType)
-          : getDefaultModelType()
-        : getDefaultModelType();
-
       // New model settings: migrate from old format if new keys not set
       let selectedModelId: ModelId;
       let selectedTranscriptionMode: TranscriptionMode;
@@ -320,7 +304,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
             : TranscriptionMode.FILE;
       } else {
         // Migrate from old ModelType
-        const migrated = migrateModelType(selectedModelType);
+        const migrated = migrateModelType(modelTypeValue);
         selectedModelId = migrated.modelId;
         selectedTranscriptionMode = migrated.mode;
         // Persist migration
@@ -380,7 +364,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
       set({
         selectedTheme,
-        selectedModelType,
         selectedModelId,
         selectedTranscriptionMode,
         modelModes,
@@ -415,7 +398,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
       set({
         selectedTheme: AppTheme.AUTO,
-        selectedModelType: getDefaultModelType(),
         selectedModelId: ModelId.WHISPER_TINY,
         selectedTranscriptionMode: TranscriptionMode.FILE,
         modelModes: {},
@@ -448,21 +430,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         message: "Failed to save theme",
       });
       set({ selectedTheme: previousTheme });
-      throw error;
-    }
-  },
-
-  setModelType: async (modelType: ModelType) => {
-    const previousModelType = get().selectedModelType;
-    set({ selectedModelType: modelType });
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.MODEL_TYPE, modelType);
-    } catch (error) {
-      logError(error, {
-        flag: FeatureFlag.settings,
-        message: "Failed to save model type",
-      });
-      set({ selectedModelType: previousModelType });
       throw error;
     }
   },
@@ -774,8 +741,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 }));
 
 export const useSelectedTheme = () => useSettingsStore((s) => s.selectedTheme);
-export const useSelectedModelType = () =>
-  useSettingsStore((s) => s.selectedModelType);
 export const useSelectedModelId = () =>
   useSettingsStore((s) => s.selectedModelId);
 export const useSelectedTranscriptionMode = () =>
@@ -788,7 +753,6 @@ export const useIsIncognitoMode = () =>
 export const useSetIncognitoMode = () =>
   useSettingsStore((s) => s.setIncognitoMode);
 export const useSetLanguage = () => useSettingsStore((s) => s.setLanguage);
-export const useSetModelType = () => useSettingsStore((s) => s.setModelType);
 export const useSetModelId = () => useSettingsStore((s) => s.setModelId);
 export const useSetTranscriptionMode = () =>
   useSettingsStore((s) => s.setTranscriptionMode);

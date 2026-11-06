@@ -13,6 +13,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
+
 const { encode, parseUnigrams } = require("./encoder");
 
 const DATA_DIR = path.join(
