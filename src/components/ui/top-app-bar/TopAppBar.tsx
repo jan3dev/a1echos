@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { Fragment, ReactNode, RefObject } from "react";
 import {
+  Pressable,
   StyleProp,
   StyleSheet,
   View,
@@ -25,6 +26,8 @@ export interface TopAppBarProps {
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
   onTitleLongPressed?: () => void;
+  /** Taps on the bar outside its buttons and title, e.g. to scroll to top. */
+  onBarPressed?: () => void;
   titleWidget?: ReactNode;
   actions?: ReactNode[];
   transparent?: boolean;
@@ -57,6 +60,7 @@ export const TopAppBar = ({
   onBackPressed,
   onTitlePressed,
   onTitleLongPressed,
+  onBarPressed,
   titleWidget,
   actions = [],
   transparent = false,
@@ -83,8 +87,11 @@ export const TopAppBar = ({
   const totalHeight = AppConstants.APP_BAR_HEIGHT + topPadding;
 
   return (
-    <View
+    <Pressable
       testID={TestID.TopAppBar}
+      onPress={onBarPressed}
+      disabled={!onBarPressed}
+      accessible={false}
       style={[
         styles.container,
         {
@@ -177,7 +184,7 @@ export const TopAppBar = ({
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 };
 

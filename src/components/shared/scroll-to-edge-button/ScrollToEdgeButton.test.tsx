@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import { fireEvent, render } from "@testing-library/react-native";
 import React from "react";
 import * as Reanimated from "react-native-reanimated";
@@ -29,6 +30,9 @@ describe("ScrollToEdgeButton", () => {
     );
     fireEvent.press(getByLabelText("Scroll down"));
     expect(onPress).toHaveBeenCalledTimes(1);
+    expect(Haptics.impactAsync).toHaveBeenCalledWith(
+      Haptics.ImpactFeedbackStyle.Light,
+    );
   });
 
   it("blocks pointer events when hidden", () => {
@@ -41,7 +45,10 @@ describe("ScrollToEdgeButton", () => {
         testID="scroll-edge"
       />,
     );
-    expect(getByTestId("scroll-edge").props.pointerEvents).toBe("none");
+    const root = getByTestId("scroll-edge", { includeHiddenElements: true });
+    expect(root.props.pointerEvents).toBe("none");
+    expect(root.props.accessibilityElementsHidden).toBe(true);
+    expect(root.props.importantForAccessibility).toBe("no-hide-descendants");
   });
 
   it("allows pointer events when visible", () => {

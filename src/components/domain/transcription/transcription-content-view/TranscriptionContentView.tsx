@@ -29,6 +29,7 @@ interface TranscriptionContentViewProps {
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
+  jumpToTopRef?: RefObject<(() => void) | null>;
 }
 
 export const TranscriptionContentView = ({
@@ -42,6 +43,7 @@ export const TranscriptionContentView = ({
   onScroll,
   onContentSizeChange,
   onLayout,
+  jumpToTopRef,
 }: TranscriptionContentViewProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -89,6 +91,7 @@ export const TranscriptionContentView = ({
       onScroll={onScroll}
       onContentSizeChange={onContentSizeChange}
       onLayout={onLayout}
+      jumpToTopRef={jumpToTopRef}
     />
   );
 };

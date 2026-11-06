@@ -8,6 +8,7 @@ export { useMicPermission } from "./use-mic-permission/useMicPermission";
 export { useOnboardingExit } from "./use-onboarding-exit/useOnboardingExit";
 export { usePermissions } from "./use-permissions/usePermissions";
 export { useProgrammaticScrollGuard } from "./use-programmatic-scroll-guard/useProgrammaticScrollGuard";
+export { usePublishRecordingJumpButton } from "./use-publish-recording-jump-button/usePublishRecordingJumpButton";
 export { useRecordingEntry } from "./use-recording-entry/useRecordingEntry";
 export { useScrollSurface } from "./use-scroll-surface/useScrollSurface";
 export { useSessionListActions } from "./use-session-list-actions/useSessionListActions";

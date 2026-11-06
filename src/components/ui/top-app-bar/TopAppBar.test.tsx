@@ -46,6 +46,15 @@ const findBackButton = (root: any) => {
 };
 
 describe("TopAppBar", () => {
+  it("calls onBarPressed when the bar itself is tapped", () => {
+    const onBarPressed = jest.fn();
+    const { getByTestId } = render(
+      <TopAppBar title="T" onBarPressed={onBarPressed} />,
+    );
+    fireEvent.press(getByTestId(TestID.TopAppBar));
+    expect(onBarPressed).toHaveBeenCalledTimes(1);
+  });
+
   it("renders title text", () => {
     const { getByText } = render(<TopAppBar title="Settings" />);
     expect(getByText("Settings")).toBeTruthy();

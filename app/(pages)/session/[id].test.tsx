@@ -167,6 +167,8 @@ jest.mock("@/stores", () => ({
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
+let mockOnBarPressed: (() => void) | null = null;
+let mockJumpToTopRef: { current: (() => void) | null } | null = null;
 let mockOnBackPressed: (() => void) | null = null;
 let mockOnMorePressed: (() => void) | null = null;
 let mockOnSelectAllPressed: (() => void) | null = null;
@@ -189,6 +191,7 @@ jest.mock("@/components", () => {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     SessionAppBar: (props: any) => {
       mockOnTitlePressed = props.onTitlePressed;
+      mockOnBarPressed = props.onBarPressed;
       mockOnBackPressed = props.onBackPressed;
       mockOnMorePressed = props.onMorePressed;
       mockOnSelectAllPressed = props.onSelectAllPressed;
@@ -211,6 +214,7 @@ jest.mock("@/components", () => {
       mockOnTranscriptionTap = props.onTranscriptionTap;
       mockOnTranscriptionLongPress = props.onTranscriptionLongPress;
       mockOnTranscriptionEdit = props.onTranscriptionEdit;
+      mockJumpToTopRef = props.jumpToTopRef;
       return <View testID={TID.TranscriptionContent}>{props.header}</View>;
     },
     Button: {
@@ -1598,30 +1602,13 @@ describe("SessionScreen", () => {
     });
   });
 
-  describe("auto-scroll effect", () => {
-    it("auto-scrolls during recording", async () => {
-      (useIsRecording as jest.Mock).mockReturnValue(true);
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // The auto-scroll effect runs via setTimeout.
-      // We just verify the component renders without error when recording.
-    });
-
-    it("auto-scrolls when realtime model has live preview", async () => {
-      const stores = jest.requireMock("@/stores");
-      (stores.useSelectedModelType as jest.Mock).mockReturnValue(
-        "whisper_realtime",
-      );
-      (stores.useLivePreview as jest.Mock).mockReturnValue("Some live text");
-      (useIsRecording as jest.Mock).mockReturnValue(false);
-
-      render(<SessionScreen />);
-      await act(async () => {});
-
-      // Verifies the auto-scroll effect activates for realtime mode with live preview
-    });
+  it("jumps the list to the top when the app bar is tapped", async () => {
+    render(<SessionScreen />);
+    await act(async () => {});
+    const jump = jest.fn();
+    mockJumpToTopRef!.current = jump;
+    act(() => mockOnBarPressed!());
+    expect(jump).toHaveBeenCalledTimes(1);
   });
 
   it("opens the transcription edit screen for the tapped edit icon", async () => {

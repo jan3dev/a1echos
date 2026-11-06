@@ -37,6 +37,8 @@ import {
   releaseDrag,
   RECORDING_BUTTON_SIZE,
   RecordingControlsView,
+  SCROLL_TO_EDGE_BUTTON_SIZE,
+  ScrollToEdgeButton,
   SUB_SCREEN_NAVBAR_HEIGHT,
   TOOLTIP_FADE_DURATION_MS,
   Tooltip,
@@ -91,6 +93,7 @@ import {
   useOnRecordingStop,
   useRecordingControlsEnabled,
   useRecordingControlsBlurTarget,
+  useRecordingJumpButton,
   useRecordingControlsVisible,
   useSessionStore,
   useSettingsStore,
@@ -365,6 +368,46 @@ function GlobalVoiceSessionHintRenderer() {
   );
 }
 
+// A sibling of the controls, not a child: Android drops touches outside a
+// parent's bounds, and drawn after them so it sits above their fade. Its own
+// component so store updates don't re-render the controls.
+function GlobalJumpButton({ hidden }: { hidden: boolean }) {
+  const insets = useSafeAreaInsets();
+  const { loc } = useLocalization();
+  const jumpButton = useRecordingJumpButton();
+  // Drawn above screens, so it would cover a tooltip's close button.
+  const tooltip = useGlobalTooltip();
+  if (!jumpButton) return null;
+
+  const position =
+    jumpButton.placement === "record"
+      ? {
+          // Centred on the record button, 16 inside the list cards' edge.
+          right: 32,
+          bottom:
+            insets.bottom +
+            AppConstants.RECORDING_CONTROLS_HEIGHT -
+            (RECORDING_BUTTON_SIZE + SCROLL_TO_EDGE_BUTTON_SIZE) / 2,
+        }
+      : {
+          right: 16,
+          bottom: insets.bottom + AppConstants.RECORDING_CONTROLS_HEIGHT + 16,
+        };
+
+  return (
+    <View style={[styles.jumpButton, position]} pointerEvents="box-none">
+      <ScrollToEdgeButton
+        visible={jumpButton.visible && !hidden && !tooltip}
+        direction={jumpButton.direction}
+        onPress={jumpButton.onPress}
+        accessibilityLabel={
+          jumpButton.direction === "up" ? loc.scrollToTop : loc.scrollToLatest
+        }
+      />
+    </View>
+  );
+}
+
 function GlobalRecordingControls() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
@@ -465,66 +508,69 @@ function GlobalRecordingControls() {
   );
 
   return (
-    <View
-      style={[styles.recordingControls, { opacity: isVisible ? 1 : 0 }]}
-      pointerEvents={isVisible ? "box-none" : "none"}
-    >
-      {isVisible && blurTarget && (
-        <FadingGlassBlur
-          blurTarget={blurTarget}
-          top={SETTINGS_HANDLE_BOX_HEIGHT}
-          fadeHeight={RECORDING_BUTTON_SIZE}
-        />
-      )}
-      {isVisible && (
-        <GestureDetector gesture={swipeUp}>
-          <View
-            collapsable={false}
-            pointerEvents={Platform.OS === "android" ? "auto" : "box-none"}
-            style={{ paddingBottom: insets.bottom }}
-            {...(Platform.OS === "android" && swipeUpResponder.panHandlers)}
-          >
-            {canOpenSettings ? (
-              <Pressable
-                testID={TestID.TranscriptionSettingsHandle}
-                style={styles.settingsHandle}
-                onPress={openSettings}
-                accessibilityRole="button"
-                accessibilityLabel={loc.transcriptionSettings}
-              >
-                <Reanimated.View
-                  collapsable={false}
-                  onLayout={measureAnchor("grabber")}
-                  style={grabberStyle}
-                >
-                  <GrabberArc
-                    color={theme.colors.systemBackgroundColor}
-                    style={footerShown && styles.hidden}
-                  />
-                </Reanimated.View>
-              </Pressable>
-            ) : (
-              <View style={styles.settingsHandle} pointerEvents="none" />
-            )}
+    <>
+      <View
+        style={[styles.recordingControls, { opacity: isVisible ? 1 : 0 }]}
+        pointerEvents={isVisible ? "box-none" : "none"}
+      >
+        {isVisible && blurTarget && (
+          <FadingGlassBlur
+            blurTarget={blurTarget}
+            top={SETTINGS_HANDLE_BOX_HEIGHT}
+            fadeHeight={RECORDING_BUTTON_SIZE}
+          />
+        )}
+        {isVisible && (
+          <GestureDetector gesture={swipeUp}>
             <View
-              onLayout={measureAnchor("controls")}
-              style={footerShown && styles.hidden}
+              collapsable={false}
+              pointerEvents={Platform.OS === "android" ? "auto" : "box-none"}
+              style={{ paddingBottom: insets.bottom }}
+              {...(Platform.OS === "android" && swipeUpResponder.panHandlers)}
             >
-              {controls}
+              {canOpenSettings ? (
+                <Pressable
+                  testID={TestID.TranscriptionSettingsHandle}
+                  style={styles.settingsHandle}
+                  onPress={openSettings}
+                  accessibilityRole="button"
+                  accessibilityLabel={loc.transcriptionSettings}
+                >
+                  <Reanimated.View
+                    collapsable={false}
+                    onLayout={measureAnchor("grabber")}
+                    style={grabberStyle}
+                  >
+                    <GrabberArc
+                      color={theme.colors.systemBackgroundColor}
+                      style={footerShown && styles.hidden}
+                    />
+                  </Reanimated.View>
+                </Pressable>
+              ) : (
+                <View style={styles.settingsHandle} pointerEvents="none" />
+              )}
+              <View
+                onLayout={measureAnchor("controls")}
+                style={footerShown && styles.hidden}
+              >
+                {controls}
+              </View>
             </View>
-          </View>
-        </GestureDetector>
-      )}
-      <TranscriptionSettingsSheet
-        visible={settingsOpen}
-        onDismiss={closeSettings}
-        motion={panelMotion}
-        footerTop={anchors.controls}
-        grabberTop={anchors.grabber}
-        footer={controls}
-        onFooterShownChange={setFooterShown}
-      />
-    </View>
+          </GestureDetector>
+        )}
+        <TranscriptionSettingsSheet
+          visible={settingsOpen}
+          onDismiss={closeSettings}
+          motion={panelMotion}
+          footerTop={anchors.controls}
+          grabberTop={anchors.grabber}
+          footer={controls}
+          onFooterShownChange={setFooterShown}
+        />
+      </View>
+      {isVisible && <GlobalJumpButton hidden={settingsOpen} />}
+    </>
   );
 }
 
@@ -733,6 +779,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 100,
+  },
+  jumpButton: {
+    position: "absolute",
+    zIndex: 101,
   },
   // In-flow (not hitSlop) so the grabber is inside the swipe and touch area.
   settingsHandle: {

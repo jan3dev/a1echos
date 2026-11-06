@@ -4,7 +4,7 @@ import React from "react";
 
 import { TestID } from "@/constants";
 import { Session } from "@/models";
-import { useSessionStore, useSettingsStore } from "@/stores";
+import { useSessionStore, useSettingsStore, useUIStore } from "@/stores";
 
 import { HomeContent } from "./HomeContent";
 
@@ -252,33 +252,39 @@ describe("HomeContent", () => {
     expect(refreshed.props.data).toHaveLength(5);
   });
 
-  it("scroll-to-top button stays hidden near the top of the list", () => {
-    const { queryByLabelText, UNSAFE_getByType } = render(
-      <HomeContent {...defaultProps} />,
-    );
+  it("publishes a hidden scroll-to-top button near the top of the list", () => {
+    const { UNSAFE_getByType } = render(<HomeContent {...defaultProps} />);
     const { FlatList } = require("react-native");
-    const flatList = UNSAFE_getByType(FlatList);
     act(() => {
-      flatList.props.onScroll({ nativeEvent: { contentOffset: { y: 10 } } });
+      UNSAFE_getByType(FlatList).props.onScroll({
+        nativeEvent: { contentOffset: { y: 10 } },
+      });
     });
-    const button = queryByLabelText("scrollToTop");
-    expect(button).toBeTruthy();
-    expect(button?.props.accessibilityLabel).toBe("scrollToTop");
+    expect(useUIStore.getState().recordingJumpButton).toMatchObject({
+      visible: false,
+      direction: "up",
+      placement: "aboveControls",
+    });
   });
 
-  it("scroll-to-top button becomes interactive after scrolling past the threshold", () => {
-    const { getByLabelText, UNSAFE_getByType } = render(
-      <HomeContent {...defaultProps} />,
+  it("shows the scroll-to-top button past the threshold and clears it on unmount", () => {
+    const ref = React.createRef<any>();
+    const { UNSAFE_getByType, unmount } = render(
+      <HomeContent {...defaultProps} scrollRef={ref} />,
     );
     const { FlatList } = require("react-native");
-    const flatList = UNSAFE_getByType(FlatList);
-    // The default window height in tests is ~896; 99999 is well past the 50%
-    // threshold no matter how the runtime resolves window dims.
     act(() => {
-      flatList.props.onScroll({ nativeEvent: { contentOffset: { y: 99999 } } });
+      UNSAFE_getByType(FlatList).props.onScroll({
+        nativeEvent: { contentOffset: { y: 99999 } },
+      });
     });
-    fireEvent.press(getByLabelText("scrollToTop"));
-    expect(getByLabelText("scrollToTop")).toBeTruthy();
+    const button = useUIStore.getState().recordingJumpButton!;
+    expect(button.visible).toBe(true);
+    const toOffset = jest.spyOn(ref.current, "scrollToOffset");
+    act(() => button.onPress());
+    expect(toOffset).toHaveBeenCalledWith({ offset: 0, animated: true });
+    unmount();
+    expect(useUIStore.getState().recordingJumpButton).toBeNull();
   });
 
   it("forwards scrollRef so scrollToOffset is callable", () => {

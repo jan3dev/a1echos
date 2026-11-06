@@ -10,9 +10,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ScrollToEdgeButton } from "@/components/shared/scroll-to-edge-button";
 import { AppConstants, TestID } from "@/constants";
-import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
+import {
+  useLocalization,
+  useProgrammaticScrollGuard,
+  usePublishRecordingJumpButton,
+} from "@/hooks";
 import { FolderSummary, Session } from "@/models";
 import { useFolderSessions, useIsIncognitoMode } from "@/stores";
 import { useTheme } from "@/theme";
@@ -63,7 +66,6 @@ export const HomeContent = ({
 }: HomeContentProps) => {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const { loc } = useLocalization();
   const { theme } = useTheme();
   const isIncognitoMode = useIsIncognitoMode();
   const sessions = useFolderSessions(folderId ?? null);
@@ -108,6 +110,13 @@ export const HomeContent = ({
     setShowJumpButton(false);
     scrollRef?.current?.scrollToOffset({ offset: 0, animated: true });
   }, [scrollGuard, scrollRef]);
+
+  usePublishRecordingJumpButton({
+    visible: showJumpButton && !selectionMode && !isIncognitoMode,
+    direction: "up",
+    placement: "aboveControls",
+    onPress: handleScrollToTop,
+  });
 
   const renderItem = useCallback(
     ({ item }: { item: Session }) => (
@@ -181,23 +190,6 @@ export const HomeContent = ({
         }}
         showsVerticalScrollIndicator={false}
       />
-
-      <View
-        pointerEvents="box-none"
-        style={[
-          styles.jumpButtonOverlay,
-          {
-            bottom: insets.bottom + AppConstants.RECORDING_CONTROLS_HEIGHT + 16,
-          },
-        ]}
-      >
-        <ScrollToEdgeButton
-          visible={showJumpButton && !selectionMode}
-          direction="up"
-          onPress={handleScrollToTop}
-          accessibilityLabel={loc.scrollToTop}
-        />
-      </View>
     </View>
   );
 };
@@ -289,11 +281,5 @@ const styles = StyleSheet.create({
   },
   quickActionsSpaced: {
     gap: 16,
-  },
-  jumpButtonOverlay: {
-    position: "absolute",
-    right: 16,
-    zIndex: 200,
-    elevation: 200,
   },
 });

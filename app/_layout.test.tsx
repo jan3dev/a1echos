@@ -64,6 +64,7 @@ jest.mock("@/stores", () => ({
   useRecordingControlsEnabled: jest.fn(() => true),
   useRecordingControlsVisible: jest.fn(() => true),
   useRecordingControlsBlurTarget: jest.fn(),
+  useRecordingJumpButton: jest.fn(() => null),
   useSettingsStore: {
     getState: jest.fn(() => ({
       selectedModelId: "whisper-tiny",
@@ -111,7 +112,9 @@ const mockKeyboardHeight = jest.fn(() => 0);
 jest.mock("@/hooks", () => ({
   useKeyboardHeight: () => mockKeyboardHeight(),
   useVoiceSessionHint: jest.fn(),
-  useLocalization: () => ({ loc: { transcriptionSettings: "settings" } }),
+  useLocalization: () => ({
+    loc: { transcriptionSettings: "settings", scrollToTop: "scrollToTop" },
+  }),
 }));
 
 jest.mock("@/utils", () => ({
@@ -148,6 +151,17 @@ jest.mock("@/components", () => {
     FadingGlassBlur: () => null,
     GrabberArc: () => null,
     RECORDING_BUTTON_SIZE: 80,
+    SCROLL_TO_EDGE_BUTTON_SIZE: 40,
+    ScrollToEdgeButton: (props: any) => {
+      const { TouchableOpacity } = require("react-native");
+      return (
+        <TouchableOpacity
+          accessibilityLabel={props.accessibilityLabel}
+          onPress={props.onPress}
+          testID={`jump-${props.visible}`}
+        />
+      );
+    },
     AppErrorBoundary: ({ children }: any) => (
       <View testID={TID.AppErrorBoundary}>{children}</View>
     ),
@@ -357,6 +371,36 @@ describe("RootLayout", () => {
   it("renders GlobalRecordingControls on home path", async () => {
     const { getByTestId } = await renderAndWaitForInit();
     expect(getByTestId(TestID.RecordingControlsView)).toBeTruthy();
+  });
+
+  it("draws the screen's jump button beside the record button", async () => {
+    const { useRecordingJumpButton } = require("@/stores");
+    const onPress = jest.fn();
+    (useRecordingJumpButton as jest.Mock).mockReturnValue({
+      visible: true,
+      direction: "up",
+      placement: "aboveControls",
+      onPress,
+    });
+    const { getByLabelText } = await renderAndWaitForInit();
+    fireEvent.press(getByLabelText("scrollToTop"));
+    expect(onPress).toHaveBeenCalledTimes(1);
+    (useRecordingJumpButton as jest.Mock).mockReturnValue(null);
+  });
+
+  it("hides the jump button while a tooltip shows", async () => {
+    const { useGlobalTooltip, useRecordingJumpButton } = require("@/stores");
+    (useRecordingJumpButton as jest.Mock).mockReturnValue({
+      visible: true,
+      direction: "up",
+      placement: "aboveControls",
+      onPress: jest.fn(),
+    });
+    (useGlobalTooltip as jest.Mock).mockReturnValue({ message: "Hi" });
+    const { getByTestId } = await renderAndWaitForInit();
+    expect(getByTestId("jump-false")).toBeTruthy();
+    (useRecordingJumpButton as jest.Mock).mockReturnValue(null);
+    (useGlobalTooltip as jest.Mock).mockReturnValue(null);
   });
 
   it("renders GlobalTooltipRenderer", async () => {

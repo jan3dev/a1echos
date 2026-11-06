@@ -29,6 +29,14 @@ export interface GlobalTooltip {
   action?: GlobalTooltipAction;
 }
 
+export interface RecordingJumpButton {
+  visible: boolean;
+  direction: "up" | "down";
+  /** Centred beside the record button, or 16 above the controls. */
+  placement: "record" | "aboveControls";
+  onPress: () => void;
+}
+
 interface UIStore {
   isTranscriptionSelectionMode: boolean;
   selectedTranscriptionIds: Set<string>;
@@ -43,6 +51,8 @@ interface UIStore {
   onRecordingStop: (() => void) | null;
   /** Android: the focused recording screen's `AppBarBlurTarget`. */
   recordingControlsBlurTarget?: RefObject<HostInstance | null>;
+  /** Jump button drawn beside the record button, above the controls' fade. */
+  recordingJumpButton: (RecordingJumpButton & { owner: object }) | null;
 
   keyboardPromptVisible: boolean;
   showKeyboardPrompt: () => void;
@@ -62,6 +72,11 @@ interface UIStore {
 
   setRecordingControlsEnabled: (enabled: boolean) => void;
   setRecordingControlsVisible: (visible: boolean) => void;
+  /** Null clears it, but only if `owner` set the current one. */
+  setRecordingJumpButton: (
+    owner: object,
+    button: RecordingJumpButton | null,
+  ) => void;
   setRecordingCallbacks: (
     onStart: (() => void) | null,
     onStop: (() => void) | null,
@@ -124,6 +139,7 @@ export const useUIStore = create<UIStore>((set, get) => ({
   recordingControlsVisible: true,
   onRecordingStart: null,
   onRecordingStop: null,
+  recordingJumpButton: null,
 
   keyboardPromptVisible: false,
 
@@ -167,6 +183,14 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   setRecordingControlsVisible: (visible: boolean) => {
     set({ recordingControlsVisible: visible });
+  },
+
+  setRecordingJumpButton: (owner, button) => {
+    if (button) {
+      set({ recordingJumpButton: { ...button, owner } });
+    } else if (get().recordingJumpButton?.owner === owner) {
+      set({ recordingJumpButton: null });
+    }
   },
 
   setRecordingCallbacks: (
@@ -334,6 +358,10 @@ export const useSetRecordingCallbacks = () =>
   useUIStore((s) => s.setRecordingCallbacks);
 export const useRecordingControlsBlurTarget = () =>
   useUIStore((s) => s.recordingControlsBlurTarget);
+export const useRecordingJumpButton = () =>
+  useUIStore((s) => s.recordingJumpButton);
+export const useSetRecordingJumpButton = () =>
+  useUIStore((s) => s.setRecordingJumpButton);
 
 export const useKeyboardPromptVisible = () =>
   useUIStore((s) => s.keyboardPromptVisible);

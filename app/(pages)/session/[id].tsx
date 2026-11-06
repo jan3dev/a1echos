@@ -47,7 +47,7 @@ import {
   useScrollSurface,
   useSessionOperations,
 } from "@/hooks";
-import { getLlmInfo, Transcription, TranscriptionMode } from "@/models";
+import { getLlmInfo, Transcription } from "@/models";
 import { shareService } from "@/services";
 import {
   useDeleteTranscriptions,
@@ -57,14 +57,12 @@ import {
   useIncognitoSession,
   useIsRecording,
   useIsTranscriptionSelectionMode,
-  useLivePreview,
   useMergeTranscriptions,
   useRenameSession,
   useSelectAllTranscriptions,
   useSelectedLanguage,
   useSelectedLlmId,
   useSelectedTranscriptionIdsSet,
-  useSelectedTranscriptionMode,
   useSessionStore,
   useSessionTranscriptions,
   useSetRecordingCallbacks,
@@ -94,7 +92,7 @@ export default function SessionScreen() {
   const listRef = useRef<FlatList<Transcription>>(null) as RefObject<
     FlatList<Transcription>
   >;
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const jumpToTopRef = useRef<(() => void) | null>(null);
   const blurTargetRef = useRef<HostInstance>(null);
   const {
     scrolled,
@@ -115,7 +113,6 @@ export default function SessionScreen() {
   const renameSessionAction = useRenameSession();
   const switchSession = useSwitchSession();
   const { endIncognitoSession } = useSessionOperations();
-  const selectedMode = useSelectedTranscriptionMode();
   const isRecording = useIsRecording();
   const startRecording = useStartRecording();
   const stopRecordingAndSave = useStopRecordingAndSave();
@@ -129,7 +126,6 @@ export default function SessionScreen() {
   const selectedLlmId = useSelectedLlmId();
   const languageCode = useSelectedLanguage().code;
   const cancelSummary = useCancelSummary();
-  const livePreview = useLivePreview();
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
   const setRecordingControlsVisible = useSetRecordingControlsVisible();
@@ -303,40 +299,8 @@ export default function SessionScreen() {
     initSession();
   }, [id, session, switchSession, showToast, loc.sessionNotFound, router]);
 
-  // Auto-scroll to bottom during recording
-  useEffect(() => {
-    const shouldScroll =
-      isRecording ||
-      (selectedMode === TranscriptionMode.REALTIME && livePreview);
-
-    if (!shouldScroll) return;
-
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    scrollTimeoutRef.current = setTimeout(() => {
-      if (listRef.current) {
-        listRef.current.scrollToEnd({ animated: true });
-      }
-    }, 50);
-
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [isRecording, selectedMode, livePreview, transcriptions.length]);
-
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      exitSelectionMode();
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [exitSelectionMode]);
+  useEffect(() => exitSelectionMode, [exitSelectionMode]);
 
   const disablePrevention = usePreventRemove(
     isRecording || !!session?.isIncognito,
@@ -717,6 +681,7 @@ export default function SessionScreen() {
           {!isInitializing && (
             <TranscriptionContentView
               listRef={listRef}
+              jumpToTopRef={jumpToTopRef}
               selectionMode={selectionMode}
               selectedTranscriptionIds={selectedIds}
               onTranscriptionTap={handleTranscriptionTap}
@@ -789,6 +754,7 @@ export default function SessionScreen() {
         isIncognitoSession={isIncognito}
         onBackPressed={handleBackPressed}
         onTitlePressed={handleTitlePressed}
+        onBarPressed={() => jumpToTopRef.current?.()}
         onMorePressed={enterSelectionMode}
         onExitSelectionPressed={exitSelectionMode}
         onSelectAllPressed={() =>

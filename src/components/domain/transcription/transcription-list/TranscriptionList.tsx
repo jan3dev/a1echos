@@ -3,6 +3,7 @@ import {
   RefObject,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -17,9 +18,9 @@ import {
   View,
 } from "react-native";
 
-import { ScrollToEdgeButton } from "@/components/shared/scroll-to-edge-button";
+import { type ScrollToEdgeDirection } from "@/components/shared/scroll-to-edge-button";
 import { AppConstants } from "@/constants";
-import { useLocalization, useProgrammaticScrollGuard } from "@/hooks";
+import { useLocalization, usePublishRecordingJumpButton } from "@/hooks";
 import { Transcription, TranscriptionMode } from "@/models";
 import {
   useSessionStore,
@@ -46,6 +47,8 @@ interface TranscriptionListProps {
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
   onLayout?: (event: LayoutChangeEvent) => void;
+  /** Set to a function that loads every older item and scrolls to the top. */
+  jumpToTopRef?: RefObject<(() => void) | null>;
 }
 
 interface ActivePreviewState {
@@ -55,6 +58,27 @@ interface ActivePreviewState {
   isRecording: boolean;
   progressLabel?: string;
 }
+
+interface ScrollMetrics {
+  offset: number;
+  content: number;
+  layout: number;
+}
+
+const overflows = ({ content, layout }: ScrollMetrics) =>
+  layout > 0 && content > layout + 1;
+
+const pickJumpDirection = (
+  m: ScrollMetrics,
+  threshold: number,
+  hasMore: boolean,
+  isRecording: boolean,
+): ScrollToEdgeDirection | null => {
+  if (!overflows(m)) return null;
+  if (m.content - m.layout - m.offset > threshold) return "down";
+  if (isRecording) return null;
+  return hasMore || m.offset > threshold ? "up" : null;
+};
 
 const EmptyPreviewState: ActivePreviewState = {
   item: null,
@@ -76,6 +100,7 @@ export const TranscriptionList = ({
   onScroll,
   onContentSizeChange,
   onLayout,
+  jumpToTopRef,
 }: TranscriptionListProps) => {
   const { loc } = useLocalization();
   const { theme } = useTheme();
@@ -192,11 +217,14 @@ export const TranscriptionList = ({
   }, [transcriptions, previewState.item]);
 
   const [limit, setLimit] = useState<number>(AppConstants.LIST_PAGE_SIZE);
-  const [showJumpButton, setShowJumpButton] = useState(false);
+  // Direction sticks while hidden so the arrow doesn't flip mid-fade.
+  const [jump, setJump] = useState<{
+    visible: boolean;
+    direction: ScrollToEdgeDirection;
+  }>({ visible: false, direction: "down" });
   // Unlocks the next bump only after `limit` advances; otherwise duplicate
   // onStartReached fires at the same window would double-bump.
   const lastBumpedAtLimitRef = useRef<number | null>(null);
-  const scrollGuard = useProgrammaticScrollGuard();
 
   // Show only the latest `limit` items; pagination loads older ones from the front.
   const visibleData = useMemo(() => {
@@ -212,30 +240,6 @@ export const TranscriptionList = ({
     setLimit((prev) => prev + AppConstants.LIST_PAGE_SIZE);
   }, [hasMore, limit]);
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      // Always forward to the surface tracker, even during a programmatic
-      // scroll, so the app bar's blur stays in sync.
-      onScroll?.(event);
-      if (scrollGuard.isActive()) return;
-      const { contentOffset, contentSize, layoutMeasurement } =
-        event.nativeEvent;
-      const distanceFromBottom =
-        contentSize.height - layoutMeasurement.height - contentOffset.y;
-      setShowJumpButton(
-        distanceFromBottom >
-          viewportHeight * AppConstants.SCROLL_TO_EDGE_THRESHOLD_RATIO,
-      );
-    },
-    [onScroll, scrollGuard, viewportHeight],
-  );
-
-  const handleScrollToLatest = useCallback(() => {
-    scrollGuard.begin();
-    setShowJumpButton(false);
-    listRef?.current?.scrollToEnd({ animated: true });
-  }, [listRef, scrollGuard]);
-
   // Snap to newest on initial layout bursts, but only when content overflows.
   // maintainVisibleContentPosition mis-anchors on iOS when content fits, so we
   // also gate the mVCP prop on the same overflow signal.
@@ -245,7 +249,84 @@ export const TranscriptionList = ({
   const [contentOverflows, setContentOverflows] = useState(false);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingScrollFrameRef = useRef<number | null>(null);
-  const listLayoutHeightRef = useRef(0);
+  const metricsRef = useRef<ScrollMetrics>({
+    offset: 0,
+    content: 0,
+    layout: 0,
+  });
+  // Keep the newest text in view while recording, until the user scrolls.
+  const followRef = useRef(false);
+  // Item count to wait for before jumping, so an unrelated resize can't
+  // consume the jump before the older items are laid out.
+  const pendingJumpToTopRef = useRef<number | null>(null);
+  const isCapturing = isRecording || isTranscribing;
+
+  const updateJumpButton = useCallback(() => {
+    const next = pickJumpDirection(
+      metricsRef.current,
+      viewportHeight * AppConstants.SCROLL_TO_EDGE_THRESHOLD_RATIO,
+      hasMore,
+      isRecording,
+    );
+    setJump((prev) => {
+      if (!next) return prev.visible ? { ...prev, visible: false } : prev;
+      return prev.visible && prev.direction === next
+        ? prev
+        : { visible: true, direction: next };
+    });
+  }, [hasMore, isRecording, viewportHeight]);
+
+  useEffect(updateJumpButton, [updateJumpButton]);
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onScroll?.(event);
+      const { contentOffset, contentSize, layoutMeasurement } =
+        event.nativeEvent;
+      metricsRef.current = {
+        offset: contentOffset.y,
+        content: contentSize.height,
+        layout: layoutMeasurement.height,
+      };
+      updateJumpButton();
+    },
+    [onScroll, updateJumpButton],
+  );
+
+  const jumpToTop = useCallback(() => {
+    userHasDraggedRef.current = true;
+    followRef.current = false;
+    if (hasMore) {
+      pendingJumpToTopRef.current = data.length;
+      setLimit(data.length);
+      return;
+    }
+    listRef?.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [data.length, hasMore, listRef]);
+
+  useImperativeHandle(jumpToTopRef, () => jumpToTop, [jumpToTop]);
+
+  const handleJumpPress = useCallback(() => {
+    if (jump.direction === "up") {
+      jumpToTop();
+      return;
+    }
+    followRef.current = isCapturing;
+    listRef?.current?.scrollToEnd({ animated: true });
+  }, [isCapturing, jump.direction, jumpToTop, listRef]);
+
+  usePublishRecordingJumpButton({
+    visible: jump.visible && !selectionMode && data.length > 0,
+    direction: jump.direction,
+    placement: "record",
+    onPress: handleJumpPress,
+  });
+
+  useEffect(() => {
+    if (!isRecording) return;
+    followRef.current = true;
+    listRef?.current?.scrollToEnd({ animated: true });
+  }, [isRecording, listRef]);
 
   useEffect(() => {
     return () => {
@@ -259,9 +340,10 @@ export const TranscriptionList = ({
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
       onLayout?.(event);
-      listLayoutHeightRef.current = event.nativeEvent.layout.height;
+      metricsRef.current.layout = event.nativeEvent.layout.height;
+      updateJumpButton();
     },
-    [onLayout],
+    [onLayout, updateJumpButton],
   );
 
   const handleContentSizeChange = useCallback(
@@ -269,19 +351,32 @@ export const TranscriptionList = ({
       onContentSizeChange?.(contentWidth, contentHeight);
       if (visibleData.length === 0) return;
 
-      const layoutHeight = listLayoutHeightRef.current;
-      const overflows = layoutHeight > 0 && contentHeight > layoutHeight + 1;
-      setContentOverflows(overflows);
+      metricsRef.current.content = contentHeight;
+      const overflowing = overflows(metricsRef.current);
+      setContentOverflows(overflowing);
+      updateJumpButton();
 
-      if (userHasDraggedRef.current && isReadyRef.current) return;
+      const pendingJump = pendingJumpToTopRef.current;
+      if (pendingJump !== null && visibleData.length >= pendingJump) {
+        pendingJumpToTopRef.current = null;
+        listRef?.current?.scrollToOffset({ offset: 0, animated: true });
+        return;
+      }
 
-      if (overflows) {
+      // Follows one resize past capture so the final result lands in view.
+      const following = followRef.current;
+      if (!isCapturing) followRef.current = false;
+      if (userHasDraggedRef.current && isReadyRef.current && !following) {
+        return;
+      }
+
+      if (overflowing) {
         if (pendingScrollFrameRef.current !== null) {
           cancelAnimationFrame(pendingScrollFrameRef.current);
         }
         pendingScrollFrameRef.current = requestAnimationFrame(() => {
           pendingScrollFrameRef.current = null;
-          listRef?.current?.scrollToEnd({ animated: false });
+          listRef?.current?.scrollToEnd({ animated: following });
         });
       }
 
@@ -293,11 +388,22 @@ export const TranscriptionList = ({
         }, 60);
       }
     },
-    [listRef, onContentSizeChange, visibleData.length],
+    [
+      isCapturing,
+      listRef,
+      onContentSizeChange,
+      updateJumpButton,
+      visibleData.length,
+    ],
   );
 
   const handleScrollBeginDrag = useCallback(() => {
     userHasDraggedRef.current = true;
+    followRef.current = false;
+    if (pendingScrollFrameRef.current !== null) {
+      cancelAnimationFrame(pendingScrollFrameRef.current);
+      pendingScrollFrameRef.current = null;
+    }
   }, []);
 
   const renderItem = useCallback(
@@ -319,7 +425,7 @@ export const TranscriptionList = ({
           isLivePreviewItem={itemState.isStreamingLive}
           isLoadingWhisperResult={itemState.isLoadingResult}
           isWhisperRecording={itemState.isRecording}
-          editDisabled={isRecording || isTranscribing}
+          editDisabled={isCapturing}
           progressLabel={itemState.progressLabel}
           onStartEdit={() => onTranscriptionEdit?.(item.id)}
           onTap={() => {
@@ -336,8 +442,7 @@ export const TranscriptionList = ({
       );
     },
     [
-      isRecording,
-      isTranscribing,
+      isCapturing,
       onTranscriptionEdit,
       onTranscriptionLongPress,
       onTranscriptionTap,
@@ -380,18 +485,6 @@ export const TranscriptionList = ({
         ListFooterComponent={<View style={{ height: bottomPadding }} />}
         renderItem={renderItem}
       />
-
-      <View
-        pointerEvents="box-none"
-        style={[styles.jumpButtonOverlay, { bottom: bottomPadding + 16 }]}
-      >
-        <ScrollToEdgeButton
-          visible={showJumpButton && !selectionMode}
-          direction="down"
-          onPress={handleScrollToLatest}
-          accessibilityLabel={loc.scrollToLatest}
-        />
-      </View>
     </View>
   );
 };
@@ -399,11 +492,5 @@ export const TranscriptionList = ({
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-  },
-  jumpButtonOverlay: {
-    position: "absolute",
-    right: 16,
-    zIndex: 200,
-    elevation: 200,
   },
 });

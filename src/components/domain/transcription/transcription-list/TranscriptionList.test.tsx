@@ -18,7 +18,11 @@ jest.mock("@/stores", () => ({
   useSettingsStore: jest.fn(),
   useSessionStore: jest.fn((sel: any) => sel({ activeSessionId: "s1" })),
   useSummaryJob: jest.fn(() => null),
+  useSetRecordingJumpButton: jest.fn(() => mockSetJumpButton),
 }));
+
+const mockSetJumpButton = jest.fn();
+const jumpButton = () => mockSetJumpButton.mock.lastCall?.[1];
 
 const SimpleItem = (props: any) => {
   const { View, Text } = require("react-native");
@@ -251,7 +255,7 @@ describe("TranscriptionList", () => {
 
   it("scroll-to-latest button is reachable after the user scrolls up", () => {
     (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
-    const { getByLabelText, UNSAFE_getByType } = render(
+    const { UNSAFE_getByType } = render(
       <TranscriptionList {...defaultProps} />,
     );
     const { FlatList } = require("react-native");
@@ -265,9 +269,54 @@ describe("TranscriptionList", () => {
         },
       });
     });
-    const button = getByLabelText("scrollToLatest");
-    expect(button).toBeTruthy();
-    fireEvent.press(button);
+    expect(jumpButton()).toMatchObject({ visible: true, direction: "down" });
+    act(() => jumpButton().onPress());
+  });
+
+  it("hides the jump button once the list empties", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType, rerender } = render(
+      <TranscriptionList {...defaultProps} />,
+    );
+    const { FlatList } = require("react-native");
+    act(() => {
+      UNSAFE_getByType(FlatList).props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 0 },
+          contentSize: { height: 99999 },
+          layoutMeasurement: { height: 100 },
+        },
+      });
+    });
+    expect(jumpButton().visible).toBe(true);
+    (useSessionTranscriptions as jest.Mock).mockReturnValue([]);
+    rerender(<TranscriptionList {...defaultProps} />);
+    expect(jumpButton().visible).toBe(false);
+  });
+
+  it("removes the jump button on unmount", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { unmount } = render(<TranscriptionList {...defaultProps} />);
+    unmount();
+    expect(jumpButton()).toBeNull();
+  });
+
+  it("hides the jump button in selection mode", () => {
+    (useSessionTranscriptions as jest.Mock).mockReturnValue(mockTranscriptions);
+    const { UNSAFE_getByType } = render(
+      <TranscriptionList {...defaultProps} selectionMode />,
+    );
+    const { FlatList } = require("react-native");
+    act(() => {
+      UNSAFE_getByType(FlatList).props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 0 },
+          contentSize: { height: 99999 },
+          layoutMeasurement: { height: 100 },
+        },
+      });
+    });
+    expect(jumpButton().visible).toBe(false);
   });
 
   it("wires onContentSizeChange for the initial snap-to-bottom", () => {
@@ -784,5 +833,152 @@ describe("TranscriptionList", () => {
     const { FlatList } = require("react-native");
     const flatList = UNSAFE_getByType(FlatList);
     expect(flatList.props.contentContainerStyle.paddingTop).toBe(116);
+  });
+
+  describe("jump button and follow", () => {
+    const { Dimensions, FlatList } = require("react-native");
+    const half = () => Dimensions.get("window").height / 2;
+    let toEnd: jest.SpyInstance;
+    let toOffset: jest.SpyInstance;
+
+    beforeEach(() => {
+      (useSessionTranscriptions as jest.Mock).mockReturnValue(
+        mockTranscriptions,
+      );
+      toEnd = jest
+        .spyOn(FlatList.prototype, "scrollToEnd")
+        .mockImplementation(() => {});
+      toOffset = jest
+        .spyOn(FlatList.prototype, "scrollToOffset")
+        .mockImplementation(() => {});
+      jest
+        .spyOn(global, "requestAnimationFrame")
+        .mockImplementation((cb: FrameRequestCallback) => {
+          cb(0);
+          return 1 as unknown as number;
+        });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    const setup = (props: object = {}) => {
+      const listRef = React.createRef<any>();
+      const utils = render(
+        <TranscriptionList {...defaultProps} listRef={listRef} {...props} />,
+      );
+      const scrollTo = (offset: number, content = 10000, layout = 800) =>
+        act(() => {
+          utils.UNSAFE_getByType(FlatList).props.onScroll({
+            nativeEvent: {
+              contentOffset: { y: offset },
+              contentSize: { height: content },
+              layoutMeasurement: { height: layout },
+            },
+          });
+        });
+      return { ...utils, scrollTo, listRef };
+    };
+
+    it("points down far from the bottom, up near it, hides near both", () => {
+      const { scrollTo } = setup();
+      scrollTo(0);
+      expect(jumpButton()).toMatchObject({ visible: true, direction: "down" });
+      scrollTo(10000 - 800);
+      expect(jumpButton()).toMatchObject({ visible: true, direction: "up" });
+      act(() => jumpButton().onPress());
+      expect(toOffset).toHaveBeenCalledWith({ offset: 0, animated: true });
+      scrollTo(half() - 1, half() * 2 - 2 + 800);
+      expect(jumpButton().visible).toBe(false);
+    });
+
+    it("never points up while recording", () => {
+      (useTranscriptionStore as unknown as jest.Mock).mockReturnValue({
+        ...mockStoreDefaults,
+        isRecording: () => true,
+      });
+      const { scrollTo } = setup();
+      scrollTo(10000 - 800);
+      expect(jumpButton()).toMatchObject({ visible: false, direction: "down" });
+    });
+
+    it("jumps to the bottom on record and stops following once dragged", () => {
+      const store = { ...mockStoreDefaults, isRecording: () => false };
+      (useTranscriptionStore as unknown as jest.Mock).mockImplementation(
+        () => store,
+      );
+      jest.useFakeTimers();
+      const { rerender, UNSAFE_getByType, scrollTo, listRef } = setup();
+      const list = () => UNSAFE_getByType(FlatList).props;
+      act(() => list().onLayout({ nativeEvent: { layout: { height: 800 } } }));
+      act(() => {
+        list().onContentSizeChange(0, 4000);
+        jest.advanceTimersByTime(100);
+      });
+      act(() => list().onScrollBeginDrag());
+      toEnd.mockClear();
+
+      store.isRecording = () => true;
+      rerender(<TranscriptionList {...defaultProps} listRef={listRef} />);
+      expect(toEnd).toHaveBeenCalled();
+
+      toEnd.mockClear();
+      act(() => list().onContentSizeChange(0, 5000));
+      expect(toEnd).toHaveBeenCalledWith({ animated: true });
+
+      act(() => list().onScrollBeginDrag());
+      toEnd.mockClear();
+      act(() => list().onContentSizeChange(0, 6000));
+      expect(toEnd).not.toHaveBeenCalled();
+
+      scrollTo(0, 6000);
+      act(() => jumpButton().onPress());
+      act(() => list().onContentSizeChange(0, 7000));
+      expect(toEnd).toHaveBeenCalledTimes(2);
+      jest.useRealTimers();
+    });
+
+    it("follows one resize past the end of capture, then stops", () => {
+      const store = { ...mockStoreDefaults, isRecording: () => true };
+      (useTranscriptionStore as unknown as jest.Mock).mockImplementation(
+        () => store,
+      );
+      jest.useFakeTimers();
+      const { rerender, UNSAFE_getByType, listRef } = setup();
+      const list = () => UNSAFE_getByType(FlatList).props;
+      act(() => list().onLayout({ nativeEvent: { layout: { height: 800 } } }));
+      act(() => {
+        list().onContentSizeChange(0, 4000);
+        jest.advanceTimersByTime(100);
+      });
+
+      store.isRecording = () => false;
+      rerender(<TranscriptionList {...defaultProps} listRef={listRef} />);
+      toEnd.mockClear();
+      act(() => list().onContentSizeChange(0, 5000));
+      expect(toEnd).toHaveBeenCalledWith({ animated: true });
+
+      act(() => list().onScrollBeginDrag());
+      toEnd.mockClear();
+      act(() => list().onContentSizeChange(0, 6000));
+      expect(toEnd).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+
+    it("loads older pages before jumping to the top", () => {
+      const many = Array.from({ length: 45 }, (_, i) => ({
+        ...mockTranscriptions[0],
+        id: `m${i}`,
+      }));
+      (useSessionTranscriptions as jest.Mock).mockReturnValue(many);
+      const jumpToTopRef = React.createRef<(() => void) | null>();
+      const { UNSAFE_getByType } = setup({ jumpToTopRef });
+      expect(UNSAFE_getByType(FlatList).props.data).toHaveLength(30);
+
+      act(() => jumpToTopRef.current!());
+      expect(UNSAFE_getByType(FlatList).props.data).toHaveLength(45);
+      expect(toOffset).not.toHaveBeenCalled();
+      act(() => UNSAFE_getByType(FlatList).props.onContentSizeChange(0, 9000));
+      expect(toOffset).toHaveBeenCalledWith({ offset: 0, animated: true });
+    });
   });
 });

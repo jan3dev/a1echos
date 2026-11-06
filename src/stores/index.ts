@@ -100,6 +100,7 @@ export {
   useRecordingControlsBlurTarget,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
+  useRecordingJumpButton,
   useSelectAllTranscriptions,
   useSelectedSessionIds,
   useSelectedSessionIdsSet,
@@ -107,6 +108,7 @@ export {
   useSetRecordingCallbacks,
   useSetRecordingControlsEnabled,
   useSetRecordingControlsVisible,
+  useSetRecordingJumpButton,
   useShowGlobalTooltip,
   useShowToast,
   useToggleSessionSelection,
@@ -125,6 +127,7 @@ export {
 } from "./ui-store/uiStore";
 export type {
   GlobalTooltipAction,
+  RecordingJumpButton,
   Toast,
   ToastVariant,
 } from "./ui-store/uiStore";

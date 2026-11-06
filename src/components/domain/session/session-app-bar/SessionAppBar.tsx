@@ -14,6 +14,7 @@ interface SessionAppBarProps {
   isIncognitoSession: boolean;
   onBackPressed?: () => void;
   onTitlePressed?: () => void;
+  onBarPressed?: () => void;
   onMorePressed?: () => void;
   onExitSelectionPressed?: () => void;
   onSelectAllPressed?: () => void;
@@ -28,6 +29,7 @@ export const SessionAppBar = ({
   isIncognitoSession,
   onBackPressed,
   onTitlePressed,
+  onBarPressed,
   onMorePressed,
   onExitSelectionPressed,
   onSelectAllPressed,
@@ -47,6 +49,7 @@ export const SessionAppBar = ({
       blurTarget={blurTarget}
       scrolled={scrolled}
       onBackPressed={onBackPressed}
+      onBarPressed={onBarPressed}
       onTitlePressed={
         !isIncognitoSession && !selectionMode ? onTitlePressed : undefined
       }
