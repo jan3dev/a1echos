@@ -1,5 +1,5 @@
 import * as Clipboard from "expo-clipboard";
-import { Directory } from "expo-file-system";
+import { Directory, File } from "expo-file-system";
 import { Share } from "react-native";
 
 import { Session, Transcription } from "@/models";
@@ -128,6 +128,100 @@ describe("ShareService", () => {
       expect(write).toHaveBeenCalledWith(
         "# Standup\n\n## Jun 15, 2025, 12:00 PM\n\nFirst\n\n## Jun 15, 2025, 12:00 PM\n\nSecond\n",
       );
+    });
+  });
+
+  describe("saveAudioWav", () => {
+    const recordedAt = new Date(2026, 3, 18, 7, 18);
+    const bytes = new Uint8Array(2.5 * 1024 * 1024).fill(7);
+
+    const mockSource = () => {
+      const handle = {
+        offset: 0,
+        readBytes: jest.fn(async (length: number) => {
+          const chunk = bytes.slice(handle.offset, handle.offset + length);
+          handle.offset += chunk.length;
+          return chunk;
+        }),
+        close: jest.fn(),
+      };
+      (File as unknown as jest.Mock).mockImplementationOnce(() => ({
+        open: () => handle,
+      }));
+      return handle;
+    };
+
+    const mockFolder = (taken: string[], writeBytes = jest.fn()) => {
+      const sink = { writeBytes, close: jest.fn() };
+      const target = { open: jest.fn(() => sink), delete: jest.fn() };
+      const createFile = jest.fn(() => target);
+      (Directory.pickDirectoryAsync as jest.Mock).mockResolvedValueOnce({
+        list: () => taken.map((name) => ({ name })),
+        createFile,
+      });
+      return { createFile, sink, target };
+    };
+
+    it("returns false without writing when the picker is dismissed", async () => {
+      (Directory.pickDirectoryAsync as jest.Mock).mockRejectedValueOnce(
+        new Error("cancelled"),
+      );
+      const onWriteStart = jest.fn();
+
+      await expect(
+        shareService.saveAudioWav("file:///a.wav", recordedAt, onWriteStart),
+      ).resolves.toBe(false);
+      expect(onWriteStart).not.toHaveBeenCalled();
+    });
+
+    it("copies the WAV in chunks under a unique colon-free name", async () => {
+      const source = mockSource();
+      const { createFile, sink } = mockFolder(["Echos Apr 18, 7.18 AM.wav"]);
+      const onWriteStart = jest.fn();
+
+      await expect(
+        shareService.saveAudioWav("file:///a.wav", recordedAt, onWriteStart),
+      ).resolves.toBe(true);
+
+      expect(onWriteStart).toHaveBeenCalled();
+      expect(createFile).toHaveBeenCalledWith(
+        "Echos Apr 18, 7.18 AM (2).wav",
+        "audio/x-wav",
+      );
+      expect(sink.writeBytes).toHaveBeenCalledTimes(3);
+      const written = sink.writeBytes.mock.calls.flatMap(([c]) => [...c]);
+      expect(written).toEqual([...bytes]);
+      expect(sink.close).toHaveBeenCalled();
+      expect(source.close).toHaveBeenCalled();
+    });
+
+    it("removes the partial file and rethrows when a write fails", async () => {
+      const source = mockSource();
+      const { target } = mockFolder(
+        [],
+        jest.fn().mockRejectedValue(new Error("disk full")),
+      );
+
+      await expect(
+        shareService.saveAudioWav("file:///a.wav", recordedAt),
+      ).rejects.toThrow("disk full");
+      expect(target.delete).toHaveBeenCalled();
+      expect(source.close).toHaveBeenCalled();
+    });
+
+    it("still rethrows the write error when cleanup fails", async () => {
+      mockSource();
+      const { target } = mockFolder(
+        [],
+        jest.fn().mockRejectedValue(new Error("disk full")),
+      );
+      target.delete.mockImplementation(() => {
+        throw new Error("gone");
+      });
+
+      await expect(
+        shareService.saveAudioWav("file:///a.wav", recordedAt),
+      ).rejects.toThrow("disk full");
     });
   });
 });

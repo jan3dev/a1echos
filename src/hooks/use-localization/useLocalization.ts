@@ -149,6 +149,7 @@ export const useLocalization = () => {
       deleteAudioTitle: t("deleteAudioTitle"),
       deleteAudioMessage: t("deleteAudioMessage"),
       audioDeleted: t("audioDeleted"),
+      audioDownloaded: t("audioDownloaded"),
       contactSupport: t("contactSupport"),
       advancedSettingsTitle: t("advancedSettingsTitle"),
       smartSplitTitle: t("smartSplitTitle"),

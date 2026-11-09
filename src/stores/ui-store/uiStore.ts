@@ -4,8 +4,10 @@ import type { HostInstance } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
+import type { TooltipVariant } from "@/components/ui/tooltip";
+
 export type ToastVariant = "info" | "success" | "warning" | "error";
-export type GlobalTooltipVariant = "normal" | "error";
+export type GlobalTooltipVariant = TooltipVariant;
 
 export interface Toast {
   id: string;

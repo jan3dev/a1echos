@@ -145,6 +145,7 @@
   "deleteAudioTitle": "¿Eliminar audio?",
   "deleteAudioMessage": "Esta acción no se puede deshacer.",
   "audioDeleted": "Audio eliminado",
+  "audioDownloaded": "Audio descargado",
   "contactSupport": "Soporte",
   "advancedSettingsTitle": "Avanzado",
   "smartSplitTitle": "División inteligente",

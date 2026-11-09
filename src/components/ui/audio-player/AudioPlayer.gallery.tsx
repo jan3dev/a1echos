@@ -18,13 +18,21 @@ const useSampleUri = () => {
 
 const DefaultDemo = () => (
   <View style={styles.stage}>
-    <AudioPlayer uri={useSampleUri()} onDelete={() => console.log("delete")} />
+    <AudioPlayer
+      uri={useSampleUri()}
+      onDelete={() => console.log("delete")}
+      onDownload={() => console.log("download")}
+    />
   </View>
 );
 
 const LoadingDemo = () => (
   <View style={styles.stage}>
-    <AudioPlayer uri={null} onDelete={() => console.log("delete")} />
+    <AudioPlayer
+      uri={null}
+      onDelete={() => console.log("delete")}
+      onDownload={() => console.log("download")}
+    />
   </View>
 );
 

@@ -44,6 +44,9 @@ const VariantMatrix = ({ variant }: { variant: TooltipVariant }) => (
 
 export const Normal = () => <VariantMatrix variant="normal" />;
 export const Error = () => <VariantMatrix variant="error" />;
+export const Brand = () => <VariantMatrix variant="brand" />;
+export const Success = () => <VariantMatrix variant="success" />;
+export const Warning = () => <VariantMatrix variant="warning" />;
 
 export const AutoDismiss = () => {
   const { show, tooltipState } = useTooltip();
@@ -92,6 +95,9 @@ const gallery: GalleryEntry = {
   demos: [
     { name: "Normal", render: Normal },
     { name: "Error", render: Error },
+    { name: "Brand", render: Brand },
+    { name: "Success", render: Success },
+    { name: "Warning", render: Warning },
     { name: "AutoDismiss", render: AutoDismiss },
   ],
 };

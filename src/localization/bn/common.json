@@ -137,6 +137,7 @@
   "deleteAudioTitle": "অডিও মুছবেন?",
   "deleteAudioMessage": "এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।",
   "audioDeleted": "অডিও মুছে ফেলা হয়েছে",
+  "audioDownloaded": "অডিও ডাউনলোড হয়েছে",
   "contactSupport": "সহায়তা",
   "advancedSettingsTitle": "উন্নত",
   "smartSplitTitle": "স্মার্ট স্প্লিট",

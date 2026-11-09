@@ -8,7 +8,8 @@ import { Icon } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 import { Text } from "../text/Text";
 
-export type TooltipVariant = "normal" | "error";
+export type TooltipVariant =
+  "normal" | "error" | "brand" | "success" | "warning";
 export type TooltipPointerPosition = "none" | "bottom";
 
 export interface TooltipProps {
@@ -63,10 +64,16 @@ export const Tooltip = ({
     : colors.glassInverse;
   const normalForeground = isDark ? colors.textPrimary : colors.textInverse;
 
-  const backgroundColor =
-    variant === "error" ? colors.accentDangerTransparent : normalBackground;
-  const foregroundColor =
-    variant === "error" ? colors.accentDanger : normalForeground;
+  // Tinted styles sit on a solid Surface/Background so text stays legible over glows.
+  const tint = {
+    normal: undefined,
+    error: { fg: colors.accentDanger, bg: colors.accentDangerTransparent },
+    brand: { fg: colors.accentBrand, bg: colors.accentBrandTransparent },
+    success: { fg: colors.accentSuccess, bg: colors.accentSuccessTransparent },
+    warning: { fg: colors.accentWarning, bg: colors.accentWarningTransparent },
+  }[variant];
+  const backgroundColor = tint?.bg ?? normalBackground;
+  const foregroundColor = tint?.fg ?? normalForeground;
 
   const contentPadding = {
     paddingLeft: 16,
@@ -81,6 +88,7 @@ export const Tooltip = ({
 
   const renderPointer = () => {
     if (pointerPosition === "none") return null;
+    const pointerPath = `M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`;
     return (
       <View style={styles.pointerContainer}>
         <Svg
@@ -88,17 +96,21 @@ export const Tooltip = ({
           height={pointerSize}
           viewBox={`0 0 ${pointerSize * 2} ${pointerSize}`}
         >
-          <Path
-            d={`M 0 0 L ${pointerSize} ${pointerSize} L ${pointerSize * 2} 0 Z`}
-            fill={backgroundColor}
-          />
+          {tint && <Path d={pointerPath} fill={colors.surfaceBackground} />}
+          <Path d={pointerPath} fill={backgroundColor} />
         </Svg>
       </View>
     );
   };
 
   const renderContent = () => (
-    <View style={[styles.content, contentPadding]}>
+    <View
+      style={[
+        styles.content,
+        contentPadding,
+        tint && { backgroundColor, borderRadius: DEFAULT_BORDER_RADIUS },
+      ]}
+    >
       {isInfo && (
         <>
           {onLeadingIconTap ? (
@@ -148,8 +160,11 @@ export const Tooltip = ({
   const bubble = (
     <View
       style={[
-        { borderRadius: DEFAULT_BORDER_RADIUS, backgroundColor },
-        variant === "normal" ? getShadow("menu") : null,
+        {
+          borderRadius: DEFAULT_BORDER_RADIUS,
+          backgroundColor: tint ? colors.surfaceBackground : backgroundColor,
+        },
+        tint ? null : getShadow("menu"),
       ]}
     >
       {content}

@@ -129,6 +129,7 @@
   "deleteAudioTitle": "删除音频？",
   "deleteAudioMessage": "此操作无法撤销。",
   "audioDeleted": "音频已删除",
+  "audioDownloaded": "音频已下载",
   "contactSupport": "支持",
   "advancedSettingsTitle": "高级",
   "smartSplitTitle": "智能分段",

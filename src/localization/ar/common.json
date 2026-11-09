@@ -168,6 +168,7 @@
   "deleteAudioTitle": "حذف الصوت؟",
   "deleteAudioMessage": "لا يمكن التراجع عن هذا الإجراء.",
   "audioDeleted": "تم حذف الصوت",
+  "audioDownloaded": "تم تنزيل الصوت",
   "contactSupport": "الدعم",
   "advancedSettingsTitle": "متقدم",
   "smartSplitTitle": "التقسيم الذكي",

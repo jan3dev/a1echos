@@ -67,13 +67,39 @@ describe("Tooltip", () => {
     expect(json).toContain('"height":18');
   });
 
-  it("error variant uses accentDangerTransparent background", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
-    act(() => {
-      jest.runAllTimers();
-    });
+  it.each([
+    ["error", lightColors.accentDanger, lightColors.accentDangerTransparent],
+    ["brand", lightColors.accentBrand, lightColors.accentBrandTransparent],
+    [
+      "success",
+      lightColors.accentSuccess,
+      lightColors.accentSuccessTransparent,
+    ],
+    [
+      "warning",
+      lightColors.accentWarning,
+      lightColors.accentWarningTransparent,
+    ],
+  ] as const)(
+    "%s variant tints over a solid background",
+    (variant, foreground, tint) => {
+      const { toJSON } = render(
+        <Tooltip {...defaultProps} variant={variant} />,
+      );
+      const json = JSON.stringify(toJSON());
+      expect(json).toContain(foreground);
+      expect(json).toContain(tint);
+      expect(json).toContain(lightColors.surfaceBackground);
+      expect(json).not.toContain(lightColors.glassInverse);
+    },
+  );
+
+  it("tinted pointer layers the tint over a solid surface", () => {
+    const { toJSON } = render(
+      <Tooltip {...defaultProps} variant="brand" pointerPosition="bottom" />,
+    );
     const json = JSON.stringify(toJSON());
-    expect(json).toContain(lightColors.accentDangerTransparent);
+    expect(json.match(/"d":"M 0 0/g)).toHaveLength(2);
   });
 
   it("normal variant uses glass background", () => {
@@ -84,15 +110,6 @@ describe("Tooltip", () => {
     const json = JSON.stringify(toJSON());
     // light theme normal variant uses glassInverse (rgba(0,0,0,0.85))
     expect(json).toContain(lightColors.glassInverse);
-  });
-
-  it("error variant does not use normal glass background", () => {
-    const { toJSON } = render(<Tooltip {...defaultProps} variant="error" />);
-    act(() => {
-      jest.runAllTimers();
-    });
-    const json = JSON.stringify(toJSON());
-    expect(json).not.toContain(lightColors.glassInverse);
   });
 
   it("dismissible tooltip renders close icon", () => {

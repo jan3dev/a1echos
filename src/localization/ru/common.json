@@ -153,6 +153,7 @@
   "deleteAudioTitle": "Удалить аудио?",
   "deleteAudioMessage": "Это действие нельзя отменить.",
   "audioDeleted": "Аудио удалено",
+  "audioDownloaded": "Аудио загружено",
   "contactSupport": "Поддержка",
   "advancedSettingsTitle": "Дополнительно",
   "smartSplitTitle": "Умное разделение",

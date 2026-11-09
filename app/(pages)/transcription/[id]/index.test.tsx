@@ -42,7 +42,10 @@ jest.mock("@/services", () => ({
     })),
     deleteAudio: jest.fn(async () => undefined),
   },
-  shareService: { shareTranscriptions: jest.fn(async () => undefined) },
+  shareService: {
+    shareTranscriptions: jest.fn(async () => undefined),
+    saveAudioWav: jest.fn(async () => true),
+  },
 }));
 
 const baseItem = {
@@ -92,6 +95,7 @@ jest.mock("@/models", () => ({
 
 const mockShowToast = jest.fn();
 let mockPlayerUri: string | null = null;
+let mockPlayerDownload: (() => Promise<void>) | undefined;
 jest.mock("@/components", () => {
   const { Pressable, Text, View } = require("react-native");
   const { TestID: TID } = require("@/constants");
@@ -101,6 +105,7 @@ jest.mock("@/components", () => {
     Screen: Pass,
     AudioPlayer: (props: any) => {
       mockPlayerUri = props.uri;
+      mockPlayerDownload = props.onDownload;
       return (
         <Pressable
           testID={TID.TranscriptionEditAudio}
@@ -154,7 +159,10 @@ const renderScreen = async () => {
 };
 
 describe("TranscriptionEditScreen", () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -356,6 +364,105 @@ describe("TranscriptionEditScreen", () => {
     });
 
     expect(String(mockTooltip.mock.calls[0][0])).toBe("reprocessFailed");
+  });
+
+  describe("audio download", () => {
+    const saveAudioWav = () => shareService.saveAudioWav as jest.Mock;
+    const download = () =>
+      act(async () => {
+        await mockPlayerDownload!();
+      });
+
+    it("saves the plaintext recording and confirms", async () => {
+      await renderScreen();
+
+      await download();
+
+      expect(saveAudioWav()).toHaveBeenCalledWith(
+        "file:///cache/dec_t1.wav",
+        baseItem.timestamp,
+        expect.any(Function),
+      );
+      expect(mockTooltip).toHaveBeenCalledTimes(1);
+      expect(String(mockTooltip.mock.calls[0][0])).toBe("audioDownloaded");
+      expect(mockTooltip.mock.calls[0].slice(1)).toEqual(["success", 3000]);
+    });
+
+    it("shows nothing when the picker is cancelled", async () => {
+      saveAudioWav().mockResolvedValueOnce(false);
+      await renderScreen();
+
+      await download();
+
+      expect(mockTooltip).not.toHaveBeenCalled();
+    });
+
+    it("shows Downloading… only for slow writes", async () => {
+      jest.useFakeTimers();
+      let finish!: (saved: boolean) => void;
+      saveAudioWav().mockImplementationOnce(
+        async (_uri: string, _at: Date, onWriteStart: () => void) => {
+          onWriteStart();
+          return new Promise<boolean>((resolve) => (finish = resolve));
+        },
+      );
+      await renderScreen();
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = mockPlayerDownload!();
+      });
+      act(() => jest.advanceTimersByTime(1000));
+      expect(String(mockTooltip.mock.calls[0][0])).toBe("downloading");
+      expect(mockTooltip.mock.calls[0][1]).toBe("brand");
+
+      await act(async () => {
+        finish(true);
+        await pending;
+      });
+      expect(String(mockTooltip.mock.calls[1][0])).toBe("audioDownloaded");
+    });
+
+    it("skips Downloading… for fast writes", async () => {
+      jest.useFakeTimers();
+      saveAudioWav().mockImplementationOnce(
+        async (_uri: string, _at: Date, onWriteStart: () => void) => {
+          onWriteStart();
+          return true;
+        },
+      );
+      await renderScreen();
+
+      await download();
+      act(() => jest.advanceTimersByTime(1000));
+
+      expect(mockTooltip).toHaveBeenCalledTimes(1);
+      expect(String(mockTooltip.mock.calls[0][0])).toBe("audioDownloaded");
+    });
+
+    it("warns on failure and allows a retry", async () => {
+      saveAudioWav().mockRejectedValueOnce(new Error("disk full"));
+      await renderScreen();
+
+      await download();
+      expect(String(mockTooltip.mock.calls[0][0])).toBe("downloadFailed");
+      expect(mockTooltip.mock.calls[0][1]).toBe("warning");
+
+      await download();
+      expect(saveAudioWav()).toHaveBeenCalledTimes(2);
+    });
+
+    it("ignores taps while a download is running", async () => {
+      saveAudioWav().mockImplementationOnce(() => new Promise(() => {}));
+      await renderScreen();
+
+      act(() => {
+        mockPlayerDownload!();
+      });
+      await download();
+
+      expect(saveAudioWav()).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("deletes the audio after confirmation", async () => {

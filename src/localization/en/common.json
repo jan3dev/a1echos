@@ -137,6 +137,7 @@
   "deleteAudioTitle": "Delete Audio?",
   "deleteAudioMessage": "This action cannot be undone.",
   "audioDeleted": "Audio Deleted",
+  "audioDownloaded": "Audio Downloaded",
   "contactSupport": "Support",
   "advancedSettingsTitle": "Advanced",
   "smartSplitTitle": "Smart Split",

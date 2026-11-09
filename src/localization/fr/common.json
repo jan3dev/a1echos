@@ -145,6 +145,7 @@
   "deleteAudioTitle": "Supprimer l’audio ?",
   "deleteAudioMessage": "Cette action est irréversible.",
   "audioDeleted": "Audio supprimé",
+  "audioDownloaded": "Audio téléchargé",
   "contactSupport": "Assistance",
   "advancedSettingsTitle": "Avancé",
   "smartSplitTitle": "Découpage intelligent",

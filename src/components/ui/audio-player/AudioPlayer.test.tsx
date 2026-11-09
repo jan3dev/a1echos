@@ -34,9 +34,8 @@ const mockWav = (bytes: Uint8Array) => {
   } = {
     size: bytes.length,
     offset: 0 as number | null,
-    readBytesSync: jest.fn(
-      (length: number): Uint8Array =>
-        bytes.slice(handle.offset!, handle.offset! + length),
+    readBytesSync: jest.fn((length: number): Uint8Array =>
+      bytes.slice(handle.offset!, handle.offset! + length),
     ),
     close: jest.fn(),
   };
@@ -190,5 +189,24 @@ describe("AudioPlayer", () => {
     fireEvent.press(getByTestId("player-delete"));
 
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("calls onDownload from the download button once the file is ready", () => {
+    const onDownload = jest.fn();
+    const { getByTestId, rerender } = render(
+      <AudioPlayer uri={null} onDownload={onDownload} testID="player" />,
+    );
+    fireEvent.press(getByTestId("player-download"));
+    expect(onDownload).not.toHaveBeenCalled();
+
+    rerender(
+      <AudioPlayer
+        uri="file:///a.wav"
+        onDownload={onDownload}
+        testID="player"
+      />,
+    );
+    fireEvent.press(getByTestId("player-download"));
+    expect(onDownload).toHaveBeenCalled();
   });
 });

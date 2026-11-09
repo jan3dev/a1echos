@@ -55,18 +55,22 @@ export interface AudioPlayerProps {
   /** Plaintext WAV file URI; null while it's being prepared. */
   uri: string | null;
   onDelete?: () => void;
+  onDownload?: () => void;
   playAccessibilityLabel?: string;
   pauseAccessibilityLabel?: string;
   deleteAccessibilityLabel?: string;
+  downloadAccessibilityLabel?: string;
   testID?: string;
 }
 
 export const AudioPlayer = ({
   uri,
   onDelete,
+  onDownload,
   playAccessibilityLabel,
   pauseAccessibilityLabel,
   deleteAccessibilityLabel,
+  downloadAccessibilityLabel,
   testID,
 }: AudioPlayerProps) => {
   const { theme } = useTheme();
@@ -204,11 +208,30 @@ export const AudioPlayer = ({
         </Text>
       </View>
 
+      {onDownload && (
+        <RipplePressable
+          testID={testID && `${testID}-download`}
+          onPress={onDownload}
+          disabled={!uri}
+          hitSlop={8}
+          rippleColor={colors.ripple}
+          borderless
+          accessibilityRole="button"
+          accessibilityLabel={downloadAccessibilityLabel}
+          accessibilityState={{ disabled: !uri }}
+          style={({ pressed }) => ({
+            opacity: uri ? iosPressed(pressed) : 0.5,
+          })}
+        >
+          <Icon name="download" size={18} color={colors.textPrimary} />
+        </RipplePressable>
+      )}
+
       {onDelete && (
         <RipplePressable
           testID={testID && `${testID}-delete`}
           onPress={onDelete}
-          hitSlop={10}
+          hitSlop={8}
           rippleColor={colors.ripple}
           borderless
           accessibilityRole="button"

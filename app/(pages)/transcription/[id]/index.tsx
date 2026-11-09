@@ -58,6 +58,9 @@ import { FeatureFlag, getErrorMessage, logError } from "@/utils";
 
 const SAVE_BAR_HEIGHT = SUB_SCREEN_NAVBAR_HEIGHT;
 const SAVE_BAR_GAP = (SAVE_BAR_HEIGHT - PRIMARY_BUTTON_HEIGHT) / 2;
+// Quick writes skip "Downloading…"; the result tooltip replaces it otherwise.
+const DOWNLOADING_DELAY_MS = 400;
+const DOWNLOADING_MAX_MS = 10 * 60 * 1000;
 
 const toFileUri = (path: string) =>
   path.startsWith("file://") ? path : `file://${path}`;
@@ -135,6 +138,7 @@ export default function TranscriptionEditScreen() {
   const [isFocused, setIsFocused] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const isDownloadingRef = useRef(false);
 
   // While the keyboard is open, Save floats above it until the user scrolls
   // its in-page slot up to the same spot; the bar then steps aside (native
@@ -268,6 +272,35 @@ export default function TranscriptionEditScreen() {
         });
       }
     });
+
+  const handleDownloadAudio = async () => {
+    if (!playableUri || isDownloadingRef.current) return;
+    isDownloadingRef.current = true;
+    let slowWrite: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const saved = await shareService.saveAudioWav(
+        playableUri,
+        transcription.timestamp,
+        () => {
+          slowWrite = setTimeout(
+            () =>
+              showGlobalTooltip(loc.downloading, "brand", DOWNLOADING_MAX_MS),
+            DOWNLOADING_DELAY_MS,
+          );
+        },
+      );
+      if (saved) showGlobalTooltip(loc.audioDownloaded, "success", 3000);
+    } catch (error) {
+      logError(error, {
+        flag: FeatureFlag.transcription,
+        message: "Failed to download transcription audio",
+      });
+      showGlobalTooltip(loc.downloadFailed, "warning");
+    } finally {
+      clearTimeout(slowWrite);
+      isDownloadingRef.current = false;
+    }
+  };
 
   const handleDelete = () =>
     confirm(
@@ -406,9 +439,11 @@ export default function TranscriptionEditScreen() {
                     testID={TestID.TranscriptionEditAudio}
                     uri={playableUri}
                     onDelete={handleDeleteAudio}
+                    onDownload={handleDownloadAudio}
                     playAccessibilityLabel={loc.play}
                     pauseAccessibilityLabel={loc.pause}
                     deleteAccessibilityLabel={loc.deleteAudio}
+                    downloadAccessibilityLabel={loc.download}
                   />
                   <ListItem
                     testID={TestID.TranscriptionEditLanguage}
