@@ -1,6 +1,6 @@
 import { View } from "react-native";
 
-import { Card, Icon, ListItem, Text } from "@/components";
+import { Icon, ListItem, ListItemGroup, Text } from "@/components";
 import { useTheme } from "@/theme";
 import type { GalleryEntry } from "@/design-system/manifest";
 
@@ -205,15 +205,8 @@ export const WithInfoIcon = () => (
   />
 );
 
-export const Grouped = () => {
-  const { theme } = useTheme();
-  return (
-    <Card
-      shadow="surface"
-      borderRadius={16}
-      backgroundColor={theme.colors.surfaceBackground}
-    >
-      <View style={{ gap: 1 }}>
+export const Grouped = () => (
+  <ListItemGroup>
         <ListItem
           grouped
           title={PRIMARY_LEFT}
@@ -230,10 +223,8 @@ export const Grouped = () => {
           info={{ onPress: () => {}, accessibilityLabel: "More Info" }}
           onPress={() => {}}
         />
-      </View>
-    </Card>
-  );
-};
+      </ListItemGroup>
+);
 
 export const WithCustomContent = () => {
   const { theme } = useTheme();

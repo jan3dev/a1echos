@@ -17,8 +17,10 @@ import {
   AppBarBlurTarget,
   authenticateBiometric,
   Icon,
+  type IconName,
   InAppBanner,
   ListItem,
+  ListItemGroup,
   Screen,
   SettingsFooter,
   Text,
@@ -87,6 +89,9 @@ export default function SettingsScreen() {
 
   const secondary = theme.colors.textSecondary;
   const chevron = <Icon name="chevron_right" size={18} color={secondary} />;
+  const leading = (name: IconName) => (
+    <Icon name={name} size={24} color={secondary} />
+  );
 
   return (
     <Screen>
@@ -112,100 +117,102 @@ export default function SettingsScreen() {
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionTranscription}
               </Text>
-              <ListItem
-                testID={TestID.SettingsModel}
-                title={loc.title}
-                iconLeading={<Icon name="sound" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsModel)}
-              />
-              <ListItem
-                testID={TestID.SettingsIntelligence}
-                title={loc.intelligenceTitle}
-                iconLeading={<Icon name="ai" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsIntelligence)}
-              />
-              <ListItem
-                testID={TestID.SettingsAdvanced}
-                title={loc.advancedSettingsTitle}
-                iconLeading={
-                  <Icon name="setting_3" size={24} color={secondary} />
-                }
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsAdvanced)}
-              />
+              <ListItemGroup>
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsModel}
+                  title={loc.title}
+                  iconLeading={leading("sound")}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsModel)}
+                />
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsIntelligence}
+                  title={loc.intelligenceTitle}
+                  iconLeading={leading("ai")}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsIntelligence)}
+                />
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsAdvanced}
+                  title={loc.advancedSettingsTitle}
+                  iconLeading={leading("setting_3")}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsAdvanced)}
+                />
+              </ListItemGroup>
             </View>
 
             <View style={styles.section}>
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionAppearance}
               </Text>
-              <ListItem
-                testID={TestID.SettingsTheme}
-                title={loc.themeTitle}
-                titleTrailing={themeDisplay}
-                iconLeading={<Icon name="theme" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsTheme)}
-              />
-              <ListItem
-                testID={TestID.SettingsTextAppearance}
-                title={loc.textAppearanceTitle}
-                iconLeading={<Icon name="text" size={24} color={secondary} />}
-                iconTrailing={chevron}
-                onPress={() => router.push(Routes.settingsTextAppearance)}
-              />
-              {hasAppLanguageSettings() && (
+              <ListItemGroup>
                 <ListItem
-                  testID={TestID.SettingsAppLanguage}
-                  title={loc.appLanguageTitle}
-                  titleTrailing={i18n.language.toUpperCase()}
-                  iconLeading={
-                    <Icon name="globe" size={24} color={secondary} />
-                  }
+                  grouped
+                  testID={TestID.SettingsTheme}
+                  title={loc.themeTitle}
+                  titleTrailing={themeDisplay}
+                  iconLeading={leading("theme")}
                   iconTrailing={chevron}
-                  onPress={() => void openAppLanguageSettings()}
+                  onPress={() => router.push(Routes.settingsTheme)}
                 />
-              )}
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsTextAppearance}
+                  title={loc.textAppearanceTitle}
+                  iconLeading={leading("text")}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsTextAppearance)}
+                />
+                {hasAppLanguageSettings() && (
+                  <ListItem
+                    grouped
+                    testID={TestID.SettingsAppLanguage}
+                    title={loc.appLanguageTitle}
+                    titleTrailing={i18n.language.toUpperCase()}
+                    iconLeading={leading("globe")}
+                    iconTrailing={chevron}
+                    onPress={() => void openAppLanguageSettings()}
+                  />
+                )}
+              </ListItemGroup>
             </View>
 
             <View style={styles.section}>
               <Text variant="body2" weight="medium" color={secondary}>
                 {loc.settingsSectionGeneral}
               </Text>
-              <ListItem
-                testID={TestID.SettingsBiometricAuthToggle}
-                title={loc.biometricAuthTitle}
-                iconLeading={
-                  <Icon
-                    name="biometric_fingerprint"
-                    size={24}
-                    color={secondary}
-                  />
-                }
-                iconTrailing={
-                  <Toggle
-                    value={biometricAuthEnabled}
-                    onValueChange={handleBiometricToggle}
-                    accessibilityLabel={loc.biometricAuthTitle}
-                  />
-                }
-                onPress={() => handleBiometricToggle(!biometricAuthEnabled)}
-              />
-              <ListItem
-                testID={TestID.SettingsContactSupport}
-                title={loc.contactSupport}
-                iconLeading={
-                  <Icon name="help_support" size={24} color={secondary} />
-                }
-                iconTrailing={chevron}
-                onPress={() =>
-                  Linking.openURL(
-                    "https://a1lab.zendesk.com/hc/en-us/requests/new",
-                  )
-                }
-              />
+              <ListItemGroup>
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsBiometricAuthToggle}
+                  title={loc.biometricAuthTitle}
+                  iconLeading={leading("biometric_fingerprint")}
+                  iconTrailing={
+                    <Toggle
+                      value={biometricAuthEnabled}
+                      onValueChange={handleBiometricToggle}
+                      accessibilityLabel={loc.biometricAuthTitle}
+                    />
+                  }
+                  onPress={() => handleBiometricToggle(!biometricAuthEnabled)}
+                />
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsContactSupport}
+                  title={loc.contactSupport}
+                  iconLeading={leading("help_support")}
+                  iconTrailing={chevron}
+                  onPress={() =>
+                    Linking.openURL(
+                      "https://a1lab.zendesk.com/hc/en-us/requests/new",
+                    )
+                  }
+                />
+              </ListItemGroup>
             </View>
           </View>
 

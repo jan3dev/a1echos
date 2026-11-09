@@ -78,7 +78,6 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
-    Card: ({ children }: any) => <View>{children}</View>,
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
     InfoSheet: ({ visible, title, message, onDismiss }: any) =>
       visible ? (
@@ -88,6 +87,7 @@ jest.mock("@/components", () => {
           <TouchableOpacity testID={TID.InfoSheetClose} onPress={onDismiss} />
         </View>
       ) : null,
+    ListItemGroup: ({ children }: any) => <View>{children}</View>,
     ListItem: ({
       title,
       subtitle,

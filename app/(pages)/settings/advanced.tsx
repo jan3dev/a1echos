@@ -5,18 +5,17 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  View,
   type HostInstance,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
-  Card,
   Icon,
   type IconName,
   InfoSheet,
   ListItem,
+  ListItemGroup,
   Screen,
   Toggle,
   TopAppBar,
@@ -125,12 +124,7 @@ export default function AdvancedSettingsScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
-          <Card
-            shadow="surface"
-            borderRadius={16}
-            backgroundColor={theme.colors.surfaceBackground}
-          >
-            <View style={styles.group}>
+          <ListItemGroup>
               <ListItem
                 grouped
                 testID={TestID.SettingsLanguage}
@@ -237,8 +231,7 @@ export default function AdvancedSettingsScreen() {
                 iconTrailing={chevron}
                 onPress={() => router.push(Routes.settingsEchosKeyboard)}
               />
-            </View>
-          </Card>
+            </ListItemGroup>
         </ScrollView>
       </AppBarBlurTarget>
 
@@ -261,8 +254,5 @@ export default function AdvancedSettingsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
-  },
-  group: {
-    gap: 1,
   },
 });

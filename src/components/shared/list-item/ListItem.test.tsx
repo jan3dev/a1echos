@@ -5,7 +5,7 @@ import type { ReactTestInstance } from "react-test-renderer";
 
 import { dynamicTestID, TestID } from "@/constants";
 
-import { ListItem } from "./ListItem";
+import { ListItem, ListItemGroup } from "./ListItem";
 
 const defaultProps = {
   title: "Session Title",
@@ -195,5 +195,18 @@ describe("ListItem", () => {
       nativeEvent: { actionName: "info" },
     });
     expect(onInfoPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ListItemGroup", () => {
+  it("renders its rows", () => {
+    const { getByText } = render(
+      <ListItemGroup>
+        <ListItem title="One" grouped />
+        <ListItem title="Two" grouped />
+      </ListItemGroup>,
+    );
+    expect(getByText("One")).toBeTruthy();
+    expect(getByText("Two")).toBeTruthy();
   });
 });

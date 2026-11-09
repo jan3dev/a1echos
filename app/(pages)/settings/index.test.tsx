@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import {
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import * as IntentLauncher from "expo-intent-launcher";
 import * as Linking from "expo-linking";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -57,6 +62,7 @@ jest.mock("@/models", () => ({
   AppTheme: { AUTO: "auto", LIGHT: "light", DARK: "dark" },
 }));
 
+const mockGroupedByTitle = new Map<string, boolean | undefined>();
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
@@ -73,14 +79,26 @@ jest.mock("@/components", () => {
     Divider: () => <View testID={TID.Divider} />,
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
     InAppBanner: () => <View testID={TID.InAppBanner} />,
-    ListItem: ({ title, titleTrailing, onPress, iconTrailing }: any) => (
-      <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
-        <Text>{String(title)}</Text>
-        {titleTrailing && (
-          <Text testID={dTID.trailing(title)}>{String(titleTrailing)}</Text>
-        )}
-        {iconTrailing}
-      </TouchableOpacity>
+    ListItem: ({
+      title,
+      titleTrailing,
+      onPress,
+      iconTrailing,
+      grouped,
+    }: any) => {
+      mockGroupedByTitle.set(title, grouped);
+      return (
+        <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
+          <Text>{String(title)}</Text>
+          {titleTrailing && (
+            <Text testID={dTID.trailing(title)}>{String(titleTrailing)}</Text>
+          )}
+          {iconTrailing}
+        </TouchableOpacity>
+      );
+    },
+    ListItemGroup: ({ children }: any) => (
+      <View testID="row-group">{children}</View>
     ),
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
@@ -95,7 +113,10 @@ jest.mock("@/components", () => {
 });
 
 describe("SettingsScreen", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGroupedByTitle.clear();
+  });
 
   it("renders sections and items", () => {
     const { getByTestId, getByText, queryByTestId } = render(
@@ -109,6 +130,16 @@ describe("SettingsScreen", () => {
     expect(getByTestId("list-item-advancedSettingsTitle")).toBeTruthy();
     expect(getByTestId("list-item-biometricAuthTitle")).toBeTruthy();
     expect(queryByTestId("list-item-spokenLanguageTitle")).toBeNull();
+  });
+
+  it("renders every row as a grouped item inside its section group", () => {
+    const { getAllByTestId } = render(<SettingsScreen />);
+    const groups = getAllByTestId("row-group");
+    expect(
+      groups.map((g) => within(g).getAllByTestId(/^list-item-/).length),
+    ).toEqual([3, 3, 2]);
+    expect(mockGroupedByTitle.size).toBe(8);
+    mockGroupedByTitle.forEach((grouped) => expect(grouped).toBe(true));
   });
 
   it("biometric toggle enables after successful authentication", async () => {

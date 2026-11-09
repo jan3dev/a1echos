@@ -11,6 +11,7 @@ import { dynamicTestID } from "@/constants";
 import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
+import { Card } from "../../ui/card/Card";
 import { Icon } from "../../ui/icon/Icon";
 import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../ui/text/Text";
@@ -200,7 +201,24 @@ export const ListItem = ({
   );
 };
 
+/** Container for `grouped` rows: rounded, shadowed card with 1pt dividers between rows. */
+export const ListItemGroup = ({ children }: { children: ReactNode }) => {
+  const { theme } = useTheme();
+  return (
+    <Card
+      shadow="surface"
+      borderRadius={16}
+      backgroundColor={theme.colors.surfaceBackground}
+    >
+      <View style={styles.group}>{children}</View>
+    </Card>
+  );
+};
+
 const styles = StyleSheet.create({
+  group: {
+    gap: 1,
+  },
   leadingContainer: {
     marginRight: 16,
   },
