@@ -2,7 +2,7 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
-import { Routes, TestID } from "@/constants";
+import { dynamicTestID, Routes, TestID } from "@/constants";
 
 import AdvancedSettingsScreen from "./advanced";
 
@@ -78,13 +78,23 @@ jest.mock("@/components", () => {
   const { TestID: TID, dynamicTestID: dTID } = require("@/constants");
   return {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
+    Card: ({ children }: any) => <View>{children}</View>,
     Icon: ({ name }: any) => <View testID={dTID.icon(name)} />,
+    InfoSheet: ({ visible, title, message, onDismiss }: any) =>
+      visible ? (
+        <View testID={TID.InfoSheet}>
+          <RNText>{`sheet:${title}`}</RNText>
+          <RNText>{String(message)}</RNText>
+          <TouchableOpacity testID={TID.InfoSheetClose} onPress={onDismiss} />
+        </View>
+      ) : null,
     ListItem: ({
       title,
       subtitle,
       titleTrailing,
       onPress,
       iconTrailing,
+      info,
       testID,
     }: any) => (
       <TouchableOpacity
@@ -93,6 +103,13 @@ jest.mock("@/components", () => {
         disabled={!onPress}
       >
         <RNText>{String(title)}</RNText>
+        {info && (
+          <TouchableOpacity
+            testID={dTID.listItemInfo(testID)}
+            accessibilityLabel={String(info.accessibilityLabel)}
+            onPress={info.onPress}
+          />
+        )}
         {subtitle && <RNText testID="subtitle">{String(subtitle)}</RNText>}
         {titleTrailing && <RNText>{String(titleTrailing)}</RNText>}
         {iconTrailing}
@@ -152,13 +169,58 @@ describe("AdvancedSettingsScreen", () => {
     expect(getByText("advancedSettingsTitle")).toBeTruthy();
   });
 
-  it("renders the toggle row and the description as a caption below the card", () => {
-    const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
+  it("renders the smart split row with its description behind an info icon", () => {
+    const { getByTestId, getByText, queryByText } = render(
+      <AdvancedSettingsScreen />,
+    );
     expect(getByTestId(TestID.SettingsSmartSplitToggle)).toBeTruthy();
     expect(getByText("smartSplitTitle")).toBeTruthy();
-    // Description moved out of the row to a caption below the Card so it
-    // can wrap freely on narrow Android screens.
-    expect(getByText("smartSplitDescription")).toBeTruthy();
+    expect(queryByText("smartSplitDescription")).toBeNull();
+  });
+
+  it.each([
+    [
+      TestID.SettingsSmartSplitToggle,
+      "smartSplitTitle",
+      "smartSplitDescription",
+    ],
+    [
+      TestID.SettingsKeyboardAutocorrectToggle,
+      "keyboardAutocorrectTitle",
+      "keyboardAutocorrectDescription",
+    ],
+    [TestID.SettingsMicTimeoutRow, "micTimeoutTitle", "micTimeoutDescription"],
+    [
+      TestID.SettingsAddKeyboardRow,
+      "advancedSettingsKeyboardTitle",
+      "advancedSettingsKeyboardDescription",
+    ],
+  ])(
+    "the %s info icon opens a sheet with its caption",
+    async (rowID, title, caption) => {
+      const { getByTestId, getByText, queryByTestId } = render(
+        <AdvancedSettingsScreen />,
+      );
+      await act(async () => {});
+      expect(queryByTestId(TestID.InfoSheet)).toBeNull();
+      fireEvent.press(getByTestId(dynamicTestID.listItemInfo(rowID)));
+      expect(getByText(`sheet:${title}`)).toBeTruthy();
+      expect(getByText(caption)).toBeTruthy();
+      expect(mockPush).not.toHaveBeenCalled();
+
+      fireEvent.press(getByTestId(TestID.InfoSheetClose));
+      expect(queryByTestId(TestID.InfoSheet)).toBeNull();
+    },
+  );
+
+  it("haptics and sounds rows have no info icon", () => {
+    const { queryByTestId } = render(<AdvancedSettingsScreen />);
+    for (const id of [
+      TestID.SettingsKeyboardHapticToggle,
+      TestID.SettingsKeyboardSoundToggle,
+    ]) {
+      expect(queryByTestId(dynamicTestID.listItemInfo(id))).toBeNull();
+    }
   });
 
   it("toggle reflects the current enabled state (on by default)", () => {
@@ -192,11 +254,10 @@ describe("AdvancedSettingsScreen", () => {
     });
   });
 
-  it("renders the Echos Keyboard row with description caption", () => {
+  it("renders the Echos Keyboard row", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsAddKeyboardRow)).toBeTruthy();
     expect(getByText("advancedSettingsKeyboardTitle")).toBeTruthy();
-    expect(getByText("advancedSettingsKeyboardDescription")).toBeTruthy();
   });
 
   it("shows Added when the keyboard is enabled", async () => {
@@ -235,7 +296,6 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsKeyboardAutocorrectToggle)).toBeTruthy();
     expect(getByText("keyboardAutocorrectTitle")).toBeTruthy();
-    expect(getByText("keyboardAutocorrectDescription")).toBeTruthy();
     expect(
       getByTestId("toggle-value-keyboardAutocorrectTitle"),
     ).toHaveTextContent("off");
@@ -261,7 +321,6 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsKeyboardHapticToggle)).toBeTruthy();
     expect(getByText("keyboardHapticTitle")).toBeTruthy();
-    expect(getByText("keyboardHapticDescription")).toBeTruthy();
     expect(getByTestId("toggle-value-keyboardHapticTitle")).toHaveTextContent(
       "off",
     );
@@ -287,7 +346,6 @@ describe("AdvancedSettingsScreen", () => {
     const { getByTestId, getByText } = render(<AdvancedSettingsScreen />);
     expect(getByTestId(TestID.SettingsKeyboardSoundToggle)).toBeTruthy();
     expect(getByText("keyboardSoundTitle")).toBeTruthy();
-    expect(getByText("keyboardSoundDescription")).toBeTruthy();
     expect(getByTestId("toggle-value-keyboardSoundTitle")).toHaveTextContent(
       "off",
     );

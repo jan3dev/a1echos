@@ -1,9 +1,17 @@
 import { ReactNode } from "react";
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 
+import { dynamicTestID } from "@/constants";
 import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
+import { Icon } from "../../ui/icon/Icon";
 import { RipplePressable } from "../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../ui/text/Text";
 
@@ -22,6 +30,10 @@ export interface ListItemProps {
   iconTrailing?: ReactNode;
   selected?: boolean;
   bordered?: boolean;
+  /** Row inside a grouped container: square corners, no stroke, 16pt padding, medium title. */
+  grouped?: boolean;
+  /** Shows an info icon after the title. */
+  info?: { onPress: () => void; accessibilityLabel: string };
   onPress?: () => void;
   onLongPress?: () => void;
   titleMaxLines?: number;
@@ -47,6 +59,8 @@ export const ListItem = ({
   iconTrailing,
   selected,
   bordered = true,
+  grouped = false,
+  info,
   onPress,
   onLongPress,
   titleMaxLines = 2,
@@ -67,10 +81,10 @@ export const ListItem = ({
       : selected
         ? colors.surfaceBorderSelected
         : colors.surfaceBorderPrimary,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 15,
+    borderWidth: grouped ? 0 : 1,
+    borderRadius: grouped ? 0 : 16,
+    paddingHorizontal: grouped ? 16 : 12,
+    paddingVertical: grouped ? 16 : 15,
     flexDirection: "row",
     alignItems: "center",
     overflow: "hidden",
@@ -86,9 +100,17 @@ export const ListItem = ({
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ selected: !!selected, disabled: !onPress }}
+        accessibilityActions={
+          info ? [{ name: "info", label: info.accessibilityLabel }] : undefined
+        }
+        onAccessibilityAction={
+          info
+            ? (e) => e.nativeEvent.actionName === "info" && info.onPress()
+            : undefined
+        }
         style={({ pressed }) => ({
           opacity: !selected ? iosPressed(pressed) : 1,
-          borderRadius: 16,
+          borderRadius: grouped ? 0 : 16,
           overflow: "hidden",
         })}
       >
@@ -98,14 +120,33 @@ export const ListItem = ({
           )}
 
           <View style={styles.contentContainer}>
-            <Text
-              variant="body1"
-              weight="semibold"
-              color={titleColor ?? colors.textPrimary}
-              numberOfLines={titleMaxLines}
-            >
-              {title}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text
+                variant="body1"
+                weight={grouped ? "medium" : "semibold"}
+                color={titleColor ?? colors.textPrimary}
+                numberOfLines={titleMaxLines}
+                style={styles.title}
+              >
+                {title}
+              </Text>
+              {info && (
+                <Pressable
+                  testID={testID && dynamicTestID.listItemInfo(testID)}
+                  onPress={info.onPress}
+                  hitSlop={13}
+                  accessibilityRole="button"
+                  accessibilityLabel={info.accessibilityLabel}
+                  style={({ pressed }) => ({ opacity: iosPressed(pressed) })}
+                >
+                  <Icon
+                    name="info_circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </Pressable>
+              )}
+            </View>
 
             {contentWidget ? (
               contentWidget
@@ -132,6 +173,7 @@ export const ListItem = ({
                   (subtitleTrailing ? colors.textPrimary : colors.textSecondary)
                 }
                 align="right"
+                numberOfLines={1}
               >
                 {titleTrailing}
               </Text>
@@ -165,6 +207,14 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: "center",
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  title: {
+    flexShrink: 1,
   },
   subtitle: {
     marginTop: 4,

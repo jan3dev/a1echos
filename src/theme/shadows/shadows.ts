@@ -97,6 +97,14 @@ export const shadows = {
     5,
   ),
 
+  surface: createShadow(
+    AquaPrimitiveColors.black,
+    { width: 0, height: 0 },
+    0.08,
+    8,
+    1,
+  ),
+
   input: createShadow(
     AquaPrimitiveColors.black,
     { width: 0, height: 0 },

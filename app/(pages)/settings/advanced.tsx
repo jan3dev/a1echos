@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AppState,
   Platform,
@@ -12,11 +12,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
+  Card,
   Icon,
   type IconName,
+  InfoSheet,
   ListItem,
   Screen,
-  Text,
   Toggle,
   TopAppBar,
 } from "@/components";
@@ -57,6 +58,11 @@ export default function AdvancedSettingsScreen() {
   const keyboardMicTimeout = useKeyboardMicTimeout();
   const selectedLanguage = useSelectedLanguage();
   const [keyboardEnabled, setKeyboardEnabled] = useState<boolean | null>(null);
+  const [infoSheet, setInfoSheet] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const [infoVisible, setInfoVisible] = useState(false);
 
   useEffect(() => {
     const refresh = () => void readKeyboardEnabled().then(setKeyboardEnabled);
@@ -70,9 +76,18 @@ export default function AdvancedSettingsScreen() {
   }, []);
 
   const secondary = theme.colors.textSecondary;
+  const chevron = <Icon name="chevron_right" size={18} color={secondary} />;
   const leading = (name: IconName) => (
     <Icon name={name} size={24} color={secondary} />
   );
+
+  const info = (title: string, message: string) => ({
+    accessibilityLabel: loc.moreInfo,
+    onPress: () => {
+      setInfoSheet({ title, message });
+      setInfoVisible(true);
+    },
+  });
 
   const micTimeoutDisplay = loc[micTimeoutLabelKey(keyboardMicTimeout, true)];
 
@@ -110,121 +125,120 @@ export default function AdvancedSettingsScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
         >
-          <ListItem
-            testID={TestID.SettingsLanguage}
-            title={loc.spokenLanguageTitle}
-            titleTrailing={selectedLanguage.code.toUpperCase()}
-            iconLeading={leading("language")}
-            iconTrailing={
-              <Icon name="chevron_right" size={24} color={secondary} />
-            }
-            onPress={() => router.push(Routes.settingsLanguage)}
-          />
-          <Captioned caption={loc.smartSplitDescription}>
-            <ListItem
-              testID={TestID.SettingsSmartSplitToggle}
-              iconLeading={leading("scissor")}
-              title={loc.smartSplitTitle}
-              iconTrailing={
-                <Toggle
-                  value={smartSplitEnabled}
-                  onValueChange={handleToggle}
-                  accessibilityLabel={loc.smartSplitTitle}
-                />
-              }
-              onPress={() => handleToggle(!smartSplitEnabled)}
-            />
-          </Captioned>
-          <Captioned caption={loc.keyboardAutocorrectDescription}>
-            <ListItem
-              testID={TestID.SettingsKeyboardAutocorrectToggle}
-              iconLeading={leading("edit_square")}
-              title={loc.keyboardAutocorrectTitle}
-              iconTrailing={
-                <Toggle
-                  value={keyboardAutocorrect}
-                  onValueChange={handleAutocorrectToggle}
-                  accessibilityLabel={loc.keyboardAutocorrectTitle}
-                />
-              }
-              onPress={() => handleAutocorrectToggle(!keyboardAutocorrect)}
-            />
-          </Captioned>
-          <Captioned caption={loc.keyboardHapticDescription}>
-            <ListItem
-              testID={TestID.SettingsKeyboardHapticToggle}
-              iconLeading={leading("flash")}
-              title={loc.keyboardHapticTitle}
-              iconTrailing={
-                <Toggle
-                  value={keyboardHaptic}
-                  onValueChange={handleHapticToggle}
-                  accessibilityLabel={loc.keyboardHapticTitle}
-                />
-              }
-              onPress={() => handleHapticToggle(!keyboardHaptic)}
-            />
-          </Captioned>
-          <Captioned caption={loc.keyboardSoundDescription}>
-            <ListItem
-              testID={TestID.SettingsKeyboardSoundToggle}
-              iconLeading={leading("sound")}
-              title={loc.keyboardSoundTitle}
-              iconTrailing={
-                <Toggle
-                  value={keyboardSound}
-                  onValueChange={handleSoundToggle}
-                  accessibilityLabel={loc.keyboardSoundTitle}
-                />
-              }
-              onPress={() => handleSoundToggle(!keyboardSound)}
-            />
-          </Captioned>
-          {/* The keyboard mic timeout only affects the iOS keyboard's hot-mic
-              session; it has no effect on Android, so hide the row there. */}
-          {Platform.OS === "ios" && (
-            <Captioned caption={loc.micTimeoutDescription}>
+          <Card
+            shadow="surface"
+            borderRadius={16}
+            backgroundColor={theme.colors.surfaceBackground}
+          >
+            <View style={styles.group}>
               <ListItem
-                testID={TestID.SettingsMicTimeoutRow}
-                iconLeading={leading("timer")}
-                title={loc.micTimeoutTitle}
-                titleTrailing={micTimeoutDisplay}
+                grouped
+                testID={TestID.SettingsLanguage}
+                title={loc.spokenLanguageTitle}
+                titleTrailing={selectedLanguage.code.toUpperCase()}
+                iconLeading={leading("language")}
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsLanguage)}
+              />
+              <ListItem
+                grouped
+                testID={TestID.SettingsSmartSplitToggle}
+                iconLeading={leading("scissor")}
+                title={loc.smartSplitTitle}
+                info={info(loc.smartSplitTitle, loc.smartSplitDescription)}
                 iconTrailing={
-                  <Icon
-                    name="chevron_right"
-                    size={24}
-                    color={theme.colors.textSecondary}
+                  <Toggle
+                    value={smartSplitEnabled}
+                    onValueChange={handleToggle}
+                    accessibilityLabel={loc.smartSplitTitle}
                   />
                 }
-                onPress={() => router.push(Routes.settingsMicTimeout)}
+                onPress={() => handleToggle(!smartSplitEnabled)}
               />
-            </Captioned>
-          )}
-          <Captioned caption={loc.advancedSettingsKeyboardDescription}>
-            <ListItem
-              testID={TestID.SettingsAddKeyboardRow}
-              iconLeading={leading("keyboard")}
-              title={loc.advancedSettingsKeyboardTitle}
-              titleTrailing={
-                keyboardEnabled === null
-                  ? undefined
-                  : keyboardEnabled
-                    ? loc.advancedSettingsKeyboardAdded
-                    : loc.advancedSettingsKeyboardNotAdded
-              }
-              titleTrailingColor={
-                keyboardEnabled ? theme.colors.accentSuccess : secondary
-              }
-              iconTrailing={
-                <Icon
-                  name="chevron_right"
-                  size={24}
-                  color={theme.colors.textSecondary}
+              <ListItem
+                grouped
+                testID={TestID.SettingsKeyboardAutocorrectToggle}
+                iconLeading={leading("edit_square")}
+                title={loc.keyboardAutocorrectTitle}
+                info={info(
+                  loc.keyboardAutocorrectTitle,
+                  loc.keyboardAutocorrectDescription,
+                )}
+                iconTrailing={
+                  <Toggle
+                    value={keyboardAutocorrect}
+                    onValueChange={handleAutocorrectToggle}
+                    accessibilityLabel={loc.keyboardAutocorrectTitle}
+                  />
+                }
+                onPress={() => handleAutocorrectToggle(!keyboardAutocorrect)}
+              />
+              <ListItem
+                grouped
+                testID={TestID.SettingsKeyboardHapticToggle}
+                iconLeading={leading("flash")}
+                title={loc.keyboardHapticTitle}
+                iconTrailing={
+                  <Toggle
+                    value={keyboardHaptic}
+                    onValueChange={handleHapticToggle}
+                    accessibilityLabel={loc.keyboardHapticTitle}
+                  />
+                }
+                onPress={() => handleHapticToggle(!keyboardHaptic)}
+              />
+              <ListItem
+                grouped
+                testID={TestID.SettingsKeyboardSoundToggle}
+                iconLeading={leading("sound")}
+                title={loc.keyboardSoundTitle}
+                iconTrailing={
+                  <Toggle
+                    value={keyboardSound}
+                    onValueChange={handleSoundToggle}
+                    accessibilityLabel={loc.keyboardSoundTitle}
+                  />
+                }
+                onPress={() => handleSoundToggle(!keyboardSound)}
+              />
+              {/* The keyboard mic timeout only affects the iOS keyboard's hot-mic
+                  session; it has no effect on Android, so hide the row there. */}
+              {Platform.OS === "ios" && (
+                <ListItem
+                  grouped
+                  testID={TestID.SettingsMicTimeoutRow}
+                  iconLeading={leading("timer")}
+                  title={loc.micTimeoutTitle}
+                  info={info(loc.micTimeoutTitle, loc.micTimeoutDescription)}
+                  titleTrailing={micTimeoutDisplay}
+                  iconTrailing={chevron}
+                  onPress={() => router.push(Routes.settingsMicTimeout)}
                 />
-              }
-              onPress={() => router.push(Routes.settingsEchosKeyboard)}
-            />
-          </Captioned>
+              )}
+              <ListItem
+                grouped
+                testID={TestID.SettingsAddKeyboardRow}
+                iconLeading={leading("keyboard")}
+                title={loc.advancedSettingsKeyboardTitle}
+                info={info(
+                  loc.advancedSettingsKeyboardTitle,
+                  loc.advancedSettingsKeyboardDescription,
+                )}
+                titleTrailing={
+                  keyboardEnabled === null
+                    ? undefined
+                    : keyboardEnabled
+                      ? loc.advancedSettingsKeyboardAdded
+                      : loc.advancedSettingsKeyboardNotAdded
+                }
+                titleTrailingColor={
+                  keyboardEnabled ? theme.colors.accentSuccess : secondary
+                }
+                iconTrailing={chevron}
+                onPress={() => router.push(Routes.settingsEchosKeyboard)}
+              />
+            </View>
+          </Card>
         </ScrollView>
       </AppBarBlurTarget>
 
@@ -233,38 +247,22 @@ export default function AdvancedSettingsScreen() {
         blurTarget={blurTargetRef}
         scrolled={scrolled}
       />
-    </Screen>
-  );
-}
 
-function Captioned({
-  caption,
-  children,
-}: {
-  caption: string;
-  children: ReactNode;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View style={styles.captioned}>
-      {children}
-      <Text
-        variant="caption1"
-        weight="medium"
-        color={theme.colors.textSecondary}
-      >
-        {caption}
-      </Text>
-    </View>
+      <InfoSheet
+        visible={infoVisible}
+        title={infoSheet?.title ?? ""}
+        message={infoSheet?.message ?? ""}
+        onDismiss={() => setInfoVisible(false)}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 24,
   },
-  captioned: {
-    gap: 8,
+  group: {
+    gap: 1,
   },
 });

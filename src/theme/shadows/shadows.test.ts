@@ -5,8 +5,8 @@ import { getShadow, shadows } from "./shadows";
 describe("shadows", () => {
   const keys = Object.keys(shadows);
 
-  it("has exactly 11 keys", () => {
-    expect(keys).toHaveLength(11);
+  it("has exactly 12 keys", () => {
+    expect(keys).toHaveLength(12);
     expect(keys).toEqual([
       "default",
       "small",
@@ -17,6 +17,7 @@ describe("shadows", () => {
       "card",
       "cardElevated",
       "modal",
+      "surface",
       "input",
       "recordingButton",
     ]);

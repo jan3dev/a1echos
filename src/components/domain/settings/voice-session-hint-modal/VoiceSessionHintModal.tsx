@@ -28,7 +28,7 @@ export const VoiceSessionHintModal = ({
       testID={TestID.VoiceSessionHintModal}
       title={loc.voiceSessionHintTitle}
       message={loc.voiceSessionHintBody}
-      primaryButton={{ text: loc.voiceSessionHintCta, onTap: onDismiss }}
+      primaryButton={{ text: loc.gotIt, onTap: onDismiss }}
       onDismiss={onDismiss}
       icon={
         <Icon name="voice_circle" size={32} color={theme.colors.textPrimary} />

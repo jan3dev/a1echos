@@ -69,7 +69,7 @@ describe("VoiceSessionHintModal", () => {
     const { getByTestId, getByText } = render(
       <VoiceSessionHintModal visible={true} onDismiss={onDismiss} />,
     );
-    expect(getByText("voiceSessionHintCta")).toBeTruthy();
+    expect(getByText("gotIt")).toBeTruthy();
     fireEvent.press(getByTestId("primary-button"));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });

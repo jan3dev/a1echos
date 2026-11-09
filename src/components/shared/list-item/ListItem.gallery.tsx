@@ -1,6 +1,6 @@
 import { View } from "react-native";
 
-import { Icon, ListItem, Text } from "@/components";
+import { Card, Icon, ListItem, Text } from "@/components";
 import { useTheme } from "@/theme";
 import type { GalleryEntry } from "@/design-system/manifest";
 
@@ -194,6 +194,47 @@ export const Selected = () => (
   />
 );
 
+export const WithInfoIcon = () => (
+  <ListItem
+    title={PRIMARY_LEFT}
+    titleTrailing={PRIMARY_RIGHT}
+    iconLeading={<LeadingIcon />}
+    iconTrailing={<Chevron />}
+    info={{ onPress: () => {}, accessibilityLabel: "More Info" }}
+    onPress={() => {}}
+  />
+);
+
+export const Grouped = () => {
+  const { theme } = useTheme();
+  return (
+    <Card
+      shadow="surface"
+      borderRadius={16}
+      backgroundColor={theme.colors.surfaceBackground}
+    >
+      <View style={{ gap: 1 }}>
+        <ListItem
+          grouped
+          title={PRIMARY_LEFT}
+          iconLeading={<LeadingIcon />}
+          iconTrailing={<Chevron />}
+          onPress={() => {}}
+        />
+        <ListItem
+          grouped
+          title="A Very Long Primary Title That Wraps to Two Lines"
+          titleTrailing={PRIMARY_RIGHT}
+          iconLeading={<LeadingIcon />}
+          iconTrailing={<Chevron />}
+          info={{ onPress: () => {}, accessibilityLabel: "More Info" }}
+          onPress={() => {}}
+        />
+      </View>
+    </Card>
+  );
+};
+
 export const WithCustomContent = () => {
   const { theme } = useTheme();
   return (
@@ -275,6 +316,8 @@ const gallery: GalleryEntry = {
       render: IconStackedBothSidesWithChevron,
     },
     { name: "Selected", render: Selected },
+    { name: "WithInfoIcon", render: WithInfoIcon },
+    { name: "Grouped", render: Grouped },
     { name: "WithCustomContent", render: WithCustomContent },
   ],
 };
