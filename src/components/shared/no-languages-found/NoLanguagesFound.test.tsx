@@ -8,9 +8,7 @@ import { NoLanguagesFound } from "./NoLanguagesFound";
 
 describe("NoLanguagesFound", () => {
   it("renders the title and description in the pinned colors", () => {
-    const { getByText } = render(
-      <NoLanguagesFound query="Klingon" colors={darkColors} />,
-    );
+    const { getByText } = render(<NoLanguagesFound colors={darkColors} />);
     expect(getByText("noLanguagesFoundTitle")).toHaveStyle({
       color: darkColors.textPrimary,
     });
@@ -19,7 +17,7 @@ describe("NoLanguagesFound", () => {
 
   it("announces the empty state to screen readers", () => {
     const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
-    render(<NoLanguagesFound query="Klingon" />);
+    render(<NoLanguagesFound />);
     expect(announce).toHaveBeenCalledWith("noLanguagesFoundTitle");
   });
 });

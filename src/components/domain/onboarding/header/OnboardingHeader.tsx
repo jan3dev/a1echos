@@ -21,6 +21,8 @@ export interface OnboardingHeaderProps {
   onBack: () => void;
   /** Omit to hide Skip. */
   onSkip?: () => void;
+  /** Shows a search button; while active, Skip becomes a close button. */
+  search?: { active: boolean; onOpen: () => void; onClose: () => void };
   testID?: string;
 }
 
@@ -58,6 +60,7 @@ export const OnboardingHeader = ({
   step,
   onBack,
   onSkip,
+  search,
   testID,
 }: OnboardingHeaderProps) => {
   const insets = useSafeAreaInsets();
@@ -97,20 +100,39 @@ export const OnboardingHeader = ({
         />
       )}
       <View style={[styles.headerSide, styles.headerTrailing]}>
-        {onSkip && (
+        {search && (
           <HeaderAction
-            testID={childTestID("skip")}
-            onPress={onSkip}
-            accessibilityLabel={loc.onboardingSkip}
+            testID={childTestID("search")}
+            onPress={search.onOpen}
+            accessibilityLabel={loc.searchLanguage}
           >
-            <Text
-              variant="body2"
-              weight="medium"
-              color={darkColors.textSecondary}
-            >
-              {loc.onboardingSkip}
-            </Text>
+            <Icon name="search" size={24} color={darkColors.textPrimary} />
           </HeaderAction>
+        )}
+        {search?.active ? (
+          <HeaderAction
+            testID={childTestID("close-search")}
+            onPress={search.onClose}
+            accessibilityLabel={loc.close}
+          >
+            <Icon name="close" size={24} color={darkColors.textPrimary} />
+          </HeaderAction>
+        ) : (
+          onSkip && (
+            <HeaderAction
+              testID={childTestID("skip")}
+              onPress={onSkip}
+              accessibilityLabel={loc.onboardingSkip}
+            >
+              <Text
+                variant="body2"
+                weight="medium"
+                color={darkColors.textSecondary}
+              >
+                {loc.onboardingSkip}
+              </Text>
+            </HeaderAction>
+          )
         )}
       </View>
     </View>
@@ -133,5 +155,6 @@ const styles = StyleSheet.create({
   },
   headerTrailing: {
     justifyContent: "flex-end",
+    gap: spacing.md,
   },
 });

@@ -130,7 +130,7 @@
   "spokenLanguageDescription": "Escolha o idioma em que você fala. O Echos usa isso para transcrever com mais precisão.",
   "searchLanguage": "Buscar idioma",
   "noLanguagesFoundTitle": "Nenhum idioma encontrado",
-  "noLanguagesFoundDescription": "Não encontramos “{{query}}”. Verifique a ortografia e tente novamente.",
+  "noLanguagesFoundDescription": "Tente outra grafia ou o nome do idioma em inglês.",
   "microphoneAccessRequiredTitle": "Acesso ao microfone necessário",
   "microphoneAccessRequiredMessageAndroid": "O Echos precisa de acesso ao microfone para gravar áudio. Conceda a permissão para continuar.",
   "microphoneAccessDeniedMessage": "Você negou permanentemente o acesso ao microfone. Ative-o nos Ajustes para usar os recursos de gravação.",

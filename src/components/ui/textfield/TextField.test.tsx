@@ -216,6 +216,17 @@ describe("TextField", () => {
     );
   });
 
+  it("draws a leading icon without a label and pads the text past it", () => {
+    const { getByDisplayValue, queryByText, toJSON } = render(
+      <TextField value="Span" iconLeading="search" autoFocus />,
+    );
+    const input = getByDisplayValue("Span");
+    expect(input.props.autoFocus).toBe(true);
+    expect(input.props.textAlignVertical).toBe("center");
+    expect(JSON.stringify(toJSON())).toContain('"paddingStart":44');
+    expect(queryByText("Search")).toBeNull();
+  });
+
   it("calls onChangeText synchronously when debounceTime is 0", () => {
     const onChangeText = jest.fn();
     const { getByDisplayValue } = render(

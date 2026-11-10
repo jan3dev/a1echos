@@ -3,6 +3,11 @@ export { useFileImport } from "./use-file-import/useFileImport";
 export { useFolderActions } from "./use-folder-actions/useFolderActions";
 export { useKeyboardHeight } from "./use-keyboard-height/useKeyboardHeight";
 export { useKeyboardSettingsCheck } from "./use-keyboard-settings-check/useKeyboardSettingsCheck";
+export {
+  LANGUAGE_LIST_WINDOW,
+  SEARCH_FADE_MS,
+  useLanguageSearch,
+} from "./use-language-search/useLanguageSearch";
 export { useLocalization } from "./use-localization/useLocalization";
 export { useMicPermission } from "./use-mic-permission/useMicPermission";
 export { useOnboardingExit } from "./use-onboarding-exit/useOnboardingExit";

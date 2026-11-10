@@ -138,7 +138,7 @@
   "spokenLanguageDescription": "Выберите язык, на котором вы говорите. Echos использует его для более точной транскрибации.",
   "searchLanguage": "Поиск языка",
   "noLanguagesFoundTitle": "Языки не найдены",
-  "noLanguagesFoundDescription": "Не удалось найти «{{query}}». Проверьте написание и попробуйте снова.",
+  "noLanguagesFoundDescription": "Попробуйте другое написание или английское название языка.",
   "microphoneAccessRequiredTitle": "Нужен доступ к микрофону",
   "microphoneAccessRequiredMessageAndroid": "Echos нужен доступ к микрофону для записи звука. Предоставьте разрешение, чтобы продолжить.",
   "microphoneAccessDeniedMessage": "Вы навсегда запретили доступ к микрофону. Включите его в Настройках, чтобы пользоваться записью.",

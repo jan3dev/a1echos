@@ -8,13 +8,11 @@ import { Icon } from "../../ui/icon/Icon";
 import { Text } from "../../ui/text/Text";
 
 interface NoLanguagesFoundProps {
-  query: string;
   /** Pins colors on screens that ignore the app theme. */
   colors?: AquaColors;
 }
 
 export const NoLanguagesFound = ({
-  query,
   colors: colorsOverride,
 }: NoLanguagesFoundProps) => {
   const { theme } = useTheme();
@@ -44,7 +42,7 @@ export const NoLanguagesFound = ({
           {loc.noLanguagesFoundTitle}
         </Text>
         <Text variant="body1" align="center" color={colors.textSecondary}>
-          {loc.noLanguagesFoundDescription(query.trim())}
+          {loc.noLanguagesFoundDescription}
         </Text>
       </View>
     </View>

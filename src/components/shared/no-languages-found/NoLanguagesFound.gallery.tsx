@@ -2,11 +2,9 @@ import { NoLanguagesFound } from "@/components";
 import type { GalleryEntry } from "@/design-system/manifest";
 import { darkColors } from "@/theme";
 
-export const Default = () => <NoLanguagesFound query="Klingon" />;
+export const Default = () => <NoLanguagesFound />;
 
-export const PinnedDark = () => (
-  <NoLanguagesFound query="Klingon" colors={darkColors} />
-);
+export const PinnedDark = () => <NoLanguagesFound colors={darkColors} />;
 
 const gallery: GalleryEntry = {
   slug: "no-languages-found",

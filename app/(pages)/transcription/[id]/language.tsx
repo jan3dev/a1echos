@@ -5,15 +5,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   AppBarBlurTarget,
-  FlagIcon,
-  ListItem,
-  Radio,
+  LanguageListItem,
   Screen,
   TopAppBar,
 } from "@/components";
 import { AppConstants, dynamicTestID, Routes } from "@/constants";
 import { useLocalization, useScrollSurface } from "@/hooks";
-import { getCountryCode, getModelInfo, SupportedLanguages } from "@/models";
+import { getModelInfo, SupportedLanguages } from "@/models";
 import { useSelectedModelId } from "@/stores";
 import { useTheme } from "@/theme";
 
@@ -53,20 +51,12 @@ export default function TranscriptionLanguageScreen() {
           scrollEventThrottle={16}
         >
           {languages.map((option) => (
-            <ListItem
+            <LanguageListItem
               key={option.code}
               testID={dynamicTestID.language(option.code)}
-              title={option.name}
-              iconLeading={<FlagIcon name={getCountryCode(option)} size={24} />}
-              iconTrailing={
-                <Radio<string>
-                  value={option.code}
-                  size="small"
-                  groupValue={language}
-                  onValueChange={() => select(option.code)}
-                />
-              }
-              onPress={() => select(option.code)}
+              language={option}
+              selected={option.code === language}
+              onSelect={(picked) => select(picked.code)}
             />
           ))}
         </ScrollView>

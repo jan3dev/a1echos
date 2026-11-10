@@ -127,22 +127,55 @@ const languageData: Record<string, LanguageInfo> = {
 };
 
 // Locale-independent lowercasing: a Turkish locale would turn "I" into "ı".
+// Latin accents are dropped so "espanol" finds "Español"; only U+0300–036F,
+// since Devanagari and Arabic vowel signs are marks too.
 const searchWords = (text: string) =>
   ` ${text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[()\s]+/g, " ")
     .trim()}`;
 
 const allCodes = Object.keys(languageData);
 
-// Names come from the app language at call time; settings store the code only.
-const toLanguage = (code: string): SpokenLanguage => ({
-  code,
-  name: i18n.t(code, { ns: "languages" }),
-});
+// Built once per app language: stable objects let memoized rows skip
+// re-rendering, and collating is slow on Android Hermes (each localeCompare
+// builds a collator over JNI). Settings store the code only.
+let cache: {
+  lng: string;
+  byCode: Map<string, SpokenLanguage>;
+  rank: Map<string, number>;
+  words: Map<string, string>;
+} | null = null;
+const languageCache = () => {
+  if (cache?.lng !== i18n.language) {
+    const languages = allCodes.map((code) => ({
+      code,
+      name: i18n.t(code, { ns: "languages" }),
+    }));
+    const collator = new Intl.Collator(i18n.language);
+    const sorted = [...languages].sort((a, b) =>
+      collator.compare(a.name, b.name),
+    );
+    cache = {
+      lng: i18n.language,
+      byCode: new Map(languages.map((lang) => [lang.code, lang])),
+      rank: new Map(sorted.map((lang, i) => [lang.code, i])),
+      words: new Map(
+        languages.map((lang) => [
+          lang.code,
+          searchWords(lang.name) +
+            searchWords(i18n.t(lang.code, { ns: "languages", lng: "en" })),
+        ]),
+      ),
+    };
+  }
+  return cache;
+};
 
-const englishName = (code: string) =>
-  i18n.t(code, { ns: "languages", lng: "en" });
+const toLanguage = (code: string): SpokenLanguage =>
+  languageCache().byCode.get(code)!;
 
 export const SupportedLanguages = {
   get all(): SpokenLanguage[] {
@@ -165,17 +198,18 @@ export const SupportedLanguages = {
   search(languages: SpokenLanguage[], query: string): SpokenLanguage[] {
     const needle = searchWords(query);
     if (needle === " ") return languages;
-    return languages.filter(
-      (lang) =>
-        searchWords(lang.name).includes(needle) ||
-        searchWords(englishName(lang.code)).includes(needle),
-    );
+    const { words } = languageCache();
+    return languages.filter((lang) => words.get(lang.code)?.includes(needle));
   },
 
-  /** Returns a copy with the given language moved to the front. */
-  pinFirst(languages: SpokenLanguage[], code: string): SpokenLanguage[] {
+  /** Returns a copy with the given language first, then A to Z by name. */
+  pickerOrder(languages: SpokenLanguage[], code: string): SpokenLanguage[] {
+    const { rank } = languageCache();
+    const at = (c: string) => rank.get(c) ?? allCodes.length;
     return [...languages].sort(
-      (a, b) => Number(b.code === code) - Number(a.code === code),
+      (a, b) =>
+        Number(b.code === code) - Number(a.code === code) ||
+        at(a.code) - at(b.code),
     );
   },
 

@@ -153,7 +153,7 @@
   "spokenLanguageDescription": "اختر اللغة التي تتحدث بها. يستخدمها Echos للتفريغ بدقة أكبر.",
   "searchLanguage": "البحث عن لغة",
   "noLanguagesFoundTitle": "لم يتم العثور على لغات",
-  "noLanguagesFoundDescription": "لم نتمكن من العثور على “{{query}}”. تحقق من الإملاء وحاول مرة أخرى.",
+  "noLanguagesFoundDescription": "جرّب تهجئة أخرى، أو الاسم الإنجليزي للغة.",
   "microphoneAccessRequiredTitle": "يلزم الوصول إلى الميكروفون",
   "microphoneAccessRequiredMessageAndroid": "يحتاج Echos إلى الوصول إلى الميكروفون لتسجيل الصوت. يُرجى منح الإذن للمتابعة.",
   "microphoneAccessDeniedMessage": "لقد رفضت الوصول إلى الميكروفون نهائيًا. يُرجى تفعيله من الإعدادات لاستخدام ميزات التسجيل.",

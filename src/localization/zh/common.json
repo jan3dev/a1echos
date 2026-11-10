@@ -114,7 +114,7 @@
   "spokenLanguageDescription": "选择你说话时使用的语言。Echos 会据此更准确地转录。",
   "searchLanguage": "搜索语言",
   "noLanguagesFoundTitle": "未找到语言",
-  "noLanguagesFoundDescription": "找不到“{{query}}”。请检查拼写后重试。",
+  "noLanguagesFoundDescription": "试试其他拼写，或该语言的英文名称。",
   "microphoneAccessRequiredTitle": "需要麦克风权限",
   "microphoneAccessRequiredMessageAndroid": "Echos 需要访问你的麦克风才能录音。请授予权限以继续。",
   "microphoneAccessDeniedMessage": "你已永久拒绝麦克风权限。请在设置中开启，以使用录音功能。",

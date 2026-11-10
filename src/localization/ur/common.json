@@ -122,7 +122,7 @@
   "spokenLanguageDescription": "وہ زبان منتخب کریں جس میں آپ بول رہے ہیں۔ Echos اسے زیادہ درست ٹرانسکرپشن کے لیے استعمال کرتا ہے۔",
   "searchLanguage": "زبان تلاش کریں",
   "noLanguagesFoundTitle": "کوئی زبان نہیں ملی",
-  "noLanguagesFoundDescription": "ہمیں “{{query}}” نہیں ملا۔ ہجے چیک کریں اور دوبارہ کوشش کریں۔",
+  "noLanguagesFoundDescription": "کوئی اور ہجے آزمائیں، یا زبان کا انگریزی نام۔",
   "microphoneAccessRequiredTitle": "مائیکروفون تک رسائی درکار ہے",
   "microphoneAccessRequiredMessageAndroid": "آڈیو ریکارڈ کرنے کے لیے Echos کو آپ کے مائیکروفون تک رسائی درکار ہے۔ جاری رکھنے کے لیے براہ کرم اجازت دیں۔",
   "microphoneAccessDeniedMessage": "آپ نے مائیکروفون تک رسائی مستقل طور پر مسترد کر دی ہے۔ ریکارڈنگ کی خصوصیات استعمال کرنے کے لیے براہ کرم ترتیبات میں اسے فعال کریں۔",

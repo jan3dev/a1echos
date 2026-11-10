@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { act, fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
-import { Platform, StyleSheet, Text } from "react-native";
+import { Platform, StyleSheet, Text, TextInput } from "react-native";
 import { usePanGesture } from "react-native-gesture-handler";
 
 import { dynamicTestID, TestID } from "@/constants";
+import { SEARCH_MOTION_MS } from "@/hooks/use-language-search/useLanguageSearch";
 import { TranscriptionMode } from "@/models";
 
 import { TranscriptionSettingsSheet } from "./TranscriptionSettingsSheet";
@@ -29,9 +30,14 @@ jest.mock("@/hooks", () => ({
   useLocalization: () => ({
     loc: new Proxy({}, { get: (_, key) => String(key) }),
   }),
+  useKeyboardHeight: () => 0,
+  useLanguageSearch: jest.requireActual(
+    "@/hooks/use-language-search/useLanguageSearch",
+  ).useLanguageSearch,
 }));
 
-const spanish = { code: "es", name: "Spanish" };
+// Early A to Z, so within the rows the list first renders.
+const arabic = { code: "ar", name: "Arabic" };
 
 // Each render builds the sheet's, the footer's, then the language header's pan.
 const lastPans = () => (usePanGesture as jest.Mock).mock.calls.slice(-3);
@@ -130,7 +136,7 @@ describe("TranscriptionSettingsSheet", () => {
     const { getByTestId } = renderSheet();
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
     expect(onLanguagePage()).toBe(true);
-    expect(getByTestId(dynamicTestID.language("es"))).toBeTruthy();
+    expect(getByTestId(dynamicTestID.language("ar"))).toBeTruthy();
 
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsBack));
     expect(onLanguagePage()).toBe(false);
@@ -140,10 +146,10 @@ describe("TranscriptionSettingsSheet", () => {
     const { getByTestId } = renderSheet();
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
     await act(async () => {
-      fireEvent.press(getByTestId(dynamicTestID.language("es")));
+      fireEvent.press(getByTestId(dynamicTestID.language("ar")));
     });
     expect(mockSetLanguage).toHaveBeenCalledWith(
-      expect.objectContaining(spanish),
+      expect.objectContaining(arabic),
     );
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
     expect(onLanguagePage()).toBe(false);
@@ -161,8 +167,8 @@ describe("TranscriptionSettingsSheet", () => {
     const { getByTestId } = renderSheet();
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
     await act(async () => {
-      fireEvent.press(getByTestId(dynamicTestID.language("es")));
-      fireEvent.press(getByTestId(dynamicTestID.language("fr")));
+      fireEvent.press(getByTestId(dynamicTestID.language("ar")));
+      fireEvent.press(getByTestId(dynamicTestID.language("af")));
     });
     expect(mockSetLanguage).toHaveBeenCalledTimes(1);
   });
@@ -172,7 +178,7 @@ describe("TranscriptionSettingsSheet", () => {
     const { getByTestId } = renderSheet();
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
     await act(async () => {
-      fireEvent.press(getByTestId(dynamicTestID.language("es")));
+      fireEvent.press(getByTestId(dynamicTestID.language("ar")));
     });
     expect(onLanguagePage()).toBe(true);
   });
@@ -183,7 +189,7 @@ describe("TranscriptionSettingsSheet", () => {
     const { getByTestId, UNSAFE_getByType } = renderSheet({ onDismiss });
     fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
     await act(async () => {
-      fireEvent.press(getByTestId(dynamicTestID.language("es")));
+      fireEvent.press(getByTestId(dynamicTestID.language("ar")));
     });
     expect(onDismiss).toHaveBeenCalled();
 
@@ -376,6 +382,101 @@ describe("TranscriptionSettingsSheet", () => {
 
     reanimated.useAnimatedStyle.mockImplementation(() => ({}));
     reanimated.useAnimatedReaction.mockImplementation(() => undefined);
+  });
+
+  describe("search", () => {
+    let now: number;
+    beforeEach(() => {
+      now = 0;
+      jest.spyOn(Date, "now").mockImplementation(() => now);
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    const openSearch = () => {
+      const utils = renderSheet();
+      fireEvent.press(utils.getByTestId(TestID.TranscriptionSettingsLanguage));
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchOpen));
+      now += SEARCH_MOTION_MS;
+      return utils;
+    };
+
+    it("filters the list, with an empty state when nothing matches", () => {
+      const { UNSAFE_getByType, getByTestId, queryByTestId } = openSearch();
+      const field = UNSAFE_getByType(TextInput);
+      fireEvent.changeText(field, "arab");
+      expect(getByTestId(dynamicTestID.language("ar"))).toBeTruthy();
+      expect(queryByTestId(dynamicTestID.language("en"))).toBeNull();
+
+      fireEvent.changeText(field, "Klingon");
+      expect(getByTestId("no-languages-found")).toBeTruthy();
+    });
+
+    it("the x takes the magnifier's place and closes search", () => {
+      const { getByTestId, queryByTestId, UNSAFE_queryByType } = openSearch();
+      expect(queryByTestId(TestID.LanguageSearchOpen)).toBeNull();
+      fireEvent.press(getByTestId(TestID.LanguageSearchClose));
+      expect(UNSAFE_queryByType(TextInput)).toBeNull();
+      expect(getByTestId(TestID.LanguageSearchOpen)).toBeTruthy();
+      expect(onLanguagePage()).toBe(true);
+    });
+
+    it("ignores the x while the animation runs", () => {
+      const { getByTestId, UNSAFE_queryByType } = renderSheet();
+      fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
+      fireEvent.press(getByTestId(TestID.LanguageSearchOpen));
+      fireEvent.press(getByTestId(TestID.LanguageSearchClose));
+      expect(UNSAFE_queryByType(TextInput)).toBeTruthy();
+    });
+
+    it("grows the panel through the shared expand height", () => {
+      const reanimated = jest.requireMock("react-native-reanimated");
+      const { getByTestId } = openSearch();
+      const header = getByTestId(TestID.TranscriptionSettingsDragHeader);
+      let page = header.parent;
+      while (page && !page.props.onLayout) page = page.parent;
+      const layout = (height: number) => ({
+        nativeEvent: { layout: { height } },
+      });
+      fireEvent(page!, "layout", layout(400));
+      reanimated.withSpring.mockClear();
+      fireEvent(page!, "layout", layout(700));
+      expect(reanimated.withSpring).toHaveBeenCalledWith(
+        700,
+        expect.objectContaining({ damping: 24.6 }),
+      );
+    });
+
+    it("starts resizing on the tap, without waiting for the relayout", () => {
+      const reanimated = jest.requireMock("react-native-reanimated");
+      const { getByTestId } = renderSheet();
+      fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
+      const header = getByTestId(TestID.TranscriptionSettingsDragHeader);
+      let page = header.parent;
+      while (page && !page.props.onLayout) page = page.parent;
+      fireEvent(page!, "layout", { nativeEvent: { layout: { height: 400 } } });
+
+      const spring = expect.objectContaining({ damping: 24.6 });
+      reanimated.withSpring.mockClear();
+      fireEvent.press(getByTestId(TestID.LanguageSearchOpen));
+      expect(reanimated.withSpring).toHaveBeenCalledWith(
+        expect.any(Number),
+        spring,
+      );
+      expect(reanimated.withSpring.mock.calls[0][0]).toBeGreaterThan(400);
+
+      now += SEARCH_MOTION_MS;
+      reanimated.withSpring.mockClear();
+      fireEvent.press(getByTestId(TestID.LanguageSearchClose));
+      expect(reanimated.withSpring).toHaveBeenCalledWith(400, spring);
+    });
+
+    it("Android back closes search before leaving the page", () => {
+      const { UNSAFE_getByType, UNSAFE_queryByType } = openSearch();
+      const { Modal } = require("react-native");
+      act(() => UNSAFE_getByType(Modal).props.onRequestClose());
+      expect(UNSAFE_queryByType(TextInput)).toBeNull();
+      expect(onLanguagePage()).toBe(true);
+    });
   });
 
   it("back button on the language page returns instead of closing", () => {

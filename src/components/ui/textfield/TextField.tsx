@@ -21,7 +21,7 @@ import {
 import { useLocalization } from "@/hooks";
 import { FeatureFlag, logError } from "@/utils";
 
-import { Icon } from "../icon/Icon";
+import { Icon, type IconName } from "../icon/Icon";
 import { RipplePressable } from "../ripple-pressable/RipplePressable";
 
 export type TextFieldVariant = "default" | "brand" | "outlined";
@@ -42,6 +42,8 @@ interface TextFieldProps {
   onPaste?: (text: string) => void;
   debounceTime?: number;
   forceFocus?: boolean;
+  autoFocus?: boolean;
+  iconLeading?: IconName;
   accessibilityLabel?: string;
   accessibilityHint?: string;
   /** Pins colors on screens that ignore the app theme. */
@@ -60,6 +62,8 @@ const CONTENT_HORIZONTAL_PADDING = 16;
 const CONTENT_VERTICAL_PADDING = 8;
 const CONTENT_TRAILING_PADDING = 12;
 const ICON_SIZE = 18;
+const LEADING_ICON_GAP = 10;
+const LEADING_ICON_PADDING = LABEL_START + ICON_SIZE + LEADING_ICON_GAP;
 const ICON_SPACING = 16;
 const ASSISTIVE_TEXT_TOP_PADDING = 4;
 const BORDER_RADIUS = 8;
@@ -82,6 +86,8 @@ export const TextField = ({
   onPaste,
   debounceTime = DEFAULT_DEBOUNCE,
   forceFocus = false,
+  autoFocus = false,
+  iconLeading,
   accessibilityLabel,
   accessibilityHint,
   colors: colorsOverride,
@@ -251,7 +257,7 @@ export const TextField = ({
                 style={[
                   styles.label,
                   {
-                    start: LABEL_START,
+                    start: iconLeading ? LEADING_ICON_PADDING : LABEL_START,
                     top: labelTop,
                     fontSize: labelFontSize,
                     color: labelColor,
@@ -271,6 +277,9 @@ export const TextField = ({
                 {
                   marginTop: label ? LABEL_OFFSET_ACTIVE : 0,
                   paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
+                  paddingStart: iconLeading
+                    ? LEADING_ICON_PADDING
+                    : CONTENT_HORIZONTAL_PADDING,
                   paddingVertical: CONTENT_VERTICAL_PADDING,
                   paddingEnd: calculateTrailingPadding(),
                 },
@@ -295,11 +304,18 @@ export const TextField = ({
                 maxLength={maxLength}
                 cursorColor={colors.accentBrand}
                 underlineColorAndroid="transparent"
-                textAlignVertical="top"
+                textAlignVertical={label ? "top" : "center"}
+                autoFocus={autoFocus}
                 disableFullscreenUI
                 keyboardAppearance={colors === darkColors ? "dark" : "light"}
               />
             </View>
+
+            {iconLeading && (
+              <View style={styles.leadingIcon} pointerEvents="none">
+                <Icon name={iconLeading} size={ICON_SIZE} color={iconColor} />
+              </View>
+            )}
 
             {trailingIconCount > 0 && (
               <View style={styles.trailingContainer}>
@@ -314,10 +330,14 @@ export const TextField = ({
                     <View
                       style={[
                         styles.clearIconBackground,
-                        { backgroundColor: colors.surfaceTertiary },
+                        { backgroundColor: colors.surfaceSecondary },
                       ]}
                     >
-                      <Icon name="close" size={14} color={iconColor} />
+                      <Icon
+                        name="close"
+                        size={14}
+                        color={colors.textTertiary}
+                      />
                     </View>
                   </RipplePressable>
                 )}
@@ -388,6 +408,13 @@ const styles = StyleSheet.create({
   input: {
     padding: 0,
     margin: 0,
+  },
+  leadingIcon: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    start: LABEL_START,
+    justifyContent: "center",
   },
   trailingContainer: {
     position: "absolute",

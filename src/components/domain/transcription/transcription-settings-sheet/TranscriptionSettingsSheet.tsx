@@ -22,6 +22,7 @@ import {
 import {
   Animated,
   FlatList,
+  Keyboard,
   LayoutChangeEvent,
   Modal,
   PixelRatio,
@@ -38,6 +39,8 @@ import {
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import Reanimated, {
+  FadeIn,
+  FadeOut,
   SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -51,7 +54,12 @@ import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppConstants, dynamicTestID, TestID } from "@/constants";
-import { useLocalization } from "@/hooks";
+import {
+  LANGUAGE_LIST_WINDOW,
+  useKeyboardHeight,
+  useLanguageSearch,
+  useLocalization,
+} from "@/hooks";
 import {
   getCountryCode,
   getModelInfo,
@@ -71,13 +79,15 @@ import {
 } from "@/stores";
 import { useTheme } from "@/theme";
 
+import { LanguageListItem } from "../../../shared/language-list-item/LanguageListItem";
 import { ListItem } from "../../../shared/list-item/ListItem";
+import { NoLanguagesFound } from "../../../shared/no-languages-found/NoLanguagesFound";
 import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Icon } from "../../../ui/icon/Icon";
 import { DimmerBackdrop } from "../../../ui/modal/Dimmer";
-import { Radio } from "../../../ui/radio/Radio";
 import { RipplePressable } from "../../../ui/ripple-pressable/RipplePressable";
 import { Text } from "../../../ui/text/Text";
+import { TextField } from "../../../ui/textfield/TextField";
 import { TranscriptionModeSelector } from "../../settings/model-card/ModelCard";
 
 import {
@@ -118,6 +128,10 @@ const OVERSHOOT_PAD = 120;
 const SNAPSHOT_DELAY_MS = 700;
 const ANDROID_FOOTER_HANDOFF_MS = 150;
 const FOOTER_RETURN_MS = 150;
+// Gap between the status bar and the panel grown for search.
+const SEARCH_TOP_GAP = 6;
+const SEARCH_FIELD_GAP = 24;
+const PAGE_GAP = 32;
 
 const ARC_PATH = Skia.Path.MakeFromSVGString(GRABBER_ARC_SVG)!;
 const PILL_PATH = Skia.Path.MakeFromSVGString(GRABBER_PILL_SVG)!;
@@ -198,6 +212,10 @@ export const TranscriptionSettingsSheet = ({
   const hasSeenLargerModelSuggestion = useHasSeenLargerModelSuggestion();
   const showLargerModelSuggestion = useShowLargerModelSuggestion();
 
+  const keyboardHeight = useKeyboardHeight();
+  const search = useLanguageSearch();
+  const [pinnedCode, setPinnedCode] = useState(selectedLanguage.code);
+
   const ownMotion = usePanelMotion();
   const m = motion ?? ownMotion;
   const [page, setPage] = useState<"main" | "language">("main");
@@ -211,7 +229,9 @@ export const TranscriptionSettingsSheet = ({
   const footerOpacity = useSharedValue(1);
   const languageOpacity = useSharedValue(0);
   const mainHeight = useSharedValue(0);
-  const heightsRef = useRef({ main: 0, language: 0 });
+  // `rest` is the language page's height without search.
+  const heightsRef = useRef({ main: 0, language: 0, rest: 0 });
+  const extraTargetRef = useRef(0);
   const [pagesHeight, setPagesHeight] = useState(0);
   // Some Android devices give the Modal window a different (and at first
   // changing) bottom edge than the app's, so what must line up with the app
@@ -236,7 +256,7 @@ export const TranscriptionSettingsSheet = ({
   // iOS can't present the suggestion modal while this one is still dismissing.
   const afterDismissRef = useRef<(() => void) | null>(null);
   const savingRef = useRef(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
 
   // The Modal itself never fades: the footer must stay crisp while it swaps
   // with the global controls. It unmounts once the dimmer has faded and the
@@ -268,7 +288,7 @@ export const TranscriptionSettingsSheet = ({
     key: string;
   } | null>(null);
   const [settled, setSettled] = useState(false);
-  const contentKey = `${page}|${selectedModelId}|${selectedMode}|${selectedLanguage.code}|${colors.surfaceBackground}|${loc.spokenLanguageTitle}|${windowWidth}`;
+  const contentKey = `${page}|${search.searching}|${selectedModelId}|${selectedMode}|${selectedLanguage.code}|${colors.surfaceBackground}|${loc.spokenLanguageTitle}|${windowWidth}`;
   // A scrolled list no longer matches its snapshot; retake once it rests.
   const clearSnapshot = () => setSnapshot(null);
 
@@ -280,7 +300,9 @@ export const TranscriptionSettingsSheet = ({
   );
 
   useEffect(() => {
-    if (!settled || !shown || snapshot?.key === contentKey) return;
+    // The keyboard is up while searching, so the panel closes unblurred.
+    if (!settled || !shown || search.searching || snapshot?.key === contentKey)
+      return;
     // Let page transitions finish first.
     const timer = setTimeout(() => {
       if (!pagesRef.current) return;
@@ -290,7 +312,7 @@ export const TranscriptionSettingsSheet = ({
       );
     }, SNAPSHOT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [settled, shown, contentKey, snapshot?.key]);
+  }, [settled, shown, search.searching, contentKey, snapshot?.key]);
 
   // Android draws the footer copy's Skia gradient a few frames after the
   // window shows: keep the global controls, unblurred, under it until then.
@@ -310,15 +332,19 @@ export const TranscriptionSettingsSheet = ({
     return () => clearTimeout(timer);
   }, [shown, visible, handedOff, onFooterShownChange]);
 
+  const resetSearch = search.reset;
   const resetPages = useCallback(() => {
     expandPendingRef.current = false;
+    heightsRef.current.language = 0;
+    heightsRef.current.rest = 0;
+    resetSearch();
     setPage("main");
     setLanguageMounted(false);
     m.expand.set(0);
     mainOpacity.set(1);
     footerOpacity.set(1);
     languageOpacity.set(0);
-  }, [m, mainOpacity, footerOpacity, languageOpacity]);
+  }, [m, mainOpacity, footerOpacity, languageOpacity, resetSearch]);
 
   useLayoutEffect(() => {
     // The target is written by gestures on the UI thread; check it there.
@@ -332,6 +358,7 @@ export const TranscriptionSettingsSheet = ({
       anim.start();
       return () => anim.stop();
     }
+    Keyboard.dismiss();
     footerOpacity.set(withTiming(1, { duration: FOOTER_RETURN_MS }));
   }, [visible, m, fadeAnim, footerOpacity]);
 
@@ -377,12 +404,29 @@ export const TranscriptionSettingsSheet = ({
   };
   useEffect(syncTravel, [homeBottom, m]);
 
+  const searchPageHeight = windowBottom - insets.top - SEARCH_TOP_GAP - 1;
+
+  // The language page resizes in place while search opens or closes.
+  const resizeLanguagePage = (height: number) => {
+    const extra = height - heightsRef.current.main;
+    if (extra === extraTargetRef.current) return;
+    extraTargetRef.current = extra;
+    m.extra.set(withSpring(extra, EXPAND_SPRING));
+  };
+
   const measure = (key: "main" | "language") => (e: LayoutChangeEvent) => {
     const heights = heightsRef.current;
+    const resized = key === "language" && heights.language > 0;
     heights[key] = e.nativeEvent.layout.height;
+    if (key === "language" && !search.searching)
+      heights.rest = heights.language;
     mainHeight.set(heights.main);
     syncTravel();
-    m.extra.set(heights.language ? heights.language - heights.main : 0);
+    const extra = heights.language ? heights.language - heights.main : 0;
+    if (extra !== extraTargetRef.current) {
+      extraTargetRef.current = extra;
+      m.extra.set(resized ? withSpring(extra, EXPAND_SPRING) : extra);
+    }
     setPagesHeight(Math.max(heights.main, heights.language));
     if (key === "language" && expandPendingRef.current) {
       expandPendingRef.current = false;
@@ -391,6 +435,8 @@ export const TranscriptionSettingsSheet = ({
   };
 
   const openLanguage = () => {
+    setPinnedCode(selectedLanguage.code);
+    resetSearch();
     setPage("language");
     mainOpacity.set(
       withTiming(0, {
@@ -410,11 +456,27 @@ export const TranscriptionSettingsSheet = ({
     }
   };
 
+  // Grows or shrinks right away instead of waiting for the relayout.
+  const openSearch = () => {
+    if (search.open()) resizeLanguagePage(searchPageHeight);
+  };
+  const closeSearch = () => {
+    if (search.close() && heightsRef.current.rest) {
+      resizeLanguagePage(heightsRef.current.rest);
+    }
+  };
+
   const back = () => {
     const t = LANGUAGE_MOTION.back;
     expandPendingRef.current = false;
     setPage("main");
-    languageOpacity.set(withTiming(0, { duration: t.listFadeOut }));
+    Keyboard.dismiss();
+    // Keeps the search results until they've faded out.
+    languageOpacity.set(
+      withTiming(0, { duration: t.listFadeOut }, (finished) => {
+        if (finished) scheduleOnRN(resetSearch);
+      }),
+    );
     m.expand.set(withDelay(t.collapseDelay, withSpring(0, EXPAND_SPRING)));
     mainOpacity.set(
       withDelay(t.mainFadeDelay, withTiming(1, { duration: t.mainFade })),
@@ -449,13 +511,13 @@ export const TranscriptionSettingsSheet = ({
     if (language.code !== selectedLanguage.code) {
       void Haptics.selectionAsync();
       savingRef.current = true;
-      try {
-        await setLanguage(language);
-      } catch {
-        return;
-      } finally {
-        savingRef.current = false;
-      }
+      // No try/finally: React Compiler can't compile it.
+      const saved = await setLanguage(language).then(
+        () => true,
+        () => false,
+      );
+      savingRef.current = false;
+      if (!saved) return;
       if (
         shouldSuggestLargerModel(language.code, selectedModelId) &&
         !hasSeenLargerModelSuggestion
@@ -519,8 +581,15 @@ export const TranscriptionSettingsSheet = ({
 
   const modelInfo = getModelInfo(selectedModelId);
   const languages = useMemo(
-    () => SupportedLanguages.forCodes(modelInfo.supportedLanguageCodes),
-    [modelInfo.supportedLanguageCodes],
+    () =>
+      SupportedLanguages.pickerOrder(
+        SupportedLanguages.search(
+          SupportedLanguages.forCodes(modelInfo.supportedLanguageCodes),
+          search.query,
+        ),
+        pinnedCode,
+      ),
+    [modelInfo.supportedLanguageCodes, search.query, pinnedCode],
   );
   const hidden = (p: "main" | "language") =>
     page !== p
@@ -589,7 +658,12 @@ export const TranscriptionSettingsSheet = ({
       onLayout={measure("language")}
       style={[
         styles.page,
-        { paddingBottom: bottomInset + FOOTER_GAP },
+        search.searching
+          ? {
+              height: searchPageHeight,
+              paddingBottom: Math.max(keyboardHeight, bottomInset) + FOOTER_GAP,
+            }
+          : { paddingBottom: bottomInset + FOOTER_GAP },
         languageStyle,
       ]}
     >
@@ -622,36 +696,73 @@ export const TranscriptionSettingsSheet = ({
             >
               {loc.spokenLanguageTitle}
             </Text>
-            <View style={styles.headerSide} />
+            <RipplePressable
+              testID={
+                search.searching
+                  ? TestID.LanguageSearchClose
+                  : TestID.LanguageSearchOpen
+              }
+              onPress={search.searching ? closeSearch : openSearch}
+              hitSlop={10}
+              rippleColor={colors.ripple}
+              borderless
+              accessibilityRole="button"
+              accessibilityLabel={
+                search.searching ? loc.close : loc.searchLanguage
+              }
+              style={styles.headerSide}
+            >
+              <Icon
+                name={search.searching ? "close" : "search"}
+                size={24}
+                color={colors.textPrimary}
+              />
+            </RipplePressable>
           </View>
         </View>
       </GestureDetector>
+      {search.searching && (
+        <Reanimated.View
+          entering={FadeIn.duration(FADE_MS)}
+          exiting={FadeOut.duration(FADE_MS)}
+          style={styles.searchField}
+        >
+          <TextField
+            value={search.query}
+            onChangeText={search.setQuery}
+            variant="outlined"
+            iconLeading="search"
+            showClearIcon
+            autoFocus
+            debounceTime={0}
+            accessibilityLabel={loc.searchLanguage}
+          />
+        </Reanimated.View>
+      )}
       <FlatList
         data={languages}
         keyExtractor={(language) => language.code}
         initialNumToRender={LANGUAGE_ROWS_FIRST_RENDER}
-        style={{
-          maxHeight: Math.min(LANGUAGE_LIST_HEIGHT, windowHeight * 0.5),
-        }}
+        windowSize={LANGUAGE_LIST_WINDOW}
+        style={
+          search.searching
+            ? styles.fill
+            : { maxHeight: Math.min(LANGUAGE_LIST_HEIGHT, windowHeight * 0.5) }
+        }
         contentContainerStyle={styles.languageList}
+        ListEmptyComponent={<NoLanguagesFound />}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={clearSnapshot}
         onScrollEndDrag={clearSnapshot}
         onMomentumScrollEnd={clearSnapshot}
         renderItem={({ item: language }) => (
-          <ListItem
+          <LanguageListItem
             testID={dynamicTestID.language(language.code)}
-            title={language.name}
-            iconLeading={<FlagIcon name={getCountryCode(language)} size={24} />}
-            iconTrailing={
-              <Radio<string>
-                value={language.code}
-                size="small"
-                groupValue={selectedLanguage.code}
-                onValueChange={() => handleSelectLanguage(language)}
-              />
-            }
-            onPress={() => handleSelectLanguage(language)}
+            language={language}
+            selected={language.code === selectedLanguage.code}
+            onSelect={handleSelectLanguage}
           />
         )}
       />
@@ -666,7 +777,9 @@ export const TranscriptionSettingsSheet = ({
       onShow={() => setShown(true)}
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={page === "language" ? back : onDismiss}
+      onRequestClose={
+        search.searching ? closeSearch : page === "language" ? back : onDismiss
+      }
       onDismiss={runAfterDismiss}
       supportedOrientations={["portrait", "portrait-upside-down", "landscape"]}
     >
@@ -773,7 +886,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    gap: 32,
+    gap: PAGE_GAP,
   },
   // Space for the grabber; MorphingGrabber draws it on top.
   grabberSpace: {
@@ -812,6 +925,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
+  },
+  searchField: {
+    paddingHorizontal: 16,
+    marginBottom: SEARCH_FIELD_GAP - PAGE_GAP,
   },
   languageList: {
     paddingHorizontal: 16,

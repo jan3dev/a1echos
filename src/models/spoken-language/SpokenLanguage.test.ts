@@ -135,19 +135,58 @@ describe("SpokenLanguage", () => {
         await i18n.changeLanguage("en");
       }
     });
+
+    it("ignores Latin accents", async () => {
+      await i18n.changeLanguage("es");
+      try {
+        const spanish = SupportedLanguages.forCodes(["ar", "es"]);
+        const codes = (query: string) =>
+          SupportedLanguages.search(spanish, query).map((l) => l.code);
+        expect(codes("arabe")).toEqual(["ar"]);
+        expect(codes("ESPANOL")).toEqual(["es"]);
+        expect(codes("Español")).toEqual(["es"]);
+      } finally {
+        await i18n.changeLanguage("en");
+      }
+    });
+
+    it("returns the same objects per app language, so rows can memoize", () => {
+      expect(SupportedLanguages.forCodes(["en"])[0]).toBe(
+        SupportedLanguages.findByCode("en"),
+      );
+    });
   });
 
-  describe("pinFirst", () => {
-    it("moves the language to the front without mutating the input", () => {
+  describe("pickerOrder", () => {
+    it("puts the language first, then A to Z, without mutating the input", () => {
       const languages = [
-        { code: "en", name: "English" },
         { code: "fr", name: "French" },
+        { code: "en", name: "English" },
         { code: "de", name: "German" },
+        { code: "ar", name: "Arabic" },
       ];
       expect(
-        SupportedLanguages.pinFirst(languages, "fr").map((l) => l.code),
-      ).toEqual(["fr", "en", "de"]);
-      expect(languages.map((l) => l.code)).toEqual(["en", "fr", "de"]);
+        SupportedLanguages.pickerOrder(languages, "fr").map((l) => l.code),
+      ).toEqual(["fr", "ar", "en", "de"]);
+      expect(languages.map((l) => l.code)).toEqual(["fr", "en", "de", "ar"]);
+    });
+
+    it("sorts by the names in the current app language", async () => {
+      const codes = ["ar", "de", "en"].map((code) =>
+        SupportedLanguages.findByCode(code)!,
+      );
+      try {
+        await i18n.changeLanguage("es");
+        // Árabe, Alemán, Inglés collate as Alemán, Árabe, Inglés.
+        expect(
+          SupportedLanguages.pickerOrder(codes, "en").map((l) => l.code),
+        ).toEqual(["en", "de", "ar"]);
+        expect(
+          SupportedLanguages.pickerOrder(codes, "xx").map((l) => l.code),
+        ).toEqual(["de", "ar", "en"]);
+      } finally {
+        await i18n.changeLanguage("en");
+      }
     });
   });
 

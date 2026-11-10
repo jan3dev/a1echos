@@ -122,7 +122,7 @@
   "spokenLanguageDescription": "Choose the language you're speaking in. Echos uses this to transcribe more accurately.",
   "searchLanguage": "Search Language",
   "noLanguagesFoundTitle": "No Languages Found",
-  "noLanguagesFoundDescription": "We couldn’t find “{{query}}”. Check the spelling and try again.",
+  "noLanguagesFoundDescription": "Try another spelling, or the English name of the language.",
   "microphoneAccessRequiredTitle": "Microphone Access Required",
   "microphoneAccessRequiredMessageAndroid": "Echos needs access to your microphone to record audio. Please grant permission to continue.",
   "microphoneAccessDeniedMessage": "You have permanently denied microphone access. Please enable it in Settings to use recording features.",

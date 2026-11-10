@@ -22,7 +22,6 @@ jest.mock("@/hooks", () => ({
 }));
 
 jest.mock("@/models", () => ({
-  getCountryCode: (lang: any) => lang.code,
   getModelInfo: () => ({ supportedLanguageCodes: ["en", "es"] }),
   SupportedLanguages: {
     forCodes: () => [
@@ -36,25 +35,19 @@ jest.mock("@/stores", () => ({
   useSelectedModelId: () => "whisper_tiny",
 }));
 
-let mockRadioGroup: string | undefined;
+let mockSelected: string | undefined;
 jest.mock("@/components", () => {
   const { Pressable, View } = require("react-native");
   const Pass = ({ children }: any) => <View>{children}</View>;
   return {
     AppBarBlurTarget: Pass,
     Screen: Pass,
-    FlagIcon: () => null,
-    ListItem: (props: any) => (
-      <Pressable testID={props.testID} onPress={props.onPress}>
-        {props.iconTrailing}
-      </Pressable>
-    ),
-    Radio: (props: any) => {
-      mockRadioGroup = props.groupValue;
+    LanguageListItem: (props: any) => {
+      if (props.selected) mockSelected = props.language.code;
       return (
         <Pressable
-          testID={`radio-${props.value}`}
-          onPress={props.onValueChange}
+          testID={props.testID}
+          onPress={() => props.onSelect(props.language)}
         />
       );
     },
@@ -67,10 +60,10 @@ describe("TranscriptionLanguageScreen", () => {
 
   it("marks the current language and returns the picked one to the editor", () => {
     const { getByTestId } = render(<TranscriptionLanguageScreen />);
-    expect(mockRadioGroup).toBe("en");
+    expect(mockSelected).toBe("en");
 
     fireEvent.press(getByTestId(dynamicTestID.language("es")));
-    fireEvent.press(getByTestId("radio-en"));
+    fireEvent.press(getByTestId(dynamicTestID.language("en")));
 
     expect(mockDismissTo).toHaveBeenNthCalledWith(
       1,

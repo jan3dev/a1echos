@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Keyboard, ScrollView, StyleSheet, View } from "react-native";
+import { useMemo, useState } from "react";
+import { FlatList, Keyboard, StyleSheet, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { SystemBars } from "react-native-edge-to-edge";
 import {
   useSafeAreaFrame,
@@ -7,20 +8,25 @@ import {
 } from "react-native-safe-area-context";
 
 import { dynamicTestID } from "@/constants";
-import { useKeyboardHeight, useLocalization } from "@/hooks";
-import { getCountryCode, SpokenLanguage, SupportedLanguages } from "@/models";
+import {
+  LANGUAGE_LIST_WINDOW,
+  SEARCH_FADE_MS,
+  useKeyboardHeight,
+  useLanguageSearch,
+  useLocalization,
+} from "@/hooks";
+import { SpokenLanguage, SupportedLanguages } from "@/models";
 import { darkColors, spacing } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
-import { FlagIcon } from "../../../ui/icon/FlagIcon";
-import { Radio } from "../../../ui/radio/Radio";
 import { Text } from "../../../ui/text/Text";
 import { TextField } from "../../../ui/textfield/TextField";
-import { ListItem } from "../../../shared/list-item/ListItem";
+import { LanguageListItem } from "../../../shared/language-list-item/LanguageListItem";
 import { NoLanguagesFound } from "../../../shared/no-languages-found/NoLanguagesFound";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
 const SPOKEN_LANGUAGE_STEP = 3;
+const LANGUAGE_ROWS_FIRST_RENDER = 12;
 
 export interface SpokenLanguageScreenProps {
   languages: SpokenLanguage[];
@@ -49,13 +55,23 @@ export const SpokenLanguageScreen = ({
   const frame = useSafeAreaFrame();
   const landscape = frame.width > frame.height;
   const { loc } = useLocalization();
-  const [query, setQuery] = useState("");
+  const search = useLanguageSearch();
   // Pinned at mount so the list doesn't reorder on each pick.
   const [pinnedCode] = useState(selectedCode);
-  const results = SupportedLanguages.pinFirst(
-    SupportedLanguages.search(languages, query),
-    pinnedCode,
+  const { query } = search;
+  // Keyed on primitives so toggling search doesn't re-render every row.
+  const results = useMemo(
+    () =>
+      SupportedLanguages.pickerOrder(
+        SupportedLanguages.search(languages, query),
+        pinnedCode,
+      ),
+    [languages, query, pinnedCode],
   );
+  const select = (language: SpokenLanguage) => {
+    Keyboard.dismiss();
+    onSelect(language);
+  };
   const childTestID = (suffix: string) =>
     testID ? `${testID}-${suffix}` : undefined;
 
@@ -66,6 +82,11 @@ export const SpokenLanguageScreen = ({
         step={SPOKEN_LANGUAGE_STEP}
         onBack={onBack}
         onSkip={onSkip}
+        search={{
+          active: search.searching,
+          onOpen: search.open,
+          onClose: () => search.close(),
+        }}
         testID={testID}
       />
 
@@ -73,72 +94,74 @@ export const SpokenLanguageScreen = ({
         style={[
           styles.content,
           {
-            paddingTop: landscape ? spacing.sm : spacing.xl,
-            paddingBottom: Math.max(keyboardHeight, insets.bottom) + spacing.md,
+            paddingTop: landscape
+              ? spacing.sm
+              : search.searching
+                ? spacing.md
+                : spacing.xl,
+            gap: search.searching ? spacing.lg : spacing.xl,
+            // Next stays put under the keyboard; the list scrolls clear of it.
+            paddingBottom: insets.bottom + spacing.md,
             paddingLeft: insets.left + spacing.md,
             paddingRight: insets.right + spacing.md,
           },
         ]}
       >
-        <Text
-          variant="h4"
-          weight="medium"
-          align="center"
-          color={darkColors.textPrimary}
-          style={styles.title}
+        <Animated.View
+          key={search.searching ? "search" : "title"}
+          entering={FadeIn.duration(SEARCH_FADE_MS)}
+          exiting={FadeOut.duration(SEARCH_FADE_MS)}
+          style={search.searching ? undefined : styles.title}
         >
-          {loc.onboardingSpokenLanguageTitle}
-        </Text>
+          {search.searching ? (
+            <TextField
+              value={search.query}
+              onChangeText={search.setQuery}
+              variant="outlined"
+              iconLeading="search"
+              showClearIcon
+              autoFocus
+              debounceTime={0}
+              accessibilityLabel={loc.searchLanguage}
+              colors={darkColors}
+            />
+          ) : (
+            <Text
+              variant="h4"
+              weight="medium"
+              align="center"
+              color={darkColors.textPrimary}
+            >
+              {loc.onboardingSpokenLanguageTitle}
+            </Text>
+          )}
+        </Animated.View>
 
-        <TextField
-          label={loc.searchLanguage}
-          value={query}
-          onChangeText={setQuery}
-          variant="outlined"
-          showClearIcon
-          debounceTime={0}
-          colors={darkColors}
-        />
-
-        <ScrollView
+        <FlatList
+          data={results}
+          keyExtractor={(language) => language.code}
+          initialNumToRender={LANGUAGE_ROWS_FIRST_RENDER}
+          windowSize={LANGUAGE_LIST_WINDOW}
           style={styles.scroll}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: keyboardHeight },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-        >
-          {results.length === 0 && (
-            <NoLanguagesFound query={query} colors={darkColors} />
+          ListEmptyComponent={<NoLanguagesFound colors={darkColors} />}
+          renderItem={({ item: language }) => (
+            <LanguageListItem
+              testID={childTestID(dynamicTestID.language(language.code))}
+              language={language}
+              selected={language.code === selectedCode}
+              enabled={!isSaving}
+              onSelect={select}
+              colors={darkColors}
+            />
           )}
-          {results.map((language) => {
-            const select = () => {
-              Keyboard.dismiss();
-              onSelect(language);
-            };
-            return (
-              <ListItem
-                key={language.code}
-                testID={childTestID(dynamicTestID.language(language.code))}
-                title={language.name}
-                colors={darkColors}
-                iconLeading={
-                  <FlagIcon name={getCountryCode(language)} size={24} />
-                }
-                iconTrailing={
-                  <Radio<string>
-                    value={language.code}
-                    size="small"
-                    groupValue={selectedCode}
-                    onValueChange={select}
-                    enabled={!isSaving}
-                    colors={darkColors}
-                  />
-                }
-                onPress={isSaving ? undefined : select}
-              />
-            );
-          })}
-        </ScrollView>
+        />
 
         <Button.primary
           testID={childTestID("next")}
@@ -159,7 +182,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     minHeight: 0,
-    gap: spacing.xl,
   },
   title: {
     flexShrink: 0,

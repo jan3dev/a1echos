@@ -114,7 +114,7 @@
   "spokenLanguageDescription": "Pilih bahasa yang Anda gunakan saat berbicara. Echos menggunakannya untuk mentranskripsi dengan lebih akurat.",
   "searchLanguage": "Cari Bahasa",
   "noLanguagesFoundTitle": "Bahasa Tidak Ditemukan",
-  "noLanguagesFoundDescription": "Kami tidak dapat menemukan “{{query}}”. Periksa ejaannya dan coba lagi.",
+  "noLanguagesFoundDescription": "Coba ejaan lain, atau nama bahasa dalam bahasa Inggris.",
   "microphoneAccessRequiredTitle": "Akses Mikrofon Diperlukan",
   "microphoneAccessRequiredMessageAndroid": "Echos memerlukan akses ke mikrofon untuk merekam audio. Berikan izin untuk melanjutkan.",
   "microphoneAccessDeniedMessage": "Anda telah menolak akses mikrofon secara permanen. Aktifkan di Pengaturan untuk menggunakan fitur rekaman.",

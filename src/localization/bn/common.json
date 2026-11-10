@@ -122,7 +122,7 @@
   "spokenLanguageDescription": "আপনি যে ভাষায় কথা বলছেন সেটি বেছে নিন। আরও নির্ভুলভাবে ট্রান্সক্রাইব করতে Echos এটি ব্যবহার করে।",
   "searchLanguage": "ভাষা খুঁজুন",
   "noLanguagesFoundTitle": "কোনো ভাষা পাওয়া যায়নি",
-  "noLanguagesFoundDescription": "“{{query}}” খুঁজে পাওয়া যায়নি। বানান যাচাই করে আবার চেষ্টা করুন।",
+  "noLanguagesFoundDescription": "অন্য বানান চেষ্টা করুন, অথবা ভাষাটির ইংরেজি নাম লিখুন।",
   "microphoneAccessRequiredTitle": "মাইক্রোফোন অ্যাক্সেস প্রয়োজন",
   "microphoneAccessRequiredMessageAndroid": "অডিও রেকর্ড করতে Echos-এর আপনার মাইক্রোফোন অ্যাক্সেস প্রয়োজন। চালিয়ে যেতে অনুমতি দিন।",
   "microphoneAccessDeniedMessage": "আপনি মাইক্রোফোন অ্যাক্সেস স্থায়ীভাবে প্রত্যাখ্যান করেছেন। রেকর্ডিং ফিচার ব্যবহার করতে সেটিংসে এটি চালু করুন।",

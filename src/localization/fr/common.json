@@ -130,7 +130,7 @@
   "spokenLanguageDescription": "Choisissez la langue dans laquelle vous parlez. Echos l’utilise pour transcrire plus précisément.",
   "searchLanguage": "Rechercher une langue",
   "noLanguagesFoundTitle": "Aucune langue trouvée",
-  "noLanguagesFoundDescription": "Aucun résultat pour « {{query}} ». Vérifiez l’orthographe et réessayez.",
+  "noLanguagesFoundDescription": "Essayez une autre orthographe, ou le nom anglais de la langue.",
   "microphoneAccessRequiredTitle": "Accès au micro requis",
   "microphoneAccessRequiredMessageAndroid": "Echos a besoin d’accéder à votre micro pour enregistrer de l’audio. Accordez l’autorisation pour continuer.",
   "microphoneAccessDeniedMessage": "Vous avez définitivement refusé l’accès au micro. Activez-le dans les Réglages pour utiliser l’enregistrement.",

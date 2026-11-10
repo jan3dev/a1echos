@@ -27,6 +27,8 @@ export enum TestID {
   TranscriptionSettingsLanguage = "transcription-settings-language",
   TranscriptionSettingsBack = "transcription-settings-back",
   TranscriptionSettingsHandle = "transcription-settings-handle",
+  LanguageSearchOpen = "language-search-open",
+  LanguageSearchClose = "language-search-close",
   RecordingControlsView = "recording-controls-view",
   BtnStart = "btn-start",
   BtnStop = "btn-stop",

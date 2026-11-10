@@ -1,6 +1,8 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { TextInput } from "react-native";
 import { useSafeAreaFrame } from "react-native-safe-area-context";
 
+import { SEARCH_MOTION_MS } from "@/hooks/use-language-search/useLanguageSearch";
 import { darkColors } from "@/theme";
 
 import {
@@ -72,21 +74,40 @@ describe("SpokenLanguageScreen", () => {
     expect(names()).toEqual(["Portuguese", "English"]);
   });
 
-  it("filters by the search query and restores the list when cleared", () => {
-    const { getByLabelText, getByText, queryByText, getByTestId } =
-      renderScreen();
-    const search = getByLabelText("searchLanguage");
+  it("search replaces the title and filters; inner x clears and keeps it open", () => {
+    const utils = renderScreen();
+    const { getByText, queryByText, getByTestId, getByLabelText } = utils;
+    fireEvent.press(getByTestId("sl-search"));
+    expect(queryByText("onboardingSpokenLanguageTitle")).toBeNull();
+    const field = utils.UNSAFE_getByType(TextInput);
 
-    fireEvent.changeText(search, "port");
+    fireEvent.changeText(field, "port");
     expect(queryByText("English")).toBeNull();
     expect(getByText("Portuguese")).toBeTruthy();
 
-    fireEvent.changeText(search, "Klingon");
+    fireEvent.changeText(field, "Klingon");
     expect(getByTestId("no-languages-found")).toBeTruthy();
 
     fireEvent.press(getByLabelText("clearText"));
     expect(getByText("English")).toBeTruthy();
     expect(getByText("Portuguese")).toBeTruthy();
+    expect(utils.UNSAFE_getByType(TextInput)).toBeTruthy();
+  });
+
+  it("skip becomes the close button while searching and comes back after", () => {
+    const { getByTestId, queryByTestId, getByText, props } = renderScreen();
+    fireEvent.press(getByTestId("sl-search"));
+    expect(queryByTestId("sl-skip")).toBeNull();
+
+    // Ignored while the open animation runs.
+    fireEvent.press(getByTestId("sl-close-search"));
+    expect(queryByTestId("sl-skip")).toBeNull();
+
+    jest.advanceTimersByTime(SEARCH_MOTION_MS);
+    fireEvent.press(getByTestId("sl-close-search"));
+    expect(getByTestId("sl-skip")).toBeTruthy();
+    expect(getByText("onboardingSpokenLanguageTitle")).toBeTruthy();
+    expect(props.onSkip).not.toHaveBeenCalled();
   });
 
   it("wires back, skip and next", () => {

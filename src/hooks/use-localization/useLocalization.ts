@@ -106,8 +106,7 @@ export const useLocalization = () => {
       spokenLanguageDescription: t("spokenLanguageDescription"),
       searchLanguage: t("searchLanguage"),
       noLanguagesFoundTitle: t("noLanguagesFoundTitle"),
-      noLanguagesFoundDescription: (query: string) =>
-        t("noLanguagesFoundDescription", { query }),
+      noLanguagesFoundDescription: t("noLanguagesFoundDescription"),
       auto: t("auto"),
       light: t("light"),
       dark: t("dark"),

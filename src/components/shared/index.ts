@@ -2,6 +2,7 @@ export * from "./ambient-glow";
 export * from "./biometric-lock";
 export * from "./error-view";
 export * from "./info-sheet";
+export * from "./language-list-item";
 export * from "./list-item";
 export * from "./no-languages-found";
 export * from "./option-picker-screen";

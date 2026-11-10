@@ -2,6 +2,8 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { TestID } from "@/constants";
+
 import LanguageSettingsScreen from "./language";
 
 // --- Mocks ---
@@ -46,10 +48,12 @@ jest.mock("@/hooks", () => ({
     onLayout: jest.fn(),
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useLanguageSearch: jest.requireActual(
+    "@/hooks/use-language-search/useLanguageSearch",
+  ).useLanguageSearch,
 }));
 
 jest.mock("@/models", () => ({
-  getCountryCode: jest.fn((lang: any) => `flag_${lang.code}`),
   getModelInfo: jest.fn(() => ({ supportedLanguageCodes: undefined })),
   ModelId: { WHISPER_TINY: "whisper_tiny" },
   shouldSuggestLargerModel: jest.requireActual(
@@ -62,8 +66,8 @@ jest.mock("@/models", () => ({
     forCodes: jest.fn(() => mockLanguages),
     search: jest.requireActual("@/models/spoken-language/SpokenLanguage")
       .SupportedLanguages.search,
-    pinFirst: jest.requireActual("@/models/spoken-language/SpokenLanguage")
-      .SupportedLanguages.pinFirst,
+    pickerOrder: jest.requireActual("@/models/spoken-language/SpokenLanguage")
+      .SupportedLanguages.pickerOrder,
     defaultLanguage: { code: "en", name: "English" },
   },
 }));
@@ -80,9 +84,21 @@ jest.mock("@/stores", () => ({
 
 jest.mock("@/utils", () => ({
   delay: jest.fn(() => Promise.resolve()),
+  iosPressed: jest.fn(() => 1),
   logError: jest.fn(),
   FeatureFlag: { settings: "settings" },
 }));
+
+jest.mock("@/components/ui/ripple-pressable/RipplePressable", () => {
+  const { TouchableOpacity } = require("react-native");
+  return {
+    RipplePressable: ({ children, testID, onPress }: any) => (
+      <TouchableOpacity testID={testID} onPress={onPress}>
+        {children}
+      </TouchableOpacity>
+    ),
+  };
+});
 
 jest.mock("@/components", () => {
   const { View, Text, TouchableOpacity } = require("react-native");
@@ -91,27 +107,24 @@ jest.mock("@/components", () => {
     AppBarBlurTarget: ({ children }: any) => <View>{children}</View>,
     Card: ({ children }: any) => <View testID={TID.Card}>{children}</View>,
     Divider: () => <View testID={TID.Divider} />,
-    FlagIcon: ({ name }: any) => <View testID={dTID.flagIcon(name)} />,
-    ListItem: ({ title, onPress, iconTrailing, iconLeading }: any) => (
-      <TouchableOpacity testID={dTID.listItem(title)} onPress={onPress}>
-        {iconLeading}
-        <Text>{String(title)}</Text>
-        {iconTrailing}
-      </TouchableOpacity>
-    ),
-    Radio: ({ value, groupValue, onValueChange }: any) => (
-      <TouchableOpacity
-        testID={dTID.radio(value)}
-        onPress={() => onValueChange?.(value)}
-      >
-        <Text testID={dTID.radioSelected(value)}>
-          {value === groupValue ? "selected" : "unselected"}
-        </Text>
-      </TouchableOpacity>
-    ),
-    NoLanguagesFound: ({ query }: any) => (
-      <Text testID="no-languages-found">{query}</Text>
-    ),
+    Icon: () => null,
+    LanguageListItem: ({ language, selected, enabled, onSelect }: any) => {
+      const select = enabled ? () => onSelect(language) : undefined;
+      return (
+        <TouchableOpacity
+          testID={dTID.listItem(language.name)}
+          onPress={select}
+        >
+          <Text>{language.name}</Text>
+          <TouchableOpacity testID={dTID.radio(language.code)} onPress={select}>
+            <Text testID={dTID.radioSelected(language.code)}>
+              {selected ? "selected" : "unselected"}
+            </Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      );
+    },
+    NoLanguagesFound: () => <View testID="no-languages-found" />,
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
     TextField: ({ value, onChangeText }: any) => {
@@ -120,9 +133,10 @@ jest.mock("@/components", () => {
         <TextInput testID="search" value={value} onChangeText={onChangeText} />
       );
     },
-    TopAppBar: ({ title }: any) => (
+    TopAppBar: ({ title, actions }: any) => (
       <View testID={TID.TopAppBar}>
         <Text>{String(title)}</Text>
+        {actions}
       </View>
     ),
   };
@@ -170,19 +184,62 @@ describe("LanguageSettingsScreen", () => {
     });
   });
 
-  it("filters by the search query and restores the list when cleared", () => {
-    const { getByTestId, queryByTestId } = render(<LanguageSettingsScreen />);
+  describe("search", () => {
+    let now: number;
+    beforeEach(() => {
+      now = 0;
+      jest.spyOn(Date, "now").mockImplementation(() => now);
+    });
+    afterEach(() => jest.restoreAllMocks());
 
-    fireEvent.changeText(getByTestId("search"), "fre");
-    expect(queryByTestId("list-item-English")).toBeNull();
-    expect(getByTestId("list-item-French")).toBeTruthy();
+    const open = (utils: ReturnType<typeof render>) => {
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchOpen));
+      now += 1000;
+    };
 
-    fireEvent.changeText(getByTestId("search"), "Klingon");
-    expect(getByTestId("no-languages-found")).toHaveTextContent("Klingon");
+    it("swaps the description for the field and filters the list", () => {
+      const utils = render(<LanguageSettingsScreen />);
+      const { getByTestId, queryByTestId, queryByText } = utils;
+      expect(queryByTestId("search")).toBeNull();
 
-    fireEvent.changeText(getByTestId("search"), "");
-    expect(queryByTestId("no-languages-found")).toBeNull();
-    expect(getByTestId("list-item-Spanish")).toBeTruthy();
+      open(utils);
+      expect(queryByText("spokenLanguageDescription")).toBeNull();
+
+      fireEvent.changeText(getByTestId("search"), "fre");
+      expect(queryByTestId("list-item-English")).toBeNull();
+      expect(getByTestId("list-item-French")).toBeTruthy();
+
+      fireEvent.changeText(getByTestId("search"), "Klingon");
+      expect(getByTestId("no-languages-found")).toBeTruthy();
+
+      fireEvent.changeText(getByTestId("search"), "");
+      expect(queryByTestId("no-languages-found")).toBeNull();
+      expect(getByTestId("list-item-Spanish")).toBeTruthy();
+    });
+
+    it("x closes and clears search first, then leaves", () => {
+      const utils = render(<LanguageSettingsScreen />);
+      open(utils);
+      fireEvent.changeText(utils.getByTestId("search"), "fre");
+
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchClose));
+      expect(utils.queryByTestId("search")).toBeNull();
+      expect(utils.getByText("spokenLanguageDescription")).toBeTruthy();
+      expect(utils.getByTestId("list-item-English")).toBeTruthy();
+      expect(mockBack).not.toHaveBeenCalled();
+
+      now += 1000;
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchClose));
+      expect(mockBack).toHaveBeenCalled();
+    });
+
+    it("ignores the x while the search animation runs", () => {
+      const utils = render(<LanguageSettingsScreen />);
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchOpen));
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchClose));
+      expect(utils.getByTestId("search")).toBeTruthy();
+      expect(mockBack).not.toHaveBeenCalled();
+    });
   });
 
   it("lists the selected language first", () => {
@@ -196,13 +253,6 @@ describe("LanguageSettingsScreen", () => {
       "list-item-French",
     );
     expect(mockLanguages[0].code).toBe("en");
-  });
-
-  it("renders FlagIcon for each language", () => {
-    const { getByTestId } = render(<LanguageSettingsScreen />);
-    expect(getByTestId("flag-icon-flag_en")).toBeTruthy();
-    expect(getByTestId("flag-icon-flag_es")).toBeTruthy();
-    expect(getByTestId("flag-icon-flag_fr")).toBeTruthy();
   });
 
   it("handles error when setLanguage fails", async () => {
