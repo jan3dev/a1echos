@@ -71,6 +71,9 @@ interface UIStore {
   largerModelSuggestionVisible: boolean;
   showLargerModelSuggestion: () => void;
   hideLargerModelSuggestion: () => void;
+  omnilingualDownloadVisible: boolean;
+  showOmnilingualDownload: () => void;
+  hideOmnilingualDownload: () => void;
 
   setRecordingControlsEnabled: (enabled: boolean) => void;
   setRecordingControlsVisible: (visible: boolean) => void;
@@ -177,6 +180,14 @@ export const useUIStore = create<UIStore>((set, get) => ({
 
   hideLargerModelSuggestion: () => {
     set({ largerModelSuggestionVisible: false });
+  },
+
+  omnilingualDownloadVisible: false,
+  showOmnilingualDownload: () => {
+    set({ omnilingualDownloadVisible: true });
+  },
+  hideOmnilingualDownload: () => {
+    set({ omnilingualDownloadVisible: false });
   },
 
   setRecordingControlsEnabled: (enabled: boolean) => {
@@ -385,5 +396,11 @@ export const useShowLargerModelSuggestion = () =>
   useUIStore((s) => s.showLargerModelSuggestion);
 export const useHideLargerModelSuggestion = () =>
   useUIStore((s) => s.hideLargerModelSuggestion);
+export const useOmnilingualDownloadVisible = () =>
+  useUIStore((s) => s.omnilingualDownloadVisible);
+export const useShowOmnilingualDownload = () =>
+  useUIStore((s) => s.showOmnilingualDownload);
+export const useHideOmnilingualDownload = () =>
+  useUIStore((s) => s.hideOmnilingualDownload);
 
 export default useUIStore;

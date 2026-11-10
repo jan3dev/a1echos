@@ -22,6 +22,8 @@ export interface ModelInfo {
   languages: number;
   /** Language codes supported by this model. Undefined means all languages in SupportedLanguages. */
   supportedLanguageCodes?: string[];
+  /** Left out of the model list until downloaded; reached via language search. */
+  isHidden?: boolean;
 }
 
 /** The 99 language codes Whisper supports, plus the zh-hant UI variant. */
@@ -302,6 +304,25 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
     ],
     languages: 1,
     supportedLanguageCodes: ["en"],
+  },
+  // Detects the spoken language itself, so the language setting doesn't
+  // apply. File only: with no language model, it needs the 20s windows'
+  // context to recognize the language; 5s real-time chunks give too little.
+  [ModelId.OMNILINGUAL]: {
+    id: ModelId.OMNILINGUAL,
+    name: "Omnilingual",
+    sizeBytes: 365_438_543,
+    supportedModes: [TranscriptionMode.FILE],
+    isBundled: false,
+    isHidden: true,
+    downloadBaseUrl:
+      "https://huggingface.co/csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12/resolve/main",
+    sherpaModelType: "omnilingual",
+    files: [
+      { name: "model.int8.onnx", sizeBytes: 365_352_120 },
+      { name: "tokens.txt", sizeBytes: 86_423 },
+    ],
+    languages: 1650,
   },
 };
 

@@ -125,7 +125,7 @@
   "deleteConfirmMessage": "هل تريد بالتأكيد حذف {{name}}؟ يمكنك تنزيله مرة أخرى لاحقًا.",
   "downloadError": "فشل التنزيل: {{error}}",
   "insufficientSpace": "لا توجد مساحة تخزين كافية لتنزيل هذا النموذج. المطلوب {{required}}، والمتاح {{available}}. أفرغ بعض المساحة وحاول مرة أخرى.",
-  "languageCount": "عدد اللغات: {{count}}",
+  "languageCount": "عدد اللغات: {{count, number}}",
   "transcriptionModeTitle": "وضع التفريغ",
   "transcriptionSettings": "إعدادات التفريغ",
   "close": "إغلاق",
@@ -293,5 +293,14 @@
   "structureNeedsModel": "نزّل نموذج ذكاء اصطناعي لتنظيم الملاحظات.",
   "structureFailed": "فشل التنظيم",
   "structureStopped": "توقف التنظيم",
-  "stop": "إيقاف"
+  "stop": "إيقاف",
+  "availableWithOmnilingual": "متاح مع Omnilingual",
+  "omnilingualLanguagesTitle": "لغات Omnilingual",
+  "omnilingualLanguagesDescription": "يكتشف Omnilingual اللغة أثناء حديثك. ابحث بين {{count, number}} لغة للتحقق من دعم لغتك.",
+  "downloadOmnilingualTitle": "تنزيل Omnilingual؟",
+  "downloadOmnilingualIntro": "يتعرّف Omnilingual على {{count, number}} لغة ويكتشف اللغة التي تتحدث بها. يعمل دون اتصال بعد التنزيل.",
+  "downloadOmnilingualNote": "{{size}}. وضع الدقة العالية فقط حاليًا.",
+  "anyLanguage": "أي لغة",
+  "modelDescription_omnilingual": "للغات التي لا تدعمها النماذج الأخرى.",
+  "notNow": "ليس الآن"
 }

@@ -63,6 +63,10 @@ import {
 import {
   getCountryCode,
   getModelInfo,
+  isOmnilingual,
+  ModelId,
+  OmnilingualLanguage,
+  OmnilingualLanguages,
   shouldSuggestLargerModel,
   SpokenLanguage,
   SupportedLanguages,
@@ -70,18 +74,22 @@ import {
 } from "@/models";
 import {
   useHasSeenLargerModelSuggestion,
+  useIsModelDownloaded,
   useSelectedLanguage,
   useSelectedModelId,
   useSelectedTranscriptionMode,
   useSetLanguage,
+  useSetModelId,
   useSetTranscriptionMode,
   useShowLargerModelSuggestion,
+  useShowOmnilingualDownload,
 } from "@/stores";
 import { useTheme } from "@/theme";
 
 import { LanguageListItem } from "../../../shared/language-list-item/LanguageListItem";
 import { ListItem } from "../../../shared/list-item/ListItem";
 import { NoLanguagesFound } from "../../../shared/no-languages-found/NoLanguagesFound";
+import { OmnilingualLanguageListItem } from "../../../shared/omnilingual-language-list-item/OmnilingualLanguageListItem";
 import { FlagIcon } from "../../../ui/icon/FlagIcon";
 import { Icon } from "../../../ui/icon/Icon";
 import { DimmerBackdrop } from "../../../ui/modal/Dimmer";
@@ -211,6 +219,10 @@ export const TranscriptionSettingsSheet = ({
   const setLanguage = useSetLanguage();
   const hasSeenLargerModelSuggestion = useHasSeenLargerModelSuggestion();
   const showLargerModelSuggestion = useShowLargerModelSuggestion();
+  const anyLanguage = selectedModelId === ModelId.OMNILINGUAL;
+  const omnilingualDownloaded = useIsModelDownloaded(ModelId.OMNILINGUAL);
+  const setModelId = useSetModelId();
+  const showOmnilingualDownload = useShowOmnilingualDownload();
 
   const keyboardHeight = useKeyboardHeight();
   const search = useLanguageSearch();
@@ -591,6 +603,19 @@ export const TranscriptionSettingsSheet = ({
       ),
     [modelInfo.supportedLanguageCodes, search.query, pinnedCode],
   );
+  const omnilingualLanguages = useMemo(
+    () => OmnilingualLanguages.fallback(search.query),
+    [search.query],
+  );
+  const pickOmnilingual = () => {
+    if (!omnilingualDownloaded) {
+      dismissThen(showOmnilingualDownload);
+      return;
+    }
+    // The store logs and rolls back a failed save.
+    setModelId(ModelId.OMNILINGUAL).catch(() => {});
+    back();
+  };
   const hidden = (p: "main" | "language") =>
     page !== p
       ? ({
@@ -633,18 +658,24 @@ export const TranscriptionSettingsSheet = ({
           </Text>
           <ListItem
             testID={TestID.TranscriptionSettingsLanguage}
-            title={selectedLanguage.name}
+            title={anyLanguage ? loc.anyLanguage : selectedLanguage.name}
             iconLeading={
-              <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
+              anyLanguage ? (
+                <Icon name="language" size={24} color={colors.textSecondary} />
+              ) : (
+                <FlagIcon name={getCountryCode(selectedLanguage)} size={24} />
+              )
             }
             iconTrailing={
-              <Icon
-                name="chevron_right"
-                size={18}
-                color={colors.textSecondary}
-              />
+              !anyLanguage && (
+                <Icon
+                  name="chevron_right"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              )
             }
-            onPress={openLanguage}
+            onPress={anyLanguage ? undefined : openLanguage}
           />
         </View>
       </View>
@@ -739,8 +770,8 @@ export const TranscriptionSettingsSheet = ({
           />
         </Reanimated.View>
       )}
-      <FlatList
-        data={languages}
+      <FlatList<SpokenLanguage | OmnilingualLanguage>
+        data={languages.length ? languages : omnilingualLanguages}
         keyExtractor={(language) => language.code}
         initialNumToRender={LANGUAGE_ROWS_FIRST_RENDER}
         windowSize={LANGUAGE_LIST_WINDOW}
@@ -751,20 +782,36 @@ export const TranscriptionSettingsSheet = ({
         }
         contentContainerStyle={styles.languageList}
         ListEmptyComponent={<NoLanguagesFound />}
+        ListHeaderComponentStyle={styles.omnilingualHeader}
+        ListHeaderComponent={
+          omnilingualLanguages.length ? (
+            <Text variant="body2" weight="medium" color={colors.textSecondary}>
+              {loc.availableWithOmnilingual}
+            </Text>
+          ) : undefined
+        }
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         onScrollBeginDrag={clearSnapshot}
         onScrollEndDrag={clearSnapshot}
         onMomentumScrollEnd={clearSnapshot}
-        renderItem={({ item: language }) => (
-          <LanguageListItem
-            testID={dynamicTestID.language(language.code)}
-            language={language}
-            selected={language.code === selectedLanguage.code}
-            onSelect={handleSelectLanguage}
-          />
-        )}
+        renderItem={({ item: language }) =>
+          isOmnilingual(language) ? (
+            <OmnilingualLanguageListItem
+              testID={dynamicTestID.language(language.code)}
+              language={language}
+              onPress={pickOmnilingual}
+            />
+          ) : (
+            <LanguageListItem
+              testID={dynamicTestID.language(language.code)}
+              language={language}
+              selected={language.code === selectedLanguage.code}
+              onSelect={handleSelectLanguage}
+            />
+          )
+        }
       />
     </Reanimated.View>
   );
@@ -933,6 +980,10 @@ const styles = StyleSheet.create({
   languageList: {
     paddingHorizontal: 16,
     gap: 8,
+  },
+  // 16 to the rows, with their 8 gap.
+  omnilingualHeader: {
+    marginBottom: 8,
   },
   footer: {
     position: "absolute",

@@ -27,6 +27,9 @@ import {
   useLargerModelSuggestionVisible,
   useShowLargerModelSuggestion,
   useHideLargerModelSuggestion,
+  useOmnilingualDownloadVisible,
+  useShowOmnilingualDownload,
+  useHideOmnilingualDownload,
   useRecordingControlsEnabled,
   useRecordingControlsVisible,
   useOnRecordingStart,
@@ -466,6 +469,19 @@ describe("uiStore", () => {
         result.current();
       });
       expect(useUIStore.getState().largerModelSuggestionVisible).toBe(false);
+    });
+  });
+
+  describe("Omnilingual download sheet visibility", () => {
+    it("shows and hides", () => {
+      const visible = renderHook(() => useOmnilingualDownloadVisible());
+      expect(visible.result.current).toBe(false);
+      const show = renderHook(() => useShowOmnilingualDownload());
+      act(() => show.result.current());
+      expect(useUIStore.getState().omnilingualDownloadVisible).toBe(true);
+      const hide = renderHook(() => useHideOmnilingualDownload());
+      act(() => hide.result.current());
+      expect(useUIStore.getState().omnilingualDownloadVisible).toBe(false);
     });
   });
 });

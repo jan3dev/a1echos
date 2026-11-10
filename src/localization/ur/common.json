@@ -94,7 +94,7 @@
   "deleteConfirmMessage": "کیا آپ واقعی {{name}} کو حذف کرنا چاہتے ہیں؟ آپ اسے بعد میں دوبارہ ڈاؤن لوڈ کر سکتے ہیں۔",
   "downloadError": "ڈاؤن لوڈ ناکام: {{error}}",
   "insufficientSpace": "یہ ماڈل ڈاؤن لوڈ کرنے کے لیے کافی اسٹوریج نہیں ہے۔ {{required}} درکار ہے، {{available}} دستیاب ہے۔ جگہ خالی کریں اور دوبارہ کوشش کریں۔",
-  "languageCount": "{{count}} زبانیں",
+  "languageCount": "{{count, number}} زبانیں",
   "transcriptionModeTitle": "ٹرانسکرپشن موڈ",
   "transcriptionSettings": "ٹرانسکرپشن کی ترتیبات",
   "close": "بند کریں",
@@ -262,5 +262,14 @@
   "structureNeedsModel": "نوٹس ترتیب دینے کے لیے ایک AI ماڈل ڈاؤن لوڈ کریں۔",
   "structureFailed": "ترتیب دینا ناکام رہا",
   "structureStopped": "ترتیب دینا روک دیا گیا",
-  "stop": "روکیں"
+  "stop": "روکیں",
+  "availableWithOmnilingual": "Omnilingual کے ساتھ دستیاب",
+  "omnilingualLanguagesTitle": "Omnilingual کی زبانیں",
+  "omnilingualLanguagesDescription": "Omnilingual آپ کے بولتے وقت زبان پہچانتا ہے۔ اپنی زبان شامل ہے یا نہیں، یہ دیکھنے کے لیے {{count, number}} زبانوں میں تلاش کریں۔",
+  "downloadOmnilingualTitle": "Omnilingual ڈاؤن لوڈ کریں؟",
+  "downloadOmnilingualIntro": "Omnilingual {{count, number}} زبانیں پہچانتا ہے اور معلوم کرتا ہے کہ آپ کون سی زبان بول رہے ہیں۔ ڈاؤن لوڈ کے بعد آف لائن کام کرتا ہے۔",
+  "downloadOmnilingualNote": "{{size}}۔ فی الحال صرف اعلیٰ درستگی موڈ۔",
+  "anyLanguage": "کوئی بھی زبان",
+  "modelDescription_omnilingual": "ان زبانوں کے لیے جو دوسرے ماڈلز میں شامل نہیں۔",
+  "notNow": "ابھی نہیں"
 }

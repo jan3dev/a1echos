@@ -1,9 +1,9 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 
 import { TryLargerModelScreen } from "@/components";
 import { Routes } from "@/constants";
-import { useEnsureModelDownloaded } from "@/hooks";
+import { useEnsureModelDownloaded, useLocalization } from "@/hooks";
 import { getModelInfo, getRecommendedModelId, ModelId } from "@/models";
 import {
   useIsModelDownloaded,
@@ -17,8 +17,14 @@ import { FeatureFlag, logError } from "@/utils";
 
 export default function TryLargerModel() {
   const router = useRouter();
+  const { loc } = useLocalization();
   const language = useSelectedLanguage();
-  const model = getModelInfo(getRecommendedModelId(language.code));
+  // Also offers Omnilingual, picked from the language search.
+  const omnilingual =
+    useLocalSearchParams<{ model?: string }>().model === ModelId.OMNILINGUAL;
+  const model = getModelInfo(
+    omnilingual ? ModelId.OMNILINGUAL : getRecommendedModelId(language.code),
+  );
   const isDownloaded = useIsModelDownloaded(model.id);
   const progress = useModelDownloadProgress(model.id);
   const cancelDownload = useModelDownloadStore((s) => s.cancelDownload);
@@ -57,6 +63,10 @@ export default function TryLargerModel() {
     <TryLargerModelScreen
       testID="try-larger-model"
       model={model}
+      title={omnilingual ? loc.downloadOmnilingualTitle : undefined}
+      subtitle={
+        omnilingual ? loc.downloadOmnilingualIntro(model.languages) : undefined
+      }
       isDownloaded={isDownloaded}
       isSelected={selectedModelId === model.id}
       downloadProgress={progress}

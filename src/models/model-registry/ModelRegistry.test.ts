@@ -1,4 +1,5 @@
 import {
+  OmnilingualLanguages,
   getAllModels,
   getModelInfo,
   getRecommendedModelId,
@@ -95,5 +96,20 @@ describe("ModelRegistry", () => {
     expect(shouldSuggestLargerModel("de", ModelId.NEMO_PARAKEET_V3)).toBe(
       false,
     );
+  });
+
+  it("Omnilingual is a hidden, file-only model with every language", () => {
+    const omni = getModelInfo(ModelId.OMNILINGUAL);
+    expect(omni.isHidden).toBe(true);
+    expect(omni.supportedModes).toEqual([TranscriptionMode.FILE]);
+    expect(omni.supportedLanguageCodes).toBeUndefined();
+    expect(omni.languages).toBe(1650);
+    expect(omni.languages).toBe(OmnilingualLanguages.all.length);
+    expect(omni.sizeBytes).toBe(
+      omni.files.reduce((sum, f) => sum + f.sizeBytes, 0),
+    );
+    // The native loader only takes this type from a directory named so.
+    expect(omni.id).toContain("omnilingual");
+    expect(getAllModels().filter((m) => m.isHidden)).toEqual([omni]);
   });
 });

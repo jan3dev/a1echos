@@ -34,7 +34,12 @@ import {
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useKeyboardHeight, useLocalization, useScrollSurface } from "@/hooks";
-import { getLlmInfo, Transcription, transcriptTextStyle } from "@/models";
+import {
+  getLlmInfo,
+  ModelId,
+  Transcription,
+  transcriptTextStyle,
+} from "@/models";
 import { audioProtectionService, shareService } from "@/services";
 import {
   useCancelSummary,
@@ -45,6 +50,7 @@ import {
   useReprocessTranscription,
   useSelectedLanguage,
   useSelectedLlmId,
+  useSelectedModelId,
   useShowGlobalTooltip,
   useStructureText,
   useSummarySessionId,
@@ -121,6 +127,8 @@ export default function TranscriptionEditScreen() {
   const transcription = lastRef.current;
 
   const selectedLanguage = useSelectedLanguage();
+  // Omnilingual detects the language, so there is none to pick.
+  const anyLanguage = useSelectedModelId() === ModelId.OMNILINGUAL;
   const updateTranscription = useUpdateTranscription();
   const deleteTranscription = useDeleteTranscription();
   const deleteTranscriptionAudio = useDeleteTranscriptionAudio();
@@ -448,7 +456,9 @@ export default function TranscriptionEditScreen() {
                   <ListItem
                     testID={TestID.TranscriptionEditLanguage}
                     title={loc.spokenLanguageTitle}
-                    titleTrailing={languageCode.toUpperCase()}
+                    titleTrailing={
+                      anyLanguage ? loc.anyLanguage : languageCode.toUpperCase()
+                    }
                     iconLeading={
                       <Icon
                         name="language"
@@ -456,14 +466,17 @@ export default function TranscriptionEditScreen() {
                         color={colors.textSecondary}
                       />
                     }
-                    iconTrailing={chevron}
-                    onPress={() =>
-                      router.push(
-                        Routes.transcriptionLanguage(
-                          transcription.id,
-                          languageCode,
-                        ),
-                      )
+                    iconTrailing={anyLanguage ? undefined : chevron}
+                    onPress={
+                      anyLanguage
+                        ? undefined
+                        : () =>
+                            router.push(
+                              Routes.transcriptionLanguage(
+                                transcription.id,
+                                languageCode,
+                              ),
+                            )
                     }
                   />
                   <ListItem

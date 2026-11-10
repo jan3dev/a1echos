@@ -105,6 +105,7 @@ export enum TestID {
   EchosKeyboardScreen = "echos-keyboard-screen",
   VoiceSessionHintModal = "voice-session-hint-modal",
   LargerModelSuggestionModal = "larger-model-suggestion-modal",
+  OmnilingualDownloadModal = "omnilingual-download-modal",
 
   // --- Theme Settings ---
   ThemeAuto = "theme-auto",

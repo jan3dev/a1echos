@@ -110,7 +110,7 @@
   "deleteConfirmMessage": "Удалить {{name}}? Позже её можно будет загрузить снова.",
   "downloadError": "Ошибка загрузки: {{error}}",
   "insufficientSpace": "Недостаточно места для загрузки этой модели. Нужно {{required}}, доступно {{available}}. Освободите место и попробуйте снова.",
-  "languageCount": "Языков: {{count}}",
+  "languageCount": "Языков: {{count, number}}",
   "transcriptionModeTitle": "Режим транскрибации",
   "transcriptionSettings": "Настройки транскрибации",
   "close": "Закрыть",
@@ -278,5 +278,14 @@
   "structureNeedsModel": "Скачайте ИИ-модель, чтобы структурировать заметки.",
   "structureFailed": "Не Удалось Структурировать",
   "structureStopped": "Структурирование Остановлено",
-  "stop": "Остановить"
+  "stop": "Остановить",
+  "availableWithOmnilingual": "Доступно в Omnilingual",
+  "omnilingualLanguagesTitle": "Языки Omnilingual",
+  "omnilingualLanguagesDescription": "Omnilingual определяет язык во время речи. Найдите свой язык среди {{count, number}}, чтобы проверить, поддерживается ли он.",
+  "downloadOmnilingualTitle": "Скачать Omnilingual?",
+  "downloadOmnilingualIntro": "Omnilingual распознаёт {{count, number}} языков и определяет, на каком вы говорите. После загрузки работает офлайн.",
+  "downloadOmnilingualNote": "{{size}}. Пока только в режиме «Высокая точность».",
+  "anyLanguage": "Любой язык",
+  "modelDescription_omnilingual": "Для языков, которые не поддерживают другие модели.",
+  "notNow": "Не сейчас"
 }

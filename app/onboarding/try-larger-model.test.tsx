@@ -8,13 +8,21 @@ import TryLargerModel from "./try-larger-model";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
+let mockModelParam: string | undefined;
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
+  useLocalSearchParams: () => ({ model: mockModelParam }),
 }));
 
 const mockEnsure = jest.fn();
 jest.mock("@/hooks", () => ({
   useEnsureModelDownloaded: () => mockEnsure,
+  useLocalization: () => ({
+    loc: {
+      downloadOmnilingualTitle: "omniTitle",
+      downloadOmnilingualIntro: (count: number) => `omniIntro ${count}`,
+    },
+  }),
 }));
 
 const mockLogError = jest.fn();
@@ -51,6 +59,8 @@ jest.mock("@/components", () => {
   return {
     TryLargerModelScreen: (props: {
       model: { id: string };
+      title?: string;
+      subtitle?: string;
       onDownload: () => void;
       onCancelDownload: () => void;
       onSelect: () => void;
@@ -59,6 +69,7 @@ jest.mock("@/components", () => {
     }) => (
       <View>
         <Text testID="model">{props.model.id}</Text>
+        <Text testID="copy">{`${props.title} ${props.subtitle}`}</Text>
         <TouchableOpacity testID="download" onPress={props.onDownload} />
         <TouchableOpacity testID="cancel" onPress={props.onCancelDownload} />
         <TouchableOpacity testID="select" onPress={props.onSelect} />
@@ -74,10 +85,23 @@ beforeEach(() => {
   mockLanguageCode = "de";
   mockIsDownloaded = false;
   mockStatus = undefined;
+  mockModelParam = undefined;
   mockSetModelId.mockResolvedValue(undefined);
 });
 
 describe("TryLargerModel onboarding route", () => {
+  it("offers Omnilingual when picked from the language search", () => {
+    mockModelParam = "omnilingual";
+    const { getByTestId } = render(<TryLargerModel />);
+    expect(getByTestId("model")).toHaveTextContent("omnilingual");
+    expect(getByTestId("copy")).toHaveTextContent("omniTitle omniIntro 1650");
+  });
+
+  it("keeps the default copy for the recommended model", () => {
+    const { getByTestId } = render(<TryLargerModel />);
+    expect(getByTestId("copy")).toHaveTextContent("undefined undefined");
+  });
+
   it("recommends a model for the selected language", () => {
     const { getByTestId, rerender } = render(<TryLargerModel />);
     expect(getByTestId("model").props.children).toBe("nemo_parakeet_v3");

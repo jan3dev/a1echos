@@ -15,6 +15,7 @@ const Screen = () => {
       onBack={() => console.log("Back")}
       onSkip={() => console.log("Skip")}
       onNext={() => console.log("Next")}
+      onPickOmnilingual={() => console.log("Omnilingual")}
     />
   );
 };

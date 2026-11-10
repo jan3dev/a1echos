@@ -188,4 +188,20 @@ describe("useLocalization", () => {
     loc.languagesSupported(99);
     expect(t).toHaveBeenCalledWith("languagesSupported", { count: 99 });
   });
+
+  it("Omnilingual strings pass their interpolation", () => {
+    const { result } = renderHook(() => useLocalization());
+    const { loc, t } = result.current;
+
+    loc.omnilingualLanguagesDescription(1650);
+    expect(t).toHaveBeenCalledWith("omnilingualLanguagesDescription", {
+      count: 1650,
+    });
+    loc.downloadOmnilingualIntro(1650);
+    expect(t).toHaveBeenCalledWith("downloadOmnilingualIntro", { count: 1650 });
+    loc.downloadOmnilingualNote("365 MB");
+    expect(t).toHaveBeenCalledWith("downloadOmnilingualNote", {
+      size: "365 MB",
+    });
+  });
 });

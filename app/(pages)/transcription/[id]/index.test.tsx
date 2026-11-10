@@ -67,6 +67,7 @@ const mockStructure = jest.fn(async (..._args: any[]): Promise<any> => ({
 }));
 const mockCancelLlm = jest.fn();
 let mockLlmId: string | null = "qwen35_2b";
+let mockModelId = "whisper_tiny";
 let mockSummarySessionId: string | null = null;
 let mockIsStructuring = false;
 jest.mock("@/stores", () => ({
@@ -82,6 +83,7 @@ jest.mock("@/stores", () => ({
   useStructureText: () => mockStructure,
   useCancelSummary: () => mockCancelLlm,
   useSelectedLlmId: () => mockLlmId,
+  useSelectedModelId: () => mockModelId,
   useSummarySessionId: () => mockSummarySessionId,
   useIsSummaryBlocked: () => false,
   useIsStructuring: () => mockIsStructuring,
@@ -89,6 +91,7 @@ jest.mock("@/stores", () => ({
 }));
 
 jest.mock("@/models", () => ({
+  ModelId: { OMNILINGUAL: "omnilingual" },
   transcriptTextStyle: () => ({}),
   getLlmInfo: (id: string) => ({ englishOnly: id.endsWith("_en") }),
 }));
@@ -127,7 +130,7 @@ jest.mock("@/components", () => {
     SUB_SCREEN_NAVBAR_HEIGHT: 72,
     ListItem: (props: any) => (
       <Pressable testID={props.testID} onPress={props.onPress}>
-        <Text>{props.titleTrailing}</Text>
+        <Text>{String(props.titleTrailing)}</Text>
       </Pressable>
     ),
     ProgressIndicator: () => <View testID="progress" />,
@@ -339,6 +342,16 @@ describe("TranscriptionEditScreen", () => {
     expect(mockPush).toHaveBeenCalledWith(
       Routes.transcriptionLanguage("t1", "es"),
     );
+  });
+
+  it("shows any language without a picker while Omnilingual detects it", async () => {
+    mockModelId = "omnilingual";
+    const { getByTestId, getByText, queryByText } = await renderScreen();
+    expect(getByText("anyLanguage")).toBeTruthy();
+    expect(queryByText("EN")).toBeNull();
+    fireEvent.press(getByTestId(TestID.TranscriptionEditLanguage));
+    expect(mockPush).not.toHaveBeenCalled();
+    mockModelId = "whisper_tiny";
   });
 
   it("reprocesses in the chosen language into the editor", async () => {

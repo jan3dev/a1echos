@@ -29,6 +29,7 @@ const renderScreen = (overrides: Partial<SpokenLanguageScreenProps> = {}) => {
     onBack: jest.fn(),
     onSkip: jest.fn(),
     onNext: jest.fn(),
+    onPickOmnilingual: jest.fn(),
     testID: "sl",
     ...overrides,
   };
@@ -92,6 +93,23 @@ describe("SpokenLanguageScreen", () => {
     expect(getByText("English")).toBeTruthy();
     expect(getByText("Portuguese")).toBeTruthy();
     expect(utils.UNSAFE_getByType(TextInput)).toBeTruthy();
+  });
+
+  it("offers Omnilingual when no language matches, in dark colors", () => {
+    const utils = renderScreen();
+    fireEvent.press(utils.getByTestId("sl-search"));
+    const field = utils.UNSAFE_getByType(TextInput);
+
+    fireEvent.changeText(field, "port");
+    expect(utils.queryByText("availableWithOmnilingual")).toBeNull();
+
+    fireEvent.changeText(field, "Cantonese");
+    expect(utils.getByText("availableWithOmnilingual")).toBeTruthy();
+    expect(utils.getByText("Cantonese")).toHaveStyle({
+      color: darkColors.textPrimary,
+    });
+    fireEvent.press(utils.getByTestId("sl-language-yue"));
+    expect(utils.props.onPickOmnilingual).toHaveBeenCalledTimes(1);
   });
 
   it("skip becomes the close button while searching and comes back after", () => {

@@ -71,6 +71,7 @@ jest.mock("@/stores", () => ({
   useSetKeyboardSound: jest.fn(() => mockSetKeyboardSound),
   useKeyboardMicTimeout: jest.fn(() => 300),
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
+  useSelectedModelId: jest.fn(() => "whisper_tiny"),
 }));
 
 jest.mock("@/components", () => {
@@ -392,6 +393,15 @@ describe("AdvancedSettingsScreen", () => {
     expect(getAllByText("EN")).toHaveLength(1);
     fireEvent.press(getByTestId(TestID.SettingsLanguage));
     expect(mockPush).toHaveBeenCalledWith(Routes.settingsLanguage);
+  });
+
+  it("shows any language while Omnilingual detects it", async () => {
+    const { useSelectedModelId } = require("@/stores");
+    (useSelectedModelId as jest.Mock).mockReturnValue("omnilingual");
+    const { findByText, queryByText } = render(<AdvancedSettingsScreen />);
+    expect(await findByText("anyLanguage")).toBeTruthy();
+    expect(queryByText("EN")).toBeNull();
+    (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
   });
 
   it("pressing the microphone-timeout row navigates to the picker", () => {

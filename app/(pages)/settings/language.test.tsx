@@ -2,16 +2,22 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
-import { TestID } from "@/constants";
+import { Routes, TestID } from "@/constants";
 
 import LanguageSettingsScreen from "./language";
 
 // --- Mocks ---
 
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+const mockParams: { model?: string } = {};
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack }),
+  useRouter: () => ({ back: mockBack, replace: mockReplace }),
+  useLocalSearchParams: () => mockParams,
 }));
+
+const mockShowOmnilingualDownload = jest.fn();
+const mockSetModelId = jest.fn().mockResolvedValue(undefined);
 
 const mockSetLanguage = jest.fn();
 
@@ -54,8 +60,13 @@ jest.mock("@/hooks", () => ({
 }));
 
 jest.mock("@/models", () => ({
-  getModelInfo: jest.fn(() => ({ supportedLanguageCodes: undefined })),
-  ModelId: { WHISPER_TINY: "whisper_tiny" },
+  getModelInfo: jest.fn(() => ({
+    supportedLanguageCodes: undefined,
+    languages: 1650,
+    sizeBytes: 365_438_543,
+  })),
+  ModelId: { WHISPER_TINY: "whisper_tiny", OMNILINGUAL: "omnilingual" },
+  ...jest.requireActual("@/models/omnilingual/OmnilingualLanguages"),
   shouldSuggestLargerModel: jest.requireActual(
     "@/models/model-registry/ModelRegistry",
   ).shouldSuggestLargerModel,
@@ -78,6 +89,9 @@ jest.mock("@/stores", () => ({
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
   useSelectedModelId: jest.fn(() => "whisper_tiny"),
   useSetLanguage: jest.fn(() => mockSetLanguage),
+  useSetModelId: jest.fn(() => mockSetModelId),
+  useIsModelDownloaded: jest.fn(() => false),
+  useShowOmnilingualDownload: jest.fn(() => mockShowOmnilingualDownload),
   useHasSeenLargerModelSuggestion: jest.fn(() => false),
   useShowLargerModelSuggestion: jest.fn(() => mockShowLargerModelSuggestion),
 }));
@@ -124,6 +138,12 @@ jest.mock("@/components", () => {
         </TouchableOpacity>
       );
     },
+    OmnilingualLanguageListItem: ({ language, onPress, testID }: any) => (
+      <TouchableOpacity testID={testID} onPress={onPress} disabled={!onPress}>
+        <Text>{language.name}</Text>
+        <Text>{language.script}</Text>
+      </TouchableOpacity>
+    ),
     NoLanguagesFound: () => <View testID="no-languages-found" />,
     Screen: ({ children }: any) => <View>{children}</View>,
     Text: ({ children }: any) => <Text>{String(children)}</Text>,
@@ -405,6 +425,109 @@ describe("LanguageSettingsScreen", () => {
         expect(logError).toHaveBeenCalled();
       });
       expect(mockShowLargerModelSuggestion).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Omnilingual", () => {
+    let now: number;
+    beforeEach(() => {
+      now = 0;
+      jest.spyOn(Date, "now").mockImplementation(() => now);
+      mockReplace.mockClear();
+      mockSetModelId.mockClear();
+      mockShowOmnilingualDownload.mockClear();
+    });
+    afterEach(() => {
+      jest.restoreAllMocks();
+      delete mockParams.model;
+      const { useSelectedModelId, useIsModelDownloaded } = require("@/stores");
+      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
+      (useIsModelDownloaded as jest.Mock).mockReturnValue(false);
+    });
+
+    const search = (query: string) => {
+      const utils = render(<LanguageSettingsScreen />);
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchOpen));
+      now += 1000;
+      fireEvent.changeText(utils.getByTestId("search"), query);
+      return utils;
+    };
+
+    it("stays hidden while the current model has a match", () => {
+      const { queryByText, queryByTestId } = search("fre");
+      expect(queryByText("availableWithOmnilingual")).toBeNull();
+      expect(queryByTestId("language-yue")).toBeNull();
+    });
+
+    it("shows its matches when the current model has none", () => {
+      const { getByText, getByTestId, queryByTestId } = search("Cantonese");
+      expect(getByText("availableWithOmnilingual")).toBeTruthy();
+      expect(getByTestId("language-yue")).toHaveTextContent("CantoneseHan");
+      expect(queryByTestId("no-languages-found")).toBeNull();
+    });
+
+    it("matches the ISO name too", () => {
+      expect(search("Yue Chinese").getByTestId("language-yue")).toBeTruthy();
+    });
+
+    it("offers the download when it isn't downloaded", () => {
+      const { getByTestId } = search("Cantonese");
+      fireEvent.press(getByTestId("language-yue"));
+      expect(mockShowOmnilingualDownload).toHaveBeenCalledTimes(1);
+      expect(mockSetModelId).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("activates it when already downloaded", () => {
+      const { useIsModelDownloaded } = require("@/stores");
+      (useIsModelDownloaded as jest.Mock).mockReturnValue(true);
+      const { getByTestId } = search("Cantonese");
+
+      fireEvent.press(getByTestId("language-yue"));
+      expect(mockShowOmnilingualDownload).not.toHaveBeenCalled();
+      expect(mockSetModelId).toHaveBeenCalledWith("omnilingual");
+      expect(mockReplace).toHaveBeenCalledWith(Routes.settingsModel);
+    });
+
+    it("shows try another spelling when nothing matches it either", () => {
+      const { getByTestId, queryByText } = search("Klingon");
+      expect(getByTestId("no-languages-found")).toBeTruthy();
+      expect(queryByText("availableWithOmnilingual")).toBeNull();
+    });
+
+    it.each([
+      [
+        "while active",
+        () => {
+          const { useSelectedModelId } = require("@/stores");
+          (useSelectedModelId as jest.Mock).mockReturnValue("omnilingual");
+        },
+      ],
+      [
+        "from its language count",
+        () => {
+          mockParams.model = "omnilingual";
+        },
+      ],
+    ])("lists every language %s, with no action", (_, setup) => {
+      setup();
+      const { getByText, getByTestId, queryByTestId } = render(
+        <LanguageSettingsScreen />,
+      );
+      expect(getByText("omnilingualLanguagesTitle")).toBeTruthy();
+      expect(getByText("omnilingualLanguagesDescription_1650")).toBeTruthy();
+      expect(getByTestId("language-kbt")).toHaveTextContent("AbadiLatin");
+      expect(queryByTestId("list-item-English")).toBeNull();
+      expect(getByTestId("language-kbt")).toBeDisabled();
+    });
+
+    it("keeps search while active", () => {
+      const { useSelectedModelId } = require("@/stores");
+      (useSelectedModelId as jest.Mock).mockReturnValue("omnilingual");
+      const { getByTestId, queryByTestId, queryByText } = search("Canto");
+      expect(getByTestId("language-yue")).toBeDisabled();
+      expect(queryByTestId("language-kbt")).toBeNull();
+      expect(queryByText("availableWithOmnilingual")).toBeNull();
     });
   });
 });

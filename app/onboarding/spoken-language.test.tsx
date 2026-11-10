@@ -52,6 +52,7 @@ jest.mock("@/components", () => {
       onBack,
       onSkip,
       onNext,
+      onPickOmnilingual,
     }: {
       languages: { code: string; name: string }[];
       selectedCode: string;
@@ -59,6 +60,7 @@ jest.mock("@/components", () => {
       onBack: () => void;
       onSkip: () => void;
       onNext: () => void;
+      onPickOmnilingual: () => void;
     }) => (
       <View>
         <Text testID="selected">{selectedCode}</Text>
@@ -72,6 +74,7 @@ jest.mock("@/components", () => {
         <TouchableOpacity testID="back" onPress={onBack} />
         <TouchableOpacity testID="skip" onPress={onSkip} />
         <TouchableOpacity testID="next" onPress={onNext} />
+        <TouchableOpacity testID="omnilingual" onPress={onPickOmnilingual} />
       </View>
     ),
     Toast: () => null,
@@ -91,6 +94,13 @@ describe("SpokenLanguage onboarding route", () => {
     fireEvent.press(getByTestId("skip"));
     expect(mockBack).toHaveBeenCalledTimes(1);
     expect(mockConfirmSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers Omnilingual on its own step when picked from search", () => {
+    const { getByTestId } = render(<SpokenLanguageOnboarding />);
+    fireEvent.press(getByTestId("omnilingual"));
+    expect(mockPush).toHaveBeenCalledWith(Routes.onboardingTryOmnilingual);
+    expect(mockSetLanguage).not.toHaveBeenCalled();
   });
 
   it("goes to the tutorial without saving when English is unchanged", async () => {

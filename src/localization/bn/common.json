@@ -94,7 +94,7 @@
   "deleteConfirmMessage": "আপনি কি নিশ্চিত যে {{name}} মুছে ফেলতে চান? পরে আবার ডাউনলোড করতে পারবেন।",
   "downloadError": "ডাউনলোড ব্যর্থ হয়েছে: {{error}}",
   "insufficientSpace": "এই মডেলটি ডাউনলোড করার মতো যথেষ্ট স্টোরেজ নেই। প্রয়োজন {{required}}, উপলব্ধ {{available}}। জায়গা খালি করে আবার চেষ্টা করুন।",
-  "languageCount": "{{count}}টি ভাষা",
+  "languageCount": "{{count, number}}টি ভাষা",
   "transcriptionModeTitle": "ট্রান্সক্রিপশন মোড",
   "transcriptionSettings": "ট্রান্সক্রিপশন সেটিংস",
   "close": "বন্ধ করুন",
@@ -262,5 +262,14 @@
   "structureNeedsModel": "নোট সাজাতে একটি AI মডেল ডাউনলোড করুন।",
   "structureFailed": "সাজানো ব্যর্থ হয়েছে",
   "structureStopped": "সাজানো থামানো হয়েছে",
-  "stop": "থামান"
+  "stop": "থামান",
+  "availableWithOmnilingual": "Omnilingual-এ উপলব্ধ",
+  "omnilingualLanguagesTitle": "Omnilingual-এর ভাষাসমূহ",
+  "omnilingualLanguagesDescription": "আপনি কথা বলার সময় Omnilingual ভাষা শনাক্ত করে। আপনার ভাষা আছে কিনা দেখতে {{count, number}}টি ভাষায় খুঁজুন।",
+  "downloadOmnilingualTitle": "Omnilingual ডাউনলোড করবেন?",
+  "downloadOmnilingualIntro": "Omnilingual {{count, number}}টি ভাষা চেনে এবং আপনি কোনটিতে কথা বলছেন তা শনাক্ত করে। ডাউনলোডের পর অফলাইনে কাজ করে।",
+  "downloadOmnilingualNote": "{{size}}। আপাতত শুধু উচ্চ নির্ভুলতা মোড।",
+  "anyLanguage": "যেকোনো ভাষা",
+  "modelDescription_omnilingual": "যেসব ভাষা অন্য মডেলগুলো সমর্থন করে না।",
+  "notNow": "এখন নয়"
 }

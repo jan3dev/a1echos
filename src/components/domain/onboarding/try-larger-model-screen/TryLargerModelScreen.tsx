@@ -21,6 +21,8 @@ const TRY_LARGER_MODEL_STEP = 4;
 
 export interface TryLargerModelScreenProps {
   model: ModelInfo;
+  title?: string;
+  subtitle?: string;
   isDownloaded: boolean;
   isSelected: boolean;
   downloadProgress?: DownloadProgress;
@@ -35,6 +37,8 @@ export interface TryLargerModelScreenProps {
 /** Presentational only — downloading, selection and navigation live at the route. */
 export const TryLargerModelScreen = ({
   model,
+  title,
+  subtitle,
   isDownloaded,
   isSelected,
   downloadProgress,
@@ -87,7 +91,7 @@ export const TryLargerModelScreen = ({
               align="center"
               color={darkColors.textPrimary}
             >
-              {loc.onboardingTryLargerModelTitle}
+              {title ?? loc.onboardingTryLargerModelTitle}
             </Text>
             <Text
               variant="body1"
@@ -95,7 +99,7 @@ export const TryLargerModelScreen = ({
               align="center"
               color={darkColors.textSecondary}
             >
-              {loc.onboardingTryLargerModelSubtitle}
+              {subtitle ?? loc.onboardingTryLargerModelSubtitle}
             </Text>
           </View>
 

@@ -1,6 +1,13 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View, type HostInstance } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type HostInstance,
+  type ScrollViewInstance,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -20,10 +27,10 @@ import {
 } from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
-  ModelId,
-  TranscriptionMode,
   getAllModels,
   getModelInfo,
+  ModelId,
+  TranscriptionMode,
 } from "@/models";
 import {
   useModelDownloadStore,
@@ -41,6 +48,11 @@ export default function ModelSettingsScreen() {
   const { loc } = useLocalization();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<HostInstance>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const focusRef = useRef<HostInstance>(null);
+  const focusedRef = useRef(false);
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const { height: windowHeight } = useWindowDimensions();
   const { scrolled, onScroll } = useScrollSurface();
 
   const selectedModelId = useSelectedModelId();
@@ -71,7 +83,7 @@ export default function ModelSettingsScreen() {
         !isActiveDownload
       ) {
         downloaded.push(model);
-      } else {
+      } else if (!model.isHidden || isActiveDownload) {
         available.push(model);
       }
     }
@@ -179,10 +191,23 @@ export default function ModelSettingsScreen() {
 
   const handleOpenLanguages = useCallback(
     (modelId: ModelId) => {
-      router.push(Routes.settingsModelLanguages(modelId));
+      router.push(
+        modelId === ModelId.OMNILINGUAL
+          ? Routes.settingsOmnilingualLanguages
+          : Routes.settingsModelLanguages(modelId),
+      );
     },
     [router],
   );
+
+  const scrollToFocus = () => {
+    if (focusedRef.current) return;
+    focusedRef.current = true;
+    focusRef.current?.measureInWindow((_x, y, _width, height) => {
+      const offset = y + height + insets.bottom + 16 - windowHeight;
+      if (offset > 0) scrollRef.current?.scrollTo({ y: offset });
+    });
+  };
 
   const renderCard = (model: ModelInfo) => {
     const progress = downloadStore.getProgress(model.id);
@@ -194,7 +219,7 @@ export default function ModelSettingsScreen() {
       savedMode && model.supportedModes.includes(savedMode)
         ? savedMode
         : model.supportedModes[0];
-    return (
+    const card = (
       <ModelCard
         key={model.id}
         testID={`model-card-${model.id}`}
@@ -218,6 +243,13 @@ export default function ModelSettingsScreen() {
         disabled={isSaving}
       />
     );
+    return model.id === focus ? (
+      <View key={model.id} ref={focusRef} onLayout={scrollToFocus}>
+        {card}
+      </View>
+    ) : (
+      card
+    );
   };
 
   return (
@@ -226,6 +258,7 @@ export default function ModelSettingsScreen() {
           before the bar's BlurView mounts and resolves its `blurTarget`. */}
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[
             styles.scrollContent,
             {

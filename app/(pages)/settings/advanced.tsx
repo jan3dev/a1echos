@@ -22,12 +22,14 @@ import {
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import { useLocalization, useScrollSurface } from "@/hooks";
+import { ModelId } from "@/models";
 import {
   useKeyboardAutocorrect,
   useKeyboardHaptic,
   useKeyboardMicTimeout,
   useKeyboardSound,
   useSelectedLanguage,
+  useSelectedModelId,
   useSetKeyboardAutocorrect,
   useSetKeyboardHaptic,
   useSetKeyboardSound,
@@ -56,6 +58,7 @@ export default function AdvancedSettingsScreen() {
   const setKeyboardSound = useSetKeyboardSound();
   const keyboardMicTimeout = useKeyboardMicTimeout();
   const selectedLanguage = useSelectedLanguage();
+  const anyLanguage = useSelectedModelId() === ModelId.OMNILINGUAL;
   const [keyboardEnabled, setKeyboardEnabled] = useState<boolean | null>(null);
   const [infoSheet, setInfoSheet] = useState<{
     title: string;
@@ -129,7 +132,11 @@ export default function AdvancedSettingsScreen() {
                 grouped
                 testID={TestID.SettingsLanguage}
                 title={loc.spokenLanguageTitle}
-                titleTrailing={selectedLanguage.code.toUpperCase()}
+                titleTrailing={
+                  anyLanguage
+                    ? loc.anyLanguage
+                    : selectedLanguage.code.toUpperCase()
+                }
                 iconLeading={leading("language")}
                 iconTrailing={chevron}
                 onPress={() => router.push(Routes.settingsLanguage)}

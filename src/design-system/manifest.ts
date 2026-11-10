@@ -29,6 +29,7 @@ import infoSheetGallery from "@/components/shared/info-sheet/InfoSheet.gallery";
 import languageListItemGallery from "@/components/shared/language-list-item/LanguageListItem.gallery";
 import listItemGallery from "@/components/shared/list-item/ListItem.gallery";
 import noLanguagesFoundGallery from "@/components/shared/no-languages-found/NoLanguagesFound.gallery";
+import omnilingualLanguageListItemGallery from "@/components/shared/omnilingual-language-list-item/OmnilingualLanguageListItem.gallery";
 import recordingButtonGallery from "@/components/shared/recording-controls/RecordingButton.gallery";
 import scrollToEdgeButtonGallery from "@/components/shared/scroll-to-edge-button/ScrollToEdgeButton.gallery";
 import colorsGallery from "@/design-system/colors/Colors.gallery";
@@ -108,6 +109,7 @@ export const DESIGN_SYSTEM_MANIFEST: GalleryEntry[] = [
   languageListItemGallery,
   listItemGallery,
   noLanguagesFoundGallery,
+  omnilingualLanguageListItemGallery,
   recordingButtonGallery,
   scrollToEdgeButtonGallery,
   keyboardLayoutsGallery,

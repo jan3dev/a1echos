@@ -86,7 +86,7 @@
   "deleteConfirmMessage": "Yakin ingin menghapus {{name}}? Anda dapat mengunduhnya lagi nanti.",
   "downloadError": "Unduhan gagal: {{error}}",
   "insufficientSpace": "Penyimpanan tidak cukup untuk mengunduh model ini. Dibutuhkan {{required}}, tersedia {{available}}. Kosongkan ruang dan coba lagi.",
-  "languageCount": "{{count}} bahasa",
+  "languageCount": "{{count, number}} bahasa",
   "transcriptionModeTitle": "Mode Transkripsi",
   "transcriptionSettings": "Pengaturan transkripsi",
   "close": "Tutup",
@@ -254,5 +254,14 @@
   "structureNeedsModel": "Unduh model AI untuk menyusun catatan.",
   "structureFailed": "Gagal Menyusun",
   "structureStopped": "Penyusunan Dihentikan",
-  "stop": "Hentikan"
+  "stop": "Hentikan",
+  "availableWithOmnilingual": "Tersedia dengan Omnilingual",
+  "omnilingualLanguagesTitle": "Bahasa Omnilingual",
+  "omnilingualLanguagesDescription": "Omnilingual mendeteksi bahasa saat Anda berbicara. Cari di antara {{count, number}} bahasa untuk memeriksa apakah bahasa Anda didukung.",
+  "downloadOmnilingualTitle": "Unduh Omnilingual?",
+  "downloadOmnilingualIntro": "Omnilingual mengenali {{count, number}} bahasa dan mendeteksi bahasa yang Anda ucapkan. Berfungsi offline setelah diunduh.",
+  "downloadOmnilingualNote": "{{size}}. Untuk saat ini hanya mode Akurasi Tinggi.",
+  "anyLanguage": "Bahasa apa pun",
+  "modelDescription_omnilingual": "Untuk bahasa yang tidak didukung model lain.",
+  "notNow": "Jangan Sekarang"
 }

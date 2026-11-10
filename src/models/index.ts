@@ -58,6 +58,12 @@ export {
 export type { SpokenLanguage } from "./spoken-language/SpokenLanguage";
 
 export {
+  isOmnilingual,
+  OmnilingualLanguages,
+} from "./omnilingual/OmnilingualLanguages";
+export type { OmnilingualLanguage } from "./omnilingual/OmnilingualLanguages";
+
+export {
   DEFAULT_TEXT_APPEARANCE,
   parseTextAppearance,
   TRANSCRIPT_FONT_KEYS,

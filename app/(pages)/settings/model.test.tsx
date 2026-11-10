@@ -2,14 +2,18 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import React from "react";
 
+import { Routes } from "@/constants";
+
 import ModelSettingsScreen from "./model";
 
 // --- Mocks ---
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
+const mockParams: { focus?: string } = {};
 jest.mock("expo-router", () => ({
   useRouter: () => ({ back: mockBack, push: mockPush }),
+  useLocalSearchParams: () => mockParams,
 }));
 
 const mockSetModelId = jest.fn();
@@ -94,13 +98,24 @@ const parakeetModel = {
   supportedLanguageCodes: ["en", "es"],
 };
 
+const omnilingualModel = {
+  id: "omnilingual",
+  name: "Omnilingual",
+  sizeBytes: 365_438_543,
+  supportedModes: ["realtime"],
+  isBundled: false,
+  isHidden: true,
+  languages: 1650,
+};
+
 jest.mock("@/models", () => ({
   ModelId: {
     WHISPER_TINY: "whisper_tiny",
     NEMO_PARAKEET_V3: "nemo_parakeet_v3",
+    OMNILINGUAL: "omnilingual",
   },
   TranscriptionMode: { FILE: "file", REALTIME: "realtime" },
-  getAllModels: jest.fn(() => [whisperModel, parakeetModel]),
+  getAllModels: jest.fn(() => [whisperModel, parakeetModel, omnilingualModel]),
   getModelInfo: jest.fn((id: string) =>
     id === "whisper_tiny" ? whisperModel : parakeetModel,
   ),
@@ -375,6 +390,67 @@ describe("ModelSettingsScreen", () => {
     expect(mockPush).toHaveBeenCalledWith({
       pathname: "/settings/model-languages",
       params: { modelId: "whisper_tiny" },
+    });
+  });
+
+  describe("hidden Omnilingual", () => {
+    const omni = "model-card-omnilingual";
+
+    it("is left out until downloaded", () => {
+      expect(render(<ModelSettingsScreen />).queryByTestId(omni)).toBeNull();
+    });
+
+    it("shows while downloading", () => {
+      mockDownloadStore.getProgress.mockImplementation((id: string) =>
+        id === "omnilingual" ? { status: "downloading", progress: 0.1 } : null,
+      );
+      expect(render(<ModelSettingsScreen />).getByTestId(omni)).toBeTruthy();
+    });
+
+    describe("opened from the download sheet", () => {
+      afterEach(() => delete mockParams.focus);
+
+      const layOut = (cardTop: number) => {
+        mockParams.focus = "omnilingual";
+        mockDownloadStore.getProgress.mockImplementation((id: string) =>
+          id === "omnilingual" ? { status: "downloading", progress: 0 } : null,
+        );
+        const utils = render(<ModelSettingsScreen />);
+        // RN's jest mocks of View and ScrollView are class instances.
+        const { ScrollView } = require("react-native");
+        const scrollTo = jest.fn();
+        utils.UNSAFE_getByType(ScrollView).instance.scrollTo = scrollTo;
+        let wrapper = utils.getByTestId(omni);
+        while (!(wrapper.props.onLayout && wrapper.instance))
+          wrapper = wrapper.parent!;
+        wrapper.instance.measureInWindow = (cb: Function) =>
+          cb(0, cardTop, 343, 200);
+        fireEvent(wrapper, "layout");
+        return { scrollTo, wrapper };
+      };
+
+      // The test window is 1334 tall, with no bottom inset.
+      it("scrolls its card into view, once", () => {
+        const { scrollTo, wrapper } = layOut(1500);
+        expect(scrollTo).toHaveBeenCalledWith({ y: 1500 + 200 + 16 - 1334 });
+        fireEvent(wrapper, "layout");
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+      });
+
+      it("doesn't scroll when the card is already in view", () => {
+        expect(layOut(100).scrollTo).not.toHaveBeenCalled();
+      });
+    });
+
+    it("shows once downloaded, and its count opens its language list", () => {
+      mockDownloadStore.isDownloaded.mockImplementation(
+        (id: string) => id === "omnilingual",
+      );
+      const { getByTestId } = render(<ModelSettingsScreen />);
+      fireEvent.press(getByTestId(`${omni}-languages`));
+      expect(mockPush).toHaveBeenCalledWith(
+        Routes.settingsOmnilingualLanguages,
+      );
     });
   });
 

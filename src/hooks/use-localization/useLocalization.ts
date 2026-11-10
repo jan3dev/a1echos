@@ -107,6 +107,17 @@ export const useLocalization = () => {
       searchLanguage: t("searchLanguage"),
       noLanguagesFoundTitle: t("noLanguagesFoundTitle"),
       noLanguagesFoundDescription: t("noLanguagesFoundDescription"),
+      availableWithOmnilingual: t("availableWithOmnilingual"),
+      omnilingualLanguagesTitle: t("omnilingualLanguagesTitle"),
+      omnilingualLanguagesDescription: (count: number) =>
+        t("omnilingualLanguagesDescription", { count }),
+      downloadOmnilingualTitle: t("downloadOmnilingualTitle"),
+      downloadOmnilingualIntro: (count: number) =>
+        t("downloadOmnilingualIntro", { count }),
+      downloadOmnilingualNote: (size: string) =>
+        t("downloadOmnilingualNote", { size }),
+      notNow: t("notNow"),
+      anyLanguage: t("anyLanguage"),
       auto: t("auto"),
       light: t("light"),
       dark: t("dark"),

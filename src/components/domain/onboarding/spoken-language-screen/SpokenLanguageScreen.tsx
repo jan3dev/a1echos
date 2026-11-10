@@ -15,7 +15,13 @@ import {
   useLanguageSearch,
   useLocalization,
 } from "@/hooks";
-import { SpokenLanguage, SupportedLanguages } from "@/models";
+import {
+  isOmnilingual,
+  OmnilingualLanguage,
+  OmnilingualLanguages,
+  SpokenLanguage,
+  SupportedLanguages,
+} from "@/models";
 import { darkColors, spacing } from "@/theme";
 
 import { Button } from "../../../ui/button/Button";
@@ -23,6 +29,7 @@ import { Text } from "../../../ui/text/Text";
 import { TextField } from "../../../ui/textfield/TextField";
 import { LanguageListItem } from "../../../shared/language-list-item/LanguageListItem";
 import { NoLanguagesFound } from "../../../shared/no-languages-found/NoLanguagesFound";
+import { OmnilingualLanguageListItem } from "../../../shared/omnilingual-language-list-item/OmnilingualLanguageListItem";
 import { OnboardingHeader } from "../header/OnboardingHeader";
 
 const SPOKEN_LANGUAGE_STEP = 3;
@@ -35,6 +42,8 @@ export interface SpokenLanguageScreenProps {
   onBack: () => void;
   onSkip: () => void;
   onNext: () => void;
+  /** Tapped an "Available with Omnilingual" search result. */
+  onPickOmnilingual: () => void;
   isSaving?: boolean;
   testID?: string;
 }
@@ -47,6 +56,7 @@ export const SpokenLanguageScreen = ({
   onBack,
   onSkip,
   onNext,
+  onPickOmnilingual,
   isSaving = false,
   testID,
 }: SpokenLanguageScreenProps) => {
@@ -67,6 +77,10 @@ export const SpokenLanguageScreen = ({
         pinnedCode,
       ),
     [languages, query, pinnedCode],
+  );
+  const omnilingualResults = useMemo(
+    () => OmnilingualLanguages.fallback(query),
+    [query],
   );
   const select = (language: SpokenLanguage) => {
     Keyboard.dismiss();
@@ -137,8 +151,8 @@ export const SpokenLanguageScreen = ({
           )}
         </Animated.View>
 
-        <FlatList
-          data={results}
+        <FlatList<SpokenLanguage | OmnilingualLanguage>
+          data={results.length ? results : omnilingualResults}
           keyExtractor={(language) => language.code}
           initialNumToRender={LANGUAGE_ROWS_FIRST_RENDER}
           windowSize={LANGUAGE_LIST_WINDOW}
@@ -151,16 +165,36 @@ export const SpokenLanguageScreen = ({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           ListEmptyComponent={<NoLanguagesFound colors={darkColors} />}
-          renderItem={({ item: language }) => (
-            <LanguageListItem
-              testID={childTestID(dynamicTestID.language(language.code))}
-              language={language}
-              selected={language.code === selectedCode}
-              enabled={!isSaving}
-              onSelect={select}
-              colors={darkColors}
-            />
-          )}
+          ListHeaderComponent={
+            omnilingualResults.length ? (
+              <Text
+                variant="body2"
+                weight="medium"
+                color={darkColors.textSecondary}
+              >
+                {loc.availableWithOmnilingual}
+              </Text>
+            ) : undefined
+          }
+          renderItem={({ item: language }) =>
+            isOmnilingual(language) ? (
+              <OmnilingualLanguageListItem
+                testID={childTestID(dynamicTestID.language(language.code))}
+                language={language}
+                onPress={onPickOmnilingual}
+                colors={darkColors}
+              />
+            ) : (
+              <LanguageListItem
+                testID={childTestID(dynamicTestID.language(language.code))}
+                language={language}
+                selected={language.code === selectedCode}
+                enabled={!isSaving}
+                onSelect={select}
+                colors={darkColors}
+              />
+            )
+          }
         />
 
         <Button.primary

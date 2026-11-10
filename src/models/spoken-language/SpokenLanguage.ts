@@ -129,7 +129,7 @@ const languageData: Record<string, LanguageInfo> = {
 // Locale-independent lowercasing: a Turkish locale would turn "I" into "ı".
 // Latin accents are dropped so "espanol" finds "Español"; only U+0300–036F,
 // since Devanagari and Arabic vowel signs are marks too.
-const searchWords = (text: string) =>
+export const searchWords = (text: string) =>
   ` ${text
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")

@@ -33,6 +33,7 @@ import {
   Icon,
   isUpwardDrag,
   LargerModelSuggestionModal,
+  Modal,
   PRIMARY_BUTTON_HEIGHT,
   releaseDrag,
   RECORDING_BUTTON_SIZE,
@@ -49,6 +50,7 @@ import {
   VoiceSessionHintModal,
 } from "@/components";
 import {
+  useEnsureModelDownloaded,
   useKeyboardHeight,
   useLocalization,
   useVoiceSessionHint,
@@ -56,7 +58,7 @@ import {
 import { AppConstants, Routes, TestID } from "@/constants";
 import { openAndPrepareDatabase } from "@/db";
 import { i18n, resolveAppLanguage, syncLayoutDirection } from "@/localization";
-import { TranscriptionState } from "@/models";
+import { getModelInfo, ModelId, TranscriptionState } from "@/models";
 import migrationsBundle from "@/db/migrations/migrations.js";
 import {
   cleanupLegacyArtifactsIfPresent,
@@ -76,6 +78,7 @@ import {
   useHideGlobalTooltip,
   useHideKeyboardPrompt,
   useHideLargerModelSuggestion,
+  useHideOmnilingualDownload,
   useIsEngineInitializing,
   useIsSessionSelectionMode,
   useIsTranscriptionSelectionMode,
@@ -85,6 +88,7 @@ import {
   useKeyboardPromptVisible,
   useLargerModelSuggestionVisible,
   useMarkLargerModelSuggestionSeen,
+  useOmnilingualDownloadVisible,
   useSelectedLanguage,
   useSetOnboardingStep,
   useMarkKeyboardPromptSeen,
@@ -96,12 +100,18 @@ import {
   useRecordingJumpButton,
   useRecordingControlsVisible,
   useSessionStore,
+  useSetModelId,
   useSettingsStore,
   useTranscriptionState,
   useTranscriptionStore,
 } from "@/stores";
 import { spacing, useTheme, useThemeStore } from "@/theme";
-import { FeatureFlag, logError, readKeyboardEnabled } from "@/utils";
+import {
+  FeatureFlag,
+  formatBytes,
+  logError,
+  readKeyboardEnabled,
+} from "@/utils";
 
 // Prevent the splash screen from auto-hiding before initialization completes
 SplashScreen.preventAutoHideAsync();
@@ -353,6 +363,44 @@ function GlobalLargerModelSuggestionRenderer() {
       languageName={language.name}
       onConfirm={handleConfirm}
       onDismiss={handleDismiss}
+    />
+  );
+}
+
+// Global so the transcription drawer, itself a Modal, can offer it too.
+function GlobalOmnilingualDownloadRenderer() {
+  const router = useRouter();
+  const { theme } = useTheme();
+  const { loc } = useLocalization();
+  const visible = useOmnilingualDownloadVisible();
+  const hide = useHideOmnilingualDownload();
+  const ensureModelDownloaded = useEnsureModelDownloaded();
+  const setModelId = useSetModelId();
+  const { languages, sizeBytes } = getModelInfo(ModelId.OMNILINGUAL);
+
+  // Audio Models shows the progress, and the model once it's in.
+  const download = () => {
+    hide();
+    void ensureModelDownloaded(ModelId.OMNILINGUAL).then((ok) => {
+      // The store logs and rolls back a failed save.
+      if (ok) setModelId(ModelId.OMNILINGUAL).catch(() => {});
+    });
+    router.push(Routes.settingsModelFocus(ModelId.OMNILINGUAL));
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      testID={TestID.OmnilingualDownloadModal}
+      title={loc.downloadOmnilingualTitle}
+      // Unclamped: translations run longer than English.
+      titleMaxLines={0}
+      messageMaxLines={0}
+      message={`${loc.downloadOmnilingualIntro(languages)}\n\n${loc.downloadOmnilingualNote(formatBytes(sizeBytes))}`}
+      primaryButton={{ text: loc.download, onTap: download }}
+      secondaryButton={{ text: loc.notNow, onTap: hide }}
+      onDismiss={hide}
+      icon={<Icon name="language" size={24} color={theme.colors.textPrimary} />}
     />
   );
 }
@@ -758,6 +806,7 @@ export default function RootLayout() {
         <GlobalKeyboardPromptNavigator />
         <GlobalVoiceSessionHintRenderer />
         <GlobalLargerModelSuggestionRenderer />
+        <GlobalOmnilingualDownloadRenderer />
         <BiometricLock />
       </GestureHandlerRootView>
     </AppErrorBoundary>

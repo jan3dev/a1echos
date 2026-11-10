@@ -15,6 +15,9 @@ const mockSetTranscriptionMode = jest.fn().mockResolvedValue(undefined);
 const mockShowLargerModelSuggestion = jest.fn();
 const mockHasSeenSuggestion = jest.fn(() => true);
 const mockSelectedModelId = jest.fn(() => "whisper_tiny");
+const mockOmnilingualDownloaded = jest.fn(() => false);
+const mockSetModelId = jest.fn().mockResolvedValue(undefined);
+const mockShowOmnilingualDownload = jest.fn();
 
 jest.mock("@/stores", () => ({
   useSelectedModelId: () => mockSelectedModelId(),
@@ -24,6 +27,9 @@ jest.mock("@/stores", () => ({
   useSetLanguage: () => mockSetLanguage,
   useHasSeenLargerModelSuggestion: () => mockHasSeenSuggestion(),
   useShowLargerModelSuggestion: () => mockShowLargerModelSuggestion,
+  useIsModelDownloaded: () => mockOmnilingualDownloaded(),
+  useSetModelId: () => mockSetModelId,
+  useShowOmnilingualDownload: () => mockShowOmnilingualDownload,
 }));
 
 jest.mock("@/hooks", () => ({
@@ -62,6 +68,7 @@ describe("TranscriptionSettingsSheet", () => {
     jest.clearAllMocks();
     mockHasSeenSuggestion.mockReturnValue(true);
     mockSelectedModelId.mockReturnValue("whisper_tiny");
+    mockOmnilingualDownloaded.mockReturnValue(false);
   });
 
   it("renders mode, language row and footer", () => {
@@ -76,6 +83,14 @@ describe("TranscriptionSettingsSheet", () => {
     );
     expect(getByTestId(TestID.TranscriptionSettingsLanguage)).toBeTruthy();
     expect(getByText("footer")).toBeTruthy();
+  });
+
+  it("shows any language without a picker while Omnilingual detects it", () => {
+    mockSelectedModelId.mockReturnValue("omnilingual");
+    const { getByTestId, getByText } = renderSheet();
+    expect(getByText("anyLanguage")).toBeTruthy();
+    fireEvent.press(getByTestId(TestID.TranscriptionSettingsLanguage));
+    expect(onLanguagePage()).toBe(false);
   });
 
   it("drags from the whole panel, but only the header on the language page", () => {
@@ -409,6 +424,55 @@ describe("TranscriptionSettingsSheet", () => {
 
       fireEvent.changeText(field, "Klingon");
       expect(getByTestId("no-languages-found")).toBeTruthy();
+    });
+
+    it("doesn't offer Omnilingual for a language another model covers", () => {
+      mockSelectedModelId.mockReturnValue("nemotron_streaming_en");
+      const { UNSAFE_getByType, getByTestId, queryByText } = openSearch();
+      fireEvent.changeText(UNSAFE_getByType(TextInput), "Japanese");
+      expect(queryByText("availableWithOmnilingual")).toBeNull();
+      expect(getByTestId("no-languages-found")).toBeTruthy();
+    });
+
+    it("offers Omnilingual only when the current model has no match", () => {
+      const { UNSAFE_getByType, getByTestId, queryByText, getByText } =
+        openSearch();
+      const field = UNSAFE_getByType(TextInput);
+      fireEvent.changeText(field, "arab");
+      expect(queryByText("availableWithOmnilingual")).toBeNull();
+
+      fireEvent.changeText(field, "Cantonese");
+      expect(getByText("availableWithOmnilingual")).toBeTruthy();
+      expect(getByTestId(dynamicTestID.language("yue"))).toBeTruthy();
+    });
+
+    it("dismisses, then offers the Omnilingual download", () => {
+      const onDismiss = jest.fn();
+      const utils = renderSheet({ onDismiss });
+      fireEvent.press(utils.getByTestId(TestID.TranscriptionSettingsLanguage));
+      fireEvent.press(utils.getByTestId(TestID.LanguageSearchOpen));
+      now += SEARCH_MOTION_MS;
+      fireEvent.changeText(utils.UNSAFE_getByType(TextInput), "Cantonese");
+      fireEvent.press(utils.getByTestId(dynamicTestID.language("yue")));
+      expect(onDismiss).toHaveBeenCalled();
+
+      const { Modal } = require("react-native");
+      if (Platform.OS === "ios") {
+        expect(mockShowOmnilingualDownload).not.toHaveBeenCalled();
+        act(() => utils.UNSAFE_getByType(Modal).props.onDismiss());
+      }
+      expect(mockShowOmnilingualDownload).toHaveBeenCalled();
+      expect(mockSetModelId).not.toHaveBeenCalled();
+    });
+
+    it("activates a downloaded Omnilingual and returns to the main page", () => {
+      mockOmnilingualDownloaded.mockReturnValue(true);
+      const { UNSAFE_getByType, getByTestId } = openSearch();
+      fireEvent.changeText(UNSAFE_getByType(TextInput), "Cantonese");
+      fireEvent.press(getByTestId(dynamicTestID.language("yue")));
+      expect(mockSetModelId).toHaveBeenCalledWith("omnilingual");
+      expect(mockShowOmnilingualDownload).not.toHaveBeenCalled();
+      expect(onLanguagePage()).toBe(false);
     });
 
     it("the x takes the magnifier's place and closes search", () => {

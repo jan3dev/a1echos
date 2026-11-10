@@ -102,7 +102,7 @@
   "deleteConfirmMessage": "Tem certeza de que deseja excluir {{name}}? Você pode baixá-lo novamente mais tarde.",
   "downloadError": "Falha no download: {{error}}",
   "insufficientSpace": "Não há armazenamento suficiente para baixar este modelo. São necessários {{required}} e há {{available}} disponíveis. Libere espaço e tente novamente.",
-  "languageCount": "{{count}} idiomas",
+  "languageCount": "{{count, number}} idiomas",
   "transcriptionModeTitle": "Modo de transcrição",
   "transcriptionSettings": "Ajustes de transcrição",
   "close": "Fechar",
@@ -270,5 +270,14 @@
   "structureNeedsModel": "Baixe um modelo de IA para estruturar notas.",
   "structureFailed": "Falha ao Estruturar",
   "structureStopped": "Estruturação Interrompida",
-  "stop": "Parar"
+  "stop": "Parar",
+  "availableWithOmnilingual": "Disponível com Omnilingual",
+  "omnilingualLanguagesTitle": "Idiomas do Omnilingual",
+  "omnilingualLanguagesDescription": "O Omnilingual detecta o idioma enquanto você fala. Pesquise entre {{count, number}} idiomas para verificar se o seu está incluído.",
+  "downloadOmnilingualTitle": "Baixar Omnilingual?",
+  "downloadOmnilingualIntro": "O Omnilingual reconhece {{count, number}} idiomas e detecta qual você está falando. Funciona offline depois de baixado.",
+  "downloadOmnilingualNote": "{{size}}. Por enquanto, apenas no modo Alta precisão.",
+  "anyLanguage": "Qualquer idioma",
+  "modelDescription_omnilingual": "Para idiomas que outros modelos não cobrem.",
+  "notNow": "Agora não"
 }

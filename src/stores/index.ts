@@ -124,6 +124,9 @@ export {
   useLargerModelSuggestionVisible,
   useShowLargerModelSuggestion,
   useHideLargerModelSuggestion,
+  useOmnilingualDownloadVisible,
+  useShowOmnilingualDownload,
+  useHideOmnilingualDownload,
 } from "./ui-store/uiStore";
 export type {
   GlobalTooltipAction,

@@ -21,7 +21,9 @@ const hidden = { includeHiddenElements: true };
 
 // Run the worklets for real so the timeline's styles land on the views.
 beforeAll(() => {
-  jest.mocked(Reanimated.useAnimatedStyle).mockImplementation(((fn: () => unknown) => fn()) as never);
+  jest
+    .mocked(Reanimated.useAnimatedStyle)
+    .mockImplementation(((fn: () => unknown) => fn()) as never);
   jest
     .mocked(Reanimated.useSharedValue)
     .mockImplementation((value) => useRef({ value }).current as never);

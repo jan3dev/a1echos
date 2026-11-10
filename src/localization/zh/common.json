@@ -86,7 +86,7 @@
   "deleteConfirmMessage": "确定要删除 {{name}} 吗？你之后可以重新下载。",
   "downloadError": "下载失败：{{error}}",
   "insufficientSpace": "存储空间不足，无法下载此模型。需要 {{required}}，可用 {{available}}。请释放空间后重试。",
-  "languageCount": "{{count}} 种语言",
+  "languageCount": "{{count, number}} 种语言",
   "transcriptionModeTitle": "转录模式",
   "transcriptionSettings": "转录设置",
   "close": "关闭",
@@ -254,5 +254,14 @@
   "structureNeedsModel": "下载 AI 模型以整理笔记。",
   "structureFailed": "整理失败",
   "structureStopped": "整理已停止",
-  "stop": "停止"
+  "stop": "停止",
+  "availableWithOmnilingual": "Omnilingual 支持",
+  "omnilingualLanguagesTitle": "Omnilingual 语言",
+  "omnilingualLanguagesDescription": "Omnilingual 会在你说话时识别语言。搜索 {{count, number}} 种语言，确认是否支持你的语言。",
+  "downloadOmnilingualTitle": "下载 Omnilingual？",
+  "downloadOmnilingualIntro": "Omnilingual 可识别 {{count, number}} 种语言，并自动检测你所说的语言。下载后可离线使用。",
+  "downloadOmnilingualNote": "{{size}}。目前仅支持高精度模式。",
+  "anyLanguage": "任意语言",
+  "modelDescription_omnilingual": "适用于其他模型未覆盖的语言。",
+  "notNow": "暂不"
 }

@@ -14,6 +14,10 @@ export const Routes = {
   onboardingEnableKeyboard: "/onboarding/enable-keyboard" as Href,
   onboardingSpokenLanguage: "/onboarding/spoken-language" as Href,
   onboardingTryLargerModel: "/onboarding/try-larger-model" as Href,
+  onboardingTryOmnilingual: {
+    pathname: "/onboarding/try-larger-model",
+    params: { model: "omnilingual" },
+  } as unknown as Href,
   onboardingTutorialIntro: "/onboarding/tutorial-intro" as Href,
   onboardingSwitchKeyboard: "/onboarding/switch-keyboard" as Href,
   onboardingDictate: "/onboarding/dictate" as Href,
@@ -42,10 +46,20 @@ export const Routes = {
     }) as unknown as Href,
   settings: "/settings" as Href,
   settingsModel: "/settings/model" as Href,
+  /** Audio Models, scrolled to the given model's card. */
+  settingsModelFocus: (modelId: string): Href =>
+    ({
+      pathname: "/settings/model",
+      params: { focus: modelId },
+    }) as unknown as Href,
   settingsIntelligence: "/settings/intelligence" as Href,
   settingsTheme: "/settings/theme" as Href,
   settingsTextAppearance: "/settings/text-appearance" as Href,
   settingsLanguage: "/settings/language" as Href,
+  settingsOmnilingualLanguages: {
+    pathname: "/settings/language",
+    params: { model: "omnilingual" },
+  } as unknown as Href,
   settingsAdvanced: "/settings/advanced" as Href,
   settingsEchosKeyboard: "/settings/echos-keyboard" as Href,
   settingsMicTimeout: "/settings/microphone-timeout" as Href,

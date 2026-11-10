@@ -89,6 +89,9 @@ jest.mock("@/stores", () => ({
     jest.fn().mockResolvedValue(undefined),
   ),
   useSelectedLanguage: jest.fn(() => ({ code: "de", name: "German" })),
+  useOmnilingualDownloadVisible: jest.fn(() => false),
+  useHideOmnilingualDownload: jest.fn(() => jest.fn()),
+  useSetModelId: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("@/services", () => ({
@@ -109,15 +112,23 @@ jest.mock("@/db/runtime-migration", () => ({
 }));
 
 const mockKeyboardHeight = jest.fn(() => 0);
+const mockEnsureModelDownloaded = jest.fn();
 jest.mock("@/hooks", () => ({
+  useEnsureModelDownloaded: () => mockEnsureModelDownloaded,
   useKeyboardHeight: () => mockKeyboardHeight(),
   useVoiceSessionHint: jest.fn(),
   useLocalization: () => ({
-    loc: { transcriptionSettings: "settings", scrollToTop: "scrollToTop" },
+    loc: {
+      transcriptionSettings: "settings",
+      scrollToTop: "scrollToTop",
+      downloadOmnilingualIntro: (count: number) => `intro ${count}`,
+      downloadOmnilingualNote: (size: string) => `note ${size}`,
+    },
   }),
 }));
 
 jest.mock("@/utils", () => ({
+  formatBytes: () => "365 MB",
   logError: jest.fn(),
   FeatureFlag: { general: "general", ui: "ui" },
   readKeyboardEnabled: jest.fn().mockResolvedValue(null),
@@ -196,6 +207,32 @@ jest.mock("@/components", () => {
           <Text>{languageName}</Text>
           <TouchableOpacity testID="lms-confirm" onPress={onConfirm} />
           <TouchableOpacity testID="lms-dismiss" onPress={onDismiss} />
+        </View>
+      );
+    },
+    Modal: ({
+      visible,
+      testID,
+      message,
+      primaryButton,
+      secondaryButton,
+      titleMaxLines,
+      messageMaxLines,
+    }: any) => {
+      const { TouchableOpacity, Text } = require("react-native");
+      if (!visible) return null;
+      return (
+        <View testID={testID}>
+          <Text>{message}</Text>
+          <Text>{`lines ${titleMaxLines} ${messageMaxLines}`}</Text>
+          <TouchableOpacity
+            testID="modal-primary"
+            onPress={primaryButton.onTap}
+          />
+          <TouchableOpacity
+            testID="modal-secondary"
+            onPress={secondaryButton.onTap}
+          />
         </View>
       );
     },
@@ -1118,6 +1155,75 @@ describe("RootLayout", () => {
       expect(mockMark).toHaveBeenCalled();
       expect(mockHide).toHaveBeenCalled();
       expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Omnilingual download sheet", () => {
+    const show = (
+      hide = jest.fn(),
+      push = jest.fn(),
+      setModelId = jest.fn().mockResolvedValue(undefined),
+    ) => {
+      const {
+        useOmnilingualDownloadVisible,
+        useHideOmnilingualDownload,
+        useSetModelId,
+      } = require("@/stores");
+      const { useRouter } = require("expo-router");
+      (useOmnilingualDownloadVisible as jest.Mock).mockReturnValue(true);
+      (useHideOmnilingualDownload as jest.Mock).mockReturnValue(hide);
+      (useSetModelId as jest.Mock).mockReturnValue(setModelId);
+      (useRouter as jest.Mock).mockReturnValue({ push });
+      return { hide, push, setModelId };
+    };
+    afterEach(() => {
+      const { useOmnilingualDownloadVisible } = require("@/stores");
+      (useOmnilingualDownloadVisible as jest.Mock).mockReturnValue(false);
+    });
+
+    it("explains the model, its size and file-only mode, unclamped", async () => {
+      show();
+      const { getByTestId, getByText } = await renderAndWaitForInit();
+      expect(getByTestId(TestID.OmnilingualDownloadModal)).toHaveTextContent(
+        "intro 1650\n\nnote 365 MB",
+        { exact: false },
+      );
+      // 0 lifts the line limit, so long translations wrap.
+      expect(getByText("lines 0 0")).toBeTruthy();
+    });
+
+    it("download starts it, goes to audio models, and selects it once in", async () => {
+      mockEnsureModelDownloaded.mockResolvedValue(true);
+      const { hide, push, setModelId } = show();
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("modal-primary"));
+      });
+      expect(hide).toHaveBeenCalled();
+      expect(mockEnsureModelDownloaded).toHaveBeenCalledWith("omnilingual");
+      expect(push).toHaveBeenCalledWith(
+        Routes.settingsModelFocus("omnilingual"),
+      );
+      expect(setModelId).toHaveBeenCalledWith("omnilingual");
+    });
+
+    it("doesn't select it when the download fails", async () => {
+      mockEnsureModelDownloaded.mockResolvedValue(false);
+      const { setModelId } = show();
+      const { getByTestId } = await renderAndWaitForInit();
+      await act(async () => {
+        fireEvent.press(getByTestId("modal-primary"));
+      });
+      expect(setModelId).not.toHaveBeenCalled();
+    });
+
+    it("not now just hides", async () => {
+      const { hide, push } = show();
+      const { getByTestId } = await renderAndWaitForInit();
+      fireEvent.press(getByTestId("modal-secondary"));
+      expect(hide).toHaveBeenCalled();
+      expect(push).not.toHaveBeenCalled();
+      expect(mockEnsureModelDownloaded).not.toHaveBeenCalled();
     });
   });
 

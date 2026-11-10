@@ -11,6 +11,7 @@ export enum ModelId {
   NEMO_PARAKEET_V3 = "nemo_parakeet_v3",
   QWEN3_ASR = "qwen3_asr",
   NEMOTRON_STREAMING_EN = "nemotron_streaming_en",
+  OMNILINGUAL = "omnilingual",
 }
 
 export enum TranscriptionMode {

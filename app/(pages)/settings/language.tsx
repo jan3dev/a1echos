@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { FlatList, StyleSheet, type HostInstance } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -9,13 +9,14 @@ import {
   Icon,
   LanguageListItem,
   NoLanguagesFound,
+  OmnilingualLanguageListItem,
   Screen,
   Text,
   TextField,
   TopAppBar,
 } from "@/components";
 import { RipplePressable } from "@/components/ui/ripple-pressable/RipplePressable";
-import { AppConstants, dynamicTestID, TestID } from "@/constants";
+import { AppConstants, dynamicTestID, Routes, TestID } from "@/constants";
 import {
   LANGUAGE_LIST_WINDOW,
   SEARCH_FADE_MS,
@@ -25,16 +26,23 @@ import {
 } from "@/hooks";
 import {
   getModelInfo,
+  isOmnilingual,
+  ModelId,
+  OmnilingualLanguage,
+  OmnilingualLanguages,
   shouldSuggestLargerModel,
   SpokenLanguage,
   SupportedLanguages,
 } from "@/models";
 import {
   useHasSeenLargerModelSuggestion,
+  useIsModelDownloaded,
   useSelectedLanguage,
   useSelectedModelId,
   useSetLanguage,
+  useSetModelId,
   useShowLargerModelSuggestion,
+  useShowOmnilingualDownload,
 } from "@/stores";
 import { useTheme } from "@/theme";
 import { delay, FeatureFlag, iosPressed, logError } from "@/utils";
@@ -47,7 +55,7 @@ export default function LanguageSettingsScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const blurTargetRef = useRef<HostInstance>(null);
-  const listRef = useRef<FlatList<SpokenLanguage>>(null);
+  const listRef = useRef<FlatList<SpokenLanguage | OmnilingualLanguage>>(null);
   const { scrolled, onScroll } = useScrollSurface();
 
   const selectedLanguage = useSelectedLanguage();
@@ -55,6 +63,13 @@ export default function LanguageSettingsScreen() {
   const setLanguage = useSetLanguage();
   const hasSeenLargerModelSuggestion = useHasSeenLargerModelSuggestion();
   const showLargerModelSuggestion = useShowLargerModelSuggestion();
+  const setModelId = useSetModelId();
+  const showOmnilingualDownload = useShowOmnilingualDownload();
+  const omnilingualDownloaded = useIsModelDownloaded(ModelId.OMNILINGUAL);
+  // Omnilingual detects the language, so its list is for reference only.
+  const { model } = useLocalSearchParams<{ model?: string }>();
+  const omnilingual =
+    selectedModelId === ModelId.OMNILINGUAL || model === ModelId.OMNILINGUAL;
 
   const [pendingLanguageCode, setPendingLanguageCode] = useState<string | null>(
     null,
@@ -106,15 +121,36 @@ export default function LanguageSettingsScreen() {
   // Keyed on primitives so toggling search doesn't re-render every row.
   const languages = useMemo(
     () =>
-      SupportedLanguages.pickerOrder(
-        SupportedLanguages.search(
-          SupportedLanguages.forCodes(supportedLanguageCodes),
-          query,
-        ),
-        pinnedCode,
-      ),
-    [supportedLanguageCodes, query, pinnedCode],
+      omnilingual
+        ? []
+        : SupportedLanguages.pickerOrder(
+            SupportedLanguages.search(
+              SupportedLanguages.forCodes(supportedLanguageCodes),
+              query,
+            ),
+            pinnedCode,
+          ),
+    [omnilingual, supportedLanguageCodes, query, pinnedCode],
   );
+  const omnilingualLanguages = useMemo(
+    () =>
+      omnilingual
+        ? OmnilingualLanguages.search(query)
+        : OmnilingualLanguages.fallback(query),
+    [omnilingual, query],
+  );
+  const omnilingualSection = !omnilingual && omnilingualLanguages.length > 0;
+  const omnilingualInfo = getModelInfo(ModelId.OMNILINGUAL);
+
+  const pickOmnilingual = () => {
+    if (!omnilingualDownloaded) {
+      showOmnilingualDownload();
+      return;
+    }
+    // The store logs and rolls back a failed save.
+    setModelId(ModelId.OMNILINGUAL).catch(() => {});
+    router.replace(Routes.settingsModel);
+  };
 
   // The field sits at the list's top; bring it into view.
   const openSearch = () => {
@@ -150,7 +186,7 @@ export default function LanguageSettingsScreen() {
       <AppBarBlurTarget targetRef={blurTargetRef} style={{ flex: 1 }}>
         <FlatList
           ref={listRef}
-          data={languages}
+          data={languages.length ? languages : omnilingualLanguages}
           keyExtractor={(language) => language.code}
           initialNumToRender={LANGUAGE_ROWS_FIRST_RENDER}
           windowSize={LANGUAGE_LIST_WINDOW}
@@ -168,50 +204,77 @@ export default function LanguageSettingsScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
-          ListHeaderComponentStyle={styles.header}
+          ListHeaderComponentStyle={
+            omnilingualSection ? styles.sectionHeader : styles.header
+          }
           ListHeaderComponent={
-            <Animated.View
-              key={search.searching ? "search" : "intro"}
-              entering={FadeIn.duration(SEARCH_FADE_MS)}
-              exiting={FadeOut.duration(SEARCH_FADE_MS)}
-            >
-              {search.searching ? (
-                <TextField
-                  value={search.query}
-                  onChangeText={search.setQuery}
-                  variant="outlined"
-                  iconLeading="search"
-                  showClearIcon
-                  autoFocus
-                  debounceTime={0}
-                  accessibilityLabel={loc.searchLanguage}
-                />
-              ) : (
+            <>
+              <Animated.View
+                key={search.searching ? "search" : "intro"}
+                entering={FadeIn.duration(SEARCH_FADE_MS)}
+                exiting={FadeOut.duration(SEARCH_FADE_MS)}
+              >
+                {search.searching ? (
+                  <TextField
+                    value={search.query}
+                    onChangeText={search.setQuery}
+                    variant="outlined"
+                    iconLeading="search"
+                    showClearIcon
+                    autoFocus
+                    debounceTime={0}
+                    accessibilityLabel={loc.searchLanguage}
+                  />
+                ) : (
+                  <Text
+                    variant="body1"
+                    weight="medium"
+                    color={theme.colors.textSecondary}
+                  >
+                    {omnilingual
+                      ? loc.omnilingualLanguagesDescription(
+                          omnilingualInfo.languages,
+                        )
+                      : loc.spokenLanguageDescription}
+                  </Text>
+                )}
+              </Animated.View>
+              {omnilingualSection && (
                 <Text
-                  variant="body1"
+                  variant="body2"
                   weight="medium"
                   color={theme.colors.textSecondary}
                 >
-                  {loc.spokenLanguageDescription}
+                  {loc.availableWithOmnilingual}
                 </Text>
               )}
-            </Animated.View>
+            </>
           }
           ListEmptyComponent={<NoLanguagesFound />}
-          renderItem={({ item: language }) => (
-            <LanguageListItem
-              testID={dynamicTestID.language(language.code)}
-              language={language}
-              selected={language.code === effectiveLanguageCode}
-              enabled={!isSaving}
-              onSelect={handleSelect}
-            />
-          )}
+          renderItem={({ item: language }) =>
+            isOmnilingual(language) ? (
+              <OmnilingualLanguageListItem
+                testID={dynamicTestID.language(language.code)}
+                language={language}
+                onPress={omnilingual ? undefined : pickOmnilingual}
+              />
+            ) : (
+              <LanguageListItem
+                testID={dynamicTestID.language(language.code)}
+                language={language}
+                selected={language.code === effectiveLanguageCode}
+                enabled={!isSaving}
+                onSelect={handleSelect}
+              />
+            )
+          }
         />
       </AppBarBlurTarget>
 
       <TopAppBar
-        title={loc.spokenLanguageTitle}
+        title={
+          omnilingual ? loc.omnilingualLanguagesTitle : loc.spokenLanguageTitle
+        }
         blurTarget={blurTargetRef}
         scrolled={scrolled}
         onBackPressed={leave}
@@ -237,5 +300,9 @@ const styles = StyleSheet.create({
   // With the rows' 16 gap, 24 between the intro or field and the list.
   header: {
     marginBottom: 8,
+  },
+  // 24 from the field to the section title, 16 from it to the rows.
+  sectionHeader: {
+    gap: 24,
   },
 });

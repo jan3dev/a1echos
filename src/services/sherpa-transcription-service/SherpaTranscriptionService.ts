@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 import type { PcmLiveStreamHandle } from "react-native-sherpa-onnx/audio";
 import type {
   OnlineSTTModelType,
+  STTModelType,
   StreamingSttEngine,
   SttEngine,
   SttStream,
@@ -687,8 +688,7 @@ const createSherpaTranscriptionService = () => {
           kind: "offline",
           stt: await loadStt().createSTT({
             modelPath,
-            modelType: modelInfo.sherpaModelType as
-              "whisper" | "nemo_transducer" | "qwen3_asr",
+            modelType: modelInfo.sherpaModelType as STTModelType,
             preferInt8: true,
             numThreads,
             modelOptions:

@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { Keyboard } from "react-native";
 
 import { SpokenLanguageScreen, Toast } from "@/components";
 import { useToast } from "@/components/ui/toast/useToast";
@@ -65,6 +66,10 @@ export default function SpokenLanguageOnboarding() {
         onBack={router.back}
         onSkip={confirmSkip}
         onNext={handleNext}
+        onPickOmnilingual={() => {
+          Keyboard.dismiss();
+          router.push(Routes.onboardingTryOmnilingual);
+        }}
         isSaving={isSaving}
       />
       <Toast {...toastState} />
