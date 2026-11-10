@@ -1043,7 +1043,7 @@ describe("transcriptionStore", () => {
       const result = await useTranscriptionStore.getState().startRecording();
       expect(result).toBe(false);
       expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.ERROR,
+        TranscriptionState.READY,
       );
     });
 
@@ -1145,7 +1145,7 @@ describe("transcriptionStore", () => {
       const result = await useTranscriptionStore.getState().startRecording();
       expect(result).toBe(false);
       expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.ERROR,
+        TranscriptionState.READY,
       );
       expect(useTranscriptionStore.getState().chunkUnsubscribe).toBeNull();
       expect(
@@ -1707,7 +1707,7 @@ describe("transcriptionStore", () => {
         backgroundRecordingService.stopBackgroundService,
       ).toHaveBeenCalled();
       expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.ERROR,
+        TranscriptionState.READY,
       );
     });
 
@@ -1791,7 +1791,7 @@ describe("transcriptionStore", () => {
       expect(mockAudioUnsub).toHaveBeenCalled();
       expect(mockPartialUnsub).toHaveBeenCalled();
       expect(useTranscriptionStore.getState().state).toBe(
-        TranscriptionState.ERROR,
+        TranscriptionState.READY,
       );
     });
 

@@ -1282,6 +1282,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         if (!(await ensureEngine())) {
           get().setError("Failed to initialize transcription engine");
+          get().transitionTo(TranscriptionState.READY);
           releaseOperationLock(operationName);
           return false;
         }
@@ -1351,13 +1352,13 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
               });
             }
           }
-          get().transitionTo(TranscriptionState.READY);
           get().clearRecordingSessionId();
           get().setError(
             isRealtime
               ? "Failed to start real-time transcription"
               : "Failed to start recording",
           );
+          get().transitionTo(TranscriptionState.READY);
           releaseOperationLock(operationName);
           return false;
         }
@@ -1384,6 +1385,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           });
         }
         get().setError(`Error starting recording: ${error}`);
+        get().transitionTo(TranscriptionState.READY);
         get().clearRecordingSessionId();
         return false;
       } finally {
