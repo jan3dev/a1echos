@@ -639,4 +639,66 @@ describe("RecordingButton", () => {
     expect(onRecordingStart).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
+
+  describe("press and hold", () => {
+    const setup = (state = TranscriptionState.READY) => {
+      const onRecordingStart = jest.fn();
+      const onRecordingStop = jest.fn();
+      const el = (s: TranscriptionState) => (
+        <RecordingButton
+          state={s}
+          onRecordingStart={onRecordingStart}
+          onRecordingStop={onRecordingStop}
+          colors={mockColors}
+        />
+      );
+      const utils = render(el(state));
+      const button = () => utils.getByRole("button");
+      const setState = (s: TranscriptionState) => utils.rerender(el(s));
+      return { onRecordingStart, onRecordingStop, button, setState };
+    };
+
+    it("starts right away on hold and stops on release", () => {
+      const { onRecordingStart, onRecordingStop, button, setState } = setup();
+      fireEvent(button(), "longPress");
+      expect(onRecordingStart).toHaveBeenCalledTimes(1);
+      setState(TranscriptionState.RECORDING);
+      fireEvent(button(), "pressOut");
+      expect(onRecordingStop).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops once recording begins when released while starting", () => {
+      const { onRecordingStop, button, setState } = setup();
+      fireEvent(button(), "longPress");
+      setState(TranscriptionState.RECORDING_STARTING);
+      fireEvent(button(), "pressOut");
+      expect(onRecordingStop).not.toHaveBeenCalled();
+      setState(TranscriptionState.RECORDING);
+      expect(onRecordingStop).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops the pending stop when the start fails", () => {
+      const { onRecordingStop, button, setState } = setup();
+      fireEvent(button(), "longPress");
+      setState(TranscriptionState.RECORDING_STARTING);
+      fireEvent(button(), "pressOut");
+      setState(TranscriptionState.READY);
+      setState(TranscriptionState.RECORDING);
+      expect(onRecordingStop).not.toHaveBeenCalled();
+    });
+
+    it("keeps recording when released before the start began", () => {
+      const { onRecordingStop, button, setState } = setup();
+      fireEvent(button(), "longPress");
+      fireEvent(button(), "pressOut");
+      setState(TranscriptionState.RECORDING);
+      expect(onRecordingStop).not.toHaveBeenCalled();
+    });
+
+    it("ignores release after a plain tap", () => {
+      const { onRecordingStop, button } = setup(TranscriptionState.RECORDING);
+      fireEvent(button(), "pressOut");
+      expect(onRecordingStop).not.toHaveBeenCalled();
+    });
+  });
 });

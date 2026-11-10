@@ -1,4 +1,3 @@
-import * as Haptics from "expo-haptics";
 import {
   BlurMask,
   Canvas,
@@ -9,6 +8,7 @@ import {
   rect,
   rrect,
 } from "@shopify/react-native-skia";
+import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
@@ -17,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, { Path } from "react-native-svg";
 import Animated, {
   Easing,
   FadeIn,
@@ -32,6 +31,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 
 import { TestID } from "@/constants";
 import { useLocalization } from "@/hooks";
@@ -39,8 +39,8 @@ import { TranscriptionState } from "@/models";
 import {
   AquaColors,
   lightColors,
-  recordingButtonGradient,
   RecordingButtonBlob,
+  recordingButtonGradient,
   RecordingButtonHighlight,
 } from "@/theme";
 
@@ -61,6 +61,7 @@ interface RecordingButtonProps {
 }
 
 const PRESS_DOWN_SCALE = 0.9;
+const HOLD_DELAY_MS = 300;
 const GESTURE_ISOLATION_DURATION = 2000;
 const EASE_OUT = Easing.out(Easing.ease);
 
@@ -304,6 +305,9 @@ export const RecordingButton = ({
   const [startPressed, setStartPressed] = useState(false);
   const [processingHeld, setProcessingHeld] = useState(false);
   const [showProcessingLogo, setShowProcessingLogo] = useState(false);
+  // Press-and-hold: recording runs while the finger stays down.
+  const [holding, setHolding] = useState(false);
+  const stopOnRecordingRef = useRef(false);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gestureIsolationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -359,7 +363,8 @@ export const RecordingButton = ({
     pressActionTimerRef.current = setTimeout(action, scaleAnimationDuration);
   };
 
-  const handleStartRecording = () => {
+  // Hold starts at once and keeps the button pressed down until release.
+  const handleStartRecording = (hold: boolean) => {
     if (!onRecordingStart || gestureIsolationActive || isDebouncing) {
       return;
     }
@@ -370,7 +375,16 @@ export const RecordingButton = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      triggerPressTransition(onRecordingStart);
+      if (hold) {
+        setHolding(true);
+        scale.value = withTiming(PRESS_DOWN_SCALE, {
+          duration: scaleAnimationDuration,
+          easing: EASE_OUT,
+        });
+        onRecordingStart();
+      } else {
+        triggerPressTransition(onRecordingStart);
+      }
 
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
@@ -407,6 +421,27 @@ export const RecordingButton = ({
       }, debounceDuration);
     });
   };
+
+  const handlePressOut = () => {
+    if (!holding) return;
+    setHolding(false);
+    scale.value = withTiming(1, {
+      duration: scaleAnimationDuration,
+      easing: EASE_OUT,
+    });
+    // Released before the start even began
+    if (state === TranscriptionState.READY) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (state === TranscriptionState.RECORDING) onRecordingStop?.();
+    else stopOnRecordingRef.current = true;
+  };
+
+  useEffect(() => {
+    if (!stopOnRecordingRef.current) return;
+    if (state === TranscriptionState.RECORDING_STARTING) return;
+    stopOnRecordingRef.current = false;
+    if (state === TranscriptionState.RECORDING) onRecordingStop?.();
+  }, [state, onRecordingStop]);
 
   const scaleAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -527,14 +562,20 @@ export const RecordingButton = ({
           }
           style={[styles.touchable, circleSize]}
           onPress={
-            isBusy
+            isBusy || holding
               ? undefined
               : isRecording
                 ? handleStopRecording
-                : handleStartRecording
+                : () => handleStartRecording(false)
           }
+          onLongPress={
+            isBusy || isRecording ? undefined : () => handleStartRecording(true)
+          }
+          delayLongPress={HOLD_DELAY_MS}
+          onPressOut={handlePressOut}
           disabled={
-            isBusy || isDebouncing || gestureIsolationActive || !enabled
+            !holding &&
+            (isBusy || isDebouncing || gestureIsolationActive || !enabled)
           }
           activeOpacity={0.7}
           accessibilityRole="button"
@@ -576,8 +617,10 @@ export const RecordingButton = ({
                 ]}
               />
             )}
+            {/* Not a touch target: swapping it mid-hold would drop the release. */}
             <Animated.View
               key={contentKey}
+              pointerEvents="none"
               entering={FadeIn.duration(CONTENT_FADE_MS).delay(CONTENT_FADE_MS)}
               exiting={FadeOut.duration(CONTENT_FADE_MS)}
             >

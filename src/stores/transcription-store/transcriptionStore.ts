@@ -6,7 +6,6 @@ import { AppState, Platform } from "react-native";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
-import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
 import { AppConstants } from "@/constants";
 import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
 import type { ChunkEvent } from "@/services";
@@ -25,6 +24,7 @@ import {
   type SampleRange,
   sliceWavFile,
 } from "@/utils";
+import { EchosAudioDecoder } from "@modules/echos-audio-decoder/src";
 
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
@@ -549,6 +549,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         .updateSessionModifiedTimestamp(sessionId);
     });
   };
+
+  // RECORDING is entered before capture is live
+  let startInFlight: Promise<void> = Promise.resolve();
 
   const acquireOperationLock = async (
     operationName: string,
@@ -1242,6 +1245,9 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return false;
       }
 
+      let finishStart = () => {};
+      startInFlight = new Promise((resolve) => (finishStart = resolve));
+
       try {
         const state = get();
         const currentState = state.state;
@@ -1382,12 +1388,14 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
         return false;
       } finally {
         releaseOperationLock(operationName);
+        finishStart();
       }
     },
 
     stopRecordingAndSave: async () => {
       const operationName = "stopRecordingAndSave";
 
+      await startInFlight;
       if (!get().isRecording()) {
         return;
       }

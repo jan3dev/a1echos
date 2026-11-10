@@ -1180,6 +1180,39 @@ describe("transcriptionStore", () => {
       await useTranscriptionStore.getState().startRecording();
     };
 
+    it("waits for a start still bringing capture up before stopping", async () => {
+      let captureLive!: (ok: boolean) => void;
+      (
+        sherpaTranscriptionService.startRealtimeTranscription as jest.Mock
+      ).mockImplementationOnce(
+        () => new Promise<boolean>((resolve) => (captureLive = resolve)),
+      );
+      useTranscriptionStore.setState({ state: TranscriptionState.READY });
+
+      const start = useTranscriptionStore.getState().startRecording();
+      for (let i = 0; i < 100 && !captureLive; i++) await Promise.resolve();
+      expect(captureLive).toBeDefined();
+      expect(useTranscriptionStore.getState().state).toBe(
+        TranscriptionState.RECORDING,
+      );
+
+      const stop = useTranscriptionStore.getState().stopRecordingAndSave();
+      await Promise.resolve();
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).not.toHaveBeenCalled();
+
+      captureLive(true);
+      await start;
+      await stop;
+      expect(
+        sherpaTranscriptionService.stopRealtimeTranscription,
+      ).toHaveBeenCalledTimes(1);
+      expect(useTranscriptionStore.getState().state).toBe(
+        TranscriptionState.READY,
+      );
+    });
+
     it("stops capture, finalizes WAV, saves transcription, transitions to READY", async () => {
       (
         sherpaTranscriptionService.stopRealtimeTranscription as jest.Mock
