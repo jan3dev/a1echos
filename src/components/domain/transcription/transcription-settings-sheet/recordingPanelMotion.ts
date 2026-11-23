@@ -20,8 +20,8 @@ export const Q_REST = -0.3;
 const DEFAULT_TRAVEL = 232;
 
 const BAR_ZONE = [0, 0.35] as const;
-const BLUR_ZONE = [0, 0.3] as const;
-const FADE_ZONE = [0.05, 0.3] as const;
+const BLUR_ZONE = [0, 0.6] as const;
+const FADE_ZONE = [0.05, 0.6] as const;
 const PANEL_ZONE = [Q_REST, 0] as const;
 export const BLUR_MAX = 8;
 

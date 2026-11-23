@@ -38,16 +38,17 @@ const drag = (m: PanelMotion, dy: number, velocityY = 0, success = true) => {
 };
 
 describe("panelVisuals", () => {
-  it("content is sharp and visible from 30% open, gone by 5%", () => {
-    expect(panelVisuals(0.3, TRAVEL)).toMatchObject({
+  it("content is sharp and visible from 60% open, gone by 5%", () => {
+    expect(panelVisuals(0.6, TRAVEL)).toMatchObject({
       contentBlur: 0,
       contentOpacity: 1,
     });
     expect(panelVisuals(0.05, TRAVEL).contentOpacity).toBe(0);
     expect(panelVisuals(0, TRAVEL).contentBlur).toBe(BLUR_MAX);
-    const mid = panelVisuals(0.15, TRAVEL);
+    const mid = panelVisuals(0.3, TRAVEL);
     expect(mid.contentBlur).toBeGreaterThan(0);
     expect(mid.contentOpacity).toBeGreaterThan(0);
+    expect(mid.contentOpacity).toBeLessThan(1);
   });
 
   it("grabber morphs in the first 35% and stays home below it", () => {
