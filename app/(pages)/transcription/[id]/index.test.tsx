@@ -67,7 +67,7 @@ const mockStructure = jest.fn(async (..._args: any[]): Promise<any> => ({
 }));
 const mockCancelLlm = jest.fn();
 let mockLlmId: string | null = "qwen35_2b";
-let mockModelId = "whisper_tiny";
+let mockModelId = "whisper_base";
 let mockSummarySessionId: string | null = null;
 let mockIsStructuring = false;
 jest.mock("@/stores", () => ({
@@ -351,7 +351,7 @@ describe("TranscriptionEditScreen", () => {
     expect(queryByText("EN")).toBeNull();
     fireEvent.press(getByTestId(TestID.TranscriptionEditLanguage));
     expect(mockPush).not.toHaveBeenCalled();
-    mockModelId = "whisper_tiny";
+    mockModelId = "whisper_base";
   });
 
   it("reprocesses in the chosen language into the editor", async () => {

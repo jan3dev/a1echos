@@ -71,7 +71,7 @@ const { preWarmModel } = require("../transcription-store/preWarmModel") as {
 
 const initialState = {
   selectedTheme: AppTheme.AUTO,
-  selectedModelId: ModelId.WHISPER_TINY,
+  selectedModelId: ModelId.WHISPER_BASE,
   selectedTranscriptionMode: TranscriptionMode.FILE,
   modelModes: {},
   selectedLanguage: SupportedLanguages.defaultLanguage,
@@ -130,7 +130,7 @@ describe("settingsStore", () => {
         .mockResolvedValueOnce(TranscriptionMode.REALTIME)
         .mockResolvedValueOnce(
           JSON.stringify({
-            [ModelId.WHISPER_TINY]: TranscriptionMode.FILE,
+            [ModelId.WHISPER_BASE]: TranscriptionMode.FILE,
             [ModelId.NEMO_PARAKEET_V3]: TranscriptionMode.REALTIME,
             junk_id: "bogus",
           }),
@@ -140,7 +140,7 @@ describe("settingsStore", () => {
       await useSettingsStore.getState().initialize();
       const { modelModes } = useSettingsStore.getState();
 
-      expect(modelModes[ModelId.WHISPER_TINY]).toBe(TranscriptionMode.FILE);
+      expect(modelModes[ModelId.WHISPER_BASE]).toBe(TranscriptionMode.FILE);
       expect(modelModes[ModelId.NEMO_PARAKEET_V3]).toBe(
         TranscriptionMode.REALTIME,
       );
@@ -166,7 +166,7 @@ describe("settingsStore", () => {
       (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(ModelId.WHISPER_TINY)
+        .mockResolvedValueOnce(ModelId.WHISPER_BASE)
         .mockResolvedValueOnce(TranscriptionMode.REALTIME)
         .mockResolvedValue(null);
 
@@ -189,6 +189,32 @@ describe("settingsStore", () => {
       await useSettingsStore.getState().initialize();
       expect(useSettingsStore.getState().selectedLanguage).toEqual(
         SupportedLanguages.defaultLanguage,
+      );
+    });
+
+    it("migrates a stored Whisper Tiny id to Whisper Base, keeping the language", async () => {
+      (AsyncStorage.getItem as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce("whisper_tiny")
+        .mockResolvedValueOnce(TranscriptionMode.FILE)
+        .mockResolvedValueOnce(
+          JSON.stringify({ whisper_tiny: TranscriptionMode.FILE }),
+        )
+        .mockResolvedValueOnce("de")
+        .mockResolvedValue(null);
+
+      await useSettingsStore.getState().initialize();
+      const state = useSettingsStore.getState();
+
+      expect(state.selectedModelId).toBe(ModelId.WHISPER_BASE);
+      expect(state.modelModes).toEqual({
+        [ModelId.WHISPER_BASE]: TranscriptionMode.FILE,
+      });
+      expect(state.selectedLanguage.code).toBe("de");
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "selected_model_id",
+        ModelId.WHISPER_BASE,
       );
     });
 
@@ -1202,7 +1228,7 @@ describe("settingsStore", () => {
       expect(state.selectedTranscriptionMode).toBe(TranscriptionMode.REALTIME);
     });
 
-    it.each([ModelId.QWEN3_ASR, ModelId.WHISPER_TINY])(
+    it.each([ModelId.QWEN3_ASR, ModelId.WHISPER_BASE])(
       "ignores real-time for file-only %s",
       async (modelId) => {
         await useSettingsStore
@@ -1290,9 +1316,9 @@ describe("settingsStore", () => {
       expect(typeof result.current).toBe("function");
     });
 
-    it("useSelectedModelId returns WHISPER_TINY by default", () => {
+    it("useSelectedModelId returns WHISPER_BASE by default", () => {
       const { result } = renderHook(() => useSelectedModelId());
-      expect(result.current).toBe(ModelId.WHISPER_TINY);
+      expect(result.current).toBe(ModelId.WHISPER_BASE);
     });
 
     it("useSelectedTranscriptionMode returns FILE by default", () => {
@@ -1312,11 +1338,11 @@ describe("settingsStore", () => {
 
     it("useModelModes returns the modelModes record", () => {
       useSettingsStore.setState({
-        modelModes: { [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME },
+        modelModes: { [ModelId.WHISPER_BASE]: TranscriptionMode.REALTIME },
       });
       const { result } = renderHook(() => useModelModes());
       expect(result.current).toEqual({
-        [ModelId.WHISPER_TINY]: TranscriptionMode.REALTIME,
+        [ModelId.WHISPER_BASE]: TranscriptionMode.REALTIME,
       });
     });
 

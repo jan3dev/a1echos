@@ -13,7 +13,12 @@ import type {
 
 import { AppConstants } from "@/constants";
 import type { ModelInfo } from "@/models";
-import { getModelInfo, ModelId, SupportedLanguages } from "@/models";
+import {
+  BUNDLED_MODEL_ID,
+  getModelInfo,
+  ModelId,
+  SupportedLanguages,
+} from "@/models";
 import {
   createPcmStreamWriter,
   FeatureFlag,
@@ -61,14 +66,14 @@ const convertToTraditional = (text: string): string => {
   return s2twConverter ? s2twConverter(text) : text;
 };
 
-const whisperEncoderAsset = require("@/assets/models/sherpa-whisper/tiny-encoder.int8.onnx");
-const whisperDecoderAsset = require("@/assets/models/sherpa-whisper/tiny-decoder.int8.onnx");
-const whisperTokensAsset = require("@/assets/models/sherpa-whisper/tiny-tokens.txt");
+const whisperEncoderAsset = require("@/assets/models/sherpa-whisper/base-encoder.int8.onnx");
+const whisperDecoderAsset = require("@/assets/models/sherpa-whisper/base-decoder.int8.onnx");
+const whisperTokensAsset = require("@/assets/models/sherpa-whisper/base-tokens.txt");
 
 const BUNDLED_ASSETS: Record<string, number> = {
-  "tiny-encoder.int8.onnx": whisperEncoderAsset,
-  "tiny-decoder.int8.onnx": whisperDecoderAsset,
-  "tiny-tokens.txt": whisperTokensAsset,
+  "base-encoder.int8.onnx": whisperEncoderAsset,
+  "base-decoder.int8.onnx": whisperDecoderAsset,
+  "base-tokens.txt": whisperTokensAsset,
 };
 
 const IOS_NUM_THREADS = 2;
@@ -214,14 +219,14 @@ const writeKeyboardModelConfig = (
     const selectedModelInfo = getModelInfo(selectedModelId);
     // The keyboards run whisper and nemo_transducer only. Other models
     // (Qwen3, Nemotron) send dictations to the app's loaded engine while its
-    // JS runs (`keyboardTranscriptionBridge`), with the bundled Whisper Tiny
+    // JS runs (`keyboardTranscriptionBridge`), with the bundled Whisper Base
     // in the user's language as the fallback.
     const isKeyboardCapable =
       selectedModelInfo.sherpaModelType === "whisper" ||
       selectedModelInfo.sherpaModelType === "nemo_transducer";
     const modelInfo = isKeyboardCapable
       ? selectedModelInfo
-      : getModelInfo(ModelId.WHISPER_TINY);
+      : getModelInfo(BUNDLED_MODEL_ID);
     const modelDir = resolveModelDir(modelInfo);
     if (!new Directory(modelDir).exists) {
       return;
@@ -278,6 +283,27 @@ const resolveModelDir = (modelInfo: ModelInfo): string =>
   modelInfo.isBundled
     ? getBundledModelDir(modelInfo.id)
     : getDownloadedModelDir(modelInfo.id);
+
+/**
+ * Removes copies earlier releases left behind: Whisper Tiny unpacked into the
+ * cache before Base replaced it, and Base downloaded into Documents before it
+ * was bundled. Call only once the keyboard config points at the bundled Base.
+ */
+const removeStaleModelCopies = (): void => {
+  for (const uri of [
+    getBundledModelDir("whisper_tiny" as ModelId),
+    getDownloadedModelDir(ModelId.WHISPER_BASE),
+  ]) {
+    try {
+      const dir = new Directory(uri);
+      if (dir.exists) dir.delete();
+    } catch (error) {
+      logWarn(`Failed to remove stale model copy ${uri}: ${error}`, {
+        flag: FeatureFlag.model,
+      });
+    }
+  }
+};
 
 /**
  * Prepare bundled model assets: download to local cache, then move into a
@@ -637,7 +663,7 @@ const createSherpaTranscriptionService = () => {
   };
 
   const doInitialize = async (
-    modelId: ModelId = ModelId.WHISPER_TINY,
+    modelId: ModelId = BUNDLED_MODEL_ID,
     languageCode: string = "en",
   ): Promise<boolean> => {
     state.isInitializing = true;
@@ -736,7 +762,7 @@ const createSherpaTranscriptionService = () => {
     modelId?: ModelId,
     languageCode: string = "en",
   ): Promise<boolean> => {
-    const targetModelId = modelId ?? ModelId.WHISPER_TINY;
+    const targetModelId = modelId ?? BUNDLED_MODEL_ID;
 
     // If an init is already in flight, wait for it — then re-check, since the
     // in-flight init may have been for a different model/language than we want.
@@ -1133,6 +1159,7 @@ const createSherpaTranscriptionService = () => {
   return {
     initialize,
     refreshKeyboardConfig,
+    removeStaleModelCopies,
     transcribeWavFile,
     startRealtimeTranscription,
     stopRealtimeTranscription,

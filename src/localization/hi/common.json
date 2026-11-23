@@ -221,7 +221,6 @@
   "biometricAuthPrompt": "Echos अनलॉक करें",
   "biometricAuthUnavailable": "पहले Face ID, फ़िंगरप्रिंट या डिवाइस पासकोड सेट करें।",
   "biometricUnlock": "अनलॉक करें",
-  "modelDescription_whisper_tiny": "तेज़, हल्का ट्रांसक्रिप्शन",
   "modelDescription_whisper_base": "सटीकता और गति में संतुलन",
   "modelDescription_whisper_small": "ज़्यादा सटीकता, बड़ा मॉडल",
   "modelDescription_nemo_parakeet_v3": "उच्च सटीकता, तेज़ गति",

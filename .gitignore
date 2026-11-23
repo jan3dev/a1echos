@@ -77,3 +77,6 @@ data/keyboard-lm/sms-eval.txt
 data/keyboard-lm/raw/
 scripts/llm-summary/results/
 __pycache__/
+
+# Bundled Whisper Base model, fetched by `npm run fetch:whisper-model`
+/assets/models/sherpa-whisper/base-*

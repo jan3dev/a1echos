@@ -14,7 +14,7 @@ jest.mock("expo-router", () => ({
 
 const mockSetLanguage = jest.fn();
 const mockMarkSuggestionSeen = jest.fn();
-let mockModelId = "whisper_tiny";
+let mockModelId = "whisper_base";
 jest.mock("@/stores", () => ({
   useSelectedLanguage: () => ({ code: "en", name: "English" }),
   useSelectedModelId: () => mockModelId,
@@ -24,7 +24,7 @@ jest.mock("@/stores", () => ({
 
 jest.mock("@/models", () => ({
   getModelInfo: () => ({ supportedLanguageCodes: ["en", "pt"] }),
-  ModelId: { WHISPER_TINY: "whisper_tiny" },
+  ModelId: { WHISPER_BASE: "whisper_base" },
   shouldSuggestLargerModel: jest.requireActual(
     "@/models/model-registry/ModelRegistry",
   ).shouldSuggestLargerModel,
@@ -83,7 +83,7 @@ jest.mock("@/components", () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockModelId = "whisper_tiny";
+  mockModelId = "whisper_base";
   mockSetLanguage.mockResolvedValue(undefined);
 });
 

@@ -46,14 +46,14 @@ jest.mock("@/models", () => {
     supportedLanguageCodes: ["en", "es", "fr"],
   };
   const mockWhisper = {
-    id: "whisper_tiny",
-    name: "Whisper Tiny",
+    id: "whisper_base",
+    name: "Whisper Base",
     languages: 99,
     supportedLanguageCodes: undefined,
   };
   return {
     MODEL_REGISTRY: {
-      whisper_tiny: { id: "whisper_tiny" },
+      whisper_base: { id: "whisper_base" },
       nemo_parakeet_v3: { id: "nemo_parakeet_v3" },
     },
     getModelInfo: jest.fn((id: string) =>
@@ -74,7 +74,7 @@ jest.mock("@/models", () => {
 });
 
 jest.mock("@/stores", () => ({
-  useSelectedModelId: jest.fn(() => "whisper_tiny"),
+  useSelectedModelId: jest.fn(() => "whisper_base"),
 }));
 
 jest.mock("@/components", () => {
@@ -110,7 +110,7 @@ describe("ModelLanguagesScreen", () => {
 
   it("renders languages for the selected model when no param is passed", () => {
     const { getByText, getByTestId } = render(<ModelLanguagesScreen />);
-    expect(getByText("Whisper Tiny")).toBeTruthy();
+    expect(getByText("Whisper Base")).toBeTruthy();
     // Whisper with no supportedLanguageCodes → forCodes returns 2 mock entries
     expect(getByText("languagesSupported_2")).toBeTruthy();
     expect(getByTestId("language-chip-en")).toBeTruthy();
@@ -129,6 +129,6 @@ describe("ModelLanguagesScreen", () => {
   it("falls back to selected model when the modelId param is invalid", () => {
     mockParams.modelId = "not-a-model";
     const { getByText } = render(<ModelLanguagesScreen />);
-    expect(getByText("Whisper Tiny")).toBeTruthy();
+    expect(getByText("Whisper Base")).toBeTruthy();
   });
 });

@@ -221,7 +221,6 @@
   "biometricAuthPrompt": "Echos ان لاک کریں",
   "biometricAuthUnavailable": "پہلے Face ID، فنگر پرنٹ یا آلے کا پاس کوڈ سیٹ اپ کریں۔",
   "biometricUnlock": "ان لاک کریں",
-  "modelDescription_whisper_tiny": "تیز، ہلکی ٹرانسکرپشن",
   "modelDescription_whisper_base": "درستگی اور رفتار میں توازن",
   "modelDescription_whisper_small": "زیادہ درستگی، بڑا ماڈل",
   "modelDescription_nemo_parakeet_v3": "اعلیٰ درستگی، تیز رفتار",

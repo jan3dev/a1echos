@@ -50,7 +50,7 @@ jest.mock("@/stores", () => ({
       }),
     },
   ),
-  useSelectedModelId: () => "whisper_tiny",
+  useSelectedModelId: () => "whisper_base",
   useSetModelId: () => mockSetModelId,
 }));
 

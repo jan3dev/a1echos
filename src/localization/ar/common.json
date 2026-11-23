@@ -252,7 +252,6 @@
   "biometricAuthPrompt": "فتح Echos",
   "biometricAuthUnavailable": "أعدّ Face ID أو بصمة الإصبع أو رمز مرور الجهاز أولًا.",
   "biometricUnlock": "فتح القفل",
-  "modelDescription_whisper_tiny": "تفريغ سريع وخفيف",
   "modelDescription_whisper_base": "توازن بين الدقة والسرعة",
   "modelDescription_whisper_small": "دقة أعلى، نموذج أكبر",
   "modelDescription_nemo_parakeet_v3": "دقة عالية وسرعة عالية",

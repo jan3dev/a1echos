@@ -229,7 +229,6 @@
   "biometricAuthPrompt": "Unlock Echos",
   "biometricAuthUnavailable": "Set up Face ID, fingerprint or a device passcode first.",
   "biometricUnlock": "Unlock",
-  "modelDescription_whisper_tiny": "Fast, lightweight transcription",
   "modelDescription_whisper_base": "Balanced accuracy and speed",
   "modelDescription_whisper_small": "Higher accuracy, larger model",
   "modelDescription_nemo_parakeet_v3": "High accuracy, high speed",

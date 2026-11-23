@@ -17,8 +17,11 @@ On-device voice notes + transcription built with Expo / React Native.
 
 ```bash
 npm install
+npm run fetch:whisper-model
 npm start
 ```
+
+The bundled Whisper Base model is gitignored. `npm run fetch:whisper-model` downloads and checksums it into `assets/models/sherpa-whisper/` (EAS builds run it via the `eas-build-pre-install` hook). To place it manually, put `base-encoder.int8.onnx`, `base-decoder.int8.onnx` and `base-tokens.txt` from [csukuangfj/sherpa-onnx-whisper-base](https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base) in that folder. Tests don't need it.
 
 This app uses native modules and **requires a development build** — Expo Go will not work:
 
@@ -41,12 +44,11 @@ npm run test:coverage     # run with coverage (thresholds: 95/90/95/95)
 
 ## Models
 
-Transcription runs on-device via sherpa-onnx. Only Whisper Tiny is bundled; the rest are downloaded on demand from HuggingFace into `DocumentDirectory/models/`.
+Transcription runs on-device via sherpa-onnx. Only Whisper Base is bundled; the rest are downloaded on demand from HuggingFace into `DocumentDirectory/models/`.
 
 | Model            | Size   | Languages                | Modes           | Bundled |
 | ---------------- | ------ | ------------------------ | --------------- | ------- |
-| Whisper Tiny     | ~104MB | 99                       | realtime + file | yes     |
-| Whisper Base     | ~161MB | 99                       | realtime + file | no      |
+| Whisper Base     | ~161MB | 99                       | realtime + file | yes     |
 | Whisper Small    | ~375MB | 99                       | realtime + file | no      |
 | NeMo Parakeet V3 | ~670MB | 25 European              | realtime + file | no      |
 | Qwen3 ASR        | ~983MB | 30 + 22 Chinese dialects | file only       | no      |

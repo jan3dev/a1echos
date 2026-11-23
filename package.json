@@ -11,6 +11,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --forceExit --detectOpenHandles",
+    "fetch:whisper-model": "node scripts/whisper-model/fetch.js",
+    "eas-build-pre-install": "npm run fetch:whisper-model",
     "build:dictionary": "node scripts/keyboard-dictionary/build.js",
     "bench:dictionary": "node scripts/keyboard-dictionary/benchmark.js",
     "bench:keyboard-lm": "python3 scripts/keyboard-lm/bench.py",

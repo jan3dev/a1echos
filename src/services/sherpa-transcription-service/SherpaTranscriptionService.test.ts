@@ -1,3 +1,4 @@
+import { Directory, Paths } from "expo-file-system";
 import { createPcmLiveStream } from "react-native-sherpa-onnx/audio";
 import { createStreamingSTT, createSTT } from "react-native-sherpa-onnx/stt";
 
@@ -245,12 +246,12 @@ describe("sherpaTranscriptionService streaming model", () => {
 });
 
 describe("sherpaTranscriptionService keyboard config", () => {
-  it("writes the Whisper Tiny fallback and the app-engine flag for Qwen3", () => {
+  it("writes the Whisper Base fallback and the app-engine flag for Qwen3", () => {
     sherpaTranscriptionService.refreshKeyboardConfig(ModelId.QWEN3_ASR, "zh");
     expect(writeJsonAtomic).toHaveBeenLastCalledWith(
       "keyboard-sherpa-model.json",
       expect.objectContaining({
-        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_TINY}`),
+        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_BASE}`),
         modelType: "whisper",
         language: "zh",
         appEngine: true,
@@ -259,7 +260,7 @@ describe("sherpaTranscriptionService keyboard config", () => {
     );
   });
 
-  it("flags Nemotron for the app engine with the English Whisper Tiny fallback", () => {
+  it("flags Nemotron for the app engine with the English Whisper Base fallback", () => {
     sherpaTranscriptionService.refreshKeyboardConfig(
       ModelId.NEMOTRON_STREAMING_EN,
       "en",
@@ -267,7 +268,7 @@ describe("sherpaTranscriptionService keyboard config", () => {
     expect(writeJsonAtomic).toHaveBeenLastCalledWith(
       "keyboard-sherpa-model.json",
       expect.objectContaining({
-        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_TINY}`),
+        modelDir: expect.stringContaining(`models/${ModelId.WHISPER_BASE}`),
         modelType: "whisper",
         language: "en",
         appEngine: true,
@@ -278,7 +279,7 @@ describe("sherpaTranscriptionService keyboard config", () => {
 
   it("doesn't flag keyboard-capable models for the app engine", () => {
     sherpaTranscriptionService.refreshKeyboardConfig(
-      ModelId.WHISPER_TINY,
+      ModelId.WHISPER_BASE,
       "de",
     );
     expect(writeJsonAtomic).toHaveBeenLastCalledWith(
@@ -286,5 +287,58 @@ describe("sherpaTranscriptionService keyboard config", () => {
       expect.not.objectContaining({ appEngine: true }),
       expect.anything(),
     );
+  });
+});
+
+describe("sherpaTranscriptionService stale model cleanup", () => {
+  const MockDirectory = Directory as unknown as jest.Mock;
+  const original = MockDirectory.getMockImplementation();
+  const tinyCache = "file:///cache/models/whisper_tiny";
+  const baseDocuments = "file:///doc/models/whisper_base";
+  let dirs: Record<string, { exists: boolean; delete: jest.Mock }>;
+  const mockDirs = (exists: boolean, onDelete?: () => void) =>
+    MockDirectory.mockImplementation((uri: string) => {
+      dirs[uri] ??= { exists, delete: jest.fn(onDelete) };
+      return dirs[uri];
+    });
+
+  beforeEach(() => {
+    jest.replaceProperty(Paths, "cache", { uri: "file:///cache" } as never);
+    jest.replaceProperty(Paths, "document", { uri: "file:///doc" } as never);
+    dirs = {};
+    mockDirs(true);
+  });
+
+  afterEach(() => {
+    MockDirectory.mockImplementation(original);
+    jest.restoreAllMocks();
+  });
+
+  it("deletes only the cached Tiny copy and the downloaded Base copy", () => {
+    sherpaTranscriptionService.removeStaleModelCopies();
+
+    expect(Object.keys(dirs).sort()).toEqual([tinyCache, baseDocuments]);
+    expect(dirs[tinyCache].delete).toHaveBeenCalledTimes(1);
+    expect(dirs[baseDocuments].delete).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a no-op when the copies are absent", () => {
+    mockDirs(false);
+
+    sherpaTranscriptionService.removeStaleModelCopies();
+
+    expect(dirs[tinyCache].delete).not.toHaveBeenCalled();
+    expect(dirs[baseDocuments].delete).not.toHaveBeenCalled();
+  });
+
+  it("keeps going and doesn't throw when a deletion fails", () => {
+    mockDirs(true, () => {
+      throw new Error("EPERM");
+    });
+
+    expect(() =>
+      sherpaTranscriptionService.removeStaleModelCopies(),
+    ).not.toThrow();
+    expect(dirs[baseDocuments].delete).toHaveBeenCalled();
   });
 });

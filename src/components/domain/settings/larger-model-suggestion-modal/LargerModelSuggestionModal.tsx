@@ -15,7 +15,7 @@ interface LargerModelSuggestionModalProps {
 
 /**
  * Offered once, the first time a non-English language is selected while still
- * on the small bundled model. Whisper Tiny nominally handles 99 languages but
+ * on the small bundled model. Whisper Base nominally handles 99 languages but
  * is noticeably weaker outside English, and nothing else in the app tells the
  * user a bigger model would transcribe them better.
  *

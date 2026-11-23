@@ -6,6 +6,7 @@ import {
   DEFAULT_TEXT_APPEARANCE,
   getModelInfo,
   getThemeByName,
+  BUNDLED_MODEL_ID,
   LlmModelId,
   ModelId,
   ModelType,
@@ -126,12 +127,12 @@ const migrateModelType = (
   switch (modelType) {
     case ModelType.WHISPER_REALTIME:
       return {
-        modelId: ModelId.WHISPER_TINY,
+        modelId: BUNDLED_MODEL_ID,
         mode: TranscriptionMode.REALTIME,
       };
     case ModelType.WHISPER_FILE:
     default:
-      return { modelId: ModelId.WHISPER_TINY, mode: TranscriptionMode.FILE };
+      return { modelId: BUNDLED_MODEL_ID, mode: TranscriptionMode.FILE };
   }
 };
 
@@ -220,7 +221,7 @@ const persistKeyboardSetting = async <F extends KeyboardSettingField>(
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   selectedTheme: AppTheme.AUTO,
-  selectedModelId: ModelId.WHISPER_TINY,
+  selectedModelId: BUNDLED_MODEL_ID,
   selectedTranscriptionMode: TranscriptionMode.FILE,
   modelModes: {},
   selectedLanguage: SupportedLanguages.defaultLanguage,
@@ -398,7 +399,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
       set({
         selectedTheme: AppTheme.AUTO,
-        selectedModelId: ModelId.WHISPER_TINY,
+        selectedModelId: BUNDLED_MODEL_ID,
         selectedTranscriptionMode: TranscriptionMode.FILE,
         modelModes: {},
         selectedLanguage: SupportedLanguages.defaultLanguage,

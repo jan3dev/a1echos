@@ -1,10 +1,11 @@
 # Echos
 
-Expo React Native voice notes app with on-device transcription (sherpa-onnx: Whisper Tiny bundled, Parakeet V3 downloadable).
+Expo React Native voice notes app with on-device transcription (sherpa-onnx: Whisper Base bundled, Parakeet V3 downloadable).
 
 ## Rules
 
 - Needs a development build (`npm run ios` / `npm run android`); Expo Go won't work.
+- The bundled Whisper Base model is gitignored: run `npm run fetch:whisper-model` before building.
 - `ios/` and `android/` are CNG output: never edit by hand. Native changes go through config plugins in `plugins/`.
 - Run `npm run test:coverage` after changes; thresholds in `jest.config.js` are enforced.
 - New components: co-located `*.gallery.tsx` exporting a `GalleryEntry`, registered in `DESIGN_SYSTEM_MANIFEST` (`app/(design-system)/manifest.ts`).

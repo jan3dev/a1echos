@@ -65,7 +65,7 @@ jest.mock("@/models", () => ({
     languages: 1650,
     sizeBytes: 365_438_543,
   })),
-  ModelId: { WHISPER_TINY: "whisper_tiny", OMNILINGUAL: "omnilingual" },
+  ModelId: { WHISPER_BASE: "whisper_base", OMNILINGUAL: "omnilingual" },
   ...jest.requireActual("@/models/omnilingual/OmnilingualLanguages"),
   shouldSuggestLargerModel: jest.requireActual(
     "@/models/model-registry/ModelRegistry",
@@ -87,7 +87,7 @@ const mockShowLargerModelSuggestion = jest.fn();
 
 jest.mock("@/stores", () => ({
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
-  useSelectedModelId: jest.fn(() => "whisper_tiny"),
+  useSelectedModelId: jest.fn(() => "whisper_base"),
   useSetLanguage: jest.fn(() => mockSetLanguage),
   useSetModelId: jest.fn(() => mockSetModelId),
   useIsModelDownloaded: jest.fn(() => false),
@@ -354,7 +354,7 @@ describe("LanguageSettingsScreen", () => {
         useSelectedModelId,
         useHasSeenLargerModelSuggestion,
       } = require("@/stores");
-      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
+      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_base");
       (useHasSeenLargerModelSuggestion as jest.Mock).mockReturnValue(false);
     });
 
@@ -441,7 +441,7 @@ describe("LanguageSettingsScreen", () => {
       jest.restoreAllMocks();
       delete mockParams.model;
       const { useSelectedModelId, useIsModelDownloaded } = require("@/stores");
-      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
+      (useSelectedModelId as jest.Mock).mockReturnValue("whisper_base");
       (useIsModelDownloaded as jest.Mock).mockReturnValue(false);
     });
 

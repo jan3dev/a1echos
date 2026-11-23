@@ -67,7 +67,7 @@ jest.mock("@/stores", () => ({
   useRecordingJumpButton: jest.fn(() => null),
   useSettingsStore: {
     getState: jest.fn(() => ({
-      selectedModelId: "whisper-tiny",
+      selectedModelId: "whisper-base",
       selectedLanguage: { code: "en", name: "English" },
     })),
   },

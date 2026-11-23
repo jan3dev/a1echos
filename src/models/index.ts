@@ -26,6 +26,7 @@ export {
 } from "./model-type/ModelType";
 
 export {
+  BUNDLED_MODEL_ID,
   getAllModels,
   getModelInfo,
   getRecommendedModelId,

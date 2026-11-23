@@ -32,7 +32,7 @@ jest.mock("@/models", () => ({
 }));
 
 jest.mock("@/stores", () => ({
-  useSelectedModelId: () => "whisper_tiny",
+  useSelectedModelId: () => "whisper_base",
 }));
 
 let mockSelected: string | undefined;

@@ -71,7 +71,7 @@ jest.mock("@/stores", () => ({
   useSetKeyboardSound: jest.fn(() => mockSetKeyboardSound),
   useKeyboardMicTimeout: jest.fn(() => 300),
   useSelectedLanguage: jest.fn(() => ({ code: "en", name: "English" })),
-  useSelectedModelId: jest.fn(() => "whisper_tiny"),
+  useSelectedModelId: jest.fn(() => "whisper_base"),
 }));
 
 jest.mock("@/components", () => {
@@ -401,7 +401,7 @@ describe("AdvancedSettingsScreen", () => {
     const { findByText, queryByText } = render(<AdvancedSettingsScreen />);
     expect(await findByText("anyLanguage")).toBeTruthy();
     expect(queryByText("EN")).toBeNull();
-    (useSelectedModelId as jest.Mock).mockReturnValue("whisper_tiny");
+    (useSelectedModelId as jest.Mock).mockReturnValue("whisper_base");
   });
 
   it("pressing the microphone-timeout row navigates to the picker", () => {

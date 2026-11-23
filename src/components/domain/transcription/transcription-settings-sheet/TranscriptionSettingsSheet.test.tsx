@@ -14,7 +14,7 @@ const mockSetLanguage = jest.fn().mockResolvedValue(undefined);
 const mockSetTranscriptionMode = jest.fn().mockResolvedValue(undefined);
 const mockShowLargerModelSuggestion = jest.fn();
 const mockHasSeenSuggestion = jest.fn(() => true);
-const mockSelectedModelId = jest.fn(() => "whisper_tiny");
+const mockSelectedModelId = jest.fn(() => "whisper_base");
 const mockOmnilingualDownloaded = jest.fn(() => false);
 const mockSetModelId = jest.fn().mockResolvedValue(undefined);
 const mockShowOmnilingualDownload = jest.fn();
@@ -67,7 +67,7 @@ describe("TranscriptionSettingsSheet", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasSeenSuggestion.mockReturnValue(true);
-    mockSelectedModelId.mockReturnValue("whisper_tiny");
+    mockSelectedModelId.mockReturnValue("whisper_base");
     mockOmnilingualDownloaded.mockReturnValue(false);
   });
 

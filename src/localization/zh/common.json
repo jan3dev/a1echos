@@ -213,7 +213,6 @@
   "biometricAuthPrompt": "解锁 Echos",
   "biometricAuthUnavailable": "请先设置面容 ID、指纹或设备密码。",
   "biometricUnlock": "解锁",
-  "modelDescription_whisper_tiny": "快速、轻量的转录",
   "modelDescription_whisper_base": "兼顾准确度与速度",
   "modelDescription_whisper_small": "更高准确度，更大模型",
   "modelDescription_nemo_parakeet_v3": "高准确度，高速度",

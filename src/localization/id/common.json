@@ -213,7 +213,6 @@
   "biometricAuthPrompt": "Buka Kunci Echos",
   "biometricAuthUnavailable": "Siapkan Face ID, sidik jari, atau kode sandi perangkat terlebih dahulu.",
   "biometricUnlock": "Buka Kunci",
-  "modelDescription_whisper_tiny": "Transkripsi cepat dan ringan",
   "modelDescription_whisper_base": "Akurasi dan kecepatan seimbang",
   "modelDescription_whisper_small": "Lebih akurat, model lebih besar",
   "modelDescription_nemo_parakeet_v3": "Akurasi tinggi, kecepatan tinggi",

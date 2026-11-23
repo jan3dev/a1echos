@@ -80,8 +80,8 @@ jest.mock("@/hooks", () => ({
 }));
 
 const whisperModel = {
-  id: "whisper_tiny",
-  name: "Whisper Tiny",
+  id: "whisper_base",
+  name: "Whisper Base",
   sizeBytes: 100_000_000,
   supportedModes: ["file", "realtime"],
   isBundled: true,
@@ -109,22 +109,23 @@ const omnilingualModel = {
 };
 
 jest.mock("@/models", () => ({
+  BUNDLED_MODEL_ID: "whisper_base",
   ModelId: {
-    WHISPER_TINY: "whisper_tiny",
+    WHISPER_BASE: "whisper_base",
     NEMO_PARAKEET_V3: "nemo_parakeet_v3",
     OMNILINGUAL: "omnilingual",
   },
   TranscriptionMode: { FILE: "file", REALTIME: "realtime" },
   getAllModels: jest.fn(() => [whisperModel, parakeetModel, omnilingualModel]),
   getModelInfo: jest.fn((id: string) =>
-    id === "whisper_tiny" ? whisperModel : parakeetModel,
+    id === "whisper_base" ? whisperModel : parakeetModel,
   ),
 }));
 
 jest.mock("@/stores", () => ({
   useModelDownloadStore: jest.fn(() => mockDownloadStore),
-  useSelectedModelId: jest.fn(() => "whisper_tiny"),
-  useModelModes: jest.fn(() => ({ whisper_tiny: "file" })),
+  useSelectedModelId: jest.fn(() => "whisper_base"),
+  useModelModes: jest.fn(() => ({ whisper_base: "file" })),
   useSettingsStore: jest.fn((selector: any) =>
     selector({
       setModelId: mockSetModelId,
@@ -244,13 +245,13 @@ describe("ModelSettingsScreen", () => {
 
   it("places bundled model in downloaded section and non-downloaded in available", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    expect(getByTestId("model-card-whisper_tiny")).toBeTruthy();
+    expect(getByTestId("model-card-whisper_base")).toBeTruthy();
     expect(getByTestId("model-card-nemo_parakeet_v3")).toBeTruthy();
   });
 
   it("selecting the same model is a no-op", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("model-card-whisper_tiny-select"));
+    fireEvent.press(getByTestId("model-card-whisper_base-select"));
     expect(mockSetModelId).not.toHaveBeenCalled();
   });
 
@@ -361,7 +362,7 @@ describe("ModelSettingsScreen", () => {
     });
   });
 
-  it("delete of currently-selected non-bundled model falls back to WHISPER_TINY", async () => {
+  it("delete of currently-selected non-bundled model falls back to WHISPER_BASE", async () => {
     const { useSelectedModelId } = require("@/stores");
     useSelectedModelId.mockReturnValueOnce("nemo_parakeet_v3");
     mockDownloadStore.isDownloaded.mockReturnValue(true);
@@ -371,7 +372,7 @@ describe("ModelSettingsScreen", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
     fireEvent.press(getByTestId("model-card-nemo_parakeet_v3-delete"));
     await waitFor(() => {
-      expect(mockSetModelId).toHaveBeenCalledWith("whisper_tiny");
+      expect(mockSetModelId).toHaveBeenCalledWith("whisper_base");
     });
   });
 
@@ -386,10 +387,10 @@ describe("ModelSettingsScreen", () => {
 
   it("languages tap navigates to model-languages route", () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("model-card-whisper_tiny-languages"));
+    fireEvent.press(getByTestId("model-card-whisper_base-languages"));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: "/settings/model-languages",
-      params: { modelId: "whisper_tiny" },
+      params: { modelId: "whisper_base" },
     });
   });
 
@@ -456,9 +457,9 @@ describe("ModelSettingsScreen", () => {
 
   it("tapping a mode chip on the selected card calls setModelMode with that model id", async () => {
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("model-card-whisper_tiny-mode-realtime"));
+    fireEvent.press(getByTestId("model-card-whisper_base-mode-realtime"));
     await waitFor(() => {
-      expect(mockSetModelMode).toHaveBeenCalledWith("whisper_tiny", "realtime");
+      expect(mockSetModelMode).toHaveBeenCalledWith("whisper_base", "realtime");
     });
     expect(mockSetModelId).not.toHaveBeenCalled();
   });
@@ -480,7 +481,7 @@ describe("ModelSettingsScreen", () => {
     const { logError } = require("@/utils");
     mockSetModelMode.mockRejectedValue(new Error("mode error"));
     const { getByTestId } = render(<ModelSettingsScreen />);
-    fireEvent.press(getByTestId("model-card-whisper_tiny-mode-realtime"));
+    fireEvent.press(getByTestId("model-card-whisper_base-mode-realtime"));
     await waitFor(() => {
       expect(logError).toHaveBeenCalled();
     });

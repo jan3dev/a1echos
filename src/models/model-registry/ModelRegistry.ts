@@ -198,29 +198,12 @@ const PARAKEET_LANGUAGES = [
 // short clips. Whisper pads every call by 10s (sherpa-onnx tail padding) and
 // hallucinates on short audio, so it is file-only.
 export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
-  [ModelId.WHISPER_TINY]: {
-    id: ModelId.WHISPER_TINY,
-    name: "Whisper Tiny",
-    sizeBytes: 103_700_000,
-    supportedModes: [TranscriptionMode.FILE],
-    isBundled: true,
-    sherpaModelType: "whisper",
-    files: [
-      { name: "tiny-encoder.int8.onnx", sizeBytes: 12_900_000 },
-      { name: "tiny-decoder.int8.onnx", sizeBytes: 89_900_000 },
-      { name: "tiny-tokens.txt", sizeBytes: 817_000 },
-    ],
-    languages: WHISPER_LANGUAGES.length,
-    supportedLanguageCodes: WHISPER_LANGUAGES,
-  },
   [ModelId.WHISPER_BASE]: {
     id: ModelId.WHISPER_BASE,
     name: "Whisper Base",
     sizeBytes: 160_609_290,
     supportedModes: [TranscriptionMode.FILE],
-    isBundled: false,
-    downloadBaseUrl:
-      "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/resolve/main",
+    isBundled: true,
     sherpaModelType: "whisper",
     files: [
       { name: "base-encoder.int8.onnx", sizeBytes: 29_120_534 },
@@ -326,6 +309,9 @@ export const MODEL_REGISTRY: Record<ModelId, ModelInfo> = {
   },
 };
 
+/** Ships in the app binary: the default model and every fallback. */
+export const BUNDLED_MODEL_ID = ModelId.WHISPER_BASE;
+
 export const getModelInfo = (modelId: ModelId): ModelInfo =>
   MODEL_REGISTRY[modelId];
 
@@ -352,4 +338,4 @@ export const shouldSuggestLargerModel = (
   modelId: ModelId,
 ): boolean =>
   languageCode !== SupportedLanguages.defaultLanguage.code &&
-  modelId === ModelId.WHISPER_TINY;
+  modelId === BUNDLED_MODEL_ID;

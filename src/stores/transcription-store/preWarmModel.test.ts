@@ -117,7 +117,7 @@ describe("preWarmModel", () => {
       .mockReturnValueOnce(secondPromise);
 
     preWarmModel(ModelId.NEMO_PARAKEET_V3, "en");
-    preWarmModel(ModelId.WHISPER_TINY, "en");
+    preWarmModel(ModelId.WHISPER_BASE, "en");
     expect(useTranscriptionStore.getState().isEngineInitializing).toBe(true);
 
     resolveFirst(true);

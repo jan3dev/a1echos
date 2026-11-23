@@ -229,7 +229,6 @@
   "biometricAuthPrompt": "Déverrouiller Echos",
   "biometricAuthUnavailable": "Configurez d’abord Face ID, une empreinte digitale ou un code d’accès.",
   "biometricUnlock": "Déverrouiller",
-  "modelDescription_whisper_tiny": "Transcription rapide et légère",
   "modelDescription_whisper_base": "Équilibre entre précision et vitesse",
   "modelDescription_whisper_small": "Plus précis, modèle plus grand",
   "modelDescription_nemo_parakeet_v3": "Haute précision, grande vitesse",

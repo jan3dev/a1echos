@@ -229,7 +229,6 @@
   "biometricAuthPrompt": "Desbloquear Echos",
   "biometricAuthUnavailable": "Primero configura Face ID, la huella dactilar o un código del dispositivo.",
   "biometricUnlock": "Desbloquear",
-  "modelDescription_whisper_tiny": "Transcripción rápida y ligera",
   "modelDescription_whisper_base": "Equilibrio entre precisión y velocidad",
   "modelDescription_whisper_small": "Más precisión, modelo más grande",
   "modelDescription_nemo_parakeet_v3": "Alta precisión, alta velocidad",

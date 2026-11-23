@@ -7,7 +7,12 @@ import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
 import { AppConstants } from "@/constants";
-import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
+import {
+  BUNDLED_MODEL_ID,
+  Transcription,
+  TranscriptionMode,
+  TranscriptionState,
+} from "@/models";
 import type { ChunkEvent } from "@/services";
 import {
   audioProtectionService,
@@ -1634,16 +1639,19 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
 
         await get()._loadTranscriptionsInternal();
 
-        // Initialize transcription engine
-        const whisperInitialized =
-          await sherpaTranscriptionService.initialize();
-        // The init above unpacks the bundled Whisper Tiny, the keyboard's
-        // fallback, so the config can be written now.
         const { selectedModelId, selectedLanguage } =
           useSettingsStore.getState();
+        const languageCode = selectedLanguage?.code ?? "en";
+        // Always the bundled model, so the keyboard's fallback gets unpacked;
+        // in the user's language when it is also their model, so the pre-warm
+        // that follows doesn't reload it.
+        const whisperInitialized = await sherpaTranscriptionService.initialize(
+          BUNDLED_MODEL_ID,
+          selectedModelId === BUNDLED_MODEL_ID ? languageCode : "en",
+        );
         sherpaTranscriptionService.refreshKeyboardConfig(
           selectedModelId,
-          selectedLanguage?.code ?? "en",
+          languageCode,
         );
         if (!whisperInitialized) {
           logWarn(
@@ -1652,6 +1660,7 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
           );
           set({ isEngineReady: false });
         } else {
+          sherpaTranscriptionService.removeStaleModelCopies();
           set({ isEngineReady: true });
         }
 

@@ -76,6 +76,7 @@ jest.mock("@/services", () => ({
     initializationStatus: "ready",
     dispose: jest.fn(async () => undefined),
     refreshKeyboardConfig: jest.fn(),
+    removeStaleModelCopies: jest.fn(),
   },
   backgroundRecordingService: {
     startBackgroundService: jest.fn(async () => true),
@@ -932,9 +933,47 @@ describe("transcriptionStore", () => {
 
       await useTranscriptionStore.getState().initialize();
 
+      expect(sherpaTranscriptionService.initialize).toHaveBeenLastCalledWith(
+        ModelId.WHISPER_BASE,
+        "en",
+      );
       expect(
         sherpaTranscriptionService.refreshKeyboardConfig,
       ).toHaveBeenLastCalledWith(ModelId.QWEN3_ASR, "zh");
+    });
+
+    it("loads the bundled model in the user's language when it is selected", async () => {
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
+      useSettingsStore.setState({
+        selectedModelId: ModelId.WHISPER_BASE,
+        selectedLanguage: { code: "de", name: "German" },
+      });
+
+      await useTranscriptionStore.getState().initialize();
+
+      expect(sherpaTranscriptionService.initialize).toHaveBeenLastCalledWith(
+        ModelId.WHISPER_BASE,
+        "de",
+      );
+    });
+
+    it("removes stale model copies only after the keyboard config is rewritten", async () => {
+      (databaseService.listTranscriptions as jest.Mock).mockResolvedValueOnce(
+        [],
+      );
+
+      await useTranscriptionStore.getState().initialize();
+
+      const refresh =
+        sherpaTranscriptionService.refreshKeyboardConfig as jest.Mock;
+      const cleanup =
+        sherpaTranscriptionService.removeStaleModelCopies as jest.Mock;
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(cleanup.mock.invocationCallOrder[0]).toBeGreaterThan(
+        refresh.mock.invocationCallOrder[0],
+      );
     });
 
     it("whisper init failure is non-fatal", async () => {
@@ -951,6 +990,9 @@ describe("transcriptionStore", () => {
       expect(state.isEngineReady).toBe(false);
       expect(state.isInitialized).toBe(true);
       expect(state.state).toBe(TranscriptionState.READY);
+      expect(
+        sherpaTranscriptionService.removeStaleModelCopies,
+      ).not.toHaveBeenCalled();
     });
 
     it("skips if already initialized", async () => {
@@ -3508,7 +3550,7 @@ describe("transcriptionStore.reprocessTranscription", () => {
       transitionTo: realTransitionTo,
     });
     useSettingsStore.setState({
-      selectedModelId: "whisper-tiny" as never,
+      selectedModelId: "whisper-base" as never,
       selectedLanguage: { code: "en" } as never,
     });
     (sherpaTranscriptionService.initialize as jest.Mock).mockImplementation(
@@ -3531,7 +3573,7 @@ describe("transcriptionStore.reprocessTranscription", () => {
     await expect(reprocess()).resolves.toBe("hola mundo");
 
     expect(sherpaTranscriptionService.initialize).toHaveBeenCalledWith(
-      "whisper-tiny",
+      "whisper-base",
       "es",
     );
     expect(sherpaTranscriptionService.transcribeWavFile).toHaveBeenCalledWith(

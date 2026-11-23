@@ -237,7 +237,6 @@
   "biometricAuthPrompt": "Разблокировать Echos",
   "biometricAuthUnavailable": "Сначала настройте Face ID, отпечаток пальца или код-пароль устройства.",
   "biometricUnlock": "Разблокировать",
-  "modelDescription_whisper_tiny": "Быстрая и лёгкая транскрибация",
   "modelDescription_whisper_base": "Баланс точности и скорости",
   "modelDescription_whisper_small": "Выше точность, больше модель",
   "modelDescription_nemo_parakeet_v3": "Высокая точность и скорость",

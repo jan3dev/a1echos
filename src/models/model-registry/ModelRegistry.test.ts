@@ -1,4 +1,5 @@
 import {
+  BUNDLED_MODEL_ID,
   OmnilingualLanguages,
   getAllModels,
   getModelInfo,
@@ -10,10 +11,18 @@ import {
 } from "../";
 
 describe("ModelRegistry", () => {
-  it("getModelInfo returns the bundled Whisper Tiny entry", () => {
-    const info = getModelInfo(ModelId.WHISPER_TINY);
-    expect(info.id).toBe(ModelId.WHISPER_TINY);
+  it("getModelInfo returns the bundled Whisper Base entry", () => {
+    const info = getModelInfo(ModelId.WHISPER_BASE);
+    expect(info.id).toBe(ModelId.WHISPER_BASE);
     expect(info.isBundled).toBe(true);
+  });
+
+  it("BUNDLED_MODEL_ID names the only bundled model", () => {
+    expect(
+      getAllModels()
+        .filter((m) => m.isBundled)
+        .map((m) => m.id),
+    ).toEqual([BUNDLED_MODEL_ID]);
   });
 
   it("getAllModels returns every entry in MODEL_REGISTRY", () => {
@@ -90,9 +99,9 @@ describe("ModelRegistry", () => {
     expect(getRecommendedModelId("en")).toBe(ModelId.NEMO_PARAKEET_V3);
   });
 
-  it("suggests a larger model only to non-English speakers on Whisper Tiny", () => {
-    expect(shouldSuggestLargerModel("de", ModelId.WHISPER_TINY)).toBe(true);
-    expect(shouldSuggestLargerModel("en", ModelId.WHISPER_TINY)).toBe(false);
+  it("suggests a larger model only to non-English speakers on Whisper Base", () => {
+    expect(shouldSuggestLargerModel("de", ModelId.WHISPER_BASE)).toBe(true);
+    expect(shouldSuggestLargerModel("en", ModelId.WHISPER_BASE)).toBe(false);
     expect(shouldSuggestLargerModel("de", ModelId.NEMO_PARAKEET_V3)).toBe(
       false,
     );

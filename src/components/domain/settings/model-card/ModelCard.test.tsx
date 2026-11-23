@@ -76,7 +76,7 @@ jest.mock("@/hooks", () => ({
 }));
 
 const baseProps = {
-  name: "Whisper Tiny",
+  name: "Whisper Base",
   description: "Fast, lightweight transcription",
   languageCount: 99,
   sizeLabel: "250 MB",
@@ -88,7 +88,7 @@ describe("ModelCard", () => {
     const { getByText } = render(
       <ModelCard {...baseProps} isBundled isSelected isDownloaded />,
     );
-    expect(getByText("Whisper Tiny")).toBeTruthy();
+    expect(getByText("Whisper Base")).toBeTruthy();
     expect(getByText("Fast, lightweight transcription")).toBeTruthy();
   });
 
@@ -167,7 +167,7 @@ describe("ModelCard", () => {
         isDownloaded={false}
         onCancelDownload={onCancel}
         downloadProgress={{
-          modelId: ModelId.WHISPER_TINY,
+          modelId: ModelId.WHISPER_BASE,
           totalBytes: 600_000_000,
           downloadedBytes: 480_000_000,
           progressRatio: 0.8,
@@ -193,7 +193,7 @@ describe("ModelCard", () => {
         isDownloaded={false}
         onRetry={onRetry}
         downloadProgress={{
-          modelId: ModelId.WHISPER_TINY,
+          modelId: ModelId.WHISPER_BASE,
           totalBytes: 600_000_000,
           downloadedBytes: 0,
           progressRatio: 0,
@@ -392,6 +392,6 @@ describe("ModelCard", () => {
         colors={{ ...useTheme().theme.colors, ...override }}
       />,
     );
-    expect(getByText("Whisper Tiny")).toHaveStyle({ color: "#override" });
+    expect(getByText("Whisper Base")).toHaveStyle({ color: "#override" });
   });
 });

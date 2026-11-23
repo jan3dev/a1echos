@@ -27,6 +27,7 @@ import {
 } from "@/hooks";
 import type { ModelInfo } from "@/models";
 import {
+  BUNDLED_MODEL_ID,
   getAllModels,
   getModelInfo,
   ModelId,
@@ -166,7 +167,7 @@ export default function ModelSettingsScreen() {
         onPrimaryButtonTap: async () => {
           hideDeleteToast();
           if (selectedModelId === modelId) {
-            await setModelId(ModelId.WHISPER_TINY);
+            await setModelId(BUNDLED_MODEL_ID);
           }
           const success = await downloadStore.deleteModel(modelId);
           if (success) {
