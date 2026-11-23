@@ -170,6 +170,21 @@ export const WithSkeletonLoading = () => {
   return <WithSkeletonLoadingContent />;
 };
 
+export const WithSpeakers = () => {
+  useSeedStore();
+  return (
+    <View style={styles.staticList}>
+      {dummyTranscriptions.map((t, i) => (
+        <TranscriptionItem
+          key={t.id}
+          transcription={{ ...t, speaker: i % 2 }}
+          onSpeakerPress={(speaker) => console.log("Speaker", speaker)}
+        />
+      ))}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   fullWidth: {
     width: "100%",
@@ -192,6 +207,7 @@ const gallery: GalleryEntry = {
     { name: "SelectionMode", render: SelectionMode },
     { name: "LivePreviewSingleItem", render: LivePreviewSingleItem },
     { name: "WithSkeletonLoading", render: WithSkeletonLoading },
+    { name: "WithSpeakers", render: WithSpeakers },
   ],
 };
 

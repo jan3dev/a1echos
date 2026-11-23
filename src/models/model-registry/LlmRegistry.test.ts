@@ -6,6 +6,7 @@ import {
   getRecommendedLlmId,
   LlmModelId,
   ModelId,
+  SPEAKER_MODEL,
 } from "../";
 
 describe("LlmRegistry", () => {
@@ -32,6 +33,14 @@ describe("LlmRegistry", () => {
     const ids = getAllDownloadableModels().map((m) => m.id);
     expect(ids).toEqual(expect.arrayContaining(Object.values(LlmModelId)));
     expect(ids).toEqual(expect.arrayContaining(Object.values(ModelId)));
+  });
+
+  it("offers the speaker model as a pinned download", () => {
+    expect(getDownloadableModel(SPEAKER_MODEL.id)).toBe(SPEAKER_MODEL);
+    expect(SPEAKER_MODEL.downloadBaseUrl).toMatch(
+      /^https:\/\/huggingface\.co\/[^/]+\/[^/]+\/resolve\/[0-9a-f]{40}$/,
+    );
+    expect(SPEAKER_MODEL.files[0].sizeBytes).toBe(SPEAKER_MODEL.sizeBytes);
   });
 
   // OS-reported totals sit below the marketed size (8 GB phones report ~7.5).

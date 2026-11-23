@@ -263,5 +263,14 @@
   "downloadOmnilingualNote": "{{size}}. Untuk saat ini hanya mode Akurasi Tinggi.",
   "anyLanguage": "Bahasa apa pun",
   "modelDescription_omnilingual": "Untuk bahasa yang tidak didukung model lain.",
-  "notNow": "Jangan Sekarang"
+  "notNow": "Jangan Sekarang",
+  "speakers": "Pembicara",
+  "speakerDefaultName": "Pembicara {{number}}",
+  "speakerRenameTitle": "Ganti Nama Pembicara",
+  "speakersDownloadTitle": "Unduh Model Pembicara?",
+  "speakersDownloadMessage": "Mengenali pembicara memerlukan unduhan satu kali sebesar {{size}}. Berjalan di perangkat Anda.",
+  "speakersIdentified": "Pembicara Dikenali",
+  "speakersOnlyOne": "Hanya Satu Pembicara Ditemukan",
+  "speakersFailed": "Pengenalan Pembicara Gagal",
+  "speakersStopped": "Pengenalan Pembicara Dihentikan"
 }

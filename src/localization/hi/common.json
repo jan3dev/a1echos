@@ -271,5 +271,14 @@
   "downloadOmnilingualNote": "{{size}}। फ़िलहाल केवल उच्च सटीकता मोड।",
   "anyLanguage": "कोई भी भाषा",
   "modelDescription_omnilingual": "उन भाषाओं के लिए जिन्हें दूसरे मॉडल सपोर्ट नहीं करते।",
-  "notNow": "अभी नहीं"
+  "notNow": "अभी नहीं",
+  "speakers": "वक्ता",
+  "speakerDefaultName": "वक्ता {{number}}",
+  "speakerRenameTitle": "वक्ता का नाम बदलें",
+  "speakersDownloadTitle": "वक्ता मॉडल डाउनलोड करें?",
+  "speakersDownloadMessage": "वक्ताओं की पहचान के लिए एक बार {{size}} डाउनलोड करना होगा। यह आपके डिवाइस पर चलता है।",
+  "speakersIdentified": "वक्ताओं की पहचान हो गई",
+  "speakersOnlyOne": "केवल एक वक्ता मिला",
+  "speakersFailed": "वक्ता पहचान विफल रही",
+  "speakersStopped": "वक्ता पहचान रोक दी गई"
 }

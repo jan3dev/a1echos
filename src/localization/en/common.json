@@ -271,5 +271,14 @@
   "structureNeedsModel": "Download an AI model to structure notes.",
   "structureFailed": "Structuring Failed",
   "structureStopped": "Structuring Stopped",
-  "stop": "Stop"
+  "stop": "Stop",
+  "speakers": "Speakers",
+  "speakerDefaultName": "Speaker {{number}}",
+  "speakerRenameTitle": "Rename Speaker",
+  "speakersDownloadTitle": "Download Speaker Model?",
+  "speakersDownloadMessage": "Identifying speakers needs a one-time {{size}} download. It runs on your device.",
+  "speakersIdentified": "Speakers Identified",
+  "speakersOnlyOne": "Only One Speaker Found",
+  "speakersFailed": "Speaker Identification Failed",
+  "speakersStopped": "Speaker Identification Stopped"
 }

@@ -54,6 +54,7 @@ jest.mock("@/services", () => ({
     deleteTranscription: jest.fn(async () => ({ audioPath: null })),
     deleteTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
     mergeTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
+    splitTranscription: jest.fn(async () => ({ audioPaths: [] })),
     clearAllTranscriptions: jest.fn(async () => ({ audioPaths: [] })),
   },
   audioProtectionService: {
@@ -3618,5 +3619,140 @@ describe("transcriptionStore.deleteTranscriptionAudio", () => {
       useTranscriptionStore.getState().deleteTranscriptionAudio("t1"),
     ).rejects.toThrow();
     expect(audioProtectionService.deleteAudio).not.toHaveBeenCalled();
+  });
+});
+
+describe("transcriptionStore.splitTranscriptionBySpeaker", () => {
+  const original = makeTx({
+    id: "whole",
+    sessionId: "session-1",
+    audioPath: "/audio/whole.wav",
+    timestamp: new Date(5000),
+  });
+  const other = makeTx({
+    id: "other",
+    sessionId: "session-1",
+    timestamp: new Date(9000),
+  });
+  const turns = [
+    { startSample: 0, endSample: 100, speaker: 0 },
+    { startSample: 100, endSample: 250, speaker: 1 },
+    { startSample: 250, endSample: 250, speaker: 0 },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useTranscriptionStore.setState({
+      ...getInitialState(),
+      state: TranscriptionState.TRANSCRIBING,
+      transcriptions: [original, other],
+    });
+    useSettingsStore.setState({
+      selectedModelId: "whisper-tiny" as never,
+      selectedLanguage: { code: "en" } as never,
+    });
+    (sherpaTranscriptionService.initialize as jest.Mock).mockImplementation(
+      async () => true,
+    );
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockImplementation(async (uri: string) => `said in ${uri}`);
+    (audioProtectionService.saveAudio as jest.Mock).mockImplementation(
+      async (_src: string, name: string) => `/audio/${name}`,
+    );
+    (databaseService.splitTranscription as jest.Mock).mockImplementation(
+      async () => ({ audioPaths: ["/audio/whole.wav"] }),
+    );
+  });
+
+  const split = () =>
+    useTranscriptionStore
+      .getState()
+      .splitTranscriptionBySpeaker(original, turns, "/plain/whole.wav");
+
+  it("replaces the item with one transcribed item per turn", async () => {
+    await split();
+
+    const { transcriptions } = useTranscriptionStore.getState();
+    expect(transcriptions.map((t) => t.id)).not.toContain("whole");
+    expect(transcriptions).toHaveLength(3);
+    expect(transcriptions[2]).toBe(other);
+    expect(transcriptions.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        sessionId: "session-1",
+        text: "said in /plain/whole.wav_0.wav",
+        timestamp: new Date(5000),
+        audioPath: expect.stringMatching(/^\/audio\/audio_\d+_0\.wav$/),
+        speaker: 0,
+      }),
+      expect.objectContaining({
+        text: "said in /plain/whole.wav_1.wav",
+        timestamp: new Date(5001),
+        speaker: 1,
+      }),
+    ]);
+    expect(databaseService.splitTranscription).toHaveBeenCalledWith(
+      "whole",
+      transcriptions.slice(0, 2),
+    );
+    expect(audioProtectionService.deleteAudio).toHaveBeenCalledWith(
+      "/audio/whole.wav",
+    );
+  });
+
+  it("drops turns with nothing recognizable", async () => {
+    (sherpaTranscriptionService.transcribeWavFile as jest.Mock)
+      .mockResolvedValueOnce("")
+      .mockResolvedValueOnce("only this");
+
+    await split();
+
+    const { transcriptions } = useTranscriptionStore.getState();
+    expect(transcriptions.map((t) => t.text)).toEqual([
+      "only this",
+      other.text,
+    ]);
+    expect(transcriptions[0].speaker).toBe(1);
+  });
+
+  it("keeps the original when no turn yields text", async () => {
+    (
+      sherpaTranscriptionService.transcribeWavFile as jest.Mock
+    ).mockResolvedValue("");
+
+    await split();
+
+    expect(useTranscriptionStore.getState().transcriptions).toEqual([
+      original,
+      other,
+    ]);
+    expect(databaseService.splitTranscription).not.toHaveBeenCalled();
+  });
+
+  it("removes the new audio and keeps the original when saving fails", async () => {
+    (databaseService.splitTranscription as jest.Mock).mockRejectedValue(
+      new Error("db locked"),
+    );
+
+    await expect(split()).rejects.toThrow("db locked");
+
+    expect(useTranscriptionStore.getState().transcriptions).toEqual([
+      original,
+      other,
+    ]);
+    expect(audioProtectionService.deleteAudio).toHaveBeenCalledTimes(2);
+    expect(audioProtectionService.deleteAudio).not.toHaveBeenCalledWith(
+      "/audio/whole.wav",
+    );
+  });
+
+  it("fails when the engine can't start", async () => {
+    (sherpaTranscriptionService.initialize as jest.Mock).mockResolvedValue(
+      false,
+    );
+    await expect(split()).rejects.toThrow(
+      "Failed to initialize transcription engine",
+    );
+    expect(sliceWavFile).not.toHaveBeenCalled();
   });
 });

@@ -25,6 +25,7 @@ interface TranscriptionContentViewProps {
   onTranscriptionTap: (id: string) => void;
   onTranscriptionLongPress: (id: string) => void;
   onTranscriptionEdit?: (id: string) => void;
+  onSpeakerPress?: (speaker: number) => void;
   header?: ReactElement;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: (contentWidth: number, contentHeight: number) => void;
@@ -39,6 +40,7 @@ export const TranscriptionContentView = ({
   onTranscriptionTap,
   onTranscriptionLongPress,
   onTranscriptionEdit,
+  onSpeakerPress,
   header,
   onScroll,
   onContentSizeChange,
@@ -85,6 +87,7 @@ export const TranscriptionContentView = ({
       onTranscriptionTap={onTranscriptionTap}
       onTranscriptionLongPress={onTranscriptionLongPress}
       onTranscriptionEdit={onTranscriptionEdit}
+      onSpeakerPress={onSpeakerPress}
       header={header}
       topPadding={topPadding}
       bottomPadding={bottomPadding}

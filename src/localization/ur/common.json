@@ -271,5 +271,14 @@
   "downloadOmnilingualNote": "{{size}}۔ فی الحال صرف اعلیٰ درستگی موڈ۔",
   "anyLanguage": "کوئی بھی زبان",
   "modelDescription_omnilingual": "ان زبانوں کے لیے جو دوسرے ماڈلز میں شامل نہیں۔",
-  "notNow": "ابھی نہیں"
+  "notNow": "ابھی نہیں",
+  "speakers": "مقررین",
+  "speakerDefaultName": "مقرر {{number}}",
+  "speakerRenameTitle": "مقرر کا نام بدلیں",
+  "speakersDownloadTitle": "مقرر ماڈل ڈاؤن لوڈ کریں؟",
+  "speakersDownloadMessage": "مقررین کی شناخت کے لیے ایک بار {{size}} ڈاؤن لوڈ درکار ہے۔ یہ آپ کے آلے پر چلتا ہے۔",
+  "speakersIdentified": "مقررین کی شناخت ہو گئی",
+  "speakersOnlyOne": "صرف ایک مقرر ملا",
+  "speakersFailed": "مقررین کی شناخت ناکام ہو گئی",
+  "speakersStopped": "مقررین کی شناخت روک دی گئی"
 }

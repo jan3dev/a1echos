@@ -263,5 +263,14 @@
   "downloadOmnilingualNote": "{{size}}。目前仅支持高精度模式。",
   "anyLanguage": "任意语言",
   "modelDescription_omnilingual": "适用于其他模型未覆盖的语言。",
-  "notNow": "暂不"
+  "notNow": "暂不",
+  "speakers": "说话人",
+  "speakerDefaultName": "说话人 {{number}}",
+  "speakerRenameTitle": "重命名说话人",
+  "speakersDownloadTitle": "下载说话人模型？",
+  "speakersDownloadMessage": "识别说话人需要一次性下载 {{size}}，并在你的设备上运行。",
+  "speakersIdentified": "已识别说话人",
+  "speakersOnlyOne": "只找到一位说话人",
+  "speakersFailed": "说话人识别失败",
+  "speakersStopped": "说话人识别已停止"
 }

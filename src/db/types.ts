@@ -10,6 +10,7 @@ export function sessionFromRow(row: SessionRow): Session {
     lastModified: new Date(row.lastModifiedMs),
     isIncognito: row.isIncognito,
     ...(row.folderId && { folderId: row.folderId }),
+    ...(row.speakerNames && { speakerNames: row.speakerNames }),
   };
 }
 
@@ -21,6 +22,7 @@ export function sessionToRow(session: Session): SessionRow {
     lastModifiedMs: session.lastModified.getTime(),
     isIncognito: session.isIncognito,
     folderId: session.folderId ?? null,
+    speakerNames: session.speakerNames ?? null,
   };
 }
 
@@ -48,6 +50,7 @@ export function transcriptionFromRow(row: TranscriptionRow): Transcription {
     timestamp: new Date(row.timestampMs),
     audioPath: row.audioPath,
     ...(row.kind === "summary" && { kind: row.kind }),
+    ...(row.speaker !== null && { speaker: row.speaker }),
   };
 }
 
@@ -59,5 +62,6 @@ export function transcriptionToRow(t: Transcription): TranscriptionRow {
     timestampMs: t.timestamp.getTime(),
     audioPath: t.audioPath,
     kind: t.kind ?? "transcript",
+    speaker: t.speaker ?? null,
   };
 }

@@ -19,6 +19,10 @@ export enum TranscriptionMode {
   REALTIME = "realtime",
 }
 
+export enum SpeakerModelId {
+  TITANET_SMALL = "speaker_titanet_small",
+}
+
 export enum LlmModelId {
   QWEN35_0_8B_EN = "qwen35_0_8b_en",
   QWEN35_0_8B = "qwen35_0_8b",

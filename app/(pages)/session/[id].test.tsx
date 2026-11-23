@@ -77,6 +77,7 @@ jest.mock("@/hooks", () => ({
     reset: jest.fn(),
   })),
   useLocalization: jest.fn(() => ({ loc: mockMakeLoc() })),
+  useEnsureModelDownloaded: jest.fn(() => jest.fn(async () => true)),
   useMicPermission: jest.fn(() => jest.fn(async () => true)),
   useFileImport: (params: any) => {
     mockFileImportParams = params;
@@ -95,6 +96,7 @@ jest.mock("@/hooks", () => ({
 
 jest.mock("@/utils", () => ({
   delay: async () => undefined,
+  formatBytes: (bytes: number) => `${bytes}B`,
   logError: jest.fn(),
   getErrorMessage: (e: Error) => e.message,
   FeatureFlag: {
@@ -115,6 +117,7 @@ const mockEmptySet = new Set();
 const mockSwitchSession = jest.fn();
 const mockShowToast = jest.fn();
 const mockRenameSession = jest.fn();
+const mockRenameSpeaker = jest.fn();
 const mockExitSelectionMode = jest.fn();
 const mockSetRecordingCallbacks = jest.fn();
 const mockSetRecordingControlsEnabled = jest.fn();
@@ -164,6 +167,14 @@ jest.mock("@/stores", () => ({
   useSummarySessionId: jest.fn(() => null),
   useSummarizeSession: jest.fn(() => jest.fn()),
   useCancelSummary: jest.fn(() => jest.fn()),
+  labelSpeakers: jest.fn((transcriptions: unknown[]) => transcriptions),
+  speakerName: jest.fn((_session: unknown, speaker: number) => `S${speaker}`),
+  useSpeakerJob: jest.fn(() => null),
+  useIdentifySpeakers: jest.fn(() => jest.fn()),
+  useCancelIdentifySpeakers: jest.fn(() => jest.fn()),
+  useRenameSpeaker: jest.fn(() => mockRenameSpeaker),
+  useIsModelDownloaded: jest.fn(() => true),
+  useModelDownloadProgress: jest.fn(() => undefined),
 }));
 
 let mockOnTitlePressed: (() => void) | null = null;
@@ -177,6 +188,8 @@ let mockOnRenameCancel: (() => void) | null = null;
 let mockOnTranscriptionTap: ((id: string) => void) | null = null;
 let mockOnTranscriptionLongPress: ((id: string) => void) | null = null;
 let mockOnTranscriptionEdit: ((id: string) => void) | null = null;
+let mockOnSpeakerPress: ((speaker: number) => void) | null = null;
+let mockSpeakerModal: any = null;
 const navbarActions: Record<string, () => void> = {};
 const navbarActionDisabled: Record<string, boolean> = {};
 const mockOnDeleteSelectedPressed = () => navbarActions.delete?.();
@@ -202,6 +215,10 @@ jest.mock("@/components", () => {
       );
     },
     SessionInputModal: (props: any) => {
+      if (String(props.title) === "speakerRenameTitle") {
+        mockSpeakerModal = props;
+        return props.visible ? <View testID="speaker-rename-modal" /> : null;
+      }
       mockOnRenameSubmit = props.onSubmit;
       mockOnRenameCancel = props.onCancel;
       return props.visible ? (
@@ -214,6 +231,7 @@ jest.mock("@/components", () => {
       mockOnTranscriptionTap = props.onTranscriptionTap;
       mockOnTranscriptionLongPress = props.onTranscriptionLongPress;
       mockOnTranscriptionEdit = props.onTranscriptionEdit;
+      mockOnSpeakerPress = props.onSpeakerPress;
       mockJumpToTopRef = props.jumpToTopRef;
       return <View testID={TID.TranscriptionContent}>{props.header}</View>;
     },
@@ -320,6 +338,11 @@ beforeEach(() => {
   (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(false);
   (stores.useIsStructuring as jest.Mock).mockReturnValue(false);
   (stores.useSummarizeSession as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useSpeakerJob as jest.Mock).mockReturnValue(null);
+  (stores.useIdentifySpeakers as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useCancelIdentifySpeakers as jest.Mock).mockReturnValue(jest.fn());
+  (stores.useIsModelDownloaded as jest.Mock).mockReturnValue(true);
+  (stores.useModelDownloadProgress as jest.Mock).mockReturnValue(undefined);
   (stores.useSelectedLlmId as jest.Mock).mockReturnValue(null);
   (stores.useSelectedLanguage as jest.Mock).mockReturnValue({ code: "en" });
   (stores.useSetRecordingCallbacks as jest.Mock).mockReturnValue(
@@ -364,6 +387,9 @@ beforeEach(() => {
   // Restore hooks
   const hooks = jest.requireMock("@/hooks");
   (hooks.useLocalization as jest.Mock).mockReturnValue({ loc: mockMakeLoc() });
+  (hooks.useEnsureModelDownloaded as jest.Mock).mockReturnValue(
+    jest.fn(async () => true),
+  );
   (hooks.usePermissions as jest.Mock).mockReturnValue({
     hasPermission: true,
     requestPermission: jest.fn(),
@@ -1650,6 +1676,156 @@ describe("SessionScreen", () => {
         { id: "t1", text: "Hello" },
         { id: "t2", text: "World" },
       ]);
+    });
+
+    describe("speakers", () => {
+      const stores = jest.requireMock("@/stores");
+      const hooks = jest.requireMock("@/hooks");
+      const setup = (outcome: Promise<string> = Promise.resolve("done")) => {
+        const tooltip = jest.fn();
+        const identify = jest.fn(() => outcome);
+        (useSessionTranscriptions as jest.Mock).mockReturnValue([
+          { id: "t1", text: "Hello", audioPath: "a.wav" },
+        ]);
+        (stores.useShowGlobalTooltip as jest.Mock).mockReturnValue(tooltip);
+        (stores.useIdentifySpeakers as jest.Mock).mockReturnValue(identify);
+        return { tooltip, identify };
+      };
+      const renderScreen = async () => {
+        const view = render(<SessionScreen />);
+        await act(async () => {});
+        return view;
+      };
+      const press = async () => {
+        const { getByTestId } = await renderScreen();
+        await act(async () => {
+          fireEvent.press(getByTestId(TestID.SessionSpeakers));
+        });
+      };
+      const isDisabled = async () =>
+        (await renderScreen()).getByTestId(TestID.SessionSpeakers).props
+          .accessibilityState.disabled;
+
+      it.each([
+        ["done", ["speakersIdentified", "success", 3000]],
+        ["one-speaker", ["speakersOnlyOne", "normal", 4000]],
+        ["stopped", ["speakersStopped", "normal", 3000]],
+        ["no-audio", ["speakersFailed", "error", 5000]],
+        ["busy", null],
+      ])("reports the outcome %s", async (outcome, expected) => {
+        const { identify, tooltip } = setup(Promise.resolve(outcome));
+        await press();
+        expect(identify).toHaveBeenCalledWith("session-1");
+        expect(
+          tooltip.mock.calls.map(([text, ...rest]) => [String(text), ...rest]),
+        ).toEqual(expected ? [expected] : []);
+      });
+
+      it("says when identification failed", async () => {
+        const { tooltip } = setup(Promise.reject(new Error("boom")));
+        await press();
+        expect(tooltip).toHaveBeenCalledWith(expect.anything(), "error", 5000);
+      });
+
+      it("offers the model download first, then identifies", async () => {
+        const { identify } = setup();
+        const ensure = jest.fn(async () => true);
+        (stores.useIsModelDownloaded as jest.Mock).mockReturnValue(false);
+        (hooks.useEnsureModelDownloaded as jest.Mock).mockReturnValue(ensure);
+        await press();
+        expect(identify).not.toHaveBeenCalled();
+
+        const toast = mockShowDeleteToast.mock.calls.at(-1)![0];
+        expect(String(toast.message)).toBe("speakersDownloadMessage_40257283B");
+        toast.onSecondaryButtonTap();
+        expect(mockHideDeleteToast).toHaveBeenCalled();
+
+        await act(async () => toast.onPrimaryButtonTap());
+        expect(ensure).toHaveBeenCalledWith("speaker_titanet_small");
+        expect(identify).toHaveBeenCalledWith("session-1");
+      });
+
+      it("does not identify when the download fails", async () => {
+        const { identify } = setup();
+        (stores.useIsModelDownloaded as jest.Mock).mockReturnValue(false);
+        (hooks.useEnsureModelDownloaded as jest.Mock).mockReturnValue(
+          jest.fn(async () => false),
+        );
+        await press();
+        await act(async () =>
+          mockShowDeleteToast.mock.calls.at(-1)![0].onPrimaryButtonTap(),
+        );
+        expect(identify).not.toHaveBeenCalled();
+      });
+
+      it("turns into Stop while this session is analyzed", async () => {
+        const cancel = jest.fn();
+        const { identify } = setup();
+        (stores.useCancelIdentifySpeakers as jest.Mock).mockReturnValue(cancel);
+        (stores.useSpeakerJob as jest.Mock).mockReturnValue({
+          sessionId: "session-1",
+          progress: 0.42,
+        });
+        // Its own TRANSCRIBING state must not disable the Stop button.
+        (stores.useIsSummaryBlocked as jest.Mock).mockReturnValue(true);
+        await press();
+        expect(cancel).toHaveBeenCalled();
+        expect(identify).not.toHaveBeenCalled();
+      });
+
+      it("is disabled without audio, while busy elsewhere, or while downloading", async () => {
+        setup();
+        expect(await isDisabled()).toBe(false);
+
+        (useSessionTranscriptions as jest.Mock).mockReturnValue([
+          { id: "t1", text: "Typed", audioPath: "" },
+          { id: "s1", text: "- Sum", audioPath: "x.wav", kind: "summary" },
+        ]);
+        expect(await isDisabled()).toBe(true);
+
+        setup();
+        (stores.useSpeakerJob as jest.Mock).mockReturnValue({
+          sessionId: "other",
+          progress: 0,
+        });
+        expect(await isDisabled()).toBe(true);
+
+        (stores.useSpeakerJob as jest.Mock).mockReturnValue(null);
+        (stores.useModelDownloadProgress as jest.Mock).mockReturnValue({
+          status: "downloading",
+          progressRatio: 0.5,
+        });
+        expect(await isDisabled()).toBe(true);
+
+        (stores.useModelDownloadProgress as jest.Mock).mockReturnValue({
+          status: "complete",
+          progressRatio: 1,
+        });
+        (stores.useSummarySessionId as jest.Mock).mockReturnValue("session-2");
+        expect(await isDisabled()).toBe(true);
+      });
+
+      it("renames a speaker from its label", async () => {
+        setup();
+        const { queryByTestId } = await renderScreen();
+        expect(queryByTestId("speaker-rename-modal")).toBeNull();
+
+        act(() => mockOnSpeakerPress!(1));
+        expect(queryByTestId("speaker-rename-modal")).toBeTruthy();
+        expect(mockSpeakerModal.label).toBe("S1");
+        expect(mockSpeakerModal.initialValue).toBe("");
+
+        act(() => mockSpeakerModal.onSubmit("Ana"));
+        expect(mockRenameSpeaker).toHaveBeenCalledWith("session-1", 1, "Ana");
+        expect(queryByTestId("speaker-rename-modal")).toBeNull();
+
+        mockSession = { ...mockSession, speakerNames: ["Ben"] };
+        act(() => mockOnSpeakerPress!(0));
+        expect(mockSpeakerModal.initialValue).toBe("Ben");
+        act(() => mockSpeakerModal.onCancel());
+        expect(queryByTestId("speaker-rename-modal")).toBeNull();
+        expect(mockRenameSpeaker).toHaveBeenCalledTimes(1);
+      });
     });
 
     describe("summary", () => {

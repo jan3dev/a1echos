@@ -167,6 +167,16 @@ describe("useLocalization", () => {
     });
   });
 
+  it("speakersDownloadMessage interpolates the download size", () => {
+    const { result } = renderHook(() => useLocalization());
+    const { loc, t } = result.current;
+
+    loc.speakersDownloadMessage("40 MB");
+    expect(t).toHaveBeenCalledWith("speakersDownloadMessage", {
+      size: "40 MB",
+    });
+  });
+
   it("insufficientSpace interpolates required and available", () => {
     const { result } = renderHook(() => useLocalization());
     const { loc, t } = result.current;

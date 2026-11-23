@@ -8,7 +8,7 @@ import { useShallow } from "zustand/shallow";
 
 import { AppConstants } from "@/constants";
 import { Transcription, TranscriptionMode, TranscriptionState } from "@/models";
-import type { ChunkEvent } from "@/services";
+import type { ChunkEvent, SpeakerTurn } from "@/services";
 import {
   audioProtectionService,
   backgroundRecordingService,
@@ -217,6 +217,16 @@ interface TranscriptionStore {
     languageCode: string,
   ) => Promise<string>;
   deleteTranscriptionAudio: (id: string) => Promise<void>;
+  /**
+   * Replaces a transcription with one item per speaker turn, each transcribed
+   * again from its own stretch of `plaintextUri`. Leaves it alone when no turn
+   * yields text. The caller holds the TRANSCRIBING state.
+   */
+  splitTranscriptionBySpeaker: (
+    transcription: Transcription,
+    turns: SpeakerTurn[],
+    plaintextUri: string,
+  ) => Promise<void>;
   importFiles: (
     sessionId: string,
     files: ImportFile[],
@@ -1174,6 +1184,64 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => {
       if (!transcription?.audioPath) return;
       await get().updateTranscription({ ...transcription, audioPath: "" });
       await audioProtectionService.deleteAudio(transcription.audioPath);
+    },
+
+    splitTranscriptionBySpeaker: async (original, turns, plaintextUri) => {
+      if (!(await ensureEngine())) {
+        throw new Error("Failed to initialize transcription engine");
+      }
+      const slices = sliceWavFile(plaintextUri, turns);
+      const parts: Transcription[] = [];
+      let committed = false;
+      try {
+        for (let i = 0; i < turns.length; i++) {
+          const slice = slices[i];
+          if (!slice) continue;
+          const text = formatTranscriptionText(
+            await sherpaTranscriptionService.transcribeWavFile(slice),
+          );
+          if (!text) continue;
+          parts.push({
+            id: Crypto.randomUUID(),
+            sessionId: original.sessionId,
+            text,
+            // In order, and in the original's place in the session.
+            timestamp: new Date(original.timestamp.getTime() + parts.length),
+            audioPath: await audioProtectionService.saveAudio(
+              slice,
+              `audio_${Date.now()}_${i}.wav`,
+            ),
+            speaker: turns[i].speaker,
+          });
+        }
+        if (parts.length === 0) return;
+
+        const { audioPaths } = await databaseService.splitTranscription(
+          original.id,
+          parts,
+        );
+        committed = true;
+        set({
+          transcriptions: [
+            ...get().transcriptions.filter((t) => t.id !== original.id),
+            ...parts,
+          ].sort((x, y) => x.timestamp.getTime() - y.timestamp.getTime()),
+        });
+        await Promise.allSettled(
+          audioPaths.map((p) => audioProtectionService.deleteAudio(p)),
+        );
+      } catch (error) {
+        if (!committed) {
+          await Promise.allSettled(
+            parts.map((p) => audioProtectionService.deleteAudio(p.audioPath)),
+          );
+        }
+        throw error;
+      } finally {
+        for (const slice of slices) {
+          if (slice) deleteCacheFile(slice);
+        }
+      }
     },
 
     importFiles: async (sessionId: string, files: ImportFile[]) => {

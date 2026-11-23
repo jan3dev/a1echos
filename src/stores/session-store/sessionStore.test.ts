@@ -15,6 +15,7 @@ import {
   useIncognitoSession,
   useMoveSessionsToFolder,
   useRenameSession,
+  useRenameSpeaker,
   useSessions,
   useSessionStore,
   useSwitchSession,
@@ -429,6 +430,32 @@ describe("sessionStore", () => {
     });
   });
 
+  describe("renameSpeaker()", () => {
+    beforeEach(() => {
+      useSessionStore.setState({ sessions: [s1, s2] });
+    });
+
+    const names = () =>
+      useSessionStore.getState().sessions.find((s) => s.id === "s1")!
+        .speakerNames;
+
+    it("names a speaker, leaving the others on their default", async () => {
+      await useSessionStore.getState().renameSpeaker("s1", 1, "  Ana ");
+      expect(names()).toEqual(["", "Ana"]);
+      expect(databaseService.upsertSession).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "s1", speakerNames: ["", "Ana"] }),
+      );
+
+      await useSessionStore.getState().renameSpeaker("s1", 0, "Ben");
+      expect(names()).toEqual(["Ben", "Ana"]);
+    });
+
+    it("skips an unknown session", async () => {
+      await useSessionStore.getState().renameSpeaker("nonexistent", 0, "Ana");
+      expect(databaseService.upsertSession).not.toHaveBeenCalled();
+    });
+  });
+
   describe("switchSession()", () => {
     beforeEach(() => {
       useSessionStore.setState({ sessions: [s1, s2], activeSessionId: "s1" });
@@ -668,6 +695,11 @@ describe("sessionStore", () => {
     it("useCreateSession returns a function", () => {
       const { result } = renderHook(() => useCreateSession());
       expect(typeof result.current).toBe("function");
+    });
+
+    it("useRenameSpeaker returns the store action", () => {
+      const { result } = renderHook(() => useRenameSpeaker());
+      expect(result.current).toBe(useSessionStore.getState().renameSpeaker);
     });
 
     it("useRenameSession returns a function", () => {

@@ -22,6 +22,7 @@ export {
   LlmModelId,
   ModelId,
   ModelType,
+  SpeakerModelId,
   TranscriptionMode,
 } from "./model-type/ModelType";
 
@@ -46,6 +47,9 @@ export type {
   DownloadableModelId,
   LlmModelInfo,
 } from "./model-registry/LlmRegistry";
+
+export { SPEAKER_MODEL } from "./model-registry/SpeakerModelRegistry";
+export type { SpeakerModelInfo } from "./model-registry/SpeakerModelRegistry";
 
 export { AppTheme, getThemeByName, getThemeName } from "./app-theme/AppTheme";
 

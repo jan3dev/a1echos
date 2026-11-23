@@ -271,5 +271,14 @@
   "downloadOmnilingualNote": "{{size}}। আপাতত শুধু উচ্চ নির্ভুলতা মোড।",
   "anyLanguage": "যেকোনো ভাষা",
   "modelDescription_omnilingual": "যেসব ভাষা অন্য মডেলগুলো সমর্থন করে না।",
-  "notNow": "এখন নয়"
+  "notNow": "এখন নয়",
+  "speakers": "বক্তা",
+  "speakerDefaultName": "বক্তা {{number}}",
+  "speakerRenameTitle": "বক্তার নাম বদলান",
+  "speakersDownloadTitle": "বক্তা মডেল ডাউনলোড করবেন?",
+  "speakersDownloadMessage": "বক্তা শনাক্ত করতে একবার {{size}} ডাউনলোড করতে হবে। এটি আপনার ডিভাইসেই চলে।",
+  "speakersIdentified": "বক্তা শনাক্ত হয়েছে",
+  "speakersOnlyOne": "শুধু একজন বক্তা পাওয়া গেছে",
+  "speakersFailed": "বক্তা শনাক্তকরণ ব্যর্থ হয়েছে",
+  "speakersStopped": "বক্তা শনাক্তকরণ বন্ধ হয়েছে"
 }

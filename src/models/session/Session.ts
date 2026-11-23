@@ -5,6 +5,9 @@ export interface Session {
   lastModified: Date;
   isIncognito: boolean;
   folderId?: string;
+  /** Names given to identified speakers, by speaker index; gaps keep the
+   *  default "Speaker N". */
+  speakerNames?: string[];
 }
 
 export interface SessionJSON {

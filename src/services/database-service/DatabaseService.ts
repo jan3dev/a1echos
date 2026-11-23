@@ -40,6 +40,7 @@ const createDatabaseService = () => {
           lastModifiedMs: row.lastModifiedMs,
           isIncognito: row.isIncognito,
           folderId: row.folderId,
+          speakerNames: row.speakerNames,
         },
       })
       .run();
@@ -162,6 +163,7 @@ const createDatabaseService = () => {
           timestampMs: row.timestampMs,
           audioPath: row.audioPath,
           kind: row.kind,
+          speaker: row.speaker,
         },
       })
       .run();
@@ -226,6 +228,19 @@ const createDatabaseService = () => {
     return { audioPaths };
   };
 
+  /** Replaces one transcription with the parts it was split into. */
+  const splitTranscription = async (
+    sourceId: string,
+    parts: Transcription[],
+  ): Promise<{ audioPaths: string[] }> => {
+    let audioPaths: string[] = [];
+    await getDb().transaction(async (tx) => {
+      for (const part of parts) await upsertTranscriptionIn(tx, part);
+      audioPaths = await deleteTranscriptionsIn(tx, [sourceId]);
+    });
+    return { audioPaths };
+  };
+
   const clearAllTranscriptions = async (): Promise<{
     audioPaths: string[];
   }> => {
@@ -263,6 +278,7 @@ const createDatabaseService = () => {
     deleteTranscription,
     deleteTranscriptions,
     mergeTranscriptions,
+    splitTranscription,
     clearAllTranscriptions,
     vacuum,
   };

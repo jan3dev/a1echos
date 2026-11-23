@@ -32,6 +32,8 @@ interface SessionStore {
   deleteFolder: (id: string) => Promise<void>;
   moveSessionsToFolder: (ids: string[], folderId: string) => Promise<void>;
   renameSession: (id: string, newName: string) => Promise<void>;
+  /** An empty name restores the default "Speaker N". */
+  renameSpeaker: (id: string, speaker: number, name: string) => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   updateSessionModifiedTimestamp: (id: string) => Promise<void>;
@@ -278,6 +280,24 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       }
     },
 
+    renameSpeaker: async (id: string, speaker: number, name: string) => {
+      const { sessions } = get();
+      const index = sessions.findIndex((s) => s.id === id);
+      if (index < 0) return;
+
+      const current = sessions[index].speakerNames ?? [];
+      const speakerNames = Array.from(
+        { length: Math.max(current.length, speaker + 1) },
+        (_, i) => (i === speaker ? name.trim() : (current[i] ?? "")),
+      );
+      const updated: Session = { ...sessions[index], speakerNames };
+      const updatedSessions = [...sessions];
+      updatedSessions[index] = updated;
+      set({ sessions: updatedSessions });
+
+      await databaseService.upsertSession(updated);
+    },
+
     switchSession: async (id: string) => {
       const { activeSessionId, sessions } = get();
 
@@ -463,6 +483,7 @@ export const useMoveSessionsToFolder = () =>
   useSessionStore((s) => s.moveSessionsToFolder);
 export const useCreateSession = () => useSessionStore((s) => s.createSession);
 export const useRenameSession = () => useSessionStore((s) => s.renameSession);
+export const useRenameSpeaker = () => useSessionStore((s) => s.renameSpeaker);
 export const useFindSessionById = () =>
   useSessionStore((s) => s.findSessionById);
 export const useSwitchSession = () => useSessionStore((s) => s.switchSession);

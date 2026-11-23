@@ -97,6 +97,47 @@ describe("TranscriptionItem", () => {
     expect(getByText("Part 2 of 5")).toBeTruthy();
   });
 
+  it("names the speaker of an identified turn and lets it be renamed", () => {
+    const onSpeakerPress = jest.fn();
+    const { getByText } = render(
+      <TranscriptionItem
+        {...defaultProps}
+        transcription={{ ...mockTranscription, speaker: 1 }}
+        onSpeakerPress={onSpeakerPress}
+      />,
+    );
+    fireEvent.press(getByText("Speaker 2"));
+    expect(onSpeakerPress).toHaveBeenCalledWith(1);
+  });
+
+  it("shows a renamed speaker, not tappable while selecting", () => {
+    const { useSessionStore } = require("@/stores");
+    useSessionStore.setState({
+      sessions: [
+        {
+          id: mockTranscription.sessionId,
+          name: "Interview",
+          timestamp: new Date(),
+          lastModified: new Date(),
+          isIncognito: false,
+          speakerNames: ["Ana"],
+        },
+      ],
+    });
+    const onSpeakerPress = jest.fn();
+    const { getByText } = render(
+      <TranscriptionItem
+        {...defaultProps}
+        transcription={{ ...mockTranscription, speaker: 0 }}
+        selectionMode
+        onSpeakerPress={onSpeakerPress}
+      />,
+    );
+    fireEvent.press(getByText("Ana"));
+    expect(onSpeakerPress).not.toHaveBeenCalled();
+    useSessionStore.setState({ sessions: [] });
+  });
+
   it("shows no Summary label on a transcript", () => {
     const { queryByText } = render(<TranscriptionItem {...defaultProps} />);
     expect(queryByText("summary")).toBeNull();

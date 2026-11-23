@@ -279,5 +279,14 @@
   "downloadOmnilingualNote": "{{size}}. Por ahora solo en modo Alta precisión.",
   "anyLanguage": "Cualquier idioma",
   "modelDescription_omnilingual": "Para idiomas que otros modelos no cubren.",
-  "notNow": "Ahora no"
+  "notNow": "Ahora no",
+  "speakers": "Hablantes",
+  "speakerDefaultName": "Hablante {{number}}",
+  "speakerRenameTitle": "Renombrar hablante",
+  "speakersDownloadTitle": "¿Descargar el modelo de hablantes?",
+  "speakersDownloadMessage": "Identificar hablantes requiere una descarga única de {{size}}. Se ejecuta en tu dispositivo.",
+  "speakersIdentified": "Hablantes identificados",
+  "speakersOnlyOne": "Solo se encontró un hablante",
+  "speakersFailed": "Error al identificar hablantes",
+  "speakersStopped": "Identificación de hablantes detenida"
 }

@@ -58,6 +58,7 @@ export enum TestID {
   SessionShareSheet = "session-share-sheet",
   SessionUpload = "session-upload",
   SessionSummary = "session-summary",
+  SessionSpeakers = "session-speakers",
   SessionShare = "session-share",
   AddToFolderClose = "add-to-folder-close",
   AddToFolderSave = "add-to-folder-save",

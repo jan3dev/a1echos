@@ -97,6 +97,7 @@ const sessionRowFor = (s: Session) => ({
   lastModifiedMs: s.lastModified.getTime(),
   isIncognito: s.isIncognito,
   folderId: s.folderId ?? null,
+  speakerNames: s.speakerNames ?? null,
 });
 
 const transcriptionRowFor = (t: Transcription) => ({
@@ -106,6 +107,7 @@ const transcriptionRowFor = (t: Transcription) => ({
   timestampMs: t.timestamp.getTime(),
   audioPath: t.audioPath,
   kind: t.kind ?? "transcript",
+  speaker: t.speaker ?? null,
 });
 
 beforeEach(() => {
@@ -353,6 +355,23 @@ describe("DatabaseService", () => {
       );
       expect(mockDelete).toHaveBeenCalled();
       expect(result.audioPaths).toEqual(["/audio/b.wav"]);
+    });
+  });
+
+  describe("splitTranscription", () => {
+    it("upserts the parts and deletes the source in one transaction", async () => {
+      queryResults.rows = [{ audioPath: "/audio/whole.wav" }];
+      const parts = [
+        { ...sampleTranscription, id: "p1", speaker: 0 },
+        { ...sampleTranscription, id: "p2", speaker: 1 },
+      ];
+
+      const result = await databaseService.splitTranscription("t1", parts);
+
+      expect(chain.values).toHaveBeenCalledWith(transcriptionRowFor(parts[0]));
+      expect(chain.values).toHaveBeenCalledWith(transcriptionRowFor(parts[1]));
+      expect(mockDelete).toHaveBeenCalled();
+      expect(result.audioPaths).toEqual(["/audio/whole.wav"]);
     });
   });
 

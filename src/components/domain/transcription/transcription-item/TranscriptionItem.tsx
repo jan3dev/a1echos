@@ -9,7 +9,7 @@ import {
 
 import { useLocalization } from "@/hooks";
 import { Transcription, transcriptTextStyle } from "@/models";
-import { useTextAppearance } from "@/stores";
+import { speakerName, useSessionStore, useTextAppearance } from "@/stores";
 import { AquaColors, useTheme } from "@/theme";
 import { iosPressed } from "@/utils";
 
@@ -77,6 +77,8 @@ interface TranscriptionItemProps {
   /** Shown after the Summary label while a long session is summarized in
    *  parts, e.g. "Part 2 of 5". */
   progressLabel?: string;
+  /** Tapping the speaker label, to rename that speaker. */
+  onSpeakerPress?: (speaker: number) => void;
   /** Pins colors on screens that ignore the app theme. */
   colors?: AquaColors;
 }
@@ -98,6 +100,7 @@ export const TranscriptionItem = ({
   onTranscriptionUpdate,
   style,
   progressLabel,
+  onSpeakerPress,
   colors: colorsOverride,
 }: TranscriptionItemProps) => {
   const { theme } = useTheme();
@@ -199,6 +202,26 @@ export const TranscriptionItem = ({
                 <SummaryLabel colors={colors} progressLabel={progressLabel} />
               </>
             )}
+            {transcription.speaker !== undefined && (
+              <>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.surfaceBorderPrimary },
+                  ]}
+                />
+                <SpeakerLabel
+                  sessionId={transcription.sessionId}
+                  speaker={transcription.speaker}
+                  colors={colors}
+                  onPress={
+                    onSpeakerPress && enableInteractions && !selectionMode
+                      ? onSpeakerPress
+                      : undefined
+                  }
+                />
+              </>
+            )}
           </View>
 
           <View style={styles.actionsContainer}>
@@ -296,6 +319,47 @@ function SummaryLabel({
   );
 }
 
+// Own component so only speaker rows subscribe to the session's names.
+function SpeakerLabel({
+  sessionId,
+  speaker,
+  colors,
+  onPress,
+}: {
+  sessionId: string;
+  speaker: number;
+  colors: AquaColors;
+  onPress?: (speaker: number) => void;
+}) {
+  // The default name is localized.
+  useLocalization();
+  const name = useSessionStore((s) =>
+    speakerName(s.findSessionById(sessionId), speaker),
+  );
+  const color = speaker % 2 === 0 ? colors.accentBrand : colors.accentSuccess;
+  return (
+    <RipplePressable
+      onPress={() => onPress?.(speaker)}
+      disabled={!onPress}
+      hitSlop={10}
+      rippleColor={colors.ripple}
+      borderless
+      style={styles.speakerLabel}
+    >
+      <Icon name="voice_circle" size={16} color={color} />
+      <Text
+        variant="caption1"
+        weight="semibold"
+        color={color}
+        numberOfLines={1}
+        style={styles.speakerName}
+      >
+        {name}
+      </Text>
+    </RipplePressable>
+  );
+}
+
 const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: 16,
@@ -327,6 +391,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  speakerLabel: {
+    flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  speakerName: {
+    flexShrink: 1,
   },
   actionsContainer: {
     flexDirection: "row",

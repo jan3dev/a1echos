@@ -17,6 +17,7 @@ export const sessions = sqliteTable("sessions", {
   folderId: text("folder_id").references(() => folders.id, {
     onDelete: "set null",
   }),
+  speakerNames: text("speaker_names", { mode: "json" }).$type<string[]>(),
 });
 
 export const transcriptions = sqliteTable(
@@ -32,6 +33,7 @@ export const transcriptions = sqliteTable(
     kind: text("kind", { enum: ["transcript", "summary"] })
       .notNull()
       .default("transcript"),
+    speaker: integer("speaker"),
   },
   (t) => [
     index("transcriptions_session_id_idx").on(t.sessionId),

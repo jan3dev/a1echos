@@ -287,5 +287,14 @@
   "downloadOmnilingualNote": "{{size}}. Пока только в режиме «Высокая точность».",
   "anyLanguage": "Любой язык",
   "modelDescription_omnilingual": "Для языков, которые не поддерживают другие модели.",
-  "notNow": "Не сейчас"
+  "notNow": "Не сейчас",
+  "speakers": "Спикеры",
+  "speakerDefaultName": "Спикер {{number}}",
+  "speakerRenameTitle": "Переименовать спикера",
+  "speakersDownloadTitle": "Скачать модель спикеров?",
+  "speakersDownloadMessage": "Для определения спикеров нужно один раз скачать {{size}}. Всё работает на вашем устройстве.",
+  "speakersIdentified": "Спикеры определены",
+  "speakersOnlyOne": "Найден только один спикер",
+  "speakersFailed": "Не удалось определить спикеров",
+  "speakersStopped": "Определение спикеров остановлено"
 }

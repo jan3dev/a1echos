@@ -11,13 +11,32 @@ const MockFile = File as unknown as jest.Mock;
 
 // Per-path File instance so writes/reads can be tracked independently.
 const fileInstances = new Map<string, ReturnType<typeof makeFileInstance>>();
-const makeFileInstance = (uri: string) => ({
-  uri,
-  exists: true,
-  writeSync: jest.fn(),
-  bytesSync: jest.fn((): Uint8Array => new Uint8Array([1, 2, 3, 4])),
-  delete: jest.fn(),
-});
+const makeFileInstance = (uri: string) => {
+  const instance = {
+    uri,
+    exists: true,
+    writeSync: jest.fn(),
+    bytesSync: jest.fn((): Uint8Array => new Uint8Array([1, 2, 3, 4])),
+    delete: jest.fn(),
+    close: jest.fn(),
+    // A read handle over the same bytes `bytesSync` returns.
+    open: () => {
+      const bytes = instance.bytesSync();
+      const handle = {
+        size: bytes.length,
+        offset: 0,
+        readBytesSync: (count: number) => {
+          const chunk = bytes.subarray(handle.offset, handle.offset + count);
+          handle.offset += chunk.length;
+          return chunk;
+        },
+        close: instance.close,
+      };
+      return handle;
+    },
+  };
+  return instance;
+};
 
 const getFileInstance = (uri: string) => {
   if (!fileInstances.has(uri)) {

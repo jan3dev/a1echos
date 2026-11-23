@@ -48,6 +48,12 @@ export {
 } from "./model-download-service/ModelDownloadService";
 export type { DownloadProgress } from "./model-download-service/ModelDownloadService";
 
+export {
+  diarizationService,
+  SpeakerIdentificationCancelledError,
+} from "./diarization-service/DiarizationService";
+export type { SpeakerTurn } from "./diarization-service/speakerTurns";
+
 export { llmService } from "./llm-service/LlmService";
 export type {
   LlmLoadOptions,

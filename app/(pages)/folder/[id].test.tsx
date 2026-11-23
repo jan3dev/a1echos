@@ -94,6 +94,7 @@ jest.mock("@/services", () => ({
 }));
 
 jest.mock("@/stores", () => ({
+  labelSpeakers: (transcriptions: unknown[]) => transcriptions,
   useTranscriptionStore: {
     getState: () => ({
       sessionTranscriptions: (sessionId: string) =>

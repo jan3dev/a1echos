@@ -279,5 +279,14 @@
   "downloadOmnilingualNote": "{{size}}. Mode Haute précision uniquement pour le moment.",
   "anyLanguage": "Toute langue",
   "modelDescription_omnilingual": "Pour les langues que les autres modèles ne couvrent pas.",
-  "notNow": "Pas maintenant"
+  "notNow": "Pas maintenant",
+  "speakers": "Intervenants",
+  "speakerDefaultName": "Intervenant {{number}}",
+  "speakerRenameTitle": "Renommer l’intervenant",
+  "speakersDownloadTitle": "Télécharger le modèle d’intervenants ?",
+  "speakersDownloadMessage": "L’identification des intervenants nécessite un téléchargement unique de {{size}}. Elle s’exécute sur votre appareil.",
+  "speakersIdentified": "Intervenants identifiés",
+  "speakersOnlyOne": "Un seul intervenant trouvé",
+  "speakersFailed": "Échec de l’identification des intervenants",
+  "speakersStopped": "Identification des intervenants arrêtée"
 }

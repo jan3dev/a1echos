@@ -48,6 +48,30 @@ describe("db/types", () => {
     );
   });
 
+  it("round-trips speaker names and speaker labels", () => {
+    const session: Session = {
+      id: "s1",
+      name: "Interview",
+      timestamp: new Date(1000),
+      lastModified: new Date(2000),
+      isIncognito: false,
+      speakerNames: ["Ana", ""],
+    };
+    expect(sessionToRow(session).speakerNames).toEqual(["Ana", ""]);
+    expect(sessionFromRow(sessionToRow(session))).toEqual(session);
+
+    const t: Transcription = {
+      id: "t1",
+      sessionId: "s1",
+      text: "Hi",
+      timestamp: new Date(1000),
+      audioPath: "",
+      speaker: 0,
+    };
+    expect(transcriptionToRow(t).speaker).toBe(0);
+    expect(transcriptionFromRow(transcriptionToRow(t))).toEqual(t);
+  });
+
   it("folderToRow and folderFromRow round-trip", () => {
     const folder = { id: "f1", name: "Work", createdAt: new Date(1000) };
     expect(folderToRow(folder)).toEqual({
@@ -75,6 +99,7 @@ describe("db/types", () => {
       timestampMs: t.timestamp.getTime(),
       audioPath: "/audio/test.wav",
       kind: "transcript",
+      speaker: null,
     });
 
     const back = transcriptionFromRow(row);

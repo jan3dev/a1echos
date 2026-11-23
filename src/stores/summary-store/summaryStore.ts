@@ -17,6 +17,7 @@ import { FeatureFlag, logError } from "@/utils";
 import { useModelDownloadStore } from "../model-download-store/modelDownloadStore";
 import { useSessionStore } from "../session-store/sessionStore";
 import { useSettingsStore } from "../settings-store/settingsStore";
+import { labelSpeakers } from "../speaker-store/speakerStore";
 import {
   AUDIO_BUSY_STATES,
   useTranscriptionStore,
@@ -57,8 +58,7 @@ export const blocksSummary = (state: TranscriptionState): boolean =>
 
 /** What a summary reads: the session's transcripts, never earlier summaries. */
 export const summarizableText = (transcriptions: Transcription[]): string =>
-  transcriptions
-    .filter((t) => t.kind !== "summary")
+  labelSpeakers(transcriptions.filter((t) => t.kind !== "summary"))
     .map((t) => t.text.trim())
     .filter(Boolean)
     .join("\n\n");

@@ -9,6 +9,9 @@ export interface Transcription {
   audioPath: string;
   /** Absent means "transcript". */
   kind?: TranscriptionKind;
+  /** Who is talking, as an index into the session's speakers; absent until
+   *  speakers are identified. */
+  speaker?: number;
 }
 
 export interface TranscriptionJSON {

@@ -41,24 +41,32 @@ import {
 } from "@/components";
 import { AppConstants, Routes, TestID } from "@/constants";
 import {
+  useEnsureModelDownloaded,
   useLocalization,
   useFileImport,
   useMicPermission,
   useScrollSurface,
   useSessionOperations,
 } from "@/hooks";
-import { getLlmInfo, Transcription } from "@/models";
+import { getLlmInfo, SPEAKER_MODEL, Transcription } from "@/models";
 import { shareService } from "@/services";
 import {
+  labelSpeakers,
+  speakerName,
+  useCancelIdentifySpeakers,
   useDeleteTranscriptions,
   useEnterTranscriptionSelection,
   useExitTranscriptionSelection,
   useFindSessionById,
+  useIdentifySpeakers,
   useIncognitoSession,
+  useIsModelDownloaded,
   useIsRecording,
   useIsTranscriptionSelectionMode,
   useMergeTranscriptions,
+  useModelDownloadProgress,
   useRenameSession,
+  useRenameSpeaker,
   useSelectAllTranscriptions,
   useSelectedLanguage,
   useSelectedLlmId,
@@ -70,6 +78,7 @@ import {
   useSetRecordingControlsVisible,
   useShowGlobalTooltip,
   useShowToast,
+  useSpeakerJob,
   useStartRecording,
   useStopRecordingAndSave,
   useCancelSummary,
@@ -81,7 +90,13 @@ import {
   useToggleTranscriptionSelection,
 } from "@/stores";
 import { useTheme } from "@/theme";
-import { delay, FeatureFlag, getErrorMessage, logError } from "@/utils";
+import {
+  delay,
+  FeatureFlag,
+  formatBytes,
+  getErrorMessage,
+  logError,
+} from "@/utils";
 
 export default function SessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -126,6 +141,14 @@ export default function SessionScreen() {
   const selectedLlmId = useSelectedLlmId();
   const languageCode = useSelectedLanguage().code;
   const cancelSummary = useCancelSummary();
+  const speakerJob = useSpeakerJob();
+  const identifySpeakers = useIdentifySpeakers();
+  const cancelIdentifySpeakers = useCancelIdentifySpeakers();
+  const renameSpeaker = useRenameSpeaker();
+  const ensureModelDownloaded = useEnsureModelDownloaded();
+  const hasSpeakerModel = useIsModelDownloaded(SPEAKER_MODEL.id);
+  const speakerModelDownload = useModelDownloadProgress(SPEAKER_MODEL.id);
+  const [renamingSpeaker, setRenamingSpeaker] = useState<number | null>(null);
   const setRecordingCallbacks = useSetRecordingCallbacks();
   const setRecordingControlsEnabled = useSetRecordingControlsEnabled();
   const setRecordingControlsVisible = useSetRecordingControlsVisible();
@@ -194,7 +217,9 @@ export default function SessionScreen() {
   );
 
   const copyTargetTranscriptions = useCallback(async () => {
-    const text = targetTranscriptions.map((t) => t.text).join("\n\n");
+    const text = labelSpeakers(targetTranscriptions)
+      .map((t) => t.text)
+      .join("\n\n");
 
     if (!text) return false;
 
@@ -216,7 +241,9 @@ export default function SessionScreen() {
     }
 
     try {
-      await shareService.shareTranscriptions(targetTranscriptions);
+      await shareService.shareTranscriptions(
+        labelSpeakers(targetTranscriptions),
+      );
       exitSelectionMode();
       return true;
     } catch (error) {
@@ -277,6 +304,67 @@ export default function SessionScreen() {
   ]);
 
   const isSummarizingHere = summarySessionId === id;
+
+  const canIdentifySpeakers = transcriptions.some(
+    (t) => t.kind !== "summary" && t.audioPath,
+  );
+  const isIdentifyingHere = speakerJob?.sessionId === id;
+  const isDownloadingSpeakerModel =
+    speakerModelDownload?.status === "downloading";
+
+  const runIdentifySpeakers = useCallback(async () => {
+    try {
+      const outcome = await identifySpeakers(id);
+      if (outcome === "done") {
+        showGlobalTooltip(loc.speakersIdentified, "success", 3000);
+      } else if (outcome === "one-speaker") {
+        showGlobalTooltip(loc.speakersOnlyOne, "normal", 4000);
+      } else if (outcome === "stopped") {
+        showGlobalTooltip(loc.speakersStopped, "normal", 3000);
+      } else if (outcome === "no-audio") {
+        showGlobalTooltip(loc.speakersFailed, "error", 5000);
+      }
+    } catch {
+      showGlobalTooltip(loc.speakersFailed, "error", 5000);
+    }
+  }, [id, identifySpeakers, loc, showGlobalTooltip]);
+
+  const handleSpeakersPressed = useCallback(() => {
+    if (hasSpeakerModel) {
+      runIdentifySpeakers();
+      return;
+    }
+    showAlertToast({
+      title: loc.speakersDownloadTitle,
+      message: loc.speakersDownloadMessage(
+        formatBytes(SPEAKER_MODEL.sizeBytes),
+      ),
+      primaryButtonText: loc.download,
+      onPrimaryButtonTap: async () => {
+        hideAlertToast();
+        if (await ensureModelDownloaded(SPEAKER_MODEL.id)) {
+          await runIdentifySpeakers();
+        }
+      },
+      secondaryButtonText: loc.cancel,
+      onSecondaryButtonTap: hideAlertToast,
+      variant: "info",
+      messageMaxLines: 3,
+    });
+  }, [
+    ensureModelDownloaded,
+    hasSpeakerModel,
+    hideAlertToast,
+    loc,
+    runIdentifySpeakers,
+    showAlertToast,
+  ]);
+
+  const speakersButtonText = isIdentifyingHere
+    ? `${Math.round((speakerJob?.progress ?? 0) * 100)}%`
+    : isDownloadingSpeakerModel
+      ? `${Math.round((speakerModelDownload?.progressRatio ?? 0) * 100)}%`
+      : loc.speakers;
 
   // Clear stale app-bar glass when the list isn't shown (loading/error/empty
   // all coincide with no transcriptions): no scroll event fires to reset it.
@@ -517,7 +605,7 @@ export default function SessionScreen() {
     if (!session || targetTranscriptions.length === 0) return;
     try {
       const saved = await shareService.saveSessionsMarkdown([
-        { session, transcriptions: targetTranscriptions },
+        { session, transcriptions: labelSpeakers(targetTranscriptions) },
       ]);
       if (!saved) return;
       showGlobalTooltip(loc.markdownSaved);
@@ -687,6 +775,7 @@ export default function SessionScreen() {
               onTranscriptionTap={handleTranscriptionTap}
               onTranscriptionLongPress={handleTranscriptionLongPress}
               onTranscriptionEdit={handleTranscriptionEdit}
+              onSpeakerPress={setRenamingSpeaker}
               header={
                 selectionMode ? undefined : (
                   <View style={styles.quickActions}>
@@ -718,6 +807,33 @@ export default function SessionScreen() {
                       icon={
                         <Icon
                           name={isSummarizingHere ? "close_circle" : "magicpen"}
+                          size={18}
+                          color={theme.colors.textPrimary}
+                        />
+                      }
+                    />
+                    <Button.utility
+                      testID={TestID.SessionSpeakers}
+                      text={speakersButtonText}
+                      enabled={
+                        isIdentifyingHere ||
+                        (canIdentifySpeakers &&
+                          !speakerJob &&
+                          !isDownloadingSpeakerModel &&
+                          !summarySessionId &&
+                          !isStructuring &&
+                          !isSummaryBlocked)
+                      }
+                      onPress={
+                        isIdentifyingHere
+                          ? cancelIdentifySpeakers
+                          : handleSpeakersPressed
+                      }
+                      icon={
+                        <Icon
+                          name={
+                            isIdentifyingHere ? "close_circle" : "voice_circle"
+                          }
                           size={18}
                           color={theme.colors.textPrimary}
                         />
@@ -789,6 +905,20 @@ export default function SessionScreen() {
         onCancel={() => setShowRenameModal(false)}
       />
 
+      <SessionInputModal
+        visible={renamingSpeaker !== null}
+        title={loc.speakerRenameTitle}
+        buttonText={loc.save}
+        label={speakerName(null, renamingSpeaker ?? 0)}
+        initialValue={session?.speakerNames?.[renamingSpeaker ?? 0] ?? ""}
+        onSubmit={(name) => {
+          if (renamingSpeaker !== null)
+            renameSpeaker(id, renamingSpeaker, name);
+          setRenamingSpeaker(null);
+        }}
+        onCancel={() => setRenamingSpeaker(null)}
+      />
+
       <Toast {...deleteToastState} />
       <Toast {...alertToastState} />
     </Screen>
@@ -801,6 +931,7 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 16,
   },

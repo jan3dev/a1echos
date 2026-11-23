@@ -59,6 +59,13 @@ jest.mock("@modules/echos-audio-decoder/src", () => ({
   },
 }));
 
+jest.mock("@modules/echos-diarization/src", () => ({
+  EchosDiarization: {
+    embed: jest.fn(async () => []),
+    release: jest.fn(async () => undefined),
+  },
+}));
+
 jest.mock("expo-document-picker", () => ({
   getDocumentAsync: jest.fn(async () => ({ canceled: true, assets: null })),
 }));

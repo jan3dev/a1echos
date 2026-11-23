@@ -39,6 +39,7 @@ interface TranscriptionListProps {
   selectionMode?: boolean;
   selectedTranscriptionIds?: Set<string>;
   onTranscriptionEdit?: (id: string) => void;
+  onSpeakerPress?: (speaker: number) => void;
   /** Rendered above the oldest item, and alone when the session is empty. */
   header?: ReactElement;
   topPadding?: number;
@@ -93,6 +94,7 @@ export const TranscriptionList = ({
   selectionMode = false,
   selectedTranscriptionIds = new Set(),
   onTranscriptionEdit,
+  onSpeakerPress,
   header,
   topPadding = 0,
   bottomPadding = 16,
@@ -427,6 +429,7 @@ export const TranscriptionList = ({
           isWhisperRecording={itemState.isRecording}
           editDisabled={isCapturing}
           progressLabel={itemState.progressLabel}
+          onSpeakerPress={onSpeakerPress}
           onStartEdit={() => onTranscriptionEdit?.(item.id)}
           onTap={() => {
             if (!isPreview) {
@@ -443,6 +446,7 @@ export const TranscriptionList = ({
     },
     [
       isCapturing,
+      onSpeakerPress,
       onTranscriptionEdit,
       onTranscriptionLongPress,
       onTranscriptionTap,

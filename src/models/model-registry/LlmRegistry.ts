@@ -1,10 +1,11 @@
-import { LlmModelId, ModelId } from "../model-type/ModelType";
+import { LlmModelId, ModelId, SpeakerModelId } from "../model-type/ModelType";
 
 import {
   MODEL_REGISTRY,
   type ModelFileInfo,
   type ModelInfo,
 } from "./ModelRegistry";
+import { SPEAKER_MODEL, type SpeakerModelInfo } from "./SpeakerModelRegistry";
 
 export interface LlmModelInfo {
   id: LlmModelId;
@@ -102,12 +103,17 @@ export const getRecommendedLlmId = (totalRamBytes: number): LlmModelId =>
       : best,
   ).id;
 
-/** Everything the model download service and store manage: ASR models and LLMs. */
-export type DownloadableModelId = ModelId | LlmModelId;
+/** Everything the model download service and store manage: ASR models, LLMs
+ *  and the speaker model. */
+export type DownloadableModelId = ModelId | LlmModelId | SpeakerModelId;
 
-const DOWNLOADABLE: Record<DownloadableModelId, ModelInfo | LlmModelInfo> = {
+const DOWNLOADABLE: Record<
+  DownloadableModelId,
+  ModelInfo | LlmModelInfo | SpeakerModelInfo
+> = {
   ...MODEL_REGISTRY,
   ...LLM_REGISTRY,
+  [SPEAKER_MODEL.id]: SPEAKER_MODEL,
 };
 
 export const getDownloadableModel = (id: DownloadableModelId) =>

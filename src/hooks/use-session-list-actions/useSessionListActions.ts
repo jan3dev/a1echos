@@ -8,6 +8,7 @@ import { AppConstants, Routes } from "@/constants";
 import { Session } from "@/models";
 import { shareService } from "@/services";
 import {
+  labelSpeakers,
   useExitSessionSelection,
   useIsSessionSelectionMode,
   useRenameSession,
@@ -183,7 +184,7 @@ export const useSessionListActions = ({
         .filter((session) => idSet.has(session.id))
         .map((session) => ({
           session,
-          transcriptions: sessionTranscriptions(session.id),
+          transcriptions: labelSpeakers(sessionTranscriptions(session.id)),
         }));
     },
     [sessions],

@@ -1,0 +1,32 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'com.a1lab.echos.diarization'
+version = '0.0.1'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+
+android {
+  namespace "com.a1lab.echos.diarization"
+  compileSdkVersion safeExtGet("compileSdkVersion", 35)
+
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 26)
+    targetSdkVersion safeExtGet("targetSdkVersion", 34)
+    consumerProguardFiles "proguard-rules.pro"
+  }
+}
+
+// react-native-sherpa-onnx keeps the com.k2fsa.sherpa.onnx Kotlin API private
+// to its own module; it ships in the app at runtime, so compile against the
+// same jar. A task provider, not a path: see withImeGradleDeps.
+evaluationDependsOn(":react-native-sherpa-onnx")
+dependencies {
+  compileOnly fileTree(
+    dir: "${project(':react-native-sherpa-onnx').buildDir}/sherpa-onnx-classes",
+    include: ["*.jar"],
+  ).builtBy(project(":react-native-sherpa-onnx").tasks.named("extractSherpaOnnxClasses"))
+}

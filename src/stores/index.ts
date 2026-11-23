@@ -12,6 +12,7 @@ export {
   useMoveSessionsToFolder,
   useRenameFolder,
   useRenameSession,
+  useRenameSpeaker,
   useSessions,
   useSessionStore,
   useSwitchSession,
@@ -151,3 +152,12 @@ export type {
   SummarizeOutcome,
   SummaryJob,
 } from "./summary-store/summaryStore";
+export {
+  labelSpeakers,
+  speakerName,
+  useCancelIdentifySpeakers,
+  useIdentifySpeakers,
+  useSpeakerJob,
+  useSpeakerStore,
+} from "./speaker-store/speakerStore";
+export type { IdentifySpeakersOutcome } from "./speaker-store/speakerStore";

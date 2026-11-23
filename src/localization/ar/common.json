@@ -302,5 +302,14 @@
   "downloadOmnilingualNote": "{{size}}. وضع الدقة العالية فقط حاليًا.",
   "anyLanguage": "أي لغة",
   "modelDescription_omnilingual": "للغات التي لا تدعمها النماذج الأخرى.",
-  "notNow": "ليس الآن"
+  "notNow": "ليس الآن",
+  "speakers": "المتحدثون",
+  "speakerDefaultName": "المتحدث {{number}}",
+  "speakerRenameTitle": "إعادة تسمية المتحدث",
+  "speakersDownloadTitle": "تنزيل نموذج المتحدثين؟",
+  "speakersDownloadMessage": "يتطلب تحديد المتحدثين تنزيلاً لمرة واحدة بحجم {{size}}. يعمل على جهازك.",
+  "speakersIdentified": "تم تحديد المتحدثين",
+  "speakersOnlyOne": "تم العثور على متحدث واحد فقط",
+  "speakersFailed": "فشل تحديد المتحدثين",
+  "speakersStopped": "تم إيقاف تحديد المتحدثين"
 }
