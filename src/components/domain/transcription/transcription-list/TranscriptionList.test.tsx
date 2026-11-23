@@ -964,6 +964,41 @@ describe("TranscriptionList", () => {
       jest.useRealTimers();
     });
 
+    it("jumps to a starting summary and follows it until it is saved", () => {
+      jest.useFakeTimers();
+      const { rerender, UNSAFE_getByType, listRef } = setup();
+      const list = () => UNSAFE_getByType(FlatList).props;
+      act(() => list().onLayout({ nativeEvent: { layout: { height: 800 } } }));
+      act(() => {
+        list().onContentSizeChange(0, 4000);
+        jest.advanceTimersByTime(100);
+      });
+      act(() => list().onScrollBeginDrag());
+      toEnd.mockClear();
+
+      (useSummaryJob as jest.Mock).mockReturnValue({
+        sessionId: "s1",
+        startedAt: new Date("2024-01-03"),
+        text: "",
+        part: 0,
+        parts: 0,
+      });
+      rerender(<TranscriptionList {...defaultProps} listRef={listRef} />);
+      expect(toEnd).toHaveBeenCalledWith({ animated: true });
+
+      toEnd.mockClear();
+      act(() => list().onContentSizeChange(0, 5000));
+      expect(toEnd).toHaveBeenCalledTimes(1);
+
+      (useSummaryJob as jest.Mock).mockReturnValue(null);
+      rerender(<TranscriptionList {...defaultProps} listRef={listRef} />);
+      act(() => list().onContentSizeChange(0, 6000));
+      expect(toEnd).toHaveBeenCalledTimes(2);
+      act(() => list().onContentSizeChange(0, 7000));
+      expect(toEnd).toHaveBeenCalledTimes(2);
+      jest.useRealTimers();
+    });
+
     it("loads older pages before jumping to the top", () => {
       const many = Array.from({ length: 45 }, (_, i) => ({
         ...mockTranscriptions[0],

@@ -121,6 +121,7 @@ export const TranscriptionList = ({
   const transcriptionMode = settingsStore.selectedTranscriptionMode;
   const sessionId = useSessionStore((s) => s.activeSessionId);
   const summaryJob = useSummaryJob();
+  const isSummarizing = summaryJob?.sessionId === sessionId;
 
   const previewState = useMemo((): ActivePreviewState => {
     const isRealtime = transcriptionMode === TranscriptionMode.REALTIME;
@@ -172,7 +173,7 @@ export const TranscriptionList = ({
       }
     }
 
-    if (summaryJob?.sessionId === sessionId) {
+    if (isSummarizing && summaryJob) {
       return {
         item: {
           id: "summary_preview",
@@ -201,6 +202,7 @@ export const TranscriptionList = ({
     transcriptionMode,
     activeSessionId,
     summaryJob,
+    isSummarizing,
     sessionId,
     loc,
   ]);
@@ -254,12 +256,14 @@ export const TranscriptionList = ({
     content: 0,
     layout: 0,
   });
-  // Keep the newest text in view while recording, until the user scrolls.
+  // Keep the newest text in view while recording or summarizing, until the
+  // user scrolls.
   const followRef = useRef(false);
   // Item count to wait for before jumping, so an unrelated resize can't
   // consume the jump before the older items are laid out.
   const pendingJumpToTopRef = useRef<number | null>(null);
   const isCapturing = isRecording || isTranscribing;
+  const isLive = isCapturing || isSummarizing;
 
   const updateJumpButton = useCallback(() => {
     const next = pickJumpDirection(
@@ -311,9 +315,9 @@ export const TranscriptionList = ({
       jumpToTop();
       return;
     }
-    followRef.current = isCapturing;
+    followRef.current = isLive;
     listRef?.current?.scrollToEnd({ animated: true });
-  }, [isCapturing, jump.direction, jumpToTop, listRef]);
+  }, [isLive, jump.direction, jumpToTop, listRef]);
 
   usePublishRecordingJumpButton({
     visible: jump.visible && !selectionMode && data.length > 0,
@@ -323,10 +327,10 @@ export const TranscriptionList = ({
   });
 
   useEffect(() => {
-    if (!isRecording) return;
+    if (!isRecording && !isSummarizing) return;
     followRef.current = true;
     listRef?.current?.scrollToEnd({ animated: true });
-  }, [isRecording, listRef]);
+  }, [isRecording, isSummarizing, listRef]);
 
   useEffect(() => {
     return () => {
@@ -365,7 +369,7 @@ export const TranscriptionList = ({
 
       // Follows one resize past capture so the final result lands in view.
       const following = followRef.current;
-      if (!isCapturing) followRef.current = false;
+      if (!isLive) followRef.current = false;
       if (userHasDraggedRef.current && isReadyRef.current && !following) {
         return;
       }
@@ -389,7 +393,7 @@ export const TranscriptionList = ({
       }
     },
     [
-      isCapturing,
+      isLive,
       listRef,
       onContentSizeChange,
       updateJumpButton,
